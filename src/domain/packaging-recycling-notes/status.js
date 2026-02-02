@@ -3,6 +3,7 @@
  * @see {@link /docs/architecture/decisions/0024-create-prn-api-strategy.md}
  */
 export const PRN_STATUS = Object.freeze({
+  DRAFT: 'draft',
   AWAITING_AUTHORISATION: 'awaiting_authorisation',
   AWAITING_ACCEPTANCE: 'awaiting_acceptance',
   ACCEPTED: 'accepted',

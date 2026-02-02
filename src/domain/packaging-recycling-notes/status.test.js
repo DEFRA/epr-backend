@@ -4,6 +4,7 @@ import { PRN_STATUS } from './status.js'
 describe('PRN_STATUS', () => {
   it('exports all expected status values', () => {
     expect(PRN_STATUS).toEqual({
+      DRAFT: 'draft',
       AWAITING_AUTHORISATION: 'awaiting_authorisation',
       AWAITING_ACCEPTANCE: 'awaiting_acceptance',
       ACCEPTED: 'accepted',

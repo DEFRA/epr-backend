@@ -1,0 +1,262 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { StatusCodes } from 'http-status-codes'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { asStandardUser } from '#test/inject-auth.js'
+
+describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns/{prnId}', () => {
+  setupAuthContext()
+
+  const organisationId = '6507f1f77bcf86cd79943901'
+  const accreditationId = '507f1f77bcf86cd799439011'
+  const prnId = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'
+  const differentOrgId = '7777777777777777777777ff'
+  const differentAccreditationId = 'eeeeeeeeeeeeeeeeeeeeeeee'
+
+  const stubPrn = {
+    _id: prnId,
+    prnNumber: 'PRN-2026-00001',
+    accreditationId,
+    organisationId,
+    issuedToOrganisation: {
+      id: 'producer-001',
+      name: 'ComplyPak Ltd'
+    },
+    tonnageValue: 9,
+    createdAt: new Date('2026-01-21T10:30:00Z'),
+    status: { currentStatus: 'awaiting_authorisation' }
+  }
+
+  const basePath = `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns/${prnId}`
+
+  describe('with valid authentication and PRN data', () => {
+    let server
+
+    beforeEach(async () => {
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([stubPrn])
+        },
+        featureFlags
+      })
+    })
+
+    it('returns the PRN matching the given id', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: basePath,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const result = JSON.parse(response.payload)
+
+      expect(result._id).toBe(prnId)
+      expect(result.prnNumber).toBe('PRN-2026-00001')
+      expect(result.organisationId).toBe(organisationId)
+      expect(result.accreditationId).toBe(accreditationId)
+      expect(result.issuedToOrganisation).toEqual({
+        id: 'producer-001',
+        name: 'ComplyPak Ltd'
+      })
+      expect(result.tonnageValue).toBe(9)
+      expect(result.createdAt).toBe('2026-01-21T10:30:00.000Z')
+      expect(result.status).toEqual({ currentStatus: 'awaiting_authorisation' })
+    })
+  })
+
+  describe('not found', () => {
+    let server
+
+    beforeEach(async () => {
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([])
+        },
+        featureFlags
+      })
+    })
+
+    it('returns 404 when PRN does not exist', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: basePath,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+
+  describe('authorization', () => {
+    it('returns 403 when PRN belongs to a different organisation', async () => {
+      const prnFromDifferentOrg = {
+        ...stubPrn,
+        organisationId: differentOrgId
+      }
+
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([
+              prnFromDifferentOrg
+            ])
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: basePath,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
+    it('returns 404 when PRN belongs to a different accreditation', async () => {
+      const prnFromDifferentAccreditation = {
+        ...stubPrn,
+        accreditationId: differentAccreditationId
+      }
+
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([
+              prnFromDifferentAccreditation
+            ])
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: basePath,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+
+  describe('validation errors', () => {
+    let server
+
+    beforeEach(async () => {
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([stubPrn])
+        },
+        featureFlags
+      })
+    })
+
+    it('rejects invalid organisationId format', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/invalid/accreditations/${accreditationId}/prns/${prnId}`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('rejects invalid accreditationId format', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/accreditations/invalid/prns/${prnId}`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('rejects invalid prnId format', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns/invalid`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
+  describe('authentication', () => {
+    let server
+
+    beforeEach(async () => {
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([stubPrn])
+        },
+        featureFlags
+      })
+    })
+
+    it('requires authentication', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: basePath
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+  })
+
+  describe('feature flag', () => {
+    it('returns 404 when feature flag is disabled', async () => {
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: false
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([stubPrn])
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: basePath,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+})
