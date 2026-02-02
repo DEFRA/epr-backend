@@ -8,7 +8,7 @@ import { PRN_STATUS } from '#domain/packaging-recycling-notes/status.js'
 
 export const prnPostPath =
   '/v1/organisations/{organisationId}/accreditations/{accreditationId}/prns'
-
+export const issuerNotesMaxLen = 200
 export const prnPost = {
   method: 'POST',
   path: prnPostPath,
@@ -33,7 +33,7 @@ export const prnPost = {
           name: Joi.string().required(),
           tradingName: Joi.string().optional()
         }).required(),
-        issuerNotes: Joi.string().max(200).required()
+        issuerNotes: Joi.string().max(issuerNotesMaxLen).required()
       })
     }
   },

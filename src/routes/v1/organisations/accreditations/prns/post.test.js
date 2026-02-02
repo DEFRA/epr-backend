@@ -5,6 +5,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#repositories/p
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { asStandardUser } from '#test/inject-auth.js'
+import { issuerNotesMaxLen } from './post'
 
 describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns', () => {
   setupAuthContext()
@@ -227,7 +228,10 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       const response = await server.inject({
         method: 'POST',
         url: basePath,
-        payload: { ...validPayload, issuerNotes: 'a'.repeat(201) },
+        payload: {
+          ...validPayload,
+          issuerNotes: 'a'.repeat(issuerNotesMaxLen + 1)
+        },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
