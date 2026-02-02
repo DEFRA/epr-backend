@@ -11,6 +11,8 @@ export async function generateCsv(rows) {
   const headerMapping = [
     ['type', 'Type'],
     ['businessName', 'Business name'],
+    ['companiesHouseNumber', 'Companies House Number'],
+    ['orgId', 'Org ID'],
     [
       'registeredOffice',
       'Registered office\nHead office\nMain place of business in UK'
