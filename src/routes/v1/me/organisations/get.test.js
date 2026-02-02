@@ -419,4 +419,165 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toHaveLength(1)
   })
+
+  it('should return 403 when user has no organisation in their token', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    // Generate token without relationships/organisations
+    const tokenWithoutOrg = generateValidTokenWith({
+      email,
+      relationships: undefined,
+      currentRelationshipId: undefined
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${tokenWithoutOrg}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    const result = JSON.parse(response.payload)
+
+    expect(result.message).toContain(
+      'User is not associated with any organisation'
+    )
+
+    // Verify warning was logged with empty orgInfo array
+    expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+      message: 'User token missing organisation information',
+      contactId: expect.any(String),
+      relationshipsCount: 0,
+      orgInfo: []
+    })
+  })
+
+  it('should return 403 and log org IDs when user has relationships but no currentRelationshipId', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const orgId1 = randomUUID()
+    const orgId2 = randomUUID()
+
+    // Generate token with relationships but no currentRelationshipId
+    const tokenWithOrgsButNoCurrent = generateValidTokenWith({
+      email,
+      relationships: [
+        `rel-1:${orgId1}:Company One`,
+        `rel-2:${orgId2}:Company Two`
+      ],
+      currentRelationshipId: undefined
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${tokenWithOrgsButNoCurrent}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    const result = JSON.parse(response.payload)
+
+    expect(result.message).toContain(
+      'User is not associated with any organisation'
+    )
+
+    // Verify warning was logged with safe (non-PII) orgInfo fields only
+    expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+      message: 'User token missing organisation information',
+      contactId: expect.any(String),
+      relationshipsCount: 2,
+      orgInfo: [
+        {
+          defraIdOrgId: orgId1,
+          isCurrent: false
+        },
+        {
+          defraIdOrgId: orgId2,
+          isCurrent: false
+        }
+      ]
+    })
+  })
+
+  it('should return 403 and log org IDs when currentRelationshipId does not match any relationship', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const orgId1 = randomUUID()
+    const orgId2 = randomUUID()
+    const invalidRelId = randomUUID()
+
+    // Generate token where currentRelationshipId doesn't match any relationship
+    // This simulates a token corruption or misconfiguration scenario
+    const tokenWithMismatchedCurrent = generateValidTokenWith({
+      email,
+      relationships: [
+        `rel-1:${orgId1}:Company One`,
+        `rel-2:${orgId2}:Company Two`
+      ],
+      currentRelationshipId: invalidRelId // Doesn't match 'rel-1' or 'rel-2'
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${tokenWithMismatchedCurrent}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    const result = JSON.parse(response.payload)
+
+    expect(result.message).toContain(
+      'User is not associated with any organisation'
+    )
+
+    // Verify all relationships have isCurrent: false since currentRelationshipId doesn't match
+    expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+      message: 'User token missing organisation information',
+      contactId: expect.any(String),
+      relationshipsCount: 2,
+      orgInfo: [
+        {
+          defraIdOrgId: orgId1,
+          isCurrent: false
+        },
+        {
+          defraIdOrgId: orgId2,
+          isCurrent: false
+        }
+      ]
+    })
+  })
 })
