@@ -72,6 +72,7 @@ describe('transform', () => {
       companyDetails: {
         name: 'Waste Ltd',
         tradingName: 'Waste Recovery',
+        companiesHouseNumber: '12345678',
         registeredAddress: baseAddress
       },
       submittedToRegulator: 'ea',
@@ -104,6 +105,8 @@ describe('transform', () => {
       {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
+        companiesHouseNumber: '12345678',
+        orgId: org.orgId,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R12345678PL',
@@ -118,6 +121,7 @@ describe('transform', () => {
         dateLastChanged: EXPECTED_DATE_LAST_CHANGED
       }
     ])
+    expect(rows[0].orgId).greaterThan(500000)
   })
 
   it('should use regulator info from registration for populating appropriate agency', async () => {
@@ -146,6 +150,8 @@ describe('transform', () => {
       {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
+        companiesHouseNumber: '12345678',
+        orgId: org.orgId,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'SEPA',
         registrationNumber: 'R12345678PL',
@@ -187,6 +193,8 @@ describe('transform', () => {
         {
           type: 'Reprocessor',
           businessName: 'Waste Ltd',
+          orgId: org.orgId,
+          companiesHouseNumber: '12345678',
           registeredOffice: '1 Waste Road, London, N1 1AA',
           appropriateAgency: 'EA',
           registrationNumber: 'R12345678PL',
@@ -259,6 +267,8 @@ describe('transform', () => {
         {
           type: 'Reprocessor',
           businessName: 'Waste Ltd',
+          orgId: org.orgId,
+          companiesHouseNumber: '12345678',
           registeredOffice: '1 Waste Road, London, N1 1AA',
           appropriateAgency: 'EA',
           registrationNumber: 'R12345678PL',
@@ -348,6 +358,8 @@ describe('transform', () => {
       {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
+        companiesHouseNumber: '',
+        orgId: org.orgId,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R11111111PL',
@@ -453,6 +465,8 @@ describe('transform', () => {
       {
         type: 'Reprocessor',
         businessName: 'Multi Material Ltd',
+        companiesHouseNumber: '',
+        orgId: org1.orgId,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R11111111PL',
@@ -469,6 +483,8 @@ describe('transform', () => {
       {
         type: 'Reprocessor',
         businessName: 'Multi Material Ltd',
+        companiesHouseNumber: '',
+        orgId: org1.orgId,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R22222222PL',
@@ -485,6 +501,8 @@ describe('transform', () => {
       {
         type: 'Exporter',
         businessName: 'Exporter Ltd',
+        companiesHouseNumber: '',
+        orgId: org2.orgId,
         registeredOffice: '1 Waste Road, London, N1 1AA',
         appropriateAgency: 'EA',
         registrationNumber: 'R44444444AL',
@@ -499,6 +517,43 @@ describe('transform', () => {
         dateLastChanged: ''
       }
     ])
+  })
+
+  it('should include companiesHouseNumber when present', async () => {
+    const registration = createTestRegistration()
+    const org = createTestOrganisation({
+      companyDetails: {
+        name: 'Test Company Ltd',
+        companiesHouseNumber: 'AC987654',
+        registeredAddress: baseAddress
+      },
+      registrations: [registration]
+    })
+
+    const rows = await transform([org])
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].businessName).toBe('Test Company Ltd')
+    expect(rows[0].companiesHouseNumber).toBe('AC987654')
+    expect(rows[0].orgId).toBe(org.orgId)
+  })
+
+  it('should default companiesHouseNumber to empty string when missing', async () => {
+    const registration = createTestRegistration()
+    const org = createTestOrganisation({
+      companyDetails: {
+        name: 'Test Company Ltd',
+        registeredAddress: baseAddress
+      },
+      registrations: [registration]
+    })
+
+    const rows = await transform([org])
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].businessName).toBe('Test Company Ltd')
+    expect(rows[0].companiesHouseNumber).toBe('')
+    expect(rows[0].orgId).toBe(org.orgId)
   })
 
   it('should filter out test organisations from results', async () => {
