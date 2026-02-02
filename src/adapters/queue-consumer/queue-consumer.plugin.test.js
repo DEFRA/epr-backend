@@ -122,22 +122,6 @@ describe('commandQueueConsumerPlugin', () => {
       })
     })
 
-    it('creates command queue consumer with dependencies', async () => {
-      await commandQueueConsumerPlugin.register(server, { config })
-
-      expect(createCommandQueueConsumer).toHaveBeenCalledWith({
-        sqsClient: mockSqsClient,
-        queueName: 'test-queue',
-        logger: server.logger,
-        summaryLogsRepository: server.app.summaryLogsRepository,
-        organisationsRepository: server.app.organisationsRepository,
-        wasteRecordsRepository: server.app.wasteRecordsRepository,
-        wasteBalancesRepository: server.app.wasteBalancesRepository,
-        summaryLogExtractor: expect.any(Object),
-        featureFlags: server.app.featureFlags
-      })
-    })
-
     it('registers start event handler', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
@@ -152,14 +136,25 @@ describe('commandQueueConsumerPlugin', () => {
   })
 
   describe('server start event', () => {
-    it('starts consumer and logs', async () => {
+    it('creates consumer and starts it', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
       const startHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'start'
       )[1]
-      startHandler()
+      await startHandler()
 
+      expect(createCommandQueueConsumer).toHaveBeenCalledWith({
+        sqsClient: mockSqsClient,
+        queueName: 'test-queue',
+        logger: server.logger,
+        summaryLogsRepository: server.app.summaryLogsRepository,
+        organisationsRepository: server.app.organisationsRepository,
+        wasteRecordsRepository: server.app.wasteRecordsRepository,
+        wasteBalancesRepository: server.app.wasteBalancesRepository,
+        summaryLogExtractor: expect.any(Object),
+        featureFlags: server.app.featureFlags
+      })
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer',
         queueName: 'test-queue',
@@ -175,6 +170,12 @@ describe('commandQueueConsumerPlugin', () => {
   describe('server stop event', () => {
     it('stops consumer and destroys clients', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
+
+      // Start first to create consumer
+      const startHandler = server.events.on.mock.calls.find(
+        (call) => call[0] === 'start'
+      )[1]
+      await startHandler()
 
       const stopHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'stop'
@@ -198,6 +199,19 @@ describe('commandQueueConsumerPlugin', () => {
           action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING_SUCCESS
         }
       })
+    })
+
+    it('handles stop when consumer was never started', async () => {
+      await commandQueueConsumerPlugin.register(server, { config })
+
+      const stopHandler = server.events.on.mock.calls.find(
+        (call) => call[0] === 'stop'
+      )[1]
+      await stopHandler()
+
+      expect(mockConsumer.stop).not.toHaveBeenCalled()
+      expect(mockSqsClient.destroy).toHaveBeenCalled()
+      expect(mockS3Client.destroy).toHaveBeenCalled()
     })
   })
 })

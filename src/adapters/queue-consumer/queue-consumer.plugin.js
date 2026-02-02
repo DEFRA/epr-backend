@@ -60,20 +60,11 @@ export const commandQueueConsumerPlugin = {
     // Access feature flags
     const featureFlags = server.app.featureFlags
 
-    const consumer = await createCommandQueueConsumer({
-      sqsClient,
-      queueName,
-      logger: server.logger,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository,
-      summaryLogExtractor,
-      featureFlags
-    })
+    // Consumer created lazily on server start to avoid SQS connection during tests
+    let consumer = null
 
     // Start consuming on server start
-    server.events.on('start', () => {
+    server.events.on('start', async () => {
       server.logger.info({
         message: 'Starting SQS command queue consumer',
         queueName,
@@ -81,6 +72,18 @@ export const commandQueueConsumerPlugin = {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
+      })
+
+      consumer = await createCommandQueueConsumer({
+        sqsClient,
+        queueName,
+        logger: server.logger,
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        wasteBalancesRepository,
+        summaryLogExtractor,
+        featureFlags
       })
 
       consumer.start()
@@ -96,7 +99,9 @@ export const commandQueueConsumerPlugin = {
         }
       })
 
-      consumer.stop()
+      if (consumer) {
+        consumer.stop()
+      }
       sqsClient.destroy()
       s3Client.destroy()
 
