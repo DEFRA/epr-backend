@@ -457,7 +457,6 @@ describe('GET /v1/me/organisations', () => {
     // Verify warning was logged with empty orgInfo array
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
       message: 'User token missing organisation information',
-      contactId: expect.any(String),
       relationshipsCount: 0,
       orgInfo: []
     })
@@ -503,18 +502,17 @@ describe('GET /v1/me/organisations', () => {
       'User is not associated with any organisation'
     )
 
-    // Verify warning was logged with safe (non-PII) orgInfo fields only
+    // Verify warning was logged with org names
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
       message: 'User token missing organisation information',
-      contactId: expect.any(String),
       relationshipsCount: 2,
       orgInfo: [
         {
-          defraIdOrgId: orgId1,
+          defraIdOrgName: 'Company One',
           isCurrent: false
         },
         {
-          defraIdOrgId: orgId2,
+          defraIdOrgName: 'Company Two',
           isCurrent: false
         }
       ]
@@ -566,15 +564,14 @@ describe('GET /v1/me/organisations', () => {
     // Verify all relationships have isCurrent: false since currentRelationshipId doesn't match
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
       message: 'User token missing organisation information',
-      contactId: expect.any(String),
       relationshipsCount: 2,
       orgInfo: [
         {
-          defraIdOrgId: orgId1,
+          defraIdOrgName: 'Company One',
           isCurrent: false
         },
         {
-          defraIdOrgId: orgId2,
+          defraIdOrgName: 'Company Two',
           isCurrent: false
         }
       ]
