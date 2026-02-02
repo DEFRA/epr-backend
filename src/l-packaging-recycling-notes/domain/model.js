@@ -40,7 +40,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   id: string;
  *   prnNumber?: string;
  *   issuedByOrganisation: string;
- *   issuedByRegistration: string;
+ *   issuedByAccreditation: string;
  *   issuedToOrganisation: string;
  *   tonnage: number;
  *   material: string;

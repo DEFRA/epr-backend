@@ -25,26 +25,26 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  */
 
 export const packagingRecyclingNotesCreatePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/l-packaging-recycling-notes'
 
 /**
  * Build PRN data for creation
  * @param {Object} params
  * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {string} params.accreditationId
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {string} params.userId
  * @param {Date} params.now
  */
 const buildPrnData = ({
   organisationId,
-  registrationId,
+  accreditationId,
   payload,
   userId,
   now
 }) => ({
   issuedByOrganisation: organisationId,
-  issuedByRegistration: registrationId,
+  issuedByAccreditation: accreditationId,
   issuedToOrganisation: payload.issuedToOrganisation,
   tonnage: payload.tonnage,
   material: payload.material,
@@ -96,14 +96,14 @@ export const packagingRecyclingNotesCreate = {
       logger,
       auth
     } = request
-    const { organisationId, registrationId } = params
+    const { organisationId, accreditationId } = params
     const userId = auth.credentials?.id ?? 'unknown'
     const now = new Date()
 
     try {
       const prnData = buildPrnData({
         organisationId,
-        registrationId,
+        accreditationId,
         payload,
         userId,
         now

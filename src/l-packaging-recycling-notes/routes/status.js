@@ -21,7 +21,7 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes/{id}/status'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/l-packaging-recycling-notes/{id}/status'
 
 const statusValues = Object.values(PRN_STATUS)
 
@@ -106,6 +106,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       params: Joi.object({
         organisationId: Joi.string().required(),
         registrationId: Joi.string().required(),
+        accreditationId: Joi.string().required(),
         id: Joi.string().hex().length(24).required()
       }),
       payload: updateStatusPayloadSchema
@@ -123,7 +124,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       logger,
       auth
     } = request
-    const { organisationId, registrationId, id } = params
+    const { organisationId, accreditationId, id } = params
     const { status: newStatus } = payload
     const userId = auth.credentials?.id ?? 'unknown'
     const now = new Date()
@@ -136,10 +137,10 @@ export const packagingRecyclingNotesUpdateStatus = {
         throw Boom.notFound(`PRN not found: ${id}`)
       }
 
-      // Verify the PRN belongs to the requested organisation and registration
+      // Verify the PRN belongs to the requested organisation and accreditation
       if (
         prn.issuedByOrganisation !== organisationId ||
-        prn.issuedByRegistration !== registrationId
+        prn.issuedByAccreditation !== accreditationId
       ) {
         throw Boom.notFound(`PRN not found: ${id}`)
       }

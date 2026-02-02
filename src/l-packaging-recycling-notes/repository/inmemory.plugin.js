@@ -41,13 +41,13 @@ function createInMemoryLumpyPackagingRecyclingNotesRepository(
     },
 
     /**
-     * @param {string} registrationId
+     * @param {string} accreditationId
      * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>}
      */
-    findByRegistration: async (registrationId) => {
+    findByAccreditation: async (accreditationId) => {
       const results = []
       for (const prn of storage.values()) {
-        if (prn.registrationId === registrationId) {
+        if (prn.issuedByAccreditation === accreditationId) {
           results.push(structuredClone(prn))
         }
       }

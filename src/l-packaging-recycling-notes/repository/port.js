@@ -11,7 +11,7 @@
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prn: Omit<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} create
- * @property {(registrationId: string) => Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByRegistration
+ * @property {(accreditationId: string) => Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: UpdateStatusParams) => Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  */
 

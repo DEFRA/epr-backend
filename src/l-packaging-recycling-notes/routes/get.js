@@ -11,7 +11,7 @@ import {
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNotesListPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/l-packaging-recycling-notes'
 
 /**
  * Build response from PRN list
@@ -40,20 +40,20 @@ export const packagingRecyclingNotesList = {
    */
   handler: async (request, h) => {
     const { lumpyPackagingRecyclingNotesRepository, params, logger } = request
-    const { registrationId } = params
+    const { accreditationId } = params
 
     try {
       const prns =
-        await lumpyPackagingRecyclingNotesRepository.findByRegistration(
-          registrationId
+        await lumpyPackagingRecyclingNotesRepository.findByAccreditation(
+          accreditationId
         )
 
       logger.info({
-        message: `PRNs listed for registration: ${registrationId}, count=${prns.length}`,
+        message: `PRNs listed for accreditation: ${accreditationId}, count=${prns.length}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-          reference: registrationId
+          reference: accreditationId
         }
       })
 
