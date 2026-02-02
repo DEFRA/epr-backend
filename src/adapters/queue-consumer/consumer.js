@@ -5,19 +5,13 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  SUMMARY_LOG_COMMAND,
-  SUMMARY_LOG_STATUS,
-  transitionStatus
-} from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 import {
   markAsValidationFailed,
   markAsSubmissionFailed
 } from '#domain/summary-logs/mark-as-failed.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 
@@ -69,63 +63,7 @@ const handleValidateCommand = async (summaryLogId, deps) => {
  * @param {ConsumerDependencies} deps
  */
 const handleSubmitCommand = async (summaryLogId, deps) => {
-  const {
-    logger,
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    wasteBalancesRepository,
-    summaryLogExtractor,
-    featureFlags
-  } = deps
-
-  const existing = await summaryLogsRepository.findById(summaryLogId)
-
-  if (!existing) {
-    throw new Error(`Summary log ${summaryLogId} not found`)
-  }
-
-  const { version, summaryLog } = existing
-
-  if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
-    throw new Error(
-      `Summary log must be in submitting status. Current status: ${summaryLog.status}`
-    )
-  }
-
-  const processingType =
-    summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-
-  const sync = syncFromSummaryLog({
-    extractor: summaryLogExtractor,
-    wasteRecordRepository: wasteRecordsRepository,
-    wasteBalancesRepository,
-    organisationsRepository,
-    featureFlags
-  })
-
-  const { created, updated } = await summaryLogMetrics.timedSubmission(
-    { processingType },
-    () => sync(summaryLog)
-  )
-
-  await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
-  await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
-
-  await summaryLogsRepository.update(
-    summaryLogId,
-    version,
-    transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-  )
-
-  await summaryLogMetrics.recordStatusTransition({
-    status: SUMMARY_LOG_STATUS.SUBMITTED,
-    processingType
-  })
-
-  logger.info({
-    message: `Summary log submitted: summaryLogId=${summaryLogId}`
-  })
+  await submitSummaryLog(summaryLogId, deps)
 }
 
 /**
