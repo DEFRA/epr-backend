@@ -10,8 +10,8 @@ import { issuerNotesMaxLen } from './post'
 describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns', () => {
   setupAuthContext()
 
-  const organisationId = '6507f1f77bcf86cd79943901'
-  const accreditationId = '507f1f77bcf86cd799439011'
+  const organisationId = '6507f1f7-7bcf-46cd-b994-390100000001'
+  const accreditationId = '507f1f77-bcf8-46cd-b994-390110000001'
 
   const basePath = `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`
 

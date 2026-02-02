@@ -9,11 +9,11 @@ import { asStandardUser } from '#test/inject-auth.js'
 describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns/{prnId}', () => {
   setupAuthContext()
 
-  const organisationId = '6507f1f77bcf86cd79943901'
-  const accreditationId = '507f1f77bcf86cd799439011'
+  const organisationId = '6507f1f7-7bcf-46cd-b994-390100000001'
+  const accreditationId = '507f1f77-bcf8-46cd-b994-390110000001'
   const prnId = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'
-  const differentOrgId = '7777777777777777777777ff'
-  const differentAccreditationId = 'eeeeeeeeeeeeeeeeeeeeeeee'
+  const differentOrgId = '77777777-7777-4777-b777-7777777777ff'
+  const differentAccreditationId = 'eeeeeeee-eeee-4eee-aeee-eeeeeeeeeeee'
 
   const stubPrn = {
     _id: prnId,

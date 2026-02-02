@@ -18,12 +18,8 @@ export const prnGetById = {
     tags: ['api'],
     validate: {
       params: Joi.object({
-        organisationId: Joi.string()
-          .pattern(/^[a-f0-9]{24}$/)
-          .required(),
-        accreditationId: Joi.string()
-          .pattern(/^[a-f0-9]{24}$/)
-          .required(),
+        organisationId: Joi.string().uuid().required(),
+        accreditationId: Joi.string().uuid().required(),
         prnId: Joi.string().uuid().required()
       })
     }
