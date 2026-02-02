@@ -121,14 +121,13 @@ const markCommandAsFailed = async (
   summaryLogsRepository,
   logger
 ) => {
-  switch (commandType) {
-    case SUMMARY_LOG_COMMAND.VALIDATE:
-      await markAsValidationFailed(summaryLogId, summaryLogsRepository, logger)
-      break
-
-    case SUMMARY_LOG_COMMAND.SUBMIT:
-      await markAsSubmissionFailed(summaryLogId, summaryLogsRepository, logger)
-      break
+  if (commandType === SUMMARY_LOG_COMMAND.VALIDATE) {
+    await markAsValidationFailed(summaryLogId, summaryLogsRepository, logger)
+  }
+  // Separate if rather than else-if: createMessageHandler validates command
+  // type before calling this function, so both conditions are independent
+  if (commandType === SUMMARY_LOG_COMMAND.SUBMIT) {
+    await markAsSubmissionFailed(summaryLogId, summaryLogsRepository, logger)
   }
 }
 
