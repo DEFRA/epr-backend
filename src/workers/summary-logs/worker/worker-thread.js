@@ -1,6 +1,6 @@
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { validateSummaryLog } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
@@ -15,23 +15,6 @@ import { createWasteBalancesRepository } from '#repositories/waste-balances/mong
 import { config } from '#root/config.js'
 
 patchTlsSecureContext()
-
-const handleValidateCommand = async ({
-  summaryLogId,
-  summaryLogsRepository,
-  organisationsRepository,
-  wasteRecordsRepository,
-  summaryLogExtractor
-}) => {
-  const validateSummaryLog = createSummaryLogsValidator({
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    summaryLogExtractor
-  })
-
-  await validateSummaryLog(summaryLogId)
-}
 
 const handleSubmitCommand = async ({
   summaryLogId,
@@ -102,8 +85,7 @@ export default async function summaryLogsWorkerThread(command) {
       // Dispatch to appropriate handler based on command type
       switch (command.command) {
         case SUMMARY_LOG_COMMAND.VALIDATE:
-          await handleValidateCommand({
-            summaryLogId: command.summaryLogId,
+          await validateSummaryLog(command.summaryLogId, {
             summaryLogsRepository,
             organisationsRepository,
             wasteRecordsRepository,

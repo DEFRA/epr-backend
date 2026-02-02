@@ -1,6 +1,6 @@
 import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { validateSummaryLog } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
@@ -58,7 +58,6 @@ describe('summaryLogsWorkerThread', () => {
   let mockWasteRecordsRepository
   let mockWasteBalancesRepository
   let mockSummaryLogExtractor
-  let mockSummaryLogsValidator
   let mockSyncFromSummaryLog
 
   let summaryLogId
@@ -102,8 +101,6 @@ describe('summaryLogsWorkerThread', () => {
       extract: vi.fn()
     }
 
-    mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
-
     mockSyncFromSummaryLog = vi
       .fn()
       .mockResolvedValue({ created: 0, updated: 0 })
@@ -128,9 +125,7 @@ describe('summaryLogsWorkerThread', () => {
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
       mockSummaryLogExtractor
     )
-    vi.mocked(createSummaryLogsValidator).mockReturnValue(
-      mockSummaryLogsValidator
-    )
+    vi.mocked(validateSummaryLog).mockResolvedValue(undefined)
     vi.mocked(syncFromSummaryLog).mockReturnValue(mockSyncFromSummaryLog)
   })
 
@@ -207,27 +202,18 @@ describe('summaryLogsWorkerThread', () => {
     )
   })
 
-  it('should create summary logs validator', async () => {
+  it('should call validateSummaryLog with correct arguments', async () => {
     await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
 
-    expect(createSummaryLogsValidator).toHaveBeenCalledWith({
+    expect(validateSummaryLog).toHaveBeenCalledWith(summaryLogId, {
       summaryLogsRepository: mockSummaryLogsRepository,
       organisationsRepository: mockOrganisationsRepository,
       wasteRecordsRepository: mockWasteRecordsRepository,
       summaryLogExtractor: mockSummaryLogExtractor
     })
-  })
-
-  it('should call validator as expected', async () => {
-    await summaryLogsWorkerThread({
-      command: 'validate',
-      summaryLogId
-    })
-
-    expect(mockSummaryLogsValidator).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should destroy S3 client once worker completes', async () => {
@@ -249,7 +235,7 @@ describe('summaryLogsWorkerThread', () => {
   })
 
   it('should destroy S3 client and close mongo client even if worker fails', async () => {
-    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
+    vi.mocked(validateSummaryLog).mockRejectedValue(new Error('Worker failed'))
 
     await expect(
       summaryLogsWorkerThread({
