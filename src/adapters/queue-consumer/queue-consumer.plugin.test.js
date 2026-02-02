@@ -12,12 +12,10 @@ vi.mock('./consumer.js')
 
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createS3Client } = await import('#common/helpers/s3/s3-client.js')
-const { createUploadsRepository } = await import(
-  '#adapters/repositories/uploads/cdp-uploader.js'
-)
-const { createSummaryLogExtractor } = await import(
-  '#application/summary-logs/extractor.js'
-)
+const { createUploadsRepository } =
+  await import('#adapters/repositories/uploads/cdp-uploader.js')
+const { createSummaryLogExtractor } =
+  await import('#application/summary-logs/extractor.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
 
 describe('commandQueueConsumerPlugin', () => {
@@ -79,7 +77,9 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.name).toBe('command-queue-consumer')
     expect(commandQueueConsumerPlugin.version).toBe('1.0.0')
     expect(commandQueueConsumerPlugin.dependencies).toContain('mongodb')
-    expect(commandQueueConsumerPlugin.dependencies).toContain('summaryLogsRepository')
+    expect(commandQueueConsumerPlugin.dependencies).toContain(
+      'summaryLogsRepository'
+    )
     expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
   })
 
@@ -125,13 +125,19 @@ describe('commandQueueConsumerPlugin', () => {
     it('registers start event handler', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
-      expect(server.events.on).toHaveBeenCalledWith('start', expect.any(Function))
+      expect(server.events.on).toHaveBeenCalledWith(
+        'start',
+        expect.any(Function)
+      )
     })
 
     it('registers stop event handler', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
-      expect(server.events.on).toHaveBeenCalledWith('stop', expect.any(Function))
+      expect(server.events.on).toHaveBeenCalledWith(
+        'stop',
+        expect.any(Function)
+      )
     })
   })
 

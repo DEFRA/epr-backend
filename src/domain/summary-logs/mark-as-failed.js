@@ -16,7 +16,11 @@ import {
  * @param {object} logger
  * @returns {Promise<void>}
  */
-export const markAsValidationFailed = async (summaryLogId, repository, logger) => {
+export const markAsValidationFailed = async (
+  summaryLogId,
+  repository,
+  logger
+) => {
   try {
     const result = await repository.findById(summaryLogId)
 
@@ -57,7 +61,11 @@ export const markAsValidationFailed = async (summaryLogId, repository, logger) =
  * @param {object} logger
  * @returns {Promise<void>}
  */
-export const markAsSubmissionFailed = async (summaryLogId, repository, logger) => {
+export const markAsSubmissionFailed = async (
+  summaryLogId,
+  repository,
+  logger
+) => {
   try {
     const result = await repository.findById(summaryLogId)
 

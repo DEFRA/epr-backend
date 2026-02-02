@@ -14,15 +14,12 @@ vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
 
-const { createSummaryLogsValidator } = await import(
-  '#application/summary-logs/validate.js'
-)
-const { syncFromSummaryLog } = await import(
-  '#application/waste-records/sync-from-summary-log.js'
-)
-const { summaryLogMetrics } = await import(
-  '#common/helpers/metrics/summary-logs.js'
-)
+const { createSummaryLogsValidator } =
+  await import('#application/summary-logs/validate.js')
+const { syncFromSummaryLog } =
+  await import('#application/waste-records/sync-from-summary-log.js')
+const { summaryLogMetrics } =
+  await import('#common/helpers/metrics/summary-logs.js')
 
 describe('createCommandQueueConsumer', () => {
   let sqsClient
@@ -40,7 +37,9 @@ describe('createCommandQueueConsumer', () => {
     eventHandlers = {}
 
     sqsClient = {
-      send: vi.fn().mockResolvedValue({ QueueUrl: 'http://localhost:4566/queue/test-queue' })
+      send: vi.fn().mockResolvedValue({
+        QueueUrl: 'http://localhost:4566/queue/test-queue'
+      })
     }
 
     logger = {
@@ -70,7 +69,9 @@ describe('createCommandQueueConsumer', () => {
 
     vi.mocked(Consumer.create).mockReturnValue(mockConsumer)
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
-    vi.mocked(syncFromSummaryLog).mockReturnValue(vi.fn().mockResolvedValue({ created: 0, updated: 0 }))
+    vi.mocked(syncFromSummaryLog).mockReturnValue(
+      vi.fn().mockResolvedValue({ created: 0, updated: 0 })
+    )
     vi.mocked(summaryLogMetrics).timedSubmission = vi.fn((_, fn) => fn())
     vi.mocked(summaryLogMetrics).recordWasteRecordsCreated = vi.fn()
     vi.mocked(summaryLogMetrics).recordWasteRecordsUpdated = vi.fn()
@@ -98,7 +99,9 @@ describe('createCommandQueueConsumer', () => {
     it('looks up queue URL by name', async () => {
       await createConsumer()
 
-      expect(sqsClient.send).toHaveBeenCalledWith(expect.any(GetQueueUrlCommand))
+      expect(sqsClient.send).toHaveBeenCalledWith(
+        expect.any(GetQueueUrlCommand)
+      )
     })
 
     it('logs resolved queue URL', async () => {
@@ -117,7 +120,9 @@ describe('createCommandQueueConsumer', () => {
     it('throws if queue not found', async () => {
       sqsClient.send.mockResolvedValue({ QueueUrl: undefined })
 
-      await expect(createConsumer()).rejects.toThrow('Queue not found: test-queue')
+      await expect(createConsumer()).rejects.toThrow(
+        'Queue not found: test-queue'
+      )
     })
   })
 
@@ -141,13 +146,19 @@ describe('createCommandQueueConsumer', () => {
     it('attaches error handler', async () => {
       await createConsumer()
 
-      expect(mockConsumer.on).toHaveBeenCalledWith('error', expect.any(Function))
+      expect(mockConsumer.on).toHaveBeenCalledWith(
+        'error',
+        expect.any(Function)
+      )
     })
 
     it('attaches processing_error handler', async () => {
       await createConsumer()
 
-      expect(mockConsumer.on).toHaveBeenCalledWith('processing_error', expect.any(Function))
+      expect(mockConsumer.on).toHaveBeenCalledWith(
+        'processing_error',
+        expect.any(Function)
+      )
     })
   })
 
@@ -276,7 +287,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('marks as validation_failed when validate command fails', async () => {
-        const mockValidator = vi.fn().mockRejectedValue(new Error('Validation failed'))
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new Error('Validation failed'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
         summaryLogsRepository.findById.mockResolvedValue({
@@ -301,7 +314,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('logs warning when summary log not found during failure handling', async () => {
-        const mockValidator = vi.fn().mockRejectedValue(new Error('Validation failed'))
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new Error('Validation failed'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
         summaryLogsRepository.findById.mockResolvedValue(null)
@@ -320,7 +335,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('skips marking as failed if not in processing status', async () => {
-        const mockValidator = vi.fn().mockRejectedValue(new Error('Validation failed'))
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new Error('Validation failed'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
         summaryLogsRepository.findById.mockResolvedValue({
@@ -339,7 +356,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('logs error when marking as failed fails', async () => {
-        const mockValidator = vi.fn().mockRejectedValue(new Error('Validation failed'))
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new Error('Validation failed'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
         summaryLogsRepository.findById.mockResolvedValue({
@@ -401,7 +420,9 @@ describe('createCommandQueueConsumer', () => {
       it('records metrics during submission', async () => {
         const mockSync = vi.fn().mockResolvedValue({ created: 5, updated: 3 })
         vi.mocked(syncFromSummaryLog).mockReturnValue(mockSync)
-        vi.mocked(summaryLogMetrics).timedSubmission.mockImplementation((_, fn) => fn())
+        vi.mocked(summaryLogMetrics).timedSubmission.mockImplementation(
+          (_, fn) => fn()
+        )
 
         const message = {
           MessageId: 'msg-123',
@@ -462,7 +483,9 @@ describe('createCommandQueueConsumer', () => {
 
       it('marks as submission_failed when submit command fails', async () => {
         const syncError = new Error('Sync failed')
-        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(syncError)
+        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+          syncError
+        )
 
         summaryLogsRepository.findById.mockResolvedValue({
           version: 1,
@@ -487,7 +510,9 @@ describe('createCommandQueueConsumer', () => {
 
       it('skips marking as submission_failed if not in submitting status', async () => {
         const syncError = new Error('Sync failed')
-        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(syncError)
+        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+          syncError
+        )
 
         summaryLogsRepository.findById
           .mockResolvedValueOnce({
@@ -511,7 +536,9 @@ describe('createCommandQueueConsumer', () => {
 
       it('logs error when marking as submission_failed fails', async () => {
         const syncError = new Error('Sync failed')
-        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(syncError)
+        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+          syncError
+        )
 
         const updateError = new Error('Database error')
         summaryLogsRepository.findById.mockResolvedValue({
