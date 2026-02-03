@@ -32,7 +32,14 @@ async function issuePrnWithRetry(repository, updateParams, prnParams) {
     const prnNumber = generatePrnNumber({ ...prnParams, suffix })
 
     try {
-      return await repository.updateStatus({ ...updateParams, prnNumber })
+      const result = await repository.updateStatus({
+        ...updateParams,
+        prnNumber
+      })
+      if (!result) {
+        throw new Error('Failed to update PRN status')
+      }
+      return result
     } catch (error) {
       if (error instanceof PrnNumberConflictError) {
         continue

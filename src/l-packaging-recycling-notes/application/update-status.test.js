@@ -380,6 +380,33 @@ describe('updatePrnStatus', () => {
     ).rejects.toThrow('Failed to update PRN status')
   })
 
+  it('throws error when update returns null during PRN issuing', async () => {
+    const prnRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        issuedByOrganisation: 'org-123',
+        issuedByAccreditation: 'acc-456',
+        nation: 'england',
+        isExport: false,
+        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+      }),
+      updateStatus: vi.fn().mockResolvedValue(null)
+    }
+    const wasteBalancesRepository = {}
+
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        userId: 'user-789'
+      })
+    ).rejects.toThrow('Failed to update PRN status')
+  })
+
   describe('metrics', () => {
     it('records status transition metric on successful update', async () => {
       const prnRepository = {
