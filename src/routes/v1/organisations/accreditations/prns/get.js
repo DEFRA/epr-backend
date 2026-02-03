@@ -12,6 +12,7 @@ export const prnsGet = {
   method: 'GET',
   path: prnsGetPath,
   options: {
+    app: { usesRefactoredDefraIdAuth: true },
     auth: {
       scope: [ROLES.standardUser]
     },
