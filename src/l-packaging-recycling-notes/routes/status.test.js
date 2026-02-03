@@ -788,6 +788,28 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         wasteBalancesRepository.deductAvailableBalanceForPrnCreation
       ).not.toHaveBeenCalled()
     })
+
+    it('returns 500 when waste balance deduction fails', async () => {
+      const balance = createMockWasteBalance()
+      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
+        balance
+      )
+      wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockRejectedValueOnce(
+        new Error('Database write failed')
+      )
+      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        createMockPrn()
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}/status`,
+        ...asStandardUser({ linkedOrgId: organisationId }),
+        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
   })
 
   describe('when feature flag is disabled', () => {
