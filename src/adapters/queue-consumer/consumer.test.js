@@ -1,5 +1,4 @@
 import { Consumer } from 'sqs-consumer'
-import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
@@ -9,7 +8,6 @@ import {
 } from '#common/enums/index.js'
 
 vi.mock('sqs-consumer')
-vi.mock('@aws-sdk/client-sqs')
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
@@ -36,11 +34,7 @@ describe('createCommandQueueConsumer', () => {
   beforeEach(() => {
     eventHandlers = {}
 
-    sqsClient = {
-      send: vi.fn().mockResolvedValue({
-        QueueUrl: 'http://localhost:4566/queue/test-queue'
-      })
-    }
+    sqsClient = {}
 
     logger = {
       info: vi.fn(),
@@ -85,7 +79,7 @@ describe('createCommandQueueConsumer', () => {
   const createConsumer = () =>
     createCommandQueueConsumer({
       sqsClient,
-      queueName: 'test-queue',
+      queueUrl: 'http://localhost:4566/000000000000/test-queue',
       logger,
       summaryLogsRepository,
       organisationsRepository,
@@ -95,56 +89,25 @@ describe('createCommandQueueConsumer', () => {
       featureFlags
     })
 
-  describe('queue URL resolution', () => {
-    it('looks up queue URL by name', async () => {
-      await createConsumer()
-
-      expect(sqsClient.send).toHaveBeenCalledWith(
-        expect.any(GetQueueUrlCommand)
-      )
-    })
-
-    it('logs resolved queue URL', async () => {
-      await createConsumer()
-
-      expect(logger.info).toHaveBeenCalledWith({
-        message: 'Resolved queue URL: http://localhost:4566/queue/test-queue',
-        queueName: 'test-queue',
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.CONNECTION_SUCCESS
-        }
-      })
-    })
-
-    it('throws if queue not found', async () => {
-      sqsClient.send.mockResolvedValue({ QueueUrl: undefined })
-
-      await expect(createConsumer()).rejects.toThrow(
-        'Queue not found: test-queue'
-      )
-    })
-  })
-
   describe('consumer creation', () => {
-    it('creates consumer with queue URL and SQS client', async () => {
-      await createConsumer()
+    it('creates consumer with queue URL and SQS client', () => {
+      createConsumer()
 
       expect(Consumer.create).toHaveBeenCalledWith({
-        queueUrl: 'http://localhost:4566/queue/test-queue',
+        queueUrl: 'http://localhost:4566/000000000000/test-queue',
         sqs: sqsClient,
         handleMessage: expect.any(Function)
       })
     })
 
-    it('returns the consumer instance', async () => {
-      const result = await createConsumer()
+    it('returns the consumer instance', () => {
+      const result = createConsumer()
 
       expect(result).toBe(mockConsumer)
     })
 
-    it('attaches error handler', async () => {
-      await createConsumer()
+    it('attaches error handler', () => {
+      createConsumer()
 
       expect(mockConsumer.on).toHaveBeenCalledWith(
         'error',
@@ -152,8 +115,8 @@ describe('createCommandQueueConsumer', () => {
       )
     })
 
-    it('attaches processing_error handler', async () => {
-      await createConsumer()
+    it('attaches processing_error handler', () => {
+      createConsumer()
 
       expect(mockConsumer.on).toHaveBeenCalledWith(
         'processing_error',
@@ -163,8 +126,8 @@ describe('createCommandQueueConsumer', () => {
   })
 
   describe('error event handlers', () => {
-    it('logs error on error event', async () => {
-      await createConsumer()
+    it('logs error on error event', () => {
+      createConsumer()
       const error = new Error('Connection failed')
 
       eventHandlers.error(error)
@@ -179,8 +142,8 @@ describe('createCommandQueueConsumer', () => {
       })
     })
 
-    it('logs error on processing_error event', async () => {
-      await createConsumer()
+    it('logs error on processing_error event', () => {
+      createConsumer()
       const error = new Error('Processing failed')
 
       eventHandlers.processing_error(error)
@@ -199,8 +162,8 @@ describe('createCommandQueueConsumer', () => {
   describe('message handling', () => {
     let handleMessage
 
-    beforeEach(async () => {
-      await createConsumer()
+    beforeEach(() => {
+      createConsumer()
       handleMessage = Consumer.create.mock.calls[0][0].handleMessage
     })
 

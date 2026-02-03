@@ -398,11 +398,11 @@ const baseConfig = {
       default: 'http://127.0.0.1:4566',
       env: 'COMMAND_QUEUE_SQS_ENDPOINT'
     },
-    queueName: {
-      doc: 'SQS queue name for backend commands',
+    url: {
+      doc: 'SQS queue URL for backend commands',
       format: String,
-      default: 'epr_backend_commands',
-      env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
+      default: 'http://127.0.0.1:4566/000000000000/epr_backend_commands',
+      env: 'COMMAND_QUEUE_SQS_URL'
     }
   },
   publicRegister: {

@@ -23,7 +23,7 @@ export const commandQueueConsumerPlugin = {
 
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
-    const queueName = config.get('commandQueue.queueName')
+    const queueUrl = config.get('commandQueue.url')
 
     const sqsClient = createSqsClient({
       region: awsRegion,
@@ -49,19 +49,19 @@ export const commandQueueConsumerPlugin = {
     let consumer = null
 
     // Start consuming on server start
-    server.events.on('start', async () => {
+    server.events.on('start', () => {
       server.logger.info({
         message: 'Starting SQS command queue consumer',
-        queueName,
+        queueUrl,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
       })
 
-      consumer = await createCommandQueueConsumer({
+      consumer = createCommandQueueConsumer({
         sqsClient,
-        queueName,
+        queueUrl,
         logger: server.logger,
         summaryLogsRepository,
         organisationsRepository,

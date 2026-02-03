@@ -43,7 +43,7 @@ describe('commandQueueConsumerPlugin', () => {
         const values = {
           awsRegion: 'eu-west-2',
           'commandQueue.endpoint': 'http://localhost:4566',
-          'commandQueue.queueName': 'test-queue'
+          'commandQueue.url': 'http://localhost:4566/000000000000/test-queue'
         }
         return values[key]
       })
@@ -54,7 +54,7 @@ describe('commandQueueConsumerPlugin', () => {
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
     vi.mocked(createSummaryLogExtractor).mockReturnValue({})
-    vi.mocked(createCommandQueueConsumer).mockResolvedValue(mockConsumer)
+    vi.mocked(createCommandQueueConsumer).mockReturnValue(mockConsumer)
   })
 
   afterEach(() => {
@@ -118,11 +118,11 @@ describe('commandQueueConsumerPlugin', () => {
       const startHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'start'
       )[1]
-      await startHandler()
+      startHandler()
 
       expect(createCommandQueueConsumer).toHaveBeenCalledWith({
         sqsClient: mockSqsClient,
-        queueName: 'test-queue',
+        queueUrl: 'http://localhost:4566/000000000000/test-queue',
         logger: server.logger,
         summaryLogsRepository: server.app.summaryLogsRepository,
         organisationsRepository: server.app.organisationsRepository,
@@ -133,7 +133,7 @@ describe('commandQueueConsumerPlugin', () => {
       })
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer',
-        queueName: 'test-queue',
+        queueUrl: 'http://localhost:4566/000000000000/test-queue',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -151,7 +151,7 @@ describe('commandQueueConsumerPlugin', () => {
       const startHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'start'
       )[1]
-      await startHandler()
+      startHandler()
 
       const stopHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'stop'
