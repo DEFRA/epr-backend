@@ -1,10 +1,26 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-import { updatePrnStatus } from './update-status.js'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from '#l-packaging-recycling-notes/repository/mongodb.js'
 
+const mockRecordStatusTransition = vi.fn()
+
+vi.mock('./metrics.js', () => ({
+  prnMetrics: {
+    recordStatusTransition: (...args) => mockRecordStatusTransition(...args)
+  }
+}))
+
+const { updatePrnStatus } = await import('./update-status.js')
+
 describe('updatePrnStatus', () => {
+  beforeEach(() => {
+    mockRecordStatusTransition.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
   it('throws not found when PRN does not exist', async () => {
     const prnRepository = {
       findById: vi.fn().mockResolvedValue(null)
@@ -389,5 +405,129 @@ describe('updatePrnStatus', () => {
         userId: 'user-789'
       })
     ).rejects.toThrow('Failed to update PRN status')
+  })
+
+  describe('metrics', () => {
+    it('records status transition metric on successful update', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 100,
+          material: 'paper',
+          isExport: false,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue(null)
+      }
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        userId: 'user-789'
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        fromStatus: PRN_STATUS.DRAFT,
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        material: 'paper',
+        isExport: false
+      })
+    })
+
+    it('records status transition metric when issuing PRN', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          nation: 'england',
+          material: 'plastic',
+          isExport: true,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          prnNumber: 'PE26000001',
+          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+      }
+      const wasteBalancesRepository = {}
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        userId: 'user-789'
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        material: 'plastic',
+        isExport: true
+      })
+    })
+
+    it('does not record metric when PRN not found', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue(null)
+      }
+      const wasteBalancesRepository = {}
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('PRN not found')
+
+      expect(mockRecordStatusTransition).not.toHaveBeenCalled()
+    })
+
+    it('does not record metric when status transition is invalid', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        })
+      }
+      const wasteBalancesRepository = {}
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('Invalid status transition')
+
+      expect(mockRecordStatusTransition).not.toHaveBeenCalled()
+    })
   })
 })
