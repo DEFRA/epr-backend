@@ -43,7 +43,7 @@ describe('commandQueueConsumerPlugin', () => {
         const values = {
           awsRegion: 'eu-west-2',
           'commandQueue.endpoint': 'http://localhost:4566',
-          'commandQueue.url': 'http://localhost:4566/000000000000/test-queue'
+          'commandQueue.queueName': 'test-queue'
         }
         return values[key]
       })
@@ -54,7 +54,7 @@ describe('commandQueueConsumerPlugin', () => {
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
     vi.mocked(createSummaryLogExtractor).mockReturnValue({})
-    vi.mocked(createCommandQueueConsumer).mockReturnValue(mockConsumer)
+    vi.mocked(createCommandQueueConsumer).mockResolvedValue(mockConsumer)
   })
 
   afterEach(() => {
@@ -73,22 +73,22 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
   })
 
-  it('skips setup when queue URL is not configured', async () => {
-    const configWithoutUrl = {
+  it('skips setup when queue name is not configured', async () => {
+    const configWithoutName = {
       get: vi.fn((key) => {
         const values = {
-          'commandQueue.url': null
+          'commandQueue.queueName': null
         }
         return values[key]
       })
     }
 
     await commandQueueConsumerPlugin.register(server, {
-      config: configWithoutUrl
+      config: configWithoutName
     })
 
     expect(server.logger.info).toHaveBeenCalledWith({
-      message: 'SQS command queue consumer disabled (no queue URL configured)'
+      message: 'SQS command queue consumer disabled (no queue name configured)'
     })
     expect(createSqsClient).not.toHaveBeenCalled()
     expect(server.events.on).not.toHaveBeenCalled()
@@ -139,11 +139,11 @@ describe('commandQueueConsumerPlugin', () => {
       const startHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'start'
       )[1]
-      startHandler()
+      await startHandler()
 
       expect(createCommandQueueConsumer).toHaveBeenCalledWith({
         sqsClient: mockSqsClient,
-        queueUrl: 'http://localhost:4566/000000000000/test-queue',
+        queueName: 'test-queue',
         logger: server.logger,
         summaryLogsRepository: server.app.summaryLogsRepository,
         organisationsRepository: server.app.organisationsRepository,
@@ -154,7 +154,7 @@ describe('commandQueueConsumerPlugin', () => {
       })
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer',
-        queueUrl: 'http://localhost:4566/000000000000/test-queue',
+        queueName: 'test-queue',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -172,7 +172,7 @@ describe('commandQueueConsumerPlugin', () => {
       const startHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'start'
       )[1]
-      startHandler()
+      await startHandler()
 
       const stopHandler = server.events.on.mock.calls.find(
         (call) => call[0] === 'stop'
