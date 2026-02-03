@@ -17,7 +17,6 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
-import { createConfigFeatureFlags } from '#feature-flags/feature-flags.config.js'
 
 import { config } from '#root/config.js'
 
@@ -68,13 +67,11 @@ const handleSubmitCommand = async ({
     summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 
   // Sync waste records from summary log
-  const featureFlags = createConfigFeatureFlags(config)
   const sync = syncFromSummaryLog({
     extractor: summaryLogExtractor,
     wasteRecordRepository: wasteRecordsRepository,
     wasteBalancesRepository,
-    organisationsRepository,
-    featureFlags
+    organisationsRepository
   })
 
   const { created, updated } = await summaryLogMetrics.timedSubmission(
