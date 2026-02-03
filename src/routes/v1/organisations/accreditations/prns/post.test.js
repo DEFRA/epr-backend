@@ -17,8 +17,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
   const validPayload = {
     tonnage: 100,
-    notes: 'REF: 101010',
-    issuedTo: {
+    issuerNotes: 'REF: 101010',
+    issuedToOrganisation: {
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
@@ -68,8 +68,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(result.prnNumber).toBe('')
       expect(result.accreditationYear).toBe(0)
       expect(result.tonnage).toBe(100)
-      expect(result.notes).toBe('REF: 101010')
-      expect(result.issuedTo).toEqual({
+      expect(result.issuerNotes).toBe('REF: 101010')
+      expect(result.issuedToOrganisation).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'Sauce Makers Limited',
         tradingName: 'Awesome Sauce'
@@ -99,8 +99,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(stored.organisationId).toBe(organisationId)
       expect(stored.accreditationId).toBe(accreditationId)
       expect(stored.tonnage).toBe(100)
-      expect(stored.notes).toBe('REF: 101010')
-      expect(stored.issuedTo).toEqual({
+      expect(stored.issuerNotes).toBe('REF: 101010')
+      expect(stored.issuedToOrganisation).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'Sauce Makers Limited',
         tradingName: 'Awesome Sauce'
@@ -117,13 +117,13 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
     it('accepts payload without optional tradingName', async () => {
       const { tradingName: _tradingName, ...issuedToWithoutTradingName } =
-        validPayload.issuedTo
+        validPayload.issuedToOrganisation
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuedTo: issuedToWithoutTradingName
+          issuedToOrganisation: issuedToWithoutTradingName
         },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
@@ -132,7 +132,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
       const result = JSON.parse(response.payload)
 
-      expect(result.issuedTo).toEqual({
+      expect(result.issuedToOrganisation).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'Sauce Makers Limited'
       })
@@ -244,13 +244,13 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects notes longer than 200 characters', async () => {
+    it('rejects issuerNotes longer than 200 characters', async () => {
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          notes: 'a'.repeat(notesMaxLen + 1)
+          issuerNotes: 'a'.repeat(notesMaxLen + 1)
         },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
@@ -258,8 +258,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects missing notes', async () => {
-      const { notes: _notes, ...payloadWithoutNotes } = validPayload
+    it('rejects missing issuerNotes', async () => {
+      const { issuerNotes: _notes, ...payloadWithoutNotes } = validPayload
       const response = await server.inject({
         method: 'POST',
         url: basePath,
@@ -270,8 +270,9 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects missing issuedTo', async () => {
-      const { issuedTo: _issuedTo, ...payloadWithoutOrg } = validPayload
+    it('rejects missing issuedToOrganisation', async () => {
+      const { issuedToOrganisation: _issuedTo, ...payloadWithoutOrg } =
+        validPayload
       const response = await server.inject({
         method: 'POST',
         url: basePath,
@@ -282,14 +283,14 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects invalid issuedTo.id format', async () => {
+    it('rejects invalid issuedToOrganisation.id format', async () => {
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuedTo: {
-            ...validPayload.issuedTo,
+          issuedToOrganisation: {
+            ...validPayload.issuedToOrganisation,
             id: 'not-a-uuid'
           }
         },
@@ -299,14 +300,15 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects missing issuedTo.name', async () => {
-      const { name: _name, ...orgWithoutName } = validPayload.issuedTo
+    it('rejects missing issuedToOrganisation.name', async () => {
+      const { name: _name, ...orgWithoutName } =
+        validPayload.issuedToOrganisation
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuedTo: orgWithoutName
+          issuedToOrganisation: orgWithoutName
         },
         ...asStandardUser({ linkedOrgId: organisationId })
       })

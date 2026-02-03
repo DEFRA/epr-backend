@@ -42,8 +42,8 @@
  * @property {string} [prnNumber]
  * @property {number} accreditationYear - 4 digit year: YYYY
  * @property {number} tonnage
- * @property {string} notes
- * @property {PrnIssuedToOrganisation} issuedTo
+ * @property {string} issuerNotes
+ * @property {PrnIssuedToOrganisation} issuedToOrganisation
  * @property {string} [authorisedAt] - ISO8601
  * @property {PrnUserSummaryWithPosition} [authorisedBy]
  * @property {PrnStatusVersion[]} status
@@ -52,8 +52,8 @@
 /**
  * @typedef {Object} CreateNewPRNRequest
  * @property {number} tonnage
- * @property {string} notes
- * @property {PrnIssuedToOrganisation} issuedTo
+ * @property {string} issuerNotes
+ * @property {PrnIssuedToOrganisation} issuedToOrganisation
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

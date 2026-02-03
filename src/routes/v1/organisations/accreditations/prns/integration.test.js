@@ -14,8 +14,8 @@ describe('PRN endpoints - Integration', () => {
 
   const validPayload = {
     tonnage: 100,
-    notes: 'REF: 101010',
-    issuedTo: {
+    issuerNotes: 'REF: 101010',
+    issuedToOrganisation: {
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
@@ -54,8 +54,8 @@ describe('PRN endpoints - Integration', () => {
     expect(created.organisationId).toBe(organisationId)
     expect(created.accreditationId).toBe(accreditationId)
     expect(created.tonnage).toBe(100)
-    expect(created.notes).toBe('REF: 101010')
-    expect(created.issuedTo).toEqual({
+    expect(created.issuerNotes).toBe('REF: 101010')
+    expect(created.issuedToOrganisation).toEqual({
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
@@ -77,8 +77,8 @@ describe('PRN endpoints - Integration', () => {
     expect(retrieved.organisationId).toBe(organisationId)
     expect(retrieved.accreditationId).toBe(accreditationId)
     expect(retrieved.tonnage).toBe(100)
-    expect(retrieved.notes).toBe('REF: 101010')
-    expect(retrieved.issuedTo).toEqual({
+    expect(retrieved.issuerNotes).toBe('REF: 101010')
+    expect(retrieved.issuedToOrganisation).toEqual({
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'

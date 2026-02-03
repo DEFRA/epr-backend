@@ -8,7 +8,7 @@ import { PRN_STATUS } from '#domain/packaging-recycling-notes/status.js'
 
 export const prnPostPath =
   '/v1/organisations/{organisationId}/accreditations/{accreditationId}/prns'
-export const notesMaxLen = 200
+export const issuerNotesMaxLen = 200
 export const prnPost = {
   method: 'POST',
   path: prnPostPath,
@@ -24,8 +24,8 @@ export const prnPost = {
       }),
       payload: Joi.object({
         tonnage: Joi.number().integer().positive().required(),
-        notes: Joi.string().max(notesMaxLen).required(),
-        issuedTo: Joi.object({
+        issuerNotes: Joi.string().max(issuerNotesMaxLen).required(),
+        issuedToOrganisation: Joi.object({
           id: Joi.string().uuid().required(),
           name: Joi.string().required(),
           tradingName: Joi.string().optional()
@@ -43,7 +43,7 @@ export const prnPost = {
     h
   ) => {
     const { organisationId, accreditationId } = params
-    const { tonnage, notes, issuedTo } =
+    const { tonnage, issuerNotes, issuedToOrganisation } =
       /** @type {import('#domain/packaging-recycling-notes/model.js').CreateNewPRNRequest} */ (
         payload
       )
@@ -68,8 +68,8 @@ export const prnPost = {
       prnNumber: '',
       accreditationYear: 0, // TODO: determine source for accreditationYear
       tonnage,
-      notes,
-      issuedTo,
+      issuerNotes,
+      issuedToOrganisation,
       status: [
         {
           status: PRN_STATUS.DRAFT,

@@ -28,8 +28,8 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
     prnNumber: '',
     accreditationYear: 0,
     tonnage: 9,
-    notes: 'REF: 101010',
-    issuedTo: {
+    issuerNotes: 'REF: 101010',
+    issuedToOrganisation: {
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'ComplyPak Ltd'
     },
@@ -81,8 +81,8 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       expect(result.prnNumber).toBe('')
       expect(result.accreditationYear).toBe(0)
       expect(result.tonnage).toBe(9)
-      expect(result.notes).toBe('REF: 101010')
-      expect(result.issuedTo).toEqual({
+      expect(result.issuerNotes).toBe('REF: 101010')
+      expect(result.issuedToOrganisation).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'ComplyPak Ltd'
       })
