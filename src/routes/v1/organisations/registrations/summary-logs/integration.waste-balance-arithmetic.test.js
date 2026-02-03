@@ -249,7 +249,6 @@ describe('Waste balance arithmetic integration tests', () => {
 
     const featureFlags = createInMemoryFeatureFlags({
       summaryLogs: true,
-      calculateWasteBalanceOnImport: true,
       lumpyPackagingRecyclingNotes: true
     })
 
@@ -257,8 +256,7 @@ describe('Waste balance arithmetic integration tests', () => {
       extractor: dynamicExtractor,
       wasteRecordRepository: wasteRecordsRepository,
       wasteBalancesRepository,
-      organisationsRepository,
-      featureFlags
+      organisationsRepository
     })
 
     const submitterWorker = {
