@@ -1,8 +1,10 @@
+/** @typedef {import('#domain/packaging-recycling-notes/model.js').PackagingRecyclingNote} PackagingRecyclingNote */
+
 /**
  * @typedef {Object} PackagingRecyclingNotesRepository
- * @property {(id: string, prn: Object) => Promise<void>} insert
- * @property {(id: string) => Promise<Object>} findById
- * @property {(accreditationId: string) => Promise<Array<Object>>} findByAccreditationId
+ * @property {(id: string, prn: PackagingRecyclingNote) => Promise<void>} insert
+ * @property {(id: string) => Promise<PackagingRecyclingNote | null>} findById
+ * @property {(accreditationId: string) => Promise<Array<PackagingRecyclingNote>>} findByAccreditationId
  */
 
 /**

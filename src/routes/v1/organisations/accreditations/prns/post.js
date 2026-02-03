@@ -8,7 +8,7 @@ import { PRN_STATUS } from '#domain/packaging-recycling-notes/status.js'
 
 export const prnPostPath =
   '/v1/organisations/{organisationId}/accreditations/{accreditationId}/prns'
-export const issuerNotesMaxLen = 200
+export const notesMaxLen = 200
 export const prnPost = {
   method: 'POST',
   path: prnPostPath,
@@ -24,12 +24,12 @@ export const prnPost = {
       }),
       payload: Joi.object({
         tonnage: Joi.number().integer().positive().required(),
-        issuedToOrganisation: Joi.object({
+        notes: Joi.string().max(notesMaxLen).required(),
+        issuedTo: Joi.object({
           id: Joi.string().uuid().required(),
           name: Joi.string().required(),
           tradingName: Joi.string().optional()
-        }).required(),
-        issuerNotes: Joi.string().max(issuerNotesMaxLen).required()
+        }).required()
       })
     }
   },
@@ -43,21 +43,40 @@ export const prnPost = {
     h
   ) => {
     const { organisationId, accreditationId } = params
-    // @ts-ignore
-    const { tonnage, issuedToOrganisation, issuerNotes } = payload
+    const { tonnage, notes, issuedTo } =
+      /** @type {import('#domain/packaging-recycling-notes/model.js').CreateNewPRNRequest} */ (
+        payload
+      )
 
     const id = crypto.randomUUID()
+    const createdAt = new Date().toISOString()
 
+    // TODO: populate from auth credentials once name is available
+    const createdBy = { id: '', name: '' }
+
+    /** @type {import('#domain/packaging-recycling-notes/model.js').PackagingRecyclingNote} */
     const prn = {
+      id,
       organisationId,
+      registrationId: '', // TODO: determine source for registrationId
       accreditationId,
-      tonnageValue: tonnage,
-      issuedToOrganisation,
-      issuerNotes,
-      createdAt: new Date(),
-      status: {
-        currentStatus: PRN_STATUS.DRAFT
-      }
+      schemaVersion: 1,
+      createdAt,
+      createdBy,
+      isExport: false, // TODO: determine source for isExport
+      isDecemberWaste: false, // TODO: determine source for isDecemberWaste
+      prnNumber: '',
+      accreditationYear: 0, // TODO: determine source for accreditationYear
+      tonnage,
+      notes,
+      issuedTo,
+      status: [
+        {
+          status: PRN_STATUS.DRAFT,
+          createdAt,
+          createdBy
+        }
+      ]
     }
 
     await packagingRecyclingNotesRepository.insert(id, prn)

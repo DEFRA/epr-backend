@@ -17,16 +17,29 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
 
   const stubPrn = {
     _id: prnId,
-    prnNumber: 'PRN-2026-00001',
-    accreditationId,
     organisationId,
-    issuedToOrganisation: {
-      id: 'producer-001',
+    registrationId: '',
+    accreditationId,
+    schemaVersion: 1,
+    createdAt: '2026-01-21T10:30:00.000Z',
+    createdBy: { id: '', name: '' },
+    isExport: false,
+    isDecemberWaste: false,
+    prnNumber: '',
+    accreditationYear: 0,
+    tonnage: 9,
+    notes: 'REF: 101010',
+    issuedTo: {
+      id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'ComplyPak Ltd'
     },
-    tonnageValue: 9,
-    createdAt: new Date('2026-01-21T10:30:00Z'),
-    status: { currentStatus: 'awaiting_authorisation' }
+    status: [
+      {
+        status: 'draft',
+        createdAt: '2026-01-21T10:30:00.000Z',
+        createdBy: { id: '', name: '' }
+      }
+    ]
   }
 
   const basePath = `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns/${prnId}`
@@ -58,16 +71,28 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const result = JSON.parse(response.payload)
 
       expect(result._id).toBe(prnId)
-      expect(result.prnNumber).toBe('PRN-2026-00001')
       expect(result.organisationId).toBe(organisationId)
       expect(result.accreditationId).toBe(accreditationId)
-      expect(result.issuedToOrganisation).toEqual({
-        id: 'producer-001',
+      expect(result.schemaVersion).toBe(1)
+      expect(result.createdAt).toBe('2026-01-21T10:30:00.000Z')
+      expect(result.createdBy).toEqual({ id: '', name: '' })
+      expect(result.isExport).toBe(false)
+      expect(result.isDecemberWaste).toBe(false)
+      expect(result.prnNumber).toBe('')
+      expect(result.accreditationYear).toBe(0)
+      expect(result.tonnage).toBe(9)
+      expect(result.notes).toBe('REF: 101010')
+      expect(result.issuedTo).toEqual({
+        id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'ComplyPak Ltd'
       })
-      expect(result.tonnageValue).toBe(9)
-      expect(result.createdAt).toBe('2026-01-21T10:30:00.000Z')
-      expect(result.status).toEqual({ currentStatus: 'awaiting_authorisation' })
+      expect(result.status).toEqual([
+        {
+          status: 'draft',
+          createdAt: '2026-01-21T10:30:00.000Z',
+          createdBy: { id: '', name: '' }
+        }
+      ])
     })
   })
 

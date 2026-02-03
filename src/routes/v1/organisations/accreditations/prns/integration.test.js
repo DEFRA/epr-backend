@@ -14,12 +14,12 @@ describe('PRN endpoints - Integration', () => {
 
   const validPayload = {
     tonnage: 100,
-    issuedToOrganisation: {
+    notes: 'REF: 101010',
+    issuedTo: {
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
-    },
-    issuerNotes: 'REF: 101010'
+    }
   }
 
   let server
@@ -53,14 +53,16 @@ describe('PRN endpoints - Integration', () => {
     expect(created.id).toBeDefined()
     expect(created.organisationId).toBe(organisationId)
     expect(created.accreditationId).toBe(accreditationId)
-    expect(created.tonnageValue).toBe(100)
-    expect(created.issuerNotes).toBe('REF: 101010')
-    expect(created.issuedToOrganisation).toEqual({
+    expect(created.tonnage).toBe(100)
+    expect(created.notes).toBe('REF: 101010')
+    expect(created.issuedTo).toEqual({
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
     })
-    expect(created.status.currentStatus).toBe('draft')
+    expect(created.status).toEqual([
+      expect.objectContaining({ status: 'draft' })
+    ])
 
     const getResponse = await server.inject({
       method: 'GET',
@@ -74,14 +76,16 @@ describe('PRN endpoints - Integration', () => {
 
     expect(retrieved.organisationId).toBe(organisationId)
     expect(retrieved.accreditationId).toBe(accreditationId)
-    expect(retrieved.tonnageValue).toBe(100)
-    expect(retrieved.issuerNotes).toBe('REF: 101010')
-    expect(retrieved.issuedToOrganisation).toEqual({
+    expect(retrieved.tonnage).toBe(100)
+    expect(retrieved.notes).toBe('REF: 101010')
+    expect(retrieved.issuedTo).toEqual({
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
     })
-    expect(retrieved.status.currentStatus).toBe('draft')
+    expect(retrieved.status).toEqual([
+      expect.objectContaining({ status: 'draft' })
+    ])
   })
 
   it('GET by id returns 404 for non-existent PRN', async () => {

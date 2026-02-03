@@ -5,7 +5,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#repositories/p
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { asStandardUser } from '#test/inject-auth.js'
-import { issuerNotesMaxLen } from './post'
+import { notesMaxLen } from './post'
 
 describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns', () => {
   setupAuthContext()
@@ -17,12 +17,12 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
   const validPayload = {
     tonnage: 100,
-    issuedToOrganisation: {
+    notes: 'REF: 101010',
+    issuedTo: {
       id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
       name: 'Sauce Makers Limited',
       tradingName: 'Awesome Sauce'
-    },
-    issuerNotes: 'REF: 101010'
+    }
   }
 
   describe('with valid authentication and payload', () => {
@@ -44,7 +44,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       })
     })
 
-    it('creates a PRN and returns 201', async () => {
+    it('creates a PRN and returns 201 with all fields', async () => {
       const response = await server.inject({
         method: 'POST',
         url: basePath,
@@ -58,15 +58,29 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
       expect(result.id).toBeDefined()
       expect(result.organisationId).toBe(organisationId)
+      expect(result.registrationId).toBe('')
       expect(result.accreditationId).toBe(accreditationId)
-      expect(result.tonnageValue).toBe(100)
-      expect(result.issuerNotes).toBe('REF: 101010')
-      expect(result.issuedToOrganisation).toEqual({
+      expect(result.schemaVersion).toBe(1)
+      expect(result.createdAt).toBeDefined()
+      expect(result.createdBy).toEqual({ id: '', name: '' })
+      expect(result.isExport).toBe(false)
+      expect(result.isDecemberWaste).toBe(false)
+      expect(result.prnNumber).toBe('')
+      expect(result.accreditationYear).toBe(0)
+      expect(result.tonnage).toBe(100)
+      expect(result.notes).toBe('REF: 101010')
+      expect(result.issuedTo).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'Sauce Makers Limited',
         tradingName: 'Awesome Sauce'
       })
-      expect(result.status.currentStatus).toBe('draft')
+      expect(result.status).toEqual([
+        {
+          status: 'draft',
+          createdAt: result.createdAt,
+          createdBy: { id: '', name: '' }
+        }
+      ])
     })
 
     it('persists the PRN in the repository', async () => {
@@ -84,26 +98,32 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(stored).not.toBeNull()
       expect(stored.organisationId).toBe(organisationId)
       expect(stored.accreditationId).toBe(accreditationId)
-      expect(stored.tonnageValue).toBe(100)
-      expect(stored.issuerNotes).toBe('REF: 101010')
-      expect(stored.issuedToOrganisation).toEqual({
+      expect(stored.tonnage).toBe(100)
+      expect(stored.notes).toBe('REF: 101010')
+      expect(stored.issuedTo).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'Sauce Makers Limited',
         tradingName: 'Awesome Sauce'
       })
-      expect(stored.status.currentStatus).toBe('draft')
-      expect(stored.createdAt).toBeInstanceOf(Date)
+      expect(stored.status).toEqual([
+        expect.objectContaining({ status: 'draft' })
+      ])
+      expect(stored.schemaVersion).toBe(1)
+      expect(stored.isExport).toBe(false)
+      expect(stored.isDecemberWaste).toBe(false)
+      expect(stored.accreditationYear).toBe(0)
+      expect(stored.prnNumber).toBe('')
     })
 
     it('accepts payload without optional tradingName', async () => {
-      const { tradingName: _tradingName, ...orgWithoutTradingName } =
-        validPayload.issuedToOrganisation
+      const { tradingName: _tradingName, ...issuedToWithoutTradingName } =
+        validPayload.issuedTo
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuedToOrganisation: orgWithoutTradingName
+          issuedTo: issuedToWithoutTradingName
         },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
@@ -112,7 +132,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
       const result = JSON.parse(response.payload)
 
-      expect(result.issuedToOrganisation).toEqual({
+      expect(result.issuedTo).toEqual({
         id: 'ebdfb7d9-3d55-4788-ad33-dbd7c885ef20',
         name: 'Sauce Makers Limited'
       })
@@ -224,13 +244,13 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects issuerNotes longer than 200 characters', async () => {
+    it('rejects notes longer than 200 characters', async () => {
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuerNotes: 'a'.repeat(issuerNotesMaxLen + 1)
+          notes: 'a'.repeat(notesMaxLen + 1)
         },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
@@ -238,8 +258,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects missing issuerNotes', async () => {
-      const { issuerNotes: _issuerNotes, ...payloadWithoutNotes } = validPayload
+    it('rejects missing notes', async () => {
+      const { notes: _notes, ...payloadWithoutNotes } = validPayload
       const response = await server.inject({
         method: 'POST',
         url: basePath,
@@ -250,11 +270,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects missing issuedToOrganisation', async () => {
-      const {
-        issuedToOrganisation: _issuedToOrganisation,
-        ...payloadWithoutOrg
-      } = validPayload
+    it('rejects missing issuedTo', async () => {
+      const { issuedTo: _issuedTo, ...payloadWithoutOrg } = validPayload
       const response = await server.inject({
         method: 'POST',
         url: basePath,
@@ -265,14 +282,14 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects invalid issuedToOrganisation.id format', async () => {
+    it('rejects invalid issuedTo.id format', async () => {
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuedToOrganisation: {
-            ...validPayload.issuedToOrganisation,
+          issuedTo: {
+            ...validPayload.issuedTo,
             id: 'not-a-uuid'
           }
         },
@@ -282,15 +299,14 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('rejects missing issuedToOrganisation.name', async () => {
-      const { name: _name, ...orgWithoutName } =
-        validPayload.issuedToOrganisation
+    it('rejects missing issuedTo.name', async () => {
+      const { name: _name, ...orgWithoutName } = validPayload.issuedTo
       const response = await server.inject({
         method: 'POST',
         url: basePath,
         payload: {
           ...validPayload,
-          issuedToOrganisation: orgWithoutName
+          issuedTo: orgWithoutName
         },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
