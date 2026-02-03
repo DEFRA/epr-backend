@@ -16,6 +16,56 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  */
 
 /**
+ * Issues a PRN with retry logic for PRN number collisions.
+ * Tries without suffix first, then A-Z on collision.
+ *
+ * @param {PackagingRecyclingNotesRepository} repository
+ * @param {Object} updateParams - Parameters for updateStatus
+ * @param {Object} prnParams - Parameters for PRN number generation
+ * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
+ */
+async function issuePrnWithRetry(repository, updateParams, prnParams) {
+  const suffixAttempts = [undefined, ...COLLISION_SUFFIXES]
+
+  for (const suffix of suffixAttempts) {
+    const prnNumber = generatePrnNumber({ ...prnParams, suffix })
+
+    try {
+      return await repository.updateStatus({ ...updateParams, prnNumber })
+    } catch (error) {
+      if (error instanceof PrnNumberConflictError) {
+        continue
+      }
+      throw error
+    }
+  }
+
+  throw new Error('Unable to generate unique PRN number after all retries')
+}
+
+/**
+ * Deducts available waste balance when creating a PRN.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  }
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -58,61 +108,35 @@ export async function updatePrnStatus({
     )
   }
 
-  // Deduct available waste balance when creating PRN (transitioning to awaiting_authorisation)
+  // Deduct available waste balance when creating PRN
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    const balance =
-      await wasteBalancesRepository.findByAccreditationId(accreditationId)
-    if (balance) {
-      await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
-        accreditationId,
-        organisationId,
-        prnId: id,
-        tonnage: prn.tonnage,
-        userId
-      })
-    }
+    await deductWasteBalanceIfNeeded(wasteBalancesRepository, {
+      accreditationId,
+      organisationId,
+      prnId: id,
+      tonnage: prn.tonnage,
+      userId
+    })
   }
 
   const now = new Date()
-  const isIssuing = newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-
-  if (isIssuing) {
-    // Issue with collision retry logic
-    const suffixAttempts = [undefined, ...COLLISION_SUFFIXES]
-
-    for (const suffix of suffixAttempts) {
-      const prnNumber = generatePrnNumber({
-        nation: prn.nation,
-        isExport: prn.isExport,
-        suffix
-      })
-
-      try {
-        return await prnRepository.updateStatus({
-          id,
-          status: newStatus,
-          updatedBy: userId,
-          updatedAt: now,
-          prnNumber
-        })
-      } catch (error) {
-        if (error instanceof PrnNumberConflictError) {
-          continue
-        }
-        throw error
-      }
-    }
-
-    throw new Error('Unable to generate unique PRN number after all retries')
-  }
-
-  // Simple status update without PRN number
-  const updatedPrn = await prnRepository.updateStatus({
+  const updateParams = {
     id,
     status: newStatus,
     updatedBy: userId,
     updatedAt: now
-  })
+  }
+
+  // Issue with PRN number generation and collision retry
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    return await issuePrnWithRetry(prnRepository, updateParams, {
+      nation: prn.nation,
+      isExport: prn.isExport
+    })
+  }
+
+  // Simple status update without PRN number
+  const updatedPrn = await prnRepository.updateStatus(updateParams)
 
   if (!updatedPrn) {
     throw Boom.badImplementation('Failed to update PRN status')
