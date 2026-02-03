@@ -18,12 +18,13 @@ import { packagingRecyclingNotesListPath } from './get.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-001'
+const accreditationId = 'acc-789'
 
 const mockPrns = [
   {
     id: 'prn-001',
     issuedByOrganisation: organisationId,
-    issuedByRegistration: registrationId,
+    issuedByAccreditation: accreditationId,
     issuedToOrganisation: 'Acme Packaging Ltd',
     tonnage: 50,
     material: 'glass',
@@ -33,7 +34,7 @@ const mockPrns = [
   {
     id: 'prn-002',
     issuedByOrganisation: organisationId,
-    issuedByRegistration: registrationId,
+    issuedByAccreditation: accreditationId,
     issuedToOrganisation: 'BigCo Waste Solutions',
     tonnage: 120,
     material: 'glass',
@@ -46,7 +47,7 @@ const createInMemoryPackagingRecyclingNotesRepository = (prns = []) => {
   return () => ({
     create: vi.fn(),
     findById: vi.fn(),
-    findByRegistration: vi.fn(async () => prns)
+    findByAccreditation: vi.fn(async () => prns)
   })
 }
 
@@ -86,14 +87,14 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       it('returns 200 with list of PRNs for registration', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByRegistration
-        ).toHaveBeenCalledWith(registrationId)
+          lumpyPackagingRecyclingNotesRepository.findByAccreditation
+        ).toHaveBeenCalledWith(accreditationId)
 
         const payload = JSON.parse(response.payload)
         expect(payload).toHaveLength(2)
@@ -108,13 +109,13 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       })
 
       it('returns empty array when no PRNs exist', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByRegistration.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findByAccreditation.mockResolvedValueOnce(
           []
         )
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -129,7 +130,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       it('returns 401 when not authenticated', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -139,13 +140,13 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        lumpyPackagingRecyclingNotesRepository.findByRegistration.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
           Boom.default.notFound('Registration not found')
         )
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -153,13 +154,13 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByRegistration.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -192,7 +193,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     it('returns 404 when feature flag is disabled', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 

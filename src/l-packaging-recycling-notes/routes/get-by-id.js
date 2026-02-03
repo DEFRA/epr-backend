@@ -11,7 +11,7 @@ import {
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNoteByIdPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes/{prnId}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/l-packaging-recycling-notes/{prnId}'
 
 /**
  * Build response from PRN
@@ -44,7 +44,7 @@ export const packagingRecyclingNoteById = {
    */
   handler: async (request, h) => {
     const { lumpyPackagingRecyclingNotesRepository, params, logger } = request
-    const { organisationId, registrationId, prnId } = params
+    const { organisationId, accreditationId, prnId } = params
 
     try {
       const prn = await lumpyPackagingRecyclingNotesRepository.findById(prnId)
@@ -53,10 +53,10 @@ export const packagingRecyclingNoteById = {
         throw Boom.notFound('PRN not found')
       }
 
-      // Verify the PRN belongs to the requested organisation and registration
+      // Verify the PRN belongs to the requested organisation and accreditation
       if (
         prn.issuedByOrganisation !== organisationId ||
-        prn.issuedByRegistration !== registrationId
+        prn.issuedByAccreditation !== accreditationId
       ) {
         throw Boom.notFound('PRN not found')
       }

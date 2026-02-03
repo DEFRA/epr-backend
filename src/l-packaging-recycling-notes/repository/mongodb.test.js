@@ -30,7 +30,7 @@ describe('MongoDB packaging recycling notes repository', () => {
     expect(repository).toEqual({
       findById: expect.any(Function),
       create: expect.any(Function),
-      findByRegistration: expect.any(Function),
+      findByAccreditation: expect.any(Function),
       updateStatus: expect.any(Function)
     })
 
@@ -70,21 +70,21 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
   })
 
-  describe('findByRegistration', () => {
-    it('returns PRNs for the specified registration', async () => {
+  describe('findByAccreditation', () => {
+    it('returns PRNs for the specified accreditation', async () => {
       const hexId1 = '123456789012345678901234'
       const hexId2 = '234567890123456789012345'
-      const registrationId = 'reg-001'
+      const accreditationId = 'acc-001'
 
       const prns = [
         {
           _id: { toHexString: () => hexId1 },
-          issuedByRegistration: registrationId,
+          issuedByAccreditation: accreditationId,
           tonnage: 100
         },
         {
           _id: { toHexString: () => hexId2 },
-          issuedByRegistration: registrationId,
+          issuedByAccreditation: accreditationId,
           tonnage: 200
         }
       ]
@@ -106,7 +106,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       const factory = await createPackagingRecyclingNotesRepository(dbMock)
       const repository = factory()
 
-      const result = await repository.findByRegistration(registrationId)
+      const result = await repository.findByAccreditation(accreditationId)
 
       expect(result).toEqual([
         { ...prns[0], id: hexId1 },
@@ -134,7 +134,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       const factory = await createPackagingRecyclingNotesRepository(dbMock)
       const repository = factory()
 
-      const result = await repository.findByRegistration('reg-nonexistent')
+      const result = await repository.findByAccreditation('acc-nonexistent')
 
       expect(result).toEqual([])
     })
