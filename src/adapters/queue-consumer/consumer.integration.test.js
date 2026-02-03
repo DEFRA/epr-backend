@@ -1,0 +1,298 @@
+import { describe, expect, vi, beforeEach } from 'vitest'
+import {
+  SendMessageCommand,
+  GetQueueUrlCommand,
+  ReceiveMessageCommand
+} from '@aws-sdk/client-sqs'
+import { it } from '#vite/fixtures/sqs.js'
+import { createCommandQueueConsumer } from './consumer.js'
+
+/**
+ * Stops the consumer and waits for it to fully stop.
+ * @param {import('sqs-consumer').Consumer} consumer
+ * @returns {Promise<void>}
+ */
+const stopConsumerAndWait = (consumer) => {
+  return new Promise((resolve) => {
+    if (!consumer.status.isRunning) {
+      resolve()
+      return
+    }
+    consumer.on('stopped', resolve)
+    consumer.stop()
+  })
+}
+
+/**
+ * Integration tests for SQS command queue consumer.
+ *
+ * These tests verify the consumer's interaction with a real SQS queue
+ * (via LocalStack). They focus on:
+ * - Queue connection and URL resolution
+ * - Message receipt and deletion
+ * - Error handling at the SQS level
+ *
+ * The consumer's internal message handling (validation, submission) is
+ * tested in the unit tests. Here we inject mock dependencies to isolate
+ * the SQS behaviour.
+ */
+describe('SQS command queue consumer integration', () => {
+  let logger
+  let summaryLogsRepository
+  let organisationsRepository
+  let wasteRecordsRepository
+  let wasteBalancesRepository
+  let summaryLogExtractor
+
+  beforeEach(() => {
+    logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn()
+    }
+
+    summaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue(undefined)
+    }
+
+    organisationsRepository = {}
+    wasteRecordsRepository = {}
+    wasteBalancesRepository = {}
+
+    // Mock extractor - not used in these tests but required by consumer
+    summaryLogExtractor = {}
+  })
+
+  describe('queue connection', () => {
+    it(
+      'connects to queue and resolves URL by name',
+      { timeout: 15000 },
+      async ({ sqsClient }) => {
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        expect(consumer).toBeDefined()
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Resolved queue URL')
+          })
+        )
+      }
+    )
+
+    it(
+      'throws when queue does not exist',
+      { timeout: 15000 },
+      async ({ sqsClient }) => {
+        await expect(
+          createCommandQueueConsumer({
+            sqsClient,
+            queueName: 'nonexistent-queue',
+            logger,
+            summaryLogsRepository,
+            organisationsRepository,
+            wasteRecordsRepository,
+            wasteBalancesRepository,
+            summaryLogExtractor
+          })
+        ).rejects.toThrow()
+      }
+    )
+  })
+
+  describe('message lifecycle', () => {
+    it(
+      'receives message from queue',
+      { timeout: 15000 },
+      async ({ sqsClient }) => {
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        // Send a message directly to queue with unique ID
+        const uniqueId = `receive-test-${Date.now()}`
+        const testMessage = {
+          command: 'validate',
+          summaryLogId: uniqueId
+        }
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify(testMessage)
+          })
+        )
+
+        // Create consumer - it will process the message
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        // Wait for processing log
+        await vi.waitFor(
+          () => {
+            expect(logger.info).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining(
+                  `Processing command: validate for summaryLogId=${uniqueId}`
+                )
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+      }
+    )
+
+    it(
+      'deletes invalid message after logging error',
+      { timeout: 15000 },
+      async ({ sqsClient }) => {
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        // Send invalid message (missing summaryLogId)
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              badField: 'test'
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        await vi.waitFor(
+          () => {
+            expect(logger.error).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining('Invalid command message')
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        // Message should be deleted (invalid messages are not retried)
+        const response = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+
+        expect(response.Messages ?? []).toHaveLength(0)
+      }
+    )
+
+    it(
+      'rejects unknown command type via Joi validation',
+      { timeout: 15000 },
+      async ({ sqsClient }) => {
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        // Send message with unknown command
+        const uniqueId = `unknown-${Date.now()}`
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'unknown',
+              summaryLogId: uniqueId
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        await vi.waitFor(
+          () => {
+            expect(logger.error).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining(
+                  'must be one of [validate, submit]'
+                )
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+      }
+    )
+  })
+
+  describe('graceful shutdown', () => {
+    it(
+      'stops polling when stop is called',
+      { timeout: 15000 },
+      async ({ sqsClient }) => {
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+        expect(consumer.status.isRunning).toBe(true)
+
+        await stopConsumerAndWait(consumer)
+        expect(consumer.status.isRunning).toBe(false)
+      }
+    )
+  })
+})
