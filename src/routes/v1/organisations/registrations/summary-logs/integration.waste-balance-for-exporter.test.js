@@ -22,7 +22,7 @@ import {
   performSubmission as sharedPerformSubmission,
   createWasteBalanceMeta,
   createSummaryLogSubmitterWorker
-} from './integration.waste-balance.helpers.js'
+} from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests (Exporter)', () => {
   let organisationId
@@ -61,16 +61,11 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     const performSubmission = (env, logId, fId, fName, data) =>
-      sharedPerformSubmission(
-        env,
-        organisationId,
-        registrationId,
-        logId,
-        fId,
-        fName,
-        data,
+      sharedPerformSubmission(env, organisationId, registrationId, logId, fId, {
+        filename: fName,
+        uploadData: data,
         sharedMeta
-      )
+      })
 
     const setupIntegrationEnvironment = async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -415,9 +410,13 @@ describe('Submission and placeholder tests (Exporter)', () => {
         registrationId,
         'summary-missing-fields',
         'file-missing-fields',
-        'waste-data-missing.xlsx',
-        createUploadData([{ rowId: 4001, exportTonnage: 'not-a-number' }]),
-        sharedMeta
+        {
+          filename: 'waste-data-missing.xlsx',
+          uploadData: createUploadData([
+            { rowId: 4001, exportTonnage: 'not-a-number' }
+          ]),
+          sharedMeta
+        }
       )
 
       const summaryLog = JSON.parse(response.payload)

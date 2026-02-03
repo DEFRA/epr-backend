@@ -20,15 +20,14 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
-import { asStandardUser } from './integration-test-helpers.js'
-
 import {
+  asStandardUser,
   EXPORTER_HEADERS,
   createExporterRowValues,
   performSubmission,
   createWasteBalanceMeta,
   createSummaryLogSubmitterWorker
-} from './integration.waste-balance.helpers.js'
+} from './integration-test-helpers.js'
 
 /**
  * Integration tests for waste balance arithmetic across multiple operations.
@@ -241,9 +240,11 @@ describe('Waste balance arithmetic integration tests', () => {
       env.registrationId,
       summaryLogId,
       fileId,
-      filename,
-      uploadData,
-      sharedMeta
+      {
+        filename,
+        uploadData,
+        sharedMeta
+      }
     )
 
   const createPrn = async (env, tonnage) => {

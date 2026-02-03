@@ -22,7 +22,7 @@ import {
   performSubmission as sharedPerformSubmission,
   createWasteBalanceMeta,
   createSummaryLogSubmitterWorker
-} from './integration.waste-balance.helpers.js'
+} from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests (Reprocessor Input)', () => {
   let organisationId
@@ -69,16 +69,11 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     const performSubmission = (env, logId, fId, fName, data) =>
-      sharedPerformSubmission(
-        env,
-        organisationId,
-        registrationId,
-        logId,
-        fId,
-        fName,
-        data,
+      sharedPerformSubmission(env, organisationId, registrationId, logId, fId, {
+        filename: fName,
+        uploadData: data,
         sharedMeta
-      )
+      })
 
     const setupIntegrationEnvironment = async () => {
       const mockLogger = {
