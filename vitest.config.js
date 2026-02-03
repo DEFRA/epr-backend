@@ -31,6 +31,7 @@ export default defineConfig({
         'src/domain/**/model.js',
         'src/domain/**/port.js',
         'src/index.js',
+        'src/**/integration.*.helpers.js',
         'src/repositories/**/port.js',
         'src/test/**'
       ],
