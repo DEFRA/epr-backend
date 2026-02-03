@@ -103,7 +103,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           isDecemberWaste: true,
           authorisedAt: '2026-01-16T14:30:00.000Z',
           authorisedBy: { name: 'John Smith', position: 'Director' },
-          wasteProcessingType: 'reprocessor'
+          wasteProcessingType: 'reprocessor',
+          processToBeUsed: 'R5'
         })
       })
 
@@ -144,7 +145,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           isDecemberWaste: false,
           authorisedAt: null,
           authorisedBy: null,
-          wasteProcessingType: null
+          wasteProcessingType: null,
+          processToBeUsed: 'R5'
         })
       })
 
@@ -185,7 +187,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           isDecemberWaste: false,
           authorisedAt: null,
           authorisedBy: null,
-          wasteProcessingType: null
+          wasteProcessingType: null,
+          processToBeUsed: 'R5'
         })
       })
     })
