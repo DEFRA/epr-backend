@@ -8,7 +8,10 @@ import { registerRepository } from '#plugins/register-repository.js'
 export const lumpyPackagingRecyclingNotesRepositoryPlugin = {
   name: 'lumpyPackagingRecyclingNotesRepository',
   dependencies: ['mongodb'],
-  register: async (server, options) => {
+  register: async (
+    /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
+    options
+  ) => {
     const db = options?.db ?? server.db
     const createRepository = await createPackagingRecyclingNotesRepository(db)
 
