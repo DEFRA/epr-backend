@@ -76,10 +76,12 @@ const findById = async (db, id) => {
     return null
   }
 
-  return {
-    ...doc,
-    id: doc._id.toHexString()
-  }
+  return /** @type {import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    /** @type {unknown} */ ({
+      ...doc,
+      id: doc._id.toHexString()
+    })
+  )
 }
 
 /**
@@ -111,10 +113,14 @@ const findByAccreditation = async (db, accreditationId) => {
     .find({ issuedByAccreditation: accreditationId })
     .toArray()
 
-  return docs.map((doc) => ({
-    ...doc,
-    id: doc._id.toHexString()
-  }))
+  return /** @type {import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} */ (
+    /** @type {unknown} */ (
+      docs.map((doc) => ({
+        ...doc,
+        id: doc._id.toHexString()
+      }))
+    )
+  )
 }
 
 /**
@@ -140,9 +146,9 @@ const updateStatus = async (
       { _id: ObjectId.createFromHexString(id) },
       {
         $set: setFields,
-        $push: {
+        $push: /** @type {*} */ ({
           'status.history': { status, updatedAt, updatedBy }
-        }
+        })
       },
       { returnDocument: 'after' }
     )
@@ -151,10 +157,12 @@ const updateStatus = async (
       return null
     }
 
-    return {
-      ...result,
-      id: result._id.toHexString()
-    }
+    return /** @type {import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+      /** @type {unknown} */ ({
+        ...result,
+        id: result._id.toHexString()
+      })
+    )
   } catch (error) {
     if (
       error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE &&

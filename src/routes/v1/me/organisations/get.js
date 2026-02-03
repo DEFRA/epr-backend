@@ -43,7 +43,7 @@ export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 /**
  * Extract loggable organization info (org name and current flag)
  *
- * @param {import('#common/helpers/auth/roles/helpers.js').DefraIdRelationship[]} orgInfo - Array of organization relationships
+ * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} orgInfo - Array of organization relationships
  * @returns {Array<{defraIdOrgName: string | undefined, isCurrent: boolean}>} Array of objects with defraIdOrgName and isCurrent
  */
 const getLoggableOrgInfo = (orgInfo) =>
