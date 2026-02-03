@@ -207,5 +207,68 @@ describe('MongoDB packaging recycling notes repository', () => {
 
       expect(droppedIndex).toBeNull()
     })
+
+    it('handles ns does not exist error when collection is new', async () => {
+      const nsDoesNotExistError = new Error(
+        'ns does not exist: epr-backend.l-packaging-recycling-notes'
+      )
+      nsDoesNotExistError.codeName = 'NamespaceNotFound'
+
+      const createdIndexes = []
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => {
+          throw nsDoesNotExistError
+        },
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(mockDb)
+
+      const prnNumberIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'prnNumber'
+      )
+      expect(prnNumberIndex).toBeDefined()
+      expect(prnNumberIndex.options.unique).toBe(true)
+      expect(prnNumberIndex.options.sparse).toBe(true)
+    })
+
+    it('re-throws non-NamespaceNotFound errors from indexes()', async () => {
+      const connectionError = new Error('Connection refused')
+      connectionError.codeName = 'NetworkError'
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => {
+          throw connectionError
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await expect(
+        createPackagingRecyclingNotesRepository(mockDb)
+      ).rejects.toThrow('Connection refused')
+    })
   })
 })
