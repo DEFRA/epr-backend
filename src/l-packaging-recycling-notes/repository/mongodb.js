@@ -23,11 +23,20 @@ export class PrnNumberConflictError extends Error {
  */
 async function ensurePrnNumberIndex(collection) {
   const indexName = 'prnNumber'
-  const indexes = await collection.indexes()
-  const existingIndex = indexes.find((idx) => idx.name === indexName)
 
-  if (existingIndex && !existingIndex.unique) {
-    await collection.dropIndex(indexName)
+  try {
+    const indexes = await collection.indexes()
+    const existingIndex = indexes.find((idx) => idx.name === indexName)
+
+    if (existingIndex && !existingIndex.unique) {
+      await collection.dropIndex(indexName)
+    }
+  } catch (error) {
+    // NamespaceNotFound means the collection doesn't exist yet.
+    // This is fine - createIndex below will create the collection.
+    if (error.codeName !== 'NamespaceNotFound') {
+      throw error
+    }
   }
 
   await collection.createIndex(
