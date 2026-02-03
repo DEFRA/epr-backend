@@ -22,15 +22,6 @@ export const commandQueueConsumerPlugin = {
     const { config } = options
 
     const queueName = config.get('commandQueue.queueName')
-
-    if (!queueName) {
-      server.logger.info({
-        message:
-          'SQS command queue consumer disabled (no queue name configured)'
-      })
-      return
-    }
-
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
 
