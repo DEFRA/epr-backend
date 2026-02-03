@@ -14,8 +14,7 @@ export const commandQueueConsumerPlugin = {
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
-    'uploadsRepository',
-    'feature-flags'
+    'uploadsRepository'
   ],
 
   register: async (server, options) => {
@@ -36,8 +35,7 @@ export const commandQueueConsumerPlugin = {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      wasteBalancesRepository,
-      featureFlags
+      wasteBalancesRepository
     } = server.app
 
     const summaryLogExtractor = createSummaryLogExtractor({
@@ -67,8 +65,7 @@ export const commandQueueConsumerPlugin = {
         organisationsRepository,
         wasteRecordsRepository,
         wasteBalancesRepository,
-        summaryLogExtractor,
-        featureFlags
+        summaryLogExtractor
       })
 
       consumer.start()

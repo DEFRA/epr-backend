@@ -33,8 +33,7 @@ describe('commandQueueConsumerPlugin', () => {
         organisationsRepository: {},
         wasteRecordsRepository: {},
         wasteBalancesRepository: {},
-        uploadsRepository: {},
-        featureFlags: {}
+        uploadsRepository: {}
       }
     }
 
@@ -70,7 +69,9 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'uploadsRepository'
     )
-    expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
+    expect(commandQueueConsumerPlugin.dependencies).toContain(
+      'organisationsRepository'
+    )
   })
 
   describe('plugin registration', () => {
@@ -128,8 +129,7 @@ describe('commandQueueConsumerPlugin', () => {
         organisationsRepository: server.app.organisationsRepository,
         wasteRecordsRepository: server.app.wasteRecordsRepository,
         wasteBalancesRepository: server.app.wasteBalancesRepository,
-        summaryLogExtractor: expect.any(Object),
-        featureFlags: server.app.featureFlags
+        summaryLogExtractor: expect.any(Object)
       })
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer',
