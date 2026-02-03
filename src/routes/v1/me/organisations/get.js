@@ -1,5 +1,6 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -40,20 +41,40 @@ import { StatusCodes } from 'http-status-codes'
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 /**
+ * Extract loggable organization info (org name and current flag)
+ *
+ * @param {import('#common/helpers/auth/roles/helpers.js').DefraIdRelationship[]} orgInfo - Array of organization relationships
+ * @returns {Array<{defraIdOrgName: string | undefined, isCurrent: boolean}>} Array of objects with defraIdOrgName and isCurrent
+ */
+const getLoggableOrgInfo = (orgInfo) =>
+  orgInfo.map((org) => ({
+    defraIdOrgName: org.defraIdOrgName,
+    isCurrent: org.isCurrent
+  }))
+
+/**
  * Get current Defra ID details from token
  *
  * @param {*} auth
+ * @param {*} logger
  * @returns {DefraOrgSummary}
  */
-const getCurrentDetailsFromToken = (auth) => {
+const getCurrentDetailsFromToken = (auth, logger) => {
   const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
 
   const currentOrg = orgInfo.find((org) => org.isCurrent)
 
   // Token should always have a current organisation
-  /* istanbul ignore if -- defensive check, Defra ID tokens always contain org info */
   if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
-    throw new Error('Token missing current organisation information')
+    logger.warn({
+      message: 'User token missing organisation information',
+      relationshipsCount: orgInfo.length,
+      orgInfo: getLoggableOrgInfo(orgInfo)
+    })
+
+    throw Boom.forbidden(
+      'User is not associated with any organisation. Please contact help desk.'
+    )
   }
 
   return {
@@ -77,11 +98,11 @@ export const organisationsLinkedGetAll = {
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationsRepository, auth } = request
+    const { organisationsRepository, auth, logger } = request
 
     const { email } = auth.credentials
 
-    const current = getCurrentDetailsFromToken(auth)
+    const current = getCurrentDetailsFromToken(auth, logger)
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
       organisationsRepository.findByLinkedDefraOrgId(current.id),
