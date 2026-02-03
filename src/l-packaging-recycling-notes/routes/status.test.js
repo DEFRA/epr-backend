@@ -660,6 +660,158 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
   })
 
+  describe('waste balance deduction on PRN creation', () => {
+    let server
+    let lumpyPackagingRecyclingNotesRepository
+    let wasteBalancesRepository
+    const mockPrn = createMockPrn({ tonnage: 50.5 })
+
+    const createMockWasteBalance = (overrides = {}) => ({
+      id: 'balance-123',
+      organisationId,
+      accreditationId,
+      amount: 500,
+      availableAmount: 500,
+      transactions: [],
+      version: 1,
+      schemaVersion: 1,
+      ...overrides
+    })
+
+    beforeAll(async () => {
+      lumpyPackagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
+
+      wasteBalancesRepository = {
+        findByAccreditationId: vi.fn(),
+        findByAccreditationIds: vi.fn(),
+        deductAvailableBalanceForPrnCreation: vi.fn()
+      }
+
+      server = await createTestServer({
+        repositories: {
+          lumpyPackagingRecyclingNotesRepository: () =>
+            lumpyPackagingRecyclingNotesRepository,
+          wasteBalancesRepository: () => wasteBalancesRepository
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          lumpyPackagingRecyclingNotes: true
+        })
+      })
+
+      await server.initialize()
+    })
+
+    afterEach(() => {
+      vi.clearAllMocks()
+    })
+
+    afterAll(async () => {
+      await server.stop()
+    })
+
+    it('deducts tonnage from available balance when transitioning to awaiting_authorisation', async () => {
+      const balance = createMockWasteBalance()
+      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
+        balance
+      )
+      wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockResolvedValueOnce(
+        undefined
+      )
+      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        mockPrn
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}/status`,
+        ...asStandardUser({ linkedOrgId: organisationId }),
+        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(
+        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+      ).toHaveBeenCalledWith({
+        accreditationId,
+        organisationId,
+        prnId,
+        tonnage: 50.5,
+        userId: expect.any(String)
+      })
+    })
+
+    it('does not deduct balance for non-creation transitions', async () => {
+      const awaitingAuthPrn = createMockPrn({
+        status: {
+          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          history: [
+            {
+              status: PRN_STATUS.AWAITING_AUTHORISATION,
+              updatedAt: new Date()
+            }
+          ]
+        }
+      })
+
+      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        awaitingAuthPrn
+      )
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}/status`,
+        ...asStandardUser({ linkedOrgId: organisationId }),
+        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+
+      expect(
+        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+      ).not.toHaveBeenCalled()
+    })
+
+    it('proceeds with status update even when no waste balance exists', async () => {
+      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(null)
+      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        createMockPrn()
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}/status`,
+        ...asStandardUser({ linkedOrgId: organisationId }),
+        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(
+        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+      ).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 when waste balance deduction fails', async () => {
+      const balance = createMockWasteBalance()
+      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
+        balance
+      )
+      wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockRejectedValueOnce(
+        new Error('Database write failed')
+      )
+      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        createMockPrn()
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}/status`,
+        ...asStandardUser({ linkedOrgId: organisationId }),
+        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
+  })
+
   describe('when feature flag is disabled', () => {
     let server
 
