@@ -456,9 +456,8 @@ describe('GET /v1/me/organisations', () => {
 
     // Verify warning was logged with empty orgInfo array
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-      message: 'User token missing organisation information',
-      relationshipsCount: 0,
-      orgInfo: []
+      message:
+        'User token missing organisation information. relationshipsCount: 0, orgInfo: []'
     })
   })
 
@@ -504,18 +503,8 @@ describe('GET /v1/me/organisations', () => {
 
     // Verify warning was logged with org names
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-      message: 'User token missing organisation information',
-      relationshipsCount: 2,
-      orgInfo: [
-        {
-          defraIdOrgName: 'Company One',
-          isCurrent: false
-        },
-        {
-          defraIdOrgName: 'Company Two',
-          isCurrent: false
-        }
-      ]
+      message:
+        'User token missing organisation information. relationshipsCount: 2, orgInfo: [{"defraIdOrgName":"Company One","isCurrent":false},{"defraIdOrgName":"Company Two","isCurrent":false}]'
     })
   })
 
@@ -563,18 +552,8 @@ describe('GET /v1/me/organisations', () => {
 
     // Verify all relationships have isCurrent: false since currentRelationshipId doesn't match
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-      message: 'User token missing organisation information',
-      relationshipsCount: 2,
-      orgInfo: [
-        {
-          defraIdOrgName: 'Company One',
-          isCurrent: false
-        },
-        {
-          defraIdOrgName: 'Company Two',
-          isCurrent: false
-        }
-      ]
+      message:
+        'User token missing organisation information. relationshipsCount: 2, orgInfo: [{"defraIdOrgName":"Company One","isCurrent":false},{"defraIdOrgName":"Company Two","isCurrent":false}]'
     })
   })
 })
