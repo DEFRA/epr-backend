@@ -401,8 +401,7 @@ const baseConfig = {
     queueName: {
       doc: 'SQS queue name for backend commands',
       format: String,
-      nullable: true,
-      default: null,
+      default: 'epr_backend_commands',
       env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
     }
   },

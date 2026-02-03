@@ -73,27 +73,6 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
   })
 
-  it('skips setup when queue name is not configured', async () => {
-    const configWithoutName = {
-      get: vi.fn((key) => {
-        const values = {
-          'commandQueue.queueName': null
-        }
-        return values[key]
-      })
-    }
-
-    await commandQueueConsumerPlugin.register(server, {
-      config: configWithoutName
-    })
-
-    expect(server.logger.info).toHaveBeenCalledWith({
-      message: 'SQS command queue consumer disabled (no queue name configured)'
-    })
-    expect(createSqsClient).not.toHaveBeenCalled()
-    expect(server.events.on).not.toHaveBeenCalled()
-  })
-
   describe('plugin registration', () => {
     it('creates SQS client with correct config', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
