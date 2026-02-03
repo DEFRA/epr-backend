@@ -21,11 +21,12 @@ export const commandQueueConsumerPlugin = {
   register: async (server, options) => {
     const { config } = options
 
-    const queueUrl = config.get('commandQueue.url')
+    const queueName = config.get('commandQueue.queueName')
 
-    if (!queueUrl) {
+    if (!queueName) {
       server.logger.info({
-        message: 'SQS command queue consumer disabled (no queue URL configured)'
+        message:
+          'SQS command queue consumer disabled (no queue name configured)'
       })
       return
     }
@@ -57,19 +58,19 @@ export const commandQueueConsumerPlugin = {
     let consumer = null
 
     // Start consuming on server start
-    server.events.on('start', () => {
+    server.events.on('start', async () => {
       server.logger.info({
         message: 'Starting SQS command queue consumer',
-        queueUrl,
+        queueName,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
       })
 
-      consumer = createCommandQueueConsumer({
+      consumer = await createCommandQueueConsumer({
         sqsClient,
-        queueUrl,
+        queueName,
         logger: server.logger,
         summaryLogsRepository,
         organisationsRepository,

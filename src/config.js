@@ -398,12 +398,12 @@ const baseConfig = {
       default: 'http://127.0.0.1:4566',
       env: 'COMMAND_QUEUE_SQS_ENDPOINT'
     },
-    url: {
-      doc: 'SQS queue URL for backend commands',
+    queueName: {
+      doc: 'SQS queue name for backend commands',
       format: String,
       nullable: true,
       default: null,
-      env: 'COMMAND_QUEUE_SQS_URL'
+      env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
     }
   },
   publicRegister: {
