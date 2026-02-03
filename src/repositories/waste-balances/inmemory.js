@@ -1,5 +1,8 @@
 import { validateAccreditationId } from './validation.js'
-import { performUpdateWasteBalanceTransactions } from './helpers.js'
+import {
+  performUpdateWasteBalanceTransactions,
+  performDeductAvailableBalanceForPrnCreation
+} from './helpers.js'
 
 /**
  * Find a waste balance by accreditation ID.
@@ -86,6 +89,13 @@ export const createInMemoryWasteBalancesRepository = (
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage),
         request
+      })
+    },
+    deductAvailableBalanceForPrnCreation: async (deductParams) => {
+      return performDeductAvailableBalanceForPrnCreation({
+        deductParams,
+        findBalance: findBalance(wasteBalanceStorage),
+        saveBalance: saveBalance(wasteBalanceStorage)
       })
     },
     // Test-only method to access internal storage

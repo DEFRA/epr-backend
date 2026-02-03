@@ -22,5 +22,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isCreatePackagingRecyclingNotesEnabled() {
     return flags.createPackagingRecyclingNotes ?? false
+  },
+  isCreateLumpyPackagingRecyclingNotesEnabled() {
+    return flags.lumpyPackagingRecyclingNotes ?? false
   }
 })

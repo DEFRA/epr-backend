@@ -352,6 +352,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_CREATE_PACKAGING_RECYCLING_NOTES'
+    },
+    lumpyPackagingRecyclingNotes: {
+      doc: 'Feature Flag: Enable Lumpy Packaging Recycling Note creation (accelerated implementation)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_LUMPY_PACKAGING_RECYCLING_NOTES'
     }
   },
   formSubmissionOverrides: {

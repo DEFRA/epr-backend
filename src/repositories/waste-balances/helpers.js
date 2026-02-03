@@ -13,6 +13,10 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import {
+  WASTE_BALANCE_TRANSACTION_TYPE,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+} from '#domain/waste-balances/model.js'
 
 const getTableName = (recordType, processingType) => {
   if (processingType === PROCESSING_TYPES.EXPORTER) {
@@ -255,4 +259,79 @@ export const performUpdateWasteBalanceTransactions = async ({
       })
     }
   }
+}
+
+/**
+ * Build a transaction for PRN creation that deducts from availableAmount only.
+ * This "ringfences" the tonnage without affecting the total amount.
+ *
+ * @param {Object} params
+ * @param {string} params.prnId - PRN identifier
+ * @param {number} params.tonnage - Tonnage to deduct
+ * @param {string} params.userId - User performing the action
+ * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
+ * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ */
+export const buildPrnCreationTransaction = ({
+  prnId,
+  tonnage,
+  userId,
+  currentBalance
+}) => ({
+  id: randomUUID(),
+  type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+  createdAt: new Date().toISOString(),
+  createdBy: { id: userId, name: userId },
+  amount: tonnage,
+  openingAmount: currentBalance.amount,
+  closingAmount: currentBalance.amount, // Total unchanged
+  openingAvailableAmount: currentBalance.availableAmount,
+  closingAvailableAmount: currentBalance.availableAmount - tonnage, // Available deducted
+  entities: [
+    {
+      id: prnId,
+      currentVersionId: prnId,
+      previousVersionIds: [],
+      type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CREATED
+    }
+  ]
+})
+
+/**
+ * Deduct available balance for PRN creation (ringfencing tonnage).
+ *
+ * @param {Object} params
+ * @param {import('./port.js').DeductAvailableBalanceParams} params.deductParams
+ * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ */
+export const performDeductAvailableBalanceForPrnCreation = async ({
+  deductParams,
+  findBalance,
+  saveBalance
+}) => {
+  const { accreditationId, prnId, tonnage, userId } = deductParams
+  const validatedAccreditationId = validateAccreditationId(accreditationId)
+
+  const wasteBalance = await findBalance(validatedAccreditationId)
+
+  if (!wasteBalance) {
+    return
+  }
+
+  const transaction = buildPrnCreationTransaction({
+    prnId,
+    tonnage,
+    userId,
+    currentBalance: wasteBalance
+  })
+
+  const updatedBalance = {
+    ...wasteBalance,
+    availableAmount: transaction.closingAvailableAmount,
+    transactions: [...(wasteBalance.transactions || []), transaction],
+    version: (wasteBalance.version || 0) + 1
+  }
+
+  await saveBalance(updatedBalance, [transaction])
 }

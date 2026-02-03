@@ -84,6 +84,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Test and Scan
         uses: ./.github/actions/test-and-scan
