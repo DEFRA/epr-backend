@@ -83,13 +83,13 @@ const create = async (db, prn) => {
 
 /**
  * @param {import('mongodb').Db} db
- * @param {string} registrationId
+ * @param {string} accreditationId
  * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>}
  */
-const findByRegistration = async (db, registrationId) => {
+const findByAccreditation = async (db, accreditationId) => {
   const docs = await db
     .collection(COLLECTION_NAME)
-    .find({ issuedByRegistration: registrationId })
+    .find({ issuedByAccreditation: accreditationId })
     .toArray()
 
   return docs.map((doc) => ({
@@ -157,8 +157,8 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
   return () => ({
     findById: (id) => findById(db, id),
     create: (prn) => create(db, prn),
-    findByRegistration: (registrationId) =>
-      findByRegistration(db, registrationId),
+    findByAccreditation: (accreditationId) =>
+      findByAccreditation(db, accreditationId),
     updateStatus: (params) => updateStatus(db, params)
   })
 }

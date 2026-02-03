@@ -18,12 +18,13 @@ import { packagingRecyclingNoteByIdPath } from './get-by-id.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-001'
+const accreditationId = 'acc-789'
 const prnId = 'prn-001'
 
 const mockPrn = {
   id: prnId,
   issuedByOrganisation: organisationId,
-  issuedByRegistration: registrationId,
+  issuedByAccreditation: accreditationId,
   issuedToOrganisation: 'Acme Packaging Ltd',
   tonnage: 50,
   material: 'glass',
@@ -40,7 +41,7 @@ const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
   return () => ({
     create: vi.fn(),
     findById: vi.fn(async () => prn),
-    findByRegistration: vi.fn()
+    findByAccreditation: vi.fn()
   })
 }
 
@@ -80,7 +81,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('returns 200 with PRN data', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -109,7 +110,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const minimalPrn = {
           id: prnId,
           issuedByOrganisation: organisationId,
-          issuedByRegistration: registrationId,
+          issuedByAccreditation: accreditationId,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
@@ -123,7 +124,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -154,7 +155,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/non-existent`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/non-existent`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -166,19 +167,19 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${differentOrgId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${differentOrgId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: differentOrgId })
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
 
-      it('returns 404 when PRN belongs to different registration', async () => {
-        const differentRegId = 'different-reg'
+      it('returns 404 when PRN belongs to different accreditation', async () => {
+        const differentAccId = 'different-acc'
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${differentRegId}/l-packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${differentAccId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -190,7 +191,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('returns 401 when not authenticated', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -206,7 +207,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -220,7 +221,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -253,7 +254,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     it('returns 404 when feature flag is disabled', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
