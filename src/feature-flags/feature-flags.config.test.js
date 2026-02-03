@@ -39,24 +39,6 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.devEndpoints')
   })
 
-  it('returns true when calculateWasteBalanceOnImport flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.calculateWasteBalanceOnImport'
-    )
-  })
-
-  it('returns false when calculateWasteBalanceOnImport flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.calculateWasteBalanceOnImport'
-    )
-  })
-
   describe('getGlassMigrationMode', () => {
     it('returns enabled when set to true', () => {
       const config = { get: vi.fn().mockReturnValue('true') }
