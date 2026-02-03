@@ -30,21 +30,20 @@ export const commandQueueConsumerPlugin = {
       endpoint: sqsEndpoint
     })
 
-    const uploadsRepository = server.app.uploadsRepository
-
-    const summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository,
-      logger: server.logger
-    })
-
     // Access deps registered by other plugins
     const {
+      uploadsRepository,
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
       wasteBalancesRepository,
       featureFlags
     } = server.app
+
+    const summaryLogExtractor = createSummaryLogExtractor({
+      uploadsRepository,
+      logger: server.logger
+    })
 
     // Consumer created lazily on server start to avoid SQS connection during tests
     let consumer = null
