@@ -66,6 +66,28 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
 }
 
 /**
+ * Deducts total waste balance when issuing a PRN.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  }
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -129,6 +151,15 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    // Deduct total waste balance when issuing PRN
+    await deductTotalBalanceIfNeeded(wasteBalancesRepository, {
+      accreditationId,
+      organisationId,
+      prnId: id,
+      tonnage: prn.tonnage,
+      userId
+    })
+
     return await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
