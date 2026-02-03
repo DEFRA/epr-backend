@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 
+import { prnMetrics } from '#common/helpers/metrics/prn.js'
 import {
   PRN_STATUS,
   PRN_STATUS_TRANSITIONS
@@ -129,10 +130,19 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    return await issuePrnWithRetry(prnRepository, updateParams, {
+    const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
     })
+
+    await prnMetrics.recordStatusTransition({
+      fromStatus: currentStatus,
+      toStatus: newStatus,
+      material: prn.material,
+      isExport: prn.isExport
+    })
+
+    return issuedPrn
   }
 
   // Simple status update without PRN number
@@ -141,6 +151,13 @@ export async function updatePrnStatus({
   if (!updatedPrn) {
     throw Boom.badImplementation('Failed to update PRN status')
   }
+
+  await prnMetrics.recordStatusTransition({
+    fromStatus: currentStatus,
+    toStatus: newStatus,
+    material: prn.material,
+    isExport: prn.isExport
+  })
 
   return updatedPrn
 }
