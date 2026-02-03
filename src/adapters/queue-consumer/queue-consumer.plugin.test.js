@@ -73,6 +73,27 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
   })
 
+  it('skips setup when queue URL is not configured', async () => {
+    const configWithoutUrl = {
+      get: vi.fn((key) => {
+        const values = {
+          'commandQueue.url': null
+        }
+        return values[key]
+      })
+    }
+
+    await commandQueueConsumerPlugin.register(server, {
+      config: configWithoutUrl
+    })
+
+    expect(server.logger.info).toHaveBeenCalledWith({
+      message: 'SQS command queue consumer disabled (no queue URL configured)'
+    })
+    expect(createSqsClient).not.toHaveBeenCalled()
+    expect(server.events.on).not.toHaveBeenCalled()
+  })
+
   describe('plugin registration', () => {
     it('creates SQS client with correct config', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
