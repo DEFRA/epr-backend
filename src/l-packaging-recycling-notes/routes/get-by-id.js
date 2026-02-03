@@ -19,6 +19,7 @@ export const packagingRecyclingNoteByIdPath =
  */
 const buildResponse = (prn) => ({
   id: prn.id,
+  prnNumber: prn.prnNumber ?? null,
   issuedToOrganisation: prn.issuedToOrganisation,
   tonnage: prn.tonnage,
   material: prn.material,
