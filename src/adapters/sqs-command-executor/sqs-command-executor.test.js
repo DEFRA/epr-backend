@@ -55,7 +55,7 @@ describe('sqsCommandExecutorPlugin', () => {
   })
 
   it('has correct plugin name', () => {
-    expect(sqsCommandExecutorPlugin.name).toBe('workers')
+    expect(sqsCommandExecutorPlugin.name).toBe('sqs-command-executor')
   })
 
   it('has correct plugin version', () => {
@@ -65,7 +65,7 @@ describe('sqsCommandExecutorPlugin', () => {
   it('registers without error', async () => {
     await server.register(sqsCommandExecutorPlugin)
 
-    expect(server.registrations.workers).toBeDefined()
+    expect(server.registrations['sqs-command-executor']).toBeDefined()
   })
 
   it('decorates request with summaryLogsWorker', async () => {
