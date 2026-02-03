@@ -31,7 +31,6 @@ describe('createCommandQueueConsumer', () => {
   let wasteRecordsRepository
   let wasteBalancesRepository
   let summaryLogExtractor
-  let featureFlags
   let mockConsumer
   let eventHandlers
 
@@ -59,7 +58,6 @@ describe('createCommandQueueConsumer', () => {
     wasteRecordsRepository = {}
     wasteBalancesRepository = {}
     summaryLogExtractor = {}
-    featureFlags = {}
 
     mockConsumer = {
       on: vi.fn((event, handler) => {
@@ -96,8 +94,7 @@ describe('createCommandQueueConsumer', () => {
       organisationsRepository,
       wasteRecordsRepository,
       wasteBalancesRepository,
-      summaryLogExtractor,
-      featureFlags
+      summaryLogExtractor
     })
 
   describe('queue URL resolution', () => {
@@ -230,7 +227,7 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: missing command or summaryLogId'
+            message: 'Invalid command message: "command" is required'
           })
         )
       })
@@ -245,7 +242,7 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: missing command or summaryLogId'
+            message: 'Invalid command message: "command" is required'
           })
         )
       })
@@ -260,7 +257,23 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: missing command or summaryLogId'
+            message: 'Invalid command message: "summaryLogId" is required'
+          })
+        )
+      })
+
+      it('handles invalid command type', async () => {
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({ command: 'unknown', summaryLogId: 'log-123' })
+        }
+
+        await handleMessage(message)
+
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Invalid command message: "command" must be one of [validate, submit]'
           })
         )
       })
@@ -558,26 +571,6 @@ describe('createCommandQueueConsumer', () => {
           err: updateError,
           message: 'Failed to mark summary log as submission_failed',
           summaryLogId: 'log-123'
-        })
-      })
-    })
-
-    describe('unknown command', () => {
-      it('logs error for unknown command type', async () => {
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'unknown', summaryLogId: 'log-123' })
-        }
-
-        await handleMessage(message)
-
-        expect(logger.error).toHaveBeenCalledWith({
-          message: 'Unknown command type: unknown',
-          summaryLogId: 'log-123',
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-          }
         })
       })
     })

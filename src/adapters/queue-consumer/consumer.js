@@ -1,3 +1,4 @@
+import Joi from 'joi'
 import { Consumer } from 'sqs-consumer'
 import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
@@ -21,6 +22,13 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {string} summaryLogId - The summary log ID to process
  */
 
+const commandMessageSchema = Joi.object({
+  command: Joi.string()
+    .valid(SUMMARY_LOG_COMMAND.VALIDATE, SUMMARY_LOG_COMMAND.SUBMIT)
+    .required(),
+  summaryLogId: Joi.string().required()
+})
+
 /**
  * @typedef {object} ConsumerDependencies
  * @property {SQSClient} sqsClient
@@ -31,7 +39,6 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {object} wasteRecordsRepository
  * @property {object} wasteBalancesRepository
  * @property {object} summaryLogExtractor
- * @property {object} featureFlags
  */
 
 /**
@@ -64,11 +71,10 @@ const handleValidateCommand = async (summaryLogId, deps) => {
  * @returns {CommandMessage | null} The parsed command, or null if invalid
  */
 const parseCommandMessage = (message, logger) => {
-  /** @type {CommandMessage} */
-  let command
+  let parsed
 
   try {
-    command = JSON.parse(message.Body ?? '{}')
+    parsed = JSON.parse(message.Body ?? '{}')
   } catch {
     logger.error({
       message: 'Failed to parse SQS message body',
@@ -81,13 +87,13 @@ const parseCommandMessage = (message, logger) => {
     return null
   }
 
-  const { command: commandType, summaryLogId } = command
+  const { error, value } = commandMessageSchema.validate(parsed)
 
-  if (!commandType || !summaryLogId) {
+  if (error) {
     logger.error({
-      message: 'Invalid command message: missing command or summaryLogId',
+      message: `Invalid command message: ${error.message}`,
       messageId: message.MessageId,
-      command,
+      command: parsed,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -96,7 +102,7 @@ const parseCommandMessage = (message, logger) => {
     return null
   }
 
-  return command
+  return value
 }
 
 /**
@@ -155,17 +161,6 @@ const createMessageHandler = (deps) => async (message) => {
       case SUMMARY_LOG_COMMAND.SUBMIT:
         await submitSummaryLog(summaryLogId, deps)
         break
-
-      default:
-        logger.error({
-          message: `Unknown command type: ${commandType}`,
-          summaryLogId,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-          }
-        })
-        return
     }
 
     logger.info({
