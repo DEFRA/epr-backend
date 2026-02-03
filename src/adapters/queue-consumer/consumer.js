@@ -1,5 +1,4 @@
 import { Consumer } from 'sqs-consumer'
-import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
 import {
   LOGGING_EVENT_ACTIONS,
@@ -24,7 +23,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 /**
  * @typedef {object} ConsumerDependencies
  * @property {SQSClient} sqsClient
- * @property {string} queueName
+ * @property {string} queueUrl
  * @property {object} logger
  * @property {object} summaryLogsRepository
  * @property {object} organisationsRepository
@@ -197,29 +196,12 @@ const createMessageHandler = (deps) => async (message) => {
 }
 
 /**
- * Creates and starts the SQS command queue consumer.
+ * Creates the SQS command queue consumer.
  * @param {ConsumerDependencies} deps
- * @returns {Promise<Consumer>}
+ * @returns {Consumer}
  */
-export const createCommandQueueConsumer = async (deps) => {
-  const { sqsClient, queueName, logger } = deps
-
-  // Look up queue URL by name
-  const getQueueUrlCommand = new GetQueueUrlCommand({ QueueName: queueName })
-  const { QueueUrl: queueUrl } = await sqsClient.send(getQueueUrlCommand)
-
-  if (!queueUrl) {
-    throw new Error(`Queue not found: ${queueName}`)
-  }
-
-  logger.info({
-    message: `Resolved queue URL: ${queueUrl}`,
-    queueName,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.CONNECTION_SUCCESS
-    }
-  })
+export const createCommandQueueConsumer = (deps) => {
+  const { sqsClient, queueUrl, logger } = deps
 
   const consumer = Consumer.create({
     queueUrl,
