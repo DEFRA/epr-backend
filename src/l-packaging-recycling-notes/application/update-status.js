@@ -62,6 +62,10 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
       tonnage,
       userId
     })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
   }
 }
 
@@ -84,6 +88,10 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
       tonnage,
       userId
     })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
   }
 }
 
