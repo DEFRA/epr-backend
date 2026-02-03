@@ -159,8 +159,12 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       expect(summaryLogsWorker.submit).toHaveBeenCalledWith(
         summaryLogId,
         expect.objectContaining({
-          id: 'test-user-id',
-          email: 'test@example.com'
+          auth: expect.objectContaining({
+            credentials: expect.objectContaining({
+              id: 'test-user-id',
+              email: 'test@example.com'
+            })
+          })
         })
       )
     })

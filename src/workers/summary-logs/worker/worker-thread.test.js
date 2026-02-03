@@ -322,10 +322,13 @@ describe('summaryLogsWorkerThread', () => {
 
       await summaryLogsWorkerThread({
         command: 'submit',
-        summaryLogId
+        summaryLogId,
+        request: { auth: { credentials: { id: 'user-123' } } }
       })
 
-      expect(mockSyncFromSummaryLog).toHaveBeenCalledWith(summaryLog, undefined)
+      expect(mockSyncFromSummaryLog).toHaveBeenCalledWith(summaryLog, {
+        auth: { credentials: { id: 'user-123' } }
+      })
     })
 
     it('should update summary log status to SUBMITTED', async () => {

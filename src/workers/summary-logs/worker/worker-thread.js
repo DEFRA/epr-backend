@@ -48,7 +48,7 @@ const handleSubmitCommand = async ({
   wasteRecordsRepository,
   wasteBalancesRepository,
   summaryLogExtractor,
-  user
+  request
 }) => {
   // Load the summary log
   const existing = await summaryLogsRepository.findById(summaryLogId)
@@ -81,7 +81,7 @@ const handleSubmitCommand = async ({
 
   const { created, updated } = await summaryLogMetrics.timedSubmission(
     { processingType },
-    () => sync(summaryLog, user)
+    () => sync(summaryLog, request)
   )
 
   // Record submission metrics
@@ -173,7 +173,7 @@ export default async function summaryLogsWorkerThread(command) {
 
         case SUMMARY_LOG_COMMAND.SUBMIT:
           await handleSubmitCommand({
-            user: command.user,
+            request: command.request,
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
             organisationsRepository,

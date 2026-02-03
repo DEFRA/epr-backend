@@ -42,6 +42,7 @@ const RESOURCE_LIMITS = {
  * Configure via PISCINA_MAX_THREADS env var.
  * Default: 2 (suitable for 4 vCPU instances, safe on smaller instances)
  */
+// @ts-ignore
 const maxThreads = config.get('piscina.maxThreads')
 
 const pool = new Piscina({
@@ -169,7 +170,7 @@ const clearTaskTimeout = (summaryLogId) => {
  * @param {string} summaryLogId
  * @param {object} logger
  * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking
- * @param {object} [user]
+ * @param {object} [request]
  * @returns {Promise<void>}
  */
 const runCommandInWorker = async (
@@ -177,10 +178,22 @@ const runCommandInWorker = async (
   summaryLogId,
   logger,
   repository,
-  user
+  request
 ) => {
   try {
-    await pool.run({ command, summaryLogId, user })
+    const serializedRequest = request?.auth?.credentials
+      ? {
+          auth: {
+            credentials: {
+              id: request.auth.credentials.id,
+              email: request.auth.credentials.email,
+              scope: request.auth.credentials.scope
+            }
+          }
+        }
+      : null
+
+    await pool.run({ command, summaryLogId, request: serializedRequest })
 
     // Clear timeout on success - worker completed normally
     clearTaskTimeout(summaryLogId)
@@ -272,7 +285,7 @@ export const createSummaryLogsCommandExecutor = (
         summaryLogsRepository
       )
     },
-    submit: async (summaryLogId, user) => {
+    submit: async (summaryLogId, request) => {
       // Fire-and-forget: submission runs asynchronously in worker thread, request returns immediately
       // Intentionally not awaiting as the HTTP response completes before submission finishes
       logger.info({
@@ -287,8 +300,8 @@ export const createSummaryLogsCommandExecutor = (
         SUMMARY_LOG_COMMAND.SUBMIT,
         summaryLogId,
         logger,
-        summaryLogsRepository ?? null,
-        user
+        summaryLogsRepository,
+        request
       )
     }
   }
