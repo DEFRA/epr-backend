@@ -1,14 +1,10 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
-import { vi } from 'vitest'
+import { ObjectId } from 'mongodb'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import {
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
-} from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -18,16 +14,13 @@ import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balan
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { ObjectId } from 'mongodb'
-
 import {
-  asStandardUser,
-  buildGetUrl,
-  buildPostUrl,
-  buildSubmitUrl,
-  createUploadPayload,
-  pollForValidation
-} from './integration-test-helpers.js'
+  REPROCESSOR_OUTPUT_HEADERS,
+  createReprocessorOutputRowValues,
+  performSubmission as sharedPerformSubmission,
+  createWasteBalanceMeta,
+  createSummaryLogSubmitterWorker
+} from './integration.waste-balance.helpers.js'
 
 describe('Submission and placeholder tests (Reprocessor Output)', () => {
   let organisationId
@@ -52,68 +45,30 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
     const fileId = 'file-submit-repro-out-123'
     const filename = 'waste-data-repro-out.xlsx'
 
-    const sharedMeta = {
-      REGISTRATION_NUMBER: {
-        value: 'REG-12345',
-        location: { sheet: 'Data', row: 1, column: 'B' }
-      },
-      PROCESSING_TYPE: {
-        value: 'REPROCESSOR_OUTPUT',
-        location: { sheet: 'Data', row: 2, column: 'B' }
-      },
-      MATERIAL: {
-        value: 'Paper_and_board',
-        location: { sheet: 'Data', row: 3, column: 'B' }
-      },
-      TEMPLATE_VERSION: {
-        value: 5,
-        location: { sheet: 'Data', row: 4, column: 'B' }
-      },
-      ACCREDITATION_NUMBER: {
-        value: 'ACC-2025-001',
-        location: { sheet: 'Data', row: 5, column: 'B' }
-      }
-    }
-
-    const reprocessedHeaders = [
-      'ROW_ID',
-      'DATE_LOAD_LEFT_SITE',
-      'PRODUCT_TONNAGE',
-      'UK_PACKAGING_WEIGHT_PERCENTAGE',
-      'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-      'ADD_PRODUCT_WEIGHT'
-    ]
-
-    const createReprocessedRowValues = (overrides = {}) => {
-      const defaults = {
-        rowId: 3001,
-        dateLeft: '2025-01-15T00:00:00.000Z',
-        productTonnage: 100,
-        ukPackagingWeightPercentage: 1,
-        productUkPackagingWeightProportion: 100,
-        addProductWeight: 'Yes'
-      }
-      const d = { ...defaults, ...overrides }
-      return [
-        d.rowId,
-        d.dateLeft,
-        d.productTonnage,
-        d.ukPackagingWeightPercentage,
-        d.productUkPackagingWeightProportion,
-        d.addProductWeight
-      ]
-    }
+    const sharedMeta = createWasteBalanceMeta('REPROCESSOR_OUTPUT')
 
     const createUploadData = (reprocessedRows = []) => ({
       REPROCESSED_LOADS: {
         location: { sheet: 'Reprocessed', row: 7, column: 'A' },
-        headers: reprocessedHeaders,
+        headers: REPROCESSOR_OUTPUT_HEADERS,
         rows: reprocessedRows.map((row, index) => ({
           rowNumber: 8 + index,
-          values: createReprocessedRowValues(row)
+          values: createReprocessorOutputRowValues(row)
         }))
       }
     })
+
+    const performSubmission = (env, logId, fId, fName, data) =>
+      sharedPerformSubmission(
+        env,
+        organisationId,
+        registrationId,
+        logId,
+        fId,
+        fName,
+        data,
+        sharedMeta
+      )
 
     const setupIntegrationEnvironment = async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -199,23 +154,11 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         featureFlags
       })
 
-      const submitterWorker = {
+      const submitterWorker = createSummaryLogSubmitterWorker({
         validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
-
-          await syncWasteRecords(summaryLog)
-
-          await summaryLogsRepository.update(
-            summaryLogId,
-            version,
-            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-          )
-        }
-      }
+        summaryLogsRepository,
+        syncWasteRecords
+      })
 
       const server = await createTestServer({
         repositories: {
@@ -238,85 +181,6 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         fileDataMap,
         submitterWorker
       }
-    }
-
-    const uploadAndValidate = async (
-      env,
-      summaryLogId,
-      fileId,
-      filename,
-      uploadData
-    ) => {
-      const { server, fileDataMap } = env
-
-      fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
-
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
-      })
-
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        summaryLogId
-      )
-
-      return server.inject({
-        method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-    }
-
-    const submitAndPoll = async (env, summaryLogId) => {
-      const { server } = env
-
-      await server.inject({
-        method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-
-      let attempts = 0
-      const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.SUBMITTING
-
-      while (
-        status === SUMMARY_LOG_STATUS.SUBMITTING &&
-        attempts < maxAttempts
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        const checkResponse = await server.inject({
-          method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
-        })
-
-        status = JSON.parse(checkResponse.payload).status
-        attempts++
-      }
-      return status
-    }
-
-    const performSubmission = async (
-      env,
-      summaryLogId,
-      fileId,
-      filename,
-      uploadData
-    ) => {
-      await uploadAndValidate(env, summaryLogId, fileId, filename, uploadData)
-      await submitAndPoll(env, summaryLogId)
     }
 
     it('should update waste balance with credits from reprocessed loads', async () => {

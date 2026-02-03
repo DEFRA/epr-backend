@@ -1,13 +1,11 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
+import { ObjectId } from 'mongodb'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import {
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
-} from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -17,16 +15,14 @@ import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balan
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { ObjectId } from 'mongodb'
-
 import {
-  asStandardUser,
-  buildGetUrl,
-  buildPostUrl,
-  buildSubmitUrl,
-  createUploadPayload,
-  pollForValidation
-} from './integration-test-helpers.js'
+  EXPORTER_HEADERS,
+  createExporterRowValues,
+  uploadAndValidate,
+  performSubmission as sharedPerformSubmission,
+  createWasteBalanceMeta,
+  createSummaryLogSubmitterWorker
+} from './integration.waste-balance.helpers.js'
 
 describe('Submission and placeholder tests (Exporter)', () => {
   let organisationId
@@ -51,127 +47,30 @@ describe('Submission and placeholder tests (Exporter)', () => {
     const fileId = 'file-submit-123'
     const filename = 'waste-data.xlsx'
 
-    const sharedMeta = {
-      REGISTRATION_NUMBER: {
-        value: 'REG-12345',
-        location: { sheet: 'Data', row: 1, column: 'B' }
-      },
-      PROCESSING_TYPE: {
-        value: 'EXPORTER',
-        location: { sheet: 'Data', row: 2, column: 'B' }
-      },
-      MATERIAL: {
-        value: 'Paper_and_board',
-        location: { sheet: 'Data', row: 3, column: 'B' }
-      },
-      TEMPLATE_VERSION: {
-        value: 5,
-        location: { sheet: 'Data', row: 4, column: 'B' }
-      },
-      ACCREDITATION_NUMBER: {
-        value: 'ACC-2025-001',
-        location: { sheet: 'Data', row: 5, column: 'B' }
-      }
-    }
-
-    const sharedHeaders = [
-      'ROW_ID',
-      'DATE_RECEIVED_FOR_EXPORT',
-      'EWC_CODE',
-      'DESCRIPTION_WASTE',
-      'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-      'GROSS_WEIGHT',
-      'TARE_WEIGHT',
-      'PALLET_WEIGHT',
-      'NET_WEIGHT',
-      'BAILING_WIRE_PROTOCOL',
-      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-      'WEIGHT_OF_NON_TARGET_MATERIALS',
-      'RECYCLABLE_PROPORTION_PERCENTAGE',
-      'TONNAGE_RECEIVED_FOR_EXPORT',
-      'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
-      'INTERIM_SITE_ID',
-      'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-      'DATE_RECEIVED_BY_OSR',
-      'OSR_ID',
-      'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-      'DATE_OF_EXPORT',
-      'EXPORT_CONTROLS',
-      'BASEL_EXPORT_CODE',
-      'CUSTOMS_CODES',
-      'CONTAINER_NUMBER'
-    ]
-
-    const createRowValues = (overrides = {}) => {
-      // All 25 fields must be filled for a row to be included in waste balance
-      // (per PAE-659 AC03: "has all mandatory fields completed")
-      const defaults = {
-        rowId: 1001,
-        dateReceived: '2025-01-15T00:00:00.000Z',
-        ewcCode: '03 03 08',
-        wasteDescription: 'Glass - pre-sorted',
-        prnIssued: 'No',
-        grossWeight: 1000,
-        tareWeight: 100,
-        palletWeight: 50,
-        netWeight: 850,
-        bailingWire: 'No',
-        recyclablePropMethod: 'Actual weight (100%)',
-        nonTargetWeight: 0,
-        recyclablePropPct: 1,
-        tonnageReceived: 850,
-        interimSite: 'No',
-        interimSiteId: 100,
-        interimTonnage: 0,
-        dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-        osrId: 100,
-        exportTonnage: 100,
-        exportDate: '2025-01-20T00:00:00.000Z',
-        exportControls: 'Article 18 (Green list)',
-        baselCode: 'B3020',
-        customsCode: '123456',
-        containerNumber: 'CONT123456'
-      }
-      const d = { ...defaults, ...overrides }
-      return [
-        d.rowId,
-        d.dateReceived,
-        d.ewcCode,
-        d.wasteDescription,
-        d.prnIssued,
-        d.grossWeight,
-        d.tareWeight,
-        d.palletWeight,
-        d.netWeight,
-        d.bailingWire,
-        d.recyclablePropMethod,
-        d.nonTargetWeight,
-        d.recyclablePropPct,
-        d.tonnageReceived,
-        d.interimSite,
-        d.interimSiteId,
-        d.interimTonnage,
-        d.dateReceivedByOsr,
-        d.osrId,
-        d.exportTonnage,
-        d.exportDate,
-        d.exportControls,
-        d.baselCode,
-        d.customsCode,
-        d.containerNumber
-      ]
-    }
+    const sharedMeta = createWasteBalanceMeta('EXPORTER')
 
     const createUploadData = (rows) => ({
       RECEIVED_LOADS_FOR_EXPORT: {
         location: { sheet: 'Received', row: 7, column: 'A' },
-        headers: sharedHeaders,
+        headers: EXPORTER_HEADERS,
         rows: rows.map((row, index) => ({
           rowNumber: 8 + index,
-          values: createRowValues(row)
+          values: createExporterRowValues(row)
         }))
       }
     })
+
+    const performSubmission = (env, logId, fId, fName, data) =>
+      sharedPerformSubmission(
+        env,
+        organisationId,
+        registrationId,
+        logId,
+        fId,
+        fName,
+        data,
+        sharedMeta
+      )
 
     const setupIntegrationEnvironment = async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -257,24 +156,11 @@ describe('Submission and placeholder tests (Exporter)', () => {
         featureFlags
       })
 
-      const submitterWorker = {
+      const submitterWorker = createSummaryLogSubmitterWorker({
         validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-
-          const { version, summaryLog } = existing
-
-          await syncWasteRecords(summaryLog)
-
-          await summaryLogsRepository.update(
-            summaryLogId,
-            version,
-            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-          )
-        }
-      }
+        summaryLogsRepository,
+        syncWasteRecords
+      })
 
       const server = await createTestServer({
         repositories: {
@@ -296,86 +182,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
         accreditationId,
         fileDataMap
       }
-    }
-
-    const uploadAndValidate = async (
-      env,
-      summaryLogId,
-      fileId,
-      filename,
-      uploadData
-    ) => {
-      const { server, fileDataMap } = env
-
-      // Register the file data for this submission
-      fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
-
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
-      })
-
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        summaryLogId
-      )
-
-      return server.inject({
-        method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-    }
-
-    const submitAndPoll = async (env, summaryLogId) => {
-      const { server } = env
-
-      await server.inject({
-        method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-
-      let attempts = 0
-      const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.SUBMITTING
-
-      while (
-        status === SUMMARY_LOG_STATUS.SUBMITTING &&
-        attempts < maxAttempts
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        const checkResponse = await server.inject({
-          method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
-        })
-
-        status = JSON.parse(checkResponse.payload).status
-        attempts++
-      }
-      return status
-    }
-
-    const performSubmission = async (
-      env,
-      summaryLogId,
-      fileId,
-      filename,
-      uploadData
-    ) => {
-      await uploadAndValidate(env, summaryLogId, fileId, filename, uploadData)
-      await submitAndPoll(env, summaryLogId)
     }
 
     it('should update waste balance with transactions', async () => {
@@ -605,10 +411,13 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       const response = await uploadAndValidate(
         env,
+        organisationId,
+        registrationId,
         'summary-missing-fields',
         'file-missing-fields',
         'waste-data-missing.xlsx',
-        createUploadData([{ rowId: 4001, exportTonnage: 'not-a-number' }])
+        createUploadData([{ rowId: 4001, exportTonnage: 'not-a-number' }]),
+        sharedMeta
       )
 
       const summaryLog = JSON.parse(response.payload)
