@@ -19,6 +19,7 @@ import { PrnNumberConflictError } from '#l-packaging-recycling-notes/repository/
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/l-packaging-recycling-notes/{id}/status'
@@ -113,12 +114,13 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#l-packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#l-packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       lumpyPackagingRecyclingNotesRepository,
+      wasteBalancesRepository,
       params,
       payload,
       logger,
@@ -151,6 +153,22 @@ export const packagingRecyclingNotesUpdateStatus = {
         throw Boom.badRequest(
           `Invalid status transition: ${currentStatus} -> ${newStatus}`
         )
+      }
+
+      // Deduct available waste balance when creating PRN (transitioning to awaiting_authorisation)
+      const isCreating = newStatus === PRN_STATUS.AWAITING_AUTHORISATION
+      if (isCreating) {
+        const balance =
+          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+        if (balance) {
+          await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
+            accreditationId,
+            organisationId,
+            prnId: id,
+            tonnage: prn.tonnage,
+            userId
+          })
+        }
       }
 
       // Generate PRN number when issuing (transitioning to awaiting_acceptance)
