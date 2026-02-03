@@ -66,10 +66,9 @@ const getCurrentDetailsFromToken = (auth, logger) => {
 
   // Token should always have a current organisation
   if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
+    const loggableOrgInfo = getLoggableOrgInfo(orgInfo)
     logger.warn({
-      message: 'User token missing organisation information',
-      relationshipsCount: orgInfo.length,
-      orgInfo: getLoggableOrgInfo(orgInfo)
+      message: `User token missing organisation information. relationshipsCount: ${orgInfo.length}, orgInfo: ${JSON.stringify(loggableOrgInfo)}`
     })
 
     throw Boom.forbidden(
