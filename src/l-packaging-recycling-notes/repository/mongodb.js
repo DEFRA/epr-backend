@@ -16,6 +16,27 @@ export class PrnNumberConflictError extends Error {
 }
 
 /**
+ * Ensures the prnNumber index exists with the unique constraint.
+ * If an older non-unique index exists, drops it and recreates with unique: true.
+ *
+ * @param {import('mongodb').Collection} collection
+ */
+async function ensurePrnNumberIndex(collection) {
+  const indexName = 'prnNumber'
+  const indexes = await collection.indexes()
+  const existingIndex = indexes.find((idx) => idx.name === indexName)
+
+  if (existingIndex && !existingIndex.unique) {
+    await collection.dropIndex(indexName)
+  }
+
+  await collection.createIndex(
+    { prnNumber: 1 },
+    { name: indexName, sparse: true, unique: true }
+  )
+}
+
+/**
  * Ensures the collection exists with required indexes.
  * Safe to call multiple times - MongoDB createIndex is idempotent.
  *
@@ -35,10 +56,8 @@ async function ensureCollection(db) {
   )
 
   // Unique index for PRN numbers - sparse to allow null values
-  await collection.createIndex(
-    { prnNumber: 1 },
-    { name: 'prnNumber', sparse: true, unique: true }
-  )
+  // Uses helper to handle migration from older non-unique index
+  await ensurePrnNumberIndex(collection)
 
   return collection
 }
