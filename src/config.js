@@ -401,7 +401,8 @@ const baseConfig = {
     url: {
       doc: 'SQS queue URL for backend commands',
       format: String,
-      default: 'http://127.0.0.1:4566/000000000000/epr_backend_commands',
+      nullable: true,
+      default: null,
       env: 'COMMAND_QUEUE_SQS_URL'
     }
   },
