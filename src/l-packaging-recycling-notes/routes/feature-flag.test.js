@@ -33,7 +33,8 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
           }),
           collection: () => options,
           createIndex: () => {},
-          createCollection: () => {}
+          createCollection: () => {},
+          indexes: async () => []
         }
 
         server.decorate('server', 'db', options)

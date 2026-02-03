@@ -13,6 +13,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       collection: function () {
         return this
       },
+      indexes: async () => [],
       createIndex: async () => {},
       findOne: function () {
         return prn
@@ -50,6 +51,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -93,6 +95,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId1 } }),
@@ -119,6 +122,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({
@@ -146,6 +150,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({
@@ -176,6 +181,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => prn,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -216,6 +222,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -248,6 +255,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -279,6 +287,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -317,6 +326,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -356,6 +366,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -390,6 +401,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async () => {},
         findOne: async () => null,
         insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
@@ -417,13 +429,14 @@ describe('MongoDB packaging recycling notes repository', () => {
   })
 
   describe('ensureCollection', () => {
-    it('creates unique index on prnNumber', async () => {
+    it('creates unique index on prnNumber when no index exists', async () => {
       const createdIndexes = []
 
       const dbMock = {
         collection: function () {
           return this
         },
+        indexes: async () => [],
         createIndex: async (fields, options) => {
           createdIndexes.push({ fields, options })
         },
@@ -444,6 +457,76 @@ describe('MongoDB packaging recycling notes repository', () => {
       expect(prnNumberIndex).toBeDefined()
       expect(prnNumberIndex.options.unique).toBe(true)
       expect(prnNumberIndex.options.sparse).toBe(true)
+    })
+
+    it('drops and recreates prnNumber index when existing index is not unique', async () => {
+      const createdIndexes = []
+      let droppedIndex = null
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [
+          { name: 'prnNumber', key: { prnNumber: 1 }, sparse: true }
+        ],
+        dropIndex: async (indexName) => {
+          droppedIndex = indexName
+        },
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(dbMock)
+
+      expect(droppedIndex).toBe('prnNumber')
+
+      const prnNumberIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'prnNumber'
+      )
+      expect(prnNumberIndex).toBeDefined()
+      expect(prnNumberIndex.options.unique).toBe(true)
+    })
+
+    it('does not drop prnNumber index when already unique', async () => {
+      let droppedIndex = null
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [
+          {
+            name: 'prnNumber',
+            key: { prnNumber: 1 },
+            sparse: true,
+            unique: true
+          }
+        ],
+        dropIndex: async (indexName) => {
+          droppedIndex = indexName
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(dbMock)
+
+      expect(droppedIndex).toBeNull()
     })
   })
 })
