@@ -5,7 +5,7 @@ import { PrnNumberConflictError } from '#l-packaging-recycling-notes/repository/
 
 const mockRecordStatusTransition = vi.fn()
 
-vi.mock('#common/helpers/metrics/prn.js', () => ({
+vi.mock('./metrics.js', () => ({
   prnMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args)
   }

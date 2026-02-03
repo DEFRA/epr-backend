@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 
-import { prnMetrics } from '#common/helpers/metrics/prn.js'
+import { prnMetrics } from './metrics.js'
 import {
   PRN_STATUS,
   PRN_STATUS_TRANSITIONS

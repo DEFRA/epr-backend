@@ -25,7 +25,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { error: (...args) => mockLoggerError(...args) }
 }))
 
-const { prnMetrics } = await import('./prn.js')
+const { prnMetrics } = await import('./metrics.js')
 
 describe('prnMetrics', () => {
   beforeEach(() => {
