@@ -18,7 +18,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
   const stubPrn = {
     _id: prnId,
     organisationId,
-    registrationId: '',
+    registrationId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
     accreditationId,
     schemaVersion: 1,
     createdAt: '2026-01-21T10:30:00.000Z',
@@ -26,7 +26,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
     isExport: false,
     isDecemberWaste: false,
     prnNumber: '',
-    accreditationYear: 0,
+    accreditationYear: 2026,
     tonnage: 9,
     issuerNotes: 'REF: 101010',
     issuedToOrganisation: {
@@ -79,7 +79,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       expect(result.isExport).toBe(false)
       expect(result.isDecemberWaste).toBe(false)
       expect(result.prnNumber).toBe('')
-      expect(result.accreditationYear).toBe(0)
+      expect(result.accreditationYear).toBe(2026)
       expect(result.tonnage).toBe(9)
       expect(result.issuerNotes).toBe('REF: 101010')
       expect(result.issuedToOrganisation).toEqual({

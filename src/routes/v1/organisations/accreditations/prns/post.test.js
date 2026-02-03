@@ -1,17 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
+import Boom from '@hapi/boom'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { asStandardUser } from '#test/inject-auth.js'
-import { notesMaxLen } from './post'
+import { issuerNotesMaxLen } from './post'
 
 describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns', () => {
   setupAuthContext()
 
   const organisationId = '6507f1f7-7bcf-46cd-b994-390100000001'
   const accreditationId = '507f1f77-bcf8-46cd-b994-390110000001'
+  const registrationId = 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb'
 
   const basePath = `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`
 
@@ -24,6 +26,31 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       tradingName: 'Awesome Sauce'
     }
   }
+
+  const authOptions = (orgId = organisationId) =>
+    asStandardUser(
+      /** @type {any} */ ({
+        linkedOrgId: orgId,
+        profile: { id: 'test-user-id', name: 'Test User' }
+      })
+    )
+
+  const createOrganisationsRepository = (
+    registrations = [
+      {
+        id: registrationId,
+        accreditationId,
+        wasteProcessingType: 'reprocessor'
+      }
+    ]
+  ) => ({
+    findById: async (id) => {
+      if (id !== organisationId) {
+        throw Boom.notFound(`Organisation with id ${id} not found`)
+      }
+      return { id: organisationId, registrations }
+    }
+  })
 
   describe('with valid authentication and payload', () => {
     let server
@@ -38,7 +65,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository: repositoryFactory
+          packagingRecyclingNotesRepository: repositoryFactory,
+          organisationsRepository: createOrganisationsRepository()
         },
         featureFlags
       })
@@ -49,7 +77,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: validPayload,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
@@ -58,15 +86,18 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
       expect(result.id).toBeDefined()
       expect(result.organisationId).toBe(organisationId)
-      expect(result.registrationId).toBe('')
+      expect(result.registrationId).toBe(registrationId)
       expect(result.accreditationId).toBe(accreditationId)
       expect(result.schemaVersion).toBe(1)
       expect(result.createdAt).toBeDefined()
-      expect(result.createdBy).toEqual({ id: '', name: '' })
+      expect(result.createdBy).toEqual({
+        id: 'test-user-id',
+        name: 'Test User'
+      })
       expect(result.isExport).toBe(false)
       expect(result.isDecemberWaste).toBe(false)
       expect(result.prnNumber).toBe('')
-      expect(result.accreditationYear).toBe(0)
+      expect(result.accreditationYear).toBe(2026)
       expect(result.tonnage).toBe(100)
       expect(result.issuerNotes).toBe('REF: 101010')
       expect(result.issuedToOrganisation).toEqual({
@@ -78,7 +109,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         {
           status: 'draft',
           createdAt: result.createdAt,
-          createdBy: { id: '', name: '' }
+          createdBy: { id: 'test-user-id', name: 'Test User' }
         }
       ])
     })
@@ -88,7 +119,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: validPayload,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       const { id } = JSON.parse(response.payload)
@@ -97,6 +128,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
 
       expect(stored).not.toBeNull()
       expect(stored.organisationId).toBe(organisationId)
+      expect(stored.registrationId).toBe(registrationId)
       expect(stored.accreditationId).toBe(accreditationId)
       expect(stored.tonnage).toBe(100)
       expect(stored.issuerNotes).toBe('REF: 101010')
@@ -111,7 +143,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       expect(stored.schemaVersion).toBe(1)
       expect(stored.isExport).toBe(false)
       expect(stored.isDecemberWaste).toBe(false)
-      expect(stored.accreditationYear).toBe(0)
+      expect(stored.accreditationYear).toBe(2026)
       expect(stored.prnNumber).toBe('')
     })
 
@@ -125,7 +157,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
           ...validPayload,
           issuedToOrganisation: issuedToWithoutTradingName
         },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
@@ -143,20 +175,82 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: validPayload,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       const response2 = await server.inject({
         method: 'POST',
         url: basePath,
         payload: { ...validPayload, tonnage: 50 },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       const result1 = JSON.parse(response1.payload)
       const result2 = JSON.parse(response2.payload)
 
       expect(result1.id).not.toBe(result2.id)
+    })
+
+    it('sets isExport to true when registration wasteProcessingType is exporter', async () => {
+      const exporterServer = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([]),
+          organisationsRepository: createOrganisationsRepository([
+            {
+              id: registrationId,
+              accreditationId,
+              wasteProcessingType: 'exporter'
+            }
+          ])
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          createPackagingRecyclingNotes: true
+        })
+      })
+
+      const response = await exporterServer.inject({
+        method: 'POST',
+        url: basePath,
+        payload: validPayload,
+        ...authOptions()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+
+      const result = JSON.parse(response.payload)
+
+      expect(result.isExport).toBe(true)
+    })
+  })
+
+  describe('registration lookup', () => {
+    it('returns 404 when no registration matches the accreditationId', async () => {
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([]),
+          organisationsRepository: createOrganisationsRepository([
+            {
+              id: registrationId,
+              accreditationId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+              wasteProcessingType: 'reprocessor'
+            }
+          ])
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          createPackagingRecyclingNotes: true
+        })
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: basePath,
+        payload: validPayload,
+        ...authOptions()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 
@@ -171,7 +265,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository:
-            createInMemoryPackagingRecyclingNotesRepository([])
+            createInMemoryPackagingRecyclingNotesRepository([]),
+          organisationsRepository: createOrganisationsRepository()
         },
         featureFlags
       })
@@ -182,7 +277,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: `/v1/organisations/invalid/accreditations/${accreditationId}/prns`,
         payload: validPayload,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -193,7 +288,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: `/v1/organisations/${organisationId}/accreditations/invalid/prns`,
         payload: validPayload,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -205,7 +300,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: payloadWithoutTonnage,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -216,7 +311,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: { ...validPayload, tonnage: 10.5 },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -227,7 +322,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: { ...validPayload, tonnage: 0 },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -238,7 +333,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: { ...validPayload, tonnage: -1 },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -250,9 +345,9 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         url: basePath,
         payload: {
           ...validPayload,
-          issuerNotes: 'a'.repeat(notesMaxLen + 1)
+          issuerNotes: 'a'.repeat(issuerNotesMaxLen + 1)
         },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -264,7 +359,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: payloadWithoutNotes,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -277,7 +372,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: payloadWithoutOrg,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -294,7 +389,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
             id: 'not-a-uuid'
           }
         },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -310,7 +405,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
           ...validPayload,
           issuedToOrganisation: orgWithoutName
         },
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -363,7 +458,7 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         method: 'POST',
         url: basePath,
         payload: validPayload,
-        ...asStandardUser({ linkedOrgId: organisationId })
+        ...authOptions()
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)

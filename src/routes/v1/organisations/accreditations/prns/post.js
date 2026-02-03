@@ -1,10 +1,13 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import crypto from 'node:crypto'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#domain/packaging-recycling-notes/status.js'
 
 /** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const prnPostPath =
   '/v1/organisations/{organisationId}/accreditations/{accreditationId}/prns'
@@ -34,12 +37,17 @@ export const prnPost = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (
-    { packagingRecyclingNotesRepository, params, payload },
+    {
+      packagingRecyclingNotesRepository,
+      organisationsRepository,
+      params,
+      payload
+    },
     h
   ) => {
     const { organisationId, accreditationId } = params
@@ -48,25 +56,41 @@ export const prnPost = {
         payload
       )
 
+    const organisation = await organisationsRepository.findById(organisationId)
+    const registration = organisation.registrations?.find(
+      (r) => r.accreditationId === accreditationId
+    )
+
+    if (!registration) {
+      throw Boom.notFound(
+        `No registration found for accreditation ${accreditationId}`
+      )
+    }
+
     const id = crypto.randomUUID()
     const createdAt = new Date().toISOString()
 
-    // TODO: populate from auth credentials once name is available
-    const createdBy = { id: '', name: '' }
+    // TODO: populate from auth credentials once name is available request.auth.credentials.profile
+
+    const createdBy = {
+      id: h.request.auth.credentials.profile.id,
+      name: h.request.auth.credentials.profile.name
+    }
 
     /** @type {import('#domain/packaging-recycling-notes/model.js').PackagingRecyclingNote} */
     const prn = {
       id,
       organisationId,
-      registrationId: '', // TODO: determine source for registrationId
+      registrationId: registration.id,
       accreditationId,
       schemaVersion: 1,
       createdAt,
       createdBy,
-      isExport: false, // TODO: determine source for isExport
-      isDecemberWaste: false, // TODO: determine source for isDecemberWaste
+      isExport:
+        registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER,
+      isDecemberWaste: false,
       prnNumber: '',
-      accreditationYear: 0, // TODO: determine source for accreditationYear
+      accreditationYear: 2026, // hardcoded to 2026 for now
       tonnage,
       issuerNotes,
       issuedToOrganisation,

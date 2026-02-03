@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
+import Boom from '@hapi/boom'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -11,6 +12,7 @@ describe('PRN endpoints - Integration', () => {
 
   const organisationId = '6507f1f7-7bcf-46cd-b994-390100000001'
   const accreditationId = '507f1f77-bcf8-46cd-b994-390110000001'
+  const registrationId = 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb'
 
   const validPayload = {
     tonnage: 100,
@@ -22,6 +24,32 @@ describe('PRN endpoints - Integration', () => {
     }
   }
 
+  const authOptions = () =>
+    asStandardUser(
+      /** @type {any} */ ({
+        linkedOrgId: organisationId,
+        profile: { id: 'test-user-id', name: 'Test User' }
+      })
+    )
+
+  const createOrganisationsRepository = () => ({
+    findById: async (id) => {
+      if (id !== organisationId) {
+        throw Boom.notFound(`Organisation with id ${id} not found`)
+      }
+      return {
+        id: organisationId,
+        registrations: [
+          {
+            id: registrationId,
+            accreditationId,
+            wasteProcessingType: 'reprocessor'
+          }
+        ]
+      }
+    }
+  })
+
   let server
 
   beforeEach(async () => {
@@ -32,7 +60,8 @@ describe('PRN endpoints - Integration', () => {
     server = await createTestServer({
       repositories: {
         packagingRecyclingNotesRepository:
-          createInMemoryPackagingRecyclingNotesRepository()
+          createInMemoryPackagingRecyclingNotesRepository(),
+        organisationsRepository: createOrganisationsRepository()
       },
       featureFlags
     })
@@ -43,7 +72,7 @@ describe('PRN endpoints - Integration', () => {
       method: 'POST',
       url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
       payload: validPayload,
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...authOptions()
     })
 
     expect(postResponse.statusCode).toBe(StatusCodes.CREATED)
@@ -52,6 +81,7 @@ describe('PRN endpoints - Integration', () => {
 
     expect(created.id).toBeDefined()
     expect(created.organisationId).toBe(organisationId)
+    expect(created.registrationId).toBe(registrationId)
     expect(created.accreditationId).toBe(accreditationId)
     expect(created.tonnage).toBe(100)
     expect(created.issuerNotes).toBe('REF: 101010')
@@ -67,7 +97,7 @@ describe('PRN endpoints - Integration', () => {
     const getResponse = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns/${created.id}`,
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...authOptions()
     })
 
     expect(getResponse.statusCode).toBe(StatusCodes.OK)
@@ -75,6 +105,7 @@ describe('PRN endpoints - Integration', () => {
     const retrieved = JSON.parse(getResponse.payload)
 
     expect(retrieved.organisationId).toBe(organisationId)
+    expect(retrieved.registrationId).toBe(registrationId)
     expect(retrieved.accreditationId).toBe(accreditationId)
     expect(retrieved.tonnage).toBe(100)
     expect(retrieved.issuerNotes).toBe('REF: 101010')
@@ -92,7 +123,7 @@ describe('PRN endpoints - Integration', () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns/00000000-0000-4000-8000-000000000000`,
-      ...asStandardUser({ linkedOrgId: organisationId })
+      ...authOptions()
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
