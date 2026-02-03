@@ -93,6 +93,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toStrictEqual({
           id: prnId,
+          prnNumber: null,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
@@ -103,6 +104,47 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           authorisedAt: '2026-01-16T14:30:00.000Z',
           authorisedBy: { name: 'John Smith', position: 'Director' },
           wasteProcessingType: 'reprocessor'
+        })
+      })
+
+      it('returns prnNumber when PRN has been issued', async () => {
+        const issuedPrn = {
+          id: prnId,
+          prnNumber: 'ER1234567890A',
+          issuedByOrganisation: organisationId,
+          issuedByAccreditation: accreditationId,
+          issuedToOrganisation: 'Acme Packaging Ltd',
+          tonnage: 50,
+          material: 'glass',
+          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE },
+          createdAt: new Date('2026-01-15T10:00:00Z')
+        }
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          issuedPrn
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const payload = JSON.parse(response.payload)
+        expect(payload).toStrictEqual({
+          id: prnId,
+          prnNumber: 'ER1234567890A',
+          issuedToOrganisation: 'Acme Packaging Ltd',
+          tonnage: 50,
+          material: 'glass',
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          createdAt: '2026-01-15T10:00:00.000Z',
+          notes: null,
+          isDecemberWaste: false,
+          authorisedAt: null,
+          authorisedBy: null,
+          wasteProcessingType: null
         })
       })
 
@@ -133,6 +175,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toStrictEqual({
           id: prnId,
+          prnNumber: null,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
