@@ -75,26 +75,26 @@ export const findBalance = (db) => async (id) => {
  * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
 export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
-    await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
-      { accreditationId: updatedBalance.accreditationId },
-      /** @type {*} */ ({
-        $set: {
-          amount: updatedBalance.amount,
-          availableAmount: updatedBalance.availableAmount,
-          version: updatedBalance.version,
-          schemaVersion: updatedBalance.schemaVersion
-        },
-        $push: {
-          transactions: { $each: newTransactions }
-        },
-        $setOnInsert: {
-          _id: updatedBalance.id,
-          organisationId: updatedBalance.organisationId
-        }
-      }),
-      { upsert: true }
-    )
-  }
+  await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
+    { accreditationId: updatedBalance.accreditationId },
+    /** @type {*} */ ({
+      $set: {
+        amount: updatedBalance.amount,
+        availableAmount: updatedBalance.availableAmount,
+        version: updatedBalance.version,
+        schemaVersion: updatedBalance.schemaVersion
+      },
+      $push: {
+        transactions: { $each: newTransactions }
+      },
+      $setOnInsert: {
+        _id: updatedBalance.id,
+        organisationId: updatedBalance.organisationId
+      }
+    }),
+    { upsert: true }
+  )
+}
 
 /**
  * Creates a MongoDB-backed waste balances repository
