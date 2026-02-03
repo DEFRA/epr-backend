@@ -21,9 +21,17 @@ export const commandQueueConsumerPlugin = {
   register: async (server, options) => {
     const { config } = options
 
+    const queueUrl = config.get('commandQueue.url')
+
+    if (!queueUrl) {
+      server.logger.info({
+        message: 'SQS command queue consumer disabled (no queue URL configured)'
+      })
+      return
+    }
+
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
-    const queueUrl = config.get('commandQueue.url')
 
     const sqsClient = createSqsClient({
       region: awsRegion,
