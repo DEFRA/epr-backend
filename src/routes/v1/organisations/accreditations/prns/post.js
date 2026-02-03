@@ -8,6 +8,7 @@ import { PRN_STATUS } from '#domain/packaging-recycling-notes/status.js'
 
 /** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
 
 export const prnPostPath =
   '/v1/organisations/{organisationId}/accreditations/{accreditationId}/prns'
@@ -37,7 +38,7 @@ export const prnPost = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository, wasteBalancesRepository: WasteBalancesRepository}} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
@@ -45,6 +46,7 @@ export const prnPost = {
     {
       packagingRecyclingNotesRepository,
       organisationsRepository,
+      wasteBalancesRepository,
       params,
       payload
     },
@@ -65,6 +67,14 @@ export const prnPost = {
       throw Boom.notFound(
         `No registration found for accreditation ${accreditationId}`
       )
+    }
+
+    const wasteBalance =
+      await wasteBalancesRepository.findByAccreditationId(accreditationId)
+    const availableAmount = wasteBalance?.availableAmount ?? 0
+
+    if (tonnage > availableAmount) {
+      throw Boom.badRequest('The tonnage exceeds the available waste balance')
     }
 
     const id = crypto.randomUUID()

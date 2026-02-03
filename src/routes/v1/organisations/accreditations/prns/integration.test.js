@@ -50,6 +50,10 @@ describe('PRN endpoints - Integration', () => {
     }
   })
 
+  const createWasteBalancesRepository = () => ({
+    findByAccreditationId: async () => ({ availableAmount: 1000 })
+  })
+
   let server
 
   beforeEach(async () => {
@@ -61,7 +65,8 @@ describe('PRN endpoints - Integration', () => {
       repositories: {
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository(),
-        organisationsRepository: createOrganisationsRepository()
+        organisationsRepository: createOrganisationsRepository(),
+        wasteBalancesRepository: createWasteBalancesRepository()
       },
       featureFlags
     })

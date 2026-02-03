@@ -22,7 +22,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
     accreditationId,
     schemaVersion: 1,
     createdAt: '2026-01-21T10:30:00.000Z',
-    createdBy: { id: '', name: '' },
+    createdBy: { id: 'test-user-id', name: 'Test User' },
     isExport: false,
     isDecemberWaste: false,
     prnNumber: '',
@@ -37,7 +37,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       {
         status: 'draft',
         createdAt: '2026-01-21T10:30:00.000Z',
-        createdBy: { id: '', name: '' }
+        createdBy: { id: 'test-user-id', name: 'Test User' }
       }
     ]
   }
@@ -75,7 +75,10 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       expect(result.accreditationId).toBe(accreditationId)
       expect(result.schemaVersion).toBe(1)
       expect(result.createdAt).toBe('2026-01-21T10:30:00.000Z')
-      expect(result.createdBy).toEqual({ id: '', name: '' })
+      expect(result.createdBy).toEqual({
+        id: 'test-user-id',
+        name: 'Test User'
+      })
       expect(result.isExport).toBe(false)
       expect(result.isDecemberWaste).toBe(false)
       expect(result.prnNumber).toBe('')
@@ -90,7 +93,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
         {
           status: 'draft',
           createdAt: '2026-01-21T10:30:00.000Z',
-          createdBy: { id: '', name: '' }
+          createdBy: { id: 'test-user-id', name: 'Test User' }
         }
       ])
     })

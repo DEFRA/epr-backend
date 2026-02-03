@@ -52,6 +52,11 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
     }
   })
 
+  const createWasteBalancesRepository = (availableAmount = 1000) => ({
+    findByAccreditationId: async () =>
+      availableAmount === null ? null : { availableAmount }
+  })
+
   describe('with valid authentication and payload', () => {
     let server
     let repositoryFactory
@@ -66,7 +71,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository: repositoryFactory,
-          organisationsRepository: createOrganisationsRepository()
+          organisationsRepository: createOrganisationsRepository(),
+          wasteBalancesRepository: createWasteBalancesRepository()
         },
         featureFlags
       })
@@ -202,7 +208,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
               accreditationId,
               wasteProcessingType: 'exporter'
             }
-          ])
+          ]),
+          wasteBalancesRepository: createWasteBalancesRepository()
         },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: true
@@ -236,7 +243,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
               accreditationId: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
               wasteProcessingType: 'reprocessor'
             }
-          ])
+          ]),
+          wasteBalancesRepository: createWasteBalancesRepository()
         },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: true
@@ -254,6 +262,85 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
     })
   })
 
+  describe('waste balance validation', () => {
+    it('returns 400 when tonnage exceeds available waste balance', async () => {
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([]),
+          organisationsRepository: createOrganisationsRepository(),
+          wasteBalancesRepository: createWasteBalancesRepository(50)
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          createPackagingRecyclingNotes: true
+        })
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: basePath,
+        payload: { ...validPayload, tonnage: 51 },
+        ...authOptions()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const result = JSON.parse(response.payload)
+      expect(result.message).toBe(
+        'The tonnage exceeds the available waste balance'
+      )
+    })
+
+    it('returns 400 when no waste balance exists for the accreditation', async () => {
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([]),
+          organisationsRepository: createOrganisationsRepository(),
+          wasteBalancesRepository: createWasteBalancesRepository(null)
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          createPackagingRecyclingNotes: true
+        })
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: basePath,
+        payload: validPayload,
+        ...authOptions()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      const result = JSON.parse(response.payload)
+      expect(result.message).toBe(
+        'The tonnage exceeds the available waste balance'
+      )
+    })
+
+    it('succeeds when tonnage equals available amount exactly', async () => {
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([]),
+          organisationsRepository: createOrganisationsRepository(),
+          wasteBalancesRepository: createWasteBalancesRepository(100)
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          createPackagingRecyclingNotes: true
+        })
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: basePath,
+        payload: { ...validPayload, tonnage: 100 },
+        ...authOptions()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+  })
+
   describe('validation errors', () => {
     let server
 
@@ -266,7 +353,8 @@ describe('POST /v1/organisations/{organisationId}/accreditations/{accreditationI
         repositories: {
           packagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository([]),
-          organisationsRepository: createOrganisationsRepository()
+          organisationsRepository: createOrganisationsRepository(),
+          wasteBalancesRepository: createWasteBalancesRepository()
         },
         featureFlags
       })
