@@ -2,8 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   findOrCreateWasteBalance,
   performUpdateWasteBalanceTransactions,
-  filterValidRecords
+  filterValidRecords,
+  buildPrnCreationTransaction,
+  performDeductAvailableBalanceForPrnCreation
 } from './helpers.js'
+import {
+  WASTE_BALANCE_TRANSACTION_TYPE,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+} from '#domain/waste-balances/model.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -331,6 +337,191 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       })
 
       expect(result).toBeUndefined()
+    })
+  })
+
+  describe('buildPrnCreationTransaction', () => {
+    it('should build a transaction that deducts from availableAmount only', () => {
+      const currentBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 400,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const transaction = buildPrnCreationTransaction({
+        prnId: 'prn-123',
+        tonnage: 50.5,
+        userId: 'user-abc',
+        currentBalance
+      })
+
+      expect(transaction.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.DEBIT)
+      expect(transaction.amount).toBe(50.5)
+      expect(transaction.openingAmount).toBe(500)
+      expect(transaction.closingAmount).toBe(500)
+      expect(transaction.openingAvailableAmount).toBe(400)
+      expect(transaction.closingAvailableAmount).toBe(349.5)
+      expect(transaction.entities).toHaveLength(1)
+      expect(transaction.entities[0].id).toBe('prn-123')
+      expect(transaction.entities[0].type).toBe(
+        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CREATED
+      )
+      expect(transaction.createdBy).toEqual({
+        id: 'user-abc',
+        name: 'user-abc'
+      })
+      expect(transaction.id).toBeDefined()
+      expect(transaction.createdAt).toBeDefined()
+    })
+  })
+
+  describe('performDeductAvailableBalanceForPrnCreation', () => {
+    it('should deduct tonnage from available balance and save', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 400,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performDeductAvailableBalanceForPrnCreation({
+        deductParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50.5,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 500,
+          availableAmount: 349.5,
+          version: 2
+        }),
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+            amount: 50.5
+          })
+        ])
+      )
+    })
+
+    it('should return early if no balance exists', async () => {
+      const findBalance = vi.fn().mockResolvedValue(null)
+      const saveBalance = vi.fn()
+
+      await performDeductAvailableBalanceForPrnCreation({
+        deductParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50.5,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
+    it('should append to existing transactions', async () => {
+      const existingTransaction = {
+        id: 'existing-tx',
+        type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+        amount: 100
+      }
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 400,
+        transactions: [existingTransaction],
+        version: 3,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performDeductAvailableBalanceForPrnCreation({
+        deductParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-456',
+          tonnage: 25,
+          userId: 'user-xyz'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactions: expect.arrayContaining([existingTransaction]),
+          version: 4
+        }),
+        expect.any(Array)
+      )
+      expect(saveBalance.mock.calls[0][0].transactions).toHaveLength(2)
+    })
+
+    it('should handle balance with undefined transactions array', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 100,
+        transactions: undefined,
+        version: undefined,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performDeductAvailableBalanceForPrnCreation({
+        deductParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-789',
+          tonnage: 10,
+          userId: 'user-123'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactions: expect.arrayContaining([
+            expect.objectContaining({ amount: 10 })
+          ]),
+          version: 1
+        }),
+        expect.any(Array)
+      )
     })
   })
 })

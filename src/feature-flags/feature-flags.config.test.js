@@ -97,4 +97,22 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.createPackagingRecyclingNotes'
     )
   })
+
+  it('returns true when lumpyPackagingRecyclingNotes flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.lumpyPackagingRecyclingNotes'
+    )
+  })
+
+  it('returns false when lumpyPackagingRecyclingNotes flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.lumpyPackagingRecyclingNotes'
+    )
+  })
 })

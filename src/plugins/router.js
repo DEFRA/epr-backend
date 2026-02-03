@@ -10,6 +10,7 @@ import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnRoutes from '#routes/v1/organisations/accreditations/prns/index.js'
+import * as packagingRecyclingNotesRoutes from '#l-packaging-recycling-notes/routes/index.js'
 
 const router = {
   plugin: {
@@ -32,6 +33,11 @@ const router = {
             ? Object.values(prnRoutes)
             : []
 
+        const packagingRecyclingNotesRoutesBehindFeatureFlag =
+          featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
+            ? Object.values(packagingRecyclingNotesRoutes)
+            : []
+
         server.route([
           health,
           ...apply,
@@ -44,7 +50,8 @@ const router = {
           ...Object.values(systemLogsRoutes),
           ...wasteBalances,
           ...Object.values(publicRegisterRoutes),
-          ...Object.values(tonnageMonitoringRoutes)
+          ...Object.values(tonnageMonitoringRoutes),
+          ...packagingRecyclingNotesRoutesBehindFeatureFlag
         ])
       })
     }

@@ -1,5 +1,8 @@
 import { validateAccreditationId } from './validation.js'
-import { performUpdateWasteBalanceTransactions } from './helpers.js'
+import {
+  performUpdateWasteBalanceTransactions,
+  performDeductAvailableBalanceForPrnCreation
+} from './helpers.js'
 
 /**
  * Find a waste balance by accreditation ID.
@@ -78,6 +81,13 @@ export const createInMemoryWasteBalancesRepository = (
         wasteRecords,
         accreditationId,
         dependencies,
+        findBalance: findBalance(wasteBalanceStorage),
+        saveBalance: saveBalance(wasteBalanceStorage)
+      })
+    },
+    deductAvailableBalanceForPrnCreation: async (deductParams) => {
+      return performDeductAvailableBalanceForPrnCreation({
+        deductParams,
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage)
       })

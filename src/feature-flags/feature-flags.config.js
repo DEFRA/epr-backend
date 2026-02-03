@@ -29,5 +29,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isCreatePackagingRecyclingNotesEnabled() {
     return config.get('featureFlags.createPackagingRecyclingNotes')
+  },
+  isCreateLumpyPackagingRecyclingNotesEnabled() {
+    return config.get('featureFlags.lumpyPackagingRecyclingNotes')
   }
 })
