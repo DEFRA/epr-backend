@@ -1,7 +1,7 @@
 import { createSqsCommandExecutor } from './sqs-command-executor.js'
 
 export const sqsCommandExecutorPlugin = {
-  name: 'sqs-command-executor',
+  name: 'workers',
   version: '1.0.0',
 
   register: (server) => {
