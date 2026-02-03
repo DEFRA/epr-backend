@@ -15,6 +15,8 @@ services:
       - 'compose/aws.env'
     environment:
       AUDIT_ENABLED: false
+      COMMAND_QUEUE_SQS_ENDPOINT: http://localstack:4566
+      COMMAND_QUEUE_SQS_URL: http://localstack:4566/000000000000/epr_backend_commands
       FEATURE_FLAG_SUMMARY_LOGS: true
       GOVUK_NOTIFY_API_KEY: /run/secrets/govuk_notify_api_key
       LOCALSTACK_ENDPOINT: http://localstack:4566
