@@ -120,7 +120,7 @@ export const summaryLogsSubmit = {
       }
 
       // Trigger async submission worker (fire-and-forget)
-      await summaryLogsWorker.submit(summaryLogId)
+      await summaryLogsWorker.submit(summaryLogId, request)
 
       const processingType =
         summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]

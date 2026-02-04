@@ -77,7 +77,8 @@ describe('createSummaryLogsCommandExecutor', () => {
 
     expect(mockRun).toHaveBeenCalledWith({
       command: 'validate',
-      summaryLogId
+      summaryLogId,
+      user: null
     })
   })
 
@@ -143,7 +144,31 @@ describe('createSummaryLogsCommandExecutor', () => {
 
       expect(mockRun).toHaveBeenCalledWith({
         command: 'submit',
-        summaryLogId
+        summaryLogId,
+        user: null
+      })
+    })
+
+    it('runs worker with serialized user context from request', async () => {
+      const mockRequest = {
+        auth: {
+          credentials: {
+            id: 'user-1',
+            email: 'test@example.com',
+            scope: ['admin']
+          }
+        }
+      }
+      await summaryLogsWorker.submit(summaryLogId, mockRequest)
+
+      expect(mockRun).toHaveBeenCalledWith({
+        command: 'submit',
+        summaryLogId,
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          scope: ['admin']
+        }
       })
     })
 
