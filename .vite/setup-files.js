@@ -39,7 +39,6 @@ process.env.AUDIT_ENABLED = 'true'
 // process.env.HTTP_PROXY is intentionally not set (null in config.js)
 
 // Feature flags - explicitly set to false for predictable test behavior
-process.env.FEATURE_FLAG_SUMMARY_LOGS = 'false'
 process.env.FEATURE_FLAG_FORMS_DATA_MIGRATION = 'false'
 process.env.FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS = 'false'
 
