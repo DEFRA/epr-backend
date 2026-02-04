@@ -274,9 +274,11 @@ describe('updatePrnStatus', () => {
       })
     }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi
-        .fn()
-        .mockResolvedValue({ accreditationId: 'acc-456' }),
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
     }
 
