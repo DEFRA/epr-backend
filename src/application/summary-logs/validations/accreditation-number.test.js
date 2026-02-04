@@ -309,6 +309,32 @@ describe('validateAccreditationNumber', () => {
     expect(issues.getAllIssues()).toHaveLength(0)
   })
 
+  it('coerces numeric spreadsheet value to string before comparing', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION_NUMBER: {
+          value: 12345678
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+  })
+
   it('handles missing location gracefully by including only field', () => {
     const registration = {
       id: 'reg-123',

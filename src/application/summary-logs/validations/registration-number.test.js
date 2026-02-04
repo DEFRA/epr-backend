@@ -214,6 +214,55 @@ describe('validateRegistrationNumber', () => {
     expect(fatals[0].context.actual).toBe('REG99999')
   })
 
+  it('coerces numeric spreadsheet value to string before comparing', () => {
+    const registration = {
+      id: 'reg-123',
+      registrationNumber: '12345'
+    }
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: 12345
+        }
+      }
+    }
+
+    const result = validateRegistrationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(result.isValid()).toBe(true)
+    expect(result.isFatal()).toBe(false)
+    expect(result.hasIssues()).toBe(false)
+  })
+
+  it('treats null spreadsheet value as mismatch when registration has a registrationNumber', () => {
+    const registration = {
+      id: 'reg-123',
+      registrationNumber: 'REG12345'
+    }
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: null
+        }
+      }
+    }
+
+    const result = validateRegistrationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(result.isFatal()).toBe(true)
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals).toHaveLength(1)
+    expect(fatals[0].context.actual).toBeNull()
+  })
+
   it('handles missing location gracefully by including only field', () => {
     const registration = {
       id: 'reg-123',
