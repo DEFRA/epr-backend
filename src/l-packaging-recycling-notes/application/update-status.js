@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 
+import { prnMetrics } from './metrics.js'
 import {
   PRN_STATUS,
   PRN_STATUS_TRANSITIONS
@@ -31,7 +32,14 @@ async function issuePrnWithRetry(repository, updateParams, prnParams) {
     const prnNumber = generatePrnNumber({ ...prnParams, suffix })
 
     try {
-      return await repository.updateStatus({ ...updateParams, prnNumber })
+      const result = await repository.updateStatus({
+        ...updateParams,
+        prnNumber
+      })
+      if (!result) {
+        throw new Error('Failed to update PRN status')
+      }
+      return result
     } catch (error) {
       if (error instanceof PrnNumberConflictError) {
         continue
@@ -168,10 +176,19 @@ export async function updatePrnStatus({
       userId
     })
 
-    return await issuePrnWithRetry(prnRepository, updateParams, {
+    const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
     })
+
+    await prnMetrics.recordStatusTransition({
+      fromStatus: currentStatus,
+      toStatus: newStatus,
+      material: prn.material,
+      isExport: prn.isExport
+    })
+
+    return issuedPrn
   }
 
   // Simple status update without PRN number
@@ -180,6 +197,13 @@ export async function updatePrnStatus({
   if (!updatedPrn) {
     throw Boom.badImplementation('Failed to update PRN status')
   }
+
+  await prnMetrics.recordStatusTransition({
+    fromStatus: currentStatus,
+    toStatus: newStatus,
+    material: prn.material,
+    isExport: prn.isExport
+  })
 
   return updatedPrn
 }

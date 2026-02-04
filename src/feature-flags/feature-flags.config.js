@@ -14,9 +14,6 @@ export const createConfigFeatureFlags = (config) => ({
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
   },
-  isCalculateWasteBalanceOnImportEnabled() {
-    return config.get('featureFlags.calculateWasteBalanceOnImport')
-  },
   getGlassMigrationMode() {
     const value = config.get('featureFlags.glassMigration')
     if (value === 'true') {

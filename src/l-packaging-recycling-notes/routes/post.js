@@ -9,6 +9,7 @@ import {
 } from '#common/enums/index.js'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { getProcessCode } from '#l-packaging-recycling-notes/domain/get-process-code.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
@@ -71,7 +72,8 @@ const buildResponse = (prn) => ({
   material: prn.material,
   issuedToOrganisation: prn.issuedToOrganisation,
   status: prn.status.currentStatus,
-  createdAt: prn.createdAt
+  createdAt: prn.createdAt,
+  processToBeUsed: getProcessCode(prn.material)
 })
 
 export const packagingRecyclingNotesCreate = {

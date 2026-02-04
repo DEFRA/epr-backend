@@ -149,6 +149,7 @@ export const USER_ROLES = Object.freeze({
  *   name: string;
  *   tradingName?: string;
  *   registrationNumber?: string;
+ *   companiesHouseNumber?: string;
  *   registeredAddress?: Address;
  *   address?: Address;
  * }} CompanyDetails
