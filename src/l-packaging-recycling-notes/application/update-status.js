@@ -70,6 +70,36 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
       tonnage,
       userId
     })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
+ * Deducts total waste balance when issuing a PRN.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
   }
 }
 
@@ -137,6 +167,15 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    // Deduct total waste balance when issuing PRN
+    await deductTotalBalanceIfNeeded(wasteBalancesRepository, {
+      accreditationId,
+      organisationId,
+      prnId: id,
+      tonnage: prn.tonnage,
+      userId
+    })
+
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
