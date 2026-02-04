@@ -96,9 +96,7 @@
     "undici": "7.19.2"
   },
   "overrides": {
-    "brace-expansion": "2.0.2",
-    "glob": "11.1.0",
-    "validator": "13.15.23"
+    "glob": "11.1.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.18",
