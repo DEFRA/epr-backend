@@ -2,10 +2,12 @@ import { testFindByAccreditationIdBehaviour } from './contract/findByAccreditati
 import { testFindByAccreditationIdsBehaviour } from './contract/findByAccreditationIds.contract.js'
 import { testUpdateWasteBalanceTransactionsBehaviour } from './contract/updateWasteBalanceTransactions.contract.js'
 import { testDeductAvailableBalanceForPrnCreationBehaviour } from './contract/deductAvailableBalanceForPrnCreation.contract.js'
+import { testDeductTotalBalanceForPrnIssueBehaviour } from './contract/deductTotalBalanceForPrnIssue.contract.js'
 
 export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testFindByAccreditationIdBehaviour(repositoryFactory)
   testFindByAccreditationIdsBehaviour(repositoryFactory)
   testUpdateWasteBalanceTransactionsBehaviour(repositoryFactory)
   testDeductAvailableBalanceForPrnCreationBehaviour(repositoryFactory)
+  testDeductTotalBalanceForPrnIssueBehaviour(repositoryFactory)
 }
