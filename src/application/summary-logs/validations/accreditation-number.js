@@ -31,7 +31,7 @@ export const validateAccreditationNumber = ({
     parsed,
     SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER
   )
-  const spreadsheetAccreditationNumber = accreditationField?.value
+  const spreadsheetAccreditationNumber = accreditationField?.value?.trim()
 
   const location = buildMetaFieldLocation(
     accreditationField,

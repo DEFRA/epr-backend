@@ -207,6 +207,108 @@ describe('validateAccreditationNumber', () => {
     })
   })
 
+  it('matches when spreadsheet value has leading/trailing whitespace', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION_NUMBER: {
+          value: '  12345678  '
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+  })
+
+  it('reports trimmed value as actual when spreadsheet value has whitespace and does not match', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION_NUMBER: {
+          value: '  99999999  '
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()[0].context.actual).toBe('99999999')
+  })
+
+  it('treats whitespace-only spreadsheet value as missing when registration has accreditation', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION_NUMBER: {
+          value: '   '
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()[0]).toMatchObject({
+      message: 'Invalid summary log: missing accreditation number'
+    })
+  })
+
+  it('treats whitespace-only spreadsheet value as blank when registration has no accreditation', () => {
+    const registration = {
+      id: 'reg-123'
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION_NUMBER: {
+          value: '   '
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+  })
+
   it('handles missing location gracefully by including only field', () => {
     const registration = {
       id: 'reg-123',

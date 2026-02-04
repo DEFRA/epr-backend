@@ -166,6 +166,54 @@ describe('validateRegistrationNumber', () => {
     expect(issues[0].severity).toBe(VALIDATION_SEVERITY.FATAL)
   })
 
+  it('matches when spreadsheet value has leading/trailing whitespace', () => {
+    const registration = {
+      id: 'reg-123',
+      registrationNumber: 'REG12345'
+    }
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: '  REG12345  '
+        }
+      }
+    }
+
+    const result = validateRegistrationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(result.isValid()).toBe(true)
+    expect(result.isFatal()).toBe(false)
+    expect(result.hasIssues()).toBe(false)
+  })
+
+  it('reports trimmed value as actual when spreadsheet value has whitespace and does not match', () => {
+    const registration = {
+      id: 'reg-123',
+      registrationNumber: 'REG12345'
+    }
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: '  REG99999  '
+        }
+      }
+    }
+
+    const result = validateRegistrationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(result.isFatal()).toBe(true)
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals[0].context.actual).toBe('REG99999')
+  })
+
   it('handles missing location gracefully by including only field', () => {
     const registration = {
       id: 'reg-123',
