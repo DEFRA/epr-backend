@@ -77,8 +77,7 @@ const parseCommandMessage = (message, logger) => {
     parsed = JSON.parse(message.Body ?? '{}')
   } catch {
     logger.error({
-      message: 'Failed to parse SQS message body',
-      messageId: message.MessageId,
+      message: `Failed to parse SQS message body, messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -91,9 +90,7 @@ const parseCommandMessage = (message, logger) => {
 
   if (error) {
     logger.error({
-      message: `Invalid command message: ${error.message}`,
-      messageId: message.MessageId,
-      command: parsed,
+      message: `Invalid command message: ${error.message}, messageId=${message.MessageId}, command=${JSON.stringify(parsed)}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -144,11 +141,11 @@ const createMessageHandler = (deps) => async (message) => {
   const { command: commandType, summaryLogId } = command
 
   logger.info({
-    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
-    messageId: message.MessageId,
+    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}, messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+      action: LOGGING_EVENT_ACTIONS.START_SUCCESS,
+      reference: summaryLogId
     }
   })
 
@@ -168,11 +165,11 @@ const createMessageHandler = (deps) => async (message) => {
     }
 
     logger.info({
-      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId}`,
-      messageId: message.MessageId,
+      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId}, messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS,
+        reference: summaryLogId
       }
     })
   } catch (err) {
