@@ -131,6 +131,32 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
 }
 
 /**
+ * Applies waste balance side effects for a status transition.
+ * Each transition type is mutually exclusive based on newStatus.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
+  const { currentStatus, newStatus, ...balanceParams } = params
+
+  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
+    await deductWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+  }
+
+  if (
+    newStatus === PRN_STATUS.CANCELLED &&
+    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
+  ) {
+    await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+  }
+
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    await deductTotalBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+  }
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -173,30 +199,15 @@ export async function updatePrnStatus({
     )
   }
 
-  // Deduct available waste balance when creating PRN
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    await deductWasteBalanceIfNeeded(wasteBalancesRepository, {
-      accreditationId,
-      organisationId,
-      prnId: id,
-      tonnage: prn.tonnage,
-      userId
-    })
-  }
-
-  // Credit available waste balance when cancelling from awaiting_authorisation
-  if (
-    newStatus === PRN_STATUS.CANCELLED &&
-    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    await creditWasteBalanceIfNeeded(wasteBalancesRepository, {
-      accreditationId,
-      organisationId,
-      prnId: id,
-      tonnage: prn.tonnage,
-      userId
-    })
-  }
+  await applyWasteBalanceEffects(wasteBalancesRepository, {
+    currentStatus,
+    newStatus,
+    accreditationId,
+    organisationId,
+    prnId: id,
+    tonnage: prn.tonnage,
+    userId
+  })
 
   const now = new Date()
   const updateParams = {
@@ -208,15 +219,6 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    // Deduct total waste balance when issuing PRN
-    await deductTotalBalanceIfNeeded(wasteBalancesRepository, {
-      accreditationId,
-      organisationId,
-      prnId: id,
-      tonnage: prn.tonnage,
-      userId
-    })
-
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
