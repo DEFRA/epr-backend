@@ -74,11 +74,28 @@ const prepareRowsForTransformation = (parsedData) => {
   }
 }
 
+const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
+  if (summaryLog.accreditationId) {
+    return summaryLog.accreditationId
+  }
+
+  if (organisationsRepository) {
+    const registration = await organisationsRepository.findRegistrationById(
+      summaryLog.organisationId,
+      summaryLog.registrationId
+    )
+    return registration?.accreditationId
+  }
+
+  return undefined
+}
+
 const updateWasteBalances = async ({
   parsedData,
   accreditationId,
   wasteBalancesRepository,
-  wasteRecords
+  wasteRecords,
+  user
 }) => {
   // We only calculate waste balance for exporters and reprocessor inputs currently
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -90,9 +107,59 @@ const updateWasteBalances = async ({
   if (accreditationId && shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
-      accreditationId
+      accreditationId,
+      user
     )
   }
+}
+
+const transformToWasteRecords = (
+  preparedData,
+  summaryLog,
+  accreditationId,
+  timestamp,
+  existingRecords
+) => {
+  const summaryLogContext = {
+    summaryLog: {
+      id: summaryLog.file.id,
+      uri: summaryLog.file.uri
+    },
+    organisationId: summaryLog.organisationId,
+    registrationId: summaryLog.registrationId,
+    accreditationId,
+    timestamp
+  }
+
+  return transformFromSummaryLog(
+    preparedData,
+    summaryLogContext,
+    existingRecords
+  )
+}
+
+const prepareWasteRecordVersions = (wasteRecords) => {
+  const wasteRecordVersions = new Map()
+  for (const { record } of wasteRecords) {
+    if (!wasteRecordVersions.has(record.type)) {
+      wasteRecordVersions.set(record.type, new Map())
+    }
+
+    // Get the latest version (last in array) and its data
+    const latestVersion = record.versions[record.versions.length - 1]
+    wasteRecordVersions.get(record.type).set(record.rowId, {
+      version: latestVersion,
+      data: record.data
+    })
+  }
+  return wasteRecordVersions
+}
+
+const calculateMetrics = (wasteRecords) => {
+  const created = wasteRecords.filter((wr) => wr.change === 'created').length
+  const updated = wasteRecords.filter((wr) => wr.change === 'updated').length
+
+  return { created, updated }
 }
 
 /**
@@ -120,11 +187,11 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
-   * @param {string} [summaryLog.accreditationId] - Optional accreditation ID
+   * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
+   * @param {Object} [user] - User context for the sync
    * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
-  return async (summaryLog) => {
-    // Capture timestamp at start of submission for consistent versioning
+  return async (summaryLog, user) => {
     const timestamp = new Date().toISOString()
 
     // 1. Extract/parse the summary log
@@ -139,16 +206,10 @@ export const syncFromSummaryLog = (dependencies) => {
       summaryLog.registrationId
     )
 
-    let accreditationId = summaryLog.accreditationId
-    if (!accreditationId && organisationsRepository) {
-      const registration = await organisationsRepository.findRegistrationById(
-        summaryLog.organisationId,
-        summaryLog.registrationId
-      )
-      if (registration) {
-        accreditationId = registration.accreditationId
-      }
-    }
+    const accreditationId = await resolveAccreditationId(
+      summaryLog,
+      organisationsRepository
+    )
 
     // 4. Convert to Map keyed by type:rowId for efficient lookup
     const existingRecords = new Map(
@@ -159,37 +220,16 @@ export const syncFromSummaryLog = (dependencies) => {
     )
 
     // 5. Transform to waste records
-    const summaryLogContext = {
-      summaryLog: {
-        id: summaryLog.file.id,
-        uri: summaryLog.file.uri
-      },
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId,
-      timestamp
-    }
-
-    const wasteRecords = transformFromSummaryLog(
+    const wasteRecords = transformToWasteRecords(
       preparedData,
-      summaryLogContext,
+      summaryLog,
+      accreditationId,
+      timestamp,
       existingRecords
     )
 
     // 6. Convert waste records to wasteRecordVersions Map structure
-    const wasteRecordVersions = new Map()
-    for (const { record } of wasteRecords) {
-      if (!wasteRecordVersions.has(record.type)) {
-        wasteRecordVersions.set(record.type, new Map())
-      }
-
-      // Get the latest version (last in array) and its data
-      const latestVersion = record.versions[record.versions.length - 1]
-      wasteRecordVersions.get(record.type).set(record.rowId, {
-        version: latestVersion,
-        data: record.data
-      })
-    }
+    const wasteRecordVersions = prepareWasteRecordVersions(wasteRecords)
 
     // 7. Append versions
     await wasteRecordRepository.appendVersions(
@@ -203,14 +243,12 @@ export const syncFromSummaryLog = (dependencies) => {
       parsedData,
       accreditationId,
       wasteBalancesRepository,
-      wasteRecords
+      wasteRecords,
+      user
     })
 
     // 9. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
-    const created = wasteRecords.filter((wr) => wr.change === 'created').length
-    const updated = wasteRecords.filter((wr) => wr.change === 'updated').length
-
-    return { created, updated }
+    return calculateMetrics(wasteRecords)
   }
 }

@@ -11,6 +11,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 import { config } from '#root/config.js'
 
@@ -39,7 +40,8 @@ const handleSubmitCommand = async ({
   organisationsRepository,
   wasteRecordsRepository,
   wasteBalancesRepository,
-  summaryLogExtractor
+  summaryLogExtractor,
+  user
 }) => {
   await submitSummaryLog(summaryLogId, {
     logger,
@@ -47,7 +49,8 @@ const handleSubmitCommand = async ({
     organisationsRepository,
     wasteRecordsRepository,
     wasteBalancesRepository,
-    summaryLogExtractor
+    summaryLogExtractor,
+    user
   })
 }
 
@@ -90,8 +93,14 @@ export default async function summaryLogsWorkerThread(command) {
         await createWasteRecordsRepository(db)
       const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
+      const systemLogsRepository = systemLogsRepositoryFactory(logger)
+
       const wasteBalancesRepositoryFactory =
-        await createWasteBalancesRepository(db, { organisationsRepository })
+        await createWasteBalancesRepository(db, {
+          organisationsRepository,
+          systemLogsRepository
+        })
       const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
       const summaryLogExtractor = createSummaryLogExtractor({
@@ -118,7 +127,8 @@ export default async function summaryLogsWorkerThread(command) {
             organisationsRepository,
             wasteRecordsRepository,
             wasteBalancesRepository,
-            summaryLogExtractor
+            summaryLogExtractor,
+            user: command.user
           })
           break
 

@@ -11,6 +11,8 @@ import {
   buildPrnCancellationTransaction,
   performCreditAvailableBalanceForPrnCancellation
 } from './helpers.js'
+import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
+import { audit } from '@defra/cdp-auditing'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -20,6 +22,14 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import * as validationPipeline from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import * as tableSchemas from '#domain/summary-logs/table-schemas/index.js'
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: vi.fn()
+}))
+
+vi.mock('#domain/waste-balances/calculator.js', () => ({
+  calculateWasteBalanceUpdates: vi.fn()
+}))
 
 describe('src/repositories/waste-balances/helpers.js', () => {
   describe('filterValidRecords', () => {
@@ -342,6 +352,280 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       })
 
       expect(result).toBeUndefined()
+    })
+
+    it('should audit and log system log when user is provided', async () => {
+      const wasteRecords = [
+        {
+          id: 'rec-1',
+          organisationId: 'org-1',
+          data: {} // no processingType
+        }
+      ]
+      const user = { id: 'user-1' }
+      const accreditation = { id: 'acc-1' }
+      const wasteBalance = {
+        id: 'bal-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 100,
+        transactions: [],
+        version: 1
+      }
+      const newTransactions = [{ id: 'trans-1' }]
+      const newAmount = 200
+      const newAvailableAmount = 200
+
+      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+      const saveBalance = vi.fn().mockResolvedValue()
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+        },
+        systemLogsRepository: {
+          insert: vi.fn().mockResolvedValue()
+        }
+      }
+
+      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+        newTransactions,
+        newAmount,
+        newAvailableAmount
+      })
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance,
+        user
+      })
+
+      expect(audit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user,
+          context: {
+            accreditationId: 'acc-1',
+            amount: 200,
+            availableAmount: 200,
+            newTransactions
+          }
+        })
+      )
+
+      expect(dependencies.systemLogsRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdBy: user
+        })
+      )
+    })
+
+    it('should save balance but skip audit when user is not provided', async () => {
+      const wasteRecords = [
+        {
+          id: 'rec-1',
+          organisationId: 'org-1',
+          data: {}
+        }
+      ]
+      const accreditation = { id: 'acc-1' }
+      const wasteBalance = {
+        id: 'bal-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 100,
+        transactions: [],
+        version: 0 // Explicit 0
+      }
+      const newTransactions = [{ id: 'trans-1' }]
+
+      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+      const saveBalance = vi.fn().mockResolvedValue()
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+        }
+      }
+
+      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+        newTransactions,
+        newAmount: 200,
+        newAvailableAmount: 200
+      })
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance
+        // user undefined
+      })
+
+      expect(audit).not.toHaveBeenCalled()
+      expect(saveBalance).toHaveBeenCalled()
+    })
+
+    it('should audit but skip system log when systemLogsRepository is missing', async () => {
+      const wasteRecords = [
+        {
+          id: 'rec-1',
+          organisationId: 'org-1',
+          data: {}
+        }
+      ]
+      const user = { id: 'user-1' }
+      const accreditation = { id: 'acc-1' }
+      const wasteBalance = {
+        id: 'bal-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 100
+        // transactions undefined
+        // version undefined
+      }
+      const newTransactions = [{ id: 'trans-1' }]
+      const newAmount = 200
+      const newAvailableAmount = 200
+
+      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+      const saveBalance = vi.fn().mockResolvedValue()
+
+      // Dependencies without systemLogsRepository
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+        }
+      }
+
+      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+        newTransactions,
+        newAmount,
+        newAvailableAmount
+      })
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance,
+        user
+      })
+
+      // Should still audit
+      expect(audit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user,
+          context: {
+            accreditationId: 'acc-1',
+            amount: 200,
+            availableAmount: 200,
+            newTransactions
+          }
+        })
+      )
+
+      // No system log insert attempt should be made (and no crash)
+    })
+
+    it('should throw error when organisationsRepository dependency is missing', async () => {
+      const wasteRecords = [{ id: 'rec-1', data: {} }]
+
+      await expect(
+        performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditationId: 'acc-1',
+          dependencies: {}, // missing organisationsRepository
+          findBalance: vi.fn(),
+          saveBalance: vi.fn()
+        })
+      ).rejects.toThrow('organisationsRepository dependency is required')
+    })
+
+    it('should throw error when accreditation is not found', async () => {
+      const wasteRecords = [{ id: 'rec-1', organisationId: 'org-1', data: {} }]
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue(null) // Not found
+        }
+      }
+
+      await expect(
+        performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditationId: 'acc-1',
+          dependencies,
+          findBalance: vi.fn(),
+          saveBalance: vi.fn()
+        })
+      ).rejects.toThrow('Accreditation not found: acc-1')
+    })
+
+    it('should return early if waste balance cannot be found or created', async () => {
+      const wasteRecords = [
+        {
+          id: 'rec-1',
+          organisationId: null,
+          data: {}
+        }
+      ]
+
+      const findBalance = vi.fn().mockResolvedValue(null)
+      const saveBalance = vi.fn()
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue({ id: 'acc-1' })
+        }
+      }
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
+    it('should return early when no new transactions are calculated', async () => {
+      const wasteRecords = [{ id: 'rec-1', organisationId: 'org-1', data: {} }]
+      const accreditation = { id: 'acc-1' }
+      const wasteBalance = { id: 'bal-1' }
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+        }
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+      const saveBalance = vi.fn()
+
+      // calculateWasteBalanceUpdates returns empty transactions
+      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+        newTransactions: [],
+        newAmount: 100,
+        newAvailableAmount: 100
+      })
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance
+      })
+
+      // Should not save balance
+      expect(saveBalance).not.toHaveBeenCalled()
     })
   })
 
