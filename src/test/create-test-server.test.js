@@ -93,13 +93,11 @@ describe('createTestServer', () => {
   describe('feature flags option', () => {
     it('accepts featureFlags option for test overrides', async () => {
       const customFlags = createInMemoryFeatureFlags({
-        summaryLogs: true,
         devEndpoints: true
       })
 
       const server = await createTestServer({ featureFlags: customFlags })
 
-      expect(server.featureFlags.isSummaryLogsEnabled()).toBe(true)
       expect(server.featureFlags.isDevEndpointsEnabled()).toBe(true)
     })
   })
