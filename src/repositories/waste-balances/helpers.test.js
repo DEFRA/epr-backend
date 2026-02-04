@@ -563,6 +563,35 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       ).rejects.toThrow('Accreditation not found: acc-1')
     })
 
+    it('should return early if waste balance cannot be found or created', async () => {
+      const wasteRecords = [
+        {
+          id: 'rec-1',
+          organisationId: null,
+          data: {}
+        }
+      ]
+
+      const findBalance = vi.fn().mockResolvedValue(null)
+      const saveBalance = vi.fn()
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue({ id: 'acc-1' })
+        }
+      }
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
     it('should return early when no new transactions are calculated', async () => {
       const wasteRecords = [{ id: 'rec-1', organisationId: 'org-1', data: {} }]
       const accreditation = { id: 'acc-1' }
