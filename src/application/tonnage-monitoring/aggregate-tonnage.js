@@ -2,12 +2,8 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   MATERIAL,
-  GLASS_RECYCLING_PROCESS
+  TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
-
-const TONNAGE_MONITORING_MATERIALS = Object.values(MATERIAL)
-  .filter((m) => m !== MATERIAL.GLASS)
-  .concat(Object.values(GLASS_RECYCLING_PROCESS))
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_RECORDS_COLLECTION = 'waste-records'

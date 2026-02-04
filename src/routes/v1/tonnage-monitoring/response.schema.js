@@ -1,21 +1,14 @@
 import Joi from 'joi'
-import {
-  MATERIAL,
-  GLASS_RECYCLING_PROCESS
-} from '#domain/organisations/model.js'
-
-const tonnageMonitoringMaterials = Object.values(MATERIAL)
-  .filter((m) => m !== MATERIAL.GLASS)
-  .concat(Object.values(GLASS_RECYCLING_PROCESS))
+import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 
 const materialTonnageSchema = Joi.object({
   material: Joi.string()
-    .valid(...tonnageMonitoringMaterials)
+    .valid(...TONNAGE_MONITORING_MATERIALS)
     .required(),
   totalTonnage: Joi.number().required()
 })
 
-const materialsExample = tonnageMonitoringMaterials.map((material) => ({
+const materialsExample = TONNAGE_MONITORING_MATERIALS.map((material) => ({
   material,
   totalTonnage: 0
 }))
