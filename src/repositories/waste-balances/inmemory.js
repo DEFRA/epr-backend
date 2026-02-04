@@ -1,7 +1,8 @@
 import { validateAccreditationId } from './validation.js'
 import {
   performUpdateWasteBalanceTransactions,
-  performDeductAvailableBalanceForPrnCreation
+  performDeductAvailableBalanceForPrnCreation,
+  performDeductTotalBalanceForPrnIssue
 } from './helpers.js'
 
 /**
@@ -87,6 +88,13 @@ export const createInMemoryWasteBalancesRepository = (
     },
     deductAvailableBalanceForPrnCreation: async (deductParams) => {
       return performDeductAvailableBalanceForPrnCreation({
+        deductParams,
+        findBalance: findBalance(wasteBalanceStorage),
+        saveBalance: saveBalance(wasteBalanceStorage)
+      })
+    },
+    deductTotalBalanceForPrnIssue: async (deductParams) => {
+      return performDeductTotalBalanceForPrnIssue({
         deductParams,
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage)

@@ -87,16 +87,39 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
   describe('when feature flag is enabled', () => {
     let server
     let lumpyPackagingRecyclingNotesRepository
+    let wasteBalancesRepository
     const mockPrn = createMockPrn()
+
+    const createMockWasteBalance = (overrides = {}) => ({
+      id: 'balance-123',
+      organisationId,
+      accreditationId,
+      amount: 500,
+      availableAmount: 500,
+      transactions: [],
+      version: 1,
+      schemaVersion: 1,
+      ...overrides
+    })
 
     beforeAll(async () => {
       lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
 
+      wasteBalancesRepository = {
+        findByAccreditationId: vi
+          .fn()
+          .mockResolvedValue(createMockWasteBalance()),
+        findByAccreditationIds: vi.fn(),
+        deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({}),
+        deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+      }
+
       server = await createTestServer({
         repositories: {
           lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository
+            lumpyPackagingRecyclingNotesRepository,
+          wasteBalancesRepository: () => wasteBalancesRepository
         },
         featureFlags: createInMemoryFeatureFlags({
           lumpyPackagingRecyclingNotes: true
@@ -683,9 +706,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
 
       wasteBalancesRepository = {
-        findByAccreditationId: vi.fn(),
+        findByAccreditationId: vi
+          .fn()
+          .mockResolvedValue(createMockWasteBalance()),
         findByAccreditationIds: vi.fn(),
-        deductAvailableBalanceForPrnCreation: vi.fn()
+        deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({}),
+        deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
       }
 
       server = await createTestServer({
@@ -770,7 +796,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       ).not.toHaveBeenCalled()
     })
 
-    it('proceeds with status update even when no waste balance exists', async () => {
+    it('returns 400 when no waste balance exists', async () => {
       wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(null)
       lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         createMockPrn()
@@ -783,7 +809,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       expect(
         wasteBalancesRepository.deductAvailableBalanceForPrnCreation
       ).not.toHaveBeenCalled()

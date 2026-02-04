@@ -77,7 +77,6 @@ const prepareRowsForTransformation = (parsedData) => {
 const updateWasteBalances = async ({
   parsedData,
   accreditationId,
-  featureFlags,
   wasteBalancesRepository,
   wasteRecords
 }) => {
@@ -88,11 +87,7 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
-  if (
-    accreditationId &&
-    shouldCalculateWasteBalance &&
-    featureFlags?.isCalculateWasteBalanceOnImportEnabled()
-  ) {
+  if (accreditationId && shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       accreditationId
@@ -108,7 +103,6 @@ const updateWasteBalances = async ({
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
- * @param {Object} dependencies.featureFlags - The feature flags
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
@@ -116,8 +110,7 @@ export const syncFromSummaryLog = (dependencies) => {
     extractor,
     wasteRecordRepository,
     wasteBalancesRepository,
-    organisationsRepository,
-    featureFlags
+    organisationsRepository
   } = dependencies
 
   /**
@@ -209,7 +202,6 @@ export const syncFromSummaryLog = (dependencies) => {
     await updateWasteBalances({
       parsedData,
       accreditationId,
-      featureFlags,
       wasteBalancesRepository,
       wasteRecords
     })

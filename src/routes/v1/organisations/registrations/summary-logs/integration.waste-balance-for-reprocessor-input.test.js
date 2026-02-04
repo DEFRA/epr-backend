@@ -140,8 +140,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       }
 
       const featureFlags = createInMemoryFeatureFlags({
-        summaryLogs: true,
-        calculateWasteBalanceOnImport: true
+        summaryLogs: true
       })
 
       const validateSummaryLog = createSummaryLogsValidator({
@@ -155,8 +154,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         extractor: dynamicExtractor,
         wasteRecordRepository: wasteRecordsRepository,
         wasteBalancesRepository,
-        organisationsRepository,
-        featureFlags
+        organisationsRepository
       })
 
       const submitterWorker = createSummaryLogSubmitterWorker({

@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 
+import { prnMetrics } from './metrics.js'
 import {
   PRN_STATUS,
   PRN_STATUS_TRANSITIONS
@@ -69,6 +70,36 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
       tonnage,
       userId
     })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
+ * Deducts total waste balance when issuing a PRN.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
   }
 }
 
@@ -136,10 +167,28 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    return await issuePrnWithRetry(prnRepository, updateParams, {
+    // Deduct total waste balance when issuing PRN
+    await deductTotalBalanceIfNeeded(wasteBalancesRepository, {
+      accreditationId,
+      organisationId,
+      prnId: id,
+      tonnage: prn.tonnage,
+      userId
+    })
+
+    const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
     })
+
+    await prnMetrics.recordStatusTransition({
+      fromStatus: currentStatus,
+      toStatus: newStatus,
+      material: prn.material,
+      isExport: prn.isExport
+    })
+
+    return issuedPrn
   }
 
   // Simple status update without PRN number
@@ -148,6 +197,13 @@ export async function updatePrnStatus({
   if (!updatedPrn) {
     throw Boom.badImplementation('Failed to update PRN status')
   }
+
+  await prnMetrics.recordStatusTransition({
+    fromStatus: currentStatus,
+    toStatus: newStatus,
+    material: prn.material,
+    isExport: prn.isExport
+  })
 
   return updatedPrn
 }

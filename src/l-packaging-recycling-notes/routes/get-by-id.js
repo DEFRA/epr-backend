@@ -7,6 +7,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { getProcessCode } from '#l-packaging-recycling-notes/domain/get-process-code.js'
 
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
@@ -19,6 +20,7 @@ export const packagingRecyclingNoteByIdPath =
  */
 const buildResponse = (prn) => ({
   id: prn.id,
+  prnNumber: prn.prnNumber ?? null,
   issuedToOrganisation: prn.issuedToOrganisation,
   tonnage: prn.tonnage,
   material: prn.material,
@@ -28,7 +30,8 @@ const buildResponse = (prn) => ({
   isDecemberWaste: prn.isDecemberWaste ?? false,
   authorisedAt: prn.authorisedAt ?? null,
   authorisedBy: prn.authorisedBy ?? null,
-  wasteProcessingType: prn.wasteProcessingType ?? null
+  wasteProcessingType: prn.wasteProcessingType ?? null,
+  processToBeUsed: getProcessCode(prn.material)
 })
 
 export const packagingRecyclingNoteById = {
