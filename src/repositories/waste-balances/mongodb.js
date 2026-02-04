@@ -2,7 +2,8 @@ import { validateAccreditationId } from './validation.js'
 import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
-  performDeductTotalBalanceForPrnIssue
+  performDeductTotalBalanceForPrnIssue,
+  performCreditAvailableBalanceForPrnCancellation
 } from './helpers.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -132,6 +133,13 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     deductTotalBalanceForPrnIssue: async (deductParams) => {
       return performDeductTotalBalanceForPrnIssue({
         deductParams,
+        findBalance: findBalance(db),
+        saveBalance: saveBalance(db)
+      })
+    },
+    creditAvailableBalanceForPrnCancellation: async (creditParams) => {
+      return performCreditAvailableBalanceForPrnCancellation({
+        creditParams,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })

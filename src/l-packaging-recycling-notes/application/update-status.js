@@ -104,6 +104,33 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
 }
 
 /**
+ * Credits available waste balance when cancelling a PRN from awaiting_authorisation.
+ * Reverses the ringfencing that occurred when the PRN was created.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -149,6 +176,20 @@ export async function updatePrnStatus({
   // Deduct available waste balance when creating PRN
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
     await deductWasteBalanceIfNeeded(wasteBalancesRepository, {
+      accreditationId,
+      organisationId,
+      prnId: id,
+      tonnage: prn.tonnage,
+      userId
+    })
+  }
+
+  // Credit available waste balance when cancelling from awaiting_authorisation
+  if (
+    newStatus === PRN_STATUS.CANCELLED &&
+    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
+  ) {
+    await creditWasteBalanceIfNeeded(wasteBalancesRepository, {
       accreditationId,
       organisationId,
       prnId: id,

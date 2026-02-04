@@ -6,7 +6,9 @@ import {
   buildPrnCreationTransaction,
   performDeductAvailableBalanceForPrnCreation,
   buildPrnIssuedTransaction,
-  performDeductTotalBalanceForPrnIssue
+  performDeductTotalBalanceForPrnIssue,
+  buildPrnCancellationTransaction,
+  performCreditAvailableBalanceForPrnCancellation
 } from './helpers.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
@@ -703,6 +705,193 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(saveBalance).toHaveBeenCalledWith(
         expect.objectContaining({
           amount: 90,
+          transactions: expect.arrayContaining([
+            expect.objectContaining({ amount: 10 })
+          ]),
+          version: 1
+        }),
+        expect.any(Array)
+      )
+    })
+  })
+
+  describe('buildPrnCancellationTransaction', () => {
+    it('should build a credit transaction that restores availableAmount only', () => {
+      const currentBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const transaction = buildPrnCancellationTransaction({
+        prnId: 'prn-123',
+        tonnage: 50,
+        userId: 'user-abc',
+        currentBalance
+      })
+
+      expect(transaction.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.CREDIT)
+      expect(transaction.amount).toBe(50)
+      expect(transaction.openingAmount).toBe(500)
+      expect(transaction.closingAmount).toBe(500)
+      expect(transaction.openingAvailableAmount).toBe(350)
+      expect(transaction.closingAvailableAmount).toBe(400)
+      expect(transaction.entities).toHaveLength(1)
+      expect(transaction.entities[0].id).toBe('prn-123')
+      expect(transaction.entities[0].type).toBe(
+        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
+      )
+      expect(transaction.createdBy).toEqual({
+        id: 'user-abc',
+        name: 'user-abc'
+      })
+      expect(transaction.id).toBeDefined()
+      expect(transaction.createdAt).toBeDefined()
+    })
+  })
+
+  describe('performCreditAvailableBalanceForPrnCancellation', () => {
+    it('should credit tonnage back to available balance and save', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performCreditAvailableBalanceForPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 500,
+          availableAmount: 400,
+          version: 2
+        }),
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+            amount: 50
+          })
+        ])
+      )
+    })
+
+    it('should return early if no balance exists', async () => {
+      const findBalance = vi.fn().mockResolvedValue(null)
+      const saveBalance = vi.fn()
+
+      await performCreditAvailableBalanceForPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
+    it('should append to existing transactions', async () => {
+      const existingTransaction = {
+        id: 'existing-tx',
+        type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+        amount: 50
+      }
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 350,
+        transactions: [existingTransaction],
+        version: 3,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performCreditAvailableBalanceForPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-456',
+          tonnage: 25,
+          userId: 'user-xyz'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactions: expect.arrayContaining([existingTransaction]),
+          version: 4
+        }),
+        expect.any(Array)
+      )
+      expect(saveBalance.mock.calls[0][0].transactions).toHaveLength(2)
+    })
+
+    it('should handle balance with undefined transactions array', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 60,
+        transactions: undefined,
+        version: undefined,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performCreditAvailableBalanceForPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-789',
+          tonnage: 10,
+          userId: 'user-123'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 100,
+          availableAmount: 70,
           transactions: expect.arrayContaining([
             expect.objectContaining({ amount: 10 })
           ]),
