@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate } from './date-formatter.js'
+import { formatDate, formatDateTimeDots } from './date-formatter.js'
 
 describe('formatDate', () => {
   it('should format date in DD/MM/YYYY format', () => {
@@ -18,5 +18,12 @@ describe('formatDate', () => {
 
   it('should return empty string for null', () => {
     expect(formatDate(null)).toBe('')
+  })
+})
+
+describe('formatDateTimeDots', () => {
+  it('should format date-time in DD.MM.YY HH:mm format', () => {
+    const date = new Date('2026-02-04T14:49:00')
+    expect(formatDateTimeDots(date)).toBe('04.02.26 14:49')
   })
 })

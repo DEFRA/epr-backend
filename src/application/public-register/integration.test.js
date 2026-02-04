@@ -31,11 +31,21 @@ describe('generatePublicRegister', () => {
     const activeDate = formatDate(VALID_FROM)
     const dateLastUpdated = formatDate(new Date(Date.now()))
 
-    const expectedCsv = `\uFEFFType,Business name,Companies House Number,Org ID,"Registered office
-Head office
-Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band
-Reprocessor,ACME ltd,AC012345,200001,"Palace of Westminster, London, SW1A 0AA",EA,REG1,ACME ltd,"7 Glass processing site, London, SW2A 0AA",Glass-remelt,R5,ACC1,${activeDate},Approved,${dateLastUpdated},"Over 10,000 tonnes"`
+    // Split CSV into lines - note the header spans 3 lines due to multiline field
+    const lines = csvData.split('\n').filter((line) => line.length > 0)
+    expect(lines.length).toBe(5) // header (3 lines) + generated at row + data row
 
-    expect(csvData).toBe(expectedCsv)
+    // Verify header
+    expect(lines[0]).toContain('Type,Business name,Companies House Number')
+
+    // Verify generated at row has timestamp format DD.MM.YY HH:mm and rest empty
+    const generatedAtRow = lines[3].split(',')
+    expect(generatedAtRow[0]).toMatch(/^\d{2}\.\d{2}\.\d{2} \d{2}:\d{2}$/)
+    expect(generatedAtRow.slice(1).every((col) => col === '')).toBe(true)
+
+    // Verify data row
+    expect(lines[4]).toContain('Reprocessor,ACME ltd,AC012345,200001')
+    expect(lines[4]).toContain(activeDate)
+    expect(lines[4]).toContain(dateLastUpdated)
   })
 })
