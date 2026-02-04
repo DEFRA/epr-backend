@@ -156,7 +156,17 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(summaryLogsWorker.submit).toHaveBeenCalledWith(summaryLogId)
+      expect(summaryLogsWorker.submit).toHaveBeenCalledWith(
+        summaryLogId,
+        expect.objectContaining({
+          auth: expect.objectContaining({
+            credentials: expect.objectContaining({
+              id: 'test-user-id',
+              email: 'test@example.com'
+            })
+          })
+        })
+      )
     })
 
     it('logs submission initiation', async () => {

@@ -23,7 +23,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       // Act & Assert
       await expect(
-        repository.updateWasteBalanceTransactions([record], accreditationId)
+        repository.updateWasteBalanceTransactions(
+          [record],
+          accreditationId,
+          undefined
+        )
       ).rejects.toThrow(`Accreditation not found: ${accreditationId}`)
     })
 
@@ -52,7 +56,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions([record], accreditationId)
+      await repository.updateWasteBalanceTransactions(
+        [record],
+        accreditationId,
+        user
+      )
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -76,7 +84,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions([], accreditationId)
+      await repository.updateWasteBalanceTransactions(
+        [],
+        accreditationId,
+        undefined
+      )
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -120,7 +132,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions([record], accreditationId)
+      await repository.updateWasteBalanceTransactions(
+        [record],
+        accreditationId,
+        user
+      )
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -152,7 +168,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions([record], accreditationId)
+      await repository.updateWasteBalanceTransactions(
+        [record],
+        accreditationId,
+        undefined
+      )
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -196,7 +216,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions([record], accreditationId)
+      await repository.updateWasteBalanceTransactions(
+        [record],
+        accreditationId,
+        user
+      )
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -256,7 +280,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
 
       // Act
-      await repository.updateWasteBalanceTransactions(input, accreditationId)
+      await repository.updateWasteBalanceTransactions(
+        input,
+        accreditationId,
+        user
+      )
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
