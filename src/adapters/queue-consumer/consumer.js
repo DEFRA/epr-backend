@@ -20,13 +20,21 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @typedef {object} CommandMessage
  * @property {string} command - 'validate' or 'submit'
  * @property {string} summaryLogId - The summary log ID to process
+ * @property {object} [user] - Optional user context for audit trail
  */
+
+const userSchema = Joi.object({
+  id: Joi.string().required(),
+  email: Joi.string().required(),
+  scope: Joi.array().items(Joi.string()).required()
+})
 
 const commandMessageSchema = Joi.object({
   command: Joi.string()
     .valid(SUMMARY_LOG_COMMAND.VALIDATE, SUMMARY_LOG_COMMAND.SUBMIT)
     .required(),
-  summaryLogId: Joi.string().required()
+  summaryLogId: Joi.string().required(),
+  user: userSchema.optional()
 })
 
 /**
@@ -141,7 +149,7 @@ const createMessageHandler = (deps) => async (message) => {
     return
   }
 
-  const { command: commandType, summaryLogId } = command
+  const { command: commandType, summaryLogId, user } = command
 
   logger.info({
     message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
@@ -159,7 +167,7 @@ const createMessageHandler = (deps) => async (message) => {
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await submitSummaryLog(summaryLogId, deps)
+        await submitSummaryLog(summaryLogId, { ...deps, user })
         break
     }
 
