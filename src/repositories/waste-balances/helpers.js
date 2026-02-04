@@ -155,6 +155,112 @@ export const filterValidRecords = (wasteRecords) => {
   return wasteRecords.filter((record) => isRecordValid(record, getTableSchema))
 }
 
+const getAccreditation = async (
+  organisationsRepository,
+  organisationId,
+  accreditationId
+) => {
+  if (!organisationsRepository) {
+    throw new Error('organisationsRepository dependency is required')
+  }
+
+  const accreditation = await organisationsRepository.findAccreditationById(
+    organisationId,
+    accreditationId
+  )
+
+  if (!accreditation) {
+    throw new Error(`Accreditation not found: ${accreditationId}`)
+  }
+
+  return accreditation
+}
+
+const recordAuditLogs = async (
+  dependencies,
+  updatedBalance,
+  newTransactions,
+  request
+) => {
+  const user = request?.auth?.credentials || request
+
+  if (!user?.id && !user?.email) {
+    return
+  }
+
+  const payload = {
+    event: {
+      category: 'waste-reporting',
+      subCategory: 'waste-balance',
+      action: 'update'
+    },
+    context: {
+      accreditationId: updatedBalance.accreditationId,
+      amount: updatedBalance.amount,
+      availableAmount: updatedBalance.availableAmount,
+      newTransactions
+    },
+    user
+  }
+
+  audit(payload)
+
+  if (dependencies.systemLogsRepository) {
+    await dependencies.systemLogsRepository.insert({
+      createdAt: new Date(),
+      createdBy: user,
+      event: payload.event,
+      context: payload.context
+    })
+  }
+}
+
+const calculateAndApplyUpdates = async (
+  dependencies,
+  validRecords,
+  validatedAccreditationId,
+  findBalance
+) => {
+  const accreditation = await getAccreditation(
+    dependencies.organisationsRepository,
+    validRecords[0]?.organisationId,
+    validatedAccreditationId
+  )
+
+  const wasteBalance = await findOrCreateWasteBalance({
+    findBalance,
+    accreditationId: validatedAccreditationId,
+    organisationId: validRecords[0]?.organisationId,
+    shouldCreate: true
+  })
+
+  if (!wasteBalance) {
+    return null
+  }
+
+  const { newTransactions, newAmount, newAvailableAmount } =
+    calculateWasteBalanceUpdates({
+      currentBalance: wasteBalance,
+      wasteRecords: validRecords,
+      accreditation
+    })
+
+  if (newTransactions.length === 0) {
+    return null
+  }
+
+  return {
+    updatedBalance: {
+      ...wasteBalance,
+      amount: newAmount,
+      availableAmount: newAvailableAmount,
+      transactions: [...(wasteBalance.transactions || []), ...newTransactions],
+      version: (wasteBalance.version || 0) + 1
+    },
+    newTransactions
+  }
+}
+
 /**
  * Shared logic for updating waste balance transactions.
  *
@@ -184,81 +290,22 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const { organisationsRepository } = dependencies
-  if (!organisationsRepository) {
-    throw new Error('organisationsRepository dependency is required')
-  }
-
-  const accreditation = await organisationsRepository.findAccreditationById(
-    validRecords[0]?.organisationId,
-    validatedAccreditationId
+  const result = await calculateAndApplyUpdates(
+    dependencies,
+    validRecords,
+    validatedAccreditationId,
+    findBalance
   )
-  if (!accreditation) {
-    throw new Error(`Accreditation not found: ${validatedAccreditationId}`)
-  }
 
-  const wasteBalance = await findOrCreateWasteBalance({
-    findBalance,
-    accreditationId: validatedAccreditationId,
-    organisationId: validRecords[0]?.organisationId,
-    shouldCreate: validRecords.length > 0
-  })
-
-  /* c8 ignore next 3 */
-  if (!wasteBalance) {
+  if (!result) {
     return
   }
 
-  const { newTransactions, newAmount, newAvailableAmount } =
-    calculateWasteBalanceUpdates({
-      currentBalance: wasteBalance,
-      wasteRecords: validRecords,
-      accreditation
-    })
-
-  if (newTransactions.length === 0) {
-    return
-  }
-
-  const updatedBalance = {
-    ...wasteBalance,
-    amount: newAmount,
-    availableAmount: newAvailableAmount,
-    transactions: [...(wasteBalance.transactions || []), ...newTransactions],
-    version: (wasteBalance.version || 0) + 1
-  }
+  const { updatedBalance, newTransactions } = result
 
   await saveBalance(updatedBalance, newTransactions)
 
-  const user = request?.auth?.credentials || request
-
-  if (user?.id || user?.email) {
-    const payload = {
-      event: {
-        category: 'waste-reporting',
-        subCategory: 'waste-balance',
-        action: 'update'
-      },
-      context: {
-        accreditationId: updatedBalance.accreditationId,
-        amount: updatedBalance.amount,
-        availableAmount: updatedBalance.availableAmount,
-        newTransactions
-      },
-      user
-    }
-
-    audit(payload)
-
-    if (dependencies.systemLogsRepository) {
-      await dependencies.systemLogsRepository.insert({
-        createdAt: new Date(),
-        createdBy: user,
-        event: payload.event,
-        context: payload.context
-      })
-    }
-  }
+  await recordAuditLogs(dependencies, updatedBalance, newTransactions, request)
 }
 
 /**
