@@ -48,6 +48,9 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   wasteProcessingType: string;
  *   isExport: boolean;
  *   issuerNotes?: string;
+ *   isDecemberWaste?: boolean;
+ *   authorisedAt?: Date | null;
+ *   authorisedBy?: { name: string; position: string } | null;
  *   status: {
  *     currentStatus: PrnStatus;
  *     history: PrnStatusHistoryItem[];

@@ -99,6 +99,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
         expect(body.status).toBe(PRN_STATUS.DRAFT)
         expect(body.createdAt).toBeDefined()
+        expect(body.processToBeUsed).toBe('R3') // plastic uses R3
       })
 
       it('creates PRN with correct organisation and registration', async () => {

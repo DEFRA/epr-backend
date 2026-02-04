@@ -27,6 +27,7 @@ import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-
 import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#l-packaging-recycling-notes/repository/mongodb.plugin.js'
 import { router } from '#plugins/router.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
+import { commandQueueConsumerPlugin } from '#adapters/queue-consumer/queue-consumer.plugin.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
@@ -112,7 +113,11 @@ function getProductionPlugins(config) {
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
     piscinaWorkersPlugin,
-    lumpyPackagingRecyclingNotesRepositoryPlugin
+    lumpyPackagingRecyclingNotesRepositoryPlugin,
+    {
+      plugin: commandQueueConsumerPlugin,
+      options: { config }
+    }
   ]
 }
 

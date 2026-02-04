@@ -335,12 +335,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    calculateWasteBalanceOnImport: {
-      doc: 'Feature Flag: Enable waste balance calculation on summary log import',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_CALCULATE_WASTE_BALANCE_ON_IMPORT'
-    },
     glassMigration: {
       doc: 'Feature Flag: Run glass acc/reg number migration on startup (PAE-839/840). Values: false (disabled), true (enabled), dry-run (enabled with dry-run mode)',
       format: ['false', 'true', 'dry-run'],
@@ -396,6 +390,20 @@ const baseConfig = {
     format: String,
     default: '[]',
     env: 'TEST_ORGANISATIONS_SKIP_TRANSFORM'
+  },
+  commandQueue: {
+    endpoint: {
+      doc: 'AWS SQS endpoint for command queue',
+      format: String,
+      default: 'http://127.0.0.1:4566',
+      env: 'COMMAND_QUEUE_SQS_ENDPOINT'
+    },
+    queueName: {
+      doc: 'SQS queue name for backend commands',
+      format: String,
+      default: 'epr_backend_commands',
+      env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
+    }
   },
   publicRegister: {
     batchSize: {

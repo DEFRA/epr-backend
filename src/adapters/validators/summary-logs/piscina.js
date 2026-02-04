@@ -8,13 +8,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 import {
-  PROCESSING_STATUSES,
-  SUBMISSION_PROCESSING_STATUSES,
-  SUMMARY_LOG_COMMAND,
-  SUMMARY_LOG_STATUS,
-  transitionStatus
-} from '#domain/summary-logs/status.js'
+  markAsValidationFailed,
+  markAsSubmissionFailed
+} from '#domain/summary-logs/mark-as-failed.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -64,93 +62,6 @@ const activeTimeouts = new Map()
 
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-
-/**
- * Marks a summary log as validation_failed if it's still in a processing state.
- * This is a "safety net" called from the main thread when:
- *   - The worker thread crashes (promise rejects)
- *   - The worker thread hangs forever (timeout fires)
- *
- * @param {string} summaryLogId
- * @param {SummaryLogsRepository} repository - Main thread repository instance
- * @param {object} logger
- * @returns {Promise<void>}
- */
-const markAsValidationFailed = async (summaryLogId, repository, logger) => {
-  try {
-    const result = await repository.findById(summaryLogId)
-
-    if (!result) {
-      logger.warn({
-        message: `Cannot mark as validation_failed: summary log not found`,
-        summaryLogId
-      })
-      return
-    }
-
-    const { version, summaryLog } = result
-
-    // Only mark as validation_failed if still in a processing state
-    if (!PROCESSING_STATUSES.includes(summaryLog.status)) {
-      return
-    }
-
-    await repository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
-    )
-  } catch (err) {
-    logger.error({
-      err,
-      message: `Failed to mark summary log as validation_failed`,
-      summaryLogId
-    })
-  }
-}
-
-/**
- * Marks a summary log as submission_failed if it's still in submitting state.
- * This is a "safety net" called from the main thread when the worker thread
- * crashes (promise rejects).
- *
- * @param {string} summaryLogId
- * @param {SummaryLogsRepository} repository - Main thread repository instance
- * @param {object} logger
- * @returns {Promise<void>}
- */
-const markAsSubmissionFailed = async (summaryLogId, repository, logger) => {
-  try {
-    const result = await repository.findById(summaryLogId)
-
-    if (!result) {
-      logger.warn({
-        message: `Cannot mark as submission_failed: summary log not found`,
-        summaryLogId
-      })
-      return
-    }
-
-    const { version, summaryLog } = result
-
-    // Only mark as submission_failed if still in submitting state
-    if (!SUBMISSION_PROCESSING_STATUSES.includes(summaryLog.status)) {
-      return
-    }
-
-    await repository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
-    )
-  } catch (err) {
-    logger.error({
-      err,
-      message: `Failed to mark summary log as submission_failed`,
-      summaryLogId
-    })
-  }
-}
 
 /**
  * Clears the timeout for a given summaryLogId if one exists.

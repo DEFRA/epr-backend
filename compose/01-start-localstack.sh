@@ -17,6 +17,8 @@ echo "[INIT SCRIPT] Creating queues" >&2
 # queues
 aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name cdp-clamav-results
 aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name cdp-uploader-scan-results-callback.fifo --attributes "{\"FifoQueue\":\"true\",\"ContentBasedDeduplication\": \"true\"}"
+aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name epr_backend_commands_dlq
+aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name epr_backend_commands --attributes "{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"arn:aws:sqs:eu-west-2:000000000000:epr_backend_commands_dlq\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
 
 # test harness
 aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name mock-clamav
