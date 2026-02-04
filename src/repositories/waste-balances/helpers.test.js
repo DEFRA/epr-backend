@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { describe, it, expect, vi } from 'vitest'
 import {
   findOrCreateWasteBalance,
@@ -799,21 +800,23 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       )
     })
 
-    it('should return early if no balance exists', async () => {
+    it('should throw if no balance exists', async () => {
       const findBalance = vi.fn().mockResolvedValue(null)
       const saveBalance = vi.fn()
 
-      await performCreditAvailableBalanceForPrnCancellation({
-        creditParams: {
-          accreditationId: 'acc-1',
-          organisationId: 'org-1',
-          prnId: 'prn-123',
-          tonnage: 50,
-          userId: 'user-abc'
-        },
-        findBalance,
-        saveBalance
-      })
+      await expect(
+        performCreditAvailableBalanceForPrnCancellation({
+          creditParams: {
+            accreditationId: 'acc-1',
+            organisationId: 'org-1',
+            prnId: 'prn-123',
+            tonnage: 50,
+            userId: 'user-abc'
+          },
+          findBalance,
+          saveBalance
+        })
+      ).rejects.toThrow(Boom.Boom)
 
       expect(findBalance).toHaveBeenCalledWith('acc-1')
       expect(saveBalance).not.toHaveBeenCalled()

@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { randomUUID } from 'node:crypto'
@@ -432,7 +433,9 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
   const wasteBalance = await findBalance(validatedAccreditationId)
 
   if (!wasteBalance) {
-    return
+    throw Boom.internal(
+      `Waste balance not found for accreditation ${validatedAccreditationId} during PRN cancellation`
+    )
   }
 
   const transaction = buildPrnCancellationTransaction({

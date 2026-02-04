@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
 import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
@@ -67,17 +68,16 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
       )
     })
 
-    it('does nothing when no balance exists', async () => {
-      await repository.creditAvailableBalanceForPrnCancellation({
-        accreditationId: 'acc-nonexistent',
-        organisationId: 'org-1',
-        prnId: 'prn-789',
-        tonnage: 10,
-        userId: 'user-123'
-      })
-
-      const result = await repository.findByAccreditationId('acc-nonexistent')
-      expect(result).toBeNull()
+    it('throws when no balance exists', async () => {
+      await expect(
+        repository.creditAvailableBalanceForPrnCancellation({
+          accreditationId: 'acc-nonexistent',
+          organisationId: 'org-1',
+          prnId: 'prn-789',
+          tonnage: 10,
+          userId: 'user-123'
+        })
+      ).rejects.toThrow(Boom.Boom)
     })
 
     it('increments version number', async ({ insertWasteBalance }) => {
