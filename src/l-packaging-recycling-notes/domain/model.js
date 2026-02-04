@@ -39,6 +39,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  * @typedef {{
  *   id: string;
  *   prnNumber?: string;
+ *   accreditationYear: number;
  *   issuedByOrganisation: string;
  *   issuedByAccreditation: string;
  *   issuedToOrganisation: string;
