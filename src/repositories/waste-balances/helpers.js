@@ -301,3 +301,78 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
 
   await saveBalance(updatedBalance, [transaction])
 }
+
+/**
+ * Build a transaction for PRN issue that deducts from amount (total) only.
+ * The availableAmount was already deducted when the PRN was created.
+ *
+ * @param {Object} params
+ * @param {string} params.prnId - PRN identifier
+ * @param {number} params.tonnage - Tonnage to deduct
+ * @param {string} params.userId - User performing the action
+ * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
+ * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ */
+export const buildPrnIssuedTransaction = ({
+  prnId,
+  tonnage,
+  userId,
+  currentBalance
+}) => ({
+  id: randomUUID(),
+  type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+  createdAt: new Date().toISOString(),
+  createdBy: { id: userId, name: userId },
+  amount: tonnage,
+  openingAmount: currentBalance.amount,
+  closingAmount: currentBalance.amount - tonnage, // Total deducted
+  openingAvailableAmount: currentBalance.availableAmount,
+  closingAvailableAmount: currentBalance.availableAmount, // Available unchanged
+  entities: [
+    {
+      id: prnId,
+      currentVersionId: prnId,
+      previousVersionIds: [],
+      type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ISSUED
+    }
+  ]
+})
+
+/**
+ * Deduct total balance for PRN issue (finalising the deduction).
+ *
+ * @param {Object} params
+ * @param {import('./port.js').DeductTotalBalanceParams} params.deductParams
+ * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ */
+export const performDeductTotalBalanceForPrnIssue = async ({
+  deductParams,
+  findBalance,
+  saveBalance
+}) => {
+  const { accreditationId, prnId, tonnage, userId } = deductParams
+  const validatedAccreditationId = validateAccreditationId(accreditationId)
+
+  const wasteBalance = await findBalance(validatedAccreditationId)
+
+  if (!wasteBalance) {
+    return
+  }
+
+  const transaction = buildPrnIssuedTransaction({
+    prnId,
+    tonnage,
+    userId,
+    currentBalance: wasteBalance
+  })
+
+  const updatedBalance = {
+    ...wasteBalance,
+    amount: transaction.closingAmount,
+    transactions: [...(wasteBalance.transactions || []), transaction],
+    version: (wasteBalance.version || 0) + 1
+  }
+
+  await saveBalance(updatedBalance, [transaction])
+}
