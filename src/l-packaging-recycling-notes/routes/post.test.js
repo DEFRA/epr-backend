@@ -416,6 +416,21 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
 
     describe('error handling', () => {
+      it('returns 404 when accreditation is not found', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          null
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
         lumpyPackagingRecyclingNotesRepository.create.mockRejectedValueOnce(

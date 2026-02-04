@@ -112,6 +112,11 @@ export const packagingRecyclingNotesCreate = {
         organisationId,
         accreditationId
       )
+
+      if (!accreditation?.validFrom) {
+        throw Boom.notFound('Accreditation not found')
+      }
+
       const accreditationYear = parseInt(
         accreditation.validFrom.slice(0, 4),
         10
