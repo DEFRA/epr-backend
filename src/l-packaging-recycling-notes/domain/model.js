@@ -55,6 +55,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *     currentStatus: PrnStatus;
  *     history: PrnStatusHistoryItem[];
  *   };
+ *   issuedAt?: Date;
  *   createdAt: Date;
  *   createdBy: string;
  *   updatedAt: Date;
