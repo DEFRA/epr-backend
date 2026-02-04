@@ -90,6 +90,7 @@ export const createSqsCommandExecutor = async (deps) => {
   const getQueueUrlCommand = new GetQueueUrlCommand({ QueueName: queueName })
   const { QueueUrl: queueUrl } = await sqsClient.send(getQueueUrlCommand)
 
+  /* c8 ignore next 3 - defensive: SDK throws QueueDoesNotExist before returning null */
   if (!queueUrl) {
     throw new Error(`Queue not found: ${queueName}`)
   }
