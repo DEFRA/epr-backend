@@ -5,6 +5,7 @@
  * @property {string} updatedBy - User ID making the change
  * @property {Date} updatedAt - Timestamp of the change
  * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
+ * @property {Date} [issuedAt] - Timestamp when the PRN was issued (transitioning to awaiting_acceptance)
  */
 
 /**

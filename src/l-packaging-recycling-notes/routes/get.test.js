@@ -33,13 +33,15 @@ const mockPrns = [
   },
   {
     id: 'prn-002',
+    prnNumber: 'ER2654321',
     issuedByOrganisation: organisationId,
     issuedByAccreditation: accreditationId,
     issuedToOrganisation: 'BigCo Waste Solutions',
     tonnage: 120,
     material: 'glass',
-    status: { currentStatus: PRN_STATUS.ISSUED },
-    createdAt: new Date('2026-01-18T14:30:00Z')
+    status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE },
+    createdAt: new Date('2026-01-18T14:30:00Z'),
+    issuedAt: new Date('2026-01-20T09:00:00Z')
   }
 ]
 
@@ -100,11 +102,23 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
         expect(payload).toHaveLength(2)
         expect(payload[0]).toStrictEqual({
           id: 'prn-001',
+          prnNumber: null,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          createdAt: '2026-01-15T10:00:00.000Z'
+          createdAt: '2026-01-15T10:00:00.000Z',
+          issuedAt: null
+        })
+        expect(payload[1]).toStrictEqual({
+          id: 'prn-002',
+          prnNumber: 'ER2654321',
+          issuedToOrganisation: 'BigCo Waste Solutions',
+          tonnage: 120,
+          material: 'glass',
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          createdAt: '2026-01-18T14:30:00.000Z',
+          issuedAt: '2026-01-20T09:00:00.000Z'
         })
       })
 
