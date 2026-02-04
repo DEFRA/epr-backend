@@ -34,6 +34,7 @@ export const packagingRecyclingNotesCreatePath =
  * @param {Object} params
  * @param {string} params.organisationId
  * @param {string} params.accreditationId
+ * @param {number} params.accreditationYear
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {string} params.userId
  * @param {Date} params.now
