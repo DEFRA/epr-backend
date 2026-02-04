@@ -53,15 +53,31 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
   describe('when feature flag is enabled', () => {
     let server
     let lumpyPackagingRecyclingNotesRepository
+    let organisationsRepository
 
     beforeAll(async () => {
       lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
 
+      organisationsRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: organisationId,
+          status: 'active'
+        }),
+        findAccreditationById: vi.fn().mockResolvedValue({
+          id: accreditationId,
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          status: 'approved',
+          accreditationNumber: 'ACC-001'
+        })
+      }
+
       server = await createTestServer({
         repositories: {
           lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository
+            lumpyPackagingRecyclingNotesRepository,
+          organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
           lumpyPackagingRecyclingNotes: true
@@ -234,6 +250,23 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
+      it('sets accreditationYear from accreditation validFrom', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            accreditationYear: 2026
+          })
+        )
+      })
+
       it('includes issuer notes when provided', async () => {
         const notes = 'Test issuer notes'
 
@@ -383,6 +416,21 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
 
     describe('error handling', () => {
+      it('returns 404 when accreditation is not found', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          null
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
         lumpyPackagingRecyclingNotesRepository.create.mockRejectedValueOnce(
