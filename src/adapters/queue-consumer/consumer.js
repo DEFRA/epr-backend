@@ -161,6 +161,10 @@ const createMessageHandler = (deps) => async (message) => {
       case SUMMARY_LOG_COMMAND.SUBMIT:
         await submitSummaryLog(summaryLogId, deps)
         break
+
+      /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
+      default:
+        return
     }
 
     logger.info({

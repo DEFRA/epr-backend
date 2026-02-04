@@ -13,6 +13,7 @@ import { getProcessCode } from '#l-packaging-recycling-notes/domain/get-process-
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 /**
  * @typedef {{
@@ -33,6 +34,7 @@ export const packagingRecyclingNotesCreatePath =
  * @param {Object} params
  * @param {string} params.organisationId
  * @param {string} params.accreditationId
+ * @param {number} params.accreditationYear
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {string} params.userId
  * @param {Date} params.now
@@ -40,10 +42,12 @@ export const packagingRecyclingNotesCreatePath =
 const buildPrnData = ({
   organisationId,
   accreditationId,
+  accreditationYear,
   payload,
   userId,
   now
 }) => ({
+  accreditationYear,
   issuedByOrganisation: organisationId,
   issuedByAccreditation: accreditationId,
   issuedToOrganisation: payload.issuedToOrganisation,
@@ -87,12 +91,13 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       lumpyPackagingRecyclingNotesRepository,
+      organisationsRepository,
       params,
       payload,
       logger,
@@ -103,9 +108,24 @@ export const packagingRecyclingNotesCreate = {
     const now = new Date()
 
     try {
+      const accreditation = await organisationsRepository.findAccreditationById(
+        organisationId,
+        accreditationId
+      )
+
+      if (!accreditation?.validFrom) {
+        throw Boom.notFound('Accreditation not found')
+      }
+
+      const accreditationYear = parseInt(
+        accreditation.validFrom.slice(0, 4),
+        10
+      )
+
       const prnData = buildPrnData({
         organisationId,
         accreditationId,
+        accreditationYear,
         payload,
         userId,
         now

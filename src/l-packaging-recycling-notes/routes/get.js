@@ -20,11 +20,13 @@ export const packagingRecyclingNotesListPath =
 const buildResponse = (prns) =>
   prns.map((prn) => ({
     id: prn.id,
+    prnNumber: prn.prnNumber ?? null,
     issuedToOrganisation: prn.issuedToOrganisation,
     tonnage: prn.tonnage,
     material: prn.material,
     status: prn.status.currentStatus,
-    createdAt: prn.createdAt
+    createdAt: prn.createdAt,
+    issuedAt: prn.issuedAt ?? null
   }))
 
 export const packagingRecyclingNotesList = {

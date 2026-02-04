@@ -128,6 +128,54 @@ export const testUpdateStatusBehaviour = (it) => {
       })
     })
 
+    describe('issuedAt assignment', () => {
+      it('sets issuedAt when provided', async () => {
+        const created = await repository.create(buildAwaitingAuthorisationPrn())
+        const issuedAt = new Date()
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: 'user-issuer',
+          updatedAt: issuedAt,
+          prnNumber: `ER26${Date.now().toString().slice(-5)}Z`,
+          issuedAt
+        })
+
+        expect(new Date(updated.issuedAt).getTime()).toBe(issuedAt.getTime())
+      })
+
+      it('persists issuedAt so it can be retrieved', async () => {
+        const created = await repository.create(buildAwaitingAuthorisationPrn())
+        const issuedAt = new Date()
+
+        await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: 'user-issuer',
+          updatedAt: issuedAt,
+          prnNumber: `ER26${Date.now().toString().slice(-5)}W`,
+          issuedAt
+        })
+
+        const found = await repository.findById(created.id)
+        expect(new Date(found.issuedAt).getTime()).toBe(issuedAt.getTime())
+      })
+
+      it('does not set issuedAt when not provided', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: 'user-raiser',
+          updatedAt: new Date()
+        })
+
+        expect(updated.issuedAt).toBeUndefined()
+      })
+    })
+
     describe('multiple status transitions', () => {
       it('tracks full status history across transitions', async () => {
         const created = await repository.create(buildDraftPrn())

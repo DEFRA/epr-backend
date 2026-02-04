@@ -23,6 +23,7 @@ import {
   NATION,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
 
 import {
   asStandardUser,
@@ -665,7 +666,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBeCloseTo(100.75) // 117.75 - 17 = 100.75
     })
 
-    it('should allow available balance to go negative', async () => {
+    it('should reject PRN creation when tonnage exceeds available balance', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -683,14 +684,186 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBeCloseTo(100)
       expect(balance.availableAmount).toBeCloseTo(100)
 
-      // Debit: 150 (more than available)
+      // Attempt to create PRN for 150 (more than available) - should be rejected
       const prn1 = await createPrn(env, 150)
+      const result = await transitionPrnStatus(
+        env,
+        prn1.id,
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+      expect(result.statusCode).toBe(409)
+      expect(result.message).toBe('Insufficient available waste balance')
+
+      // Balance should be unchanged
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(100)
+    })
+
+    it('should reject PRN issue when tonnage exceeds total balance', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 100
+      await performSummaryLogSubmission(
+        env,
+        'log-total-reject',
+        'file-total-reject',
+        'waste-total-reject.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(100)
+
+      // Create and raise PRN for 50 (within available)
+      const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(100) // Total unchanged
-      expect(balance.availableAmount).toBeCloseTo(-50) // Can go negative
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(50)
+
+      // Manually reduce total balance to simulate concurrent deduction
+      await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+        accreditationId,
+        organisationId: env.organisationId,
+        prnId: 'other-prn',
+        tonnage: 80,
+        userId: 'test-user'
+      })
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(20) // 100 - 80
+
+      // Attempt to issue PRN for 50 (more than remaining total of 20) - should be rejected
+      const result = await transitionPrnStatus(
+        env,
+        prn1.id,
+        PRN_STATUS.AWAITING_ACCEPTANCE
+      )
+      expect(result.statusCode).toBe(409)
+      expect(result.message).toBe('Insufficient total waste balance')
+
+      // Balance should be unchanged
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(20)
+    })
+
+    it('should deduct from total balance when PRN is issued', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 200
+      await performSummaryLogSubmission(
+        env,
+        'log-issue-1',
+        'file-issue-1',
+        'waste-issue-1.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.availableAmount).toBeCloseTo(200)
+
+      // Create PRN for 50 tonnes
+      const prn1 = await createPrn(env, 50)
+
+      // Raise PRN (deduct from available only)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(150) // 200 - 50 = 150
+
+      // Issue PRN (deduct from total only)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(150) // 200 - 50 = 150 (now deducted)
+      expect(balance.availableAmount).toBeCloseTo(150) // Unchanged from issue
+    })
+
+    it('should handle complete PRN lifecycle with multiple PRNs', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 500
+      await performSummaryLogSubmission(
+        env,
+        'log-lifecycle',
+        'file-lifecycle',
+        'waste-lifecycle.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 500 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(500)
+      expect(balance.availableAmount).toBeCloseTo(500)
+
+      // Create and raise PRN 1 for 100 tonnes
+      const prn1 = await createPrn(env, 100)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(500)
+      expect(balance.availableAmount).toBeCloseTo(400) // 500 - 100
+
+      // Create and raise PRN 2 for 75 tonnes
+      const prn2 = await createPrn(env, 75)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(500)
+      expect(balance.availableAmount).toBeCloseTo(325) // 400 - 75
+
+      // Issue PRN 1 (total deducted, available unchanged)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(400) // 500 - 100
+      expect(balance.availableAmount).toBeCloseTo(325) // Unchanged
+
+      // Create and raise PRN 3 for 50 tonnes
+      const prn3 = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(400) // Unchanged
+      expect(balance.availableAmount).toBeCloseTo(275) // 325 - 50
+
+      // Issue PRN 2 (total deducted, available unchanged)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(325) // 400 - 75
+      expect(balance.availableAmount).toBeCloseTo(275) // Unchanged
+
+      // Issue PRN 3 (total deducted, available unchanged)
+      await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(275) // 325 - 50
+      expect(balance.availableAmount).toBeCloseTo(275) // Now matches total
+
+      // Final state: All PRNs issued, total = available = 500 - 100 - 75 - 50 = 275
     })
 
     it('should handle revisions that affect running totals', async () => {
@@ -759,6 +932,202 @@ describe('Waste balance arithmetic integration tests', () => {
     })
   })
 
+  describe('PRN cancellation', () => {
+    it('should restore available balance when cancelling from awaiting_authorisation', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 200
+      await performSummaryLogSubmission(
+        env,
+        'log-cancel-1',
+        'file-cancel-1',
+        'waste-cancel-1.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.availableAmount).toBeCloseTo(200)
+
+      // Raise PRN for 50 (deducts available)
+      const prn1 = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.availableAmount).toBeCloseTo(150)
+
+      // Cancel the PRN (restores available)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(200) // Restored: 150 + 50
+    })
+
+    it('should not change balance when cancelling from draft', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 200
+      await performSummaryLogSubmission(
+        env,
+        'log-cancel-draft',
+        'file-cancel-draft',
+        'waste-cancel-draft.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      // Create PRN (stays in draft, no balance deduction)
+      const prn1 = await createPrn(env, 50)
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.availableAmount).toBeCloseTo(200)
+
+      // Cancel from draft (no balance change)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(200) // Unchanged
+      expect(balance.availableAmount).toBeCloseTo(200) // Unchanged
+    })
+
+    it('should only restore the cancelled PRN tonnage among multiple raised PRNs', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 500
+      await performSummaryLogSubmission(
+        env,
+        'log-cancel-multi',
+        'file-cancel-multi',
+        'waste-cancel-multi.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 500 }])
+      )
+
+      // Raise three PRNs: 100, 75, 50
+      const prn1 = await createPrn(env, 100)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      const prn2 = await createPrn(env, 75)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      const prn3 = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(500)
+      expect(balance.availableAmount).toBeCloseTo(275) // 500 - 100 - 75 - 50
+
+      // Cancel only the 75-tonne PRN
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.CANCELLED)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(500) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(350) // 275 + 75
+    })
+
+    it('should allow new PRN creation using restored balance', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 100
+      await performSummaryLogSubmission(
+        env,
+        'log-cancel-reuse',
+        'file-cancel-reuse',
+        'waste-cancel-reuse.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      // Raise PRN for 80 (available drops to 20)
+      const prn1 = await createPrn(env, 80)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.availableAmount).toBeCloseTo(20)
+
+      // Cancel it (available restored to 100)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.availableAmount).toBeCloseTo(100)
+
+      // Raise a new PRN for 90 using the restored balance
+      const prn2 = await createPrn(env, 90)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100) // Total unchanged throughout
+      expect(balance.availableAmount).toBeCloseTo(10) // 100 - 90
+    })
+
+    it('should handle cancellation interleaved with issuance', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 500
+      await performSummaryLogSubmission(
+        env,
+        'log-cancel-interleave',
+        'file-cancel-interleave',
+        'waste-cancel-interleave.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 500 }])
+      )
+
+      // Raise three PRNs: 100, 75, 50
+      const prn1 = await createPrn(env, 100)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      const prn2 = await createPrn(env, 75)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      const prn3 = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(500)
+      expect(balance.availableAmount).toBeCloseTo(275) // 500 - 100 - 75 - 50
+
+      // Issue PRN 1 (total deducted, available unchanged)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(400) // 500 - 100
+      expect(balance.availableAmount).toBeCloseTo(275) // Unchanged
+
+      // Cancel PRN 2 (available credited, total unchanged)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.CANCELLED)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(400) // Unchanged
+      expect(balance.availableAmount).toBeCloseTo(350) // 275 + 75
+
+      // Issue PRN 3 (total deducted, available unchanged)
+      await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(350) // 400 - 50
+      expect(balance.availableAmount).toBeCloseTo(350) // Now matches total
+    })
+  })
+
   describe('transaction audit trail', () => {
     it('should record correct transaction history for series of operations', async () => {
       const env = await setupIntegrationEnvironment()
@@ -819,6 +1188,42 @@ describe('Waste balance arithmetic integration tests', () => {
       for (const debit of debitTransactions) {
         expect(debit.entities[0].type).toBe('prn:created')
       }
+    })
+
+    it('should record cancellation credit with PRN_CANCELLED entity type', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 200
+      await performSummaryLogSubmission(
+        env,
+        'log-audit-cancel',
+        'file-audit-cancel',
+        'waste-audit-cancel.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      // Raise PRN for 50
+      const prn1 = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      // Cancel it
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Find the cancellation credit transaction
+      const cancellationTransactions = balance.transactions.filter((t) =>
+        t.entities?.some(
+          (e) => e.type === WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
+        )
+      )
+
+      expect(cancellationTransactions).toHaveLength(1)
+      expect(cancellationTransactions[0].type).toBe('credit')
+      expect(cancellationTransactions[0].amount).toBe(50)
+      expect(cancellationTransactions[0].entities[0].id).toBe(prn1.id)
     })
   })
 })

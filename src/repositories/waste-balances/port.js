@@ -8,11 +8,31 @@
  */
 
 /**
+ * @typedef {Object} DeductTotalBalanceParams
+ * @property {string} accreditationId
+ * @property {string} organisationId
+ * @property {string} prnId
+ * @property {number} tonnage
+ * @property {string} userId
+ */
+
+/**
+ * @typedef {Object} CreditAvailableBalanceParams
+ * @property {string} accreditationId
+ * @property {string} organisationId
+ * @property {string} prnId
+ * @property {number} tonnage
+ * @property {string} userId
+ */
+
+/**
  * @typedef {Object} WasteBalancesRepository
  * @property {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} findByAccreditationId
  * @property {(accreditationIds: string[]) => Promise<import('#domain/waste-balances/model.js').WasteBalance[]>} findByAccreditationIds
- * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], accreditationId: string) => Promise<void>} updateWasteBalanceTransactions
+ * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], accreditationId: string, user?: Object) => Promise<void>} updateWasteBalanceTransactions
  * @property {(params: DeductAvailableBalanceParams) => Promise<void>} deductAvailableBalanceForPrnCreation
+ * @property {(params: DeductTotalBalanceParams) => Promise<void>} deductTotalBalanceForPrnIssue
+ * @property {(params: CreditAvailableBalanceParams) => Promise<void>} creditAvailableBalanceForPrnCancellation
  */
 
 /**

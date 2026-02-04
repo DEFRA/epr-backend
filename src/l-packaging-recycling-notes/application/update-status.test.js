@@ -104,9 +104,11 @@ describe('updatePrnStatus', () => {
       })
     }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi
-        .fn()
-        .mockResolvedValue({ accreditationId: 'acc-456' }),
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
       deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
     }
 
@@ -131,7 +133,7 @@ describe('updatePrnStatus', () => {
     })
   })
 
-  it('skips waste balance deduction when no balance exists', async () => {
+  it('throws error when creating PRN without waste balance', async () => {
     const prnRepository = {
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
@@ -140,29 +142,23 @@ describe('updatePrnStatus', () => {
         tonnage: 100,
         status: { currentStatus: PRN_STATUS.DRAFT }
       }),
-      updateStatus: vi.fn().mockResolvedValue({
-        id: '507f1f77bcf86cd799439011',
-        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
-      })
+      updateStatus: vi.fn()
     }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(null),
-      deductAvailableBalanceForPrnCreation: vi.fn()
+      findByAccreditationId: vi.fn().mockResolvedValue(null)
     }
 
-    await updatePrnStatus({
-      prnRepository,
-      wasteBalancesRepository,
-      id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      accreditationId: 'acc-456',
-      newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-      userId: 'user-789'
-    })
-
-    expect(
-      wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-    ).not.toHaveBeenCalled()
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        userId: 'user-789'
+      })
+    ).rejects.toThrow('No waste balance found for accreditation: acc-456')
   })
 
   it('updates status and returns updated PRN', async () => {
@@ -185,7 +181,12 @@ describe('updatePrnStatus', () => {
       updateStatus: vi.fn().mockResolvedValue(updatedPrn)
     }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(null)
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
     }
 
     const result = await updatePrnStatus({
@@ -220,11 +221,19 @@ describe('updatePrnStatus', () => {
         issuedByAccreditation: 'acc-456',
         nation: 'england',
         isExport: false,
+        tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
       updateStatus: vi.fn().mockResolvedValue(updatedPrn)
     }
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
 
     const result = await updatePrnStatus({
       prnRepository,
@@ -242,8 +251,127 @@ describe('updatePrnStatus', () => {
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
       updatedBy: 'user-789',
       updatedAt: expect.any(Date),
+      issuedAt: expect.any(Date),
       prnNumber: expect.stringMatching(/^ER26\d{5}$/)
     })
+  })
+
+  it('sets issuedAt to the same timestamp as updatedAt when issuing', async () => {
+    const prnRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        issuedByOrganisation: 'org-123',
+        issuedByAccreditation: 'acc-456',
+        nation: 'england',
+        isExport: false,
+        tonnage: 50,
+        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+      }),
+      updateStatus: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        prnNumber: 'ER2600001',
+        status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+    }
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      id: '507f1f77bcf86cd799439011',
+      organisationId: 'org-123',
+      accreditationId: 'acc-456',
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      userId: 'user-789'
+    })
+
+    const updateCall = prnRepository.updateStatus.mock.calls[0][0]
+    expect(updateCall.issuedAt).toStrictEqual(updateCall.updatedAt)
+  })
+
+  it('deducts total waste balance when issuing PRN (transitioning to awaiting_acceptance)', async () => {
+    const updatedPrn = {
+      id: '507f1f77bcf86cd799439011',
+      prnNumber: 'WE26000001',
+      status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+    }
+    const prnRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        issuedByOrganisation: 'org-123',
+        issuedByAccreditation: 'acc-456',
+        nation: 'england',
+        isExport: false,
+        tonnage: 75,
+        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+      }),
+      updateStatus: vi.fn().mockResolvedValue(updatedPrn)
+    }
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      id: '507f1f77bcf86cd799439011',
+      organisationId: 'org-123',
+      accreditationId: 'acc-456',
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      userId: 'user-789'
+    })
+
+    expect(
+      wasteBalancesRepository.deductTotalBalanceForPrnIssue
+    ).toHaveBeenCalledWith({
+      accreditationId: 'acc-456',
+      organisationId: 'org-123',
+      prnId: '507f1f77bcf86cd799439011',
+      tonnage: 75,
+      userId: 'user-789'
+    })
+  })
+
+  it('throws error when issuing PRN without waste balance', async () => {
+    const prnRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        issuedByOrganisation: 'org-123',
+        issuedByAccreditation: 'acc-456',
+        nation: 'england',
+        isExport: false,
+        tonnage: 75,
+        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+      }),
+      updateStatus: vi.fn()
+    }
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue(null)
+    }
+
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        userId: 'user-789'
+      })
+    ).rejects.toThrow('No waste balance found for accreditation: acc-456')
   })
 
   it('retries with suffix when PRN number collision occurs', async () => {
@@ -259,6 +387,7 @@ describe('updatePrnStatus', () => {
         issuedByAccreditation: 'acc-456',
         nation: 'england',
         isExport: false,
+        tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
       updateStatus: vi
@@ -266,7 +395,14 @@ describe('updatePrnStatus', () => {
         .mockRejectedValueOnce(new PrnNumberConflictError('WE26000001'))
         .mockResolvedValueOnce(updatedPrn)
     }
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
 
     const result = await updatePrnStatus({
       prnRepository,
@@ -286,6 +422,7 @@ describe('updatePrnStatus', () => {
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
       updatedBy: 'user-789',
       updatedAt: expect.any(Date),
+      issuedAt: expect.any(Date),
       prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
     })
   })
@@ -298,6 +435,7 @@ describe('updatePrnStatus', () => {
         issuedByAccreditation: 'acc-456',
         nation: 'england',
         isExport: false,
+        tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
       // Reject all 27 attempts (no suffix + A-Z)
@@ -305,7 +443,14 @@ describe('updatePrnStatus', () => {
         .fn()
         .mockRejectedValue(new PrnNumberConflictError('collision'))
     }
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
 
     await expect(
       updatePrnStatus({
@@ -331,11 +476,19 @@ describe('updatePrnStatus', () => {
         issuedByAccreditation: 'acc-456',
         nation: 'england',
         isExport: false,
+        tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
       updateStatus: vi.fn().mockRejectedValue(dbError)
     }
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
 
     await expect(
       updatePrnStatus({
@@ -364,7 +517,12 @@ describe('updatePrnStatus', () => {
       updateStatus: vi.fn().mockResolvedValue(null)
     }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(null)
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
     }
 
     await expect(
@@ -388,11 +546,19 @@ describe('updatePrnStatus', () => {
         issuedByAccreditation: 'acc-456',
         nation: 'england',
         isExport: false,
+        tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
       updateStatus: vi.fn().mockResolvedValue(null)
     }
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
 
     await expect(
       updatePrnStatus({
@@ -405,6 +571,229 @@ describe('updatePrnStatus', () => {
         userId: 'user-789'
       })
     ).rejects.toThrow('Failed to update PRN status')
+  })
+
+  describe('negative waste balance prevention', () => {
+    it('throws conflict when PRN tonnage exceeds available waste balance at creation', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }),
+        updateStatus: vi.fn()
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 500,
+          availableAmount: 50
+        }),
+        deductAvailableBalanceForPrnCreation: vi.fn()
+      }
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('Insufficient available waste balance')
+
+      expect(
+        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+      ).not.toHaveBeenCalled()
+      expect(prnRepository.updateStatus).not.toHaveBeenCalled()
+    })
+
+    it('throws conflict when PRN tonnage exceeds total waste balance at issue', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          nation: 'england',
+          isExport: false,
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        updateStatus: vi.fn()
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 50,
+          availableAmount: 200
+        }),
+        deductTotalBalanceForPrnIssue: vi.fn()
+      }
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('Insufficient total waste balance')
+
+      expect(
+        wasteBalancesRepository.deductTotalBalanceForPrnIssue
+      ).not.toHaveBeenCalled()
+      expect(prnRepository.updateStatus).not.toHaveBeenCalled()
+    })
+
+    it('allows creation when tonnage equals available waste balance exactly', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 100,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 500,
+          availableAmount: 100
+        }),
+        deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
+      }
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        userId: 'user-789'
+      })
+
+      expect(
+        wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+      ).toHaveBeenCalled()
+    })
+
+    it('treats undefined available balance as zero', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 1,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }),
+        updateStatus: vi.fn()
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 500
+        })
+      }
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('Insufficient available waste balance')
+    })
+
+    it('treats undefined total balance as zero', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          nation: 'england',
+          isExport: false,
+          tonnage: 1,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        updateStatus: vi.fn()
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          availableAmount: 200
+        })
+      }
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('Insufficient total waste balance')
+    })
+
+    it('allows issue when tonnage equals total waste balance exactly', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          nation: 'england',
+          isExport: false,
+          tonnage: 50,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          prnNumber: 'ER2600001',
+          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 50,
+          availableAmount: 200
+        }),
+        deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+      }
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        userId: 'user-789'
+      })
+
+      expect(
+        wasteBalancesRepository.deductTotalBalanceForPrnIssue
+      ).toHaveBeenCalled()
+    })
   })
 
   describe('metrics', () => {
@@ -425,7 +814,12 @@ describe('updatePrnStatus', () => {
         })
       }
       const wasteBalancesRepository = {
-        findByAccreditationId: vi.fn().mockResolvedValue(null)
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 1000,
+          availableAmount: 1000
+        }),
+        deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
       }
 
       await updatePrnStatus({
@@ -454,6 +848,7 @@ describe('updatePrnStatus', () => {
           issuedByAccreditation: 'acc-456',
           nation: 'england',
           material: 'plastic',
+          tonnage: 50,
           isExport: true,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -463,7 +858,14 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
       }
-      const wasteBalancesRepository = {}
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue({
+          accreditationId: 'acc-456',
+          amount: 1000,
+          availableAmount: 1000
+        }),
+        deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+      }
 
       await updatePrnStatus({
         prnRepository,
@@ -528,6 +930,117 @@ describe('updatePrnStatus', () => {
       ).rejects.toThrow('Invalid status transition')
 
       expect(mockRecordStatusTransition).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('cancellation waste balance credit', () => {
+    it('credits available waste balance when cancelling from awaiting_authorisation', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 75,
+          material: 'paper',
+          isExport: false,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.CANCELLED }
+        })
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi
+          .fn()
+          .mockResolvedValue({ accreditationId: 'acc-456' }),
+        creditAvailableBalanceForPrnCancellation: vi.fn().mockResolvedValue({})
+      }
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.CANCELLED,
+        userId: 'user-789'
+      })
+
+      expect(
+        wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
+      ).toHaveBeenCalledWith({
+        accreditationId: 'acc-456',
+        organisationId: 'org-123',
+        prnId: '507f1f77bcf86cd799439011',
+        tonnage: 75,
+        userId: 'user-789'
+      })
+    })
+
+    it('does not credit waste balance when cancelling from draft', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 50,
+          material: 'plastic',
+          isExport: false,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.CANCELLED }
+        })
+      }
+      const wasteBalancesRepository = {
+        creditAvailableBalanceForPrnCancellation: vi.fn()
+      }
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.CANCELLED,
+        userId: 'user-789'
+      })
+
+      expect(
+        wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
+      ).not.toHaveBeenCalled()
+    })
+
+    it('throws error when cancelling awaiting_authorisation PRN without waste balance', async () => {
+      const prnRepository = {
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          issuedByOrganisation: 'org-123',
+          issuedByAccreditation: 'acc-456',
+          tonnage: 50,
+          material: 'paper',
+          isExport: false,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        updateStatus: vi.fn()
+      }
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue(null)
+      }
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.CANCELLED,
+          userId: 'user-789'
+        })
+      ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
   })
 })

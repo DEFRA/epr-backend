@@ -15,6 +15,7 @@ export const buildPrn = (overrides = {}) => {
   const { status: statusOverrides, ...rest } = overrides
 
   return {
+    accreditationYear: 2026,
     issuedByOrganisation: `org-${randomUUID()}`,
     issuedByAccreditation: `acc-${randomUUID()}`,
     issuedToOrganisation: `recipient-${randomUUID()}`,

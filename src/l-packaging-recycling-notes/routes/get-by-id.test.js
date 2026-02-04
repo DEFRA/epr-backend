@@ -23,6 +23,7 @@ const prnId = 'prn-001'
 
 const mockPrn = {
   id: prnId,
+  accreditationYear: 2026,
   issuedByOrganisation: organisationId,
   issuedByAccreditation: accreditationId,
   issuedToOrganisation: 'Acme Packaging Ltd',
@@ -94,6 +95,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         expect(payload).toStrictEqual({
           id: prnId,
           prnNumber: null,
+          accreditationYear: 2026,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
@@ -112,6 +114,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const issuedPrn = {
           id: prnId,
           prnNumber: 'ER1234567890A',
+          accreditationYear: 2026,
           issuedByOrganisation: organisationId,
           issuedByAccreditation: accreditationId,
           issuedToOrganisation: 'Acme Packaging Ltd',
@@ -136,6 +139,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         expect(payload).toStrictEqual({
           id: prnId,
           prnNumber: 'ER1234567890A',
+          accreditationYear: 2026,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
@@ -178,6 +182,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         expect(payload).toStrictEqual({
           id: prnId,
           prnNumber: null,
+          accreditationYear: null,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',

@@ -63,6 +63,10 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
+    if ((balance.availableAmount ?? 0) < tonnage) {
+      throw Boom.conflict('Insufficient available waste balance')
+    }
+
     await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
       accreditationId,
       organisationId,
@@ -70,6 +74,93 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
       tonnage,
       userId
     })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
+ * Deducts total waste balance when issuing a PRN.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    if ((balance.amount ?? 0) < tonnage) {
+      throw Boom.conflict('Insufficient total waste balance')
+    }
+
+    await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
+ * Credits available waste balance when cancelling a PRN from awaiting_authorisation.
+ * Reverses the ringfencing that occurred when the PRN was created.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
+ * Applies waste balance side effects for a status transition.
+ * Each transition type is mutually exclusive based on newStatus.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
+  const { currentStatus, newStatus, ...balanceParams } = params
+
+  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
+    await deductWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+  }
+
+  if (
+    newStatus === PRN_STATUS.CANCELLED &&
+    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
+  ) {
+    await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+  }
+
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    await deductTotalBalanceIfNeeded(wasteBalancesRepository, balanceParams)
   }
 }
 
@@ -116,16 +207,15 @@ export async function updatePrnStatus({
     )
   }
 
-  // Deduct available waste balance when creating PRN
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    await deductWasteBalanceIfNeeded(wasteBalancesRepository, {
-      accreditationId,
-      organisationId,
-      prnId: id,
-      tonnage: prn.tonnage,
-      userId
-    })
-  }
+  await applyWasteBalanceEffects(wasteBalancesRepository, {
+    currentStatus,
+    newStatus,
+    accreditationId,
+    organisationId,
+    prnId: id,
+    tonnage: prn.tonnage,
+    userId
+  })
 
   const now = new Date()
   const updateParams = {
@@ -137,6 +227,8 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    updateParams.issuedAt = now
+
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
