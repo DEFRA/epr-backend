@@ -700,6 +700,61 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBeCloseTo(100)
     })
 
+    it('should reject PRN issue when tonnage exceeds total balance', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Credit: 100
+      await performSummaryLogSubmission(
+        env,
+        'log-total-reject',
+        'file-total-reject',
+        'waste-total-reject.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(100)
+
+      // Create and raise PRN for 50 (within available)
+      const prn1 = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(50)
+
+      // Manually reduce total balance to simulate concurrent deduction
+      await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+        accreditationId,
+        organisationId: env.organisationId,
+        prnId: 'other-prn',
+        tonnage: 80,
+        userId: 'test-user'
+      })
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(20) // 100 - 80
+
+      // Attempt to issue PRN for 50 (more than remaining total of 20) - should be rejected
+      const result = await transitionPrnStatus(
+        env,
+        prn1.id,
+        PRN_STATUS.AWAITING_ACCEPTANCE
+      )
+      expect(result.statusCode).toBe(409)
+      expect(result.message).toBe('Insufficient total waste balance')
+
+      // Balance should be unchanged
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(20)
+    })
+
     it('should deduct from total balance when PRN is issued', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
