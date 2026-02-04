@@ -219,6 +219,8 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    updateParams.issuedAt = now
+
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       nation: prn.nation,
       isExport: prn.isExport
