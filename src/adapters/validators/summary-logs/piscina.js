@@ -81,7 +81,7 @@ const clearTaskTimeout = (summaryLogId) => {
  * @param {string} summaryLogId
  * @param {object} logger
  * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking
- * @param {object} [request]
+ * @param {object} [user]
  * @returns {Promise<void>}
  */
 const runCommandInWorker = async (
@@ -89,22 +89,18 @@ const runCommandInWorker = async (
   summaryLogId,
   logger,
   repository,
-  request
+  user
 ) => {
   try {
-    const serializedRequest = request?.auth?.credentials
+    const serializedUser = user
       ? {
-          auth: {
-            credentials: {
-              id: request.auth.credentials.id,
-              email: request.auth.credentials.email,
-              scope: request.auth.credentials.scope
-            }
-          }
+          id: user.id,
+          email: user.email,
+          scope: user.scope
         }
       : null
 
-    await pool.run({ command, summaryLogId, request: serializedRequest })
+    await pool.run({ command, summaryLogId, user: serializedUser })
 
     // Clear timeout on success - worker completed normally
     clearTaskTimeout(summaryLogId)
@@ -212,7 +208,7 @@ export const createSummaryLogsCommandExecutor = (
         summaryLogId,
         logger,
         summaryLogsRepository,
-        request
+        request?.auth?.credentials || request
       )
     }
   }

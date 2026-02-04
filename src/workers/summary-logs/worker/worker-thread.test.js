@@ -323,11 +323,11 @@ describe('summaryLogsWorkerThread', () => {
       await summaryLogsWorkerThread({
         command: 'submit',
         summaryLogId,
-        request: { auth: { credentials: { id: 'user-123' } } }
+        user: { id: 'user-123' }
       })
 
       expect(mockSyncFromSummaryLog).toHaveBeenCalledWith(summaryLog, {
-        auth: { credentials: { id: 'user-123' } }
+        id: 'user-123'
       })
     })
 

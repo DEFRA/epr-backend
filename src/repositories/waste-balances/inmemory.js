@@ -81,7 +81,7 @@ export const createInMemoryWasteBalancesRepository = (
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
-      request
+      user
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
@@ -89,7 +89,7 @@ export const createInMemoryWasteBalancesRepository = (
         dependencies,
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage),
-        request
+        user
       })
     },
     deductAvailableBalanceForPrnCreation: async (deductParams) => {

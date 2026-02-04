@@ -74,10 +74,7 @@ const prepareRowsForTransformation = (parsedData) => {
   }
 }
 
-const resolveAccreditationId = async (
-  summaryLog,
-  organisationsRepository
-) => {
+const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
   if (summaryLog.accreditationId) {
     return summaryLog.accreditationId
   }
@@ -98,7 +95,7 @@ const updateWasteBalances = async ({
   accreditationId,
   wasteBalancesRepository,
   wasteRecords,
-  request
+  user
 }) => {
   // We only calculate waste balance for exporters and reprocessor inputs currently
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -111,7 +108,7 @@ const updateWasteBalances = async ({
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       accreditationId,
-      request
+      user
     )
   }
 }
@@ -191,10 +188,10 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
-   * @param {Object} [request] - Request context for the sync
+   * @param {Object} [user] - User context for the sync
    * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
-  return async (summaryLog, request) => {
+  return async (summaryLog, user) => {
     const timestamp = new Date().toISOString()
 
     // 1. Extract/parse the summary log
@@ -247,7 +244,7 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationId,
       wasteBalancesRepository,
       wasteRecords,
-      request
+      user
     })
 
     // 9. Count created/updated records for metrics

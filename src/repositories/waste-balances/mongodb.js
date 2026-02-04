@@ -117,7 +117,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
-      request
+      user
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
@@ -125,7 +125,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db),
-        request
+        user
       })
     },
     deductAvailableBalanceForPrnCreation: async (deductParams) => {

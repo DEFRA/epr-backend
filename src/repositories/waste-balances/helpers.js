@@ -180,10 +180,8 @@ const recordAuditLogs = async (
   dependencies,
   updatedBalance,
   newTransactions,
-  request
+  user
 ) => {
-  const user = request?.auth?.credentials || request
-
   if (!user?.id && !user?.email) {
     return
   }
@@ -271,8 +269,8 @@ const calculateAndApplyUpdates = async (
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [params.dependencies.organisationsRepository]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
- * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], request?: any) => Promise<void>} params.saveBalance
- * @param {any} [params.request]
+ * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
+ * @param {any} [params.user]
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
@@ -280,7 +278,7 @@ export const performUpdateWasteBalanceTransactions = async ({
   dependencies,
   findBalance,
   saveBalance,
-  request
+  user
 }) => {
   const validRecords = filterValidRecords(wasteRecords)
 
@@ -305,7 +303,7 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   await saveBalance(updatedBalance, newTransactions)
 
-  await recordAuditLogs(dependencies, updatedBalance, newTransactions, request)
+  await recordAuditLogs(dependencies, updatedBalance, newTransactions, user)
 }
 
 /**

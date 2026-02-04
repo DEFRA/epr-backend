@@ -397,7 +397,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         dependencies,
         findBalance,
         saveBalance,
-        request: user
+        user
       })
 
       expect(audit).toHaveBeenCalledWith(
@@ -510,7 +510,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         dependencies,
         findBalance,
         saveBalance,
-        request: user
+        user
       })
 
       // Should still audit

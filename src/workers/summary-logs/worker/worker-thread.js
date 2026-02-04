@@ -41,7 +41,7 @@ const handleSubmitCommand = async ({
   wasteRecordsRepository,
   wasteBalancesRepository,
   summaryLogExtractor,
-  request
+  user
 }) => {
   await submitSummaryLog(summaryLogId, {
     logger,
@@ -50,7 +50,7 @@ const handleSubmitCommand = async ({
     wasteRecordsRepository,
     wasteBalancesRepository,
     summaryLogExtractor,
-    request
+    user
   })
 }
 
@@ -128,7 +128,7 @@ export default async function summaryLogsWorkerThread(command) {
             wasteRecordsRepository,
             wasteBalancesRepository,
             summaryLogExtractor,
-            request: command.request
+            user: command.user
           })
           break
 

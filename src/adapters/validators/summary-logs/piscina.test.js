@@ -78,7 +78,7 @@ describe('createSummaryLogsCommandExecutor', () => {
     expect(mockRun).toHaveBeenCalledWith({
       command: 'validate',
       summaryLogId,
-      request: null
+      user: null
     })
   })
 
@@ -145,7 +145,7 @@ describe('createSummaryLogsCommandExecutor', () => {
       expect(mockRun).toHaveBeenCalledWith({
         command: 'submit',
         summaryLogId,
-        request: null
+        user: null
       })
     })
 
@@ -164,14 +164,10 @@ describe('createSummaryLogsCommandExecutor', () => {
       expect(mockRun).toHaveBeenCalledWith({
         command: 'submit',
         summaryLogId,
-        request: {
-          auth: {
-            credentials: {
-              id: 'user-1',
-              email: 'test@example.com',
-              scope: ['admin']
-            }
-          }
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          scope: ['admin']
         }
       })
     })
