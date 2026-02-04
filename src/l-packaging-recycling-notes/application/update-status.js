@@ -63,6 +63,10 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
+    if ((balance.availableAmount ?? 0) < tonnage) {
+      throw Boom.conflict('Insufficient available waste balance')
+    }
+
     await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
       accreditationId,
       organisationId,
@@ -89,6 +93,10 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
+    if ((balance.amount ?? 0) < tonnage) {
+      throw Boom.conflict('Insufficient total waste balance')
+    }
+
     await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
       accreditationId,
       organisationId,

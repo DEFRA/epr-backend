@@ -665,7 +665,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBeCloseTo(100.75) // 117.75 - 17 = 100.75
     })
 
-    it('should allow available balance to go negative', async () => {
+    it('should reject PRN creation when tonnage exceeds available balance', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -683,14 +683,21 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBeCloseTo(100)
       expect(balance.availableAmount).toBeCloseTo(100)
 
-      // Debit: 150 (more than available)
+      // Attempt to create PRN for 150 (more than available) - should be rejected
       const prn1 = await createPrn(env, 150)
-      await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      const result = await transitionPrnStatus(
+        env,
+        prn1.id,
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+      expect(result.statusCode).toBe(409)
+      expect(result.message).toBe('Insufficient available waste balance')
 
+      // Balance should be unchanged
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(100) // Total unchanged
-      expect(balance.availableAmount).toBeCloseTo(-50) // Can go negative
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(100)
     })
 
     it('should deduct from total balance when PRN is issued', async () => {
