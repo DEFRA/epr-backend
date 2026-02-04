@@ -548,7 +548,8 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           amount: 500,
           availableAmount: 50
-        })
+        }),
+        deductAvailableBalanceForPrnCreation: vi.fn()
       }
 
       await expect(
@@ -565,7 +566,7 @@ describe('updatePrnStatus', () => {
 
       expect(
         wasteBalancesRepository.deductAvailableBalanceForPrnCreation
-      ).toBeUndefined()
+      ).not.toHaveBeenCalled()
       expect(prnRepository.updateStatus).not.toHaveBeenCalled()
     })
 
@@ -587,7 +588,8 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           amount: 50,
           availableAmount: 200
-        })
+        }),
+        deductTotalBalanceForPrnIssue: vi.fn()
       }
 
       await expect(
@@ -604,7 +606,7 @@ describe('updatePrnStatus', () => {
 
       expect(
         wasteBalancesRepository.deductTotalBalanceForPrnIssue
-      ).toBeUndefined()
+      ).not.toHaveBeenCalled()
       expect(prnRepository.updateStatus).not.toHaveBeenCalled()
     })
 
