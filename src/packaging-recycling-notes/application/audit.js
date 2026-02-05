@@ -16,6 +16,8 @@ import {
  * @param {Object} next
  */
 async function auditPrnStatusTransition(request, prnId, previous, next) {
+  const organisationId = next?.organisationId ?? previous?.organisationId
+
   const payload = {
     event: {
       category: 'waste-reporting',
@@ -23,6 +25,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
       action: 'status-transition'
     },
     context: {
+      organisationId,
       prnId,
       previous,
       next
@@ -34,7 +37,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
     ? payload
     : {
         ...payload,
-        context: { prnId }
+        context: { organisationId, prnId }
       }
 
   audit(safeAuditingPayload)

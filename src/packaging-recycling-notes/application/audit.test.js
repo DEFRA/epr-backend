@@ -70,6 +70,7 @@ describe('auditPrnStatusTransition', () => {
         action: 'status-transition'
       },
       context: {
+        organisationId: 'org-456',
         prnId,
         previous: previousPrn,
         next: nextPrn
@@ -100,6 +101,7 @@ describe('auditPrnStatusTransition', () => {
         action: 'status-transition'
       },
       context: {
+        organisationId: 'org-456',
         prnId,
         previous: previousPrn,
         next: nextPrn
@@ -126,6 +128,7 @@ describe('auditPrnStatusTransition', () => {
         action: 'status-transition'
       },
       context: {
+        organisationId: 'org-456',
         prnId
       },
       user: {
@@ -139,10 +142,27 @@ describe('auditPrnStatusTransition', () => {
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         context: {
+          organisationId: 'org-456',
           prnId,
           previous: largePreviousPrn,
           next: nextPrn
         }
+      })
+    )
+  })
+
+  it('falls back to previous organisationId when next lacks it', async () => {
+    const request = createMockRequest()
+    const nextWithoutOrg = { ...nextPrn }
+    delete nextWithoutOrg.organisationId
+
+    await auditPrnStatusTransition(request, prnId, previousPrn, nextWithoutOrg)
+
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          organisationId: 'org-456'
+        })
       })
     )
   })
