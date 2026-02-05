@@ -17,6 +17,7 @@ import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import {
   MATERIAL,
   NATION,
+  REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { packagingRecyclingNotesCreatePath } from './post.js'
@@ -29,7 +30,6 @@ const validPayload = {
   issuedToOrganisation: 'producer-org-789',
   tonnage: 100,
   material: MATERIAL.PLASTIC,
-  nation: NATION.ENGLAND,
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
 }
 
@@ -69,7 +69,8 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           validFrom: '2026-01-01',
           validTo: '2026-12-31',
           status: 'approved',
-          accreditationNumber: 'ACC-001'
+          accreditationNumber: 'ACC-001',
+          submittedToRegulator: REGULATOR.SEPA
         })
       }
 
@@ -267,6 +268,24 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
+      it('derives regulator from accreditation submittedToRegulator', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            regulator: REGULATOR.SEPA,
+            nation: NATION.SCOTLAND
+          })
+        )
+      })
+
       it('includes issuer notes when provided', async () => {
         const notes = 'Test issuer notes'
 
@@ -354,20 +373,6 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: {
             ...validPayload,
             material: 'invalid_material'
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when nation is invalid', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: {
-            ...validPayload,
-            nation: 'invalid_nation'
           }
         })
 

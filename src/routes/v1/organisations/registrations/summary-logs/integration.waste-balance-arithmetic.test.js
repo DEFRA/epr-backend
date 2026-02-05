@@ -18,11 +18,7 @@ import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balan
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
-import {
-  MATERIAL,
-  NATION,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
 
 import {
@@ -436,7 +432,6 @@ describe('Waste balance arithmetic integration tests', () => {
         issuedToOrganisation: 'producer-org-123',
         tonnage,
         material: MATERIAL.PAPER,
-        nation: NATION.ENGLAND,
         wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
       }
     })

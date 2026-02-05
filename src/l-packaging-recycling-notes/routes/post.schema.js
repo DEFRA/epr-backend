@@ -1,10 +1,6 @@
 import Joi from 'joi'
 
-import {
-  MATERIAL,
-  NATION,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 const POSITIVE_INTEGER = 1
 const MAX_ISSUER_NOTES_LENGTH = 200
@@ -14,9 +10,6 @@ export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
   tonnage: Joi.number().integer().min(POSITIVE_INTEGER).required(),
   material: Joi.string()
     .valid(...Object.values(MATERIAL))
-    .required(),
-  nation: Joi.string()
-    .valid(...Object.values(NATION))
     .required(),
   wasteProcessingType: Joi.string()
     .valid(...Object.values(WASTE_PROCESSING_TYPE))
