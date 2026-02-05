@@ -1,6 +1,9 @@
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { MATERIAL } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  TONNAGE_MONITORING_MATERIALS
+} from '#domain/organisations/model.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_RECORDS_COLLECTION = 'waste-records'
@@ -93,7 +96,12 @@ const buildMaterialLookupStage = () => ({
       { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
       { $unwind: '$registrations' },
       { $match: { $expr: { $eq: ['$registrations.id', '$$regId'] } } },
-      { $project: { material: '$registrations.material' } }
+      {
+        $project: {
+          material: '$registrations.material',
+          glassRecyclingProcess: '$registrations.glassRecyclingProcess'
+        }
+      }
     ],
     as: 'orgData'
   }
@@ -135,14 +143,37 @@ const buildAggregationPipeline = () => [
     }
   },
   buildMaterialLookupStage(),
-  { $addFields: { material: { $arrayElemAt: ['$orgData.material', 0] } } },
+  {
+    $addFields: {
+      material: { $arrayElemAt: ['$orgData.material', 0] },
+      glassRecyclingProcess: {
+        $arrayElemAt: ['$orgData.glassRecyclingProcess', 0]
+      }
+    }
+  },
   { $match: { material: { $ne: null } } },
-  { $group: { _id: '$material', totalTonnage: { $sum: '$totalTonnage' } } },
+  {
+    $addFields: {
+      effectiveMaterial: {
+        $cond: {
+          if: { $eq: ['$material', MATERIAL.GLASS] },
+          then: { $arrayElemAt: ['$glassRecyclingProcess', 0] },
+          else: '$material'
+        }
+      }
+    }
+  },
+  {
+    $group: {
+      _id: '$effectiveMaterial',
+      totalTonnage: { $sum: '$totalTonnage' }
+    }
+  },
   { $sort: { _id: 1 } }
 ]
 
 const formatTonnageResults = (results) => {
-  const allMaterials = Object.values(MATERIAL)
+  const allMaterials = TONNAGE_MONITORING_MATERIALS
   const materialTonnageMap = new Map(
     results.map((r) => [r._id, r.totalTonnage])
   )

@@ -49,7 +49,7 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
       const mockTonnageData = {
         generatedAt: '2026-01-29T12:00:00.000Z',
         materials: [
-          { material: 'glass', totalTonnage: 100 },
+          { material: 'glass_re_melt', totalTonnage: 100 },
           { material: 'plastic', totalTonnage: 200 }
         ],
         total: 300
