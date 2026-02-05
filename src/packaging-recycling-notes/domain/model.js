@@ -9,7 +9,8 @@ export const PRN_STATUS = Object.freeze({
   ACCEPTED: 'accepted',
   REJECTED: 'rejected',
   CANCELLED: 'cancelled',
-  DELETED: 'deleted'
+  DELETED: 'deleted',
+  DISCARDED: 'discarded'
 })
 
 /**
@@ -17,11 +18,7 @@ export const PRN_STATUS = Object.freeze({
  * @type {Record<PrnStatus, PrnStatus[]>}
  */
 export const PRN_STATUS_TRANSITIONS = Object.freeze({
-  [PRN_STATUS.DRAFT]: [
-    PRN_STATUS.AWAITING_AUTHORISATION,
-    PRN_STATUS.CANCELLED,
-    PRN_STATUS.DELETED
-  ],
+  [PRN_STATUS.DRAFT]: [PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DISCARDED],
   [PRN_STATUS.AWAITING_AUTHORISATION]: [
     PRN_STATUS.AWAITING_ACCEPTANCE,
     PRN_STATUS.CANCELLED,
@@ -31,7 +28,8 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
   [PRN_STATUS.ACCEPTED]: [],
   [PRN_STATUS.REJECTED]: [],
   [PRN_STATUS.CANCELLED]: [],
-  [PRN_STATUS.DELETED]: []
+  [PRN_STATUS.DELETED]: [],
+  [PRN_STATUS.DISCARDED]: []
 })
 
 /**
