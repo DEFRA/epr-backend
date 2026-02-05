@@ -98,7 +98,7 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
 
 vi.mock('@defra/hapi-secure-context')
 
-vi.mock('#adapters/queue-consumer/queue-consumer.plugin.js', () => ({
+vi.mock('#server/queue-consumer/queue-consumer.plugin.js', () => ({
   commandQueueConsumerPlugin: {
     name: 'command-queue-consumer',
     version: '1.0.0',

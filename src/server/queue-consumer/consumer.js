@@ -1,7 +1,7 @@
 import Joi from 'joi'
 import { Consumer } from 'sqs-consumer'
-import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
+import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -211,12 +211,7 @@ const createMessageHandler = (deps) => async (message) => {
 export const createCommandQueueConsumer = async (deps) => {
   const { sqsClient, queueName, logger } = deps
 
-  const getQueueUrlCommand = new GetQueueUrlCommand({ QueueName: queueName })
-  const { QueueUrl: queueUrl } = await sqsClient.send(getQueueUrlCommand)
-
-  if (!queueUrl) {
-    throw new Error(`Queue not found: ${queueName}`)
-  }
+  const queueUrl = await resolveQueueUrl(sqsClient, queueName)
 
   logger.info({
     message: `Resolved queue URL: ${queueUrl}`,

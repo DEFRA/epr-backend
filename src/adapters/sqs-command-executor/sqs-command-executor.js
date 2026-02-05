@@ -1,5 +1,6 @@
-import { GetQueueUrlCommand, SendMessageCommand } from '@aws-sdk/client-sqs'
+import { SendMessageCommand } from '@aws-sdk/client-sqs'
 
+import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -87,13 +88,7 @@ const sendCommandMessage = async (
 export const createSqsCommandExecutor = async (deps) => {
   const { sqsClient, queueName, logger } = deps
 
-  const getQueueUrlCommand = new GetQueueUrlCommand({ QueueName: queueName })
-  const { QueueUrl: queueUrl } = await sqsClient.send(getQueueUrlCommand)
-
-  /* c8 ignore next 3 - defensive: SDK throws QueueDoesNotExist before returning null */
-  if (!queueUrl) {
-    throw new Error(`Queue not found: ${queueName}`)
-  }
+  const queueUrl = await resolveQueueUrl(sqsClient, queueName)
 
   logger.info({
     message: `Resolved queue URL: ${queueUrl}`,
