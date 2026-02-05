@@ -1,5 +1,7 @@
 import { ObjectId } from 'mongodb'
 
+import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
+
 const COLLECTION_NAME = 'l-packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
@@ -121,7 +123,7 @@ const findByAccreditation = async (db, accreditationId) => {
     .collection(COLLECTION_NAME)
     .find({
       issuedByAccreditation: accreditationId,
-      'status.currentStatus': { $ne: 'deleted' }
+      'status.currentStatus': { $ne: PRN_STATUS.DELETED }
     })
     .toArray()
 
