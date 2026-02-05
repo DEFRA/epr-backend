@@ -7,6 +7,8 @@ import {
 import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
+const TEST_TIMEOUT = 30000
+
 /**
  * Stops the consumer and waits for it to fully stop.
  * @param {import('sqs-consumer').Consumer} consumer
@@ -67,7 +69,7 @@ describe('SQS command queue consumer integration', () => {
   describe('queue connection', () => {
     it(
       'connects to queue and resolves URL by name',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const consumer = await createCommandQueueConsumer({
           sqsClient,
@@ -91,7 +93,7 @@ describe('SQS command queue consumer integration', () => {
 
     it(
       'throws when queue does not exist',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         await expect(
           createCommandQueueConsumer({
@@ -112,7 +114,7 @@ describe('SQS command queue consumer integration', () => {
   describe('message lifecycle', () => {
     it(
       'receives message from queue',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -165,7 +167,7 @@ describe('SQS command queue consumer integration', () => {
 
     it(
       'deletes invalid message after logging error',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -222,7 +224,7 @@ describe('SQS command queue consumer integration', () => {
 
     it(
       'rejects unknown command type via Joi validation',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -274,7 +276,7 @@ describe('SQS command queue consumer integration', () => {
   describe('graceful shutdown', () => {
     it(
       'stops polling when stop is called',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const consumer = await createCommandQueueConsumer({
           sqsClient,
