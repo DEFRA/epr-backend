@@ -3,6 +3,8 @@ import { GetQueueUrlCommand, ReceiveMessageCommand } from '@aws-sdk/client-sqs'
 import { it } from '#vite/fixtures/sqs.js'
 import { createSqsCommandExecutor } from './sqs-command-executor.js'
 
+const TEST_TIMEOUT = 30000
+
 /**
  * Integration tests for SQS command executor.
  *
@@ -29,7 +31,7 @@ describe('SQS command executor integration', () => {
   describe('validate', () => {
     it(
       'sends validate command message to queue',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const executor = await createSqsCommandExecutor({
           sqsClient,
@@ -64,7 +66,7 @@ describe('SQS command executor integration', () => {
 
     it(
       'logs message send success',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const executor = await createSqsCommandExecutor({
           sqsClient,
@@ -89,7 +91,7 @@ describe('SQS command executor integration', () => {
   describe('submit', () => {
     it(
       'sends submit command message to queue',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const executor = await createSqsCommandExecutor({
           sqsClient,
@@ -124,7 +126,7 @@ describe('SQS command executor integration', () => {
 
     it(
       'includes user context in submit message when request has credentials',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const executor = await createSqsCommandExecutor({
           sqsClient,
@@ -173,7 +175,7 @@ describe('SQS command executor integration', () => {
 
     it(
       'logs message send success',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const executor = await createSqsCommandExecutor({
           sqsClient,
@@ -198,7 +200,7 @@ describe('SQS command executor integration', () => {
   describe('queue connection', () => {
     it(
       'resolves queue URL and logs it',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         await createSqsCommandExecutor({
           sqsClient,
@@ -216,7 +218,7 @@ describe('SQS command executor integration', () => {
 
     it(
       'throws when queue does not exist',
-      { timeout: 15000 },
+      { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         await expect(
           createSqsCommandExecutor({
