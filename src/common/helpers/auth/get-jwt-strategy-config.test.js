@@ -498,6 +498,81 @@ describe('#getJwtStrategyConfig', () => {
         expect(result.credentials.scope).toEqual([ROLES.inquirer])
       })
 
+      test('includes name from token payload in credentials', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              name: 'Test User',
+              iss: defraIdMockOidcWellKnownResponse.issuer
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const result = await config.validate(artifacts, request)
+
+        expect(result.credentials.name).toBe('Test User')
+      })
+
+      test('handles undefined name in token payload', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
+              // name is not provided
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const result = await config.validate(artifacts, request)
+
+        expect(result.credentials.name).toBeUndefined()
+      })
+
+      test('handles null name in token payload', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              name: null,
+              iss: defraIdMockOidcWellKnownResponse.issuer
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const result = await config.validate(artifacts, request)
+
+        expect(result.credentials.name).toBeNull()
+      })
+
       test('does not call getEntraUserRoles for Defra ID tokens', async () => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
