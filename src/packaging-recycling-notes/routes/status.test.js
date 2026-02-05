@@ -591,6 +591,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       it('returns 404 when PRN not found', async () => {
         const nonExistentId = '507f1f77bcf86cd799439099'
 
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          null
+        )
+
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${nonExistentId}/status`,
@@ -625,13 +629,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        // Add to repository
-        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
-          async (id) => {
-            if (id === createdPrnId) return createdPrn
-            if (id === prnId) return mockPrn
-            return null
-          }
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createdPrn
         )
 
         const response = await server.inject({

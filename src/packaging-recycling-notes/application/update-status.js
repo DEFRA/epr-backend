@@ -189,7 +189,7 @@ export async function updatePrnStatus({
   newStatus,
   user
 }) {
-  const prn = await prnRepository.findById(id)
+  const prn = providedPrn ?? (await prnRepository.findById(id))
 
   if (
     !prn ||

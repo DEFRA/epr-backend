@@ -10,9 +10,11 @@ import {
 } from '#common/enums/index.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
+import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
@@ -60,7 +62,7 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -81,6 +83,14 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
 
     try {
+      // Fetch PRN before update to capture previous state for audit
+      const previousPrn =
+        await lumpyPackagingRecyclingNotesRepository.findById(id)
+
+      if (!previousPrn) {
+        throw Boom.notFound(`PRN not found: ${id}`)
+      }
+
       const updatedPrn = await updatePrnStatus({
         prnRepository: lumpyPackagingRecyclingNotesRepository,
         wasteBalancesRepository,
@@ -91,6 +101,8 @@ export const packagingRecyclingNotesUpdateStatus = {
         newStatus,
         user
       })
+
+      await auditPrnStatusTransition(request, id, previousPrn, updatedPrn)
 
       logger.info({
         message: `PRN status updated: id=${id}, -> ${newStatus}`,
