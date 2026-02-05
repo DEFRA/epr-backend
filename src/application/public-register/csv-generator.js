@@ -35,7 +35,7 @@ export async function generateCsv(rows) {
 
   const generatedAtRow = [
     `Generated at ${generatedAtTimestamp}`,
-    ...new Array(headerMapping.length - 1).fill('')
+    ...Array.from({ length: headerMapping.length - 1 }, () => '')
   ]
 
   const allRows = [
