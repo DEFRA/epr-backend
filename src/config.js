@@ -346,6 +346,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_LUMPY_PACKAGING_RECYCLING_NOTES'
+    },
+    useSqsCommandExecutor: {
+      doc: 'Feature Flag: Use SQS-based command executor instead of Piscina worker threads',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_USE_SQS_COMMAND_EXECUTOR'
     }
   },
   formSubmissionOverrides: {

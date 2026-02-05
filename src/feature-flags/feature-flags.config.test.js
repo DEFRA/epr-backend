@@ -79,4 +79,22 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.lumpyPackagingRecyclingNotes'
     )
   })
+
+  it('returns true when useSqsCommandExecutor flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isUseSqsCommandExecutorEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.useSqsCommandExecutor'
+    )
+  })
+
+  it('returns false when useSqsCommandExecutor flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isUseSqsCommandExecutorEnabled()).toBe(false)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.useSqsCommandExecutor'
+    )
+  })
 })
