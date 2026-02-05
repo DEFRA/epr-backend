@@ -1,5 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildDraftPrn } from './test-data.js'
+import { buildDraftPrn, buildDeletedPrn } from './test-data.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -118,6 +118,28 @@ export const testFindBehaviour = (it) => {
 
         expect(result).toHaveLength(1)
         expect(result[0].issuedByOrganisation).toBe('org-A')
+      })
+
+      it('does not return deleted PRNs (soft delete)', async () => {
+        const accreditationId = `acc-deleted-${Date.now()}`
+
+        await repository.create(
+          buildDraftPrn({
+            issuedByAccreditation: accreditationId,
+            tonnage: 100
+          })
+        )
+        await repository.create(
+          buildDeletedPrn({
+            issuedByAccreditation: accreditationId,
+            tonnage: 200
+          })
+        )
+
+        const result = await repository.findByAccreditation(accreditationId)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].tonnage).toBe(100)
       })
     })
   })

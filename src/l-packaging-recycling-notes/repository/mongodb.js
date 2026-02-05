@@ -119,7 +119,10 @@ const create = async (db, prn) => {
 const findByAccreditation = async (db, accreditationId) => {
   const docs = await db
     .collection(COLLECTION_NAME)
-    .find({ issuedByAccreditation: accreditationId })
+    .find({
+      issuedByAccreditation: accreditationId,
+      'status.currentStatus': { $ne: 'deleted' }
+    })
     .toArray()
 
   return /** @type {import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} */ (

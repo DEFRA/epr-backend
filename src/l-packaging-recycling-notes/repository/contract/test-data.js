@@ -88,3 +88,30 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
     }
   })
 }
+
+/**
+ * Builds a PRN in deleted status.
+ * @param {Partial<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ */
+export const buildDeletedPrn = (overrides = {}) => {
+  const now = new Date()
+  return buildPrn({
+    ...overrides,
+    status: {
+      currentStatus: PRN_STATUS.DELETED,
+      history: [
+        {
+          status: PRN_STATUS.DRAFT,
+          updatedAt: new Date(now.getTime() - 2000),
+          updatedBy: DEFAULT_CREATOR
+        },
+        {
+          status: PRN_STATUS.DELETED,
+          updatedAt: now,
+          updatedBy: 'user-deleter'
+        }
+      ],
+      ...overrides.status
+    }
+  })
+}

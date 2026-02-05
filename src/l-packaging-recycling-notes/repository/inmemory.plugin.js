@@ -47,7 +47,10 @@ function createInMemoryLumpyPackagingRecyclingNotesRepository(
     findByAccreditation: async (accreditationId) => {
       const results = []
       for (const prn of storage.values()) {
-        if (prn.issuedByAccreditation === accreditationId) {
+        if (
+          prn.issuedByAccreditation === accreditationId &&
+          prn.status?.currentStatus !== 'deleted'
+        ) {
           results.push(structuredClone(prn))
         }
       }
