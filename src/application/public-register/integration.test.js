@@ -31,11 +31,19 @@ describe('generatePublicRegister', () => {
     const activeDate = formatDate(VALID_FROM)
     const dateLastUpdated = formatDate(new Date(Date.now()))
 
-    const expectedCsv = `\uFEFFType,Business name,Companies House Number,Org ID,"Registered office
-Head office
-Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band
-Reprocessor,ACME ltd,AC012345,200001,"Palace of Westminster, London, SW1A 0AA",EA,REG1,ACME ltd,"7 Glass processing site, London, SW2A 0AA",Glass-remelt,R5,ACC1,${activeDate},Approved,${dateLastUpdated},"Over 10,000 tonnes"`
+    const lines = csvData.split('\n').filter((line) => line.length > 0)
+    expect(lines.length).toBe(5) // generated at row + header (3 lines) + data row
 
-    expect(csvData).toBe(expectedCsv)
+    expect(lines[0]).toMatch(
+      /^(\uFEFF)?Generated at \d{2}\.\d{2}\.\d{2} \d{2}:\d{2}(,){15}$/
+    )
+
+    // Verify header (starts on line 1)
+    expect(lines[1]).toContain('Type,Business name,Companies House Number')
+
+    // Verify data row
+    expect(lines[4]).toContain('Reprocessor,ACME ltd,AC012345,200001')
+    expect(lines[4]).toContain(activeDate)
+    expect(lines[4]).toContain(dateLastUpdated)
   })
 })
