@@ -107,6 +107,10 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.status).toBe(PRN_STATUS.DRAFT)
         expect(body.createdAt).toBeDefined()
         expect(body.processToBeUsed).toBe('R3') // plastic uses R3
+        expect(body.notes).toBeNull()
+        expect(body.isDecemberWaste).toBe(false)
+        expect(body.accreditationYear).toBe(2026)
+        expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
       })
 
       it('creates PRN with correct organisation and registration', async () => {
@@ -251,10 +255,33 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
-      it('includes issuer notes when provided', async () => {
+      it('should default accreditationYear and isDecemberWaste when missing from stored PRN', async () => {
+        lumpyPackagingRecyclingNotesRepository.create.mockResolvedValueOnce({
+          id: 'prn-sparse',
+          tonnage: validPayload.tonnage,
+          material: validPayload.material,
+          issuedToOrganisation: validPayload.issuedToOrganisation,
+          status: { currentStatus: PRN_STATUS.DRAFT },
+          createdAt: new Date()
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        const body = JSON.parse(response.payload)
+        expect(body.accreditationYear).toBeNull()
+        expect(body.isDecemberWaste).toBe(false)
+        expect(body.notes).toBeNull()
+      })
+
+      it('should include issuer notes when provided', async () => {
         const notes = 'Test issuer notes'
 
-        await server.inject({
+        const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
@@ -264,13 +291,8 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           }
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            notes
-          })
-        )
+        const body = JSON.parse(response.payload)
+        expect(body.notes).toBe(notes)
       })
     })
 
