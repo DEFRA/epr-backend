@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { generateCsv } from './csv-generator.js'
 
 describe('generateCsv', () => {
@@ -41,11 +41,21 @@ describe('generateCsv', () => {
     }
   ]
 
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-02-04T14:49:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('should generate a CSV string with correct headers and data rows', async () => {
     const csvOutput = await generateCsv(mockInput)
 
     const expectedCsv =
       '\uFEFF' + // ← Add BOM to expected string
+      'Generated at 04.02.26 14:49,,,,,,,,,,,,,,,\n' +
       'Type,Business name,Companies House Number,Org ID,"Registered office\n' +
       'Head office\n' +
       'Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band\n' +
