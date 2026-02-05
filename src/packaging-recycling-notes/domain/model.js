@@ -56,8 +56,8 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   notes?: string;
  *   isDecemberWaste: boolean;
  *   accreditationYear: number;
- *   authorisedAt: Date | null;
- *   authorisedBy: { id: string; name: string; position: string } | null;
+ *   issuedAt: Date | null;
+ *   issuedBy: { id: string; name: string; position: string } | null;
  *   status: {
  *     currentStatus: PrnStatus;
  *     history: PrnStatusHistoryItem[];

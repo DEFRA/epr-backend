@@ -297,8 +297,7 @@ describe('updatePrnStatus', () => {
       updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date),
       issuedAt: expect.any(Date),
-      authorisedAt: expect.any(Date),
-      authorisedBy: { id: 'user-789', name: 'Test User', position: '' },
+      issuedBy: { id: 'user-789', name: 'Test User', position: '' },
       prnNumber: expect.stringMatching(/^ER26\d{5}$/)
     })
   })
@@ -470,8 +469,7 @@ describe('updatePrnStatus', () => {
       updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date),
       issuedAt: expect.any(Date),
-      authorisedAt: expect.any(Date),
-      authorisedBy: { id: 'user-789', name: 'Test User', position: '' },
+      issuedBy: { id: 'user-789', name: 'Test User', position: '' },
       prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
     })
   })

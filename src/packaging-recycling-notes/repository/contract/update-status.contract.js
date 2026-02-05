@@ -175,38 +175,35 @@ export const testUpdateStatusBehaviour = (it) => {
           updatedAt: new Date()
         })
 
-        expect(updated.issuedAt).toBeUndefined()
+        expect(updated.issuedAt).toBeNull()
       })
     })
 
     describe('authorisation fields', () => {
-      it('sets authorisedAt when provided', async () => {
+      it('sets issuedAt when provided', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const authorisedAt = new Date()
+        const issuedAt = new Date()
 
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: authorisedAt,
+          updatedAt: issuedAt,
           prnNumber: `ER26${Date.now().toString().slice(-5)}Q`,
-          issuedAt: authorisedAt,
-          authorisedAt,
-          authorisedBy: {
+          issuedAt,
+          issuedBy: {
             id: 'user-issuer',
             name: 'Issuer User',
             position: 'Manager'
           }
         })
 
-        expect(new Date(updated.authorisedAt).getTime()).toBe(
-          authorisedAt.getTime()
-        )
+        expect(new Date(updated.issuedAt).getTime()).toBe(issuedAt.getTime())
       })
 
-      it('sets authorisedBy when provided', async () => {
+      it('sets issuedBy when provided', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const authorisedBy = {
+        const issuedBy = {
           id: 'user-issuer',
           name: 'Issuer User',
           position: 'Manager'
@@ -219,17 +216,16 @@ export const testUpdateStatusBehaviour = (it) => {
           updatedAt: new Date(),
           prnNumber: `ER26${Date.now().toString().slice(-5)}R`,
           issuedAt: new Date(),
-          authorisedAt: new Date(),
-          authorisedBy
+          issuedBy
         })
 
-        expect(updated.authorisedBy).toEqual(authorisedBy)
+        expect(updated.issuedBy).toEqual(issuedBy)
       })
 
-      it('persists authorisedAt and authorisedBy so they can be retrieved', async () => {
+      it('persists issuedAt and issuedBy so they can be retrieved', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const authorisedAt = new Date()
-        const authorisedBy = {
+        const issuedAt = new Date()
+        const issuedBy = {
           id: 'user-issuer',
           name: 'Issuer User',
           position: ''
@@ -239,21 +235,18 @@ export const testUpdateStatusBehaviour = (it) => {
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: authorisedAt,
+          updatedAt: issuedAt,
           prnNumber: `ER26${Date.now().toString().slice(-5)}S`,
-          issuedAt: authorisedAt,
-          authorisedAt,
-          authorisedBy
+          issuedAt,
+          issuedBy
         })
 
         const found = await repository.findById(created.id)
-        expect(new Date(found.authorisedAt).getTime()).toBe(
-          authorisedAt.getTime()
-        )
-        expect(found.authorisedBy).toEqual(authorisedBy)
+        expect(new Date(found.issuedAt).getTime()).toBe(issuedAt.getTime())
+        expect(found.issuedBy).toEqual(issuedBy)
       })
 
-      it('does not set authorisedAt/authorisedBy when not provided', async () => {
+      it('does not set issuedAt/issuedBy when not provided', async () => {
         const created = await repository.create(buildDraftPrn())
 
         const updated = await repository.updateStatus({
@@ -263,9 +256,9 @@ export const testUpdateStatusBehaviour = (it) => {
           updatedAt: new Date()
         })
 
-        // authorisedAt/authorisedBy are null by default in the PRN model
-        expect(updated.authorisedAt).toBeNull()
-        expect(updated.authorisedBy).toBeNull()
+        // issuedAt/issuedBy are null by default in the PRN model
+        expect(updated.issuedAt).toBeNull()
+        expect(updated.issuedBy).toBeNull()
       })
     })
 

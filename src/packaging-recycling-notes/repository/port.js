@@ -6,8 +6,7 @@
  * @property {Date} updatedAt - Timestamp of the change
  * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
  * @property {Date} [issuedAt] - Timestamp when the PRN was issued (transitioning to awaiting_acceptance)
- * @property {Date} [authorisedAt] - Timestamp when the PRN was authorised
- * @property {{ id: string; name: string; position: string }} [authorisedBy] - User who authorised the PRN
+ * @property {{ id: string; name: string; position: string }} [issuedBy] - User who issued the PRN
  */
 
 /**

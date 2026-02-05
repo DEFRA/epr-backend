@@ -41,8 +41,8 @@ const createMockPrn = (overrides = {}) => ({
   isExport: false,
   isDecemberWaste: false,
   accreditationYear: 2026,
-  authorisedAt: null,
-  authorisedBy: null,
+  issuedAt: null,
+  issuedBy: null,
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.DRAFT,
@@ -76,8 +76,8 @@ const createInMemoryPackagingRecyclingNotesRepository = (initialPrns = []) => {
         updatedBy,
         updatedAt,
         prnNumber,
-        authorisedAt,
-        authorisedBy
+        issuedAt,
+        issuedBy
       }) => {
         const prn = store.get(id)
         if (!prn) return null
@@ -89,11 +89,11 @@ const createInMemoryPackagingRecyclingNotesRepository = (initialPrns = []) => {
         if (prnNumber) {
           prn.prnNumber = prnNumber
         }
-        if (authorisedAt) {
-          prn.authorisedAt = authorisedAt
+        if (issuedAt) {
+          prn.issuedAt = issuedAt
         }
-        if (authorisedBy) {
-          prn.authorisedBy = authorisedBy
+        if (issuedBy) {
+          prn.issuedBy = issuedBy
         }
         store.set(id, prn)
 

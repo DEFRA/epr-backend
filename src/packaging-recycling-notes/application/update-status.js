@@ -230,8 +230,7 @@ export async function updatePrnStatus({
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     updateParams.issuedAt = now
-    updateParams.authorisedAt = now
-    updateParams.authorisedBy = {
+    updateParams.issuedBy = {
       id: user.id,
       name: user.name,
       position: ''

@@ -144,16 +144,7 @@ const findByAccreditation = async (db, accreditationId) => {
  */
 const updateStatus = async (
   db,
-  {
-    id,
-    status,
-    updatedBy,
-    updatedAt,
-    prnNumber,
-    issuedAt,
-    authorisedAt,
-    authorisedBy
-  }
+  { id, status, updatedBy, updatedAt, prnNumber, issuedAt, issuedBy }
 ) => {
   const setFields = {
     'status.currentStatus': status,
@@ -169,12 +160,8 @@ const updateStatus = async (
     setFields.issuedAt = issuedAt
   }
 
-  if (authorisedAt) {
-    setFields.authorisedAt = authorisedAt
-  }
-
-  if (authorisedBy) {
-    setFields.authorisedBy = authorisedBy
+  if (issuedBy) {
+    setFields.issuedBy = issuedBy
   }
 
   try {
