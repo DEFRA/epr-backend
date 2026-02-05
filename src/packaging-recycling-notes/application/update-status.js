@@ -176,7 +176,7 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
  * @param {string} params.organisationId
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
- * @param {string} params.userId
+ * @param {{ id: string; name: string }} params.user
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 export async function updatePrnStatus({
@@ -187,7 +187,7 @@ export async function updatePrnStatus({
   organisationId,
   accreditationId,
   newStatus,
-  userId
+  user
 }) {
   const prn = await prnRepository.findById(id)
 
@@ -214,20 +214,26 @@ export async function updatePrnStatus({
     organisationId,
     prnId: id,
     tonnage: prn.tonnage,
-    userId
+    userId: user.id
   })
 
   const now = new Date()
   const updateParams = {
     id,
     status: newStatus,
-    updatedBy: userId,
+    updatedBy: user,
     updatedAt: now
   }
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     updateParams.issuedAt = now
+    updateParams.authorisedAt = now
+    updateParams.authorisedBy = {
+      id: user.id,
+      name: user.name,
+      position: ''
+    }
 
     const accreditation = await organisationsRepository.findAccreditationById(
       organisationId,

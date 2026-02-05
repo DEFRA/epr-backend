@@ -152,8 +152,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
-      it('sets createdBy and updatedBy to the authenticated user ID', async () => {
+      it('sets createdBy and updatedBy to the authenticated user', async () => {
         const userId = 'specific-test-user-id'
+        const userName = 'Test User'
 
         await server.inject({
           method: 'POST',
@@ -163,6 +164,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             credentials: {
               scope: ['standard_user'],
               id: userId,
+              name: userName,
               email: 'test@example.com',
               linkedOrgId: organisationId
             }
@@ -174,11 +176,12 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.create
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            createdBy: expect.objectContaining({ id: userId }),
+            createdBy: { id: userId, name: userName },
+            updatedBy: { id: userId, name: userName },
             status: expect.objectContaining({
               history: expect.arrayContaining([
                 expect.objectContaining({
-                  updatedBy: userId
+                  updatedBy: { id: userId, name: userName }
                 })
               ])
             })

@@ -2,10 +2,12 @@
  * @typedef {Object} UpdateStatusParams
  * @property {string} id - PRN ID
  * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus} status - New status
- * @property {string} updatedBy - User ID making the change
+ * @property {{ id: string; name: string }} updatedBy - User making the change
  * @property {Date} updatedAt - Timestamp of the change
  * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
  * @property {Date} [issuedAt] - Timestamp when the PRN was issued (transitioning to awaiting_acceptance)
+ * @property {Date} [authorisedAt] - Timestamp when the PRN was authorised
+ * @property {{ id: string; name: string; position: string }} [authorisedBy] - User who authorised the PRN
  */
 
 /**

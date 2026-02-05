@@ -51,7 +51,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('PRN not found')
   })
@@ -76,7 +76,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('PRN not found')
   })
@@ -101,7 +101,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('PRN not found')
   })
@@ -127,7 +127,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Invalid status transition')
   })
@@ -163,7 +163,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-      userId: 'user-789'
+      user: { id: 'user-789', name: 'Test User' }
     })
 
     expect(
@@ -200,7 +200,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
   })
@@ -241,14 +241,14 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-      userId: 'user-789'
+      user: { id: 'user-789', name: 'Test User' }
     })
 
     expect(result).toBe(updatedPrn)
     expect(prnRepository.updateStatus).toHaveBeenCalledWith({
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_AUTHORISATION,
-      updatedBy: 'user-789',
+      updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date)
     })
   })
@@ -287,16 +287,18 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      userId: 'user-789'
+      user: { id: 'user-789', name: 'Test User' }
     })
 
     expect(result).toBe(updatedPrn)
     expect(prnRepository.updateStatus).toHaveBeenCalledWith({
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
-      updatedBy: 'user-789',
+      updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date),
       issuedAt: expect.any(Date),
+      authorisedAt: expect.any(Date),
+      authorisedBy: { id: 'user-789', name: 'Test User', position: '' },
       prnNumber: expect.stringMatching(/^ER26\d{5}$/)
     })
   })
@@ -334,7 +336,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      userId: 'user-789'
+      user: { id: 'user-789', name: 'Test User' }
     })
 
     const updateCall = prnRepository.updateStatus.mock.calls[0][0]
@@ -375,7 +377,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      userId: 'user-789'
+      user: { id: 'user-789', name: 'Test User' }
     })
 
     expect(
@@ -414,7 +416,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
   })
@@ -456,7 +458,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      userId: 'user-789'
+      user: { id: 'user-789', name: 'Test User' }
     })
 
     expect(result).toBe(updatedPrn)
@@ -465,9 +467,11 @@ describe('updatePrnStatus', () => {
     expect(prnRepository.updateStatus).toHaveBeenLastCalledWith({
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
-      updatedBy: 'user-789',
+      updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date),
       issuedAt: expect.any(Date),
+      authorisedAt: expect.any(Date),
+      authorisedBy: { id: 'user-789', name: 'Test User', position: '' },
       prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
     })
   })
@@ -505,7 +509,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Unable to generate unique PRN number after all retries')
 
@@ -545,7 +549,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow()
 
@@ -583,7 +587,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Database connection failed')
 
@@ -619,7 +623,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Failed to update PRN status')
   })
@@ -654,7 +658,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Failed to update PRN status')
   })
@@ -689,7 +693,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient available waste balance')
 
@@ -729,7 +733,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient total waste balance')
 
@@ -770,7 +774,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(
@@ -805,7 +809,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient available waste balance')
     })
@@ -838,7 +842,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient total waste balance')
     })
@@ -876,7 +880,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(
@@ -919,7 +923,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith({
@@ -964,7 +968,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith({
@@ -990,7 +994,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('PRN not found')
 
@@ -1017,7 +1021,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Invalid status transition')
 
@@ -1057,7 +1061,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.CANCELLED,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(
@@ -1099,7 +1103,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.CANCELLED,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(
@@ -1133,7 +1137,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.CANCELLED,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
@@ -1170,7 +1174,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DELETED,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(
@@ -1211,7 +1215,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DELETED,
-        userId: 'user-789'
+        user: { id: 'user-789', name: 'Test User' }
       })
 
       expect(
@@ -1244,7 +1248,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.DELETED,
-          userId: 'user-789'
+          user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })

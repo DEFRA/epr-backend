@@ -59,12 +59,12 @@ const buildPrnData = ({
   authorisedBy: null,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: user.id }]
+    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: user }]
   },
   createdAt: now,
   createdBy: user,
   updatedAt: now,
-  updatedBy: null
+  updatedBy: user
 })
 
 /**

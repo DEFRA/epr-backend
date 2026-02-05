@@ -17,7 +17,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-raiser',
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
         })
 
@@ -32,7 +32,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-raiser',
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
         })
 
@@ -40,7 +40,10 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(updated.status.history[1].status).toBe(
           PRN_STATUS.AWAITING_AUTHORISATION
         )
-        expect(updated.status.history[1].updatedBy).toBe('user-raiser')
+        expect(updated.status.history[1].updatedBy).toEqual({
+          id: 'user-raiser',
+          name: 'Raiser User'
+        })
       })
 
       it('updates the updatedAt timestamp', async () => {
@@ -50,7 +53,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-raiser',
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: updateTime
         })
 
@@ -61,7 +64,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const result = await repository.updateStatus({
           id: '000000000000000000000000',
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-test',
+          updatedBy: { id: 'user-test', name: 'Test User' },
           updatedAt: new Date()
         })
 
@@ -74,7 +77,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-test',
+          updatedBy: { id: 'user-test', name: 'Test User' },
           updatedAt: new Date()
         })
 
@@ -90,7 +93,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: 'user-issuer',
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
           prnNumber
         })
@@ -105,7 +108,7 @@ export const testUpdateStatusBehaviour = (it) => {
         await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: 'user-issuer',
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
           prnNumber
         })
@@ -120,7 +123,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-raiser',
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
         })
 
@@ -136,7 +139,7 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: 'user-issuer',
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: issuedAt,
           prnNumber: `ER26${Date.now().toString().slice(-5)}Z`,
           issuedAt
@@ -152,7 +155,7 @@ export const testUpdateStatusBehaviour = (it) => {
         await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: 'user-issuer',
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: issuedAt,
           prnNumber: `ER26${Date.now().toString().slice(-5)}W`,
           issuedAt
@@ -168,11 +171,101 @@ export const testUpdateStatusBehaviour = (it) => {
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-raiser',
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
         })
 
         expect(updated.issuedAt).toBeUndefined()
+      })
+    })
+
+    describe('authorisation fields', () => {
+      it('sets authorisedAt when provided', async () => {
+        const created = await repository.create(buildAwaitingAuthorisationPrn())
+        const authorisedAt = new Date()
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: authorisedAt,
+          prnNumber: `ER26${Date.now().toString().slice(-5)}Q`,
+          issuedAt: authorisedAt,
+          authorisedAt,
+          authorisedBy: {
+            id: 'user-issuer',
+            name: 'Issuer User',
+            position: 'Manager'
+          }
+        })
+
+        expect(new Date(updated.authorisedAt).getTime()).toBe(
+          authorisedAt.getTime()
+        )
+      })
+
+      it('sets authorisedBy when provided', async () => {
+        const created = await repository.create(buildAwaitingAuthorisationPrn())
+        const authorisedBy = {
+          id: 'user-issuer',
+          name: 'Issuer User',
+          position: 'Manager'
+        }
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: new Date(),
+          prnNumber: `ER26${Date.now().toString().slice(-5)}R`,
+          issuedAt: new Date(),
+          authorisedAt: new Date(),
+          authorisedBy
+        })
+
+        expect(updated.authorisedBy).toEqual(authorisedBy)
+      })
+
+      it('persists authorisedAt and authorisedBy so they can be retrieved', async () => {
+        const created = await repository.create(buildAwaitingAuthorisationPrn())
+        const authorisedAt = new Date()
+        const authorisedBy = {
+          id: 'user-issuer',
+          name: 'Issuer User',
+          position: ''
+        }
+
+        await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: authorisedAt,
+          prnNumber: `ER26${Date.now().toString().slice(-5)}S`,
+          issuedAt: authorisedAt,
+          authorisedAt,
+          authorisedBy
+        })
+
+        const found = await repository.findById(created.id)
+        expect(new Date(found.authorisedAt).getTime()).toBe(
+          authorisedAt.getTime()
+        )
+        expect(found.authorisedBy).toEqual(authorisedBy)
+      })
+
+      it('does not set authorisedAt/authorisedBy when not provided', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
+          updatedAt: new Date()
+        })
+
+        // authorisedAt/authorisedBy are null by default in the PRN model
+        expect(updated.authorisedAt).toBeNull()
+        expect(updated.authorisedBy).toBeNull()
       })
     })
 
@@ -183,14 +276,14 @@ export const testUpdateStatusBehaviour = (it) => {
         await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: 'user-raiser',
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
         })
 
         const final = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: 'user-issuer',
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
           prnNumber: 'ER2600001X'
         })

@@ -75,7 +75,10 @@ export const packagingRecyclingNotesUpdateStatus = {
     } = request
     const { organisationId, accreditationId, id } = params
     const { status: newStatus } = payload
-    const userId = auth.credentials?.id ?? 'unknown'
+    const user = {
+      id: auth.credentials?.id ?? 'unknown',
+      name: auth.credentials?.name ?? 'unknown'
+    }
 
     try {
       const updatedPrn = await updatePrnStatus({
@@ -86,7 +89,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         organisationId,
         accreditationId,
         newStatus,
-        userId
+        user
       })
 
       logger.info({
