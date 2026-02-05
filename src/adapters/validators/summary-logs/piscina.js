@@ -173,7 +173,11 @@ export const createSummaryLogsCommandExecutor = (
         activeTimeouts.delete(summaryLogId)
         logger.error({
           message: `Summary log validate worker timed out: summaryLogId=${summaryLogId}`,
-          summaryLogId
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE,
+            reference: summaryLogId
+          }
         })
 
         await markAsValidationFailed(

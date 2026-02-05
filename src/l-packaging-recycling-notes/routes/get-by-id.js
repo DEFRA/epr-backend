@@ -47,7 +47,11 @@ export const packagingRecyclingNoteById = {
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { lumpyPackagingRecyclingNotesRepository, params, logger } = request
+    const {
+      lumpyPackagingRecyclingNotesRepository,
+      params,
+      logger /** @type {import('#common/hapi-types.js').TypedLogger} */
+    } = request
     const { organisationId, accreditationId, prnId } = params
 
     try {

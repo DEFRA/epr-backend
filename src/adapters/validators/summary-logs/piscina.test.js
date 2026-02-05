@@ -349,9 +349,8 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(logger.warn).toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining(
-              'Cannot mark as validation_failed'
-            ),
-            summaryLogId
+              'Cannot mark as validation_failed: summary log not found, summaryLogId=summary-log-123'
+            )
           })
         )
         expect(mainThreadRepository.update).not.toHaveBeenCalled()
@@ -378,10 +377,8 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             err: updateError,
-            message: expect.stringContaining(
-              'Failed to mark summary log as validation_failed'
-            ),
-            summaryLogId
+            message:
+              'Failed to mark summary log as validation_failed, summaryLogId=summary-log-123'
           })
         )
       })
@@ -436,8 +433,11 @@ describe('createSummaryLogsCommandExecutor', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: expect.stringContaining('worker timed out'),
-            summaryLogId
+            message:
+              'Summary log validate worker timed out: summaryLogId=summary-log-123',
+            event: expect.objectContaining({
+              reference: summaryLogId
+            })
           })
         )
       })
@@ -550,10 +550,8 @@ describe('createSummaryLogsCommandExecutor', () => {
 
         expect(logger.warn).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: expect.stringContaining(
-              'Cannot mark as submission_failed'
-            ),
-            summaryLogId
+            message:
+              'Cannot mark as submission_failed: summary log not found, summaryLogId=summary-log-123'
           })
         )
         expect(mainThreadRepository.update).not.toHaveBeenCalled()
@@ -580,10 +578,8 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             err: updateError,
-            message: expect.stringContaining(
-              'Failed to mark summary log as submission_failed'
-            ),
-            summaryLogId
+            message:
+              'Failed to mark summary log as submission_failed, summaryLogId=summary-log-123'
           })
         )
       })

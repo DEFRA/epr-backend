@@ -41,7 +41,11 @@ export const packagingRecyclingNotesList = {
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { lumpyPackagingRecyclingNotesRepository, params, logger } = request
+    const {
+      lumpyPackagingRecyclingNotesRepository,
+      params,
+      logger /** @type {import('#common/hapi-types.js').TypedLogger} */
+    } = request
     const { accreditationId } = params
 
     try {
@@ -66,7 +70,7 @@ export const packagingRecyclingNotesList = {
       }
 
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${packagingRecyclingNotesListPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
