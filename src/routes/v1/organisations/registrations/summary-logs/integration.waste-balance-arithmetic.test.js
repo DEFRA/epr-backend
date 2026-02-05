@@ -930,8 +930,8 @@ describe('Waste balance arithmetic integration tests', () => {
     })
   })
 
-  describe('PRN cancellation', () => {
-    it('should restore available balance when cancelling from awaiting_authorisation', async () => {
+  describe('PRN deletion', () => {
+    it('should restore available balance when deleting from awaiting_authorisation', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -958,8 +958,8 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBeCloseTo(200)
       expect(balance.availableAmount).toBeCloseTo(150)
 
-      // Cancel the PRN (restores available)
-      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+      // Delete the PRN (restores available)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -967,7 +967,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBeCloseTo(200) // Restored: 150 + 50
     })
 
-    it('should not change balance when cancelling from draft', async () => {
+    it('should not change balance when discarding from draft', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -988,8 +988,8 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBeCloseTo(200)
       expect(balance.availableAmount).toBeCloseTo(200)
 
-      // Cancel from draft (no balance change)
-      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+      // Discard from draft (no balance change)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.DISCARDED)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -997,7 +997,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBeCloseTo(200) // Unchanged
     })
 
-    it('should only restore the cancelled PRN tonnage among multiple raised PRNs', async () => {
+    it('should only restore the deleted PRN tonnage among multiple raised PRNs', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -1025,8 +1025,8 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBeCloseTo(500)
       expect(balance.availableAmount).toBeCloseTo(275) // 500 - 100 - 75 - 50
 
-      // Cancel only the 75-tonne PRN
-      await transitionPrnStatus(env, prn2.id, PRN_STATUS.CANCELLED)
+      // Delete only the 75-tonne PRN
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.DELETED)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -1055,8 +1055,8 @@ describe('Waste balance arithmetic integration tests', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.availableAmount).toBeCloseTo(20)
 
-      // Cancel it (available restored to 100)
-      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+      // Delete it (available restored to 100)
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -1072,7 +1072,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBeCloseTo(10) // 100 - 90
     })
 
-    it('should handle cancellation interleaved with issuance', async () => {
+    it('should handle deletion interleaved with issuance', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -1108,8 +1108,8 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBeCloseTo(400) // 500 - 100
       expect(balance.availableAmount).toBeCloseTo(275) // Unchanged
 
-      // Cancel PRN 2 (available credited, total unchanged)
-      await transitionPrnStatus(env, prn2.id, PRN_STATUS.CANCELLED)
+      // Delete PRN 2 (available credited, total unchanged)
+      await transitionPrnStatus(env, prn2.id, PRN_STATUS.DELETED)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -1188,7 +1188,7 @@ describe('Waste balance arithmetic integration tests', () => {
       }
     })
 
-    it('should record cancellation credit with PRN_CANCELLED entity type', async () => {
+    it('should record deletion credit with PRN_CANCELLED entity type', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -1205,8 +1205,8 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      // Cancel it
-      await transitionPrnStatus(env, prn1.id, PRN_STATUS.CANCELLED)
+      // Delete it
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
 
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
