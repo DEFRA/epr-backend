@@ -45,7 +45,6 @@ export const testCreateBehaviour = (it) => {
           tonnage: 500,
           material: 'paper',
           regulator: 'sepa',
-          nation: 'scotland',
           wasteProcessingType: 'exporting',
           isExport: true,
           issuerNotes: 'Test notes for contract',
@@ -63,7 +62,6 @@ export const testCreateBehaviour = (it) => {
         expect(found.tonnage).toBe(500)
         expect(found.material).toBe('paper')
         expect(found.regulator).toBe('sepa')
-        expect(found.nation).toBe('scotland')
         expect(found.wasteProcessingType).toBe('exporting')
         expect(found.isExport).toBe(true)
         expect(found.issuerNotes).toBe('Test notes for contract')

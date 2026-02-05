@@ -46,7 +46,6 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   tonnage: number;
  *   material: string;
  *   regulator: string;
- *   nation: string;
  *   wasteProcessingType: string;
  *   isExport: boolean;
  *   issuerNotes?: string;

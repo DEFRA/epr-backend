@@ -16,7 +16,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import {
   MATERIAL,
-  NATION,
+  REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#l-packaging-recycling-notes/repository/mongodb.js'
@@ -34,7 +34,7 @@ const createMockPrn = (overrides = {}) => ({
   issuedToOrganisation: 'producer-org-789',
   tonnage: 100,
   material: MATERIAL.PLASTIC,
-  nation: NATION.ENGLAND,
+  regulator: REGULATOR.EA,
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   isExport: false,
   issuerNotes: 'Test notes',
@@ -251,9 +251,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         )
       })
 
-      it('uses nation code for agency prefix', async () => {
-        const walesPrn = createMockPrn({
-          nation: NATION.WALES,
+      it('uses regulator code for agency prefix', async () => {
+        const nrwPrn = createMockPrn({
+          regulator: REGULATOR.NRW,
           status: {
             currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
             history: [
@@ -266,7 +266,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          walesPrn
+          nrwPrn
         )
 
         await server.inject({

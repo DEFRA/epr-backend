@@ -22,7 +22,6 @@ export const buildPrn = (overrides = {}) => {
     tonnage: 100.5,
     material: 'plastic',
     regulator: 'ea',
-    nation: 'england',
     wasteProcessingType: 'reprocessing',
     isExport: false,
     status: {

@@ -230,7 +230,7 @@ export async function updatePrnStatus({
     updateParams.issuedAt = now
 
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
-      nation: prn.nation,
+      regulator: prn.regulator,
       isExport: prn.isExport
     })
 

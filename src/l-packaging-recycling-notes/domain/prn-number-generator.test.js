@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { NATION } from '#domain/organisations/model.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 import {
   generatePrnNumber,
   AGENCY_CODE,
@@ -10,11 +10,11 @@ import {
 
 describe('prn-number-generator', () => {
   describe('constants', () => {
-    it('has correct agency codes', () => {
-      expect(AGENCY_CODE[NATION.ENGLAND]).toBe('E')
-      expect(AGENCY_CODE[NATION.NORTHERN_IRELAND]).toBe('N')
-      expect(AGENCY_CODE[NATION.SCOTLAND]).toBe('S')
-      expect(AGENCY_CODE[NATION.WALES]).toBe('W')
+    it('maps regulator to correct agency codes', () => {
+      expect(AGENCY_CODE[REGULATOR.EA]).toBe('E')
+      expect(AGENCY_CODE[REGULATOR.NIEA]).toBe('N')
+      expect(AGENCY_CODE[REGULATOR.SEPA]).toBe('S')
+      expect(AGENCY_CODE[REGULATOR.NRW]).toBe('W')
     })
 
     it('has correct operator type codes', () => {
@@ -31,7 +31,7 @@ describe('prn-number-generator', () => {
     describe('format validation', () => {
       it('generates a PRN number in the correct format XXNNnnnnn', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
@@ -40,7 +40,7 @@ describe('prn-number-generator', () => {
 
       it('has exactly 9 characters', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
@@ -49,53 +49,53 @@ describe('prn-number-generator', () => {
     })
 
     describe('agency code (position 1)', () => {
-      it('uses E for England', () => {
+      it('uses E for EA (Environment Agency)', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
         expect(prnNumber[0]).toBe('E')
       })
 
-      it('uses N for Northern Ireland', () => {
+      it('uses N for NIEA (Northern Ireland Environment Agency)', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.NORTHERN_IRELAND,
+          regulator: REGULATOR.NIEA,
           isExport: false
         })
 
         expect(prnNumber[0]).toBe('N')
       })
 
-      it('uses S for Scotland', () => {
+      it('uses S for SEPA (Scottish Environment Protection Agency)', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.SCOTLAND,
+          regulator: REGULATOR.SEPA,
           isExport: false
         })
 
         expect(prnNumber[0]).toBe('S')
       })
 
-      it('uses W for Wales', () => {
+      it('uses W for NRW (Natural Resources Wales)', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.WALES,
+          regulator: REGULATOR.NRW,
           isExport: false
         })
 
         expect(prnNumber[0]).toBe('W')
       })
 
-      it('throws for unknown nation', () => {
+      it('throws for unknown regulator', () => {
         expect(() =>
-          generatePrnNumber({ nation: 'unknown', isExport: false })
-        ).toThrow('Unknown nation: unknown')
+          generatePrnNumber({ regulator: 'unknown', isExport: false })
+        ).toThrow('Unknown regulator: unknown')
       })
     })
 
     describe('operator type code (position 2)', () => {
       it('uses R for reprocessor (isExport = false)', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
@@ -104,7 +104,7 @@ describe('prn-number-generator', () => {
 
       it('uses X for exporter (isExport = true)', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: true
         })
 
@@ -115,7 +115,7 @@ describe('prn-number-generator', () => {
     describe('accreditation year (positions 3-4)', () => {
       it('uses hardcoded year 26', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
@@ -126,7 +126,7 @@ describe('prn-number-generator', () => {
     describe('sequential number (positions 5-9)', () => {
       it('generates 5-digit padded number', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
@@ -140,7 +140,7 @@ describe('prn-number-generator', () => {
         for (let i = 0; i < 100; i++) {
           numbers.add(
             generatePrnNumber({
-              nation: NATION.ENGLAND,
+              regulator: REGULATOR.EA,
               isExport: false
             })
           )
@@ -151,27 +151,27 @@ describe('prn-number-generator', () => {
     })
 
     describe('example outputs', () => {
-      it('generates England reprocessor PRN like ER2612345', () => {
+      it('generates EA reprocessor PRN like ER2612345', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
         expect(prnNumber).toMatch(/^ER26\d{5}$/)
       })
 
-      it('generates England exporter PRN like EX2612345', () => {
+      it('generates EA exporter PRN like EX2612345', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: true
         })
 
         expect(prnNumber).toMatch(/^EX26\d{5}$/)
       })
 
-      it('generates Wales reprocessor PRN like WR2612345', () => {
+      it('generates NRW reprocessor PRN like WR2612345', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.WALES,
+          regulator: REGULATOR.NRW,
           isExport: false
         })
 
@@ -182,7 +182,7 @@ describe('prn-number-generator', () => {
     describe('suffix for collision avoidance', () => {
       it('appends suffix when provided', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false,
           suffix: 'A'
         })
@@ -193,7 +193,7 @@ describe('prn-number-generator', () => {
 
       it('does not append suffix when not provided', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false
         })
 
@@ -203,7 +203,7 @@ describe('prn-number-generator', () => {
 
       it('accepts any single character suffix', () => {
         const prnNumber = generatePrnNumber({
-          nation: NATION.ENGLAND,
+          regulator: REGULATOR.EA,
           isExport: false,
           suffix: 'Z'
         })

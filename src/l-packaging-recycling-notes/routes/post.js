@@ -8,11 +8,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
-import {
-  WASTE_PROCESSING_TYPE,
-  REGULATOR,
-  NATION
-} from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#l-packaging-recycling-notes/domain/get-process-code.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
@@ -31,17 +27,6 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 export const packagingRecyclingNotesCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/l-packaging-recycling-notes'
-
-/**
- * Maps regulator to nation for PRN number generation.
- * TODO: Remove when Defra-p5c0 updates generator to use regulator directly.
- */
-const REGULATOR_TO_NATION = Object.freeze({
-  [REGULATOR.EA]: NATION.ENGLAND,
-  [REGULATOR.SEPA]: NATION.SCOTLAND,
-  [REGULATOR.NRW]: NATION.WALES,
-  [REGULATOR.NIEA]: NATION.NORTHERN_IRELAND
-})
 
 /**
  * Build PRN data for creation
@@ -70,7 +55,6 @@ const buildPrnData = ({
   tonnage: payload.tonnage,
   material: payload.material,
   regulator,
-  nation: REGULATOR_TO_NATION[regulator],
   wasteProcessingType: payload.wasteProcessingType,
   isExport: payload.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER,
   issuerNotes: payload.issuerNotes || undefined,

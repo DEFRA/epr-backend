@@ -219,7 +219,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -262,7 +262,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -307,7 +307,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 75,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -350,7 +350,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 75,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -385,7 +385,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -433,7 +433,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -474,7 +474,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -544,7 +544,7 @@ describe('updatePrnStatus', () => {
         id: '507f1f77bcf86cd799439011',
         issuedByOrganisation: 'org-123',
         issuedByAccreditation: 'acc-456',
-        nation: 'england',
+        regulator: 'ea',
         isExport: false,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -618,7 +618,7 @@ describe('updatePrnStatus', () => {
           id: '507f1f77bcf86cd799439011',
           issuedByOrganisation: 'org-123',
           issuedByAccreditation: 'acc-456',
-          nation: 'england',
+          regulator: 'ea',
           isExport: false,
           tonnage: 100,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -727,7 +727,7 @@ describe('updatePrnStatus', () => {
           id: '507f1f77bcf86cd799439011',
           issuedByOrganisation: 'org-123',
           issuedByAccreditation: 'acc-456',
-          nation: 'england',
+          regulator: 'ea',
           isExport: false,
           tonnage: 1,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -760,7 +760,7 @@ describe('updatePrnStatus', () => {
           id: '507f1f77bcf86cd799439011',
           issuedByOrganisation: 'org-123',
           issuedByAccreditation: 'acc-456',
-          nation: 'england',
+          regulator: 'ea',
           isExport: false,
           tonnage: 50,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
@@ -846,7 +846,7 @@ describe('updatePrnStatus', () => {
           id: '507f1f77bcf86cd799439011',
           issuedByOrganisation: 'org-123',
           issuedByAccreditation: 'acc-456',
-          nation: 'england',
+          regulator: 'ea',
           material: 'plastic',
           tonnage: 50,
           isExport: true,

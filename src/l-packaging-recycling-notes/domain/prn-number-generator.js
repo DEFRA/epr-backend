@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto'
 
-import { NATION } from '#domain/organisations/model.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 
 /**
  * PRN number format: XXNNnnnnn
@@ -11,10 +11,10 @@ import { NATION } from '#domain/organisations/model.js'
  */
 
 export const AGENCY_CODE = Object.freeze({
-  [NATION.ENGLAND]: 'E',
-  [NATION.NORTHERN_IRELAND]: 'N',
-  [NATION.SCOTLAND]: 'S',
-  [NATION.WALES]: 'W'
+  [REGULATOR.EA]: 'E',
+  [REGULATOR.NIEA]: 'N',
+  [REGULATOR.SEPA]: 'S',
+  [REGULATOR.NRW]: 'W'
 })
 
 export const OPERATOR_TYPE_CODE = Object.freeze({
@@ -31,16 +31,16 @@ const RANDOM_SUFFIX_PADDING = 5
  * Generates a PRN number for a packaging recycling note.
  *
  * @param {Object} params
- * @param {string} params.nation - The nation (england, scotland, wales, northern_ireland)
+ * @param {string} params.regulator - The regulator (ea, sepa, nrw, niea)
  * @param {boolean} params.isExport - True for exporter, false for reprocessor
  * @param {string} [params.suffix] - Optional single character suffix (A-Z) for collision avoidance
  * @returns {string} PRN number in format XXNNnnnnn or XXNNnnnnnX (e.g. ER2612345 or ER2612345A)
- * @throws {Error} If nation is unknown
+ * @throws {Error} If regulator is unknown
  */
-export function generatePrnNumber({ nation, isExport, suffix }) {
-  const agencyCode = AGENCY_CODE[nation]
+export function generatePrnNumber({ regulator, isExport, suffix }) {
+  const agencyCode = AGENCY_CODE[regulator]
   if (!agencyCode) {
-    throw new Error(`Unknown nation: ${nation}`)
+    throw new Error(`Unknown regulator: ${regulator}`)
   }
 
   const operatorTypeCode = isExport

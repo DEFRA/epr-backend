@@ -16,7 +16,6 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import {
   MATERIAL,
-  NATION,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -280,8 +279,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.create
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            regulator: REGULATOR.SEPA,
-            nation: NATION.SCOTLAND
+            regulator: REGULATOR.SEPA
           })
         )
       })
