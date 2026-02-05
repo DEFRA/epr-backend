@@ -43,7 +43,7 @@ const mockPrn = {
   updatedAt: new Date('2026-01-15T10:00:00Z'),
   updatedBy: null,
   notes: 'Test notes',
-  authorisedAt: new Date('2026-01-16T14:30:00Z'),
+  issuedAt: new Date('2026-01-16T14:30:00Z'),
   authorisedBy: { id: 'auth-user', name: 'John Smith', position: 'Director' }
 }
 
@@ -125,7 +125,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdAt: '2026-01-15T10:00:00.000Z',
           notes: 'Test notes',
           isDecemberWaste: true,
-          authorisedAt: '2026-01-16T14:30:00.000Z',
+          issuedAt: '2026-01-16T14:30:00.000Z',
           authorisedBy: {
             id: 'auth-user',
             name: 'John Smith',
@@ -154,7 +154,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
           updatedBy: null,
-          authorisedAt: null,
+          issuedAt: null,
           authorisedBy: null
           // accreditationYear, isDecemberWaste, notes not present
         }
@@ -197,8 +197,12 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
           updatedBy: null,
-          authorisedAt: null,
-          authorisedBy: null
+          issuedAt: new Date('2026-01-17T09:00:00Z'),
+          authorisedBy: {
+            id: 'issuer',
+            name: 'Jane Smith',
+            position: 'Manager'
+          }
         }
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           issuedPrn
@@ -227,8 +231,12 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdAt: '2026-01-15T10:00:00.000Z',
           notes: null,
           isDecemberWaste: false,
-          authorisedAt: null,
-          authorisedBy: null,
+          issuedAt: '2026-01-17T09:00:00.000Z',
+          authorisedBy: {
+            id: 'issuer',
+            name: 'Jane Smith',
+            position: 'Manager'
+          },
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
           processToBeUsed: 'R5'
         })
