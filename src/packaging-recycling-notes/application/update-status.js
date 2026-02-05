@@ -177,6 +177,7 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {{ id: string; name: string }} params.user
+ * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 export async function updatePrnStatus({
@@ -187,7 +188,8 @@ export async function updatePrnStatus({
   organisationId,
   accreditationId,
   newStatus,
-  user
+  user,
+  providedPrn
 }) {
   const prn = providedPrn ?? (await prnRepository.findById(id))
 

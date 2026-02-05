@@ -99,7 +99,8 @@ export const packagingRecyclingNotesUpdateStatus = {
         organisationId,
         accreditationId,
         newStatus,
-        user
+        user,
+        providedPrn: previousPrn
       })
 
       await auditPrnStatusTransition(request, id, previousPrn, updatedPrn)
