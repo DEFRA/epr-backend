@@ -150,20 +150,4 @@ describe('auditPrnStatusTransition', () => {
       })
     )
   })
-
-  it('falls back to previous organisationId when next lacks it', async () => {
-    const request = createMockRequest()
-    const nextWithoutOrg = { ...nextPrn }
-    delete nextWithoutOrg.organisationId
-
-    await auditPrnStatusTransition(request, prnId, previousPrn, nextWithoutOrg)
-
-    expect(mockAudit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        context: expect.objectContaining({
-          organisationId: 'org-456'
-        })
-      })
-    )
-  })
 })
