@@ -186,8 +186,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('does not generate PRN number for non-issuing transitions', async () => {
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
+        const prn = createMockPrn()
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => prn
         )
 
         await server.inject({
@@ -200,34 +201,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const callArgs =
           lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
         expect(callArgs).not.toHaveProperty('prnNumber')
-      })
-
-      it('handles PRN with no status history gracefully', async () => {
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
-        )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            id: prnId,
-            tonnage: 100,
-            material: MATERIAL.PLASTIC,
-            issuedToOrganisation: {
-              id: 'producer-org-789',
-              name: 'Producer Org'
-            },
-            status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
-            updatedAt: new Date()
-          }
-        )
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
       })
     })
 
@@ -245,8 +218,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         const response = await server.inject({
@@ -281,8 +254,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          exporterPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => exporterPrn
         )
 
         await server.inject({
@@ -314,8 +287,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         organisationsRepository.findAccreditationById.mockResolvedValueOnce({
@@ -352,8 +325,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         const response = await server.inject({
@@ -380,8 +353,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         // First call throws conflict, second succeeds
@@ -429,8 +402,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         // First three calls throw conflict, fourth succeeds
@@ -478,8 +451,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         // All 27 attempts (no suffix + A-Z) throw conflict
@@ -515,8 +488,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          awaitingAuthPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => awaitingAuthPrn
         )
 
         // First call throws conflict, second throws database error
@@ -541,9 +514,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('sets updatedBy to the authenticated user ID', async () => {
         const userId = 'specific-test-user-id'
+        const prn = createMockPrn()
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => prn
         )
 
         await server.inject({
@@ -571,8 +545,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('falls back to unknown when credentials have no id', async () => {
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
+        const prn = createMockPrn()
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => prn
         )
 
         await server.inject({
@@ -601,6 +576,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     describe('error handling', () => {
       it('returns 404 when PRN not found', async () => {
         const nonExistentId = '507f1f77bcf86cd799439099'
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          null
+        )
 
         const response = await server.inject({
           method: 'POST',
@@ -666,8 +645,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          unknownStatusPrn
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => unknownStatusPrn
         )
 
         const response = await server.inject({
@@ -707,8 +686,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('returns 500 when updateStatus returns null', async () => {
         // Reset PRN to draft status for this test
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
+        const prn = createMockPrn()
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => prn
         )
         lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
           null
@@ -726,8 +706,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('returns 500 when repository throws non-Boom error', async () => {
         // Reset PRN to draft status for this test
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
+        const prn = createMockPrn()
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
+          async () => prn
         )
         lumpyPackagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
           new Error('Database connection failed')

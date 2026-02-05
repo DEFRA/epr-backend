@@ -1,5 +1,9 @@
 import { audit } from '@defra/cdp-auditing'
-import { extractUserDetails, recordSystemLog } from '#root/auditing/helpers.js'
+import {
+  extractUserDetails,
+  recordSystemLog,
+  isPayloadSmallEnoughToAudit
+} from '#root/auditing/helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -7,21 +11,33 @@ import { extractUserDetails, recordSystemLog } from '#root/auditing/helpers.js'
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{prnId: string, organisationId: string, accreditationId: string, previousStatus: string, newStatus: string}} context
+ * @param {string} prnId
+ * @param {Object} previous
+ * @param {Object} next
  */
-async function auditPrnStatusTransition(request, context) {
-  const user = extractUserDetails(request)
+async function auditPrnStatusTransition(request, prnId, previous, next) {
   const payload = {
     event: {
       category: 'waste-reporting',
       subCategory: 'packaging-recycling-note',
       action: 'status-transition'
     },
-    context,
-    user
+    context: {
+      prnId,
+      previous,
+      next
+    },
+    user: extractUserDetails(request)
   }
 
-  audit(payload)
+  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
+    ? payload
+    : {
+        ...payload,
+        context: { prnId }
+      }
+
+  audit(safeAuditingPayload)
   await recordSystemLog(request, payload)
 }
 

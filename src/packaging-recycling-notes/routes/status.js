@@ -80,6 +80,14 @@ export const packagingRecyclingNotesUpdateStatus = {
     const userId = auth.credentials?.id ?? 'unknown'
 
     try {
+      // Fetch PRN before update to capture previous state for audit
+      const previousPrn =
+        await lumpyPackagingRecyclingNotesRepository.findById(id)
+
+      if (!previousPrn) {
+        throw Boom.notFound(`PRN not found: ${id}`)
+      }
+
       const updatedPrn = await updatePrnStatus({
         prnRepository: lumpyPackagingRecyclingNotesRepository,
         wasteBalancesRepository,
@@ -88,21 +96,11 @@ export const packagingRecyclingNotesUpdateStatus = {
         organisationId,
         accreditationId,
         newStatus,
-        userId
+        userId,
+        prn: previousPrn
       })
 
-      // Extract previous status from history (second-to-last entry)
-      const history = updatedPrn.status?.history ?? []
-      const previousStatus =
-        history.length >= 2 ? history[history.length - 2].status : undefined
-
-      await auditPrnStatusTransition(request, {
-        prnId: id,
-        organisationId,
-        accreditationId,
-        previousStatus,
-        newStatus
-      })
+      await auditPrnStatusTransition(request, id, previousPrn, updatedPrn)
 
       logger.info({
         message: `PRN status updated: id=${id}, -> ${newStatus}`,
