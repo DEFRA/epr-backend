@@ -32,7 +32,11 @@ export const validateRegistrationNumber = ({
     parsed,
     SUMMARY_LOG_META_FIELDS.REGISTRATION_NUMBER
   )
-  const spreadsheetRegistrationNumber = registrationField?.value
+  const rawRegistrationValue = registrationField?.value
+  const spreadsheetRegistrationNumber =
+    rawRegistrationValue == null
+      ? rawRegistrationValue
+      : String(rawRegistrationValue).trim()
 
   const location = buildMetaFieldLocation(
     registrationField,
