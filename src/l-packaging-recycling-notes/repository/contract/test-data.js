@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = 'user-creator'
+const STATUS_HISTORY_OFFSET_MS = 1000
 
 /**
  * Builds a valid PRN for testing with sensible defaults.
@@ -75,7 +76,7 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(now.getTime() - 1000),
+          updatedAt: new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS),
           updatedBy: DEFAULT_CREATOR
         },
         {
@@ -102,7 +103,7 @@ export const buildDeletedPrn = (overrides = {}) => {
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(now.getTime() - 2000),
+          updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
           updatedBy: DEFAULT_CREATOR
         },
         {
