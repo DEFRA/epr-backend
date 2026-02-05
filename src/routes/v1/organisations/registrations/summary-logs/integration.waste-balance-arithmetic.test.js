@@ -17,12 +17,8 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
-import {
-  MATERIAL,
-  NATION,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { MATERIAL } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
 
 import {
@@ -314,7 +310,7 @@ describe('Waste balance arithmetic integration tests', () => {
       findByAccreditation: async (accId) => {
         const results = []
         for (const prn of prnStorage.values()) {
-          if (prn.issuedByAccreditation === accId) {
+          if (prn.accreditationId === accId) {
             results.push(structuredClone(prn))
           }
         }
@@ -430,14 +426,16 @@ describe('Waste balance arithmetic integration tests', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes`,
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
       ...asStandardUser({ linkedOrgId: organisationId }),
       payload: {
-        issuedToOrganisation: 'producer-org-123',
+        issuedToOrganisation: {
+          id: 'producer-org-123',
+          name: 'Producer Org',
+          tradingName: 'Producer Trading'
+        },
         tonnage,
-        material: MATERIAL.PAPER,
-        nation: NATION.ENGLAND,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
+        material: MATERIAL.PAPER
       }
     })
 
@@ -449,7 +447,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/l-packaging-recycling-notes/${prnId}/status`,
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
       ...asStandardUser({ linkedOrgId: organisationId }),
       payload: { status }
     })
