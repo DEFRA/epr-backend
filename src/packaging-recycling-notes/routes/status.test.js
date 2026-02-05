@@ -201,6 +201,34 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
         expect(callArgs).not.toHaveProperty('prnNumber')
       })
+
+      it('handles PRN with no status history gracefully', async () => {
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
+        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
+          {
+            id: prnId,
+            tonnage: 100,
+            material: MATERIAL.PLASTIC,
+            issuedToOrganisation: {
+              id: 'producer-org-789',
+              name: 'Producer Org'
+            },
+            status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
+            updatedAt: new Date()
+          }
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+      })
     })
 
     describe('PRN number generation', () => {

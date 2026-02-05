@@ -10,9 +10,11 @@ import {
 } from '#common/enums/index.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
+import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
@@ -60,7 +62,7 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -87,6 +89,19 @@ export const packagingRecyclingNotesUpdateStatus = {
         accreditationId,
         newStatus,
         userId
+      })
+
+      // Extract previous status from history (second-to-last entry)
+      const history = updatedPrn.status?.history ?? []
+      const previousStatus =
+        history.length >= 2 ? history[history.length - 2].status : undefined
+
+      await auditPrnStatusTransition(request, {
+        prnId: id,
+        organisationId,
+        accreditationId,
+        previousStatus,
+        newStatus
       })
 
       logger.info({
