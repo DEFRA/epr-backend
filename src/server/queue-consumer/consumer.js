@@ -149,7 +149,7 @@ const createMessageHandler = (deps) => async (message) => {
     return
   }
 
-  const { command: commandType, summaryLogId, user } = command
+  const { command: commandType, summaryLogId } = command
 
   logger.info({
     message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
@@ -167,7 +167,7 @@ const createMessageHandler = (deps) => async (message) => {
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await submitSummaryLog(summaryLogId, { ...deps, user })
+        await submitSummaryLog(summaryLogId, { ...deps, user: command.user })
         break
     }
 
