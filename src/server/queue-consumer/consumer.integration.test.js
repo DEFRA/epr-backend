@@ -6,6 +6,11 @@ import {
 } from '@aws-sdk/client-sqs'
 import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { submitSummaryLog } from '#application/summary-logs/submit.js'
+
+vi.mock('#application/summary-logs/validate.js')
+vi.mock('#application/summary-logs/submit.js')
 
 const TEST_TIMEOUT = 30000
 
@@ -47,6 +52,8 @@ describe('SQS command queue consumer integration', () => {
   let summaryLogExtractor
 
   beforeEach(() => {
+    vi.resetAllMocks()
+
     logger = {
       info: vi.fn(),
       error: vi.fn(),
@@ -64,6 +71,11 @@ describe('SQS command queue consumer integration', () => {
 
     // Mock extractor - not used in these tests but required by consumer
     summaryLogExtractor = {}
+
+    // Set up mocks for command handlers
+    const mockValidator = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+    vi.mocked(submitSummaryLog).mockResolvedValue(undefined)
   })
 
   describe('queue connection', () => {
@@ -113,27 +125,28 @@ describe('SQS command queue consumer integration', () => {
 
   describe('message lifecycle', () => {
     it(
-      'receives message from queue',
+      'calls validateSummaryLog when validate command received',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
+        const mockValidator = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
         )
 
-        // Send a message directly to queue with unique ID
-        const uniqueId = `receive-test-${Date.now()}`
-        const testMessage = {
-          command: 'validate',
-          summaryLogId: uniqueId
-        }
+        // Send a validate command
+        const summaryLogId = `validate-test-${Date.now()}`
         await sqsClient.send(
           new SendMessageCommand({
             QueueUrl: queueUrl,
-            MessageBody: JSON.stringify(testMessage)
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              summaryLogId
+            })
           })
         )
 
-        // Create consumer - it will process the message
         const consumer = await createCommandQueueConsumer({
           sqsClient,
           queueName: sqsClient.queueName,
@@ -147,14 +160,70 @@ describe('SQS command queue consumer integration', () => {
 
         consumer.start()
 
-        // Wait for processing log
+        // Wait for validator to be called with correct summaryLogId
         await vi.waitFor(
           () => {
-            expect(logger.info).toHaveBeenCalledWith(
+            expect(mockValidator).toHaveBeenCalledWith(summaryLogId)
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+      }
+    )
+
+    it(
+      'calls submitSummaryLog when submit command received',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        // Send a submit command with user context
+        const summaryLogId = `submit-test-${Date.now()}`
+        const user = {
+          id: 'user-123',
+          email: 'test@example.com',
+          scope: ['operator']
+        }
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'submit',
+              summaryLogId,
+              user
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        // Wait for submitSummaryLog to be called with correct args
+        await vi.waitFor(
+          () => {
+            expect(submitSummaryLog).toHaveBeenCalledWith(
+              summaryLogId,
               expect.objectContaining({
-                message: expect.stringContaining(
-                  `Processing command: validate for summaryLogId=${uniqueId}`
-                )
+                logger,
+                summaryLogsRepository,
+                organisationsRepository,
+                wasteRecordsRepository,
+                wasteBalancesRepository,
+                summaryLogExtractor,
+                user
               })
             )
           },
