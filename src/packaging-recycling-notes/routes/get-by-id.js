@@ -8,6 +8,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -66,11 +67,13 @@ export const packagingRecyclingNoteById = {
         )
       ])
 
+      // Verify the PRN exists, belongs to the requested organisation/accreditation,
+      // and treat deleted PRNs as not found (soft delete)
       if (
         !prn ||
-        // Verify the PRN belongs to the requested organisation and accreditation
         prn.organisationId !== organisationId ||
-        prn.accreditationId !== accreditationId
+        prn.accreditationId !== accreditationId ||
+        prn.status.currentStatus === PRN_STATUS.DELETED
       ) {
         throw Boom.notFound('PRN not found')
       }
