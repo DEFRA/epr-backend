@@ -342,8 +342,8 @@ describe('createCommandQueueConsumer', () => {
         await handleMessage(message)
 
         expect(logger.warn).toHaveBeenCalledWith({
-          message: 'Cannot mark as validation_failed: summary log not found',
-          summaryLogId: 'log-123'
+          message:
+            'Cannot mark as validation_failed: summary log not found, summaryLogId=log-123'
         })
       })
 
@@ -390,8 +390,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith({
           err: updateError,
-          message: 'Failed to mark summary log as validation_failed',
-          summaryLogId: 'log-123'
+          message:
+            'Failed to mark summary log as validation_failed, summaryLogId=log-123'
         })
       })
     })
@@ -467,8 +467,8 @@ describe('createCommandQueueConsumer', () => {
           })
         )
         expect(logger.warn).toHaveBeenCalledWith({
-          message: 'Cannot mark as submission_failed: summary log not found',
-          summaryLogId: 'log-123'
+          message:
+            'Cannot mark as submission_failed: summary log not found, summaryLogId=log-123'
         })
       })
 
@@ -569,8 +569,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith({
           err: updateError,
-          message: 'Failed to mark summary log as submission_failed',
-          summaryLogId: 'log-123'
+          message:
+            'Failed to mark summary log as submission_failed, summaryLogId=log-123'
         })
       })
     })
