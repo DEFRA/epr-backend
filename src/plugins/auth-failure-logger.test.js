@@ -52,17 +52,15 @@ describe('auth-failure-logger plugin', () => {
     await server.inject({ method: 'GET', url: '/unauthorized' })
 
     expect(mockLogger.warn).toHaveBeenCalledWith({
-      message: 'Invalid token',
-      error: expect.objectContaining({
+      message: 'Invalid token (path: /unauthorized, method: get)',
+      err: expect.objectContaining({
         isBoom: true,
         output: expect.objectContaining({ statusCode: 401 })
       }),
       event: {
         category: LOGGING_EVENT_CATEGORIES.AUTH,
         action: LOGGING_EVENT_ACTIONS.AUTH_FAILED
-      },
-      path: '/unauthorized',
-      method: 'get'
+      }
     })
   })
 

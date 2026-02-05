@@ -23,7 +23,10 @@ export const getTonnageMonitoring = {
     }
   },
   handler: async (request, h) => {
-    const { db, logger } = request
+    const {
+      db,
+      logger /** @type {import('#common/hapi-types.js').TypedLogger} */
+    } = request
 
     try {
       const result = await aggregateTonnageByMaterial(db)
@@ -39,7 +42,7 @@ export const getTonnageMonitoring = {
       return h.response(result).code(StatusCodes.OK)
     } catch (error) {
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${tonnageMonitoringPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

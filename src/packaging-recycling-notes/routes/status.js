@@ -70,7 +70,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       organisationsRepository,
       params,
       payload,
-      logger,
+      logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
       auth
     } = request
     const { organisationId, accreditationId, id } = params
@@ -105,7 +105,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       }
 
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${packagingRecyclingNotesUpdateStatusPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

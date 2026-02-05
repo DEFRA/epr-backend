@@ -26,8 +26,7 @@ export const markAsValidationFailed = async (
 
     if (!result) {
       logger.warn({
-        message: `Cannot mark as validation_failed: summary log not found`,
-        summaryLogId
+        message: `Cannot mark as validation_failed: summary log not found, summaryLogId=${summaryLogId}`
       })
       return
     }
@@ -46,8 +45,7 @@ export const markAsValidationFailed = async (
   } catch (err) {
     logger.error({
       err,
-      message: `Failed to mark summary log as validation_failed`,
-      summaryLogId
+      message: `Failed to mark summary log as validation_failed, summaryLogId=${summaryLogId}`
     })
   }
 }
@@ -71,8 +69,7 @@ export const markAsSubmissionFailed = async (
 
     if (!result) {
       logger.warn({
-        message: `Cannot mark as submission_failed: summary log not found`,
-        summaryLogId
+        message: `Cannot mark as submission_failed: summary log not found, summaryLogId=${summaryLogId}`
       })
       return
     }
@@ -91,8 +88,7 @@ export const markAsSubmissionFailed = async (
   } catch (err) {
     logger.error({
       err,
-      message: `Failed to mark summary log as submission_failed`,
-      summaryLogId
+      message: `Failed to mark summary log as submission_failed, summaryLogId=${summaryLogId}`
     })
   }
 }

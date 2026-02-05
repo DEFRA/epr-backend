@@ -79,7 +79,7 @@ export const packagingRecyclingNotesList = {
       }
 
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${packagingRecyclingNotesListPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
