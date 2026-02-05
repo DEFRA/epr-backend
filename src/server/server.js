@@ -24,7 +24,7 @@ import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
-import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#l-packaging-recycling-notes/repository/mongodb.plugin.js'
+import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { router } from '#plugins/router.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
 import { commandQueueConsumerPlugin } from '#adapters/queue-consumer/queue-consumer.plugin.js'
