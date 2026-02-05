@@ -31,17 +31,15 @@ describe('generatePublicRegister', () => {
     const activeDate = formatDate(VALID_FROM)
     const dateLastUpdated = formatDate(new Date(Date.now()))
 
-    // Split CSV into lines - note the header spans 3 lines due to multiline field
     const lines = csvData.split('\n').filter((line) => line.length > 0)
-    expect(lines.length).toBe(5) // header (3 lines) + generated at row + data row
+    expect(lines.length).toBe(5) // generated at row + header (3 lines) + data row
 
-    // Verify header
-    expect(lines[0]).toContain('Type,Business name,Companies House Number')
+    expect(lines[0]).toMatch(
+      /^(\uFEFF)?Generated at \d{2}\.\d{2}\.\d{2} \d{2}:\d{2}(,){15}$/
+    )
 
-    // Verify generated at row has timestamp format DD.MM.YY HH:mm and rest empty
-    const generatedAtRow = lines[3].split(',')
-    expect(generatedAtRow[0]).toMatch(/^\d{2}\.\d{2}\.\d{2} \d{2}:\d{2}$/)
-    expect(generatedAtRow.slice(1).every((col) => col === '')).toBe(true)
+    // Verify header (starts on line 1)
+    expect(lines[1]).toContain('Type,Business name,Companies House Number')
 
     // Verify data row
     expect(lines[4]).toContain('Reprocessor,ACME ltd,AC012345,200001')

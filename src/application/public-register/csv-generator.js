@@ -32,30 +32,19 @@ export async function generateCsv(rows) {
   ]
 
   const generatedAtTimestamp = formatDateTimeDots(new Date())
-  const generatedAtRow = {
-    type: generatedAtTimestamp,
-    businessName: '',
-    companiesHouseNumber: '',
-    orgId: '',
-    registeredOffice: '',
-    appropriateAgency: '',
-    registrationNumber: '',
-    tradingName: '',
-    reprocessingSite: '',
-    packagingWasteCategory: '',
-    annexIIProcess: '',
-    accreditationNo: '',
-    activeDate: '',
-    accreditationStatus: '',
-    dateLastChanged: '',
-    tonnageBand: ''
-  }
 
-  const rowsWithGeneratedAt = [generatedAtRow, ...rows]
+  const generatedAtRow = [
+    `Generated at ${generatedAtTimestamp}`,
+    ...new Array(headerMapping.length - 1).fill('')
+  ]
 
-  return writeToString(rowsWithGeneratedAt, {
-    headers: headerMapping.map(([_, header]) => header),
-    transform: (row) => headerMapping.map(([key]) => row[key]),
+  const allRows = [
+    generatedAtRow,
+    headerMapping.map(([_, header]) => header),
+    ...rows.map((row) => headerMapping.map(([key]) => row[key]))
+  ]
+
+  return writeToString(allRows, {
     writeBOM: true
   })
 }

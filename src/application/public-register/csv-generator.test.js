@@ -55,10 +55,10 @@ describe('generateCsv', () => {
 
     const expectedCsv =
       '\uFEFF' + // ← Add BOM to expected string
+      'Generated at 04.02.26 14:49,,,,,,,,,,,,,,,\n' +
       'Type,Business name,Companies House Number,Org ID,"Registered office\n' +
       'Head office\n' +
       'Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band\n' +
-      '04.02.26 14:49,,,,,,,,,,,,,,,\n' +
       'Reprocessor,Waste Ltd,12345678,500001,"1 Waste Road, London, N1 1AA",EA,R12345678PL,Waste Recovery,"2 Waste Site, London, EC1 1AA",Plastic,R3,A123456PL,22/01/2026,Approved,22/01/2026,"Up to 10,000 tonnes"\n' +
       'Exporter,Export Co,12345679,500002,"10 Export Street, Bristol, BS1 2AB",SEPA,R87654321AL,Export Trading,,Aluminium,R4,,,,,'
 
