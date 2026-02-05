@@ -68,7 +68,10 @@ export function getJwtStrategyConfig(oidcConfigs) {
         }
 
         const email = tokenPayload.email
-        const name = tokenPayload.name
+        const name = [tokenPayload.firstName, tokenPayload.lastName]
+          .filter(Boolean)
+          .map((s) => s.trim())
+          .join(' ')
         const scope = await getDefraUserRoles(tokenPayload, request)
 
         return {
