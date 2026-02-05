@@ -55,16 +55,16 @@ const buildPrnData = ({
   notes: payload.notes || undefined,
   isDecemberWaste: false,
   accreditationYear: 2026,
-  authorisedAt: null,
-  authorisedBy: null,
+  issuedAt: null,
+  issuedBy: null,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: user.id }]
+    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: user }]
   },
   createdAt: now,
   createdBy: user,
   updatedAt: now,
-  updatedBy: null
+  updatedBy: user
 })
 
 /**

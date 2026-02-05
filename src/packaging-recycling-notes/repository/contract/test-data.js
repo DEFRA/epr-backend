@@ -29,8 +29,8 @@ export const buildPrn = (overrides = {}) => {
     isExport: false,
     isDecemberWaste: false,
     accreditationYear: 2026,
-    authorisedAt: null,
-    authorisedBy: null,
+    issuedAt: null,
+    issuedBy: null,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
       history: [

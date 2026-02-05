@@ -41,8 +41,8 @@ const createMockPrn = (overrides = {}) => ({
   isExport: false,
   isDecemberWaste: false,
   accreditationYear: 2026,
-  authorisedAt: null,
-  authorisedBy: null,
+  issuedAt: null,
+  issuedBy: null,
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.DRAFT,
@@ -70,15 +70,30 @@ const createInMemoryPackagingRecyclingNotesRepository = (initialPrns = []) => {
       return prn ? { ...prn } : null
     }),
     updateStatus: vi.fn(
-      async ({ id, status, updatedBy, updatedAt, prnNumber }) => {
+      async ({
+        id,
+        status,
+        updatedBy,
+        updatedAt,
+        prnNumber,
+        issuedAt,
+        issuedBy
+      }) => {
         const prn = store.get(id)
         if (!prn) return null
 
         prn.status.currentStatus = status
         prn.status.history.push({ status, updatedAt, updatedBy })
         prn.updatedAt = updatedAt
+        prn.updatedBy = updatedBy
         if (prnNumber) {
           prn.prnNumber = prnNumber
+        }
+        if (issuedAt) {
+          prn.issuedAt = issuedAt
+        }
+        if (issuedBy) {
+          prn.issuedBy = issuedBy
         }
         store.set(id, prn)
 
@@ -511,8 +526,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         ).toHaveBeenCalledTimes(2)
       })
 
-      it('sets updatedBy to the authenticated user ID', async () => {
+      it('sets updatedBy to the authenticated user', async () => {
         const userId = 'specific-test-user-id'
+        const userName = 'Test User Name'
 
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
@@ -526,6 +542,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             credentials: {
               scope: ['standard_user'],
               id: userId,
+              name: userName,
               email: 'test@example.com',
               linkedOrgId: organisationId
             }
@@ -537,12 +554,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            updatedBy: userId
+            updatedBy: { id: userId, name: userName }
           })
         )
       })
 
-      it('falls back to unknown when credentials have no id', async () => {
+      it('falls back to unknown when credentials have no id or name', async () => {
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
@@ -564,7 +581,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            updatedBy: 'unknown'
+            updatedBy: { id: 'unknown', name: 'unknown' }
           })
         )
       })

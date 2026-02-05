@@ -32,8 +32,8 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   createdAt: prn.createdAt,
   notes: prn.notes ?? null,
   isDecemberWaste: prn.isDecemberWaste ?? false,
-  authorisedAt: prn.authorisedAt ?? null,
-  authorisedBy: prn.authorisedBy ?? null,
+  issuedAt: prn.issuedAt ?? null,
+  issuedBy: prn.issuedBy ?? null,
   wasteProcessingType,
   processToBeUsed: getProcessCode(prn.material)
 })

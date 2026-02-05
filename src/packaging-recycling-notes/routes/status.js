@@ -77,7 +77,10 @@ export const packagingRecyclingNotesUpdateStatus = {
     } = request
     const { organisationId, accreditationId, id } = params
     const { status: newStatus } = payload
-    const userId = auth.credentials?.id ?? 'unknown'
+    const user = {
+      id: auth.credentials?.id ?? 'unknown',
+      name: auth.credentials?.name ?? 'unknown'
+    }
 
     try {
       // Fetch PRN before update to capture previous state for audit
@@ -96,8 +99,8 @@ export const packagingRecyclingNotesUpdateStatus = {
         organisationId,
         accreditationId,
         newStatus,
-        userId,
-        prn: previousPrn
+        user,
+        providedPrn: previousPrn
       })
 
       await auditPrnStatusTransition(request, id, previousPrn, updatedPrn)

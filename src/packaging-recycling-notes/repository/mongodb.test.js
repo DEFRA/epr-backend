@@ -62,7 +62,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         repository.updateStatus({
           id: hexId,
           status: 'awaiting_acceptance',
-          updatedBy: 'user-123',
+          updatedBy: { id: 'user-123', name: 'Test User' },
           updatedAt: new Date(),
           prnNumber: 'ER2612345'
         })
@@ -99,7 +99,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         repository.updateStatus({
           id: hexId,
           status: 'awaiting_acceptance',
-          updatedBy: 'user-123',
+          updatedBy: { id: 'user-123', name: 'Test User' },
           updatedAt: new Date(),
           prnNumber
         })

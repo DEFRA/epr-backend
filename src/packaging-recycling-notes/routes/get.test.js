@@ -41,8 +41,8 @@ const mockPrns = [
     createdBy: { id: 'user-1', name: 'Test User' },
     updatedAt: new Date('2026-01-15T10:00:00Z'),
     updatedBy: null,
-    authorisedAt: null,
-    authorisedBy: null
+    issuedAt: null,
+    issuedBy: null
   },
   {
     id: 'prn-002',
@@ -65,8 +65,7 @@ const mockPrns = [
     updatedAt: new Date('2026-01-18T14:30:00Z'),
     updatedBy: null,
     issuedAt: new Date('2026-01-20T09:00:00Z'),
-    authorisedAt: null,
-    authorisedBy: null
+    issuedBy: null
   }
 ]
 
