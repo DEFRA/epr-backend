@@ -387,9 +387,10 @@ const baseConfig = {
   },
   commandQueue: {
     endpoint: {
-      doc: 'AWS SQS endpoint for command queue',
+      doc: 'AWS SQS endpoint for command queue (only set for local development)',
       format: String,
-      default: 'http://127.0.0.1:4566',
+      nullable: true,
+      default: null,
       env: 'COMMAND_QUEUE_SQS_ENDPOINT'
     },
     queueName: {
