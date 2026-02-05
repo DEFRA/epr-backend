@@ -1,17 +1,18 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
+/** @typedef {import('#packaging-recycling-notes/domain/model.js').CreatePrnResponse} CreatePrnResponse */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -68,17 +69,22 @@ const buildPrnData = ({
 })
 
 /**
- * Build response from created PRN
- * @param {Object} prn
+ * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
+ * @param {{ wasteProcessingType: string }} accreditation
+ * @returns {CreatePrnResponse}
  */
-const buildResponse = (prn) => ({
+const buildResponse = (prn, { wasteProcessingType }) => ({
   id: prn.id,
-  tonnage: prn.tonnage,
-  material: prn.material,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  status: prn.status.currentStatus,
+  accreditationYear: prn.accreditationYear ?? null,
   createdAt: prn.createdAt,
-  processToBeUsed: getProcessCode(prn.material)
+  isDecemberWaste: prn.isDecemberWaste ?? false,
+  issuedToOrganisation: prn.issuedToOrganisation,
+  material: prn.material,
+  notes: prn.notes ?? null,
+  processToBeUsed: getProcessCode(prn.material),
+  status: prn.status.currentStatus,
+  tonnage: prn.tonnage,
+  wasteProcessingType
 })
 
 export const packagingRecyclingNotesCreate = {
@@ -138,7 +144,9 @@ export const packagingRecyclingNotesCreate = {
         }
       })
 
-      return h.response(buildResponse(prn)).code(StatusCodes.CREATED)
+      return h
+        .response(buildResponse(prn, accreditation))
+        .code(StatusCodes.CREATED)
     } catch (error) {
       if (error.isBoom) {
         throw error

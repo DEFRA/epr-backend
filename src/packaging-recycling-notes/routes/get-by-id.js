@@ -1,15 +1,16 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
+/** @typedef {import('#packaging-recycling-notes/domain/model.js').GetPrnResponse} GetPrnResponse */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -17,25 +18,25 @@ export const packagingRecyclingNoteByIdPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{prnId}'
 
 /**
- * Build response from PRN
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
+ * @returns {GetPrnResponse}
  */
 const buildResponse = (prn, { wasteProcessingType }) => ({
   id: prn.id,
-  prnNumber: prn.prnNumber ?? null,
   accreditationYear: prn.accreditationYear ?? null,
-  issuedToOrganisation: prn.issuedToOrganisation,
-  tonnage: prn.tonnage,
-  material: prn.material,
-  status: prn.status.currentStatus,
   createdAt: prn.createdAt,
-  notes: prn.notes ?? null,
   isDecemberWaste: prn.isDecemberWaste ?? false,
   issuedAt: prn.issuedAt ?? null,
   issuedBy: prn.issuedBy ?? null,
-  wasteProcessingType,
-  processToBeUsed: getProcessCode(prn.material)
+  issuedToOrganisation: prn.issuedToOrganisation,
+  material: prn.material,
+  notes: prn.notes ?? null,
+  prnNumber: prn.prnNumber ?? null,
+  processToBeUsed: getProcessCode(prn.material),
+  status: prn.status.currentStatus,
+  tonnage: prn.tonnage,
+  wasteProcessingType
 })
 
 export const packagingRecyclingNoteById = {

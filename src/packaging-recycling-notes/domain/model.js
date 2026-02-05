@@ -33,6 +33,14 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
 
 /**
  * @typedef {{
+ *   id: string;
+ *   name: string;
+ *   tradingName?: string;
+ * }} IssuedToOrganisation
+ */
+
+/**
+ * @typedef {{
  *   status: PrnStatus;
  *   updatedAt: Date;
  *   updatedBy: { id: string; name: string };
@@ -46,7 +54,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   prnNumber?: string | null;
  *   organisationId: string;
  *   accreditationId: string;
- *   issuedToOrganisation: { id: string; name: string; tradingName?: string };
+ *   issuedToOrganisation: IssuedToOrganisation;
  *   tonnage: number;
  *   material: string;
  *   isExport: boolean;
@@ -64,4 +72,28 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   updatedAt: Date;
  *   updatedBy: { id: string; name: string } ;
  * }} PackagingRecyclingNote
+ */
+
+/**
+ * @typedef {{
+ *   id: string;
+ *   accreditationYear: number | null;
+ *   createdAt: Date;
+ *   isDecemberWaste: boolean;
+ *   issuedToOrganisation: IssuedToOrganisation;
+ *   material: string;
+ *   notes: string | null;
+ *   processToBeUsed: string;
+ *   status: PrnStatus;
+ *   tonnage: number;
+ *   wasteProcessingType: string;
+ * }} CreatePrnResponse
+ */
+
+/**
+ * @typedef {CreatePrnResponse & {
+ *   issuedAt: Date | null;
+ *   issuedBy: { id: string; name: string; position: string } | null;
+ *   prnNumber: string | null;
+ * }} GetPrnResponse
  */
