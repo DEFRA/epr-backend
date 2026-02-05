@@ -281,6 +281,24 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
+
+      it('returns 404 when PRN has been soft deleted', async () => {
+        const deletedPrn = {
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.DELETED }
+        }
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          deletedPrn
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
     })
 
     describe('authentication', () => {

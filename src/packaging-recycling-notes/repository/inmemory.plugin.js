@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 import { registerRepository } from '#plugins/register-repository.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 /**
  * In-memory implementation of the lumpy packaging recycling notes repository.
@@ -47,7 +48,10 @@ function createInMemoryLumpyPackagingRecyclingNotesRepository(
     findByAccreditation: async (accreditationId) => {
       const results = []
       for (const prn of storage.values()) {
-        if (prn.accreditationId === accreditationId) {
+        if (
+          prn.accreditationId === accreditationId &&
+          prn.status?.currentStatus !== PRN_STATUS.DELETED
+        ) {
           results.push(structuredClone(prn))
         }
       }

@@ -1,5 +1,7 @@
 import { ObjectId } from 'mongodb'
 
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+
 const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
@@ -119,7 +121,10 @@ const create = async (db, prn) => {
 const findByAccreditation = async (db, accreditationId) => {
   const docs = await db
     .collection(COLLECTION_NAME)
-    .find({ accreditationId })
+    .find({
+      accreditationId,
+      'status.currentStatus': { $ne: PRN_STATUS.DELETED }
+    })
     .toArray()
 
   return /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} */ (

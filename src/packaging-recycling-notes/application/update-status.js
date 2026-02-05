@@ -154,7 +154,7 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
   }
 
   if (
-    newStatus === PRN_STATUS.CANCELLED &&
+    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
   ) {
     await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
+const STATUS_HISTORY_OFFSET_MS = 1000
 
 /**
  * Builds a valid PRN for testing with sensible defaults.
@@ -82,13 +83,40 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(now.getTime() - 1000),
+          updatedAt: new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS),
           updatedBy: DEFAULT_CREATOR.id
         },
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedAt: now,
           updatedBy: 'user-raiser'
+        }
+      ],
+      ...overrides.status
+    }
+  })
+}
+
+/**
+ * Builds a PRN in deleted status.
+ * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ */
+export const buildDeletedPrn = (overrides = {}) => {
+  const now = new Date()
+  return buildPrn({
+    ...overrides,
+    status: {
+      currentStatus: PRN_STATUS.DELETED,
+      history: [
+        {
+          status: PRN_STATUS.DRAFT,
+          updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
+          updatedBy: DEFAULT_CREATOR.id
+        },
+        {
+          status: PRN_STATUS.DELETED,
+          updatedAt: now,
+          updatedBy: 'user-deleter'
         }
       ],
       ...overrides.status
