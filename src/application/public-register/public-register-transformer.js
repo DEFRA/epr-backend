@@ -16,6 +16,7 @@ import {
 } from './formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { config } from '#root/config.js'
 
 const INCLUDED_STATUSES = new Set([
@@ -24,7 +25,7 @@ const INCLUDED_STATUSES = new Set([
   REG_ACC_STATUS.CANCELLED
 ])
 
-const TEST_ORGANISATIONS = new Set(JSON.parse(config.get('testOrganisations')))
+const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
 /**
