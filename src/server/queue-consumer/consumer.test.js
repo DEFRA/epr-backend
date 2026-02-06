@@ -245,8 +245,7 @@ describe('createCommandQueueConsumer', () => {
 
         // Parsing errors use base logger (before message deps are created)
         expect(baseLogger.error).toHaveBeenCalledWith({
-          message: 'Failed to parse SQS message body',
-          messageId: 'msg-123',
+          message: 'Failed to parse SQS message body for messageId=msg-123',
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -261,7 +260,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: "command" is required'
+            message:
+              'Invalid command message for messageId=msg-123: "command" is required'
           })
         )
       })
@@ -276,7 +276,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: "command" is required'
+            message:
+              'Invalid command message for messageId=msg-123: "command" is required'
           })
         )
       })
@@ -291,7 +292,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: "summaryLogId" is required'
+            message:
+              'Invalid command message for messageId=msg-123: "summaryLogId" is required'
           })
         )
       })
@@ -307,7 +309,7 @@ describe('createCommandQueueConsumer', () => {
         expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message: "command" must be one of [validate, submit]'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
           })
         )
       })

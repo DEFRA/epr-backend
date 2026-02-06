@@ -93,12 +93,13 @@ const handleValidateCommand = async (summaryLogId, deps) => {
 const parseCommandMessage = (message, logger) => {
   let parsed
 
+  const messageId = message.MessageId ?? 'unknown'
+
   try {
     parsed = JSON.parse(message.Body ?? '{}')
   } catch {
     logger.error({
-      message: 'Failed to parse SQS message body',
-      messageId: message.MessageId,
+      message: `Failed to parse SQS message body for messageId=${messageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -111,8 +112,7 @@ const parseCommandMessage = (message, logger) => {
 
   if (error) {
     logger.error({
-      message: `Invalid command message: ${error.message}`,
-      messageId: message.MessageId,
+      message: `Invalid command message for messageId=${messageId}: ${error.message}`,
       command: parsed,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
