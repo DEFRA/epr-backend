@@ -108,21 +108,4 @@ describe('createInMemoryFeatureFlags', () => {
       expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
     })
   })
-
-  describe('isSqsCommandsEnabled', () => {
-    it('returns true when sqsCommands flag is enabled', () => {
-      const flags = createInMemoryFeatureFlags({ sqsCommands: true })
-      expect(flags.isSqsCommandsEnabled()).toBe(true)
-    })
-
-    it('returns false when sqsCommands flag is disabled', () => {
-      const flags = createInMemoryFeatureFlags({ sqsCommands: false })
-      expect(flags.isSqsCommandsEnabled()).toBe(false)
-    })
-
-    it('returns false when sqsCommands flag is not provided', () => {
-      const flags = createInMemoryFeatureFlags({})
-      expect(flags.isSqsCommandsEnabled()).toBe(false)
-    })
-  })
 })

@@ -79,18 +79,4 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.lumpyPackagingRecyclingNotes'
     )
   })
-
-  it('returns true when sqsCommands flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isSqsCommandsEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.sqsCommands')
-  })
-
-  it('returns false when sqsCommands flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isSqsCommandsEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.sqsCommands')
-  })
 })
