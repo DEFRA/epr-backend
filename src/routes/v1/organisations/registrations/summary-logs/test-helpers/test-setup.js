@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -11,9 +12,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-// eslint-disable-next-line n/no-unpublished-import
 import { createTestServer } from '#test/create-test-server.js'
-// eslint-disable-next-line n/no-unpublished-import
 import { asStandardUser } from '#test/inject-auth.js'
 
 export const createUploadPayload = (

@@ -20,7 +20,12 @@ export default [
   ...ns,
   nodePlugin.configs['flat/recommended-module'],
   {
-    files: ['.vite/**/*.js', '**/*.contract.js', 'benchmarks/**/*.js'],
+    files: [
+      '.vite/**/*.js',
+      '**/*.contract.js',
+      'benchmarks/**/*.js',
+      '**/test-helpers/**/*.js'
+    ],
     rules: {
       'n/no-unpublished-import': 'off'
     }

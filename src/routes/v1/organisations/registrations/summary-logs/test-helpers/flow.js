@@ -1,4 +1,3 @@
-// eslint-disable-next-line n/no-unpublished-import
 import { asStandardUser } from '#test/inject-auth.js'
 import {
   SUMMARY_LOG_STATUS,
