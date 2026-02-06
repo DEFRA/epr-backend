@@ -1,32 +1,17 @@
+import { describe, it, expect, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
-
-import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import {
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
-} from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-
 import { ObjectId } from 'mongodb'
 
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+
 import {
-  asStandardUser,
-  buildGetUrl,
-  buildPostUrl,
-  buildSubmitUrl,
-  createUploadPayload,
-  pollForValidation
-} from './integration-test-helpers.js'
+  createExporterUploadData,
+  createWasteBalanceMeta,
+  setupIntegrationEnvironment,
+  uploadAndValidate,
+  SUMMARY_LOG_STATUS,
+  performSubmission
+} from './test-helpers/index.js'
 
 describe('Submission and placeholder tests (Exporter)', () => {
   let organisationId
@@ -51,333 +36,28 @@ describe('Submission and placeholder tests (Exporter)', () => {
     const fileId = 'file-submit-123'
     const filename = 'waste-data.xlsx'
 
-    const sharedMeta = {
-      REGISTRATION_NUMBER: {
-        value: 'REG-12345',
-        location: { sheet: 'Data', row: 1, column: 'B' }
-      },
-      PROCESSING_TYPE: {
-        value: 'EXPORTER',
-        location: { sheet: 'Data', row: 2, column: 'B' }
-      },
-      MATERIAL: {
-        value: 'Paper_and_board',
-        location: { sheet: 'Data', row: 3, column: 'B' }
-      },
-      TEMPLATE_VERSION: {
-        value: 5,
-        location: { sheet: 'Data', row: 4, column: 'B' }
-      },
-      ACCREDITATION_NUMBER: {
-        value: 'ACC-2025-001',
-        location: { sheet: 'Data', row: 5, column: 'B' }
-      }
-    }
+    const sharedMeta = createWasteBalanceMeta('EXPORTER')
 
-    const sharedHeaders = [
-      'ROW_ID',
-      'DATE_RECEIVED_FOR_EXPORT',
-      'EWC_CODE',
-      'DESCRIPTION_WASTE',
-      'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-      'GROSS_WEIGHT',
-      'TARE_WEIGHT',
-      'PALLET_WEIGHT',
-      'NET_WEIGHT',
-      'BAILING_WIRE_PROTOCOL',
-      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-      'WEIGHT_OF_NON_TARGET_MATERIALS',
-      'RECYCLABLE_PROPORTION_PERCENTAGE',
-      'TONNAGE_RECEIVED_FOR_EXPORT',
-      'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
-      'INTERIM_SITE_ID',
-      'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-      'DATE_RECEIVED_BY_OSR',
-      'OSR_ID',
-      'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-      'DATE_OF_EXPORT',
-      'EXPORT_CONTROLS',
-      'BASEL_EXPORT_CODE',
-      'CUSTOMS_CODES',
-      'CONTAINER_NUMBER'
-    ]
+    const createUploadData = createExporterUploadData
 
-    const createRowValues = (overrides = {}) => {
-      // All 25 fields must be filled for a row to be included in waste balance
-      // (per PAE-659 AC03: "has all mandatory fields completed")
-      const defaults = {
-        rowId: 1001,
-        dateReceived: '2025-01-15T00:00:00.000Z',
-        ewcCode: '03 03 08',
-        wasteDescription: 'Glass - pre-sorted',
-        prnIssued: 'No',
-        grossWeight: 1000,
-        tareWeight: 100,
-        palletWeight: 50,
-        netWeight: 850,
-        bailingWire: 'No',
-        recyclablePropMethod: 'Actual weight (100%)',
-        nonTargetWeight: 0,
-        recyclablePropPct: 1,
-        tonnageReceived: 850,
-        interimSite: 'No',
-        interimSiteId: 100,
-        interimTonnage: 0,
-        dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-        osrId: 100,
-        exportTonnage: 100,
-        exportDate: '2025-01-20T00:00:00.000Z',
-        exportControls: 'Article 18 (Green list)',
-        baselCode: 'B3020',
-        customsCode: '123456',
-        containerNumber: 'CONT123456'
-      }
-      const d = { ...defaults, ...overrides }
-      return [
-        d.rowId,
-        d.dateReceived,
-        d.ewcCode,
-        d.wasteDescription,
-        d.prnIssued,
-        d.grossWeight,
-        d.tareWeight,
-        d.palletWeight,
-        d.netWeight,
-        d.bailingWire,
-        d.recyclablePropMethod,
-        d.nonTargetWeight,
-        d.recyclablePropPct,
-        d.tonnageReceived,
-        d.interimSite,
-        d.interimSiteId,
-        d.interimTonnage,
-        d.dateReceivedByOsr,
-        d.osrId,
-        d.exportTonnage,
-        d.exportDate,
-        d.exportControls,
-        d.baselCode,
-        d.customsCode,
-        d.containerNumber
-      ]
-    }
-
-    const createUploadData = (rows) => ({
-      RECEIVED_LOADS_FOR_EXPORT: {
-        location: { sheet: 'Received', row: 7, column: 'A' },
-        headers: sharedHeaders,
-        rows: rows.map((row, index) => ({
-          rowNumber: 8 + index,
-          values: createRowValues(row)
-        }))
-      }
-    })
-
-    const setupIntegrationEnvironment = async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-        trace: vi.fn(),
-        fatal: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
+    const setupIntegrationEnvironmentLocal = async () => {
       const accreditationId = new ObjectId().toString()
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-12345',
-            status: 'approved',
-            material: 'paper',
-            wasteProcessingType: 'exporter',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            accreditationId
-          }
-        ],
-        accreditations: [
-          {
-            id: accreditationId,
-            accreditationNumber: 'ACC-2025-001',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository()
-      const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([], { organisationsRepository })
-      const wasteBalancesRepository = wasteBalancesRepositoryFactory()
-
-      // We'll use a dynamic extractor that we can update with new files
-      const fileDataMap = {}
-      const dynamicExtractor = {
-        extract: async (summaryLog) => {
-          const fileId = summaryLog.file.id
-          if (!fileDataMap[fileId]) {
-            throw new Error(`No data found for file ${fileId}`)
-          }
-          return fileDataMap[fileId]
-        }
-      }
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor: dynamicExtractor
-      })
-
-      const featureFlags = createInMemoryFeatureFlags({
-        summaryLogs: true
-      })
-
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: dynamicExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        wasteBalancesRepository,
-        organisationsRepository
-      })
-
-      const submitterWorker = {
-        validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-
-          const { version, summaryLog } = existing
-
-          await syncWasteRecords(summaryLog)
-
-          await summaryLogsRepository.update(
-            summaryLogId,
-            version,
-            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-          )
-        }
-      }
-
-      const server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory,
-          organisationsRepository: () => organisationsRepository,
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        workers: {
-          summaryLogsWorker: submitterWorker
-        },
-        featureFlags
+      const env = await setupIntegrationEnvironment({
+        organisationId,
+        registrationId,
+        accreditationId,
+        wasteProcessingType: 'exporter',
+        material: 'paper'
       })
 
       return {
-        server,
-        wasteBalancesRepository,
-        accreditationId,
-        fileDataMap
+        ...env,
+        accreditationId
       }
-    }
-
-    const uploadAndValidate = async (
-      env,
-      summaryLogId,
-      fileId,
-      filename,
-      uploadData
-    ) => {
-      const { server, fileDataMap } = env
-
-      // Register the file data for this submission
-      fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
-
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
-      })
-
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        summaryLogId
-      )
-
-      return server.inject({
-        method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-    }
-
-    const submitAndPoll = async (env, summaryLogId) => {
-      const { server } = env
-
-      await server.inject({
-        method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-
-      let attempts = 0
-      const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.SUBMITTING
-
-      while (
-        status === SUMMARY_LOG_STATUS.SUBMITTING &&
-        attempts < maxAttempts
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        const checkResponse = await server.inject({
-          method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
-        })
-
-        status = JSON.parse(checkResponse.payload).status
-        attempts++
-      }
-      return status
-    }
-
-    const performSubmission = async (
-      env,
-      summaryLogId,
-      fileId,
-      filename,
-      uploadData
-    ) => {
-      await uploadAndValidate(env, summaryLogId, fileId, filename, uploadData)
-      await submitAndPoll(env, summaryLogId)
     }
 
     it('should update waste balance with transactions', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       const firstUploadData = createUploadData([
@@ -392,10 +72,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         summaryLogId,
         fileId,
-        filename,
-        firstUploadData
+        {
+          filename,
+          uploadData: firstUploadData,
+          sharedMeta
+        }
       )
 
       const balance =
@@ -429,7 +114,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should update waste balance correctly when a revised summary log is submitted', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       const firstUploadData = createUploadData([
@@ -445,10 +130,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // First submission
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-log-1',
         'file-1',
-        'waste-data.xlsx',
-        firstUploadData
+        {
+          filename: 'waste-data.xlsx',
+          uploadData: firstUploadData,
+          sharedMeta
+        }
       )
 
       let balance =
@@ -474,10 +164,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Submit revised log (new summary log ID, new file ID)
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-log-2',
         'file-2',
-        'waste-data-v2.xlsx',
-        secondUploadData
+        {
+          filename: 'waste-data-v2.xlsx',
+          uploadData: secondUploadData,
+          sharedMeta
+        }
       )
 
       balance =
@@ -518,7 +213,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should not create transaction for a row where PRN was already issued', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -534,10 +229,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-prn-issued',
         'file-prn-issued',
-        'waste-data-prn.xlsx',
-        uploadData
+        {
+          filename: 'waste-data-prn.xlsx',
+          uploadData,
+          sharedMeta
+        }
       )
 
       const balance =
@@ -557,7 +257,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should not create transaction for a row that falls outside the accreditation period', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -577,10 +277,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-outside-period',
         'file-outside-period',
-        'waste-data-period.xlsx',
-        uploadData
+        {
+          filename: 'waste-data-period.xlsx',
+          uploadData,
+          sharedMeta
+        }
       )
 
       const balance =
@@ -599,14 +304,21 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should handle submission with missing mandatory fields', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
 
       const response = await uploadAndValidate(
         env,
+        organisationId,
+        registrationId,
         'summary-missing-fields',
         'file-missing-fields',
-        'waste-data-missing.xlsx',
-        createUploadData([{ rowId: 4001, exportTonnage: 'not-a-number' }])
+        {
+          filename: 'waste-data-missing.xlsx',
+          uploadData: createUploadData([
+            { rowId: 4001, exportTonnage: 'not-a-number' }
+          ]),
+          sharedMeta
+        }
       )
 
       const summaryLog = JSON.parse(response.payload)
@@ -619,7 +331,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should create debit transaction when a row previously within accreditation period is revised to fall outside', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: row within accreditation period
@@ -630,10 +342,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // First submission
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-period-change-1',
         'file-period-1',
-        'waste-data-v1.xlsx',
-        firstUploadData
+        {
+          filename: 'waste-data-v1.xlsx',
+          uploadData: firstUploadData,
+          sharedMeta
+        }
       )
 
       let balance =
@@ -654,10 +371,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Submit revised log
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-period-change-2',
         'file-period-2',
-        'waste-data-v2.xlsx',
-        secondUploadData
+        {
+          filename: 'waste-data-v2.xlsx',
+          uploadData: secondUploadData,
+          sharedMeta
+        }
       )
 
       balance =
@@ -684,7 +406,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should create debit transaction when a row is revised to have PRN issued', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: row without PRN issued (gets credited)
@@ -695,10 +417,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // First submission - should credit 100
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-prn-change-1',
         'file-prn-1',
-        'waste-data-v1.xlsx',
-        firstUploadData
+        {
+          filename: 'waste-data-v1.xlsx',
+          uploadData: firstUploadData,
+          sharedMeta
+        }
       )
 
       let balance =
@@ -714,10 +441,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Submit revised log - should debit 100 (PRN now issued)
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-prn-change-2',
         'file-prn-2',
-        'waste-data-v2.xlsx',
-        secondUploadData
+        {
+          filename: 'waste-data-v2.xlsx',
+          uploadData: secondUploadData,
+          sharedMeta
+        }
       )
 
       balance =
@@ -741,7 +473,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should create credit transaction when a row is revised from PRN issued to no PRN', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: row with PRN already issued (no credit)
@@ -752,10 +484,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // First submission - should not credit (PRN issued)
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-prn-reverse-1',
         'file-prn-rev-1',
-        'waste-data-v1.xlsx',
-        firstUploadData
+        {
+          filename: 'waste-data-v1.xlsx',
+          uploadData: firstUploadData,
+          sharedMeta
+        }
       )
 
       let balance =
@@ -773,10 +510,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Submit revised log - should now credit 100
       await performSubmission(
         env,
+        organisationId,
+        registrationId,
         'summary-prn-reverse-2',
         'file-prn-rev-2',
-        'waste-data-v2.xlsx',
-        secondUploadData
+        {
+          filename: 'waste-data-v2.xlsx',
+          uploadData: secondUploadData,
+          sharedMeta
+        }
       )
 
       balance =
@@ -794,7 +536,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should track multiple sequential revisions to the same row with correct running balance', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       const revisions = [
@@ -808,10 +550,17 @@ describe('Submission and placeholder tests (Exporter)', () => {
         const rev = revisions[i]
         await performSubmission(
           env,
+          organisationId,
+          registrationId,
           `summary-multi-rev-${i + 1}`,
           `file-multi-${i + 1}`,
-          `waste-data-v${i + 1}.xlsx`,
-          createUploadData([{ rowId: 8001, exportTonnage: rev.tonnage }])
+          {
+            filename: `waste-data-v${i + 1}.xlsx`,
+            uploadData: createUploadData([
+              { rowId: 8001, exportTonnage: rev.tonnage }
+            ]),
+            sharedMeta
+          }
         )
 
         const balance =

@@ -30,7 +30,7 @@ import {
   buildSubmitUrl,
   createUploadPayload,
   pollForValidation
-} from './integration-test-helpers.js'
+} from './test-helpers/index.js'
 
 describe('Submission and placeholder tests', () => {
   let organisationId
