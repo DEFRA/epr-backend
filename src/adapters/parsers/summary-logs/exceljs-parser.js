@@ -142,6 +142,9 @@ const extractObjectCellValue = (cellValue, recursiveExtract) => {
   // Date objects - extract date-only (YYYY-MM-DD)
   // We only care about dates, not times, in this system
   if (cellValue instanceof Date) {
+    if (isNaN(cellValue.getTime())) {
+      return null
+    }
     return cellValue.toISOString().slice(0, 10)
   }
 
