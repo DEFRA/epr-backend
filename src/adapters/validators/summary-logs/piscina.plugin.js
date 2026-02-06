@@ -10,6 +10,9 @@ export const piscinaWorkersPlugin = {
   version: '1.0.0',
   dependencies: ['mongodb'],
 
+  /**
+   * @param {import('#common/hapi-types.js').HapiServer} server
+   */
   register: async (server) => {
     const summaryLogsRepository = (
       await createSummaryLogsRepository(server.db)
@@ -46,7 +49,7 @@ export const piscinaWorkersPlugin = {
       } catch (err) {
         /* v8 ignore next 9 */
         server.logger.error({
-          error: err,
+          err,
           message: 'Failed to close worker pool',
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,

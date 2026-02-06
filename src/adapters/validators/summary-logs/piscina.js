@@ -40,6 +40,7 @@ const RESOURCE_LIMITS = {
  * Configure via PISCINA_MAX_THREADS env var.
  * Default: 2 (suitable for 4 vCPU instances, safe on smaller instances)
  */
+// @ts-ignore
 const maxThreads = config.get('piscina.maxThreads')
 
 const pool = new Piscina({
@@ -80,16 +81,26 @@ const clearTaskTimeout = (summaryLogId) => {
  * @param {string} summaryLogId
  * @param {object} logger
  * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking
+ * @param {object} [user]
  * @returns {Promise<void>}
  */
 const runCommandInWorker = async (
   command,
   summaryLogId,
   logger,
-  repository
+  repository,
+  user
 ) => {
   try {
-    await pool.run({ command, summaryLogId })
+    const serializedUser = user
+      ? {
+          id: user.id,
+          email: user.email,
+          scope: user.scope
+        }
+      : null
+
+    await pool.run({ command, summaryLogId, user: serializedUser })
 
     // Clear timeout on success - worker completed normally
     clearTaskTimeout(summaryLogId)
@@ -162,7 +173,11 @@ export const createSummaryLogsCommandExecutor = (
         activeTimeouts.delete(summaryLogId)
         logger.error({
           message: `Summary log validate worker timed out: summaryLogId=${summaryLogId}`,
-          summaryLogId
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE,
+            reference: summaryLogId
+          }
         })
 
         await markAsValidationFailed(
@@ -181,7 +196,7 @@ export const createSummaryLogsCommandExecutor = (
         summaryLogsRepository
       )
     },
-    submit: async (summaryLogId) => {
+    submit: async (summaryLogId, request) => {
       // Fire-and-forget: submission runs asynchronously in worker thread, request returns immediately
       // Intentionally not awaiting as the HTTP response completes before submission finishes
       logger.info({
@@ -196,7 +211,8 @@ export const createSummaryLogsCommandExecutor = (
         SUMMARY_LOG_COMMAND.SUBMIT,
         summaryLogId,
         logger,
-        summaryLogsRepository ?? null
+        summaryLogsRepository,
+        request?.auth?.credentials || request
       )
     }
   }

@@ -4,7 +4,10 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { MATERIAL } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  GLASS_RECYCLING_PROCESS
+} from '#domain/organisations/model.js'
 
 const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -26,10 +29,11 @@ const createOrganisation = (id, registrations) => ({
   registrations
 })
 
-const createRegistration = (id, material) => ({
+const createRegistration = (id, material, glassRecyclingProcess) => ({
   id,
   material,
-  status: 'approved'
+  status: 'approved',
+  ...(glassRecyclingProcess && { glassRecyclingProcess })
 })
 
 const createExporterWasteRecord = (
@@ -146,11 +150,15 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     expect(result.total).toBe(150)
   })
 
-  it('aggregates exporter interim site tonnage', async () => {
+  it('aggregates exporter interim site tonnage for glass_re_melt', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
-        createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.GLASS)])
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.GLASS, [
+            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+          ])
+        ])
       )
 
     await db
@@ -163,10 +171,100 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     const result = await aggregateTonnageByMaterial(db)
 
     expect(result.materials).toContainEqual({
-      material: MATERIAL.GLASS,
+      material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
       totalTonnage: 100
     })
     expect(result.total).toBe(100)
+  })
+
+  it('aggregates exporter tonnage for glass_other', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.GLASS, [
+            GLASS_RECYCLING_PROCESS.GLASS_OTHER
+          ])
+        ])
+      )
+
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 60, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId1, 40, '2026-01-16')
+      ])
+
+    const result = await aggregateTonnageByMaterial(db)
+
+    expect(result.materials).toContainEqual({
+      material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
+      totalTonnage: 100
+    })
+    expect(result.total).toBe(100)
+  })
+
+  it('aggregates reprocessor-input tonnage for glass_other', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.GLASS, [
+            GLASS_RECYCLING_PROCESS.GLASS_OTHER
+          ])
+        ])
+      )
+
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createReprocessorInputWasteRecord(orgId1, regId1, 120, '2026-01-10'),
+        createReprocessorInputWasteRecord(orgId1, regId1, 80, '2026-01-11')
+      ])
+
+    const result = await aggregateTonnageByMaterial(db)
+
+    expect(result.materials).toContainEqual({
+      material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
+      totalTonnage: 200
+    })
+    expect(result.total).toBe(200)
+  })
+
+  it('aggregates glass_re_melt and glass_other separately', async () => {
+    const regId4 = 'REG-004'
+
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.GLASS, [
+            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+          ]),
+          createRegistration(regId4, MATERIAL.GLASS, [
+            GLASS_RECYCLING_PROCESS.GLASS_OTHER
+          ])
+        ])
+      )
+
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId4, 75, '2026-01-15')
+      ])
+
+    const result = await aggregateTonnageByMaterial(db)
+
+    expect(result.materials).toContainEqual({
+      material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      totalTonnage: 100
+    })
+    expect(result.materials).toContainEqual({
+      material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
+      totalTonnage: 75
+    })
+    expect(result.total).toBe(175)
   })
 
   it('aggregates reprocessor-input tonnage by material', async () => {
@@ -221,7 +319,9 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       .insertMany([
         createOrganisation(orgId1, [
           createRegistration(regId1, MATERIAL.PLASTIC),
-          createRegistration(regId2, MATERIAL.GLASS)
+          createRegistration(regId2, MATERIAL.GLASS, [
+            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+          ])
         ]),
         createOrganisation(orgId2, [
           createRegistration(regId3, MATERIAL.PLASTIC)
@@ -243,7 +343,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       totalTonnage: 300
     })
     expect(result.materials).toContainEqual({
-      material: MATERIAL.GLASS,
+      material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
       totalTonnage: 50
     })
     expect(result.total).toBe(350)
@@ -308,8 +408,12 @@ describe('aggregateTonnageByMaterial - Integration', () => {
   it('returns all materials with zero tonnage when no data exists', async () => {
     const result = await aggregateTonnageByMaterial(db)
 
-    expect(result.materials).toHaveLength(Object.values(MATERIAL).length)
-    Object.values(MATERIAL).forEach((material) => {
+    const expectedMaterials = Object.values(MATERIAL)
+      .filter((m) => m !== MATERIAL.GLASS)
+      .concat(Object.values(GLASS_RECYCLING_PROCESS))
+
+    expect(result.materials).toHaveLength(expectedMaterials.length)
+    expectedMaterials.forEach((material) => {
       expect(result.materials).toContainEqual({ material, totalTonnage: 0 })
     })
     expect(result.total).toBe(0)

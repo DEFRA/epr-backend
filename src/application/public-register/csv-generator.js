@@ -1,6 +1,7 @@
 /** @import {PublicRegisterRow} from './types.js' */
 
 import { writeToString } from '@fast-csv/format'
+import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
 
 /**
  * Generates a CSV string from transformed data
@@ -30,9 +31,20 @@ export async function generateCsv(rows) {
     ['tonnageBand', 'Tonnage Band']
   ]
 
-  return writeToString(rows, {
-    headers: headerMapping.map(([_, header]) => header),
-    transform: (row) => headerMapping.map(([key]) => row[key]),
+  const generatedAtTimestamp = formatDateTimeDots(new Date())
+
+  const generatedAtRow = [
+    `Generated at ${generatedAtTimestamp}`,
+    ...Array.from({ length: headerMapping.length - 1 }, () => '')
+  ]
+
+  const allRows = [
+    generatedAtRow,
+    headerMapping.map(([_, header]) => header),
+    ...rows.map((row) => headerMapping.map(([key]) => row[key]))
+  ]
+
+  return writeToString(allRows, {
     writeBOM: true
   })
 }

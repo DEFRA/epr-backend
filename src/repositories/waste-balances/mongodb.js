@@ -2,7 +2,8 @@ import { validateAccreditationId } from './validation.js'
 import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
-  performDeductTotalBalanceForPrnIssue
+  performDeductTotalBalanceForPrnIssue,
+  performCreditAvailableBalanceForPrnCancellation
 } from './helpers.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -105,6 +106,7 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} [dependencies] - Optional dependencies
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [dependencies.organisationsRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
 export const createWasteBalancesRepository = async (db, dependencies = {}) => {
@@ -113,13 +115,18 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
   return () => ({
     findByAccreditationId: performFindByAccreditationId(db),
     findByAccreditationIds: performFindByAccreditationIds(db),
-    updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {
+    updateWasteBalanceTransactions: async (
+      wasteRecords,
+      accreditationId,
+      user
+    ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
         accreditationId,
         dependencies,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db)
+        saveBalance: saveBalance(db),
+        user
       })
     },
     deductAvailableBalanceForPrnCreation: async (deductParams) => {
@@ -132,6 +139,13 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     deductTotalBalanceForPrnIssue: async (deductParams) => {
       return performDeductTotalBalanceForPrnIssue({
         deductParams,
+        findBalance: findBalance(db),
+        saveBalance: saveBalance(db)
+      })
+    },
+    creditAvailableBalanceForPrnCancellation: async (creditParams) => {
+      return performCreditAvailableBalanceForPrnCancellation({
+        creditParams,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
