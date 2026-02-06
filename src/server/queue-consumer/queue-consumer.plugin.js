@@ -15,7 +15,7 @@ import { createCommandQueueConsumer } from './consumer.js'
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
-  dependencies: ['mongodb', 'feature-flags'],
+  dependencies: ['mongodb'],
 
   register: async (server, options) => {
     const { config } = options
@@ -59,8 +59,6 @@ export const commandQueueConsumerPlugin = {
       }
     )
 
-    const { featureFlags } = server.app
-
     // Consumer created lazily on server start to avoid SQS connection during tests
     let consumer = null
 
@@ -83,8 +81,7 @@ export const commandQueueConsumerPlugin = {
         summaryLogsRepositoryFactory,
         organisationsRepositoryFactory,
         wasteRecordsRepositoryFactory,
-        wasteBalancesRepositoryFactory,
-        featureFlags
+        wasteBalancesRepositoryFactory
       })
 
       consumer.start()

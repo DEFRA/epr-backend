@@ -219,6 +219,22 @@ describe('createCommandQueueConsumer', () => {
     })
 
     describe('message parsing', () => {
+      it('handles undefined messageId with fallback', async () => {
+        const mockValidator = vi.fn()
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const message = {
+          // MessageId intentionally omitted to test fallback
+          Body: JSON.stringify({ command: 'validate', summaryLogId: 'log-123' })
+        }
+
+        await handleMessage(message)
+
+        // Should create child logger with 'unknown' messageId
+        expect(baseLogger.child).toHaveBeenCalledWith({ messageId: 'unknown' })
+        expect(mockValidator).toHaveBeenCalledWith('log-123')
+      })
+
       it('handles invalid JSON gracefully', async () => {
         const message = {
           MessageId: 'msg-123',

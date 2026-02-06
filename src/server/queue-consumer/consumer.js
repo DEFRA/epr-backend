@@ -51,9 +51,20 @@ const commandMessageSchema = Joi.object({
  */
 
 /**
+ * Message-scoped dependencies created for each SQS message.
+ * @typedef {object} MessageDependencies
+ * @property {object} logger - Message-scoped logger with messageId
+ * @property {object} summaryLogsRepository
+ * @property {object} organisationsRepository
+ * @property {object} wasteRecordsRepository
+ * @property {object} wasteBalancesRepository
+ * @property {object} summaryLogExtractor
+ */
+
+/**
  * Handles a validate command.
  * @param {string} summaryLogId
- * @param {ConsumerDependencies} deps
+ * @param {MessageDependencies} deps
  */
 const handleValidateCommand = async (summaryLogId, deps) => {
   const {
@@ -142,7 +153,7 @@ const markCommandAsFailed = async (
  * Each message gets its own logger and repository instances for correlation.
  * @param {ConsumerDependencies} deps - Base dependencies with factories
  * @param {string} messageId - SQS message ID for correlation
- * @returns {object} Message-scoped dependencies
+ * @returns {MessageDependencies} Message-scoped dependencies
  */
 const createMessageDependencies = (deps, messageId) => {
   const {
@@ -186,7 +197,7 @@ const createMessageDependencies = (deps, messageId) => {
  */
 const createMessageHandler = (deps) => async (message) => {
   const { logger: baseLogger } = deps
-  const messageId = message.MessageId
+  const messageId = message.MessageId ?? 'unknown'
 
   const command = parseCommandMessage(message, baseLogger)
   if (!command) {

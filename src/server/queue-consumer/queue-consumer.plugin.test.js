@@ -53,9 +53,7 @@ describe('commandQueueConsumerPlugin', () => {
         on: vi.fn()
       },
       db: {}, // Mock db instead of repos on app
-      app: {
-        featureFlags: {}
-      }
+      app: {}
     }
 
     config = {
@@ -113,8 +111,7 @@ describe('commandQueueConsumerPlugin', () => {
   it('has correct plugin metadata', () => {
     expect(commandQueueConsumerPlugin.name).toBe('command-queue-consumer')
     expect(commandQueueConsumerPlugin.version).toBe('1.0.0')
-    expect(commandQueueConsumerPlugin.dependencies).toContain('mongodb')
-    expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
+    expect(commandQueueConsumerPlugin.dependencies).toEqual(['mongodb'])
   })
 
   describe('plugin registration', () => {
@@ -192,8 +189,7 @@ describe('commandQueueConsumerPlugin', () => {
         summaryLogsRepositoryFactory: mockSummaryLogsRepositoryFactory,
         organisationsRepositoryFactory: mockOrganisationsRepositoryFactory,
         wasteRecordsRepositoryFactory: mockWasteRecordsRepositoryFactory,
-        wasteBalancesRepositoryFactory: mockWasteBalancesRepositoryFactory,
-        featureFlags: server.app.featureFlags
+        wasteBalancesRepositoryFactory: mockWasteBalancesRepositoryFactory
       })
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer',
