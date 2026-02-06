@@ -25,8 +25,6 @@ import {
 describe('Repeated uploads of identical data', () => {
   let organisationId
   let registrationId
-  const VALID_FROM = '2025-01-01'
-  const VALID_TO = '2025-12-31'
 
   const { getServer } = setupAuthContext()
 

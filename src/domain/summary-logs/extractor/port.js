@@ -17,7 +17,7 @@
  * @typedef {Object} DataSection
  * @property {CellLocation} location - Starting location of the data section
  * @property {Array<string|null>} headers - Column headers (null for skipped columns)
- * @property {Array<{rowNumber: number, values: Array<*>}>} rows - Data rows
+ * @property {Array<Array<*>>} rows - Data rows
  */
 
 /**

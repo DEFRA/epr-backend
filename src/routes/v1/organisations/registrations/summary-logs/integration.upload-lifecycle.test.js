@@ -9,8 +9,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { ObjectId } from 'mongodb'
-
 import {
   asStandardUser,
   createUploadPayload,
