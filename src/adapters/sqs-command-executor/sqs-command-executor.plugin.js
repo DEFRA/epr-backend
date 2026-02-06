@@ -9,7 +9,10 @@ export const sqsCommandExecutorPlugin = {
   name: 'sqs-command-executor',
   version: '1.0.0',
 
-  register: async (server, options) => {
+  register: async (
+    /** @type {import('#common/hapi-types.js').HapiServer} */ server,
+    options
+  ) => {
     const { config } = options
 
     const queueName = config.get('commandQueue.queueName')
@@ -22,8 +25,7 @@ export const sqsCommandExecutorPlugin = {
     })
 
     server.logger.info({
-      message: 'Creating SQS command executor',
-      queueName,
+      message: `Creating SQS command executor for queue: ${queueName}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.START_SUCCESS
