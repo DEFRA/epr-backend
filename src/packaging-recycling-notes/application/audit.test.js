@@ -66,7 +66,7 @@ describe('auditPrnStatusTransition', () => {
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'waste-reporting',
-        subCategory: 'packaging-recycling-note',
+        subCategory: 'packaging-recycling-notes',
         action: 'status-transition'
       },
       context: {
@@ -97,7 +97,7 @@ describe('auditPrnStatusTransition', () => {
       },
       event: {
         category: 'waste-reporting',
-        subCategory: 'packaging-recycling-note',
+        subCategory: 'packaging-recycling-notes',
         action: 'status-transition'
       },
       context: {
@@ -124,7 +124,7 @@ describe('auditPrnStatusTransition', () => {
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'waste-reporting',
-        subCategory: 'packaging-recycling-note',
+        subCategory: 'packaging-recycling-notes',
         action: 'status-transition'
       },
       context: {
