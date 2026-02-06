@@ -22,6 +22,7 @@ export const OPERATOR_TYPE_CODE = Object.freeze({
   EXPORTER: 'X'
 })
 
+const YEAR_DIGITS = 2
 const RANDOM_SUFFIX_RANGE = 100000
 const RANDOM_SUFFIX_PADDING = 5
 
@@ -51,7 +52,7 @@ export function generatePrnNumber({
     ? OPERATOR_TYPE_CODE.EXPORTER
     : OPERATOR_TYPE_CODE.REPROCESSOR
 
-  const yearSuffix = String(accreditationYear).slice(-2)
+  const yearSuffix = String(accreditationYear).slice(-YEAR_DIGITS)
 
   const randomSuffix = randomInt(RANDOM_SUFFIX_RANGE)
   const paddedSuffix = String(randomSuffix).padStart(RANDOM_SUFFIX_PADDING, '0')
