@@ -3,8 +3,14 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createCommandQueueConsumer } from './consumer.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
@@ -14,13 +20,7 @@ import { createCommandQueueConsumer } from './consumer.js'
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
-  dependencies: [
-    'summaryLogsRepository',
-    'organisationsRepository',
-    'wasteRecordsRepository',
-    'wasteBalancesRepository',
-    'uploadsRepository'
-  ],
+  dependencies: ['mongodb'],
 
   register: async (
     /** @type {import('#common/hapi-types.js').HapiServer} */ server,
@@ -37,14 +37,36 @@ export const commandQueueConsumerPlugin = {
       endpoint: sqsEndpoint
     })
 
-    // Access deps registered by other plugins
-    const {
-      uploadsRepository,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository
-    } = server.app
+    // Create repository instances directly - the queue consumer runs outside
+    // request context so cannot use the request-scoped repository plugins
+    const s3Client = createS3Client({
+      region: awsRegion,
+      endpoint: config.get('s3Endpoint'),
+      forcePathStyle: config.get('isDevelopment')
+    })
+
+    const uploadsRepository = createUploadsRepository({
+      s3Client,
+      cdpUploaderUrl: config.get('cdpUploader.url'),
+      s3Bucket: config.get('cdpUploader.s3Bucket')
+    })
+
+    const summaryLogsRepository = await createSummaryLogsRepository(
+      server.db,
+      server.logger
+    )
+
+    const organisationsFactory = await createOrganisationsRepository(server.db)
+    const organisationsRepository = organisationsFactory()
+
+    const wasteRecordsFactory = await createWasteRecordsRepository(server.db)
+    const wasteRecordsRepository = wasteRecordsFactory()
+
+    const wasteBalancesFactory = await createWasteBalancesRepository(
+      server.db,
+      { organisationsRepository }
+    )
+    const wasteBalancesRepository = wasteBalancesFactory()
 
     const summaryLogExtractor = createSummaryLogExtractor({
       uploadsRepository,

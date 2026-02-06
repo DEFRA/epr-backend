@@ -44,7 +44,7 @@ describe('runGlassMigration', () => {
     }
 
     createOrganisationsRepository.mockReturnValue(() => mockRepository)
-    createSystemLogsRepository.mockResolvedValue(() => mockSystemLogsRepository)
+    createSystemLogsRepository.mockResolvedValue(mockSystemLogsRepository)
 
     auditSpy = vi
       .spyOn(glassMigrationAudit, 'auditGlassMigration')

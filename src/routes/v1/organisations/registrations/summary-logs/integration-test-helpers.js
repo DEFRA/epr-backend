@@ -148,9 +148,8 @@ export const createTestInfrastructure = async (
     debug: vi.fn()
   }
 
-  const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+  const summaryLogsRepository = createInMemorySummaryLogsRepository(mockLogger)
   const uploadsRepository = createInMemoryUploadsRepository()
-  const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
   const testOrg = buildOrganisation({
     registrations: [
@@ -189,7 +188,7 @@ export const createTestInfrastructure = async (
 
   const server = await createTestServer({
     repositories: {
-      summaryLogsRepository: summaryLogsRepositoryFactory,
+      summaryLogsRepository,
       uploadsRepository
     },
     workers: {

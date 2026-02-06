@@ -8,7 +8,7 @@ export const testSystemLogsRepositoryContract = (it) => {
     systemLogsRepository
   }) => {
     /** @type {SystemLogsRepository} */
-    const repository = systemLogsRepository()
+    const repository = systemLogsRepository
 
     const organisationId1 = randomUUID()
     const organisationId2 = randomUUID()
@@ -62,7 +62,7 @@ export const testSystemLogsRepositoryContract = (it) => {
     systemLogsRepository
   }) => {
     /** @type {SystemLogsRepository} */
-    const repository = systemLogsRepository()
+    const repository = systemLogsRepository
 
     const organisationId = randomUUID()
 

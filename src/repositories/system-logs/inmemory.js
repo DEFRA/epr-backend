@@ -1,26 +1,26 @@
 /** @import {SystemLog} from './port.js' */
 
 /**
- * @returns {import('./port.js').SystemLogsRepositoryFactory}
+ * @param {import('#common/helpers/logging/logger.js').TypedLogger} _logger - unused, for interface consistency
+ * @returns {import('./port.js').SystemLogsRepository}
  */
-export function createSystemLogsRepository() {
+export function createSystemLogsRepository(_logger) {
   /** @type SystemLog[] */
   const storage = []
-  return () => {
-    return {
-      async insert(systemLog) {
-        storage.push(systemLog)
-      },
 
-      async findByOrganisationId(organisationId) {
-        const results = storage.filter(
-          (payload) => payload.context?.organisationId === organisationId
-        )
-        // coerce dates to numbers then subtract
-        // b - a to produce most recent first
-        results.sort((a, b) => +b.createdAt - +a.createdAt)
-        return results
-      }
+  return {
+    async insert(systemLog) {
+      storage.push(systemLog)
+    },
+
+    async findByOrganisationId(organisationId) {
+      const results = storage.filter(
+        (payload) => payload.context?.organisationId === organisationId
+      )
+      // coerce dates to numbers then subtract
+      // b - a to produce most recent first
+      results.sort((a, b) => +b.createdAt - +a.createdAt)
+      return results
     }
   }
 }

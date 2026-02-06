@@ -174,7 +174,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     const setupIntegrationEnvironment = async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
@@ -183,8 +182,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
         trace: vi.fn(),
         fatal: vi.fn()
       }
+      const summaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const accreditationId = new ObjectId().toString()
       const testOrg = buildOrganisation({
@@ -276,7 +276,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       const server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository,
           uploadsRepository,
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository,

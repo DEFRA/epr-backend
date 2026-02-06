@@ -17,17 +17,18 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   const summaryLogId = new ObjectId().toString()
 
   const createServer = async () => {
-    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory({
+    const mockLogger = {
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn(),
       debug: vi.fn()
-    })
+    }
+    const summaryLogsRepository =
+      createInMemorySummaryLogsRepository(mockLogger)
 
     const server = await createTestServer({
       repositories: {
-        summaryLogsRepository: summaryLogsRepositoryFactory
+        summaryLogsRepository
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })

@@ -216,16 +216,17 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {Promise<import('./port.js').SummaryLogsRepositoryFactory>}
+ * @param {import('#common/helpers/logging/logger.js').TypedLogger} logger
+ * @returns {Promise<import('./port.js').SummaryLogsRepository>}
  */
-export const createSummaryLogsRepository = async (db) => {
+export const createSummaryLogsRepository = async (db, logger) => {
   await ensureCollection(db)
 
-  return (logger) => ({
+  return {
     insert: insert(db),
     update: update(db, logger),
     findById: findById(db),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
-  })
+  }
 }

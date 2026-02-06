@@ -118,12 +118,12 @@ describe('summaryLogsWorkerThread', () => {
     summaryLogId = 'summary-log-123'
 
     vi.mocked(createMongoClient).mockResolvedValue(mockMongoClient)
-    vi.mocked(createSystemLogsRepository).mockReturnValue(
-      () => mockSystemLogsRepository
+    vi.mocked(createSystemLogsRepository).mockResolvedValue(
+      mockSystemLogsRepository
     )
     vi.mocked(createS3Client).mockReturnValue(mockS3Client)
-    vi.mocked(createSummaryLogsRepository).mockReturnValue(
-      () => mockSummaryLogsRepository
+    vi.mocked(createSummaryLogsRepository).mockResolvedValue(
+      mockSummaryLogsRepository
     )
     vi.mocked(createUploadsRepository).mockReturnValue(mockUploadsRepository)
     vi.mocked(createOrganisationsRepository).mockReturnValue(
@@ -169,13 +169,16 @@ describe('summaryLogsWorkerThread', () => {
     expect(mockMongoClient.db).toHaveBeenCalledWith('test-db')
   })
 
-  it('should create summary logs repository with db', async () => {
+  it('should create summary logs repository with db and logger', async () => {
     await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
 
-    expect(createSummaryLogsRepository).toHaveBeenCalledWith(mockDb)
+    expect(createSummaryLogsRepository).toHaveBeenCalledWith(
+      mockDb,
+      expect.any(Object)
+    )
   })
 
   it('should create S3 client with expected config', async () => {
@@ -273,9 +276,9 @@ describe('summaryLogsWorkerThread', () => {
   })
 
   it('should destroy S3 client and close mongo client even if repository creation fails', async () => {
-    vi.mocked(createSummaryLogsRepository).mockImplementation(() => {
-      throw new Error('Repository creation failed')
-    })
+    vi.mocked(createSummaryLogsRepository).mockRejectedValue(
+      new Error('Repository creation failed')
+    )
 
     await expect(
       summaryLogsWorkerThread({

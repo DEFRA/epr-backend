@@ -177,13 +177,14 @@ const transitionToSubmittingExclusive =
  * Simulates eventual consistency by maintaining separate storage and staleCache.
  * Updates are asynchronously synced to staleCache to simulate replication lag.
  *
- * @returns {import('./port.js').SummaryLogsRepositoryFactory}
+ * @param {import('#common/helpers/logging/logger.js').TypedLogger} logger
+ * @returns {import('./port.js').SummaryLogsRepository}
  */
-export const createInMemorySummaryLogsRepository = () => {
+export const createInMemorySummaryLogsRepository = (logger) => {
   const storage = new Map()
   const staleCache = new Map()
 
-  return (logger) => ({
+  return {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
@@ -192,5 +193,5 @@ export const createInMemorySummaryLogsRepository = () => {
       storage,
       staleCache
     )
-  })
+  }
 }

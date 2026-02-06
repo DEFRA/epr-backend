@@ -5,6 +5,13 @@ import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
 
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+}
+
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
@@ -14,8 +21,8 @@ const it = mongoIt.extend({
 
   systemLogsRepository: async ({ mongoClient }, use) => {
     const database = mongoClient.db('epr-backend')
-    const factory = await createSystemLogsRepository(database)
-    await use(factory)
+    const repository = await createSystemLogsRepository(database, mockLogger)
+    await use(repository)
   }
 })
 
@@ -48,8 +55,7 @@ describe('Mongo DB system logs repository', () => {
     }
     const collectionSpy = vi.spyOn(mockDb, 'collection')
 
-    const repositoryFactory = await createSystemLogsRepository(mockDb)
-    const repository = repositoryFactory(mockLogger)
+    const repository = await createSystemLogsRepository(mockDb, mockLogger)
 
     const payload = {
       createdAt: new Date(),

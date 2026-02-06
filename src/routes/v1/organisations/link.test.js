@@ -62,7 +62,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createSystemLogsRepository({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        })
       },
       featureFlags
     })

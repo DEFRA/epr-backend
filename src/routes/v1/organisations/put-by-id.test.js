@@ -32,7 +32,12 @@ describe('PUT /v1/organisations/{id}', () => {
     server = await createTestServer({
       repositories: {
         organisationsRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createSystemLogsRepository({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        })
       },
       featureFlags
     })

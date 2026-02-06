@@ -65,8 +65,8 @@ describe('Repeated uploads of identical data', () => {
         debug: vi.fn()
       }
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const summaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
 
       // Set up organisation with registration
@@ -264,7 +264,7 @@ describe('Repeated uploads of identical data', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository,
           uploadsRepository,
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository

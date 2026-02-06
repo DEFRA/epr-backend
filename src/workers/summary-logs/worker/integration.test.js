@@ -19,7 +19,7 @@ describe('SummaryLogsValidator integration', () => {
   let summaryLogsRepository
 
   beforeEach(async () => {
-    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+    summaryLogsRepository = createInMemorySummaryLogsRepository(logger)
   })
 
   const createTestOrg = (

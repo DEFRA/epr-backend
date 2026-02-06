@@ -18,12 +18,13 @@ async function ensureCollection(db) {
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {Promise<import('./port.js').SystemLogsRepositoryFactory>}
+ * @param {import('#common/helpers/logging/logger.js').TypedLogger} logger
+ * @returns {Promise<import('./port.js').SystemLogsRepository>}
  */
-export const createSystemLogsRepository = async (db) => {
+export const createSystemLogsRepository = async (db, logger) => {
   await ensureCollection(db)
 
-  return (logger) => ({
+  return {
     async insert(systemLog) {
       try {
         await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertOne({
@@ -52,5 +53,5 @@ export const createSystemLogsRepository = async (db) => {
         createdBy: doc.createdBy
       }))
     }
-  })
+  }
 }
