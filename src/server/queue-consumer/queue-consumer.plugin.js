@@ -12,6 +12,27 @@ import { createWasteBalancesRepository } from '#repositories/waste-balances/mong
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
+const createRepositoryFactories = async (db, logger) => {
+  const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
+  const organisationsRepositoryFactory = await createOrganisationsRepository(db)
+  const wasteRecordsRepositoryFactory = await createWasteRecordsRepository(db)
+  const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
+  const wasteBalancesRepositoryFactory = await createWasteBalancesRepository(
+    db,
+    {
+      organisationsRepository: organisationsRepositoryFactory(),
+      systemLogsRepository: systemLogsRepositoryFactory(logger)
+    }
+  )
+
+  return {
+    summaryLogsRepositoryFactory,
+    organisationsRepositoryFactory,
+    wasteRecordsRepositoryFactory,
+    wasteBalancesRepositoryFactory
+  }
+}
+
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
@@ -43,26 +64,13 @@ export const commandQueueConsumerPlugin = {
       s3Bucket: config.get('cdpUploader.s3Bucket')
     })
 
-    // Create repository factories from db - repos will be instantiated per-message
-    // with message-scoped loggers (like worker-thread.js pattern)
-    const db = server.db
-    const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
-    const organisationsRepositoryFactory =
-      await createOrganisationsRepository(db)
-    const wasteRecordsRepositoryFactory = await createWasteRecordsRepository(db)
-    const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
-    const wasteBalancesRepositoryFactory = await createWasteBalancesRepository(
-      db,
-      {
-        organisationsRepository: organisationsRepositoryFactory(),
-        systemLogsRepository: systemLogsRepositoryFactory(server.logger)
-      }
+    const repoFactories = await createRepositoryFactories(
+      server.db,
+      server.logger
     )
 
-    // Consumer created lazily on server start to avoid SQS connection during tests
     let consumer = null
 
-    // Start consuming on server start
     server.events.on('start', async () => {
       server.logger.info({
         message: 'Starting SQS command queue consumer',
@@ -78,16 +86,12 @@ export const commandQueueConsumerPlugin = {
         queueName,
         logger: server.logger,
         uploadsRepository,
-        summaryLogsRepositoryFactory,
-        organisationsRepositoryFactory,
-        wasteRecordsRepositoryFactory,
-        wasteBalancesRepositoryFactory
+        ...repoFactories
       })
 
       consumer.start()
     })
 
-    // Stop consuming on server stop (graceful shutdown)
     server.events.on('stop', async () => {
       server.logger.info({
         message: 'Stopping SQS command queue consumer',

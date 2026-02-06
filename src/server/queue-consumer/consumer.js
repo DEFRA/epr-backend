@@ -230,6 +230,12 @@ const createMessageHandler = (deps) => async (message) => {
           user: command.user
         })
         break
+
+      // Joi schema validates command type before switch, so default is unreachable.
+      // Required by SonarCloud rule "Add a default clause to this switch statement".
+      /* c8 ignore next 2 */
+      default:
+        break
     }
 
     logger.info({
