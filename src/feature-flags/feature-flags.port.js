@@ -10,6 +10,7 @@
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled
  * @property {() => boolean} isSummaryLogsEnabled
  * @property {() => boolean} isCreateLumpyPackagingRecyclingNotesEnabled
+ * @property {() => boolean} isSqsCommandsEnabled
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

@@ -26,5 +26,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isCreateLumpyPackagingRecyclingNotesEnabled() {
     return config.get('featureFlags.lumpyPackagingRecyclingNotes')
+  },
+  isSqsCommandsEnabled() {
+    return config.get('featureFlags.sqsCommands')
   }
 })
