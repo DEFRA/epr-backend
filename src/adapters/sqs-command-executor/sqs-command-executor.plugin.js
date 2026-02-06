@@ -5,13 +5,18 @@ import {
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSqsCommandExecutor } from './sqs-command-executor.js'
 
+/**
+ * @typedef {Object} SqsCommandExecutorPluginOptions
+ * @property {{get: (key: string) => string}} config
+ */
+
 export const sqsCommandExecutorPlugin = {
   name: 'sqs-command-executor',
   version: '1.0.0',
 
   register: async (
     /** @type {import('#common/hapi-types.js').HapiServer} */ server,
-    options
+    /** @type {SqsCommandExecutorPluginOptions} */ options
   ) => {
     const { config } = options
 
