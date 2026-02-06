@@ -13,11 +13,14 @@ vi.mock('@aws-sdk/client-sqs', () => ({
   GetQueueUrlCommand: vi.fn()
 }))
 vi.mock('#application/summary-logs/validate.js')
+vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
 
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
+const { createSummaryLogExtractor } =
+  await import('#application/summary-logs/extractor.js')
 const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
 const { summaryLogMetrics } =
@@ -25,11 +28,13 @@ const { summaryLogMetrics } =
 
 describe('createCommandQueueConsumer', () => {
   let sqsClient
-  let logger
+  let baseLogger
+  let messageLogger
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
   let wasteBalancesRepository
+  let uploadsRepository
   let summaryLogExtractor
   let mockConsumer
   let eventHandlers
@@ -43,10 +48,19 @@ describe('createCommandQueueConsumer', () => {
       })
     }
 
-    logger = {
+    // Message-scoped logger created via logger.child()
+    messageLogger = {
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn()
+    }
+
+    // Base logger that creates child loggers per message
+    baseLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      child: vi.fn().mockReturnValue(messageLogger)
     }
 
     summaryLogsRepository = {
@@ -57,6 +71,7 @@ describe('createCommandQueueConsumer', () => {
     organisationsRepository = {}
     wasteRecordsRepository = {}
     wasteBalancesRepository = {}
+    uploadsRepository = {}
     summaryLogExtractor = {}
 
     mockConsumer = {
@@ -72,6 +87,7 @@ describe('createCommandQueueConsumer', () => {
       this.QueueName = params.QueueName
     })
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
+    vi.mocked(createSummaryLogExtractor).mockReturnValue(summaryLogExtractor)
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
     )
@@ -85,16 +101,17 @@ describe('createCommandQueueConsumer', () => {
     vi.resetAllMocks()
   })
 
+  // Factories return repos when called - mirroring actual pattern
   const createConsumer = () =>
     createCommandQueueConsumer({
       sqsClient,
       queueName: 'test-queue',
-      logger,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository,
-      summaryLogExtractor
+      logger: baseLogger,
+      uploadsRepository,
+      summaryLogsRepositoryFactory: () => summaryLogsRepository,
+      organisationsRepositoryFactory: () => organisationsRepository,
+      wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+      wasteBalancesRepositoryFactory: () => wasteBalancesRepository
     })
 
   describe('queue URL resolution', () => {
@@ -107,7 +124,7 @@ describe('createCommandQueueConsumer', () => {
     it('logs resolved queue URL', async () => {
       await createConsumer()
 
-      expect(logger.info).toHaveBeenCalledWith({
+      expect(baseLogger.info).toHaveBeenCalledWith({
         message:
           'Resolved queue URL: http://localhost:4566/000000000000/test-queue',
         queueName: 'test-queue'
@@ -166,7 +183,7 @@ describe('createCommandQueueConsumer', () => {
 
       eventHandlers.error(error)
 
-      expect(logger.error).toHaveBeenCalledWith({
+      expect(baseLogger.error).toHaveBeenCalledWith({
         err: error,
         message: 'SQS consumer error',
         event: {
@@ -182,7 +199,7 @@ describe('createCommandQueueConsumer', () => {
 
       eventHandlers.processing_error(error)
 
-      expect(logger.error).toHaveBeenCalledWith({
+      expect(baseLogger.error).toHaveBeenCalledWith({
         err: error,
         message: 'SQS message processing error',
         event: {
@@ -210,7 +227,8 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith({
+        // Parsing errors use base logger (before message deps are created)
+        expect(baseLogger.error).toHaveBeenCalledWith({
           message: 'Failed to parse SQS message body',
           messageId: 'msg-123',
           event: {
@@ -225,7 +243,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
+        expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Invalid command message: "command" is required'
           })
@@ -240,7 +258,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
+        expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Invalid command message: "command" is required'
           })
@@ -255,7 +273,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
+        expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Invalid command message: "summaryLogId" is required'
           })
@@ -270,7 +288,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
+        expect(baseLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
               'Invalid command message: "command" must be one of [validate, submit]'
@@ -292,7 +310,8 @@ describe('createCommandQueueConsumer', () => {
         await handleMessage(message)
 
         expect(mockValidator).toHaveBeenCalledWith('log-123')
-        expect(logger.info).toHaveBeenCalledWith(
+        // Message processing uses message-scoped logger
+        expect(messageLogger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Command completed: validate for summaryLogId=log-123'
           })
@@ -341,7 +360,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.warn).toHaveBeenCalledWith({
+        expect(messageLogger.warn).toHaveBeenCalledWith({
           message:
             'Cannot mark as validation_failed: summary log not found, summaryLogId=log-123'
         })
@@ -388,7 +407,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(messageLogger.error).toHaveBeenCalledWith({
           err: updateError,
           message:
             'Failed to mark summary log as validation_failed, summaryLogId=log-123'
@@ -423,7 +442,7 @@ describe('createCommandQueueConsumer', () => {
             status: SUMMARY_LOG_STATUS.SUBMITTED
           })
         )
-        expect(logger.info).toHaveBeenCalledWith(
+        expect(messageLogger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Summary log submitted: summaryLogId=log-123'
           })
@@ -461,12 +480,12 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
+        expect(messageLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Command failed: submit for summaryLogId=log-123'
           })
         )
-        expect(logger.warn).toHaveBeenCalledWith({
+        expect(messageLogger.warn).toHaveBeenCalledWith({
           message:
             'Cannot mark as submission_failed: summary log not found, summaryLogId=log-123'
         })
@@ -485,7 +504,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
+        expect(messageLogger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             err: expect.objectContaining({
               message: expect.stringContaining('must be in submitting status')
@@ -567,7 +586,7 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(messageLogger.error).toHaveBeenCalledWith({
           err: updateError,
           message:
             'Failed to mark summary log as submission_failed, summaryLogId=log-123'

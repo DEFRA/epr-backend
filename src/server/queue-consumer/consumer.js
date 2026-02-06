@@ -12,6 +12,7 @@ import {
   markAsValidationFailed
 } from '#domain/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
@@ -41,12 +42,12 @@ const commandMessageSchema = Joi.object({
  * @typedef {object} ConsumerDependencies
  * @property {SQSClient} sqsClient
  * @property {string} queueName
- * @property {object} logger
- * @property {object} summaryLogsRepository
- * @property {object} organisationsRepository
- * @property {object} wasteRecordsRepository
- * @property {object} wasteBalancesRepository
- * @property {object} summaryLogExtractor
+ * @property {object} logger - Base logger (will create child loggers per message)
+ * @property {object} uploadsRepository
+ * @property {Function} summaryLogsRepositoryFactory - Factory: (logger) => repo
+ * @property {Function} organisationsRepositoryFactory - Factory: () => repo
+ * @property {Function} wasteRecordsRepositoryFactory - Factory: () => repo
+ * @property {Function} wasteBalancesRepositoryFactory - Factory: () => repo
  */
 
 /**
@@ -137,23 +138,69 @@ const markCommandAsFailed = async (
 }
 
 /**
+ * Creates message-scoped dependencies for processing a single SQS message.
+ * Each message gets its own logger and repository instances for correlation.
+ * @param {ConsumerDependencies} deps - Base dependencies with factories
+ * @param {string} messageId - SQS message ID for correlation
+ * @returns {object} Message-scoped dependencies
+ */
+const createMessageDependencies = (deps, messageId) => {
+  const {
+    logger: baseLogger,
+    uploadsRepository,
+    summaryLogsRepositoryFactory,
+    organisationsRepositoryFactory,
+    wasteRecordsRepositoryFactory,
+    wasteBalancesRepositoryFactory
+  } = deps
+
+  // Create message-scoped logger for correlation
+  const logger = baseLogger.child({ messageId })
+
+  // Instantiate repos with message-scoped logger
+  const summaryLogsRepository = summaryLogsRepositoryFactory(logger)
+  const organisationsRepository = organisationsRepositoryFactory()
+  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
+  const wasteBalancesRepository = wasteBalancesRepositoryFactory()
+
+  // Create extractor with message-scoped logger
+  const summaryLogExtractor = createSummaryLogExtractor({
+    uploadsRepository,
+    logger
+  })
+
+  return {
+    logger,
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    wasteBalancesRepository,
+    summaryLogExtractor
+  }
+}
+
+/**
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
  * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<void>}
  */
 const createMessageHandler = (deps) => async (message) => {
-  const { logger, summaryLogsRepository } = deps
+  const { logger: baseLogger } = deps
+  const messageId = message.MessageId
 
-  const command = parseCommandMessage(message, logger)
+  const command = parseCommandMessage(message, baseLogger)
   if (!command) {
     return
   }
+
+  // Create message-scoped dependencies for this message
+  const messageDeps = createMessageDependencies(deps, messageId)
+  const { logger, summaryLogsRepository } = messageDeps
 
   const { command: commandType, summaryLogId } = command
 
   logger.info({
     message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
-    messageId: message.MessageId,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -163,17 +210,19 @@ const createMessageHandler = (deps) => async (message) => {
   try {
     switch (commandType) {
       case SUMMARY_LOG_COMMAND.VALIDATE:
-        await handleValidateCommand(summaryLogId, deps)
+        await handleValidateCommand(summaryLogId, messageDeps)
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await submitSummaryLog(summaryLogId, { ...deps, user: command.user })
+        await submitSummaryLog(summaryLogId, {
+          ...messageDeps,
+          user: command.user
+        })
         break
     }
 
     logger.info({
       message: `Command completed: ${commandType} for summaryLogId=${summaryLogId}`,
-      messageId: message.MessageId,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -183,7 +232,6 @@ const createMessageHandler = (deps) => async (message) => {
     logger.error({
       err,
       message: `Command failed: ${commandType} for summaryLogId=${summaryLogId}`,
-      messageId: message.MessageId,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE

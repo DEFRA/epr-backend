@@ -2,21 +2,20 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
-  dependencies: [
-    'summaryLogsRepository',
-    'organisationsRepository',
-    'wasteRecordsRepository',
-    'wasteBalancesRepository',
-    'uploadsRepository',
-    'feature-flags'
-  ],
+  dependencies: ['mongodb', 'feature-flags'],
 
   register: async (server, options) => {
     const { config } = options
@@ -24,26 +23,43 @@ export const commandQueueConsumerPlugin = {
     const queueName = config.get('commandQueue.queueName')
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
+    const s3Endpoint = config.get('s3Endpoint')
+    const isDevelopment = config.get('isDevelopment')
 
     const sqsClient = createSqsClient({
       region: awsRegion,
       endpoint: sqsEndpoint
     })
 
-    // Access deps registered by other plugins
-    const {
-      uploadsRepository,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository,
-      featureFlags
-    } = server.app
-
-    const summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository,
-      logger: server.logger
+    const s3Client = createS3Client({
+      region: awsRegion,
+      endpoint: s3Endpoint,
+      forcePathStyle: isDevelopment
     })
+
+    const uploadsRepository = createUploadsRepository({
+      s3Client,
+      cdpUploaderUrl: config.get('cdpUploader.url'),
+      s3Bucket: config.get('cdpUploader.s3Bucket')
+    })
+
+    // Create repository factories from db - repos will be instantiated per-message
+    // with message-scoped loggers (like worker-thread.js pattern)
+    const db = server.db
+    const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
+    const organisationsRepositoryFactory =
+      await createOrganisationsRepository(db)
+    const wasteRecordsRepositoryFactory = await createWasteRecordsRepository(db)
+    const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
+    const wasteBalancesRepositoryFactory = await createWasteBalancesRepository(
+      db,
+      {
+        organisationsRepository: organisationsRepositoryFactory(),
+        systemLogsRepository: systemLogsRepositoryFactory(server.logger)
+      }
+    )
+
+    const { featureFlags } = server.app
 
     // Consumer created lazily on server start to avoid SQS connection during tests
     let consumer = null
@@ -63,11 +79,11 @@ export const commandQueueConsumerPlugin = {
         sqsClient,
         queueName,
         logger: server.logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        wasteBalancesRepository,
-        summaryLogExtractor,
+        uploadsRepository,
+        summaryLogsRepositoryFactory,
+        organisationsRepositoryFactory,
+        wasteRecordsRepositoryFactory,
+        wasteBalancesRepositoryFactory,
         featureFlags
       })
 
@@ -88,6 +104,7 @@ export const commandQueueConsumerPlugin = {
         consumer.stop()
       }
       sqsClient.destroy()
+      s3Client.destroy()
 
       server.logger.info({
         message: 'SQS command queue consumer stopped',

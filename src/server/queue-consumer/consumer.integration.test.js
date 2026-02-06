@@ -44,20 +44,30 @@ const stopConsumerAndWait = (consumer) => {
  * the SQS behaviour.
  */
 describe('SQS command queue consumer integration', () => {
-  let logger
+  let baseLogger
+  let messageLogger
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
   let wasteBalancesRepository
-  let summaryLogExtractor
+  let uploadsRepository
 
   beforeEach(() => {
     vi.resetAllMocks()
 
-    logger = {
+    // Message-scoped logger created via logger.child()
+    messageLogger = {
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn()
+    }
+
+    // Base logger that creates child loggers per message
+    baseLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      child: vi.fn().mockReturnValue(messageLogger)
     }
 
     summaryLogsRepository = {
@@ -68,9 +78,7 @@ describe('SQS command queue consumer integration', () => {
     organisationsRepository = {}
     wasteRecordsRepository = {}
     wasteBalancesRepository = {}
-
-    // Mock extractor - not used in these tests but required by consumer
-    summaryLogExtractor = {}
+    uploadsRepository = {}
 
     // Set up mocks for command handlers
     const mockValidator = vi.fn().mockResolvedValue(undefined)
@@ -78,24 +86,31 @@ describe('SQS command queue consumer integration', () => {
     vi.mocked(submitSummaryLog).mockResolvedValue(undefined)
   })
 
+  // Helper to create consumer with factory-based API
+  const createConsumerWithMocks = (
+    sqsClient,
+    queueName = sqsClient.queueName
+  ) =>
+    createCommandQueueConsumer({
+      sqsClient,
+      queueName,
+      logger: baseLogger,
+      uploadsRepository,
+      summaryLogsRepositoryFactory: () => summaryLogsRepository,
+      organisationsRepositoryFactory: () => organisationsRepository,
+      wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+      wasteBalancesRepositoryFactory: () => wasteBalancesRepository
+    })
+
   describe('queue connection', () => {
     it(
       'connects to queue and resolves URL by name',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumerWithMocks(sqsClient)
 
         expect(consumer).toBeDefined()
-        expect(logger.info).toHaveBeenCalledWith(
+        expect(baseLogger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining('Resolved queue URL')
           })
@@ -108,16 +123,7 @@ describe('SQS command queue consumer integration', () => {
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         await expect(
-          createCommandQueueConsumer({
-            sqsClient,
-            queueName: 'nonexistent-queue',
-            logger,
-            summaryLogsRepository,
-            organisationsRepository,
-            wasteRecordsRepository,
-            wasteBalancesRepository,
-            summaryLogExtractor
-          })
+          createConsumerWithMocks(sqsClient, 'nonexistent-queue')
         ).rejects.toThrow()
       }
     )
@@ -147,16 +153,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumerWithMocks(sqsClient)
 
         consumer.start()
 
@@ -198,31 +195,22 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumerWithMocks(sqsClient)
 
         consumer.start()
 
         // Wait for submitSummaryLog to be called with correct args
+        // Note: message-scoped logger and repos are passed, not the base ones
         await vi.waitFor(
           () => {
             expect(submitSummaryLog).toHaveBeenCalledWith(
               summaryLogId,
               expect.objectContaining({
-                logger,
+                logger: messageLogger,
                 summaryLogsRepository,
                 organisationsRepository,
                 wasteRecordsRepository,
                 wasteBalancesRepository,
-                summaryLogExtractor,
                 user
               })
             )
@@ -253,22 +241,14 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumerWithMocks(sqsClient)
 
         consumer.start()
 
+        // Parsing errors use base logger (before message deps are created)
         await vi.waitFor(
           () => {
-            expect(logger.error).toHaveBeenCalledWith(
+            expect(baseLogger.error).toHaveBeenCalledWith(
               expect.objectContaining({
                 message: expect.stringContaining('Invalid command message')
               })
@@ -311,22 +291,14 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumerWithMocks(sqsClient)
 
         consumer.start()
 
+        // Parsing errors use base logger (before message deps are created)
         await vi.waitFor(
           () => {
-            expect(logger.error).toHaveBeenCalledWith(
+            expect(baseLogger.error).toHaveBeenCalledWith(
               expect.objectContaining({
                 message: expect.stringContaining(
                   'must be one of [validate, submit]'
@@ -347,16 +319,7 @@ describe('SQS command queue consumer integration', () => {
       'stops polling when stop is called',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumerWithMocks(sqsClient)
 
         consumer.start()
         expect(consumer.status.isRunning).toBe(true)
