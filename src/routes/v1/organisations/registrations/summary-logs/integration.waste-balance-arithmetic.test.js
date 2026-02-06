@@ -171,7 +171,6 @@ describe('Waste balance arithmetic integration tests', () => {
   })
 
   const setupIntegrationEnvironment = async () => {
-    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
     const mockLogger = {
       info: vi.fn(),
       error: vi.fn(),
@@ -180,8 +179,9 @@ describe('Waste balance arithmetic integration tests', () => {
       trace: vi.fn(),
       fatal: vi.fn()
     }
+    const summaryLogsRepository =
+      createInMemorySummaryLogsRepository(mockLogger)
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
     // Generate IDs inside setup to ensure consistency
     const organisationId = new ObjectId().toString()
@@ -320,7 +320,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     const server = await createTestServer({
       repositories: {
-        summaryLogsRepository: summaryLogsRepositoryFactory,
+        summaryLogsRepository,
         uploadsRepository,
         wasteRecordsRepository: wasteRecordsRepositoryFactory,
         organisationsRepository: () => organisationsRepository,

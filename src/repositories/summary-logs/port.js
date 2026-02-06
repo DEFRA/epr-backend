@@ -27,8 +27,4 @@
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  */
 
-/**
- * @typedef {(logger: import('#common/helpers/logging/logger.js').TypedLogger) => SummaryLogsRepository} SummaryLogsRepositoryFactory
- */
-
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

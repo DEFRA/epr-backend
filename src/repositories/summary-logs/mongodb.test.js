@@ -8,6 +8,13 @@ import { summaryLogFactory } from './contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+}
+
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
@@ -15,20 +22,14 @@ const it = mongoIt.extend({
     await client.close()
   },
 
+  // Factory for contract tests that need to pass their own logger
   summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = await createSummaryLogsRepository(database)
-    await use(factory)
+    await use((logger) => createSummaryLogsRepository(database, logger))
   },
 
   summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
-    const repository = summaryLogsRepositoryFactory(mockLogger)
+    const repository = await summaryLogsRepositoryFactory(mockLogger)
     await use(repository)
   }
 })
@@ -53,8 +54,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
-      const repository = repositoryFactory(mockLogger)
+      const repository = await createSummaryLogsRepository(mockDb, mockLogger)
 
       await expect(
         repository.insert(
@@ -93,8 +93,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
-      const repository = repositoryFactory(mockLogger)
+      const repository = await createSummaryLogsRepository(mockDb, mockLogger)
 
       const result = await repository.transitionToSubmittingExclusive(
         logId,
@@ -140,8 +139,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
-      const repository = repositoryFactory(mockLogger)
+      const repository = await createSummaryLogsRepository(mockDb, mockLogger)
 
       const result = await repository.transitionToSubmittingExclusive(
         logId,
@@ -184,8 +182,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
-      const repository = repositoryFactory(mockLogger)
+      const repository = await createSummaryLogsRepository(mockDb, mockLogger)
 
       await expect(
         repository.transitionToSubmittingExclusive(logId, 1, 'org-1', 'reg-1')

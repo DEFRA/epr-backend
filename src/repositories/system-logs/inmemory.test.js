@@ -1,19 +1,25 @@
-import { describe, expect, it as base } from 'vitest'
+import { describe, expect, it as base, vi } from 'vitest'
 import { createSystemLogsRepository } from './inmemory.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
+
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+}
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
   systemLogsRepository: async ({}, use) => {
-    const factory = () => createSystemLogsRepository()(null)
-    await use(factory)
+    const repository = createSystemLogsRepository(mockLogger)
+    await use(repository)
   }
 })
 
 describe('In memory system logs repository', () => {
   it('should create repository instance', async ({ systemLogsRepository }) => {
-    const repository = systemLogsRepository()
-    expect(repository).toBeDefined()
+    expect(systemLogsRepository).toBeDefined()
   })
 
   describe('system logs repository contract', () => {

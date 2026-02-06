@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
+import { vi } from 'vitest'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -9,6 +10,13 @@ import { randomUUID } from 'crypto'
 
 const { validToken } = entraIdMockAuthTokens
 
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+}
+
 describe('GET /v1/system-logs', () => {
   setupAuthContext()
   let server
@@ -16,11 +24,10 @@ describe('GET /v1/system-logs', () => {
   let systemLogsRepository
 
   beforeEach(async () => {
-    const systemLogsRepositoryFactory = createSystemLogsRepository()
-    systemLogsRepository = systemLogsRepositoryFactory(undefined)
+    systemLogsRepository = createSystemLogsRepository(mockLogger)
     server = await createTestServer({
       repositories: {
-        systemLogsRepository: systemLogsRepositoryFactory
+        systemLogsRepository
       }
     })
   })

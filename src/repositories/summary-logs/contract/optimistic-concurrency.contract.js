@@ -225,7 +225,7 @@ export const testOptimisticConcurrency = (it) => {
           warn: vi.fn(),
           debug: vi.fn()
         }
-        const repository = summaryLogsRepositoryFactory(logger)
+        const repository = await summaryLogsRepositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
@@ -272,7 +272,7 @@ export const testOptimisticConcurrency = (it) => {
           warn: vi.fn(),
           debug: vi.fn()
         }
-        const repository = summaryLogsRepositoryFactory(logger)
+        const repository = await summaryLogsRepositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
           repository,

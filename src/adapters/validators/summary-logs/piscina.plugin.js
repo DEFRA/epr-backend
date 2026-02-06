@@ -14,9 +14,10 @@ export const piscinaWorkersPlugin = {
    * @param {import('#common/hapi-types.js').HapiServer} server
    */
   register: async (server) => {
-    const summaryLogsRepository = (
-      await createSummaryLogsRepository(server.db)
-    )(server.logger)
+    const summaryLogsRepository = await createSummaryLogsRepository(
+      server.db,
+      server.logger
+    )
 
     const summaryLogsWorker = createSummaryLogsCommandExecutor(
       server.logger,

@@ -76,8 +76,10 @@ export default async function summaryLogsWorkerThread(command) {
     try {
       const db = mongoClient.db(databaseName)
 
-      const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
-      const summaryLogsRepository = summaryLogsRepositoryFactory(logger)
+      const summaryLogsRepository = await createSummaryLogsRepository(
+        db,
+        logger
+      )
 
       const uploadsRepository = createUploadsRepository({
         s3Client,
@@ -93,8 +95,7 @@ export default async function summaryLogsWorkerThread(command) {
         await createWasteRecordsRepository(db)
       const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
-      const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
-      const systemLogsRepository = systemLogsRepositoryFactory(logger)
+      const systemLogsRepository = await createSystemLogsRepository(db, logger)
 
       const wasteBalancesRepositoryFactory =
         await createWasteBalancesRepository(db, {

@@ -64,15 +64,15 @@ describe('Submission and placeholder tests', () => {
     let server
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
         debug: vi.fn()
       }
+      const summaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
         registrations: [
@@ -373,11 +373,16 @@ describe('Submission and placeholder tests', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository,
           uploadsRepository,
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository,
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createSystemLogsRepository({
+            info: vi.fn(),
+            error: vi.fn(),
+            warn: vi.fn(),
+            debug: vi.fn()
+          })
         },
         workers: {
           summaryLogsWorker: submitterWorker
@@ -682,15 +687,15 @@ describe('Submission and placeholder tests', () => {
     }
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
         debug: vi.fn()
       }
+      testSummaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
         registrations: [
@@ -744,7 +749,7 @@ describe('Submission and placeholder tests', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository: testSummaryLogsRepository,
           uploadsRepository
         },
         workers: {

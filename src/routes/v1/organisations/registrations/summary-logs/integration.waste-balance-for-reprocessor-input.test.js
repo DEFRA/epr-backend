@@ -240,8 +240,8 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         fatal: vi.fn()
       }
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const summaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
       const wasteRecordsRepositoryFactory =
         createInMemoryWasteRecordsRepository()
@@ -329,7 +329,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       const server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository,
           uploadsRepository,
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository,

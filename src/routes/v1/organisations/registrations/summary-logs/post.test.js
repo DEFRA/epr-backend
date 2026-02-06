@@ -37,13 +37,12 @@ describe(`${summaryLogsCreatePath} route`, () => {
     let uploadsRepository
 
     beforeAll(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      summaryLogsRepository = createInMemorySummaryLogsRepository(mockLogger)
       uploadsRepository = createInMemoryUploadsRepository()
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: () => summaryLogsRepository,
+          summaryLogsRepository,
           uploadsRepository
         },
         featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
@@ -147,8 +146,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: () =>
-            createInMemorySummaryLogsRepository()(mockLogger),
+          summaryLogsRepository:
+            createInMemorySummaryLogsRepository(mockLogger),
           uploadsRepository
         },
         featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
@@ -208,8 +207,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: () =>
-            createInMemorySummaryLogsRepository()(mockLogger),
+          summaryLogsRepository:
+            createInMemorySummaryLogsRepository(mockLogger),
           uploadsRepository: createInMemoryUploadsRepository()
         },
         featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })

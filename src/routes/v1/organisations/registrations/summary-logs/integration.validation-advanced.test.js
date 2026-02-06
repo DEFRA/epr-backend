@@ -290,15 +290,15 @@ describe('Advanced validation scenarios', () => {
     let testSummaryLogsRepository
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
         debug: vi.fn()
       }
+      testSummaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
         registrations: [
@@ -387,7 +387,7 @@ describe('Advanced validation scenarios', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository: testSummaryLogsRepository,
           uploadsRepository
         },
         workers: {
@@ -485,15 +485,15 @@ describe('Advanced validation scenarios', () => {
     let testSummaryLogsRepository
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
         debug: vi.fn()
       }
+      testSummaryLogsRepository =
+        createInMemorySummaryLogsRepository(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
         registrations: [
@@ -565,7 +565,7 @@ describe('Advanced validation scenarios', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
+          summaryLogsRepository: testSummaryLogsRepository,
           uploadsRepository
         },
         workers: {
@@ -755,19 +755,17 @@ describe('Advanced validation scenarios', () => {
 
   describe('edge case: validation object without issues array', () => {
     const summaryLogId = 'summary-no-issues-array'
-    let summaryLogsRepositoryFactory
     let summaryLogsRepository
     let server
 
     beforeEach(async () => {
-      summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
         debug: vi.fn()
       }
-      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      summaryLogsRepository = createInMemorySummaryLogsRepository(mockLogger)
 
       await summaryLogsRepository.insert(
         summaryLogId,
@@ -782,7 +780,7 @@ describe('Advanced validation scenarios', () => {
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory
+          summaryLogsRepository
         },
         featureFlags
       })

@@ -145,9 +145,10 @@ export const runGlassMigration = async (server) => {
       const organisationsRepository = (
         await createOrganisationsRepository(server.db)
       )()
-      const systemLogsRepository = (
-        await createSystemLogsRepository(server.db)
-      )(logger)
+      const systemLogsRepository = await createSystemLogsRepository(
+        server.db,
+        logger
+      )
       return await executeMigration(
         organisationsRepository,
         systemLogsRepository,
