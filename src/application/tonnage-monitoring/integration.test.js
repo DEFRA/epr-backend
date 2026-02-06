@@ -461,4 +461,34 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     })
     expect(result.total).toBe(100)
   })
+
+  it('excludes waste records from test organisations', async () => {
+    const testOrgId = '507f1f77bcf86cd799439013'
+    const testRegId = 'REG-TEST'
+
+    await db.collection(ORGANISATIONS_COLLECTION).insertMany([
+      {
+        ...createOrganisation(testOrgId, [
+          createRegistration(testRegId, MATERIAL.PLASTIC)
+        ]),
+        orgId: 999999
+      },
+      createOrganisation(orgId1, [createRegistration(regId1, MATERIAL.PLASTIC)])
+    ])
+
+    await db
+      .collection(WASTE_RECORDS_COLLECTION)
+      .insertMany([
+        createExporterWasteRecord(testOrgId, testRegId, 500, '2026-01-15'),
+        createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15')
+      ])
+
+    const result = await aggregateTonnageByMaterial(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      totalTonnage: 100
+    })
+    expect(result.total).toBe(100)
+  })
 })

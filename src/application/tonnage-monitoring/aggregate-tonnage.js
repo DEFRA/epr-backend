@@ -4,6 +4,7 @@ import {
   MATERIAL,
   TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_RECORDS_COLLECTION = 'waste-records'
@@ -98,6 +99,7 @@ const buildMaterialLookupStage = () => ({
       { $match: { $expr: { $eq: ['$registrations.id', '$$regId'] } } },
       {
         $project: {
+          orgId: '$orgId',
           material: '$registrations.material',
           glassRecyclingProcess: '$registrations.glassRecyclingProcess'
         }
@@ -145,12 +147,14 @@ const buildAggregationPipeline = () => [
   buildMaterialLookupStage(),
   {
     $addFields: {
+      orgId: { $arrayElemAt: ['$orgData.orgId', 0] },
       material: { $arrayElemAt: ['$orgData.material', 0] },
       glassRecyclingProcess: {
         $arrayElemAt: ['$orgData.glassRecyclingProcess', 0]
       }
     }
   },
+  { $match: { orgId: { $nin: TEST_ORGANISATION_IDS } } },
   { $match: { material: { $ne: null } } },
   {
     $addFields: {

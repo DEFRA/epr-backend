@@ -21,7 +21,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
   const payload = {
     event: {
       category: 'waste-reporting',
-      subCategory: 'packaging-recycling-note',
+      subCategory: 'packaging-recycling-notes',
       action: 'status-transition'
     },
     context: {
