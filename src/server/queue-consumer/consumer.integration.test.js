@@ -8,9 +8,11 @@ import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
+vi.mock('#application/summary-logs/extractor.js')
 
 const TEST_TIMEOUT = 30000
 
@@ -45,19 +47,27 @@ const stopConsumerAndWait = (consumer) => {
  */
 describe('SQS command queue consumer integration', () => {
   let logger
+  let messageLogger
   let summaryLogsRepository
   let organisationsRepository
   let wasteRecordsRepository
   let wasteBalancesRepository
-  let summaryLogExtractor
+  let uploadsRepository
 
   beforeEach(() => {
     vi.resetAllMocks()
 
-    logger = {
+    messageLogger = {
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn()
+    }
+
+    logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      child: vi.fn().mockReturnValue(messageLogger)
     }
 
     summaryLogsRepository = {
@@ -69,13 +79,14 @@ describe('SQS command queue consumer integration', () => {
     wasteRecordsRepository = {}
     wasteBalancesRepository = {}
 
-    // Mock extractor - not used in these tests but required by consumer
-    summaryLogExtractor = {}
+    // Mock uploads repository - consumer creates extractor internally
+    uploadsRepository = {}
 
     // Set up mocks for command handlers
     const mockValidator = vi.fn().mockResolvedValue(undefined)
     vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
     vi.mocked(submitSummaryLog).mockResolvedValue(undefined)
+    vi.mocked(createSummaryLogExtractor).mockReturnValue({})
   })
 
   describe('queue connection', () => {
@@ -87,11 +98,11 @@ describe('SQS command queue consumer integration', () => {
           sqsClient,
           queueName: sqsClient.queueName,
           logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
+          uploadsRepository,
+          summaryLogsRepositoryFactory: () => summaryLogsRepository,
+          organisationsRepositoryFactory: () => organisationsRepository,
+          wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+          wasteBalancesRepositoryFactory: () => wasteBalancesRepository
         })
 
         expect(consumer).toBeDefined()
@@ -112,11 +123,11 @@ describe('SQS command queue consumer integration', () => {
             sqsClient,
             queueName: 'nonexistent-queue',
             logger,
-            summaryLogsRepository,
-            organisationsRepository,
-            wasteRecordsRepository,
-            wasteBalancesRepository,
-            summaryLogExtractor
+            uploadsRepository,
+            summaryLogsRepositoryFactory: () => summaryLogsRepository,
+            organisationsRepositoryFactory: () => organisationsRepository,
+            wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+            wasteBalancesRepositoryFactory: () => wasteBalancesRepository
           })
         ).rejects.toThrow()
       }
@@ -151,11 +162,11 @@ describe('SQS command queue consumer integration', () => {
           sqsClient,
           queueName: sqsClient.queueName,
           logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
+          uploadsRepository,
+          summaryLogsRepositoryFactory: () => summaryLogsRepository,
+          organisationsRepositoryFactory: () => organisationsRepository,
+          wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+          wasteBalancesRepositoryFactory: () => wasteBalancesRepository
         })
 
         consumer.start()
@@ -202,27 +213,27 @@ describe('SQS command queue consumer integration', () => {
           sqsClient,
           queueName: sqsClient.queueName,
           logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
+          uploadsRepository,
+          summaryLogsRepositoryFactory: () => summaryLogsRepository,
+          organisationsRepositoryFactory: () => organisationsRepository,
+          wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+          wasteBalancesRepositoryFactory: () => wasteBalancesRepository
         })
 
         consumer.start()
 
         // Wait for submitSummaryLog to be called with correct args
+        // Uses message-scoped logger (from logger.child())
         await vi.waitFor(
           () => {
             expect(submitSummaryLog).toHaveBeenCalledWith(
               summaryLogId,
               expect.objectContaining({
-                logger,
+                logger: messageLogger,
                 summaryLogsRepository,
                 organisationsRepository,
                 wasteRecordsRepository,
                 wasteBalancesRepository,
-                summaryLogExtractor,
                 user
               })
             )
@@ -257,11 +268,11 @@ describe('SQS command queue consumer integration', () => {
           sqsClient,
           queueName: sqsClient.queueName,
           logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
+          uploadsRepository,
+          summaryLogsRepositoryFactory: () => summaryLogsRepository,
+          organisationsRepositoryFactory: () => organisationsRepository,
+          wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+          wasteBalancesRepositoryFactory: () => wasteBalancesRepository
         })
 
         consumer.start()
@@ -315,11 +326,11 @@ describe('SQS command queue consumer integration', () => {
           sqsClient,
           queueName: sqsClient.queueName,
           logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
+          uploadsRepository,
+          summaryLogsRepositoryFactory: () => summaryLogsRepository,
+          organisationsRepositoryFactory: () => organisationsRepository,
+          wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+          wasteBalancesRepositoryFactory: () => wasteBalancesRepository
         })
 
         consumer.start()
@@ -351,11 +362,11 @@ describe('SQS command queue consumer integration', () => {
           sqsClient,
           queueName: sqsClient.queueName,
           logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
+          uploadsRepository,
+          summaryLogsRepositoryFactory: () => summaryLogsRepository,
+          organisationsRepositoryFactory: () => organisationsRepository,
+          wasteRecordsRepositoryFactory: () => wasteRecordsRepository,
+          wasteBalancesRepositoryFactory: () => wasteBalancesRepository
         })
 
         consumer.start()

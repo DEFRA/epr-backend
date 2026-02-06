@@ -2,8 +2,14 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
 /**
@@ -11,16 +17,37 @@ import { createCommandQueueConsumer } from './consumer.js'
  * @property {{get: (key: string) => string}} config
  */
 
+/**
+ * Creates repository factories from the database connection.
+ * Repositories are instantiated per-message with message-scoped loggers.
+ * @param {import('mongodb').Db} db
+ * @param {object} logger
+ */
+const createRepositoryFactories = async (db, logger) => {
+  const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
+  const organisationsRepositoryFactory = await createOrganisationsRepository(db)
+  const wasteRecordsRepositoryFactory = await createWasteRecordsRepository(db)
+  const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
+  const wasteBalancesRepositoryFactory = await createWasteBalancesRepository(
+    db,
+    {
+      organisationsRepository: organisationsRepositoryFactory(),
+      systemLogsRepository: systemLogsRepositoryFactory(logger)
+    }
+  )
+
+  return {
+    summaryLogsRepositoryFactory,
+    organisationsRepositoryFactory,
+    wasteRecordsRepositoryFactory,
+    wasteBalancesRepositoryFactory
+  }
+}
+
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
-  dependencies: [
-    'summaryLogsRepository',
-    'organisationsRepository',
-    'wasteRecordsRepository',
-    'wasteBalancesRepository',
-    'uploadsRepository'
-  ],
+  dependencies: ['mongodb'],
 
   register: async (
     /** @type {import('#common/hapi-types.js').HapiServer} */ server,
@@ -31,30 +58,33 @@ export const commandQueueConsumerPlugin = {
     const queueName = config.get('commandQueue.queueName')
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
+    const s3Endpoint = config.get('s3Endpoint')
+    const isDevelopment = config.get('isDevelopment')
 
     const sqsClient = createSqsClient({
       region: awsRegion,
       endpoint: sqsEndpoint
     })
 
-    // Access deps registered by other plugins
-    const {
-      uploadsRepository,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository
-    } = server.app
-
-    const summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository,
-      logger: server.logger
+    const s3Client = createS3Client({
+      region: awsRegion,
+      endpoint: s3Endpoint,
+      forcePathStyle: isDevelopment
     })
 
-    // Consumer created lazily on server start to avoid SQS connection during tests
+    const uploadsRepository = createUploadsRepository({
+      s3Client,
+      cdpUploaderUrl: config.get('cdpUploader.url'),
+      s3Bucket: config.get('cdpUploader.s3Bucket')
+    })
+
+    const repoFactories = await createRepositoryFactories(
+      server.db,
+      server.logger
+    )
+
     let consumer = null
 
-    // Start consuming on server start
     server.events.on('start', async () => {
       server.logger.info({
         message: `Starting SQS command queue consumer for queue: ${queueName}`,
@@ -68,17 +98,13 @@ export const commandQueueConsumerPlugin = {
         sqsClient,
         queueName,
         logger: server.logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        wasteBalancesRepository,
-        summaryLogExtractor
+        uploadsRepository,
+        ...repoFactories
       })
 
       consumer.start()
     })
 
-    // Stop consuming on server stop (graceful shutdown)
     server.events.on('stop', async () => {
       server.logger.info({
         message: 'Stopping SQS command queue consumer',
@@ -92,6 +118,7 @@ export const commandQueueConsumerPlugin = {
         consumer.stop()
       }
       sqsClient.destroy()
+      s3Client.destroy()
 
       server.logger.info({
         message: 'SQS command queue consumer stopped',
