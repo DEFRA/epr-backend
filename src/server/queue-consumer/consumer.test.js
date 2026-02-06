@@ -211,8 +211,21 @@ describe('createCommandQueueConsumer', () => {
         await handleMessage(message)
 
         expect(logger.error).toHaveBeenCalledWith({
-          message: 'Failed to parse SQS message body',
-          messageId: 'msg-123',
+          message: 'Failed to parse SQS message body for messageId=msg-123',
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+          }
+        })
+      })
+
+      it('uses unknown as fallback when MessageId is missing', async () => {
+        const message = { Body: 'not valid json' }
+
+        await handleMessage(message)
+
+        expect(logger.error).toHaveBeenCalledWith({
+          message: 'Failed to parse SQS message body for messageId=unknown',
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -227,7 +240,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: "command" is required'
+            message:
+              'Invalid command message for messageId=msg-123: "command" is required'
           })
         )
       })
@@ -242,7 +256,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: "command" is required'
+            message:
+              'Invalid command message for messageId=msg-123: "command" is required'
           })
         )
       })
@@ -257,7 +272,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Invalid command message: "summaryLogId" is required'
+            message:
+              'Invalid command message for messageId=msg-123: "summaryLogId" is required'
           })
         )
       })
@@ -273,7 +289,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message: "command" must be one of [validate, submit]'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
           })
         )
       })
