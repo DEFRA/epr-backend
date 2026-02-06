@@ -245,3 +245,47 @@ export const createReprocessorOutputRowValues = (overrides = {}) => {
     d.addProductWeight
   ]
 }
+
+export const createExporterUploadData = (rows) => ({
+  RECEIVED_LOADS_FOR_EXPORT: {
+    location: { sheet: 'Received', row: 7, column: 'A' },
+    headers: EXPORTER_HEADERS,
+    rows: rows.map((row, index) => ({
+      rowNumber: 8 + index,
+      values: createExporterRowValues(row)
+    }))
+  }
+})
+
+export const createReprocessorInputUploadData = (
+  receivedRows = [],
+  sentOnRows = []
+) => ({
+  RECEIVED_LOADS_FOR_REPROCESSING: {
+    location: { sheet: 'Received', row: 7, column: 'A' },
+    headers: REPROCESSOR_INPUT_RECEIVED_HEADERS,
+    rows: receivedRows.map((row, index) => ({
+      rowNumber: 8 + index,
+      values: createReprocessorInputReceivedRowValues(row)
+    }))
+  },
+  SENT_ON_LOADS: {
+    location: { sheet: 'Sent', row: 7, column: 'A' },
+    headers: REPROCESSOR_INPUT_SENT_ON_HEADERS,
+    rows: sentOnRows.map((row, index) => ({
+      rowNumber: 8 + index,
+      values: createReprocessorInputSentOnRowValues(row)
+    }))
+  }
+})
+
+export const createReprocessorOutputUploadData = (rows) => ({
+  LOADS_OF_PACKAGING_WASTE_REPROCESSED_INTO_PRODUCTS: {
+    location: { sheet: 'Output', row: 7, column: 'A' },
+    headers: REPROCESSOR_OUTPUT_HEADERS,
+    rows: rows.map((row, index) => ({
+      rowNumber: 8 + index,
+      values: createReprocessorOutputRowValues(row)
+    }))
+  }
+})

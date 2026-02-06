@@ -1,17 +1,8 @@
-import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
-import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -23,6 +14,7 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
+  setupIntegrationEnvironment,
   createTestInfrastructure
 } from './test-helpers/index.js'
 
@@ -50,10 +42,13 @@ describe('Advanced validation scenarios', () => {
         let uploadResponse
 
         beforeEach(async () => {
-          const result = await createTestInfrastructure(
+          const env = await setupIntegrationEnvironment({
             organisationId,
             registrationId,
-            {
+            reprocessingType: 'output',
+            registrationNumber: 'REG-123',
+            accreditationNumber: 'ACC-123',
+            extractorData: {
               [fileId]: {
                 meta: createStandardMeta('REPROCESSOR_OUTPUT'),
                 data: {
@@ -83,11 +78,10 @@ describe('Advanced validation scenarios', () => {
                   }
                 }
               }
-            },
-            { reprocessingType: 'output' }
-          )
-          server = result.server
-          summaryLogsRepository = result.summaryLogsRepository
+            }
+          })
+          server = env.server
+          summaryLogsRepository = env.summaryLogsRepository
 
           uploadResponse = await server.inject({
             method: 'POST',
@@ -287,114 +281,73 @@ describe('Advanced validation scenarios', () => {
     const fileId = 'file-combined-errors'
     const filename = 'combined-errors.xlsx'
     let uploadResponse
-    let testSummaryLogsRepository
+    let summaryLogsRepository
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
+      const env = await setupIntegrationEnvironment({
+        organisationId,
+        registrationId,
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-123',
+        extractorData: {
+          [fileId]: {
+            meta: {
+              PROCESSING_TYPE: {
+                value: 'REPROCESSOR_INPUT',
+                location: { sheet: 'Cover', row: 2, column: 'B' }
+              },
+              MATERIAL: {
+                value: 'Paper_and_board',
+                location: { sheet: 'Cover', row: 3, column: 'B' }
+              },
+              TEMPLATE_VERSION: {
+                value: 5,
+                location: { sheet: 'Cover', row: 4, column: 'B' }
+              }
             },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 5,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
-            }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                {
-                  rowNumber: 8,
-                  values: [
-                    999,
-                    'invalid-date',
-                    '03 03 08',
-                    1000,
-                    100,
-                    50,
-                    850,
-                    true,
-                    'WEIGHT',
-                    50,
-                    0.85,
-                    850
-                  ]
-                }
-              ]
+            data: {
+              RECEIVED_LOADS_FOR_REPROCESSING: {
+                location: { sheet: 'Received', row: 7, column: 'B' },
+                headers: [
+                  'ROW_ID',
+                  'DATE_RECEIVED_FOR_REPROCESSING',
+                  'EWC_CODE',
+                  'GROSS_WEIGHT',
+                  'TARE_WEIGHT',
+                  'PALLET_WEIGHT',
+                  'NET_WEIGHT',
+                  'BAILING_WIRE_PROTOCOL',
+                  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                  'WEIGHT_OF_NON_TARGET_MATERIALS',
+                  'RECYCLABLE_PROPORTION_PERCENTAGE',
+                  'TONNAGE_RECEIVED_FOR_RECYCLING'
+                ],
+                rows: [
+                  {
+                    rowNumber: 8,
+                    values: [
+                      999,
+                      'invalid-date',
+                      '03 03 08',
+                      1000,
+                      100,
+                      50,
+                      850,
+                      true,
+                      'WEIGHT',
+                      50,
+                      0.85,
+                      850
+                    ]
+                  }
+                ]
+              }
             }
           }
         }
       })
-
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = env.server
+      summaryLogsRepository = env.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
@@ -444,7 +397,7 @@ describe('Advanced validation scenarios', () => {
 
       it('should persist only meta errors due to short-circuit validation', async () => {
         const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
+          await summaryLogsRepository.findById(summaryLogId)
 
         expect(summaryLog.validation).toBeDefined()
         expect(summaryLog.validation.issues.length).toBeGreaterThan(0)
@@ -463,7 +416,7 @@ describe('Advanced validation scenarios', () => {
 
       it('should demonstrate short-circuit validation stops at fatal meta errors', async () => {
         const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
+          await summaryLogsRepository.findById(summaryLogId)
 
         const issues = summaryLog.validation.issues
 
@@ -482,97 +435,57 @@ describe('Advanced validation scenarios', () => {
     const fileId = 'file-meta-syntax-fatal'
     const filename = 'meta-syntax-fatal.xlsx'
     let uploadResponse
-    let testSummaryLogsRepository
+    let summaryLogsRepository
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG12345',
-            material: 'aluminium',
-            wasteProcessingType: 'reprocessor',
-            accreditation: null
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG12345',
-              location: { sheet: 'Cover', row: 1, column: 'B' }
+      const env = await setupIntegrationEnvironment({
+        organisationId,
+        registrationId,
+        registrationNumber: 'REG12345',
+        accreditationNumber: null,
+        extractorData: {
+          [fileId]: {
+            meta: {
+              REGISTRATION_NUMBER: {
+                value: 'REG12345',
+                location: { sheet: 'Cover', row: 1, column: 'B' }
+              },
+              PROCESSING_TYPE: {
+                value: 'REPROCESSOR_INPUT',
+                location: { sheet: 'Cover', row: 2, column: 'B' }
+              },
+              MATERIAL: {
+                value: 'Aluminium',
+                location: { sheet: 'Cover', row: 3, column: 'B' }
+              }
             },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Aluminium',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: ['INVALID_HEADER'],
-              rows: [
-                {
-                  rowNumber: 8,
-                  values: [
-                    999,
-                    'invalid-date',
-                    'bad-code',
-                    'not-a-number',
-                    'YES',
-                    'WEIGHT',
-                    50,
-                    0.85,
-                    850
-                  ]
-                }
-              ]
+            data: {
+              RECEIVED_LOADS_FOR_REPROCESSING: {
+                location: { sheet: 'Received', row: 7, column: 'B' },
+                headers: ['INVALID_HEADER'],
+                rows: [
+                  {
+                    rowNumber: 8,
+                    values: [
+                      999,
+                      'invalid-date',
+                      'bad-code',
+                      'not-a-number',
+                      'YES',
+                      'WEIGHT',
+                      50,
+                      0.85,
+                      850
+                    ]
+                  }
+                ]
+              }
             }
           }
         }
       })
-
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = env.server
+      summaryLogsRepository = env.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
@@ -642,7 +555,7 @@ describe('Advanced validation scenarios', () => {
 
       it('should demonstrate Level 1 short-circuit: only meta syntax validation ran', async () => {
         const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
+          await summaryLogsRepository.findById(summaryLogId)
 
         const issues = summaryLog.validation.issues
 
@@ -755,19 +668,16 @@ describe('Advanced validation scenarios', () => {
 
   describe('edge case: validation object without issues array', () => {
     const summaryLogId = 'summary-no-issues-array'
-    let summaryLogsRepositoryFactory
     let summaryLogsRepository
     let server
 
     beforeEach(async () => {
-      summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const env = await setupIntegrationEnvironment({
+        organisationId,
+        registrationId
+      })
+      server = env.server
+      summaryLogsRepository = env.summaryLogsRepository
 
       await summaryLogsRepository.insert(
         summaryLogId,
@@ -777,15 +687,6 @@ describe('Advanced validation scenarios', () => {
           validation: {}
         })
       )
-
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory
-        },
-        featureFlags
-      })
     })
 
     it('should return OK with empty issues array when validation.issues is undefined', async () => {

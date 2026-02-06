@@ -13,7 +13,7 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
-  createTestInfrastructure
+  setupIntegrationEnvironment
 } from './test-helpers/index.js'
 
 describe('REPROCESSOR_INPUT data syntax validation', () => {
@@ -38,10 +38,12 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       let uploadResponse
 
       beforeEach(async () => {
-        const result = await createTestInfrastructure(
+        const env = await setupIntegrationEnvironment({
           organisationId,
           registrationId,
-          {
+          registrationNumber: 'REG-123',
+          accreditationNumber: 'ACC-123',
+          extractorData: {
             [fileId]: {
               meta: createStandardMeta('REPROCESSOR_INPUT'),
               data: {
@@ -113,9 +115,9 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
               }
             }
           }
-        )
-        server = result.server
-        summaryLogsRepository = result.summaryLogsRepository
+        })
+        server = env.server
+        summaryLogsRepository = env.summaryLogsRepository
 
         uploadResponse = await server.inject({
           method: 'POST',
@@ -226,10 +228,12 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       let uploadResponse
 
       beforeEach(async () => {
-        const result = await createTestInfrastructure(
+        const env = await setupIntegrationEnvironment({
           organisationId,
           registrationId,
-          {
+          registrationNumber: 'REG-123',
+          accreditationNumber: 'ACC-123',
+          extractorData: {
             [fileId]: {
               meta: createStandardMeta('REPROCESSOR_INPUT'),
               data: {
@@ -332,9 +336,9 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
               }
             }
           }
-        )
-        server = result.server
-        summaryLogsRepository = result.summaryLogsRepository
+        })
+        server = env.server
+        summaryLogsRepository = env.summaryLogsRepository
 
         uploadResponse = await server.inject({
           method: 'POST',

@@ -1,17 +1,23 @@
 import { vi } from 'vitest'
+import { ObjectId } from 'mongodb'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 
@@ -180,6 +186,154 @@ export const createTestInfrastructure = async (
   })
 
   return { server, summaryLogsRepository }
+}
+
+export const setupIntegrationEnvironment = async ({
+  organisationId = new ObjectId().toString(),
+  registrationId = new ObjectId().toString(),
+  accreditationId = new ObjectId().toString(),
+  registrationNumber = 'REG-12345',
+  accreditationNumber = 'ACC-2025-001',
+  extractorData,
+  wasteProcessingType = 'reprocessor',
+  reprocessingType = 'input',
+  material = 'paper',
+  featureFlags: featureFlagsOverrides = {},
+  extraRepositories = {},
+  extraWorkers = {}
+} = {}) => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn()
+  }
+
+  const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+  const uploadsRepository = createInMemoryUploadsRepository()
+  const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+  const testOrg = buildOrganisation({
+    registrations: [
+      buildRegistration({
+        id: registrationId,
+        registrationNumber,
+        status: 'approved',
+        material,
+        wasteProcessingType,
+        reprocessingType,
+        formSubmissionTime: new Date(),
+        submittedToRegulator: 'ea',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        accreditationId
+      })
+    ],
+    accreditations: accreditationId
+      ? [
+          {
+            id: accreditationId,
+            accreditationNumber,
+            validFrom: '2025-01-01',
+            validTo: '2025-12-31'
+          }
+        ]
+      : []
+  })
+  testOrg.id = organisationId
+
+  const organisationsRepository = createInMemoryOrganisationsRepository([
+    testOrg
+  ])()
+
+  const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
+  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
+
+  const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
+    [],
+    { organisationsRepository }
+  )
+  const wasteBalancesRepository = wasteBalancesRepositoryFactory()
+
+  const fileDataMap = { ...extractorData }
+  const summaryLogExtractor = {
+    extract: async (summaryLog) => {
+      const fileId = summaryLog.file.id
+      if (!fileDataMap[fileId]) {
+        throw new Error(`No data found for file ${fileId}`)
+      }
+      return fileDataMap[fileId]
+    }
+  }
+
+  const validateSummaryLog = createSummaryLogsValidator({
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    summaryLogExtractor
+  })
+
+  const featureFlags = createInMemoryFeatureFlags({
+    summaryLogs: true,
+    ...featureFlagsOverrides
+  })
+
+  const syncWasteRecordsFn = syncFromSummaryLog({
+    extractor: summaryLogExtractor,
+    wasteRecordRepository: wasteRecordsRepository,
+    wasteBalancesRepository,
+    organisationsRepository
+  })
+
+  const submitterWorker = createSummaryLogSubmitterWorker({
+    validate: validateSummaryLog,
+    summaryLogsRepository,
+    syncWasteRecords: syncWasteRecordsFn
+  })
+
+  const server = await createTestServer({
+    repositories: {
+      summaryLogsRepository: summaryLogsRepositoryFactory,
+      uploadsRepository,
+      wasteRecordsRepository: wasteRecordsRepositoryFactory,
+      organisationsRepository: () => organisationsRepository,
+      wasteBalancesRepository: wasteBalancesRepositoryFactory,
+      ...extraRepositories
+    },
+    workers: {
+      summaryLogsWorker: submitterWorker,
+      ...extraWorkers
+    },
+    featureFlags
+  })
+
+  return {
+    server,
+    summaryLogsRepository,
+    uploadsRepository,
+    wasteRecordsRepository,
+    wasteBalancesRepository,
+    organisationsRepository,
+    summaryLogExtractor,
+    fileDataMap,
+    submitterWorker,
+    organisationId,
+    registrationId,
+    accreditationId,
+    syncWasteRecords: async (log) => {
+      if (log) {
+        return syncWasteRecordsFn(log)
+      }
+      const logs = await summaryLogsRepository.findAll()
+      for (const l of logs) {
+        if (l.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) {
+          await syncWasteRecordsFn(l.summaryLog)
+        }
+      }
+    }
+  }
 }
 
 export const createSummaryLogSubmitterWorker = ({

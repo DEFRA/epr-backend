@@ -19,11 +19,10 @@ import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/mo
 
 import {
   asStandardUser,
-  EXPORTER_HEADERS,
-  createExporterRowValues,
+  createExporterUploadData,
   performSubmission,
   createWasteBalanceMeta,
-  createSummaryLogSubmitterWorker
+  setupIntegrationEnvironment
 } from './test-helpers/index.js'
 
 /**
@@ -48,111 +47,17 @@ describe('Waste balance arithmetic integration tests', () => {
 
   const sharedMeta = createWasteBalanceMeta('EXPORTER')
 
-  const createUploadData = (rows) => ({
-    RECEIVED_LOADS_FOR_EXPORT: {
-      location: { sheet: 'Received', row: 7, column: 'A' },
-      headers: EXPORTER_HEADERS,
-      rows: rows.map((row, index) => ({
-        rowNumber: 8 + index,
-        values: createExporterRowValues(row)
-      }))
-    }
-  })
+  const createUploadData = createExporterUploadData
 
-  const setupIntegrationEnvironment = async () => {
-    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-      trace: vi.fn(),
-      fatal: vi.fn()
-    }
-    const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
+  const setupIntegrationEnvironmentLocal = async () => {
     // Generate IDs inside setup to ensure consistency
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const accreditationId = new ObjectId().toString()
 
-    const testOrg = buildOrganisation({
-      registrations: [
-        {
-          id: registrationId,
-          registrationNumber: 'REG-12345',
-          status: 'approved',
-          material: 'paper',
-          wasteProcessingType: 'exporter',
-          formSubmissionTime: new Date(),
-          submittedToRegulator: 'ea',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
-          accreditationId
-        }
-      ],
-      accreditations: [
-        {
-          id: accreditationId,
-          accreditationNumber: 'ACC-2025-001',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31'
-        }
-      ]
-    })
-    testOrg.id = organisationId
-
-    const organisationsRepository = createInMemoryOrganisationsRepository([
-      testOrg
-    ])()
-
-    const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
-    const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
-    const wasteBalancesRepositoryFactory =
-      createInMemoryWasteBalancesRepository([], { organisationsRepository })
-    const wasteBalancesRepository = wasteBalancesRepositoryFactory()
-
-    // Dynamic extractor for file data
-    const fileDataMap = {}
-    const dynamicExtractor = {
-      extract: async (summaryLog) => {
-        const fileId = summaryLog.file.id
-        if (!fileDataMap[fileId]) {
-          throw new Error(`No data found for file ${fileId}`)
-        }
-        return fileDataMap[fileId]
-      }
-    }
-
-    const validateSummaryLog = createSummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      summaryLogExtractor: dynamicExtractor
-    })
-
-    const featureFlags = createInMemoryFeatureFlags({
-      summaryLogs: true,
-      lumpyPackagingRecyclingNotes: true
-    })
-
-    const syncWasteRecords = syncFromSummaryLog({
-      extractor: dynamicExtractor,
-      wasteRecordRepository: wasteRecordsRepository,
-      wasteBalancesRepository,
-      organisationsRepository
-    })
-
-    const submitterWorker = createSummaryLogSubmitterWorker({
-      validate: validateSummaryLog,
-      summaryLogsRepository,
-      syncWasteRecords
-    })
-
     // PRN repository
     const prnStorage = new Map()
+
     const lumpyPackagingRecyclingNotesRepository = {
       create: async (prn) => {
         const id = new ObjectId().toHexString()
@@ -195,27 +100,22 @@ describe('Waste balance arithmetic integration tests', () => {
       }
     }
 
-    const server = await createTestServer({
-      repositories: {
-        summaryLogsRepository: summaryLogsRepositoryFactory,
-        uploadsRepository,
-        wasteRecordsRepository: wasteRecordsRepositoryFactory,
-        organisationsRepository: () => organisationsRepository,
-        wasteBalancesRepository: wasteBalancesRepositoryFactory,
+    const env = await setupIntegrationEnvironment({
+      organisationId,
+      registrationId,
+      accreditationId,
+      wasteProcessingType: 'exporter',
+      material: 'paper',
+      featureFlags: { lumpyPackagingRecyclingNotes: true },
+      extraRepositories: {
         lumpyPackagingRecyclingNotesRepository: () =>
           lumpyPackagingRecyclingNotesRepository
-      },
-      workers: {
-        summaryLogsWorker: submitterWorker
-      },
-      featureFlags
+      }
     })
 
     return {
-      server,
-      wasteBalancesRepository,
+      ...env,
       lumpyPackagingRecyclingNotesRepository,
-      fileDataMap,
       organisationId,
       registrationId,
       accreditationId
@@ -278,7 +178,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
   describe('series of credits and debits', () => {
     it('should maintain correct balance through multiple summary log submissions and PRN creations', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Step 1: Submit first summary log with 100 + 200 = 300 tonnes
@@ -346,7 +246,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle interleaved credits and debits correctly', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Interleave summary log submissions and PRN creations
@@ -432,7 +332,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle decimal tonnage values correctly', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100.5 (decimal tonnes from summary log)
@@ -486,7 +386,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should reject PRN creation when tonnage exceeds available balance', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -521,7 +421,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should reject PRN issue when tonnage exceeds total balance', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -576,7 +476,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should deduct from total balance when PRN is issued', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200
@@ -614,7 +514,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle complete PRN lifecycle with multiple PRNs', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 500
@@ -686,7 +586,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle revisions that affect running totals', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Initial submission: 100 tonnes
@@ -753,7 +653,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
   describe('PRN deletion', () => {
     it('should restore available balance when deleting from awaiting_authorisation', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200
@@ -789,7 +689,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should not change balance when discarding from draft', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200
@@ -819,7 +719,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should only restore the deleted PRN tonnage among multiple raised PRNs', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 500
@@ -856,7 +756,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should allow new PRN creation using restored balance', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -894,7 +794,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle deletion interleaved with issuance', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 500
@@ -949,7 +849,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
   describe('transaction audit trail', () => {
     it('should record correct transaction history for series of operations', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -1010,7 +910,7 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should record deletion credit with PRN_CANCELLED entity type', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupIntegrationEnvironmentLocal()
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200

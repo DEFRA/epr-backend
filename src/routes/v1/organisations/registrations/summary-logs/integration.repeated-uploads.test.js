@@ -1,20 +1,11 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
 
-import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -24,7 +15,11 @@ import {
   buildSubmitUrl,
   createUploadPayload,
   pollForValidation,
-  pollWhileStatus
+  pollWhileStatus,
+  setupIntegrationEnvironment,
+  performSubmission,
+  createReprocessorInputUploadData,
+  createWasteBalanceMeta
 } from './test-helpers/index.js'
 
 describe('Repeated uploads of identical data', () => {
@@ -53,272 +48,69 @@ describe('Repeated uploads of identical data', () => {
     const firstFileId = 'file-first-upload'
     const secondFileId = 'file-second-upload'
 
-    let server
-    let wasteRecordsRepository
+    let env
     let secondUploadResponse
 
     beforeEach(async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-        trace: vi.fn(),
-        fatal: vi.fn()
-      }
+      const accreditationId = new ObjectId().toString()
+      const sharedMeta = createWasteBalanceMeta('REPROCESSOR_INPUT')
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-      const uploadsRepository = createInMemoryUploadsRepository()
-
-      // Set up organisation with registration
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-12345',
-            status: 'approved',
-            material: 'glass',
-            glassRecyclingProcess: ['glass_re_melt'],
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO,
-            accreditation: {
-              accreditationNumber: 'ACC-2025-001'
-            }
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      // Define shared metadata and headers
-      const sharedMeta = {
-        REGISTRATION_NUMBER: {
-          value: 'REG-12345',
-          location: { sheet: 'Data', row: 1, column: 'B' }
-        },
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT',
-          location: { sheet: 'Data', row: 2, column: 'B' }
-        },
-        MATERIAL: {
-          value: 'Glass_remelt',
-          location: { sheet: 'Data', row: 3, column: 'B' }
-        },
-        TEMPLATE_VERSION: {
-          value: 5,
-          location: { sheet: 'Data', row: 4, column: 'B' }
-        },
-        ACCREDITATION_NUMBER: {
-          value: 'ACC-2025-001',
-          location: { sheet: 'Data', row: 5, column: 'B' }
-        }
-      }
-
-      const sharedHeaders = [
-        'ROW_ID',
-        'DATE_RECEIVED_FOR_REPROCESSING',
-        'EWC_CODE',
-        'DESCRIPTION_WASTE',
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-        'GROSS_WEIGHT',
-        'TARE_WEIGHT',
-        'PALLET_WEIGHT',
-        'NET_WEIGHT',
-        'BAILING_WIRE_PROTOCOL',
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-        'WEIGHT_OF_NON_TARGET_MATERIALS',
-        'RECYCLABLE_PROPORTION_PERCENTAGE',
-        'TONNAGE_RECEIVED_FOR_RECYCLING',
-        'SUPPLIER_NAME',
-        'SUPPLIER_ADDRESS',
-        'SUPPLIER_POSTCODE',
-        'SUPPLIER_EMAIL',
-        'SUPPLIER_PHONE_NUMBER',
-        'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
-        'YOUR_REFERENCE',
-        'WEIGHBRIDGE_TICKET',
-        'CARRIER_NAME',
-        'CBD_REG_NUMBER',
-        'CARRIER_VEHICLE_REGISTRATION_NUMBER'
-      ]
-
-      // Identical data for both uploads - matching existing test pattern
       const sharedRows = [
-        {
-          rowNumber: 8,
-          values: [
-            1001,
-            '2025-01-15',
-            '03 03 08',
-            'Glass - pre-sorted',
-            'No',
-            1000,
-            100,
-            50,
-            850,
-            'Yes',
-            'Actual weight (100%)',
-            50,
-            0.85,
-            678.98, // (850-50)*0.9985*0.85
-            // Supplementary fields left empty
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            ''
-          ]
-        },
-        {
-          rowNumber: 9,
-          values: [
-            1002,
-            '2025-01-16',
-            '03 03 08',
-            'Glass - pre-sorted',
-            'No',
-            900,
-            90,
-            45,
-            765,
-            'Yes',
-            'Actual weight (100%)',
-            45,
-            0.85,
-            611.082, // (765-45)*0.9985*0.85
-            // Supplementary fields left empty
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            '',
-            ''
-          ]
-        }
+        { rowId: 1001, tonnageReceived: 850 },
+        { rowId: 1002, tonnageReceived: 765 }
       ]
 
-      const identicalUploadData = {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'A' },
-          headers: sharedHeaders,
-          rows: sharedRows
-        }
+      const uploadData = createReprocessorInputUploadData(sharedRows)
+
+      const extractorData = {
+        [firstFileId]: { meta: sharedMeta, data: uploadData },
+        [secondFileId]: { meta: sharedMeta, data: uploadData }
       }
 
-      // Both file IDs return identical data
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [firstFileId]: { meta: sharedMeta, data: identicalUploadData },
-        [secondFileId]: { meta: sharedMeta, data: identicalUploadData }
-      })
-
-      const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository()
-      wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
-      const wasteBalancesRepository = {
+      const mockWasteBalancesRepository = {
         updateWasteBalanceTransactions: vi.fn()
       }
 
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: summaryLogExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        wasteBalancesRepository,
-        organisationsRepository
-      })
-
-      const summaryLogsWorker = {
-        validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
-
-          await syncWasteRecords(summaryLog)
-
-          await summaryLogsRepository.update(summaryLogId, version, {
-            status: SUMMARY_LOG_STATUS.SUBMITTED
-          })
+      env = await setupIntegrationEnvironment({
+        organisationId,
+        registrationId,
+        accreditationId,
+        material: 'paper',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        extractorData,
+        extraRepositories: {
+          wasteBalancesRepository: () => mockWasteBalancesRepository
         }
-      }
-
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory,
-          organisationsRepository: () => organisationsRepository
-        },
-        workers: {
-          summaryLogsWorker
-        },
-        featureFlags
       })
 
       // === First upload: upload, validate, submit ===
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, firstSummaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          firstFileId,
-          'waste-data.xlsx'
-        )
-      })
-
-      await pollForValidation(
-        server,
-        organisationId,
-        registrationId,
-        firstSummaryLogId
-      )
-
-      await server.inject({
-        method: 'POST',
-        url: buildSubmitUrl(organisationId, registrationId, firstSummaryLogId),
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-
-      await pollWhileStatus(
-        server,
+      const firstSubmissionStatus = await performSubmission(
+        env,
         organisationId,
         registrationId,
         firstSummaryLogId,
-        { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
+        firstFileId,
+        {
+          filename: 'waste-data-1.xlsx',
+          uploadData,
+          sharedMeta
+        }
       )
 
+      if (firstSubmissionStatus !== SUMMARY_LOG_STATUS.SUBMITTED) {
+        const response = await env.server.inject({
+          method: 'GET',
+          url: buildGetUrl(organisationId, registrationId, firstSummaryLogId),
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+        throw new Error(
+          `First submission failed validation: ${response.payload}`
+        )
+      }
+
       // === Second upload: upload the same data again ===
-      secondUploadResponse = await server.inject({
+      secondUploadResponse = await env.server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, secondSummaryLogId),
         payload: createUploadPayload(
@@ -331,7 +123,7 @@ describe('Repeated uploads of identical data', () => {
       })
 
       await pollForValidation(
-        server,
+        env.server,
         organisationId,
         registrationId,
         secondSummaryLogId
@@ -343,7 +135,7 @@ describe('Repeated uploads of identical data', () => {
     })
 
     it('should classify all loads as unchanged on second upload', async () => {
-      const response = await server.inject({
+      const response = await env.server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
         ...asStandardUser({ linkedOrgId: organisationId })
@@ -374,14 +166,15 @@ describe('Repeated uploads of identical data', () => {
       { timeout: 60000 },
       async () => {
         // Get waste records before second submission
-        const recordsBefore = await wasteRecordsRepository.findByRegistration(
-          organisationId,
-          registrationId
-        )
+        const recordsBefore =
+          await env.wasteRecordsRepository.findByRegistration(
+            organisationId,
+            registrationId
+          )
         const versionCountsBefore = recordsBefore.map((r) => r.versions.length)
 
         // Submit the second upload
-        await server.inject({
+        await env.server.inject({
           method: 'POST',
           url: buildSubmitUrl(
             organisationId,
@@ -392,7 +185,7 @@ describe('Repeated uploads of identical data', () => {
         })
 
         await pollWhileStatus(
-          server,
+          env.server,
           organisationId,
           registrationId,
           secondSummaryLogId,
@@ -400,10 +193,11 @@ describe('Repeated uploads of identical data', () => {
         )
 
         // Get waste records after second submission
-        const recordsAfter = await wasteRecordsRepository.findByRegistration(
-          organisationId,
-          registrationId
-        )
+        const recordsAfter =
+          await env.wasteRecordsRepository.findByRegistration(
+            organisationId,
+            registrationId
+          )
         const versionCountsAfter = recordsAfter.map((r) => r.versions.length)
 
         // Version counts should be unchanged (no new versions created)

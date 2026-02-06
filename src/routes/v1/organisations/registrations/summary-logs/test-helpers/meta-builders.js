@@ -44,10 +44,11 @@ export const buildMeta = ({
 export const createStandardMeta = (processingType) =>
   buildMeta({ processingType })
 
-export const createWasteBalanceMeta = (processingType) =>
+export const createWasteBalanceMeta = (processingType, options = {}) =>
   buildMeta({
     registrationNumber: 'REG-12345',
     processingType,
     accreditationNumber: 'ACC-2025-001',
-    sheet: 'Data'
+    sheet: 'Data',
+    ...options
   })

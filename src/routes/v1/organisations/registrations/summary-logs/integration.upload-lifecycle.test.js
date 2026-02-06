@@ -18,7 +18,7 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
-  createTestInfrastructure
+  setupIntegrationEnvironment
 } from './test-helpers/index.js'
 
 describe('Summary logs upload lifecycle', () => {
@@ -30,21 +30,20 @@ describe('Summary logs upload lifecycle', () => {
   setupAuthContext()
 
   beforeEach(async () => {
-    organisationId = new ObjectId().toString()
-    registrationId = new ObjectId().toString()
-
-    const result = await createTestInfrastructure(
-      organisationId,
-      registrationId,
-      {
+    const env = await setupIntegrationEnvironment({
+      registrationNumber: 'REG-123',
+      accreditationNumber: 'ACC-123',
+      extractorData: {
         'file-123': {
           meta: createStandardMeta('REPROCESSOR_INPUT'),
           data: {}
         }
       }
-    )
-    server = result.server
-    summaryLogsRepository = result.summaryLogsRepository
+    })
+    server = env.server
+    summaryLogsRepository = env.summaryLogsRepository
+    organisationId = env.organisationId
+    registrationId = env.registrationId
   })
 
   describe('retrieving summary log that has not been uploaded', () => {
