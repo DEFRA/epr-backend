@@ -14,7 +14,7 @@ import {
   pollForValidation,
   createStandardMeta,
   createTestInfrastructure
-} from './integration-test-helpers.js'
+} from './test-helpers/index.js'
 
 describe('REPROCESSOR_INPUT data syntax validation', () => {
   let organisationId

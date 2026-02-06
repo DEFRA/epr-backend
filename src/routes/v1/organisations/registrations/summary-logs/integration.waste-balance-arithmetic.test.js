@@ -24,7 +24,7 @@ import {
   performSubmission,
   createWasteBalanceMeta,
   createSummaryLogSubmitterWorker
-} from './integration-test-helpers.js'
+} from './test-helpers/index.js'
 
 /**
  * Integration tests for waste balance arithmetic across multiple operations.

@@ -19,7 +19,7 @@ import {
   pollForValidation,
   createStandardMeta,
   createTestInfrastructure
-} from './integration-test-helpers.js'
+} from './test-helpers/index.js'
 
 describe('Summary logs upload lifecycle', () => {
   let server

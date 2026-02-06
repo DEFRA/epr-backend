@@ -22,7 +22,7 @@ import {
   performSubmission as sharedPerformSubmission,
   createWasteBalanceMeta,
   createSummaryLogSubmitterWorker
-} from './integration-test-helpers.js'
+} from './test-helpers/index.js'
 
 describe('Submission and placeholder tests (Exporter)', () => {
   let organisationId

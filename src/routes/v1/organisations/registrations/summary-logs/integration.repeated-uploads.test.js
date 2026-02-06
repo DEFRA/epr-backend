@@ -25,7 +25,7 @@ import {
   createUploadPayload,
   pollForValidation,
   pollWhileStatus
-} from './integration-test-helpers.js'
+} from './test-helpers/index.js'
 
 describe('Repeated uploads of identical data', () => {
   let organisationId
@@ -62,7 +62,9 @@ describe('Repeated uploads of identical data', () => {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
-        debug: vi.fn()
+        debug: vi.fn(),
+        trace: vi.fn(),
+        fatal: vi.fn()
       }
 
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -232,6 +234,10 @@ describe('Repeated uploads of identical data', () => {
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      const wasteBalancesRepository = {
+        updateWasteBalanceTransactions: vi.fn()
+      }
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
@@ -241,7 +247,9 @@ describe('Repeated uploads of identical data', () => {
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
-        wasteRecordRepository: wasteRecordsRepository
+        wasteRecordRepository: wasteRecordsRepository,
+        wasteBalancesRepository,
+        organisationsRepository
       })
 
       const summaryLogsWorker = {
