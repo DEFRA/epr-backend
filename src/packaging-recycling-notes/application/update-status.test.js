@@ -265,6 +265,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -309,6 +310,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -354,6 +356,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 75,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -397,6 +400,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 75,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -432,6 +436,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -481,6 +486,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -521,6 +527,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -562,6 +569,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -633,6 +641,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         isExport: false,
+        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -708,6 +717,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           isExport: false,
+          accreditationYear: 2026,
           tonnage: 100,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -819,6 +829,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           isExport: false,
+          accreditationYear: 2026,
           tonnage: 1,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -852,6 +863,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           isExport: false,
+          accreditationYear: 2026,
           tonnage: 50,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -941,6 +953,7 @@ describe('updatePrnStatus', () => {
           material: 'plastic',
           tonnage: 50,
           isExport: true,
+          accreditationYear: 2026,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
         updateStatus: vi.fn().mockResolvedValue({

@@ -243,7 +243,8 @@ export async function updatePrnStatus({
 
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       regulator: accreditation.submittedToRegulator,
-      isExport: prn.isExport
+      isExport: prn.isExport,
+      accreditationYear: prn.accreditationYear
     })
 
     await prnMetrics.recordStatusTransition({
