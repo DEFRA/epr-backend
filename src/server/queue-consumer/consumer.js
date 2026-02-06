@@ -1,7 +1,7 @@
 import Joi from 'joi'
 import { Consumer } from 'sqs-consumer'
-import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
+import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -20,13 +20,21 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @typedef {object} CommandMessage
  * @property {string} command - 'validate' or 'submit'
  * @property {string} summaryLogId - The summary log ID to process
+ * @property {object} [user] - Optional user context for audit trail
  */
+
+const userSchema = Joi.object({
+  id: Joi.string().required(),
+  email: Joi.string().required(),
+  scope: Joi.array().items(Joi.string()).required()
+})
 
 const commandMessageSchema = Joi.object({
   command: Joi.string()
     .valid(SUMMARY_LOG_COMMAND.VALIDATE, SUMMARY_LOG_COMMAND.SUBMIT)
     .required(),
-  summaryLogId: Joi.string().required()
+  summaryLogId: Joi.string().required(),
+  user: userSchema.optional()
 })
 
 /**
@@ -73,11 +81,13 @@ const handleValidateCommand = async (summaryLogId, deps) => {
 const parseCommandMessage = (message, logger) => {
   let parsed
 
+  const messageId = message.MessageId ?? 'unknown'
+
   try {
     parsed = JSON.parse(message.Body ?? '{}')
   } catch {
     logger.error({
-      message: `Failed to parse SQS message body, messageId=${message.MessageId}`,
+      message: `Failed to parse SQS message body for messageId=${messageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -90,7 +100,8 @@ const parseCommandMessage = (message, logger) => {
 
   if (error) {
     logger.error({
-      message: `Invalid command message: ${error.message}, messageId=${message.MessageId}, command=${JSON.stringify(parsed)}`,
+      message: `Invalid command message for messageId=${messageId}: ${error.message}`,
+      command: parsed,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -141,11 +152,11 @@ const createMessageHandler = (deps) => async (message) => {
   const { command: commandType, summaryLogId } = command
 
   logger.info({
-    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}, messageId=${message.MessageId}`,
+    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
+    messageId: message.MessageId,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.START_SUCCESS,
-      reference: summaryLogId
+      action: LOGGING_EVENT_ACTIONS.START_SUCCESS
     }
   })
 
@@ -156,7 +167,7 @@ const createMessageHandler = (deps) => async (message) => {
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await submitSummaryLog(summaryLogId, deps)
+        await submitSummaryLog(summaryLogId, { ...deps, user: command.user })
         break
 
       /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
@@ -165,11 +176,11 @@ const createMessageHandler = (deps) => async (message) => {
     }
 
     logger.info({
-      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId}, messageId=${message.MessageId}`,
+      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId}`,
+      messageId: message.MessageId,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS,
-        reference: summaryLogId
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
   } catch (err) {
@@ -200,12 +211,7 @@ const createMessageHandler = (deps) => async (message) => {
 export const createCommandQueueConsumer = async (deps) => {
   const { sqsClient, queueName, logger } = deps
 
-  const getQueueUrlCommand = new GetQueueUrlCommand({ QueueName: queueName })
-  const { QueueUrl: queueUrl } = await sqsClient.send(getQueueUrlCommand)
-
-  if (!queueUrl) {
-    throw new Error(`Queue not found: ${queueName}`)
-  }
+  const queueUrl = await resolveQueueUrl(sqsClient, queueName)
 
   logger.info({
     message: `Resolved queue URL: ${queueUrl}`,

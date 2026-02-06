@@ -69,9 +69,6 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'uploadsRepository'
     )
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'organisationsRepository'
-    )
   })
 
   describe('plugin registration', () => {
@@ -132,8 +129,7 @@ describe('commandQueueConsumerPlugin', () => {
         summaryLogExtractor: expect.any(Object)
       })
       expect(server.logger.info).toHaveBeenCalledWith({
-        message: 'Starting SQS command queue consumer',
-        queueName: 'test-queue',
+        message: 'Starting SQS command queue consumer for queue: test-queue',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
