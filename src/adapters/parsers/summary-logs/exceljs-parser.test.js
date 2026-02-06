@@ -2123,6 +2123,29 @@ describe('extractCellValue', () => {
     expect(extractCellValue(date)).toBe('2025-12-25')
   })
 
+  describe('invalid Date objects', () => {
+    it('returns null for Date created from NaN', () => {
+      expect(extractCellValue(new Date(NaN))).toBe(null)
+    })
+
+    it('returns null for Date created from invalid string', () => {
+      expect(extractCellValue(new Date('invalid'))).toBe(null)
+    })
+
+    it('returns null for Date created from Infinity', () => {
+      expect(extractCellValue(new Date(Infinity))).toBe(null)
+    })
+
+    it('returns null for formula with invalid date result', () => {
+      expect(
+        extractCellValue({
+          formula: '=TODAY()',
+          result: new Date(NaN)
+        })
+      ).toBe(null)
+    })
+  })
+
   describe('boolean values', () => {
     it('returns true unchanged', () => {
       expect(extractCellValue(true)).toBe(true)

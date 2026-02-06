@@ -4,8 +4,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import {
   generatePrnNumber,
   AGENCY_CODE,
-  OPERATOR_TYPE_CODE,
-  ACCREDITATION_YEAR
+  OPERATOR_TYPE_CODE
 } from './prn-number-generator.js'
 
 describe('prn-number-generator', () => {
@@ -21,10 +20,6 @@ describe('prn-number-generator', () => {
       expect(OPERATOR_TYPE_CODE.REPROCESSOR).toBe('R')
       expect(OPERATOR_TYPE_CODE.EXPORTER).toBe('X')
     })
-
-    it('has hardcoded accreditation year', () => {
-      expect(ACCREDITATION_YEAR).toBe('26')
-    })
   })
 
   describe('generatePrnNumber', () => {
@@ -32,7 +27,8 @@ describe('prn-number-generator', () => {
       it('generates a PRN number in the correct format XXNNnnnnn', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber).toMatch(/^[ENSW][RX]\d{7}$/)
@@ -41,7 +37,8 @@ describe('prn-number-generator', () => {
       it('has exactly 9 characters', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber).toHaveLength(9)
@@ -52,7 +49,8 @@ describe('prn-number-generator', () => {
       it('uses E for EA (England)', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber[0]).toBe('E')
@@ -61,7 +59,8 @@ describe('prn-number-generator', () => {
       it('uses N for NIEA (Northern Ireland)', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.NIEA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber[0]).toBe('N')
@@ -70,7 +69,8 @@ describe('prn-number-generator', () => {
       it('uses S for SEPA (Scotland)', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.SEPA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber[0]).toBe('S')
@@ -79,7 +79,8 @@ describe('prn-number-generator', () => {
       it('uses W for NRW (Wales)', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.NRW,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber[0]).toBe('W')
@@ -87,7 +88,11 @@ describe('prn-number-generator', () => {
 
       it('throws for unknown regulator', () => {
         expect(() =>
-          generatePrnNumber({ regulator: 'unknown', isExport: false })
+          generatePrnNumber({
+            regulator: 'unknown',
+            isExport: false,
+            accreditationYear: 2026
+          })
         ).toThrow('Unknown regulator: unknown')
       })
     })
@@ -96,7 +101,8 @@ describe('prn-number-generator', () => {
       it('uses R for reprocessor (isExport = false)', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber[1]).toBe('R')
@@ -105,7 +111,8 @@ describe('prn-number-generator', () => {
       it('uses X for exporter (isExport = true)', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: true
+          isExport: true,
+          accreditationYear: 2026
         })
 
         expect(prnNumber[1]).toBe('X')
@@ -113,13 +120,24 @@ describe('prn-number-generator', () => {
     })
 
     describe('accreditation year (positions 3-4)', () => {
-      it('uses hardcoded year 26', () => {
+      it('derives 2-digit year from accreditationYear', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber.slice(2, 4)).toBe('26')
+      })
+
+      it('uses last 2 digits of accreditationYear', () => {
+        const prnNumber = generatePrnNumber({
+          regulator: REGULATOR.EA,
+          isExport: false,
+          accreditationYear: 2027
+        })
+
+        expect(prnNumber.slice(2, 4)).toBe('27')
       })
     })
 
@@ -127,7 +145,8 @@ describe('prn-number-generator', () => {
       it('generates 5-digit padded number', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         const sequentialPart = prnNumber.slice(4)
@@ -141,7 +160,8 @@ describe('prn-number-generator', () => {
           numbers.add(
             generatePrnNumber({
               regulator: REGULATOR.EA,
-              isExport: false
+              isExport: false,
+              accreditationYear: 2026
             })
           )
         }
@@ -154,7 +174,8 @@ describe('prn-number-generator', () => {
       it('generates EA reprocessor PRN like ER2612345', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber).toMatch(/^ER26\d{5}$/)
@@ -163,7 +184,8 @@ describe('prn-number-generator', () => {
       it('generates EA exporter PRN like EX2612345', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: true
+          isExport: true,
+          accreditationYear: 2026
         })
 
         expect(prnNumber).toMatch(/^EX26\d{5}$/)
@@ -172,7 +194,8 @@ describe('prn-number-generator', () => {
       it('generates NRW reprocessor PRN like WR2612345', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.NRW,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber).toMatch(/^WR26\d{5}$/)
@@ -184,6 +207,7 @@ describe('prn-number-generator', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
           isExport: false,
+          accreditationYear: 2026,
           suffix: 'A'
         })
 
@@ -194,7 +218,8 @@ describe('prn-number-generator', () => {
       it('does not append suffix when not provided', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
-          isExport: false
+          isExport: false,
+          accreditationYear: 2026
         })
 
         expect(prnNumber).toMatch(/^ER26\d{5}$/)
@@ -205,6 +230,7 @@ describe('prn-number-generator', () => {
         const prnNumber = generatePrnNumber({
           regulator: REGULATOR.EA,
           isExport: false,
+          accreditationYear: 2026,
           suffix: 'Z'
         })
 
