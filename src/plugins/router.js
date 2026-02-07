@@ -12,6 +12,7 @@ import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
+import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 
 const router = {
   plugin: {
@@ -52,7 +53,8 @@ const router = {
           ...Object.values(publicRegisterRoutes),
           ...Object.values(tonnageMonitoringRoutes),
           ...packagingRecyclingNotesRoutesBehindFeatureFlag,
-          ...packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag
+          ...packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag,
+          ...summaryLogUploadsReportRoutes
         ])
       })
     }

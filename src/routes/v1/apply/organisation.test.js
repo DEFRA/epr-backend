@@ -21,6 +21,9 @@ const mockInsertOne = vi.fn().mockResolvedValue({
   insertedId: { toString: () => '12345678901234567890abcd' }
 })
 
+// @vitest-environment node
+/* @vitest-config { "test": { "fileParallelism": false } } */
+
 const mockCountDocuments = vi.fn(() => 1)
 
 vi.mock('@defra/cdp-auditing', () => ({
