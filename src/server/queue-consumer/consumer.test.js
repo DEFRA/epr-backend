@@ -130,7 +130,8 @@ describe('createCommandQueueConsumer', () => {
       expect(Consumer.create).toHaveBeenCalledWith({
         queueUrl: 'http://localhost:4566/000000000000/test-queue',
         sqs: sqsClient,
-        handleMessage: expect.any(Function)
+        handleMessage: expect.any(Function),
+        handleMessageTimeout: 300000
       })
     })
 
@@ -154,6 +155,15 @@ describe('createCommandQueueConsumer', () => {
 
       expect(mockConsumer.on).toHaveBeenCalledWith(
         'processing_error',
+        expect.any(Function)
+      )
+    })
+
+    it('attaches timeout_error handler', async () => {
+      await createConsumer()
+
+      expect(mockConsumer.on).toHaveBeenCalledWith(
+        'timeout_error',
         expect.any(Function)
       )
     })
@@ -190,6 +200,101 @@ describe('createCommandQueueConsumer', () => {
           action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
         }
       })
+    })
+
+    it('logs timeout error with command info and marks as failed', async () => {
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'validate',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.error).toHaveBeenCalledWith({
+        err: error,
+        message: 'Command timed out: validate for summaryLogId=summary-123',
+        messageId: 'msg-123',
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+        }
+      })
+    })
+
+    it('marks summary log as validation_failed on validate timeout', async () => {
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+      })
+
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'validate',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+        })
+      )
+    })
+
+    it('marks summary log as submission_failed on submit timeout', async () => {
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING }
+      })
+
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'submit',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+        })
+      )
+    })
+
+    it('logs timeout with messageId when message body is invalid', async () => {
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-456',
+        Body: 'not json'
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Command timed out for messageId=msg-456'
+        })
+      )
     })
   })
 
