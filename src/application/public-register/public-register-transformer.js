@@ -13,7 +13,7 @@ import {
   formatTonnageBand,
   getAnnexIIProcess,
   uppercaseString
-} from './formatters.js'
+} from '#common/helpers/formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'

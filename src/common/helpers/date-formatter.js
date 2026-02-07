@@ -50,3 +50,15 @@ export function formatDateTimeDots(date) {
   const partMap = Object.fromEntries(parts.map((p) => [p.type, p.value]))
   return `${partMap.day}.${partMap.month}.${partMap.year} ${partMap.hour}:${partMap.minute}`
 }
+
+/**
+ * Converts a Date or ISO string to ISO string, or returns empty string if null/undefined
+ * @param {Date|string|null|undefined} date
+ * @returns {string}
+ */
+export function toISOString(date) {
+  if (!date) {
+    return ''
+  }
+  return date instanceof Date ? date.toISOString() : date
+}
