@@ -16,6 +16,10 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 
+const ONE_MINUTE = 60_000
+const COMMAND_TIMEOUT_MINUTES = 5
+const COMMAND_TIMEOUT_MS = COMMAND_TIMEOUT_MINUTES * ONE_MINUTE
+
 /**
  * @typedef {object} CommandMessage
  * @property {string} command - 'validate' or 'submit'
@@ -221,7 +225,8 @@ export const createCommandQueueConsumer = async (deps) => {
   const consumer = Consumer.create({
     queueUrl,
     sqs: sqsClient,
-    handleMessage: /** @type {*} */ (createMessageHandler(deps))
+    handleMessage: /** @type {*} */ (createMessageHandler(deps)),
+    handleMessageTimeout: COMMAND_TIMEOUT_MS
   })
 
   consumer.on('error', (err) => {
@@ -244,6 +249,31 @@ export const createCommandQueueConsumer = async (deps) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
+  })
+
+  consumer.on('timeout_error', async (err, message) => {
+    const command = parseCommandMessage(message, logger)
+
+    logger.error({
+      err,
+      message: command
+        ? `Command timed out: ${command.command} for summaryLogId=${command.summaryLogId}`
+        : `Command timed out for messageId=${message.MessageId}`,
+      messageId: message.MessageId,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    if (command) {
+      await markCommandAsFailed(
+        command.command,
+        command.summaryLogId,
+        deps.summaryLogsRepository,
+        logger
+      )
+    }
   })
 
   return consumer
