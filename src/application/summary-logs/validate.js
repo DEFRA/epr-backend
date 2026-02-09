@@ -12,7 +12,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
-import { PermanentError } from '#domain/summary-logs/permanent-error.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'

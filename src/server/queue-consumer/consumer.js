@@ -13,7 +13,7 @@ import {
 } from '#domain/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
-import { PermanentError } from '#domain/summary-logs/permanent-error.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */

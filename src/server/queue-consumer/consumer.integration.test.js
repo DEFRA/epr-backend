@@ -8,7 +8,7 @@ import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
-import { PermanentError } from '#domain/summary-logs/permanent-error.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')

@@ -2,7 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { PermanentError } from '#domain/summary-logs/permanent-error.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'

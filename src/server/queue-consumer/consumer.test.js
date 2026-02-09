@@ -3,7 +3,7 @@ import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { PermanentError } from '#domain/summary-logs/permanent-error.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES

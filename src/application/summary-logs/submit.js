@@ -2,7 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { PermanentError } from '#domain/summary-logs/permanent-error.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
