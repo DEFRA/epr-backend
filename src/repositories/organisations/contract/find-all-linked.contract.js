@@ -1,16 +1,6 @@
 import crypto from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation } from './test-data.js'
-
-const buildLinkedDefraOrg = (orgId, orgName) => ({
-  orgId,
-  orgName,
-  linkedBy: {
-    email: 'linker@example.com',
-    id: crypto.randomUUID()
-  },
-  linkedAt: new Date().toISOString()
-})
+import { buildLinkedDefraOrg, buildOrganisation } from './test-data.js'
 
 export const testFindAllLinkedBehaviour = (it) => {
   describe('findAllLinked', () => {
