@@ -1,4 +1,3 @@
-export { packagingRecyclingNotesAccept } from './accept.js'
 export { packagingRecyclingNotesList } from './get.js'
 export { packagingRecyclingNoteById } from './get-by-id.js'
 export { packagingRecyclingNotesCreate } from './post.js'

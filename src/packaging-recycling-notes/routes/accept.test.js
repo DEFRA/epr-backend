@@ -83,7 +83,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
             lumpyPackagingRecyclingNotesRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true
+          packagingRecyclingNotesExternalApi: true
         })
       })
     })

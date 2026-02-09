@@ -347,6 +347,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_LUMPY_PACKAGING_RECYCLING_NOTES'
     },
+    packagingRecyclingNotesExternalApi: {
+      doc: 'Feature Flag: Enable external PRN acceptance API endpoint',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES_EXTERNAL_API'
+    },
     sqsCommands: {
       doc: 'Feature Flag: Use SQS command executor instead of Piscina workers',
       format: Boolean,

@@ -88,6 +88,27 @@ describe('createInMemoryFeatureFlags', () => {
     })
   })
 
+  describe('isPackagingRecyclingNotesExternalApiEnabled', () => {
+    it('returns true when packagingRecyclingNotesExternalApi flag is enabled', () => {
+      const flags = createInMemoryFeatureFlags({
+        packagingRecyclingNotesExternalApi: true
+      })
+      expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(true)
+    })
+
+    it('returns false when packagingRecyclingNotesExternalApi flag is disabled', () => {
+      const flags = createInMemoryFeatureFlags({
+        packagingRecyclingNotesExternalApi: false
+      })
+      expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(false)
+    })
+
+    it('returns false when packagingRecyclingNotesExternalApi flag is not provided', () => {
+      const flags = createInMemoryFeatureFlags({})
+      expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(false)
+    })
+  })
+
   describe('isCreateLumpyPackagingRecyclingNotesEnabled', () => {
     it('returns true when lumpyPackagingRecyclingNotes flag is enabled', () => {
       const flags = createInMemoryFeatureFlags({
