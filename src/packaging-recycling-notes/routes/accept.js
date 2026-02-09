@@ -7,6 +7,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
+import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
@@ -54,12 +56,22 @@ export const acceptPrn = {
         ? new Date(payload.acceptedAt)
         : new Date()
 
-      await lumpyPackagingRecyclingNotesRepository.updateStatus({
-        id: prn.id,
-        status: PRN_STATUS.ACCEPTED,
-        updatedBy: { id: 'rpd', name: 'RPD' },
-        updatedAt: acceptedAt
+      const updatedPrn =
+        await lumpyPackagingRecyclingNotesRepository.updateStatus({
+          id: prn.id,
+          status: PRN_STATUS.ACCEPTED,
+          updatedBy: { id: 'rpd', name: 'RPD' },
+          updatedAt: acceptedAt
+        })
+
+      await prnMetrics.recordStatusTransition({
+        fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        toStatus: PRN_STATUS.ACCEPTED,
+        material: prn.material,
+        isExport: prn.isExport
       })
+
+      await auditPrnStatusTransition(request, prn.id, prn, updatedPrn)
 
       logger.info({
         message: `PRN accepted: ${prnNumber}`,
