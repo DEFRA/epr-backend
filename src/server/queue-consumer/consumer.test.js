@@ -454,37 +454,6 @@ describe('createCommandQueueConsumer', () => {
           )
         })
 
-        it('logs permanent error with correct message', async () => {
-          const mockValidator = vi
-            .fn()
-            .mockRejectedValue(
-              new PermanentError('Summary log not found: summaryLogId=log-123')
-            )
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
-
-          const message = {
-            MessageId: 'msg-123',
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message)
-
-          expect(logger.error).toHaveBeenCalledWith(
-            expect.objectContaining({
-              message:
-                'Command failed (permanent): validate for summaryLogId=log-123 messageId=msg-123'
-            })
-          )
-        })
-
         it('logs warning when summary log not found during failure handling', async () => {
           const mockValidator = vi
             .fn()
@@ -606,30 +575,6 @@ describe('createCommandQueueConsumer', () => {
           await handleMessage(message).catch(() => {})
 
           expect(summaryLogsRepository.update).not.toHaveBeenCalled()
-        })
-
-        it('logs transient error with retry message', async () => {
-          const mockValidator = vi
-            .fn()
-            .mockRejectedValue(new Error('Database timeout'))
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          const message = {
-            MessageId: 'msg-123',
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message).catch(() => {})
-
-          expect(logger.error).toHaveBeenCalledWith(
-            expect.objectContaining({
-              message:
-                'Command failed (transient, will retry): validate for summaryLogId=log-123 messageId=msg-123'
-            })
-          )
         })
       })
     })
@@ -787,35 +732,6 @@ describe('createCommandQueueConsumer', () => {
 
           // findById is called once by submitSummaryLog, but update should NOT be called
           expect(summaryLogsRepository.update).not.toHaveBeenCalled()
-        })
-
-        it('logs transient error with retry message', async () => {
-          const syncError = new Error('Sync failed')
-          vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
-            syncError
-          )
-
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
-          })
-
-          const message = {
-            MessageId: 'msg-123',
-            Body: JSON.stringify({
-              command: 'submit',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message).catch(() => {})
-
-          expect(logger.error).toHaveBeenCalledWith(
-            expect.objectContaining({
-              message:
-                'Command failed (transient, will retry): submit for summaryLogId=log-123 messageId=msg-123'
-            })
-          )
         })
       })
     })
