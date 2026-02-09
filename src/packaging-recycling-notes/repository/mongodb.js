@@ -1,21 +1,10 @@
 import { ObjectId } from 'mongodb'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { PrnNumberConflictError } from './port.js'
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-
-/**
- * Error thrown when a PRN number already exists in the database.
- * Callers can catch this to retry with a different PRN number.
- */
-export class PrnNumberConflictError extends Error {
-  constructor(prnNumber) {
-    super(`PRN number already exists: ${prnNumber}`)
-    this.name = 'PrnNumberConflictError'
-    this.prnNumber = prnNumber
-  }
-}
 
 /**
  * Ensures the prnNumber index exists with the unique constraint.
@@ -82,6 +71,26 @@ const findById = async (db, id) => {
   const doc = await db
     .collection(COLLECTION_NAME)
     .findOne({ _id: ObjectId.createFromHexString(id) })
+
+  if (!doc) {
+    return null
+  }
+
+  return /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    /** @type {unknown} */ ({
+      ...doc,
+      id: doc._id.toHexString()
+    })
+  )
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {string} prnNumber
+ * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
+ */
+const findByPrnNumber = async (db, prnNumber) => {
+  const doc = await db.collection(COLLECTION_NAME).findOne({ prnNumber })
 
   if (!doc) {
     return null
@@ -206,6 +215,7 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
 
   return () => ({
     findById: (id) => findById(db, id),
+    findByPrnNumber: (prnNumber) => findByPrnNumber(db, prnNumber),
     create: (prn) => create(db, prn),
     findByAccreditation: (accreditationId) =>
       findByAccreditation(db, accreditationId),

@@ -6,7 +6,7 @@ import {
   PRN_STATUS_TRANSITIONS
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
-import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/mongodb.js'
+import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 
 /** Suffixes A-Z for collision avoidance */
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')

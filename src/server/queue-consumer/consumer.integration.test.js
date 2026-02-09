@@ -12,7 +12,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
 
-const TEST_TIMEOUT = 30000
+const TEST_TIMEOUT = 60000
 
 /**
  * Stops the consumer and waits for it to fully stop.

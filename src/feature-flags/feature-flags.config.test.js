@@ -62,6 +62,24 @@ describe('createConfigFeatureFlags', () => {
     })
   })
 
+  it('returns true when packagingRecyclingNotesExternalApi flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.packagingRecyclingNotesExternalApi'
+    )
+  })
+
+  it('returns false when packagingRecyclingNotesExternalApi flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(false)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.packagingRecyclingNotesExternalApi'
+    )
+  })
+
   it('returns true when lumpyPackagingRecyclingNotes flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)

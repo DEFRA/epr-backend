@@ -3,6 +3,8 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
+const PRN_SUFFIX_DIGITS = 5
+const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 
 /**
  * Builds a valid PRN for testing with sensible defaults.
@@ -90,6 +92,44 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedAt: now,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' }
+        }
+      ],
+      ...overrides.status
+    }
+  })
+}
+
+/**
+ * Builds a PRN in awaiting_acceptance status (issued, with PRN number).
+ * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ */
+export const buildAwaitingAcceptancePrn = (overrides = {}) => {
+  const now = new Date()
+  return buildPrn({
+    prnNumber: `ER26${Date.now().toString().slice(-PRN_SUFFIX_DIGITS)}`,
+    issuedAt: now,
+    issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
+    ...overrides,
+    status: {
+      currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      history: [
+        {
+          status: PRN_STATUS.DRAFT,
+          updatedAt: new Date(
+            now.getTime() -
+              AWAITING_ACCEPTANCE_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
+          ),
+          updatedBy: DEFAULT_CREATOR.id
+        },
+        {
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
+          updatedBy: 'user-raiser'
+        },
+        {
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedAt: now,
+          updatedBy: 'user-issuer'
         }
       ],
       ...overrides.status
