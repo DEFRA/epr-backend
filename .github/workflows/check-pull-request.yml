@@ -110,7 +110,7 @@ jobs:
   test-journey:
     name: Run Journey Tests
     runs-on: ubuntu-latest
-    needs: [pr-validator, detect-changes]
+    needs: [pr-prep, detect-changes]
     if: needs.detect-changes.outputs.docs-only != 'true'
     steps:
       - uses: actions/checkout@v6
