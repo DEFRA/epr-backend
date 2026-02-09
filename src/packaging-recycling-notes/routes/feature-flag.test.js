@@ -5,6 +5,9 @@ import {
   createFormCollections,
   createLockManagerIndex
 } from '#root/common/helpers/collections/create-update.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { packagingRecyclingNotesAcceptPath } from '#packaging-recycling-notes/routes/accept.js'
 
 /**
  * Tests for Lumpy Packaging Recycling Notes feature flag.
@@ -15,6 +18,9 @@ import {
  * - Different routes: /packaging-recycling-notes
  *
  * No code is shared between the two implementations.
+ *
+ * External API endpoints (e.g. accept) are gated behind a separate flag:
+ * isPackagingRecyclingNotesExternalApiEnabled
  */
 
 vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
@@ -86,5 +92,37 @@ describe('Packaging Recycling Notes', () => {
     expect(
       server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
     ).toBe(false)
+  })
+
+  describe('external API flag', () => {
+    const hasAcceptRoute = (server) =>
+      server
+        .table()
+        .some((route) => route.path === packagingRecyclingNotesAcceptPath)
+
+    it('registers accept route when external API flag is enabled', async () => {
+      const server = await createTestServer({
+        featureFlags: createInMemoryFeatureFlags({
+          packagingRecyclingNotesExternalApi: true
+        })
+      })
+
+      expect(hasAcceptRoute(server)).toBe(true)
+
+      await server.stop()
+    })
+
+    it('does not register accept route when external API flag is disabled', async () => {
+      const server = await createTestServer({
+        featureFlags: createInMemoryFeatureFlags({
+          lumpyPackagingRecyclingNotes: true,
+          packagingRecyclingNotesExternalApi: false
+        })
+      })
+
+      expect(hasAcceptRoute(server)).toBe(false)
+
+      await server.stop()
+    })
   })
 })

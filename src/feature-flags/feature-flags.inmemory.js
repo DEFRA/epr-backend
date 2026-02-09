@@ -19,5 +19,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isCreateLumpyPackagingRecyclingNotesEnabled() {
     return flags.lumpyPackagingRecyclingNotes ?? false
+  },
+  isPackagingRecyclingNotesExternalApiEnabled() {
+    return flags.packagingRecyclingNotesExternalApi ?? false
   }
 })
