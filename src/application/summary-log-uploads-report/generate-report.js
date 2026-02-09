@@ -13,8 +13,9 @@ import { toISOString } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
-const TEST_ORGANISATIONS = new Set(JSON.parse(config.get('testOrganisations')))
+const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
 /**
