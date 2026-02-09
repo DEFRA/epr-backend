@@ -5,7 +5,7 @@ export const externalApiAuthPlugin = {
     register: (server) => {
       server.auth.scheme('api-gateway-client-scheme', () => ({
         authenticate: (_request, h) => {
-          // TODO(Defra-1yym): Replace stub with Cognito client ID verification.
+          // TODO(PAE-1058): Replace stub with Cognito client ID verification.
           // The CDP API gateway validates the JWT signature before requests
           // reach us. This stub should be replaced with logic that:
           // 1. Extracts the Bearer token from the Authorization header
