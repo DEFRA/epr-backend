@@ -6,13 +6,14 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_NUMBER_MAX_LENGTH,
+  PRN_STATUS
+} from '#packaging-recycling-notes/domain/model.js'
 import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
-
-const PRN_NUMBER_MAX_LENGTH = 20
 
 export const packagingRecyclingNotesAcceptPath =
   '/v1/packaging-recycling-notes/{prnNumber}/accept'
