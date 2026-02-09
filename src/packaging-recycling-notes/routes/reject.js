@@ -15,18 +15,18 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
-export const packagingRecyclingNotesAcceptPath =
-  '/v1/packaging-recycling-notes/{prnNumber}/accept'
+export const packagingRecyclingNotesRejectPath =
+  '/v1/packaging-recycling-notes/{prnNumber}/reject'
 
-const packagingRecyclingNotesAcceptPayloadSchema = Joi.object({
-  acceptedAt: Joi.string().isoDate().optional().messages({
-    'string.isoDate': 'acceptedAt must be a valid ISO 8601 date-time'
+const packagingRecyclingNotesRejectPayloadSchema = Joi.object({
+  rejectedAt: Joi.string().isoDate().optional().messages({
+    'string.isoDate': 'rejectedAt must be a valid ISO 8601 date-time'
   })
 }).allow(null)
 
-export const packagingRecyclingNotesAccept = {
+export const packagingRecyclingNotesReject = {
   method: 'POST',
-  path: packagingRecyclingNotesAcceptPath,
+  path: packagingRecyclingNotesRejectPath,
   options: {
     auth: { strategy: 'api-gateway-client' },
     tags: ['api'],
@@ -34,7 +34,7 @@ export const packagingRecyclingNotesAccept = {
       params: Joi.object({
         prnNumber: Joi.string().max(PRN_NUMBER_MAX_LENGTH).required()
       }),
-      payload: packagingRecyclingNotesAcceptPayloadSchema
+      payload: packagingRecyclingNotesRejectPayloadSchema
     }
   },
   handler: async (request, h) => {
@@ -56,21 +56,21 @@ export const packagingRecyclingNotesAccept = {
         )
       }
 
-      const acceptedAt = payload?.acceptedAt
-        ? new Date(payload.acceptedAt)
+      const rejectedAt = payload?.rejectedAt
+        ? new Date(payload.rejectedAt)
         : new Date()
 
       const updatedPrn =
         await lumpyPackagingRecyclingNotesRepository.updateStatus({
           id: prn.id,
-          status: PRN_STATUS.ACCEPTED,
+          status: PRN_STATUS.AWAITING_CANCELLATION,
           updatedBy: { id: 'rpd', name: 'RPD' },
-          updatedAt: acceptedAt
+          updatedAt: rejectedAt
         })
 
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        toStatus: PRN_STATUS.ACCEPTED,
+        toStatus: PRN_STATUS.AWAITING_CANCELLATION,
         material: prn.material,
         isExport: prn.isExport
       })
@@ -78,7 +78,7 @@ export const packagingRecyclingNotesAccept = {
       await auditPrnStatusTransition(request, prn.id, prn, updatedPrn)
 
       logger.info({
-        message: `PRN accepted: ${prnNumber}`,
+        message: `PRN rejected: ${prnNumber}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -94,7 +94,7 @@ export const packagingRecyclingNotesAccept = {
 
       logger.error({
         err: error,
-        message: `Failure on ${packagingRecyclingNotesAcceptPath}`,
+        message: `Failure on ${packagingRecyclingNotesRejectPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -102,7 +102,7 @@ export const packagingRecyclingNotesAccept = {
       })
 
       throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesAcceptPath}`
+        `Failure on ${packagingRecyclingNotesRejectPath}`
       )
     }
   }

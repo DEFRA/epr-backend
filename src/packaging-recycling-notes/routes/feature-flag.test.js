@@ -8,6 +8,7 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { packagingRecyclingNotesAcceptPath } from '#packaging-recycling-notes/routes/accept.js'
+import { packagingRecyclingNotesRejectPath } from '#packaging-recycling-notes/routes/reject.js'
 
 /**
  * Tests for Lumpy Packaging Recycling Notes feature flag.
@@ -95,10 +96,8 @@ describe('Packaging Recycling Notes', () => {
   })
 
   describe('external API flag', () => {
-    const hasAcceptRoute = (server) =>
-      server
-        .table()
-        .some((route) => route.path === packagingRecyclingNotesAcceptPath)
+    const hasRoute = (server, path) =>
+      server.table().some((route) => route.path === path)
 
     it('registers accept route when external API flag is enabled', async () => {
       const server = await createTestServer({
@@ -107,7 +106,7 @@ describe('Packaging Recycling Notes', () => {
         })
       })
 
-      expect(hasAcceptRoute(server)).toBe(true)
+      expect(hasRoute(server, packagingRecyclingNotesAcceptPath)).toBe(true)
 
       await server.stop()
     })
@@ -120,7 +119,32 @@ describe('Packaging Recycling Notes', () => {
         })
       })
 
-      expect(hasAcceptRoute(server)).toBe(false)
+      expect(hasRoute(server, packagingRecyclingNotesAcceptPath)).toBe(false)
+
+      await server.stop()
+    })
+
+    it('registers reject route when external API flag is enabled', async () => {
+      const server = await createTestServer({
+        featureFlags: createInMemoryFeatureFlags({
+          packagingRecyclingNotesExternalApi: true
+        })
+      })
+
+      expect(hasRoute(server, packagingRecyclingNotesRejectPath)).toBe(true)
+
+      await server.stop()
+    })
+
+    it('does not register reject route when external API flag is disabled', async () => {
+      const server = await createTestServer({
+        featureFlags: createInMemoryFeatureFlags({
+          lumpyPackagingRecyclingNotes: true,
+          packagingRecyclingNotesExternalApi: false
+        })
+      })
+
+      expect(hasRoute(server, packagingRecyclingNotesRejectPath)).toBe(false)
 
       await server.stop()
     })
