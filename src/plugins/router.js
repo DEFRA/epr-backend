@@ -10,6 +10,7 @@ import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
+import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 
 const router = {
@@ -35,7 +36,7 @@ const router = {
 
         const packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag =
           featureFlags.isPackagingRecyclingNotesExternalApiEnabled()
-            ? [packagingRecyclingNotesAccept]
+            ? [packagingRecyclingNotesAccept, packagingRecyclingNotesReject]
             : []
 
         server.route([

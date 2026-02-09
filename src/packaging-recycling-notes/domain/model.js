@@ -1,5 +1,7 @@
 /** @import { Material } from '#domain/organisations/model.js' */
 
+export const PRN_NUMBER_MAX_LENGTH = 20
+
 /**
  * Status values for Packaging Recycling Notes (PRNs)
  * @typedef {typeof PRN_STATUS[keyof typeof PRN_STATUS]} PrnStatus

@@ -14,6 +14,7 @@ import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
+import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags } from '#plugins/feature-flags.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
@@ -156,6 +157,7 @@ async function createServer(options = {}) {
     pulse,
     Jwt,
     authPlugin,
+    externalApiAuthPlugin,
     authFailureLogger
   ]
 
