@@ -79,6 +79,99 @@ export const testFindAllLinkedBehaviour = (it) => {
       )
     })
 
+    it('returns only linked orgs matching name filter', async () => {
+      const acmeOrg = buildOrganisation({
+        companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra One'
+        )
+      })
+      const betaOrg = buildOrganisation({
+        companyDetails: { name: 'Beta Corp', registrationNumber: 'REG002' },
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra Two'
+        )
+      })
+
+      await Promise.all([acmeOrg, betaOrg].map((org) => repository.insert(org)))
+
+      const result = await repository.findAllLinked({ name: 'acme' })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(acmeOrg.id)
+    })
+
+    it('name filter is case-insensitive', async () => {
+      const org = buildOrganisation({
+        companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra Org'
+        )
+      })
+      await repository.insert(org)
+
+      const result = await repository.findAllLinked({ name: 'ACME' })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(org.id)
+    })
+
+    it('name filter matches partial names', async () => {
+      const org = buildOrganisation({
+        companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra Org'
+        )
+      })
+      await repository.insert(org)
+
+      const result = await repository.findAllLinked({ name: 'Acm' })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(org.id)
+    })
+
+    it('returns empty when name filter matches nothing', async () => {
+      const org = buildOrganisation({
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra Org'
+        )
+      })
+      await repository.insert(org)
+
+      const result = await repository.findAllLinked({ name: 'zzz' })
+
+      expect(result).toEqual([])
+    })
+
+    it('returns all linked orgs when no filter provided', async () => {
+      const org1 = buildOrganisation({
+        companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra One'
+        )
+      })
+      const org2 = buildOrganisation({
+        companyDetails: { name: 'Beta Corp', registrationNumber: 'REG002' },
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra Two'
+        )
+      })
+
+      await Promise.all([org1, org2].map((org) => repository.insert(org)))
+
+      const result = await repository.findAllLinked()
+
+      expect(result).toHaveLength(2)
+    })
+
     it('returns organisations with computed status field', async () => {
       const linkedOrg = buildOrganisation({
         linkedDefraOrganisation: buildLinkedDefraOrg(

@@ -165,13 +165,21 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
-const performFindAllLinked = (db) => async () => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .find({ linkedDefraOrganisation: { $exists: true } })
-    .toArray()
-  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
-}
+const performFindAllLinked =
+  (db) =>
+  async (filter = {}) => {
+    const query = { linkedDefraOrganisation: { $exists: true } }
+
+    if (filter.name) {
+      query['companyDetails.name'] = {
+        $regex: escapeRegex(filter.name),
+        $options: 'i'
+      }
+    }
+
+    const docs = await db.collection(COLLECTION_NAME).find(query).toArray()
+    return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+  }
 
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
