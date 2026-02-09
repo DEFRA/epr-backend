@@ -114,8 +114,30 @@ jobs:
     if: needs.detect-changes.outputs.docs-only != 'true'
     steps:
       - uses: actions/checkout@v6
+
+      - name: Check for matching journey test branch
+        id: journey-branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          if git ls-remote --heads https://github.com/DEFRA/epr-backend-journey-tests.git "$BRANCH" | grep -q .; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Record build start time
+        id: build-timer
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - run: docker build -t defradigital/epr-backend:${{github.sha}} .
-      - uses: DEFRA/epr-backend-journey-tests/run-journey-tests@main
+
+      - name: Record test start time
+        id: test-timer
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Run journey tests on ${{ steps.journey-branch.outputs.ref }}
+        # FIXME reset to main before merging!
+        uses: DEFRA/epr-backend-journey-tests/run-journey-tests@PAE-1053-use-journey-tests-on-matching-branch
         with:
           epr-backend: ${{github.sha}}
-          branch: main
+          branch: ${{ steps.journey-branch.outputs.ref }}
