@@ -28,7 +28,7 @@ export const packagingRecyclingNotesReject = {
   method: 'POST',
   path: packagingRecyclingNotesRejectPath,
   options: {
-    auth: false,
+    auth: { strategy: 'api-gateway-client' },
     tags: ['api'],
     validate: {
       params: Joi.object({
