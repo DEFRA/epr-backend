@@ -2,7 +2,10 @@ import crypto from 'node:crypto'
 import { describe, it, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildLinkedDefraOrg,
+  buildOrganisation
+} from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -11,16 +14,6 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { linkedOrganisationsGetAllPath } from './get.js'
 
 const { validToken } = entraIdMockAuthTokens
-
-const buildLinkedDefraOrg = (orgId, orgName) => ({
-  orgId,
-  orgName,
-  linkedBy: {
-    email: 'linker@example.com',
-    id: crypto.randomUUID()
-  },
-  linkedAt: new Date().toISOString()
-})
 
 describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
   setupAuthContext()
