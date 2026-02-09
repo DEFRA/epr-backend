@@ -3,6 +3,7 @@ import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { PermanentError } from '#domain/summary-logs/permanent-error.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -420,99 +421,215 @@ describe('createCommandQueueConsumer', () => {
         )
       })
 
-      it('marks as validation_failed when validate command fails', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+      describe('permanent errors', () => {
+        it('marks as validation_failed when validate command fails with PermanentError', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(
+              new PermanentError('Summary log not found: summaryLogId=log-123')
+            )
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-        })
-
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'validate', summaryLogId: 'log-123' })
-        }
-
-        await handleMessage(message)
-
-        expect(summaryLogsRepository.update).toHaveBeenCalledWith(
-          'log-123',
-          1,
-          expect.objectContaining({
-            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
           })
-        )
-      })
 
-      it('logs warning when summary log not found during failure handling', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
 
-        summaryLogsRepository.findById.mockResolvedValue(null)
+          await handleMessage(message)
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'validate', summaryLogId: 'log-123' })
-        }
+          expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+            'log-123',
+            1,
+            expect.objectContaining({
+              status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            })
+          )
+        })
 
-        await handleMessage(message)
+        it('logs permanent error with correct message', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(
+              new PermanentError('Summary log not found: summaryLogId=log-123')
+            )
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        expect(logger.warn).toHaveBeenCalledWith({
-          message:
-            'Cannot mark as validation_failed: summary log not found, summaryLogId=log-123'
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message)
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message:
+                'Command failed (permanent): validate for summaryLogId=log-123 messageId=msg-123'
+            })
+          )
+        })
+
+        it('logs warning when summary log not found during failure handling', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(
+              new PermanentError('Summary log not found: summaryLogId=log-123')
+            )
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue(null)
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message)
+
+          expect(logger.warn).toHaveBeenCalledWith({
+            message:
+              'Cannot mark as validation_failed: summary log not found, summaryLogId=log-123'
+          })
+        })
+
+        it('skips marking as failed if not in processing status', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(
+              new PermanentError('Summary log not found: summaryLogId=log-123')
+            )
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message)
+
+          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+        })
+
+        it('logs error when marking as failed fails', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(
+              new PermanentError('Summary log not found: summaryLogId=log-123')
+            )
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          })
+          const updateError = new Error('Database error')
+          summaryLogsRepository.update.mockRejectedValue(updateError)
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message)
+
+          expect(logger.error).toHaveBeenCalledWith({
+            err: updateError,
+            message:
+              'Failed to mark summary log as validation_failed, summaryLogId=log-123'
+          })
         })
       })
 
-      it('skips marking as failed if not in processing status', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+      describe('transient errors', () => {
+        it('rethrows transient errors for SQS retry', async () => {
+          const transientError = new Error('Database timeout')
+          const mockValidator = vi.fn().mockRejectedValue(transientError)
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow(
+            'Database timeout'
+          )
         })
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'validate', summaryLogId: 'log-123' })
-        }
+        it('does not mark as failed for transient errors', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        await handleMessage(message)
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
 
-        expect(summaryLogsRepository.update).not.toHaveBeenCalled()
-      })
+          await handleMessage(message).catch(() => {})
 
-      it('logs error when marking as failed fails', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
         })
-        const updateError = new Error('Database error')
-        summaryLogsRepository.update.mockRejectedValue(updateError)
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'validate', summaryLogId: 'log-123' })
-        }
+        it('logs transient error with retry message', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        await handleMessage(message)
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
 
-        expect(logger.error).toHaveBeenCalledWith({
-          err: updateError,
-          message:
-            'Failed to mark summary log as validation_failed, summaryLogId=log-123'
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message:
+                'Command failed (transient, will retry): validate for summaryLogId=log-123 messageId=msg-123'
+            })
+          )
         })
       })
     })
@@ -571,128 +688,134 @@ describe('createCommandQueueConsumer', () => {
         expect(summaryLogMetrics.recordStatusTransition).toHaveBeenCalled()
       })
 
-      it('throws and marks as failed when summary log not found', async () => {
-        summaryLogsRepository.findById.mockResolvedValueOnce(null)
-        summaryLogsRepository.findById.mockResolvedValueOnce(null)
+      describe('permanent errors', () => {
+        it('marks as failed when summary log not found', async () => {
+          summaryLogsRepository.findById.mockResolvedValueOnce(null)
+          summaryLogsRepository.findById.mockResolvedValueOnce(null)
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
-        }
-
-        await handleMessage(message)
-
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message:
-              'Command failed: submit for summaryLogId=log-123 messageId=msg-123'
-          })
-        )
-        expect(logger.warn).toHaveBeenCalledWith({
-          message:
-            'Cannot mark as submission_failed: summary log not found, summaryLogId=log-123'
-        })
-      })
-
-      it('throws when summary log not in submitting status', async () => {
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
-        })
-
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
-        }
-
-        await handleMessage(message)
-
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            err: expect.objectContaining({
-              message: expect.stringContaining('must be in submitting status')
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
             })
+          }
+
+          await handleMessage(message)
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message:
+                'Command failed (permanent): submit for summaryLogId=log-123 messageId=msg-123'
+            })
+          )
+          expect(logger.warn).toHaveBeenCalledWith({
+            message:
+              'Cannot mark as submission_failed: summary log not found, summaryLogId=log-123'
           })
-        )
-      })
-
-      it('marks as submission_failed when submit command fails', async () => {
-        const syncError = new Error('Sync failed')
-        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
-          syncError
-        )
-
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
         })
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
-        }
-
-        await handleMessage(message)
-
-        expect(summaryLogsRepository.update).toHaveBeenCalledWith(
-          'log-123',
-          1,
-          expect.objectContaining({
-            status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+        it('marks as failed when summary log not in submitting status', async () => {
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
           })
-        )
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message)
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              err: expect.objectContaining({
+                message: expect.stringContaining('must be in submitting status')
+              })
+            })
+          )
+        })
       })
 
-      it('skips marking as submission_failed if not in submitting status', async () => {
-        const syncError = new Error('Sync failed')
-        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
-          syncError
-        )
+      describe('transient errors', () => {
+        it('rethrows transient errors for SQS retry', async () => {
+          const syncError = new Error('Sync failed')
+          vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+            syncError
+          )
 
-        summaryLogsRepository.findById
-          .mockResolvedValueOnce({
+          summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
             summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
           })
-          .mockResolvedValueOnce({
-            version: 2,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTED }
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow('Sync failed')
+        })
+
+        it('does not mark as failed for transient errors', async () => {
+          const syncError = new Error('Sync failed')
+          vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+            syncError
+          )
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
           })
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
-        }
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
+            })
+          }
 
-        await handleMessage(message)
+          await handleMessage(message).catch(() => {})
 
-        expect(summaryLogsRepository.update).not.toHaveBeenCalled()
-      })
-
-      it('logs error when marking as submission_failed fails', async () => {
-        const syncError = new Error('Sync failed')
-        vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
-          syncError
-        )
-
-        const updateError = new Error('Database error')
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+          // findById is called once by submitSummaryLog, but update should NOT be called
+          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
         })
-        summaryLogsRepository.update.mockRejectedValue(updateError)
 
-        const message = {
-          MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
-        }
+        it('logs transient error with retry message', async () => {
+          const syncError = new Error('Sync failed')
+          vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+            syncError
+          )
 
-        await handleMessage(message)
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+          })
 
-        expect(logger.error).toHaveBeenCalledWith({
-          err: updateError,
-          message:
-            'Failed to mark summary log as submission_failed, summaryLogId=log-123'
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message:
+                'Command failed (transient, will retry): submit for summaryLogId=log-123 messageId=msg-123'
+            })
+          )
         })
       })
     })

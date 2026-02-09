@@ -8,6 +8,7 @@ import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { PermanentError } from '#domain/summary-logs/permanent-error.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
@@ -338,6 +339,147 @@ describe('SQS command queue consumer integration', () => {
         )
 
         await stopConsumerAndWait(consumer)
+      }
+    )
+  })
+
+  describe('transient vs permanent errors', () => {
+    it(
+      'deletes message and does not retry on PermanentError',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new PermanentError('Summary log not found'))
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
+        )
+
+        const summaryLogId = `permanent-test-${Date.now()}`
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              summaryLogId
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        // Wait for the permanent error to be logged
+        await vi.waitFor(
+          () => {
+            expect(logger.error).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining('(permanent)')
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        // Message should be deleted from main queue (handler returned normally)
+        const mainResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(mainResponse.Messages ?? []).toHaveLength(0)
+
+        // Message should NOT be on DLQ (it was handled, not failed)
+        const dlqResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: dlqUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(dlqResponse.Messages ?? []).toHaveLength(0)
+      }
+    )
+
+    it(
+      'retries transient errors and sends to DLQ after maxReceiveCount',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new Error('Database timeout'))
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
+        )
+
+        const summaryLogId = `transient-test-${Date.now()}`
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              summaryLogId
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        // Wait for the message to land on the DLQ after retries exhausted
+        // (maxReceiveCount=2, VisibilityTimeout=1s)
+        await vi.waitFor(
+          () => {
+            expect(mockValidator.mock.calls.length).toBeGreaterThanOrEqual(2)
+          },
+          { timeout: 15000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        // Message should be on the DLQ
+        const dlqResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: dlqUrl,
+            WaitTimeSeconds: 5
+          })
+        )
+        expect(dlqResponse.Messages).toHaveLength(1)
+
+        const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+        expect(dlqBody.summaryLogId).toBe(summaryLogId)
       }
     )
   })

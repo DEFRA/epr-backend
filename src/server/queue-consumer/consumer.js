@@ -13,6 +13,7 @@ import {
 } from '#domain/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { PermanentError } from '#domain/summary-logs/permanent-error.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
@@ -186,21 +187,35 @@ const createMessageHandler = (deps) => async (message) => {
       }
     })
   } catch (err) {
+    if (err instanceof PermanentError) {
+      logger.error({
+        err,
+        message: `Command failed (permanent): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+        }
+      })
+
+      await markCommandAsFailed(
+        commandType,
+        summaryLogId,
+        summaryLogsRepository,
+        logger
+      )
+      return
+    }
+
     logger.error({
       err,
-      message: `Command failed: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+      message: `Command failed (transient, will retry): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
 
-    await markCommandAsFailed(
-      commandType,
-      summaryLogId,
-      summaryLogsRepository,
-      logger
-    )
+    throw err
   }
 }
 

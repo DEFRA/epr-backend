@@ -95,9 +95,10 @@ const sqsClientFixture = {
       new CreateQueueCommand({
         QueueName: queueName,
         Attributes: {
+          VisibilityTimeout: '1',
           RedrivePolicy: JSON.stringify({
             deadLetterTargetArn: dlqArn,
-            maxReceiveCount: '3'
+            maxReceiveCount: '2'
           })
         }
       })
