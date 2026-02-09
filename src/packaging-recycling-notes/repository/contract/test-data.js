@@ -98,6 +98,41 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
 }
 
 /**
+ * Builds a PRN in awaiting_acceptance status (issued, with PRN number).
+ * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ */
+export const buildAwaitingAcceptancePrn = (overrides = {}) => {
+  const now = new Date()
+  return buildPrn({
+    prnNumber: `ER26${Date.now().toString().slice(-5)}`,
+    issuedAt: now,
+    issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
+    ...overrides,
+    status: {
+      currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      history: [
+        {
+          status: PRN_STATUS.DRAFT,
+          updatedAt: new Date(now.getTime() - 3 * STATUS_HISTORY_OFFSET_MS),
+          updatedBy: DEFAULT_CREATOR.id
+        },
+        {
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
+          updatedBy: 'user-raiser'
+        },
+        {
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedAt: now,
+          updatedBy: 'user-issuer'
+        }
+      ],
+      ...overrides.status
+    }
+  })
+}
+
+/**
  * Builds a PRN in deleted status.
  * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
  */

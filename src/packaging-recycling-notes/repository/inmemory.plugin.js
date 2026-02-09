@@ -31,6 +31,19 @@ function createInMemoryLumpyPackagingRecyclingNotesRepository(
     },
 
     /**
+     * @param {string} prnNumber
+     * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
+     */
+    findByPrnNumber: async (prnNumber) => {
+      for (const prn of storage.values()) {
+        if (prn.prnNumber === prnNumber) {
+          return structuredClone(prn)
+        }
+      }
+      return null
+    },
+
+    /**
      * @param {Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>} prn
      * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
      */

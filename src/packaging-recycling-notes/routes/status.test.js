@@ -200,6 +200,80 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         )
       })
 
+      it('transitions from awaiting_acceptance to accepted', async () => {
+        const awaitingAcceptancePrn = createMockPrn({
+          prnNumber: 'ER2600001',
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAcceptancePrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.ACCEPTED }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const body = JSON.parse(response.payload)
+        expect(body.status).toBe(PRN_STATUS.ACCEPTED)
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: prnId,
+            status: PRN_STATUS.ACCEPTED
+          })
+        )
+      })
+
+      it('does not affect waste balance on acceptance', async () => {
+        const awaitingAcceptancePrn = createMockPrn({
+          prnNumber: 'ER2600001',
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAcceptancePrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.ACCEPTED }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(
+          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+        ).not.toHaveBeenCalled()
+        expect(
+          wasteBalancesRepository.deductTotalBalanceForPrnIssue
+        ).not.toHaveBeenCalled()
+      })
+
       it('does not generate PRN number for non-issuing transitions', async () => {
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()

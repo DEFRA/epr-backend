@@ -96,6 +96,26 @@ const findById = async (db, id) => {
 }
 
 /**
+ * @param {import('mongodb').Db} db
+ * @param {string} prnNumber
+ * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
+ */
+const findByPrnNumber = async (db, prnNumber) => {
+  const doc = await db.collection(COLLECTION_NAME).findOne({ prnNumber })
+
+  if (!doc) {
+    return null
+  }
+
+  return /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    /** @type {unknown} */ ({
+      ...doc,
+      id: doc._id.toHexString()
+    })
+  )
+}
+
+/**
  * @typedef {Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>} CreatePrnInput
  */
 
@@ -206,6 +226,7 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
 
   return () => ({
     findById: (id) => findById(db, id),
+    findByPrnNumber: (prnNumber) => findByPrnNumber(db, prnNumber),
     create: (prn) => create(db, prn),
     findByAccreditation: (accreditationId) =>
       findByAccreditation(db, accreditationId),
