@@ -165,6 +165,14 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performFindAllLinked = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ linkedDefraOrganisation: { $exists: true } })
+    .toArray()
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
     .collection(COLLECTION_NAME)
@@ -263,6 +271,7 @@ export const createOrganisationsRepository = async (
       replace: performReplace(db),
       findById,
       findAll: performFindAll(db),
+      findAllLinked: performFindAllLinked(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
