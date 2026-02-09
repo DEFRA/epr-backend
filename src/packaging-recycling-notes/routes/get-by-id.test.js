@@ -32,7 +32,8 @@ const mockPrn = {
     accreditationNumber: 'ACC-2026-001',
     accreditationYear: 2026,
     material: 'glass',
-    submittedToRegulator: 'ea'
+    submittedToRegulator: 'ea',
+    glassRecyclingProcess: 'glass_re_melt'
   },
   issuedToOrganisation: {
     id: 'acme-001',
@@ -151,7 +152,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
             id: accreditationId,
             accreditationNumber: 'ACC-2026-001',
             material: 'glass',
-            submittedToRegulator: 'ea'
+            submittedToRegulator: 'ea',
+            glassRecyclingProcess: 'glass_re_melt'
           },
           issuedToOrganisation: {
             id: 'acme-001',
@@ -198,7 +200,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
             accreditationNumber: 'ACC-2026-001',
             accreditationYear: 2026,
             material: 'glass',
-            submittedToRegulator: 'ea'
+            submittedToRegulator: 'ea',
+            glassRecyclingProcess: 'glass_re_melt'
           },
           issuedToOrganisation: {
             id: 'acme-001',

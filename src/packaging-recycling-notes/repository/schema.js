@@ -29,7 +29,7 @@ const accreditationSchema = Joi.object({
     .required(),
   glassRecyclingProcess: Joi.string().when('material', {
     is: 'glass',
-    then: Joi.string().optional(),
+    then: Joi.string().required(),
     otherwise: Joi.forbidden()
   }),
   siteAddress: siteAddressSchema.optional()

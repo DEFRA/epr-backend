@@ -29,7 +29,8 @@ export const testCreateBehaviour = (it) => {
             accreditationNumber: 'ACC-G1',
             accreditationYear: 2026,
             material: 'glass',
-            submittedToRegulator: 'ea'
+            submittedToRegulator: 'ea',
+            glassRecyclingProcess: 'glass_re_melt'
           }
         })
 

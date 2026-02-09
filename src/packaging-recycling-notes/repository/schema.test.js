@@ -252,6 +252,20 @@ describe('PRN insert schema', () => {
   })
 
   describe('conditional fields', () => {
+    it('rejects glass material without glassRecyclingProcess', () => {
+      const data = buildValidPrnInsert({
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'glass',
+          submittedToRegulator: 'ea'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
     it('rejects glassRecyclingProcess on non-glass materials', () => {
       const data = buildValidPrnInsert({
         accreditation: {
