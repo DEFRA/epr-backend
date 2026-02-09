@@ -12,6 +12,8 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
+const PRN_NUMBER_MAX_LENGTH = 20
+
 export const packagingRecyclingNotesAcceptPath =
   '/v1/packaging-recycling-notes/{prnNumber}/accept'
 
@@ -29,7 +31,7 @@ export const packagingRecyclingNotesAccept = {
     tags: ['api'],
     validate: {
       params: Joi.object({
-        prnNumber: Joi.string().max(20).required()
+        prnNumber: Joi.string().max(PRN_NUMBER_MAX_LENGTH).required()
       }),
       payload: packagingRecyclingNotesAcceptPayloadSchema
     }

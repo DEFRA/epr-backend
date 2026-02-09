@@ -3,6 +3,8 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
+const PRN_SUFFIX_DIGITS = 5
+const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 
 /**
  * Builds a valid PRN for testing with sensible defaults.
@@ -104,7 +106,7 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
 export const buildAwaitingAcceptancePrn = (overrides = {}) => {
   const now = new Date()
   return buildPrn({
-    prnNumber: `ER26${Date.now().toString().slice(-5)}`,
+    prnNumber: `ER26${Date.now().toString().slice(-PRN_SUFFIX_DIGITS)}`,
     issuedAt: now,
     issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
     ...overrides,
@@ -113,7 +115,10 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(now.getTime() - 3 * STATUS_HISTORY_OFFSET_MS),
+          updatedAt: new Date(
+            now.getTime() -
+              AWAITING_ACCEPTANCE_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
+          ),
           updatedBy: DEFAULT_CREATOR.id
         },
         {
