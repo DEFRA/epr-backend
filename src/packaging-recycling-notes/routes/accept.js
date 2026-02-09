@@ -12,17 +12,18 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
-export const acceptPrnPath = '/v1/packaging-recycling-notes/{prnNumber}/accept'
+export const packagingRecyclingNotesAcceptPath =
+  '/v1/packaging-recycling-notes/{prnNumber}/accept'
 
-const acceptPrnPayloadSchema = Joi.object({
+const packagingRecyclingNotesAcceptPayloadSchema = Joi.object({
   acceptedAt: Joi.string().isoDate().optional().messages({
     'string.isoDate': 'acceptedAt must be a valid ISO 8601 date-time'
   })
 }).allow(null)
 
-export const acceptPrn = {
+export const packagingRecyclingNotesAccept = {
   method: 'POST',
-  path: acceptPrnPath,
+  path: packagingRecyclingNotesAcceptPath,
   options: {
     auth: false,
     tags: ['api'],
@@ -30,7 +31,7 @@ export const acceptPrn = {
       params: Joi.object({
         prnNumber: Joi.string().max(20).required()
       }),
-      payload: acceptPrnPayloadSchema
+      payload: packagingRecyclingNotesAcceptPayloadSchema
     }
   },
   handler: async (request, h) => {
@@ -90,14 +91,16 @@ export const acceptPrn = {
 
       logger.error({
         err: error,
-        message: `Failure on ${acceptPrnPath}`,
+        message: `Failure on ${packagingRecyclingNotesAcceptPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
         }
       })
 
-      throw Boom.badImplementation(`Failure on ${acceptPrnPath}`)
+      throw Boom.badImplementation(
+        `Failure on ${packagingRecyclingNotesAcceptPath}`
+      )
     }
   }
 }
