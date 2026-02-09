@@ -1,3 +1,5 @@
+/** @import { Material } from '#domain/organisations/model.js' */
+
 export const PRN_NUMBER_MAX_LENGTH = 20
 
 /**
@@ -61,7 +63,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   accreditationId: string;
  *   issuedToOrganisation: IssuedToOrganisation;
  *   tonnage: number;
- *   material: string;
+ *   material: Material;
  *   isExport: boolean;
  *   notes?: string;
  *   isDecemberWaste: boolean;
@@ -75,7 +77,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   createdAt: Date;
  *   createdBy: { id: string; name: string };
  *   updatedAt: Date;
- *   updatedBy: { id: string; name: string } ;
+ *   updatedBy: { id: string; name: string } | null;
  * }} PackagingRecyclingNote
  */
 

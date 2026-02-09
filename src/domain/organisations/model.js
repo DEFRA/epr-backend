@@ -107,11 +107,11 @@ export const GLASS_RECYCLING_PROCESS = Object.freeze({
   GLASS_OTHER: 'glass_other'
 })
 
-export const TONNAGE_MONITORING_MATERIALS = Object.freeze(
-  Object.values(MATERIAL)
-    .filter((m) => m !== MATERIAL.GLASS)
-    .concat(Object.values(GLASS_RECYCLING_PROCESS))
-)
+/** @type {readonly (Material | GlassRecyclingProcess)[]} */
+export const TONNAGE_MONITORING_MATERIALS = Object.freeze([
+  ...Object.values(MATERIAL).filter((m) => m !== MATERIAL.GLASS),
+  ...Object.values(GLASS_RECYCLING_PROCESS)
+])
 
 /**
  * @typedef {'up_to_500' | 'up_to_5000' | 'up_to_10000' | 'over_10000'} TonnageBand
