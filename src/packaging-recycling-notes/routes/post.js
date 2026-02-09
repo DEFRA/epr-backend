@@ -104,14 +104,14 @@ const deriveAccreditationYear = (accreditation) => {
  */
 const buildResponse = (prn, { wasteProcessingType }) => ({
   id: prn.id,
-  accreditationYear: prn.accreditation?.accreditationYear ?? null,
+  accreditationYear: prn.accreditation.accreditationYear,
   createdAt: prn.createdAt,
-  isDecemberWaste: prn.isDecemberWaste ?? false,
+  isDecemberWaste: prn.isDecemberWaste,
   issuedToOrganisation: prn.issuedToOrganisation,
-  material: prn.accreditation?.material,
+  material: prn.accreditation.material,
   notes: prn.notes ?? null,
   processToBeUsed: /** @type {string} */ (
-    getProcessCode(prn.accreditation?.material)
+    getProcessCode(prn.accreditation.material)
   ),
   status: prn.status.currentStatus,
   tonnage: prn.tonnage,
