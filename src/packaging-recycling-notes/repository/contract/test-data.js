@@ -119,17 +119,17 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
             now.getTime() -
               AWAITING_ACCEPTANCE_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
           ),
-          updatedBy: DEFAULT_CREATOR.id
+          updatedBy: DEFAULT_CREATOR
         },
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
-          updatedBy: 'user-raiser'
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' }
         },
         {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedAt: now,
-          updatedBy: 'user-issuer'
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' }
         }
       ],
       ...overrides.status
