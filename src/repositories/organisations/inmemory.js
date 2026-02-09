@@ -155,7 +155,7 @@ const performFindAll = (staleCache) => async () => {
 const performFindAllLinked =
   (staleCache) =>
   async (filter = {}) => {
-    let matches = staleCache.filter((org) => org.linkedDefraOrganisation)
+    let matches = staleCache.filter((org) => org.linkedDefraOrganisation?.orgId)
 
     if (filter.name) {
       const nameLower = filter.name.toLowerCase()
