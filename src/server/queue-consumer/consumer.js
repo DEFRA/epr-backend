@@ -15,6 +15,11 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
+/** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
+
+const ONE_MINUTE = 60_000
+const COMMAND_TIMEOUT_MINUTES = 5
+const COMMAND_TIMEOUT_MS = COMMAND_TIMEOUT_MINUTES * ONE_MINUTE
 
 /**
  * @typedef {object} CommandMessage
@@ -41,7 +46,7 @@ const commandMessageSchema = Joi.object({
  * @typedef {object} ConsumerDependencies
  * @property {SQSClient} sqsClient
  * @property {string} queueName
- * @property {object} logger
+ * @property {TypedLogger} logger
  * @property {object} summaryLogsRepository
  * @property {object} organisationsRepository
  * @property {object} wasteRecordsRepository
@@ -75,7 +80,7 @@ const handleValidateCommand = async (summaryLogId, deps) => {
 /**
  * Parses and validates a command message from SQS.
  * @param {import('@aws-sdk/client-sqs').Message} message
- * @param {object} logger
+ * @param {TypedLogger} logger
  * @returns {CommandMessage | null} The parsed command, or null if invalid
  */
 const parseCommandMessage = (message, logger) => {
@@ -101,7 +106,6 @@ const parseCommandMessage = (message, logger) => {
   if (error) {
     logger.error({
       message: `Invalid command message for messageId=${messageId}: ${error.message}`,
-      command: parsed,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -118,7 +122,7 @@ const parseCommandMessage = (message, logger) => {
  * @param {string} commandType
  * @param {string} summaryLogId
  * @param {object} summaryLogsRepository
- * @param {object} logger
+ * @param {TypedLogger} logger
  */
 const markCommandAsFailed = async (
   commandType,
@@ -152,8 +156,7 @@ const createMessageHandler = (deps) => async (message) => {
   const { command: commandType, summaryLogId } = command
 
   logger.info({
-    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
-    messageId: message.MessageId,
+    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -176,8 +179,7 @@ const createMessageHandler = (deps) => async (message) => {
     }
 
     logger.info({
-      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId}`,
-      messageId: message.MessageId,
+      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -186,8 +188,7 @@ const createMessageHandler = (deps) => async (message) => {
   } catch (err) {
     logger.error({
       err,
-      message: `Command failed: ${commandType} for summaryLogId=${summaryLogId}`,
-      messageId: message.MessageId,
+      message: `Command failed: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -214,14 +215,14 @@ export const createCommandQueueConsumer = async (deps) => {
   const queueUrl = await resolveQueueUrl(sqsClient, queueName)
 
   logger.info({
-    message: `Resolved queue URL: ${queueUrl}`,
-    queueName
+    message: `Resolved queue URL: ${queueUrl} for queueName=${queueName}`
   })
 
   const consumer = Consumer.create({
     queueUrl,
     sqs: sqsClient,
-    handleMessage: /** @type {*} */ (createMessageHandler(deps))
+    handleMessage: /** @type {*} */ (createMessageHandler(deps)),
+    handleMessageTimeout: COMMAND_TIMEOUT_MS
   })
 
   consumer.on('error', (err) => {
@@ -244,6 +245,30 @@ export const createCommandQueueConsumer = async (deps) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
+  })
+
+  consumer.on('timeout_error', async (err, message) => {
+    const command = parseCommandMessage(message, logger)
+
+    logger.error({
+      err,
+      message: command
+        ? `Command timed out: ${command.command} for summaryLogId=${command.summaryLogId} messageId=${message.MessageId}`
+        : `Command timed out for messageId=${message.MessageId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    if (command) {
+      await markCommandAsFailed(
+        command.command,
+        command.summaryLogId,
+        deps.summaryLogsRepository,
+        logger
+      )
+    }
   })
 
   return consumer
