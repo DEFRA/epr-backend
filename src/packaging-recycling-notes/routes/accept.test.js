@@ -279,6 +279,16 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
 
+      it('returns 422 for invalid acceptedAt format', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: acceptUrl,
+          payload: { acceptedAt: 'not-a-date' }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('returns 500 when repository throws unexpected error', async () => {
         lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
           new Error('Database connection lost')
