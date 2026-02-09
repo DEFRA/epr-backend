@@ -1,5 +1,8 @@
 import { Consumer } from 'sqs-consumer'
-import { GetQueueUrlCommand } from '@aws-sdk/client-sqs'
+import {
+  GetQueueUrlCommand,
+  GetQueueAttributesCommand
+} from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
@@ -11,7 +14,8 @@ import {
 
 vi.mock('sqs-consumer')
 vi.mock('@aws-sdk/client-sqs', () => ({
-  GetQueueUrlCommand: vi.fn()
+  GetQueueUrlCommand: vi.fn(),
+  GetQueueAttributesCommand: vi.fn()
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
@@ -39,8 +43,17 @@ describe('createCommandQueueConsumer', () => {
     eventHandlers = {}
 
     sqsClient = {
-      send: vi.fn().mockResolvedValue({
-        QueueUrl: 'http://localhost:4566/000000000000/test-queue'
+      send: vi.fn().mockImplementation((command) => {
+        if (command instanceof GetQueueAttributesCommand) {
+          return Promise.resolve({
+            Attributes: {
+              RedrivePolicy: JSON.stringify({ maxReceiveCount: '2' })
+            }
+          })
+        }
+        return Promise.resolve({
+          QueueUrl: 'http://localhost:4566/000000000000/test-queue'
+        })
       })
     }
 
@@ -72,6 +85,7 @@ describe('createCommandQueueConsumer', () => {
     vi.mocked(GetQueueUrlCommand).mockImplementation(function (params) {
       this.QueueName = params.QueueName
     })
+    vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
@@ -121,6 +135,33 @@ describe('createCommandQueueConsumer', () => {
         'Queue not found: test-queue'
       )
     })
+
+    it('logs redrive policy maxReceiveCount', async () => {
+      await createConsumer()
+
+      expect(logger.info).toHaveBeenCalledWith({
+        message:
+          'Queue redrive policy: maxReceiveCount=2 for queueName=test-queue'
+      })
+    })
+
+    it('warns when no redrive policy is configured', async () => {
+      sqsClient.send.mockImplementation((command) => {
+        if (command instanceof GetQueueAttributesCommand) {
+          return Promise.resolve({ Attributes: {} })
+        }
+        return Promise.resolve({
+          QueueUrl: 'http://localhost:4566/000000000000/test-queue'
+        })
+      })
+
+      await createConsumer()
+
+      expect(logger.warn).toHaveBeenCalledWith({
+        message:
+          'No redrive policy configured for queueName=test-queue; transient errors on final retry will not be marked as failed'
+      })
+    })
   })
 
   describe('consumer creation', () => {
@@ -131,7 +172,8 @@ describe('createCommandQueueConsumer', () => {
         queueUrl: 'http://localhost:4566/000000000000/test-queue',
         sqs: sqsClient,
         handleMessage: expect.any(Function),
-        handleMessageTimeout: 300000
+        handleMessageTimeout: 300000,
+        attributeNames: ['ApproximateReceiveCount']
       })
     })
 
@@ -547,6 +589,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
               summaryLogId: 'log-123'
@@ -558,7 +601,27 @@ describe('createCommandQueueConsumer', () => {
           )
         })
 
-        it('does not mark as failed for transient errors', async () => {
+        it('does not mark as failed for transient errors on non-final attempt', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+        })
+
+        it('does not mark as failed when Attributes are missing', async () => {
           const mockValidator = vi
             .fn()
             .mockRejectedValue(new Error('Database timeout'))
@@ -575,6 +638,39 @@ describe('createCommandQueueConsumer', () => {
           await handleMessage(message).catch(() => {})
 
           expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+        })
+
+        it('marks as failed on final attempt before rethrowing', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '2' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow(
+            'Database timeout'
+          )
+
+          expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+            'log-123',
+            1,
+            expect.objectContaining({
+              status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            })
+          )
         })
       })
     })
@@ -700,6 +796,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
               summaryLogId: 'log-123'
@@ -709,7 +806,7 @@ describe('createCommandQueueConsumer', () => {
           await expect(handleMessage(message)).rejects.toThrow('Sync failed')
         })
 
-        it('does not mark as failed for transient errors', async () => {
+        it('does not mark as failed for transient errors on non-final attempt', async () => {
           const syncError = new Error('Sync failed')
           vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
             syncError
@@ -722,6 +819,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
               summaryLogId: 'log-123'
@@ -732,6 +830,37 @@ describe('createCommandQueueConsumer', () => {
 
           // findById is called once by submitSummaryLog, but update should NOT be called
           expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+        })
+
+        it('marks as failed on final attempt before rethrowing', async () => {
+          const syncError = new Error('Sync failed')
+          vi.mocked(summaryLogMetrics).timedSubmission.mockRejectedValue(
+            syncError
+          )
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '2' },
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow('Sync failed')
+
+          expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+            'log-123',
+            1,
+            expect.objectContaining({
+              status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+            })
+          )
         })
       })
     })

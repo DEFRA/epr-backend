@@ -1,4 +1,8 @@
-import { SQSClient, GetQueueUrlCommand } from '@aws-sdk/client-sqs'
+import {
+  SQSClient,
+  GetQueueUrlCommand,
+  GetQueueAttributesCommand
+} from '@aws-sdk/client-sqs'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClientType */
 
@@ -28,4 +32,27 @@ export async function resolveQueueUrl(sqsClient, queueName) {
   }
 
   return queueUrl
+}
+
+/**
+ * Reads the maxReceiveCount from a queue's redrive policy.
+ * @param {SQSClientType} sqsClient
+ * @param {string} queueUrl
+ * @returns {Promise<number|null>} maxReceiveCount, or null if no redrive policy
+ */
+export async function getMaxReceiveCount(sqsClient, queueUrl) {
+  const command = new GetQueueAttributesCommand({
+    QueueUrl: queueUrl,
+    AttributeNames: ['RedrivePolicy']
+  })
+
+  const { Attributes: attributes } = await sqsClient.send(command)
+  const redrivePolicy = attributes?.RedrivePolicy
+
+  if (!redrivePolicy) {
+    return null
+  }
+
+  const parsed = JSON.parse(redrivePolicy)
+  return Number(parsed.maxReceiveCount)
 }

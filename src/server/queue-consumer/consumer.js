@@ -1,7 +1,10 @@
 import Joi from 'joi'
 import { Consumer } from 'sqs-consumer'
 
-import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
+import {
+  resolveQueueUrl,
+  getMaxReceiveCount
+} from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -144,9 +147,10 @@ const markCommandAsFailed = async (
 /**
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
+ * @param {number|null} maxReceiveCount
  * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<void>}
  */
-const createMessageHandler = (deps) => async (message) => {
+const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   const { logger, summaryLogsRepository } = deps
 
   const command = parseCommandMessage(message, logger)
@@ -206,14 +210,31 @@ const createMessageHandler = (deps) => async (message) => {
       return
     }
 
+    const receiveCount = Number(
+      message.Attributes?.ApproximateReceiveCount ?? 0
+    )
+    const isFinalAttempt =
+      maxReceiveCount !== null && receiveCount >= maxReceiveCount
+
     logger.error({
       err,
-      message: `Command failed (transient, will retry): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+      message: isFinalAttempt
+        ? `Command failed (transient, final attempt): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`
+        : `Command failed (transient, will retry): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
+
+    if (isFinalAttempt) {
+      await markCommandAsFailed(
+        commandType,
+        summaryLogId,
+        summaryLogsRepository,
+        logger
+      )
+    }
 
     throw err
   }
@@ -233,11 +254,26 @@ export const createCommandQueueConsumer = async (deps) => {
     message: `Resolved queue URL: ${queueUrl} for queueName=${queueName}`
   })
 
+  const maxReceiveCount = await getMaxReceiveCount(sqsClient, queueUrl)
+
+  if (maxReceiveCount !== null) {
+    logger.info({
+      message: `Queue redrive policy: maxReceiveCount=${maxReceiveCount} for queueName=${queueName}`
+    })
+  } else {
+    logger.warn({
+      message: `No redrive policy configured for queueName=${queueName}; transient errors on final retry will not be marked as failed`
+    })
+  }
+
   const consumer = Consumer.create({
     queueUrl,
     sqs: sqsClient,
-    handleMessage: /** @type {*} */ (createMessageHandler(deps)),
-    handleMessageTimeout: COMMAND_TIMEOUT_MS
+    handleMessage: /** @type {*} */ (
+      createMessageHandler(deps, maxReceiveCount)
+    ),
+    handleMessageTimeout: COMMAND_TIMEOUT_MS,
+    attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 
   consumer.on('error', (err) => {

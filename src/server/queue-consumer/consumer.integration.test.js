@@ -9,6 +9,7 @@ import { createCommandQueueConsumer } from './consumer.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
@@ -419,13 +420,18 @@ describe('SQS command queue consumer integration', () => {
     )
 
     it(
-      'retries transient errors and sends to DLQ after maxReceiveCount',
+      'retries transient errors, marks as failed on final attempt, and sends to DLQ',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const mockValidator = vi
           .fn()
           .mockRejectedValue(new Error('Database timeout'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        summaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+        })
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -468,6 +474,15 @@ describe('SQS command queue consumer integration', () => {
         )
 
         await stopConsumerAndWait(consumer)
+
+        // Summary log should be marked as failed on the final attempt
+        expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+          summaryLogId,
+          1,
+          expect.objectContaining({
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+          })
+        )
 
         // Message should be on the DLQ
         const dlqResponse = await sqsClient.send(
