@@ -10,7 +10,7 @@
  *
  * @param {import('@hapi/hapi').Server} server - Hapi server instance
  * @param {string} name - Property name to register (e.g. 'organisationsRepository')
- * @param {(request: {logger: unknown}) => unknown} getInstance - Factory function that returns the repository instance
+ * @param {(request: {logger: import('#common/hapi-types.js').TypedLogger}) => unknown} getInstance - Factory function that returns the repository instance
  */
 export const registerRepository = (server, name, getInstance) => {
   // Register on server.app for background jobs (using server.logger)

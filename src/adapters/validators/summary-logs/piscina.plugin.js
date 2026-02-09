@@ -15,7 +15,9 @@ export const piscinaWorkersPlugin = {
    */
   register: async (server) => {
     const summaryLogsRepository = (
-      await createSummaryLogsRepository(server.db)
+      await createSummaryLogsRepository(
+        /** @type {import('mongodb').Db} */ (server.db)
+      )
     )(server.logger)
 
     const summaryLogsWorker = createSummaryLogsCommandExecutor(

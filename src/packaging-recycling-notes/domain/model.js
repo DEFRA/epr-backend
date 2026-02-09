@@ -1,3 +1,5 @@
+/** @import { Material } from '#domain/organisations/model.js' */
+
 /**
  * Status values for Packaging Recycling Notes (PRNs)
  * @typedef {typeof PRN_STATUS[keyof typeof PRN_STATUS]} PrnStatus
@@ -59,7 +61,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   accreditationId: string;
  *   issuedToOrganisation: IssuedToOrganisation;
  *   tonnage: number;
- *   material: string;
+ *   material: Material;
  *   isExport: boolean;
  *   notes?: string;
  *   isDecemberWaste: boolean;
@@ -73,7 +75,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   createdAt: Date;
  *   createdBy: { id: string; name: string };
  *   updatedAt: Date;
- *   updatedBy: { id: string; name: string } ;
+ *   updatedBy: { id: string; name: string } | null;
  * }} PackagingRecyclingNote
  */
 
