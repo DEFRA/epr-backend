@@ -286,13 +286,13 @@ export const createCommandQueueConsumer = async (deps) => {
 
   const maxReceiveCount = await getMaxReceiveCount(sqsClient, queueUrl)
 
-  if (maxReceiveCount !== null) {
-    logger.info({
-      message: `Queue redrive policy: maxReceiveCount=${maxReceiveCount} for queueName=${queueName}`
-    })
-  } else {
+  if (maxReceiveCount === null) {
     logger.warn({
       message: `No redrive policy configured for queueName=${queueName}; transient errors on final retry will not be marked as failed`
+    })
+  } else {
+    logger.info({
+      message: `Queue redrive policy: maxReceiveCount=${maxReceiveCount} for queueName=${queueName}`
     })
   }
 
