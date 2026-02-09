@@ -7,10 +7,13 @@ export default defineConfig({
     clearMocks: true,
     hookTimeout: 60000,
     fileParallelism: true,
+    reporters: process.env.CI
+      ? ['default', ['json', { outputFile: 'coverage/test-results.json' }]]
+      : ['default'],
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json-summary'],
       include: ['src/**'],
       exclude: [
         ...configDefaults.exclude,

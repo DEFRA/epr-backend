@@ -34,6 +34,95 @@ runs:
       shell: bash
       run: npm test
 
+    - name: Write test summary
+      if: always()
+      shell: bash
+      run: |
+        {
+          if [ -f coverage/test-results.json ]; then
+            IFS=$'\t' read -r SP SF ST TP TF TT DUR < <(jq -r '
+              def fmt_ms:
+                if . >= 60000 then "\(. / 60000 | floor)m \(. / 1000 % 60 | round)s"
+                elif . >= 1000 then "\(. / 1000 * 10 | round / 10)s"
+                else "\(.)ms"
+                end;
+              [
+                (.testResults | map(select(.status == "passed")) | length),
+                (.testResults | map(select(.status == "failed")) | length),
+                (.testResults | length),
+                ([.testResults[].assertionResults[] | select(.status == "passed")] | length),
+                ([.testResults[].assertionResults[] | select(.status == "failed")] | length),
+                ([.testResults[].assertionResults[]] | length),
+                ((([.testResults[].endTime] | max) - .startTime) | round | fmt_ms)
+              ] | @tsv
+            ' coverage/test-results.json)
+
+            SLOW_SUITES=$(jq -r '
+              def fmt_ms:
+                if . >= 60000 then "\(. / 60000 | floor)m \(. / 1000 % 60 | round)s"
+                elif . >= 1000 then "\(. / 1000 * 10 | round / 10)s"
+                else "\(.)ms"
+                end;
+              [.testResults[] | {name: .name, duration: (.endTime - .startTime)}]
+              | sort_by(-.duration) | .[0:5][]
+              | "| \(.name) | \(.duration | fmt_ms) |"
+            ' coverage/test-results.json)
+
+            SLOW_TESTS=$(jq -r '
+              def fmt_ms:
+                if . >= 60000 then "\(. / 60000 | floor)m \(. / 1000 % 60 | round)s"
+                elif . >= 1000 then "\(. / 1000 * 10 | round / 10)s"
+                else "\(.)ms"
+                end;
+              [.testResults[].assertionResults[] | select(.duration > 0) | {name: .title, duration: .duration}]
+              | sort_by(-.duration) | .[0:5][]
+              | "| \(.name) | \(.duration | fmt_ms) |"
+            ' coverage/test-results.json)
+
+            cat <<EOF
+        ## Unit Tests
+
+        | | Passed | Failed | Total |
+        |---|---|---|---|
+        | Suites | $SP | $SF | $ST |
+        | Tests | $TP | $TF | $TT |
+
+        Duration: $DUR
+
+        ### Slowest Suites
+
+        | Suite | Duration |
+        |---|---|
+        $SLOW_SUITES
+
+        ### Slowest Tests
+
+        | Test | Duration |
+        |---|---|
+        $SLOW_TESTS
+        EOF
+          fi
+
+          if [ -f coverage/coverage-summary.json ]; then
+            read -r LINES BRANCHES FUNCTIONS STATEMENTS < <(jq -r '[
+              .total.lines.pct, .total.branches.pct,
+              .total.functions.pct, .total.statements.pct
+            ] | @tsv' coverage/coverage-summary.json)
+
+            cat <<EOF
+
+        ## Coverage
+
+        | Metric | Covered |
+        |---|---|
+        | Lines | ${LINES}% |
+        | Branches | ${BRANCHES}% |
+        | Functions | ${FUNCTIONS}% |
+        | Statements | ${STATEMENTS}% |
+        EOF
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
     - name: SonarCloud Scan
       if: ${{ github.actor != 'dependabot[bot]' }}
       uses: SonarSource/sonarqube-scan-action@v6
