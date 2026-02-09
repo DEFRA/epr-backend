@@ -71,7 +71,7 @@ export const packagingRecyclingNotesAccept = {
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         toStatus: PRN_STATUS.ACCEPTED,
-        material: prn.material,
+        material: prn.accreditation?.material,
         isExport: prn.isExport
       })
 

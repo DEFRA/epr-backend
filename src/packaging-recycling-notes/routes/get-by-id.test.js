@@ -24,17 +24,22 @@ const prnId = 'prn-001'
 
 const mockPrn = {
   id: prnId,
-  schemaVersion: 1,
-  accreditationYear: 2026,
-  organisationId,
-  accreditationId,
+  schemaVersion: 2,
+  organisation: { id: organisationId, name: 'Test Organisation' },
+  registrationId,
+  accreditation: {
+    id: accreditationId,
+    accreditationNumber: 'ACC-2026-001',
+    accreditationYear: 2026,
+    material: 'glass',
+    submittedToRegulator: 'ea'
+  },
   issuedToOrganisation: {
     id: 'acme-001',
     name: 'Acme Packaging Ltd',
     tradingName: 'Acme'
   },
   tonnage: 50,
-  material: 'glass',
   isExport: false,
   isDecemberWaste: true,
   status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
@@ -139,15 +144,20 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('returns defaults for optional fields when not present', async () => {
         const legacyPrn = {
           id: prnId,
-          schemaVersion: 1,
-          organisationId,
-          accreditationId,
+          schemaVersion: 2,
+          organisation: { id: organisationId, name: 'Test Organisation' },
+          registrationId,
+          accreditation: {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2026-001',
+            material: 'glass',
+            submittedToRegulator: 'ea'
+          },
           issuedToOrganisation: {
             id: 'acme-001',
             name: 'Acme Packaging Ltd'
           },
           tonnage: 50,
-          material: 'glass',
           isExport: false,
           status: { currentStatus: PRN_STATUS.DRAFT },
           createdAt: new Date('2026-01-15T10:00:00Z'),
@@ -180,16 +190,21 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const issuedPrn = {
           id: prnId,
           prnNumber: 'ER1234567890A',
-          schemaVersion: 1,
-          accreditationYear: 2026,
-          organisationId,
-          accreditationId,
+          schemaVersion: 2,
+          organisation: { id: organisationId, name: 'Test Organisation' },
+          registrationId,
+          accreditation: {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2026-001',
+            accreditationYear: 2026,
+            material: 'glass',
+            submittedToRegulator: 'ea'
+          },
           issuedToOrganisation: {
             id: 'acme-001',
             name: 'Acme Packaging Ltd'
           },
           tonnage: 50,
-          material: 'glass',
           isExport: false,
           isDecemberWaste: false,
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE },

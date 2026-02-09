@@ -7,19 +7,27 @@ const issuedDate = '2026-01-15T10:00:00Z'
 
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
-  schemaVersion: 1,
+  schemaVersion: 2,
   prnNumber,
-  organisationId: 'org-123',
-  accreditationId: 'acc-789',
+  organisation: {
+    id: 'org-123',
+    name: 'Test Organisation'
+  },
+  registrationId: 'reg-456',
+  accreditation: {
+    id: 'acc-789',
+    accreditationNumber: 'ACC-2026-001',
+    accreditationYear: 2026,
+    material: MATERIAL.PLASTIC,
+    submittedToRegulator: 'ea'
+  },
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'
   },
   tonnage: 100,
-  material: MATERIAL.PLASTIC,
   isExport: false,
   isDecemberWaste: false,
-  accreditationYear: 2026,
   issuedAt: new Date(issuedDate),
   issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
   notes: 'Test notes',

@@ -22,32 +22,48 @@ export const testCreateBehaviour = (it) => {
 
       it('stores the PRN so it can be retrieved', async () => {
         const prnInput = buildDraftPrn({
-          organisationId: 'org-test-123',
+          organisation: { id: 'org-test-123', name: 'Test Org' },
           tonnage: 250.75,
-          material: 'glass'
+          accreditation: {
+            id: 'acc-glass',
+            accreditationNumber: 'ACC-G1',
+            accreditationYear: 2026,
+            material: 'glass',
+            submittedToRegulator: 'ea'
+          }
         })
 
         const created = await repository.create(prnInput)
         const found = await repository.findById(created.id)
 
         expect(found).toBeTruthy()
-        expect(found.organisationId).toBe('org-test-123')
+        expect(found.organisation.id).toBe('org-test-123')
         expect(found.tonnage).toBe(250.75)
-        expect(found.material).toBe('glass')
+        expect(found.accreditation.material).toBe('glass')
       })
 
       it('preserves all fields when creating', async () => {
         const now = new Date()
         const prnInput = buildPrn({
-          organisationId: 'org-preserve-test',
-          accreditationId: 'acc-preserve-test',
+          organisation: {
+            id: 'org-preserve-test',
+            name: 'Preserve Org',
+            tradingName: 'Preserve Trading'
+          },
+          registrationId: 'reg-preserve-test',
+          accreditation: {
+            id: 'acc-preserve-test',
+            accreditationNumber: 'ACC-PRESERVE',
+            accreditationYear: 2026,
+            material: 'paper',
+            submittedToRegulator: 'nrw'
+          },
           issuedToOrganisation: {
             id: 'recipient-preserve-test',
             name: 'Recipient Org',
             tradingName: 'Recipient Trading'
           },
           tonnage: 500,
-          material: 'paper',
           isExport: true,
           notes: 'Test notes for contract',
           createdBy: { id: 'user-contract-test', name: 'Contract User' },
@@ -58,15 +74,25 @@ export const testCreateBehaviour = (it) => {
         const created = await repository.create(prnInput)
         const found = await repository.findById(created.id)
 
-        expect(found.organisationId).toBe('org-preserve-test')
-        expect(found.accreditationId).toBe('acc-preserve-test')
+        expect(found.organisation).toStrictEqual({
+          id: 'org-preserve-test',
+          name: 'Preserve Org',
+          tradingName: 'Preserve Trading'
+        })
+        expect(found.registrationId).toBe('reg-preserve-test')
+        expect(found.accreditation).toStrictEqual({
+          id: 'acc-preserve-test',
+          accreditationNumber: 'ACC-PRESERVE',
+          accreditationYear: 2026,
+          material: 'paper',
+          submittedToRegulator: 'nrw'
+        })
         expect(found.issuedToOrganisation).toStrictEqual({
           id: 'recipient-preserve-test',
           name: 'Recipient Org',
           tradingName: 'Recipient Trading'
         })
         expect(found.tonnage).toBe(500)
-        expect(found.material).toBe('paper')
         expect(found.isExport).toBe(true)
         expect(found.notes).toBe('Test notes for contract')
         expect(found.createdBy).toStrictEqual({

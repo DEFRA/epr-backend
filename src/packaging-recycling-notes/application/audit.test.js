@@ -26,10 +26,9 @@ describe('auditPrnStatusTransition', () => {
 
   const nextPrn = {
     id: prnId,
-    organisationId: 'org-456',
-    accreditationId: 'acc-789',
+    organisation: { id: 'org-456', name: 'Test Organisation' },
+    accreditation: { id: 'acc-789', material: 'plastic' },
     tonnage: 100,
-    material: 'plastic',
     status: { currentStatus: 'awaiting_acceptance' },
     prnNumber: 'ER2600001'
   }

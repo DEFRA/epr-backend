@@ -29,18 +29,23 @@ const prnId = '507f1f77bcf86cd799439011'
 
 const createMockPrn = (overrides = {}) => ({
   id: prnId,
-  schemaVersion: 1,
-  organisationId,
-  accreditationId,
+  schemaVersion: 2,
+  organisation: { id: organisationId, name: 'Test Organisation' },
+  registrationId,
+  accreditation: {
+    id: accreditationId,
+    accreditationNumber: 'ACC-2026-001',
+    accreditationYear: 2026,
+    material: MATERIAL.PLASTIC,
+    submittedToRegulator: REGULATOR.EA
+  },
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'
   },
   tonnage: 100,
-  material: MATERIAL.PLASTIC,
   isExport: false,
   isDecemberWaste: false,
-  accreditationYear: 2026,
   issuedAt: null,
   issuedBy: null,
   notes: 'Test notes',

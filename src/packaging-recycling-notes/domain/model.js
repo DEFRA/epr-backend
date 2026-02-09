@@ -43,7 +43,26 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   id: string;
  *   name: string;
  *   tradingName?: string;
- * }} IssuedToOrganisation
+ * }} OrganisationNameAndId
+ */
+
+/**
+ * @typedef {{
+ *   id: string;
+ *   accreditationNumber: string;
+ *   accreditationYear: number;
+ *   material: string;
+ *   submittedToRegulator: string;
+ *   glassRecyclingProcess?: string;
+ *   siteAddress?: {
+ *     line1: string;
+ *     line2?: string;
+ *     town?: string;
+ *     county?: string;
+ *     postcode: string;
+ *     country?: string;
+ *   };
+ * }} AccreditationSnapshot
  */
 
 /**
@@ -59,15 +78,14 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   id: string;
  *   schemaVersion: number;
  *   prnNumber?: string | null;
- *   organisationId: string;
- *   accreditationId: string;
- *   issuedToOrganisation: IssuedToOrganisation;
+ *   organisation: OrganisationNameAndId;
+ *   registrationId: string;
+ *   accreditation: AccreditationSnapshot;
+ *   issuedToOrganisation: OrganisationNameAndId;
  *   tonnage: number;
- *   material: Material;
  *   isExport: boolean;
  *   notes?: string;
  *   isDecemberWaste: boolean;
- *   accreditationYear: number;
  *   issuedAt: Date | null;
  *   issuedBy: { id: string; name: string; position: string } | null;
  *   status: {
@@ -87,7 +105,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   accreditationYear: number | null;
  *   createdAt: Date;
  *   isDecemberWaste: boolean;
- *   issuedToOrganisation: IssuedToOrganisation;
+ *   issuedToOrganisation: OrganisationNameAndId;
  *   material: string;
  *   notes: string | null;
  *   processToBeUsed: string;

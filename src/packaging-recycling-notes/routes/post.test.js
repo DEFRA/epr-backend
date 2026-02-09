@@ -58,7 +58,17 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         createInMemoryPackagingRecyclingNotesRepository()()
 
       organisationsRepository = {
+        findById: vi.fn(async () => ({
+          companyDetails: {
+            name: 'Test Org',
+            tradingName: 'Test Trading'
+          }
+        })),
         findAccreditationById: vi.fn(async () => ({
+          id: accreditationId,
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
           submittedToRegulator: 'ea'
         }))
@@ -125,8 +135,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.create
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            organisationId,
-            accreditationId,
+            organisation: expect.objectContaining({ id: organisationId }),
+            registrationId,
+            accreditation: expect.objectContaining({ id: accreditationId }),
             issuedToOrganisation: validPayload.issuedToOrganisation
           })
         )
@@ -235,6 +246,10 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
       it('sets isExport to true for exporter', async () => {
         organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          validFrom: '2026-01-01',
           wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
           submittedToRegulator: 'ea'
         })
@@ -253,6 +268,73 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             isExport: true
           })
         )
+      })
+
+      it('snapshots glass recycling process for glass accreditations', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.GLASS,
+          validFrom: '2026-01-01',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: 'ea',
+          glassProcessingType: ['remelt'],
+          site: { address: '123 Glass Lane' }
+        })
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { ...validPayload, material: MATERIAL.GLASS }
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            accreditation: expect.objectContaining({
+              material: MATERIAL.GLASS,
+              glassRecyclingProcess: 'remelt',
+              siteAddress: '123 Glass Lane'
+            })
+          })
+        )
+      })
+
+      it('omits glass recycling process for non-glass accreditations', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        const createArg =
+          lumpyPackagingRecyclingNotesRepository.create.mock.calls[0][0]
+        expect(createArg.accreditation).not.toHaveProperty(
+          'glassRecyclingProcess'
+        )
+      })
+
+      it('falls back to current year when accreditation has no validFrom', async () => {
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          id: accreditationId,
+          accreditationNumber: 'ACC-001',
+          material: MATERIAL.PLASTIC,
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: 'ea'
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        const body = JSON.parse(response.payload)
+        expect(body.accreditationYear).toBe(new Date().getFullYear())
       })
 
       it('should default accreditationYear and isDecemberWaste when missing from stored PRN', async () => {
@@ -436,7 +518,17 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           lumpyPackagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository(),
           organisationsRepository: () => ({
+            findById: vi.fn(async () => ({
+              companyDetails: {
+                name: 'Test Org',
+                tradingName: 'Test Trading'
+              }
+            })),
             findAccreditationById: vi.fn(async () => ({
+              id: accreditationId,
+              accreditationNumber: 'ACC-001',
+              material: MATERIAL.PLASTIC,
+              validFrom: '2026-01-01',
               wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
               submittedToRegulator: 'ea'
             }))

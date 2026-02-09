@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
+import { validatePrnInsert } from './validation.js'
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -43,17 +44,38 @@ async function ensurePrnNumberIndex(collection) {
  * @param {import('mongodb').Db} db
  * @returns {Promise<import('mongodb').Collection>}
  */
+/**
+ * Ensures the organisation_status compound index uses the v2 field path.
+ * Handles migration from v1 (organisationId) to v2 (organisation.id).
+ *
+ * @param {import('mongodb').Collection} collection
+ */
+async function ensureOrganisationStatusIndex(collection) {
+  const indexName = 'organisationId_status'
+
+  try {
+    const indexes = await collection.indexes()
+    const existingIndex = indexes.find((idx) => idx.name === indexName)
+
+    if (existingIndex?.key?.organisationId) {
+      await collection.dropIndex(indexName)
+    }
+  } catch (error) {
+    if (error.codeName !== 'NamespaceNotFound') {
+      throw error
+    }
+  }
+
+  await collection.createIndex(
+    { 'organisation.id': 1, 'status.currentStatus': 1 },
+    { name: indexName }
+  )
+}
+
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
-  // Optimises queries by organisation and current status
-  await collection.createIndex(
-    {
-      organisationId: 1,
-      'status.currentStatus': 1
-    },
-    { name: 'organisationId_status' }
-  )
+  await ensureOrganisationStatusIndex(collection)
 
   // Unique index for PRN numbers - sparse to allow null values
   // Uses helper to handle migration from older non-unique index
@@ -114,10 +136,11 @@ const findByPrnNumber = async (db, prnNumber) => {
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 const create = async (db, prn) => {
-  const result = await db.collection(COLLECTION_NAME).insertOne(prn)
+  const validated = validatePrnInsert(prn)
+  const result = await db.collection(COLLECTION_NAME).insertOne(validated)
 
   return {
-    ...prn,
+    ...validated,
     id: result.insertedId.toHexString()
   }
 }
@@ -131,7 +154,7 @@ const findByAccreditation = async (db, accreditationId) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
-      accreditationId,
+      'accreditation.id': accreditationId,
       'status.currentStatus': { $ne: PRN_STATUS.DELETED }
     })
     .toArray()

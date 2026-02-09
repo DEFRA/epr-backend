@@ -24,18 +24,23 @@ const accreditationId = 'acc-789'
 const mockPrns = [
   {
     id: 'prn-001',
-    schemaVersion: 1,
-    organisationId,
-    accreditationId,
+    schemaVersion: 2,
+    organisation: { id: organisationId, name: 'Test Organisation' },
+    registrationId,
+    accreditation: {
+      id: accreditationId,
+      accreditationNumber: 'ACC-2026-001',
+      accreditationYear: 2026,
+      material: 'glass',
+      submittedToRegulator: 'ea'
+    },
     issuedToOrganisation: {
       id: 'acme-001',
       name: 'Acme Packaging Ltd'
     },
     tonnage: 50,
-    material: 'glass',
     isExport: false,
     isDecemberWaste: false,
-    accreditationYear: 2026,
     status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
     createdAt: new Date('2026-01-15T10:00:00Z'),
     createdBy: { id: 'user-1', name: 'Test User' },
@@ -47,18 +52,23 @@ const mockPrns = [
   {
     id: 'prn-002',
     prnNumber: 'ER2654321',
-    schemaVersion: 1,
-    organisationId,
-    accreditationId,
+    schemaVersion: 2,
+    organisation: { id: organisationId, name: 'Test Organisation' },
+    registrationId,
+    accreditation: {
+      id: accreditationId,
+      accreditationNumber: 'ACC-2026-001',
+      accreditationYear: 2026,
+      material: 'glass',
+      submittedToRegulator: 'ea'
+    },
     issuedToOrganisation: {
       id: 'bigco-001',
       name: 'BigCo Waste Solutions'
     },
     tonnage: 120,
-    material: 'glass',
     isExport: false,
     isDecemberWaste: false,
-    accreditationYear: 2026,
     status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE },
     createdAt: new Date('2026-01-18T14:30:00Z'),
     createdBy: { id: 'user-1', name: 'Test User' },

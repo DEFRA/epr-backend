@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { registerRepository } from '#plugins/register-repository.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
+import { validatePrnInsert } from './validation.js'
 
 const performFindById = (storage) => async (id) => {
   const prn = storage.get(id)
@@ -18,8 +19,9 @@ const performFindByPrnNumber = (storage) => async (prnNumber) => {
 }
 
 const performCreate = (storage) => async (prn) => {
+  const validated = validatePrnInsert(prn)
   const id = new ObjectId().toHexString()
-  const prnWithId = { ...prn, id }
+  const prnWithId = { ...validated, id }
   storage.set(id, structuredClone(prnWithId))
   return structuredClone(prnWithId)
 }
@@ -28,7 +30,7 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
   const results = []
   for (const prn of storage.values()) {
     if (
-      prn.accreditationId === accreditationId &&
+      prn.accreditation?.id === accreditationId &&
       prn.status?.currentStatus !== PRN_STATUS.DELETED
     ) {
       results.push(structuredClone(prn))

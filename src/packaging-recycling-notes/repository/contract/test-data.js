@@ -18,19 +18,28 @@ export const buildPrn = (overrides = {}) => {
   const { status: statusOverrides, ...rest } = overrides
 
   return {
-    schemaVersion: 1,
-    organisationId: `org-${randomUUID()}`,
-    accreditationId: `acc-${randomUUID()}`,
+    schemaVersion: 2,
+    organisation: {
+      id: `org-${randomUUID()}`,
+      name: 'Test Organisation',
+      tradingName: 'Test Trading'
+    },
+    registrationId: `reg-${randomUUID()}`,
+    accreditation: {
+      id: `acc-${randomUUID()}`,
+      accreditationNumber: `ACC-${Date.now()}`,
+      accreditationYear: 2026,
+      material: 'plastic',
+      submittedToRegulator: 'ea'
+    },
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,
       name: 'Recipient Org',
       tradingName: 'Recipient Trading'
     },
     tonnage: 100,
-    material: 'plastic',
     isExport: false,
     isDecemberWaste: false,
-    accreditationYear: 2026,
     issuedAt: null,
     issuedBy: null,
     status: {
