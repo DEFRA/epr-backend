@@ -1,5 +1,3 @@
-/** @import { Material } from '#domain/organisations/model.js' */
-
 export const PRN_NUMBER_MAX_LENGTH = 20
 
 /**

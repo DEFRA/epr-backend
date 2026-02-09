@@ -893,9 +893,8 @@ describe('updatePrnStatus', () => {
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
           organisation: { id: 'org-123' },
-          accreditation: { id: 'acc-456' },
+          accreditation: { id: 'acc-456', material: 'paper' },
           tonnage: 100,
-          material: 'paper',
           isExport: false,
           status: { currentStatus: PRN_STATUS.DRAFT }
         }),

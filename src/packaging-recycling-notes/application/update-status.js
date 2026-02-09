@@ -267,7 +267,7 @@ export async function updatePrnStatus({
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,
     toStatus: newStatus,
-    material: prn.material,
+    material: prn.accreditation?.material,
     isExport: prn.isExport
   })
 
