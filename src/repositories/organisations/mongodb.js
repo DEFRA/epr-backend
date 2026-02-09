@@ -168,7 +168,7 @@ const performFindAll = (db) => async () => {
 const performFindAllLinked =
   (db) =>
   async (filter = {}) => {
-    const query = { linkedDefraOrganisation: { $exists: true } }
+    const query = { 'linkedDefraOrganisation.orgId': { $ne: null } }
 
     if (filter.name) {
       query['companyDetails.name'] = {
