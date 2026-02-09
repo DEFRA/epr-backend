@@ -191,43 +191,32 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
       }
     })
   } catch (err) {
-    if (err instanceof PermanentError) {
-      logger.error({
-        err,
-        message: `Command failed (permanent): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-        }
-      })
-
-      await markCommandAsFailed(
-        commandType,
-        summaryLogId,
-        summaryLogsRepository,
-        logger
-      )
-      return
-    }
-
+    const isPermanent = err instanceof PermanentError
     const receiveCount = Number(
       message.Attributes?.ApproximateReceiveCount ?? 0
     )
-    const isFinalAttempt =
-      maxReceiveCount !== null && receiveCount >= maxReceiveCount
+    const isFinalTransientAttempt =
+      !isPermanent &&
+      maxReceiveCount !== null &&
+      receiveCount >= maxReceiveCount
+    const isTerminal = isPermanent || isFinalTransientAttempt
+
+    const label = isPermanent
+      ? 'permanent'
+      : isFinalTransientAttempt
+        ? 'transient, final attempt'
+        : 'transient, will retry'
 
     logger.error({
       err,
-      message: isFinalAttempt
-        ? `Command failed (transient, final attempt): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`
-        : `Command failed (transient, will retry): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+      message: `Command failed (${label}): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
 
-    if (isFinalAttempt) {
+    if (isTerminal) {
       await markCommandAsFailed(
         commandType,
         summaryLogId,
@@ -236,7 +225,9 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
       )
     }
 
-    throw err
+    if (!isPermanent) {
+      throw err
+    }
   }
 }
 
