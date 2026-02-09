@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { registerRepository } from '#plugins/register-repository.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { PrnNumberConflictError } from './port.js'
 
 /**
  * In-memory implementation of the lumpy packaging recycling notes repository.
@@ -9,7 +10,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
  * @param {Array} [initialData] - Optional initial PRN data
  * @returns {() => import('./port.js').PackagingRecyclingNotesRepository}
  */
-function createInMemoryLumpyPackagingRecyclingNotesRepository(
+export function createInMemoryLumpyPackagingRecyclingNotesRepository(
   initialData = []
 ) {
   const storage = new Map()
@@ -75,17 +76,50 @@ function createInMemoryLumpyPackagingRecyclingNotesRepository(
      * @param {import('./port.js').UpdateStatusParams} params
      * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
      */
-    updateStatus: async ({ id, status, updatedBy, updatedAt }) => {
+    updateStatus: async ({
+      id,
+      status,
+      updatedBy,
+      updatedAt,
+      prnNumber,
+      issuedAt,
+      issuedBy
+    }) => {
       const prn = storage.get(id)
       if (!prn) {
         return null
       }
+
+      if (prnNumber) {
+        for (const existing of storage.values()) {
+          if (existing.id !== id && existing.prnNumber === prnNumber) {
+            throw new PrnNumberConflictError(prnNumber)
+          }
+        }
+      }
+
       const updated = {
         ...prn,
-        status,
         updatedBy,
-        updatedAt
+        updatedAt,
+        status: {
+          currentStatus: status,
+          history: [...prn.status.history, { status, updatedAt, updatedBy }]
+        }
       }
+
+      if (prnNumber) {
+        updated.prnNumber = prnNumber
+      }
+
+      if (issuedAt) {
+        updated.issuedAt = issuedAt
+      }
+
+      if (issuedBy) {
+        updated.issuedBy = issuedBy
+      }
+
       storage.set(id, updated)
       return structuredClone(updated)
     }

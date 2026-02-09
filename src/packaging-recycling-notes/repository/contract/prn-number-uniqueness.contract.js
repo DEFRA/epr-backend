@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { PrnNumberConflictError } from '../mongodb.js'
+import { PrnNumberConflictError } from '../port.js'
 import { buildAwaitingAuthorisationPrn } from './test-data.js'
 
 export const testPrnNumberUniqueness = (it) => {

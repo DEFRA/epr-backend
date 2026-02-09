@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
-import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/mongodb.js'
+import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 
 const mockRecordStatusTransition = vi.fn()
 

@@ -19,7 +19,7 @@ import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/mongodb.js'
+import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
 const organisationId = 'org-123'

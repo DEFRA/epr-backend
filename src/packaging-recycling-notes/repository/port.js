@@ -1,4 +1,16 @@
 /**
+ * Error thrown when a PRN number already exists in the database.
+ * Callers can catch this to retry with a different PRN number.
+ */
+export class PrnNumberConflictError extends Error {
+  constructor(prnNumber) {
+    super(`PRN number already exists: ${prnNumber}`)
+    this.name = 'PrnNumberConflictError'
+    this.prnNumber = prnNumber
+  }
+}
+
+/**
  * @typedef {Object} UpdateStatusParams
  * @property {string} id - PRN ID
  * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus} status - New status
