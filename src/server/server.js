@@ -27,6 +27,7 @@ import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-
 import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { router } from '#plugins/router.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
+import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
@@ -93,6 +94,12 @@ function getSwaggerPlugins() {
 
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
+
+  // v8 ignore next 3 - SQS branch tested via sqs-command-executor.plugin.test.js
+  const workerPlugin = config.get('featureFlags.sqsCommands')
+    ? { plugin: sqsCommandExecutorPlugin, options: { config } }
+    : piscinaWorkersPlugin
+
   return [
     {
       plugin: mongoDbPlugin,
@@ -112,7 +119,7 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
-    piscinaWorkersPlugin,
+    workerPlugin,
     lumpyPackagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
