@@ -57,7 +57,9 @@ runs:
               ] | @tsv
             ' coverage/test-results.json)
 
-            SLOW_SUITES=$(jq -r '
+            REPO_URL="https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+
+            SLOW_SUITES=$(jq -r --arg ws "$GITHUB_WORKSPACE/src/" --arg repo "$REPO_URL/src/" '
               def fmt_ms:
                 if . >= 60000 then "\(. / 60000 | floor)m \(. / 1000 % 60 | round)s"
                 elif . >= 1000 then "\(. / 1000 * 10 | round / 10)s"
@@ -65,7 +67,8 @@ runs:
                 end;
               [.testResults[] | {name: .name, duration: (.endTime - .startTime)}]
               | sort_by(-.duration) | .[0:5][]
-              | "| \(.name) | \(.duration | fmt_ms) |"
+              | (.name | ltrimstr($ws)) as $short
+              | "| [\($short)](\($repo)\($short)) | \(.duration | fmt_ms) |"
             ' coverage/test-results.json)
 
             SLOW_TESTS=$(jq -r '
