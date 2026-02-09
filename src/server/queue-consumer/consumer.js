@@ -145,6 +145,73 @@ const markCommandAsFailed = async (
 }
 
 /**
+ * Returns a label describing the failure mode for logging.
+ * @param {boolean} isPermanent
+ * @param {boolean} isFinalTransientAttempt
+ * @returns {string}
+ */
+const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
+  if (isPermanent) {
+    return 'permanent'
+  }
+  if (isFinalTransientAttempt) {
+    return 'transient, final attempt'
+  }
+  return 'transient, will retry'
+}
+
+/**
+ * Handles a command processing error: logs, marks as failed if terminal,
+ * and rethrows transient errors so SQS can retry.
+ * @param {object} params
+ * @param {Error} params.err
+ * @param {string} params.commandType
+ * @param {string} params.summaryLogId
+ * @param {import('@aws-sdk/client-sqs').Message} params.message
+ * @param {number|null} params.maxReceiveCount
+ * @param {object} params.summaryLogsRepository
+ * @param {TypedLogger} params.logger
+ */
+const handleCommandError = async ({
+  err,
+  commandType,
+  summaryLogId,
+  message,
+  maxReceiveCount,
+  summaryLogsRepository,
+  logger
+}) => {
+  const isPermanent = err instanceof PermanentError
+  const receiveCount = Number(message.Attributes?.ApproximateReceiveCount ?? 0)
+  const isFinalTransientAttempt =
+    !isPermanent && maxReceiveCount !== null && receiveCount >= maxReceiveCount
+  const isTerminal = isPermanent || isFinalTransientAttempt
+
+  logger.error({
+    err,
+    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+    }
+  })
+
+  if (isTerminal) {
+    await markCommandAsFailed(
+      commandType,
+      summaryLogId,
+      summaryLogsRepository,
+      logger
+    )
+  }
+
+  if (isPermanent) {
+    return
+  }
+  throw err
+}
+
+/**
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
  * @param {number|null} maxReceiveCount
@@ -191,43 +258,15 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
       }
     })
   } catch (err) {
-    const isPermanent = err instanceof PermanentError
-    const receiveCount = Number(
-      message.Attributes?.ApproximateReceiveCount ?? 0
-    )
-    const isFinalTransientAttempt =
-      !isPermanent &&
-      maxReceiveCount !== null &&
-      receiveCount >= maxReceiveCount
-    const isTerminal = isPermanent || isFinalTransientAttempt
-
-    const label = isPermanent
-      ? 'permanent'
-      : isFinalTransientAttempt
-        ? 'transient, final attempt'
-        : 'transient, will retry'
-
-    logger.error({
+    await handleCommandError({
       err,
-      message: `Command failed (${label}): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
+      commandType,
+      summaryLogId,
+      message,
+      maxReceiveCount,
+      summaryLogsRepository,
+      logger
     })
-
-    if (isTerminal) {
-      await markCommandAsFailed(
-        commandType,
-        summaryLogId,
-        summaryLogsRepository,
-        logger
-      )
-    }
-
-    if (!isPermanent) {
-      throw err
-    }
   }
 }
 
