@@ -58,7 +58,10 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           material: MATERIAL.PLASTIC,
           validFrom: '2026-01-01',
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-          submittedToRegulator: 'ea'
+          submittedToRegulator: 'ea',
+          site: {
+            address: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+          }
         }))
       }
 

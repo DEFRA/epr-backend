@@ -30,7 +30,8 @@ export const testCreateBehaviour = (it) => {
             accreditationYear: 2026,
             material: 'glass',
             submittedToRegulator: 'ea',
-            glassRecyclingProcess: 'glass_re_melt'
+            glassRecyclingProcess: 'glass_re_melt',
+            siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
           }
         })
 

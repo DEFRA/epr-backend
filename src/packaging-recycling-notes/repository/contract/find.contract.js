@@ -125,7 +125,8 @@ export const testFindBehaviour = (it) => {
               accreditationNumber: 'ACC-1',
               accreditationYear: 2026,
               material: 'plastic',
-              submittedToRegulator: 'ea'
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
             },
             tonnage: 100
           })
@@ -137,7 +138,8 @@ export const testFindBehaviour = (it) => {
               accreditationNumber: 'ACC-2',
               accreditationYear: 2026,
               material: 'plastic',
-              submittedToRegulator: 'ea'
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
             },
             tonnage: 200
           })
@@ -149,7 +151,8 @@ export const testFindBehaviour = (it) => {
               accreditationNumber: 'ACC-3',
               accreditationYear: 2026,
               material: 'plastic',
-              submittedToRegulator: 'ea'
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
             },
             tonnage: 300
           })
@@ -172,7 +175,8 @@ export const testFindBehaviour = (it) => {
               accreditationNumber: 'ACC-IDS',
               accreditationYear: 2026,
               material: 'plastic',
-              submittedToRegulator: 'ea'
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
             }
           })
         )
@@ -195,7 +199,8 @@ export const testFindBehaviour = (it) => {
               accreditationNumber: 'ACC-A',
               accreditationYear: 2026,
               material: 'plastic',
-              submittedToRegulator: 'ea'
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
             },
             organisation: { id: 'org-A', name: 'Org A' }
           })
@@ -207,7 +212,8 @@ export const testFindBehaviour = (it) => {
               accreditationNumber: 'ACC-B',
               accreditationYear: 2026,
               material: 'plastic',
-              submittedToRegulator: 'ea'
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
             },
             organisation: { id: 'org-B', name: 'Org B' }
           })
@@ -226,7 +232,8 @@ export const testFindBehaviour = (it) => {
           accreditationNumber: 'ACC-DEL',
           accreditationYear: 2026,
           material: 'plastic',
-          submittedToRegulator: 'ea'
+          submittedToRegulator: 'ea',
+          siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
         }
 
         await repository.create(

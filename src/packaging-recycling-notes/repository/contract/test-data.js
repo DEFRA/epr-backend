@@ -30,7 +30,11 @@ export const buildPrn = (overrides = {}) => {
       accreditationNumber: `ACC-${Date.now()}`,
       accreditationYear: 2026,
       material: 'plastic',
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      siteAddress: {
+        line1: '1 Test Street',
+        postcode: 'SW1A 1AA'
+      }
     },
     issuedToOrganisation: {
       id: `recipient-${randomUUID()}`,

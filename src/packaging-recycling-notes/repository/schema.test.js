@@ -47,7 +47,8 @@ describe('PRN insert schema', () => {
           accreditationYear: 2026,
           material: 'glass',
           submittedToRegulator: 'ea',
-          glassRecyclingProcess: 'glass_re_melt'
+          glassRecyclingProcess: 'glass_re_melt',
+          siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
         }
       })
       const { error } = prnInsertSchema.validate(data)
@@ -251,6 +252,114 @@ describe('PRN insert schema', () => {
     })
   })
 
+  describe('tonnage validation', () => {
+    it('rejects zero tonnage', () => {
+      const data = buildValidPrnInsert({ tonnage: 0 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+      expect(error.message).toContain('positive')
+    })
+
+    it('rejects negative tonnage', () => {
+      const data = buildValidPrnInsert({ tonnage: -5 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+      expect(error.message).toContain('positive')
+    })
+
+    it('accepts positive tonnage', () => {
+      const data = buildValidPrnInsert({ tonnage: 1 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+  })
+
+  describe('material enum validation', () => {
+    it('rejects invalid material value', () => {
+      const data = buildValidPrnInsert({
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'unobtainium',
+          submittedToRegulator: 'ea'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('accepts all valid material values', () => {
+      const materials = [
+        'aluminium',
+        'fibre',
+        'glass',
+        'paper',
+        'plastic',
+        'steel',
+        'wood'
+      ]
+      for (const material of materials) {
+        const accreditation =
+          material === 'glass'
+            ? {
+                id: 'acc-1',
+                accreditationNumber: 'ACC-001',
+                accreditationYear: 2026,
+                material,
+                submittedToRegulator: 'ea',
+                glassRecyclingProcess: 'glass_re_melt',
+                siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+              }
+            : {
+                id: 'acc-1',
+                accreditationNumber: 'ACC-001',
+                accreditationYear: 2026,
+                material,
+                submittedToRegulator: 'ea',
+                siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+              }
+        const { error } = prnInsertSchema.validate(
+          buildValidPrnInsert({ accreditation })
+        )
+        expect(error).toBeUndefined()
+      }
+    })
+  })
+
+  describe('glassRecyclingProcess enum validation', () => {
+    it('rejects invalid glassRecyclingProcess value', () => {
+      const data = buildValidPrnInsert({
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'glass',
+          submittedToRegulator: 'ea',
+          glassRecyclingProcess: 'glass_magic'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('accepts glass_other', () => {
+      const data = buildValidPrnInsert({
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'glass',
+          submittedToRegulator: 'ea',
+          glassRecyclingProcess: 'glass_other',
+          siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+  })
+
   describe('conditional fields', () => {
     it('rejects glass material without glassRecyclingProcess', () => {
       const data = buildValidPrnInsert({
@@ -274,11 +383,58 @@ describe('PRN insert schema', () => {
           accreditationYear: 2026,
           material: 'plastic',
           submittedToRegulator: 'ea',
-          glassRecyclingProcess: 'glass_re_melt'
+          glassRecyclingProcess: 'glass_re_melt',
+          siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
         }
       })
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
+    })
+
+    it('requires siteAddress for reprocessors', () => {
+      const data = buildValidPrnInsert({
+        isExport: false,
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'plastic',
+          submittedToRegulator: 'ea'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('accepts missing siteAddress for exporters', () => {
+      const data = buildValidPrnInsert({
+        isExport: true,
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'plastic',
+          submittedToRegulator: 'ea'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('accepts siteAddress for exporters when provided', () => {
+      const data = buildValidPrnInsert({
+        isExport: true,
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'plastic',
+          submittedToRegulator: 'ea',
+          siteAddress: { line1: '1 Test St', postcode: 'SW1A 1AA' }
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
     })
   })
 

@@ -1,6 +1,13 @@
 import Joi from 'joi'
 
+import {
+  MATERIAL,
+  GLASS_RECYCLING_PROCESS
+} from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+
+const materialValues = Object.values(MATERIAL)
+const glassProcessValues = Object.values(GLASS_RECYCLING_PROCESS)
 
 const statusValues = Object.values(PRN_STATUS)
 
@@ -23,13 +30,17 @@ const accreditationSchema = Joi.object({
   id: Joi.string().required(),
   accreditationNumber: Joi.string().required(),
   accreditationYear: Joi.number().integer().required(),
-  material: Joi.string().required(),
+  material: Joi.string()
+    .valid(...materialValues)
+    .required(),
   submittedToRegulator: Joi.string()
     .valid('ea', 'nrw', 'sepa', 'niea')
     .required(),
-  glassRecyclingProcess: Joi.string().when('material', {
-    is: 'glass',
-    then: Joi.string().required(),
+  glassRecyclingProcess: Joi.when('material', {
+    is: MATERIAL.GLASS,
+    then: Joi.string()
+      .valid(...glassProcessValues)
+      .required(),
     otherwise: Joi.forbidden()
   }),
   siteAddress: siteAddressSchema.optional()
@@ -66,9 +77,15 @@ export const prnInsertSchema = Joi.object({
   prnNumber: Joi.string().allow(null).optional(),
   organisation: organisationNameAndIdSchema.required(),
   registrationId: Joi.string().required(),
-  accreditation: accreditationSchema.required(),
+  accreditation: Joi.when('isExport', {
+    is: true,
+    then: accreditationSchema.required(),
+    otherwise: accreditationSchema
+      .keys({ siteAddress: siteAddressSchema.required() })
+      .required()
+  }),
   issuedToOrganisation: organisationNameAndIdSchema.required(),
-  tonnage: Joi.number().required(),
+  tonnage: Joi.number().positive().required(),
   isExport: Joi.boolean().required(),
   notes: Joi.string().optional(),
   isDecemberWaste: Joi.boolean().required(),
