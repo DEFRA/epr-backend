@@ -317,7 +317,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
-      it('falls back to current year when accreditation has no validFrom', async () => {
+      it('returns 500 when accreditation has no validFrom', async () => {
         organisationsRepository.findAccreditationById.mockResolvedValueOnce({
           id: accreditationId,
           accreditationNumber: 'ACC-001',
@@ -333,8 +333,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        const body = JSON.parse(response.payload)
-        expect(body.accreditationYear).toBe(new Date().getFullYear())
+        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
 
       it('should default accreditationYear and isDecemberWaste when missing from stored PRN', async () => {

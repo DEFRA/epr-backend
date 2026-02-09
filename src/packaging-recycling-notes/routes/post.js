@@ -84,15 +84,17 @@ const buildPrnData = ({
 })
 
 /**
- * Derives the accreditation year from the validFrom date.
- * @param {Object} accreditation
+ * @param {{ id: string; validFrom?: string }} accreditation
  * @returns {number}
+ * @throws {Error} if validFrom is missing — approved accreditations must have it
  */
 const deriveAccreditationYear = (accreditation) => {
-  if (accreditation.validFrom) {
-    return new Date(accreditation.validFrom).getFullYear()
+  if (!accreditation.validFrom) {
+    throw new Error(
+      `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
+    )
   }
-  return new Date().getFullYear()
+  return new Date(accreditation.validFrom).getFullYear()
 }
 
 /**
