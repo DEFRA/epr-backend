@@ -33,7 +33,7 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   material: prn.material,
   notes: prn.notes ?? null,
   prnNumber: prn.prnNumber ?? null,
-  processToBeUsed: getProcessCode(prn.material),
+  processToBeUsed: /** @type {string} */ (getProcessCode(prn.material)),
   status: prn.status.currentStatus,
   tonnage: prn.tonnage,
   wasteProcessingType
