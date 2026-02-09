@@ -109,8 +109,7 @@ describe('createCommandQueueConsumer', () => {
 
       expect(logger.info).toHaveBeenCalledWith({
         message:
-          'Resolved queue URL: http://localhost:4566/000000000000/test-queue',
-        queueName: 'test-queue'
+          'Resolved queue URL: http://localhost:4566/000000000000/test-queue for queueName=test-queue'
       })
     })
 
@@ -217,8 +216,8 @@ describe('createCommandQueueConsumer', () => {
 
       expect(logger.error).toHaveBeenCalledWith({
         err: error,
-        message: 'Command timed out: validate for summaryLogId=summary-123',
-        messageId: 'msg-123',
+        message:
+          'Command timed out: validate for summaryLogId=summary-123 messageId=msg-123',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -415,7 +414,8 @@ describe('createCommandQueueConsumer', () => {
         expect(mockValidator).toHaveBeenCalledWith('log-123')
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Command completed: validate for summaryLogId=log-123'
+            message:
+              'Command completed: validate for summaryLogId=log-123 messageId=msg-123'
           })
         )
       })
@@ -584,7 +584,8 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Command failed: submit for summaryLogId=log-123'
+            message:
+              'Command failed: submit for summaryLogId=log-123 messageId=msg-123'
           })
         )
         expect(logger.warn).toHaveBeenCalledWith({
