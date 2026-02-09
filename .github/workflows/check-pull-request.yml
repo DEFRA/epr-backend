@@ -184,7 +184,7 @@ jobs:
           |---|---|---|---|
           | Tests | $PASSED | $FAILED | $TOTAL |
 
-          Branch: \`${{ steps.journey-branch.outputs.ref }}\` | Docker build: $DOCKER_DUR | Tests: $TEST_DUR
+          Docker build: $DOCKER_DUR | Tests: $TEST_DUR
 
           ### Slowest Journey Tests
 
