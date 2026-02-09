@@ -3,6 +3,7 @@ import { MATERIAL } from '#domain/organisations/model.js'
 
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
+const issuedDate = '2026-01-15T10:00:00Z'
 
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
@@ -19,7 +20,7 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   isExport: false,
   isDecemberWaste: false,
   accreditationYear: 2026,
-  issuedAt: new Date('2026-01-15T10:00:00Z'),
+  issuedAt: new Date(issuedDate),
   issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
   notes: 'Test notes',
   status: {
@@ -32,13 +33,13 @@ export const createMockIssuedPrn = (overrides = {}) => ({
       },
       {
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
-        updatedAt: new Date('2026-01-15T10:00:00Z')
+        updatedAt: new Date(issuedDate)
       }
     ]
   },
   createdAt: new Date('2026-01-10T10:00:00Z'),
   createdBy: { id: 'user-123', name: 'Test User' },
-  updatedAt: new Date('2026-01-15T10:00:00Z'),
+  updatedAt: new Date(issuedDate),
   updatedBy: { id: 'user-issuer', name: 'Issuer User' },
   ...overrides
 })
