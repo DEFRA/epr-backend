@@ -37,7 +37,7 @@ export const buildPrn = (overrides = {}) => {
         {
           status: PRN_STATUS.DRAFT,
           updatedAt: now,
-          updatedBy: DEFAULT_CREATOR.id
+          updatedBy: DEFAULT_CREATOR
         }
       ],
       ...statusOverrides
@@ -63,7 +63,7 @@ export const buildDraftPrn = (overrides = {}) =>
         {
           status: PRN_STATUS.DRAFT,
           updatedAt: new Date(),
-          updatedBy: DEFAULT_CREATOR.id
+          updatedBy: DEFAULT_CREATOR
         }
       ],
       ...overrides.status
@@ -84,12 +84,12 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
         {
           status: PRN_STATUS.DRAFT,
           updatedAt: new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS),
-          updatedBy: DEFAULT_CREATOR.id
+          updatedBy: DEFAULT_CREATOR
         },
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedAt: now,
-          updatedBy: 'user-raiser'
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' }
         }
       ],
       ...overrides.status
@@ -111,12 +111,12 @@ export const buildDeletedPrn = (overrides = {}) => {
         {
           status: PRN_STATUS.DRAFT,
           updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
-          updatedBy: DEFAULT_CREATOR.id
+          updatedBy: DEFAULT_CREATOR
         },
         {
           status: PRN_STATUS.DELETED,
           updatedAt: now,
-          updatedBy: 'user-deleter'
+          updatedBy: { id: 'user-deleter', name: 'Deleter User' }
         }
       ],
       ...overrides.status
