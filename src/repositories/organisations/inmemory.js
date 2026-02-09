@@ -152,12 +152,22 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
-const performFindAllLinked = (staleCache) => async () => {
-  const matches = staleCache.filter((org) => org.linkedDefraOrganisation)
-  return matches.map((org) =>
-    mapDocumentWithCurrentStatuses(structuredClone(org))
-  )
-}
+const performFindAllLinked =
+  (staleCache) =>
+  async (filter = {}) => {
+    let matches = staleCache.filter((org) => org.linkedDefraOrganisation)
+
+    if (filter.name) {
+      const nameLower = filter.name.toLowerCase()
+      matches = matches.filter((org) =>
+        org.companyDetails.name.toLowerCase().includes(nameLower)
+      )
+    }
+
+    return matches.map((org) =>
+      mapDocumentWithCurrentStatuses(structuredClone(org))
+    )
+  }
 
 const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
   const found = staleCache.find(

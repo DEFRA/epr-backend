@@ -113,6 +113,85 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     )
   })
 
+  it('filters by name query parameter', async () => {
+    const acmeOrg = buildOrganisation({
+      companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Defra One'
+      )
+    })
+    const betaOrg = buildOrganisation({
+      companyDetails: { name: 'Beta Corp', registrationNumber: 'REG002' },
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Defra Two'
+      )
+    })
+
+    await organisationsRepository.insert(acmeOrg)
+    await organisationsRepository.insert(betaOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${linkedOrganisationsGetAllPath}?name=acme`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(acmeOrg.id)
+  })
+
+  it('returns empty array when name query matches nothing', async () => {
+    const linkedOrg = buildOrganisation({
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Defra Org'
+      )
+    })
+    await organisationsRepository.insert(linkedOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${linkedOrganisationsGetAllPath}?name=zzz`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result).toEqual([])
+  })
+
+  it('name filter is case-insensitive', async () => {
+    const org = buildOrganisation({
+      companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Defra Org'
+      )
+    })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${linkedOrganisationsGetAllPath}?name=ACME`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(org.id)
+  })
+
   testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => ({
