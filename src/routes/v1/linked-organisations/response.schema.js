@@ -14,14 +14,11 @@ const linkedOrganisationItemSchema = Joi.object({
   id: Joi.string().required(),
   orgId: Joi.number().integer().required(),
   companyDetails: Joi.object({
-    name: Joi.string().required(),
-    registrationNumber: Joi.string().optional()
-  })
-    .required()
-    .options({ allowUnknown: true }),
+    name: Joi.string().required()
+  }).required(),
   status: Joi.string().required(),
   linkedDefraOrganisation: linkedDefraOrganisationResponseSchema.required()
-}).options({ allowUnknown: true })
+})
 
 export const linkedOrganisationsResponseSchema = Joi.array()
   .items(linkedOrganisationItemSchema)
@@ -30,8 +27,7 @@ export const linkedOrganisationsResponseSchema = Joi.array()
       id: '507f1f77bcf86cd799439011',
       orgId: 100001,
       companyDetails: {
-        name: 'Acme Recycling Ltd',
-        registrationNumber: '12345678'
+        name: 'Acme Recycling Ltd'
       },
       status: 'active',
       linkedDefraOrganisation: {

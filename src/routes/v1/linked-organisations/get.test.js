@@ -30,13 +30,12 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     })
   })
 
-  it('returns 200 with only linked organisations', async () => {
-    const linkedOrg = buildOrganisation({
-      linkedDefraOrganisation: buildLinkedDefraOrg(
-        crypto.randomUUID(),
-        'Defra Org'
-      )
-    })
+  it('returns 200 with only projected fields for linked organisations', async () => {
+    const linkedDefraOrganisation = buildLinkedDefraOrg(
+      crypto.randomUUID(),
+      'Defra Org'
+    )
+    const linkedOrg = buildOrganisation({ linkedDefraOrganisation })
     const unlinkedOrg = buildOrganisation()
 
     await organisationsRepository.insert(linkedOrg)
@@ -53,7 +52,55 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe(linkedOrg.id)
+    expect(Object.keys(result[0]).sort()).toEqual([
+      'companyDetails',
+      'id',
+      'linkedDefraOrganisation',
+      'orgId',
+      'status'
+    ])
+    expect(Object.keys(result[0].companyDetails)).toEqual(['name'])
+    expect(result[0]).toEqual({
+      id: linkedOrg.id,
+      orgId: linkedOrg.orgId,
+      companyDetails: {
+        name: linkedOrg.companyDetails.name
+      },
+      status: 'created',
+      linkedDefraOrganisation: {
+        orgId: linkedDefraOrganisation.orgId,
+        orgName: linkedDefraOrganisation.orgName,
+        linkedBy: linkedDefraOrganisation.linkedBy,
+        linkedAt: linkedDefraOrganisation.linkedAt
+      }
+    })
+  })
+
+  it('excludes sensitive fields from the response', async () => {
+    const linkedOrg = buildOrganisation({
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Defra Org'
+      )
+    })
+    await organisationsRepository.insert(linkedOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: linkedOrganisationsGetAllPath,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result).toHaveLength(1)
+    expect(result[0]).not.toHaveProperty('users')
+    expect(result[0]).not.toHaveProperty('registrations')
+    expect(result[0]).not.toHaveProperty('accreditations')
+    expect(result[0]).not.toHaveProperty('contactDetails')
+    expect(result[0]).not.toHaveProperty('statusHistory')
   })
 
   it('returns 200 with empty array when no organisations are linked', async () => {
