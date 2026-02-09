@@ -1,47 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { prnInsertSchema } from './schema.js'
-
-const buildValidPrnInsert = (overrides = {}) => ({
-  schemaVersion: 2,
-  organisation: {
-    id: 'org-123',
-    name: 'Test Organisation',
-    tradingName: 'Test Trading'
-  },
-  registrationId: 'reg-456',
-  accreditation: {
-    id: 'acc-789',
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: 'ea'
-  },
-  issuedToOrganisation: {
-    id: 'recipient-123',
-    name: 'Recipient Org',
-    tradingName: 'Recipient Trading'
-  },
-  tonnage: 100,
-  isExport: false,
-  isDecemberWaste: false,
-  issuedAt: null,
-  issuedBy: null,
-  status: {
-    currentStatus: 'draft',
-    history: [
-      {
-        status: 'draft',
-        updatedAt: new Date(),
-        updatedBy: { id: 'user-1', name: 'Test User' }
-      }
-    ]
-  },
-  createdAt: new Date(),
-  createdBy: { id: 'user-1', name: 'Test User' },
-  updatedAt: new Date(),
-  updatedBy: { id: 'user-1', name: 'Test User' },
-  ...overrides
-})
+import { buildPrn as buildValidPrnInsert } from './contract/test-data.js'
 
 describe('PRN insert schema', () => {
   describe('valid documents', () => {
@@ -287,6 +246,23 @@ describe('PRN insert schema', () => {
     it('rejects when status is missing', () => {
       const data = buildValidPrnInsert()
       delete data.status
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+  })
+
+  describe('conditional fields', () => {
+    it('rejects glassRecyclingProcess on non-glass materials', () => {
+      const data = buildValidPrnInsert({
+        accreditation: {
+          id: 'acc-1',
+          accreditationNumber: 'ACC-001',
+          accreditationYear: 2026,
+          material: 'plastic',
+          submittedToRegulator: 'ea',
+          glassRecyclingProcess: 'glass_re_melt'
+        }
+      })
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })

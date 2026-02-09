@@ -1,54 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { validatePrnInsert } from './validation.js'
-
-const buildValidPrnInsert = (overrides = {}) => ({
-  schemaVersion: 2,
-  organisation: {
-    id: 'org-123',
-    name: 'Test Organisation',
-    tradingName: 'Test Trading'
-  },
-  registrationId: 'reg-456',
-  accreditation: {
-    id: 'acc-789',
-    accreditationNumber: 'ACC-2026-001',
-    accreditationYear: 2026,
-    material: 'plastic',
-    submittedToRegulator: 'ea'
-  },
-  issuedToOrganisation: {
-    id: 'recipient-123',
-    name: 'Recipient Org',
-    tradingName: 'Recipient Trading'
-  },
-  tonnage: 100,
-  isExport: false,
-  isDecemberWaste: false,
-  issuedAt: null,
-  issuedBy: null,
-  status: {
-    currentStatus: 'draft',
-    history: [
-      {
-        status: 'draft',
-        updatedAt: new Date(),
-        updatedBy: { id: 'user-1', name: 'Test User' }
-      }
-    ]
-  },
-  createdAt: new Date(),
-  createdBy: { id: 'user-1', name: 'Test User' },
-  updatedAt: new Date(),
-  updatedBy: { id: 'user-1', name: 'Test User' },
-  ...overrides
-})
+import { buildPrn as buildValidPrnInsert } from './contract/test-data.js'
 
 describe('validatePrnInsert', () => {
   it('returns validated value for valid data', () => {
     const data = buildValidPrnInsert()
     const result = validatePrnInsert(data)
     expect(result.schemaVersion).toBe(2)
-    expect(result.organisation.id).toBe('org-123')
+    expect(result.organisation.id).toBe(data.organisation.id)
   })
 
   it('strips unknown fields', () => {

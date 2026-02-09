@@ -27,7 +27,11 @@ const accreditationSchema = Joi.object({
   submittedToRegulator: Joi.string()
     .valid('ea', 'nrw', 'sepa', 'niea')
     .required(),
-  glassRecyclingProcess: Joi.string().optional(),
+  glassRecyclingProcess: Joi.string().when('material', {
+    is: 'glass',
+    then: Joi.string().optional(),
+    otherwise: Joi.forbidden()
+  }),
   siteAddress: siteAddressSchema.optional()
 })
 
