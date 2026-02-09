@@ -473,8 +473,6 @@ describe('SQS command queue consumer integration', () => {
           { timeout: 15000 }
         )
 
-        await stopConsumerAndWait(consumer)
-
         // Summary log should be marked as failed on the final attempt
         expect(summaryLogsRepository.update).toHaveBeenCalledWith(
           summaryLogId,
@@ -484,17 +482,26 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        // Message should be on the DLQ
-        const dlqResponse = await sqsClient.send(
-          new ReceiveMessageCommand({
-            QueueUrl: dlqUrl,
-            WaitTimeSeconds: 5
-          })
-        )
-        expect(dlqResponse.Messages).toHaveLength(1)
+        // Wait for message to land on DLQ. The consumer must stay alive so
+        // SQS can attempt another receive where it sees receiveCount >
+        // maxReceiveCount and redirects the message to the DLQ.
+        await vi.waitFor(
+          async () => {
+            const dlqResponse = await sqsClient.send(
+              new ReceiveMessageCommand({
+                QueueUrl: dlqUrl,
+                WaitTimeSeconds: 0
+              })
+            )
+            expect(dlqResponse.Messages).toHaveLength(1)
 
-        const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
-        expect(dlqBody.summaryLogId).toBe(summaryLogId)
+            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            expect(dlqBody.summaryLogId).toBe(summaryLogId)
+          },
+          { timeout: 15000, interval: 500 }
+        )
+
+        await stopConsumerAndWait(consumer)
       }
     )
   })
