@@ -120,7 +120,7 @@ export function createInMemoryLumpyPackagingRecyclingNotesRepository(
         updated.issuedBy = issuedBy
       }
 
-      storage.set(id, updated)
+      storage.set(id, structuredClone(updated))
       return structuredClone(updated)
     }
   })
