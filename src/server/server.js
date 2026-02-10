@@ -26,6 +26,7 @@ import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongo
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
 import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
+import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
@@ -158,7 +159,8 @@ async function createServer(options = {}) {
     Jwt,
     authPlugin,
     externalApiAuthPlugin,
-    authFailureLogger
+    authFailureLogger,
+    externalApiErrorFormatter
   ]
 
   /* istanbul ignore next */

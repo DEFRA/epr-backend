@@ -2,6 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
@@ -38,13 +39,13 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   const existing = await summaryLogsRepository.findById(summaryLogId)
 
   if (!existing) {
-    throw new Error(`Summary log ${summaryLogId} not found`)
+    throw new PermanentError(`Summary log ${summaryLogId} not found`)
   }
 
   const { version, summaryLog } = existing
 
   if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
-    throw new Error(
+    throw new PermanentError(
       `Summary log must be in submitting status. Current status: ${summaryLog.status}`
     )
   }

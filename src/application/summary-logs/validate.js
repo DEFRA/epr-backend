@@ -12,6 +12,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
@@ -472,7 +473,9 @@ export const createSummaryLogsValidator = ({
     const result = await summaryLogsRepository.findById(summaryLogId)
 
     if (!result) {
-      throw new Error(`Summary log not found: summaryLogId=${summaryLogId}`)
+      throw new PermanentError(
+        `Summary log not found: summaryLogId=${summaryLogId}`
+      )
     }
 
     const { version, summaryLog } = result

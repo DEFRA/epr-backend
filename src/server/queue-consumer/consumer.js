@@ -1,7 +1,10 @@
 import Joi from 'joi'
 import { Consumer } from 'sqs-consumer'
 
-import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
+import {
+  resolveQueueUrl,
+  getMaxReceiveCount
+} from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -13,6 +16,7 @@ import {
 } from '#domain/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
@@ -141,16 +145,84 @@ const markCommandAsFailed = async (
 }
 
 /**
+ * Returns a label describing the failure mode for logging.
+ * @param {boolean} isPermanent
+ * @param {boolean} isFinalTransientAttempt
+ * @returns {string}
+ */
+const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
+  if (isPermanent) {
+    return 'permanent'
+  }
+  if (isFinalTransientAttempt) {
+    return 'transient, final attempt'
+  }
+  return 'transient, will retry'
+}
+
+/**
+ * Handles a command processing error: logs, marks as failed if terminal,
+ * and rethrows transient errors so SQS can retry.
+ * @param {object} params
+ * @param {Error} params.err
+ * @param {string} params.commandType
+ * @param {string} params.summaryLogId
+ * @param {import('@aws-sdk/client-sqs').Message} params.message
+ * @param {number|null} params.maxReceiveCount
+ * @param {object} params.summaryLogsRepository
+ * @param {TypedLogger} params.logger
+ */
+const handleCommandError = async ({
+  err,
+  commandType,
+  summaryLogId,
+  message,
+  maxReceiveCount,
+  summaryLogsRepository,
+  logger
+}) => {
+  const isPermanent = err instanceof PermanentError
+  const receiveCount = Number(message.Attributes?.ApproximateReceiveCount ?? 0)
+  const isFinalTransientAttempt =
+    !isPermanent && maxReceiveCount !== null && receiveCount >= maxReceiveCount
+  const isTerminal = isPermanent || isFinalTransientAttempt
+
+  logger.error({
+    err,
+    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+    }
+  })
+
+  if (isTerminal) {
+    await markCommandAsFailed(
+      commandType,
+      summaryLogId,
+      summaryLogsRepository,
+      logger
+    )
+  }
+
+  if (isPermanent) {
+    return
+  }
+  throw err
+}
+
+/**
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
- * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<void>}
+ * @param {number|null} maxReceiveCount
+ * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<import('@aws-sdk/client-sqs').Message | void>}
  */
-const createMessageHandler = (deps) => async (message) => {
+const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   const { logger, summaryLogsRepository } = deps
 
   const command = parseCommandMessage(message, logger)
   if (!command) {
-    return
+    return message
   }
 
   const { command: commandType, summaryLogId } = command
@@ -175,7 +247,7 @@ const createMessageHandler = (deps) => async (message) => {
 
       /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
       default:
-        return
+        return message
     }
 
     logger.info({
@@ -185,22 +257,22 @@ const createMessageHandler = (deps) => async (message) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
-  } catch (err) {
-    logger.error({
-      err,
-      message: `Command failed: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
 
-    await markCommandAsFailed(
+    return message
+  } catch (err) {
+    await handleCommandError({
+      err,
       commandType,
       summaryLogId,
+      message,
+      maxReceiveCount,
       summaryLogsRepository,
       logger
-    )
+    })
+
+    // handleCommandError returns (rather than throwing) for permanent errors,
+    // so acknowledge the message to prevent SQS retrying it
+    return message
   }
 }
 
@@ -218,11 +290,26 @@ export const createCommandQueueConsumer = async (deps) => {
     message: `Resolved queue URL: ${queueUrl} for queueName=${queueName}`
   })
 
+  const maxReceiveCount = await getMaxReceiveCount(sqsClient, queueUrl)
+
+  if (maxReceiveCount === null) {
+    logger.warn({
+      message: `No redrive policy configured for queueName=${queueName}; transient errors on final retry will not be marked as failed`
+    })
+  } else {
+    logger.info({
+      message: `Queue redrive policy: maxReceiveCount=${maxReceiveCount} for queueName=${queueName}`
+    })
+  }
+
   const consumer = Consumer.create({
     queueUrl,
     sqs: sqsClient,
-    handleMessage: /** @type {*} */ (createMessageHandler(deps)),
-    handleMessageTimeout: COMMAND_TIMEOUT_MS
+    handleMessage: /** @type {*} */ (
+      createMessageHandler(deps, maxReceiveCount)
+    ),
+    handleMessageTimeout: COMMAND_TIMEOUT_MS,
+    attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 
   consumer.on('error', (err) => {
