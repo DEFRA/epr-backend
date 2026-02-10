@@ -150,6 +150,32 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
+const toLinkedOrganisationSummary = (org) => ({
+  id: org._id.toString(),
+  orgId: org.orgId,
+  companyDetails: { name: org.companyDetails.name },
+  status: getCurrentStatus(org),
+  linkedDefraOrganisation: {
+    ...org.linkedDefraOrganisation,
+    linkedAt: new Date(org.linkedDefraOrganisation.linkedAt).toISOString()
+  }
+})
+
+const performFindAllLinked =
+  (staleCache) =>
+  async (filter = {}) => {
+    let matches = staleCache.filter((org) => org.linkedDefraOrganisation?.orgId)
+
+    if (filter.name) {
+      const nameLower = filter.name.toLowerCase()
+      matches = matches.filter((org) =>
+        org.companyDetails.name.toLowerCase().includes(nameLower)
+      )
+    }
+
+    return matches.map(toLinkedOrganisationSummary)
+  }
+
 const performFindByIds = (staleCache) => async (ids) => {
   if (!ids || ids.length === 0) {
     return []
@@ -296,9 +322,10 @@ export const createInMemoryOrganisationsRepository = (
       insert: insertFn,
       replace: replaceFn,
       findAll: performFindAll(staleCache),
-      findByIds: performFindByIds(staleCache),
+      findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,
+      findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findRegistrationById: performFindRegistrationById(findById),
