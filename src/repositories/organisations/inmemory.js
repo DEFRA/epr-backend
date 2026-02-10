@@ -1,3 +1,5 @@
+/** @import {Organisation} from '#domain/organisations/model.js' */
+
 import Boom from '@hapi/boom'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
@@ -12,10 +14,6 @@ import {
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
 const CONSISTENCY_RETRY_DELAY_MS = 5
-
-/**
- * @typedef {{ id: string, [key: string]: any }} Organisation
- */
 
 const initializeItems = (items) =>
   items?.map((item) => ({
@@ -178,6 +176,19 @@ const performFindAllLinked =
     return matches.map(toLinkedOrganisationSummary)
   }
 
+const performFindByIds = (staleCache) => async (ids) => {
+  if (!ids || ids.length === 0) {
+    return []
+  }
+
+  const validIds = ids.map((id) => validateId(id))
+
+  const idSet = new Set(validIds)
+  return structuredClone(staleCache)
+    .filter((org) => idSet.has(org._id))
+    .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
+}
+
 const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
   const found = staleCache.find(
     (o) => o.linkedDefraOrganisation?.orgId === defraOrgId
@@ -314,6 +325,7 @@ export const createInMemoryOrganisationsRepository = (
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,
+      findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findRegistrationById: performFindRegistrationById(findById),

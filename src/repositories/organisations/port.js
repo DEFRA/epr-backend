@@ -1,4 +1,4 @@
-/** @import {User, Organisation} from '#domain/organisations/model.js' */
+/** @import {User, Organisation, Material, GlassRecyclingProcess} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -103,7 +103,8 @@
  *  accreditationId?: string;
  *  approvedPersons: User[]
  *  formSubmissionTime: Date;
- *  material: string;
+ *  material: Material;
+ *  glassRecyclingProcess?: GlassRecyclingProcess[];
  *  orgName: string;
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
@@ -114,7 +115,7 @@
 
 /**
  * @typedef {RegistrationBase & {
- *  cbduNumber: string;
+ *  registrationNumber: string;
  *  status: 'approved'|'suspended';
  *  validFrom: string;
  *  validTo: string;
@@ -123,6 +124,7 @@
 
 /**
  * @typedef {RegistrationBase & {
+ *  registrationNumber?: string;
  *  cbduNumber?: string;
  *  status: 'created'|'rejected'|'archived';
  *  validFrom?: string;
@@ -152,6 +154,7 @@
  * @property {(organisation: Object) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {() => Promise<Object[]>} findAll
+ * @property {(ids: string[]) => Promise<Object[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(filter?: { name?: string }) => Promise<Organisation[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
