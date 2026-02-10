@@ -26,6 +26,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
   describe('when feature flag is enabled', () => {
     let server
     let lumpyPackagingRecyclingNotesRepository
+    let wasteBalancesRepository
 
     beforeAll(async () => {
       lumpyPackagingRecyclingNotesRepository = {
@@ -36,11 +37,19 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         updateStatus: vi.fn()
       }
 
+      wasteBalancesRepository = {
+        findByAccreditationId: vi.fn(),
+        findByAccreditationIds: vi.fn(),
+        deductAvailableBalanceForPrnCreation: vi.fn(),
+        deductTotalBalanceForPrnIssue: vi.fn(),
+        creditAvailableBalanceForPrnCancellation: vi.fn()
+      }
+
       server = await createTestServer({
         repositories: {
           lumpyPackagingRecyclingNotesRepository: () =>
             lumpyPackagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => ({}),
+          wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => ({})
         },
         featureFlags: createInMemoryFeatureFlags({
@@ -171,6 +180,35 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
           beforeCall.getTime()
         )
+      })
+
+      it('does not affect waste balance', async () => {
+        const mockPrn = createMockIssuedPrn()
+        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+          mockPrn
+        )
+        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
+          {
+            ...mockPrn,
+            status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+          }
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: acceptUrl
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+        expect(
+          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+        ).not.toHaveBeenCalled()
+        expect(
+          wasteBalancesRepository.deductTotalBalanceForPrnIssue
+        ).not.toHaveBeenCalled()
+        expect(
+          wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
+        ).not.toHaveBeenCalled()
       })
     })
 
