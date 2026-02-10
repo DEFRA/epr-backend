@@ -310,6 +310,14 @@ const baseConfig = {
       default: '["me@example.com", "you@example.com"]'
     }
   },
+  packagingRecyclingNotesExternalApi: {
+    clientId: {
+      doc: 'Client id for external API access',
+      format: String,
+      default: 'stub-client-id',
+      env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_CLIENT_ID'
+    }
+  },
   featureFlags: {
     summaryLogs: {
       doc: 'Feature Flag: Summary Logs',

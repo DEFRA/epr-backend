@@ -1,5 +1,7 @@
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import Jwt from '@hapi/jwt'
+
 import { MATERIAL } from '#domain/organisations/model.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
@@ -9,6 +11,22 @@ const issuedDate = '2026-01-15T10:00:00Z'
 
 const creator = { id: 'user-123', name: 'Test User' }
 const issuer = { id: 'user-issuer', name: 'Issuer User' }
+
+export function generateExternalApiToken(clientId = 'stub-client-id') {
+  return Jwt.token.generate(
+    {
+      sub: clientId,
+      token_use: 'access',
+      scope: 'epr-backend-resource-srv/access',
+      auth_time: 1734387454,
+      iss: 'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_test',
+      version: 2,
+      jti: '00000000-0000-0000-0000-000000000000',
+      client_id: clientId
+    },
+    { key: 'unused', algorithm: 'HS256' }
+  )
+}
 
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,

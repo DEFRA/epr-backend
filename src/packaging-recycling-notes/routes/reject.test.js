@@ -1,24 +1,30 @@
 import { StatusCodes } from 'http-status-codes'
 import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
   afterAll,
-  afterEach
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi
 } from 'vitest'
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createMockIssuedPrn } from './test-helpers.js'
+import {
+  createMockIssuedPrn,
+  generateExternalApiToken
+} from './test-helpers.js'
 
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
 
 const rejectUrl = `/v1/packaging-recycling-notes/${prnNumber}/reject`
+const authHeaders = {
+  authorization: `Bearer ${generateExternalApiToken()}`
+}
 
 describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
   setupAuthContext()
@@ -82,7 +88,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
@@ -106,7 +113,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(
@@ -115,10 +123,16 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
           expect.objectContaining({
             id: prnId,
             status: PRN_STATUS.AWAITING_CANCELLATION,
-            updatedBy: { id: 'rpd', name: 'RPD' },
+            updatedBy: expect.objectContaining({
+              id: 'stub-client-id',
+              name: 'RPD'
+            }),
             operation: expect.objectContaining({
               slot: 'rejected',
-              by: { id: 'rpd', name: 'RPD' }
+              by: expect.objectContaining({
+                id: 'stub-client-id',
+                name: 'RPD'
+              })
             })
           })
         )
@@ -143,6 +157,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         await server.inject({
           method: 'POST',
           url: rejectUrl,
+          headers: authHeaders,
           payload: { rejectedAt }
         })
 
@@ -173,7 +188,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         const callArgs =
@@ -202,6 +218,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         const response = await server.inject({
           method: 'POST',
           url: rejectUrl,
+          headers: authHeaders,
           payload: null
         })
 
@@ -222,7 +239,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -251,7 +269,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -280,7 +299,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -309,7 +329,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -338,7 +359,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -352,6 +374,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         const response = await server.inject({
           method: 'POST',
           url: rejectUrl,
+          headers: authHeaders,
           payload: { rejectedAt: 'not-a-date' }
         })
 
@@ -369,7 +392,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: rejectUrl
+          url: rejectUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
