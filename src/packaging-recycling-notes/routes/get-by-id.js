@@ -24,16 +24,18 @@ export const packagingRecyclingNoteByIdPath =
  */
 const buildResponse = (prn, { wasteProcessingType }) => ({
   id: prn.id,
-  accreditationYear: prn.accreditationYear ?? null,
+  accreditationYear: prn.accreditation?.accreditationYear ?? null,
   createdAt: prn.createdAt,
   isDecemberWaste: prn.isDecemberWaste ?? false,
-  issuedAt: prn.issuedAt ?? null,
-  issuedBy: prn.issuedBy ?? null,
+  issuedAt: prn.status.issued?.at ?? null,
+  issuedBy: prn.status.issued?.by ?? null,
   issuedToOrganisation: prn.issuedToOrganisation,
-  material: prn.material,
+  material: prn.accreditation?.material,
   notes: prn.notes ?? null,
   prnNumber: prn.prnNumber ?? null,
-  processToBeUsed: /** @type {string} */ (getProcessCode(prn.material)),
+  processToBeUsed: /** @type {string} */ (
+    getProcessCode(prn.accreditation?.material)
+  ),
   status: prn.status.currentStatus,
   tonnage: prn.tonnage,
   wasteProcessingType
@@ -72,8 +74,8 @@ export const packagingRecyclingNoteById = {
       // and treat deleted PRNs as not found (soft delete)
       if (
         !prn ||
-        prn.organisationId !== organisationId ||
-        prn.accreditationId !== accreditationId ||
+        prn.organisation?.id !== organisationId ||
+        prn.accreditation?.id !== accreditationId ||
         prn.status.currentStatus === PRN_STATUS.DELETED
       ) {
         throw Boom.notFound('PRN not found')

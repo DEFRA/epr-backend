@@ -16,7 +16,7 @@ import {
  * @param {Object} next
  */
 async function auditPrnStatusTransition(request, prnId, previous, next) {
-  const { organisationId } = next
+  const organisationId = next.organisation?.id
 
   const payload = {
     event: {

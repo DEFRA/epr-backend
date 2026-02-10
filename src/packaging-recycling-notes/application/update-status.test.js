@@ -60,8 +60,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'different-org',
-        accreditationId: 'acc-456',
+        organisation: { id: 'different-org' },
+        accreditation: { id: 'acc-456' },
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
@@ -85,8 +85,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'different-acc',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'different-acc' },
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
@@ -110,8 +110,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
@@ -136,8 +136,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
         tonnage: 100,
         status: { currentStatus: PRN_STATUS.DRAFT }
       }),
@@ -181,8 +181,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
         tonnage: 100,
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
@@ -208,8 +208,8 @@ describe('updatePrnStatus', () => {
   it('updates status and returns updated PRN', async () => {
     const updatedPrn = {
       id: '507f1f77bcf86cd799439011',
-      organisationId: 'org-123',
-      accreditationId: 'acc-456',
+      organisation: { id: 'org-123' },
+      accreditation: { id: 'acc-456' },
       tonnage: 100,
       status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
       updatedAt: new Date('2026-02-03T10:00:00Z')
@@ -217,8 +217,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
         tonnage: 100,
         status: { currentStatus: PRN_STATUS.DRAFT }
       }),
@@ -249,7 +249,12 @@ describe('updatePrnStatus', () => {
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_AUTHORISATION,
       updatedBy: { id: 'user-789', name: 'Test User' },
-      updatedAt: expect.any(Date)
+      updatedAt: expect.any(Date),
+      operation: {
+        slot: 'created',
+        at: expect.any(Date),
+        by: { id: 'user-789', name: 'Test User' }
+      }
     })
   })
 
@@ -262,10 +267,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -297,20 +301,22 @@ describe('updatePrnStatus', () => {
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
       updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date),
-      issuedAt: expect.any(Date),
-      issuedBy: { id: 'user-789', name: 'Test User', position: '' },
+      operation: {
+        slot: 'issued',
+        at: expect.any(Date),
+        by: { id: 'user-789', name: 'Test User' }
+      },
       prnNumber: expect.stringMatching(/^ER26\d{5}$/)
     })
   })
 
-  it('sets issuedAt to the same timestamp as updatedAt when issuing', async () => {
+  it('sets issued operation timestamp to the same as updatedAt when issuing', async () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -341,7 +347,7 @@ describe('updatePrnStatus', () => {
     })
 
     const updateCall = prnRepository.updateStatus.mock.calls[0][0]
-    expect(updateCall.issuedAt).toStrictEqual(updateCall.updatedAt)
+    expect(updateCall.operation.at).toStrictEqual(updateCall.updatedAt)
   })
 
   it('deducts total waste balance when issuing PRN (transitioning to awaiting_acceptance)', async () => {
@@ -353,10 +359,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 75,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -397,10 +402,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 75,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -433,10 +437,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -473,8 +476,11 @@ describe('updatePrnStatus', () => {
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
       updatedBy: { id: 'user-789', name: 'Test User' },
       updatedAt: expect.any(Date),
-      issuedAt: expect.any(Date),
-      issuedBy: { id: 'user-789', name: 'Test User', position: '' },
+      operation: {
+        slot: 'issued',
+        at: expect.any(Date),
+        by: { id: 'user-789', name: 'Test User' }
+      },
       prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
     })
   })
@@ -483,10 +489,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -524,10 +529,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -566,10 +570,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -604,8 +607,8 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
         tonnage: 100,
         status: { currentStatus: PRN_STATUS.DRAFT }
       }),
@@ -638,10 +641,9 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
-        organisationId: 'org-123',
-        accreditationId: 'acc-456',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
         isExport: false,
-        accreditationYear: 2026,
         tonnage: 50,
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       }),
@@ -675,8 +677,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 100,
           status: { currentStatus: PRN_STATUS.DRAFT }
         }),
@@ -714,10 +716,9 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456', accreditationYear: 2026 },
           isExport: false,
-          accreditationYear: 2026,
           tonnage: 100,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -755,8 +756,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 100,
           status: { currentStatus: PRN_STATUS.DRAFT }
         }),
@@ -794,8 +795,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 1,
           status: { currentStatus: PRN_STATUS.DRAFT }
         }),
@@ -826,10 +827,9 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456', accreditationYear: 2026 },
           isExport: false,
-          accreditationYear: 2026,
           tonnage: 1,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -860,10 +860,9 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456', accreditationYear: 2026 },
           isExport: false,
-          accreditationYear: 2026,
           tonnage: 50,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
@@ -904,10 +903,9 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456', material: 'paper' },
           tonnage: 100,
-          material: 'paper',
           isExport: false,
           status: { currentStatus: PRN_STATUS.DRAFT }
         }),
@@ -948,12 +946,14 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
-          material: 'plastic',
+          organisation: { id: 'org-123' },
+          accreditation: {
+            id: 'acc-456',
+            material: 'plastic',
+            accreditationYear: 2026
+          },
           tonnage: 50,
           isExport: true,
-          accreditationYear: 2026,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
         updateStatus: vi.fn().mockResolvedValue({
@@ -1016,8 +1016,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           status: { currentStatus: PRN_STATUS.DRAFT }
         })
       })
@@ -1045,8 +1045,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 50,
           material: 'plastic',
           isExport: false,
@@ -1083,8 +1083,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 50,
           material: 'plastic',
           isExport: false,
@@ -1119,8 +1119,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 50,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         })
@@ -1147,8 +1147,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = {
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 75,
           material: 'paper',
           isExport: false,
@@ -1191,8 +1191,8 @@ describe('updatePrnStatus', () => {
       const prnRepository = {
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
-          organisationId: 'org-123',
-          accreditationId: 'acc-456',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
           tonnage: 50,
           material: 'paper',
           isExport: false,

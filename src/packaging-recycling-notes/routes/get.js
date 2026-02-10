@@ -25,10 +25,10 @@ const buildResponse = (prns, { wasteProcessingType }) =>
     prnNumber: prn.prnNumber ?? null,
     issuedToOrganisation: prn.issuedToOrganisation,
     tonnage: prn.tonnage,
-    material: prn.material,
+    material: prn.accreditation?.material,
     status: prn.status.currentStatus,
     createdAt: prn.createdAt,
-    issuedAt: prn.issuedAt ?? null,
+    issuedAt: prn.status.issued?.at ?? null,
     wasteProcessingType
   }))
 

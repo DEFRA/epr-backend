@@ -310,7 +310,7 @@ describe('Waste balance arithmetic integration tests', () => {
       findByAccreditation: async (accId) => {
         const results = []
         for (const prn of prnStorage.values()) {
-          if (prn.accreditationId === accId) {
+          if (prn.accreditation?.id === accId) {
             results.push(structuredClone(prn))
           }
         }

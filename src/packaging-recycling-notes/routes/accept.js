@@ -60,18 +60,20 @@ export const packagingRecyclingNotesAccept = {
         ? new Date(payload.acceptedAt)
         : new Date()
 
+      const actor = { id: 'rpd', name: 'RPD' }
       const updatedPrn =
         await lumpyPackagingRecyclingNotesRepository.updateStatus({
           id: prn.id,
           status: PRN_STATUS.ACCEPTED,
-          updatedBy: { id: 'rpd', name: 'RPD' },
-          updatedAt: acceptedAt
+          updatedBy: actor,
+          updatedAt: acceptedAt,
+          operation: { slot: 'accepted', at: acceptedAt, by: actor }
         })
 
       await prnMetrics.recordStatusTransition({
         fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         toStatus: PRN_STATUS.ACCEPTED,
-        material: prn.material,
+        material: prn.accreditation?.material,
         isExport: prn.isExport
       })
 

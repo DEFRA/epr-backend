@@ -24,27 +24,37 @@ const prnId = 'prn-001'
 
 const mockPrn = {
   id: prnId,
-  schemaVersion: 1,
-  accreditationYear: 2026,
-  organisationId,
-  accreditationId,
+  schemaVersion: 2,
+  organisation: { id: organisationId, name: 'Test Organisation' },
+  registrationId,
+  accreditation: {
+    id: accreditationId,
+    accreditationNumber: 'ACC-2026-001',
+    accreditationYear: 2026,
+    material: 'glass',
+    submittedToRegulator: 'ea',
+    glassRecyclingProcess: 'glass_re_melt'
+  },
   issuedToOrganisation: {
     id: 'acme-001',
     name: 'Acme Packaging Ltd',
     tradingName: 'Acme'
   },
   tonnage: 50,
-  material: 'glass',
   isExport: false,
   isDecemberWaste: true,
-  status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
+  status: {
+    currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+    issued: {
+      at: new Date('2026-01-16T14:30:00Z'),
+      by: { id: 'auth-user', name: 'John Smith', position: 'Director' }
+    }
+  },
   createdAt: new Date('2026-01-15T10:00:00Z'),
   createdBy: { id: 'user-1', name: 'Test User' },
   updatedAt: new Date('2026-01-15T10:00:00Z'),
   updatedBy: null,
-  notes: 'Test notes',
-  issuedAt: new Date('2026-01-16T14:30:00Z'),
-  issuedBy: { id: 'auth-user', name: 'John Smith', position: 'Director' }
+  notes: 'Test notes'
 }
 
 const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
@@ -139,23 +149,27 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('returns defaults for optional fields when not present', async () => {
         const legacyPrn = {
           id: prnId,
-          schemaVersion: 1,
-          organisationId,
-          accreditationId,
+          schemaVersion: 2,
+          organisation: { id: organisationId, name: 'Test Organisation' },
+          registrationId,
+          accreditation: {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2026-001',
+            material: 'glass',
+            submittedToRegulator: 'ea',
+            glassRecyclingProcess: 'glass_re_melt'
+          },
           issuedToOrganisation: {
             id: 'acme-001',
             name: 'Acme Packaging Ltd'
           },
           tonnage: 50,
-          material: 'glass',
           isExport: false,
           status: { currentStatus: PRN_STATUS.DRAFT },
           createdAt: new Date('2026-01-15T10:00:00Z'),
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
-          updatedBy: null,
-          issuedAt: null,
-          issuedBy: null
+          updatedBy: null
           // accreditationYear, isDecemberWaste, notes not present
         }
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
@@ -180,25 +194,29 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const issuedPrn = {
           id: prnId,
           prnNumber: 'ER1234567890A',
-          schemaVersion: 1,
-          accreditationYear: 2026,
-          organisationId,
-          accreditationId,
+          schemaVersion: 2,
+          organisation: { id: organisationId, name: 'Test Organisation' },
+          registrationId,
+          accreditation: {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2026-001',
+            accreditationYear: 2026,
+            material: 'glass',
+            submittedToRegulator: 'ea',
+            glassRecyclingProcess: 'glass_re_melt'
+          },
           issuedToOrganisation: {
             id: 'acme-001',
             name: 'Acme Packaging Ltd'
           },
           tonnage: 50,
-          material: 'glass',
           isExport: false,
           isDecemberWaste: false,
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE },
           createdAt: new Date('2026-01-15T10:00:00Z'),
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
-          updatedBy: null,
-          issuedAt: null,
-          issuedBy: null
+          updatedBy: null
         }
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           issuedPrn

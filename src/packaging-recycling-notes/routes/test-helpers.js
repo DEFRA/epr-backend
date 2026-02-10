@@ -3,43 +3,68 @@ import { MATERIAL } from '#domain/organisations/model.js'
 
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
+const draftDate = '2026-01-10T10:00:00Z'
+const authorisedDate = '2026-01-12T10:00:00Z'
 const issuedDate = '2026-01-15T10:00:00Z'
+
+const creator = { id: 'user-123', name: 'Test User' }
+const issuer = { id: 'user-issuer', name: 'Issuer User' }
 
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
-  schemaVersion: 1,
+  schemaVersion: 2,
   prnNumber,
-  organisationId: 'org-123',
-  accreditationId: 'acc-789',
+  organisation: {
+    id: 'org-123',
+    name: 'Test Organisation'
+  },
+  registrationId: 'reg-456',
+  accreditation: {
+    id: 'acc-789',
+    accreditationNumber: 'ACC-2026-001',
+    accreditationYear: 2026,
+    material: MATERIAL.PLASTIC,
+    submittedToRegulator: 'ea'
+  },
   issuedToOrganisation: {
     id: 'producer-org-789',
     name: 'Producer Org'
   },
   tonnage: 100,
-  material: MATERIAL.PLASTIC,
   isExport: false,
   isDecemberWaste: false,
-  accreditationYear: 2026,
-  issuedAt: new Date(issuedDate),
-  issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+    created: {
+      at: new Date(authorisedDate),
+      by: creator
+    },
+    issued: {
+      at: new Date(issuedDate),
+      by: { ...issuer, position: 'Manager' }
+    },
     history: [
-      { status: PRN_STATUS.DRAFT, updatedAt: new Date('2026-01-10T10:00:00Z') },
+      {
+        status: PRN_STATUS.DRAFT,
+        at: new Date(draftDate),
+        by: creator
+      },
       {
         status: PRN_STATUS.AWAITING_AUTHORISATION,
-        updatedAt: new Date('2026-01-12T10:00:00Z')
+        at: new Date(authorisedDate),
+        by: creator
       },
       {
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
-        updatedAt: new Date(issuedDate)
+        at: new Date(issuedDate),
+        by: issuer
       }
     ]
   },
-  createdAt: new Date('2026-01-10T10:00:00Z'),
-  createdBy: { id: 'user-123', name: 'Test User' },
+  createdAt: new Date(draftDate),
+  createdBy: creator,
   updatedAt: new Date(issuedDate),
-  updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+  updatedBy: issuer,
   ...overrides
 })

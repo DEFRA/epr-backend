@@ -32,36 +32,58 @@ export const packagingRecyclingNotesCreatePath =
 /**
  * Build PRN data for creation
  * @param {Object} params
- * @param {string} params.organisationId
- * @param {string} params.accreditationId
+ * @param {{ id: string; name: string; tradingName?: string }} params.organisation
+ * @param {string} params.registrationId
+ * @param {Object} params.accreditation
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {{ id: string; name: string }} params.user
  * @param {boolean} params.isExport
  * @param {Date} params.now
  */
+const snapshotAccreditation = (accreditation) => {
+  const snapshot = {
+    id: accreditation.id,
+    accreditationNumber: accreditation.accreditationNumber,
+    accreditationYear: deriveAccreditationYear(accreditation),
+    material: accreditation.material,
+    submittedToRegulator: accreditation.submittedToRegulator
+  }
+
+  if (
+    accreditation.material === 'glass' &&
+    accreditation.glassRecyclingProcess?.[0]
+  ) {
+    snapshot.glassRecyclingProcess = accreditation.glassRecyclingProcess[0]
+  }
+
+  if (accreditation.site?.address) {
+    snapshot.siteAddress = accreditation.site.address
+  }
+
+  return snapshot
+}
+
 const buildPrnData = ({
-  organisationId,
-  accreditationId,
+  organisation,
+  registrationId,
+  accreditation,
   payload,
   user,
   isExport,
   now
 }) => ({
-  schemaVersion: 1,
-  organisationId,
-  accreditationId,
+  schemaVersion: 2,
+  organisation,
+  registrationId,
+  accreditation: snapshotAccreditation(accreditation),
   issuedToOrganisation: payload.issuedToOrganisation,
   tonnage: payload.tonnage,
-  material: payload.material,
   isExport,
   notes: payload.notes || undefined,
   isDecemberWaste: false,
-  accreditationYear: 2026,
-  issuedAt: null,
-  issuedBy: null,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: user }]
+    history: [{ status: PRN_STATUS.DRAFT, at: now, by: user }]
   },
   createdAt: now,
   createdBy: user,
@@ -70,19 +92,35 @@ const buildPrnData = ({
 })
 
 /**
+ * @param {{ id: string; validFrom?: string }} accreditation
+ * @returns {number}
+ * @throws {Error} if validFrom is missing — approved accreditations must have it
+ */
+const deriveAccreditationYear = (accreditation) => {
+  if (!accreditation.validFrom) {
+    throw new Error(
+      `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
+    )
+  }
+  return new Date(accreditation.validFrom).getFullYear()
+}
+
+/**
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
  * @returns {CreatePrnResponse}
  */
 const buildResponse = (prn, { wasteProcessingType }) => ({
   id: prn.id,
-  accreditationYear: prn.accreditationYear ?? null,
+  accreditationYear: prn.accreditation.accreditationYear,
   createdAt: prn.createdAt,
-  isDecemberWaste: prn.isDecemberWaste ?? false,
+  isDecemberWaste: prn.isDecemberWaste,
   issuedToOrganisation: prn.issuedToOrganisation,
-  material: prn.material,
+  material: prn.accreditation.material,
   notes: prn.notes ?? null,
-  processToBeUsed: /** @type {string} */ (getProcessCode(prn.material)),
+  processToBeUsed: /** @type {string} */ (
+    getProcessCode(prn.accreditation.material)
+  ),
   status: prn.status.currentStatus,
   tonnage: prn.tonnage,
   wasteProcessingType
@@ -111,7 +149,7 @@ export const packagingRecyclingNotesCreate = {
       logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
       auth
     } = request
-    const { organisationId, accreditationId } = params
+    const { organisationId, registrationId, accreditationId } = params
     const user = {
       id: auth.credentials?.id ?? 'unknown',
       name: auth.credentials?.name ?? 'unknown'
@@ -119,16 +157,28 @@ export const packagingRecyclingNotesCreate = {
     const now = new Date()
 
     try {
-      const accreditation = await organisationsRepository.findAccreditationById(
-        organisationId,
-        accreditationId
-      )
+      const [accreditation, org] = await Promise.all([
+        organisationsRepository.findAccreditationById(
+          organisationId,
+          accreditationId
+        ),
+        organisationsRepository.findById(organisationId)
+      ])
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
+      const organisation = {
+        id: organisationId,
+        name: org.companyDetails.name,
+        ...(org.companyDetails.tradingName && {
+          tradingName: org.companyDetails.tradingName
+        })
+      }
+
       const prnData = buildPrnData({
-        organisationId,
-        accreditationId,
+        organisation,
+        registrationId,
+        accreditation,
         payload,
         user,
         isExport,

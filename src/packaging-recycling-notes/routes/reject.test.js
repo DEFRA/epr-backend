@@ -70,7 +70,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
                 ...mockPrn.status.history,
                 {
                   status: PRN_STATUS.AWAITING_CANCELLATION,
-                  updatedAt: new Date()
+                  at: new Date(),
+                  by: { id: 'rpd', name: 'RPD' }
                 }
               ]
             }
@@ -112,7 +113,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
           expect.objectContaining({
             id: prnId,
             status: PRN_STATUS.AWAITING_CANCELLATION,
-            updatedBy: { id: 'rpd', name: 'RPD' }
+            updatedBy: { id: 'rpd', name: 'RPD' },
+            operation: expect.objectContaining({
+              slot: 'rejected',
+              by: { id: 'rpd', name: 'RPD' }
+            })
           })
         )
       })
@@ -225,7 +230,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         const acceptedPrn = createMockIssuedPrn({
           status: {
             currentStatus: PRN_STATUS.ACCEPTED,
-            history: [{ status: PRN_STATUS.ACCEPTED, updatedAt: new Date() }]
+            history: [
+              {
+                status: PRN_STATUS.ACCEPTED,
+                at: new Date(),
+                by: { id: 'rpd', name: 'RPD' }
+              }
+            ]
           }
         })
         lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
@@ -247,7 +258,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_CANCELLATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'rpd', name: 'RPD' }
               }
             ]
           }
@@ -268,7 +280,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         const cancelledPrn = createMockIssuedPrn({
           status: {
             currentStatus: PRN_STATUS.CANCELLED,
-            history: [{ status: PRN_STATUS.CANCELLED, updatedAt: new Date() }]
+            history: [
+              {
+                status: PRN_STATUS.CANCELLED,
+                at: new Date(),
+                by: { id: 'rpd', name: 'RPD' }
+              }
+            ]
           }
         })
         lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
@@ -287,7 +305,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         const draftPrn = createMockIssuedPrn({
           status: {
             currentStatus: PRN_STATUS.DRAFT,
-            history: [{ status: PRN_STATUS.DRAFT, updatedAt: new Date() }]
+            history: [
+              {
+                status: PRN_STATUS.DRAFT,
+                at: new Date(),
+                by: { id: 'rpd', name: 'RPD' }
+              }
+            ]
           }
         })
         lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(

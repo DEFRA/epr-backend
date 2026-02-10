@@ -105,6 +105,218 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
   })
 
+  describe('ensureOrganisationStatusIndex', () => {
+    it('creates organisation.id compound index when no index exists', async () => {
+      const createdIndexes = []
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [],
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(mockDb)
+
+      const orgStatusIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'organisationId_status'
+      )
+      expect(orgStatusIndex).toBeDefined()
+      expect(orgStatusIndex.fields).toStrictEqual({
+        'organisation.id': 1,
+        'status.currentStatus': 1
+      })
+    })
+
+    it('drops and recreates index when existing index uses v1 organisationId key', async () => {
+      const createdIndexes = []
+      const droppedIndexes = []
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [
+          {
+            name: 'organisationId_status',
+            key: { organisationId: 1, 'status.currentStatus': 1 }
+          }
+        ],
+        dropIndex: async (indexName) => {
+          droppedIndexes.push(indexName)
+        },
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(mockDb)
+
+      expect(droppedIndexes).toContain('organisationId_status')
+
+      const orgStatusIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'organisationId_status'
+      )
+      expect(orgStatusIndex.fields).toStrictEqual({
+        'organisation.id': 1,
+        'status.currentStatus': 1
+      })
+    })
+
+    it('does not drop index when already using v2 organisation.id key', async () => {
+      let droppedIndex = null
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [
+          {
+            name: 'organisationId_status',
+            key: { 'organisation.id': 1, 'status.currentStatus': 1 }
+          }
+        ],
+        dropIndex: async (indexName) => {
+          droppedIndex = indexName
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(mockDb)
+
+      expect(droppedIndex).toBeNull()
+    })
+
+    it('handles NamespaceNotFound error when collection is new', async () => {
+      const nsError = new Error('ns not found')
+      nsError.codeName = 'NamespaceNotFound'
+
+      let indexesCalls = 0
+      const createdIndexes = []
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => {
+          indexesCalls++
+          if (indexesCalls === 1) {
+            throw nsError
+          }
+          return []
+        },
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(mockDb)
+
+      const orgStatusIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'organisationId_status'
+      )
+      expect(orgStatusIndex).toBeDefined()
+    })
+
+    it('re-throws non-NamespaceNotFound errors', async () => {
+      const connectionError = new Error('Connection refused')
+      connectionError.codeName = 'NetworkError'
+
+      let indexesCalls = 0
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => {
+          indexesCalls++
+          if (indexesCalls === 1) {
+            throw connectionError
+          }
+          return []
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await expect(
+        createPackagingRecyclingNotesRepository(mockDb)
+      ).rejects.toThrow('Connection refused')
+    })
+  })
+
+  describe('ensurePrnNumberIndex error handling', () => {
+    it('re-throws non-NamespaceNotFound errors from prnNumber indexes()', async () => {
+      const connectionError = new Error('Connection lost')
+      connectionError.codeName = 'NetworkError'
+
+      let indexesCalls = 0
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => {
+          indexesCalls++
+          // First call (org index) succeeds, second call (prnNumber index) fails
+          if (indexesCalls === 2) {
+            throw connectionError
+          }
+          return []
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await expect(
+        createPackagingRecyclingNotesRepository(mockDb)
+      ).rejects.toThrow('Connection lost')
+    })
+  })
+
   describe('ensureCollection index management', () => {
     it('creates unique index on prnNumber when no index exists', async () => {
       const createdIndexes = []
