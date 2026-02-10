@@ -40,10 +40,18 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
 }
 
 const matchesDateRange = (statusAt, dateFrom, dateTo) => {
-  if (!dateFrom && !dateTo) return true
-  if (!statusAt) return false
-  if (dateFrom && statusAt < dateFrom) return false
-  if (dateTo && statusAt > dateTo) return false
+  if (!dateFrom && !dateTo) {
+    return true
+  }
+  if (!statusAt) {
+    return false
+  }
+  if (dateFrom && statusAt < dateFrom) {
+    return false
+  }
+  if (dateTo && statusAt > dateTo) {
+    return false
+  }
   return true
 }
 
