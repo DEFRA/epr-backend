@@ -1,19 +1,10 @@
-import Boom from '@hapi/boom'
 import Joi from 'joi'
-import { StatusCodes } from 'http-status-codes'
 
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
 import {
   PRN_NUMBER_MAX_LENGTH,
   PRN_STATUS
 } from '#packaging-recycling-notes/domain/model.js'
-import { prnMetrics } from '#packaging-recycling-notes/application/metrics.js'
-import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
-
-/** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+import { createExternalTransitionHandler } from './external-transition-handler.js'
 
 export const packagingRecyclingNotesAcceptPath =
   '/v1/packaging-recycling-notes/{prnNumber}/accept'
@@ -37,75 +28,10 @@ export const packagingRecyclingNotesAccept = {
       payload: packagingRecyclingNotesAcceptPayloadSchema
     }
   },
-  handler: async (request, h) => {
-    const { lumpyPackagingRecyclingNotesRepository, params, payload, logger } =
-      request
-    const { prnNumber } = params
-
-    try {
-      const prn =
-        await lumpyPackagingRecyclingNotesRepository.findByPrnNumber(prnNumber)
-
-      if (!prn) {
-        throw Boom.notFound(`Packaging recycling note not found: ${prnNumber}`)
-      }
-
-      if (prn.status.currentStatus !== PRN_STATUS.AWAITING_ACCEPTANCE) {
-        throw Boom.conflict(
-          `Packaging recycling note has already been ${prn.status.currentStatus}`
-        )
-      }
-
-      const acceptedAt = payload?.acceptedAt
-        ? new Date(payload.acceptedAt)
-        : new Date()
-
-      const actor = { id: 'rpd', name: 'RPD' }
-      const updatedPrn =
-        await lumpyPackagingRecyclingNotesRepository.updateStatus({
-          id: prn.id,
-          status: PRN_STATUS.ACCEPTED,
-          updatedBy: actor,
-          updatedAt: acceptedAt,
-          operation: { slot: 'accepted', at: acceptedAt, by: actor }
-        })
-
-      await prnMetrics.recordStatusTransition({
-        fromStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        toStatus: PRN_STATUS.ACCEPTED,
-        material: prn.accreditation?.material,
-        isExport: prn.isExport
-      })
-
-      await auditPrnStatusTransition(request, prn.id, prn, updatedPrn)
-
-      logger.info({
-        message: `PRN accepted: ${prnNumber}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-          reference: prnNumber
-        }
-      })
-
-      return h.response().code(StatusCodes.NO_CONTENT)
-    } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${packagingRecyclingNotesAcceptPath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        }
-      })
-
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesAcceptPath}`
-      )
-    }
-  }
+  ...createExternalTransitionHandler({
+    newStatus: PRN_STATUS.ACCEPTED,
+    timestampField: 'acceptedAt',
+    actionVerb: 'accepted',
+    path: packagingRecyclingNotesAcceptPath
+  })
 }

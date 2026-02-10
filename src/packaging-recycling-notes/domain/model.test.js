@@ -1,49 +1,147 @@
 import { describe, it, expect } from 'vitest'
 
-import { PRN_STATUS, PRN_STATUS_TRANSITIONS } from './model.js'
+import {
+  PRN_STATUS,
+  PRN_STATUS_TRANSITIONS,
+  PRN_ACTOR,
+  isValidTransition,
+  validateTransition,
+  StatusConflictError,
+  UnauthorisedTransitionError
+} from './model.js'
 
-describe('PRN_STATUS', () => {
-  it('includes awaiting_cancellation status', () => {
-    expect(PRN_STATUS.AWAITING_CANCELLATION).toBe('awaiting_cancellation')
+describe('PRN_STATUS_TRANSITIONS', () => {
+  it('has empty array for terminal states', () => {
+    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.ACCEPTED]).toEqual([])
+    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.CANCELLED]).toEqual([])
+    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.DELETED]).toEqual([])
+    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.DISCARDED]).toEqual([])
   })
 
-  it('does not include rejected as a status', () => {
-    expect(PRN_STATUS).not.toHaveProperty('REJECTED')
+  it.each([
+    [
+      PRN_STATUS.DRAFT,
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
+    [PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED, PRN_ACTOR.REPROCESSOR_EXPORTER],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_ACTOR.SIGNATORY
+    ],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.DELETED,
+      PRN_ACTOR.SIGNATORY
+    ],
+    [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED, PRN_ACTOR.PRODUCER],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.AWAITING_CANCELLATION,
+      PRN_ACTOR.PRODUCER
+    ],
+    [
+      PRN_STATUS.AWAITING_CANCELLATION,
+      PRN_STATUS.CANCELLED,
+      PRN_ACTOR.SIGNATORY
+    ]
+  ])('allows %s -> %s for %s', (from, to, actor) => {
+    expect(isValidTransition(from, to, actor)).toBe(true)
+  })
+
+  it.each([
+    [PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION, PRN_ACTOR.SIGNATORY],
+    [PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION, PRN_ACTOR.PRODUCER],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_ACTOR.PRODUCER
+    ],
+    [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED, PRN_ACTOR.SIGNATORY],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.ACCEPTED,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
+    [PRN_STATUS.DRAFT, PRN_STATUS.ACCEPTED, PRN_ACTOR.PRODUCER],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER],
+    ['unknown', PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
+  ])('rejects %s -> %s for %s', (from, to, actor) => {
+    expect(isValidTransition(from, to, actor)).toBe(false)
   })
 })
 
-describe('PRN_STATUS_TRANSITIONS', () => {
-  it('allows awaiting_acceptance to transition to accepted', () => {
-    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.AWAITING_ACCEPTANCE]).toContain(
-      PRN_STATUS.ACCEPTED
-    )
+describe('validateTransition', () => {
+  it('does not throw for valid transitions', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.PRODUCER
+      )
+    ).not.toThrow()
   })
 
-  it('allows awaiting_acceptance to transition to awaiting_cancellation', () => {
-    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.AWAITING_ACCEPTANCE]).toContain(
-      PRN_STATUS.AWAITING_CANCELLATION
-    )
+  it('throws StatusConflictError when no transition exists from current to new status', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.DRAFT,
+        PRN_ACTOR.PRODUCER
+      )
+    ).toThrow(StatusConflictError)
   })
 
-  it('does not allow awaiting_acceptance to transition to rejected', () => {
-    expect(
-      PRN_STATUS_TRANSITIONS[PRN_STATUS.AWAITING_ACCEPTANCE]
-    ).not.toContain('rejected')
+  it('throws StatusConflictError for terminal states', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.CANCELLED,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.PRODUCER
+      )
+    ).toThrow(StatusConflictError)
   })
 
-  it('allows awaiting_cancellation to transition to cancelled', () => {
-    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.AWAITING_CANCELLATION]).toContain(
-      PRN_STATUS.CANCELLED
-    )
+  it('throws UnauthorisedTransitionError when transition exists but actor is not permitted', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.SIGNATORY
+      )
+    ).toThrow(UnauthorisedTransitionError)
   })
 
-  it('only allows awaiting_cancellation to transition to cancelled', () => {
-    expect(PRN_STATUS_TRANSITIONS[PRN_STATUS.AWAITING_CANCELLATION]).toEqual([
-      PRN_STATUS.CANCELLED
-    ])
+  it('includes status details in StatusConflictError', () => {
+    try {
+      validateTransition(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.DRAFT,
+        PRN_ACTOR.PRODUCER
+      )
+    } catch (error) {
+      expect(error.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+      expect(error.newStatus).toBe(PRN_STATUS.DRAFT)
+    }
   })
 
-  it('does not have a transition entry for rejected', () => {
-    expect(PRN_STATUS_TRANSITIONS).not.toHaveProperty('rejected')
+  it('includes actor details in UnauthorisedTransitionError', () => {
+    try {
+      validateTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.SIGNATORY
+      )
+    } catch (error) {
+      expect(error.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(error.newStatus).toBe(PRN_STATUS.ACCEPTED)
+      expect(error.actor).toBe(PRN_ACTOR.SIGNATORY)
+    }
   })
 })

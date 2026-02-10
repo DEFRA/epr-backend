@@ -8,7 +8,12 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  PRN_ACTOR,
+  StatusConflictError,
+  UnauthorisedTransitionError
+} from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
@@ -20,6 +25,18 @@ export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
 
 const statusValues = Object.values(PRN_STATUS)
+
+/**
+ * Infers the actor the requester is acting as, based on the PRN's current
+ * status. Until the auth system carries actor identity, this is our best
+ * proxy. Statuses not in this map have no valid internal actor, so
+ * transitions from those statuses will be rejected by the domain validation.
+ */
+const INTERNAL_ACTOR_BY_STATUS = Object.freeze({
+  [PRN_STATUS.DRAFT]: PRN_ACTOR.REPROCESSOR_EXPORTER,
+  [PRN_STATUS.AWAITING_AUTHORISATION]: PRN_ACTOR.SIGNATORY,
+  [PRN_STATUS.AWAITING_CANCELLATION]: PRN_ACTOR.SIGNATORY
+})
 
 const updateStatusPayloadSchema = Joi.object({
   status: Joi.string()
@@ -91,6 +108,10 @@ export const packagingRecyclingNotesUpdateStatus = {
         throw Boom.notFound(`PRN not found: ${id}`)
       }
 
+      // Infer the actor role from PRN status. Undefined for statuses
+      // without a valid internal actor — domain validation rejects these.
+      const actor = INTERNAL_ACTOR_BY_STATUS[previousPrn.status.currentStatus]
+
       const updatedPrn = await updatePrnStatus({
         prnRepository: lumpyPackagingRecyclingNotesRepository,
         wasteBalancesRepository,
@@ -99,6 +120,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         organisationId,
         accreditationId,
         newStatus,
+        actor,
         user,
         providedPrn: previousPrn
       })
@@ -116,6 +138,13 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       return h.response(buildResponse(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
+      if (
+        error instanceof StatusConflictError ||
+        error instanceof UnauthorisedTransitionError
+      ) {
+        throw Boom.badRequest(error.message)
+      }
+
       if (error.isBoom) {
         throw error
       }

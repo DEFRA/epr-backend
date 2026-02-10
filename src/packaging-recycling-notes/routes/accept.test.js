@@ -39,7 +39,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
       server = await createTestServer({
         repositories: {
           lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository
+            lumpyPackagingRecyclingNotesRepository,
+          wasteBalancesRepository: () => ({}),
+          organisationsRepository: () => ({})
         },
         featureFlags: createInMemoryFeatureFlags({
           packagingRecyclingNotesExternalApi: true
