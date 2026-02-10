@@ -55,7 +55,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       submit: vi.fn().mockResolvedValue(undefined)
     }
 
-    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {

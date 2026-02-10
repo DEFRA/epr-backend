@@ -23,11 +23,6 @@ const router = {
       server.dependency('feature-flags', () => {
         const featureFlags = options.featureFlags || server.featureFlags
 
-        const summaryLogsRoutesBehindFeatureFlag =
-          featureFlags.isSummaryLogsEnabled()
-            ? Object.values(summaryLogsRoutes)
-            : []
-
         const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
           ? Object.values(devRoutes)
           : []
@@ -50,7 +45,7 @@ const router = {
           health,
           ...apply,
           ...Object.values(meRoutes),
-          ...summaryLogsRoutesBehindFeatureFlag,
+          ...Object.values(summaryLogsRoutes),
           ...devRoutesBehindFeatureFlag,
           ...Object.values(organisationRoutes),
           ...formSubmissionsRoutes,

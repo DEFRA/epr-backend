@@ -2,20 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { createConfigFeatureFlags } from './feature-flags.config.js'
 
 describe('createConfigFeatureFlags', () => {
-  it('returns true when summaryLogs flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isSummaryLogsEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.summaryLogs')
-  })
-
-  it('returns false when summaryLogs flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isSummaryLogsEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.summaryLogs')
-  })
-
   it('returns true when logFileUploadsFromForms flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)

@@ -245,7 +245,6 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     const featureFlags = createInMemoryFeatureFlags({
-      summaryLogs: true,
       lumpyPackagingRecyclingNotes: true
     })
 

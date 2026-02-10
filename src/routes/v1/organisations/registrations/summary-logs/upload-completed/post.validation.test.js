@@ -21,7 +21,7 @@ describe('POST upload-completed validation', () => {
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
-      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      featureFlags: createInMemoryFeatureFlags()
     })
   })
 

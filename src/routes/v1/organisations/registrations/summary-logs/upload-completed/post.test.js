@@ -137,7 +137,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       validate: vi.fn()
     }
 
-    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {
@@ -622,7 +622,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         validate: vi.fn()
       }
 
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       transitionServer = await createTestServer({
         repositories: {
