@@ -1,13 +1,15 @@
+import { StatusCodes } from 'http-status-codes'
+
 export const EXTERNAL_API_TAG = 'external-api'
 
 const STATUS_CODE_TO_ERROR_CODE = {
-  400: 'BAD_REQUEST',
-  401: 'UNAUTHORISED',
-  403: 'FORBIDDEN',
-  404: 'NOT_FOUND',
-  409: 'CONFLICT',
-  422: 'BAD_REQUEST',
-  500: 'INTERNAL_SERVER_ERROR'
+  [StatusCodes.BAD_REQUEST]: 'BAD_REQUEST',
+  [StatusCodes.UNAUTHORIZED]: 'UNAUTHORISED',
+  [StatusCodes.FORBIDDEN]: 'FORBIDDEN',
+  [StatusCodes.NOT_FOUND]: 'NOT_FOUND',
+  [StatusCodes.CONFLICT]: 'CONFLICT',
+  [StatusCodes.UNPROCESSABLE_ENTITY]: 'BAD_REQUEST',
+  [StatusCodes.INTERNAL_SERVER_ERROR]: 'INTERNAL_SERVER_ERROR'
 }
 
 export const externalApiErrorFormatter = {
@@ -27,7 +29,10 @@ export const externalApiErrorFormatter = {
         }
 
         const boomStatusCode = response.output.statusCode
-        const statusCode = boomStatusCode === 422 ? 400 : boomStatusCode
+        const statusCode =
+          boomStatusCode === StatusCodes.UNPROCESSABLE_ENTITY
+            ? StatusCodes.BAD_REQUEST
+            : boomStatusCode
         const code =
           STATUS_CODE_TO_ERROR_CODE[boomStatusCode] || 'INTERNAL_SERVER_ERROR'
 
