@@ -2,6 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'
@@ -247,11 +248,12 @@ describe('SummaryLogsValidator', () => {
     vi.resetAllMocks()
   })
 
-  it('should throw error if summary log is not found', async () => {
+  it('should throw PermanentError if summary log is not found', async () => {
     summaryLogsRepository.findById.mockResolvedValue(null)
 
     const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
+    expect(result).toBeInstanceOf(PermanentError)
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe(
       'Summary log not found: summaryLogId=summary-log-123'
