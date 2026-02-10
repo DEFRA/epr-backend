@@ -2,11 +2,16 @@ import { describe, expect, it, beforeEach } from 'vitest'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { generateOrgId } from '#repositories/organisations/contract/test-data.js'
+import {
+  generateOrgId,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 
 describe('generateSummaryLogUploadsReport', () => {
   let organisationRepo
@@ -88,7 +93,7 @@ describe('generateSummaryLogUploadsReport', () => {
     expect(reportRows).toEqual([
       expect.objectContaining({
         registrationNumber: registration.registrationNumber,
-        accreditationNo: accreditation.accreditationNumber,
+        accreditationNumber: accreditation.accreditationNumber,
         lastSuccessfulUpload: submittedAt
       })
     ])
@@ -190,7 +195,7 @@ describe('generateSummaryLogUploadsReport', () => {
         expect.objectContaining({
           orgId: org.orgId,
           registrationNumber: registration.registrationNumber,
-          accreditationNo: accreditation.accreditationNumber,
+          accreditationNumber: accreditation.accreditationNumber,
           lastSuccessfulUpload: latestSuccessfulAt,
           lastFailedUpload: latestFailedAt,
           successfulUploads: 2,
@@ -242,5 +247,60 @@ describe('generateSummaryLogUploadsReport', () => {
         registrationNumber: registration.registrationNumber
       })
     ])
+  })
+
+  it('returns empty string for registrationNumber when null', async () => {
+    const submittedAt = '2026-01-15T10:30:00.000Z'
+
+    const orgId = generateOrgId()
+    const orgBeforeUpdate = await buildApprovedOrg(organisationRepo, {
+      orgId
+    })
+
+    await summaryLogsRepo.insert(
+      new ObjectId().toString(),
+      summaryLogFactory.submitted({
+        organisationId: orgBeforeUpdate.id,
+        registrationId: orgBeforeUpdate.registrations[0].id,
+        submittedAt
+      })
+    )
+
+    await organisationRepo.replace(
+      orgBeforeUpdate.id,
+      orgBeforeUpdate.version,
+      prepareOrgUpdate(orgBeforeUpdate, {
+        registrations: orgBeforeUpdate.registrations.map((reg) => ({
+          ...reg,
+          status: ORGANISATION_STATUS.CREATED,
+          registrationNumber: null,
+          validFrom: null,
+          validTo: null
+        })),
+        accreditations: orgBeforeUpdate.accreditations.map((acc) => ({
+          ...acc,
+          status: ORGANISATION_STATUS.CREATED,
+          accreditationNumber: null,
+          validFrom: null,
+          validTo: null
+        }))
+      })
+    )
+    await waitForVersion(
+      organisationRepo,
+      orgBeforeUpdate.id,
+      orgBeforeUpdate.version + 1
+    )
+
+    const reportRows = await generateSummaryLogUploadsReport(
+      organisationRepo,
+      summaryLogsRepo
+    )
+
+    const row = reportRows.find((r) => r.orgId === orgBeforeUpdate.orgId)
+
+    expect(row).toBeDefined()
+    expect(row.registrationNumber).toBe('')
+    expect(row.accreditationNumber).toBe('')
   })
 })

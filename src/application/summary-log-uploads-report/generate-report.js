@@ -32,8 +32,8 @@ function buildLookupKey(organisationId, registrationId) {
  *   type: string;
  *   businessName: string;
  *   orgId: number;
- *   registrationNumber: string | undefined;
- *   accreditationNo: string;
+ *   registrationNumber: string;
+ *   accreditationNumber: string;
  *   reprocessingSite: string;
  *   packagingWasteCategory: string;
  * }} FormattedRegistrationInfo
@@ -87,8 +87,8 @@ function buildRegistrationLookup(organisations) {
               type: capitalize(registration.wasteProcessingType),
               businessName: org.companyDetails.name,
               orgId: org.orgId,
-              registrationNumber: registration.registrationNumber,
-              accreditationNo: accreditation?.accreditationNumber || '',
+              registrationNumber: registration.registrationNumber || '',
+              accreditationNumber: accreditation?.accreditationNumber || '',
               reprocessingSite: formatAddress(registration.site?.address),
               packagingWasteCategory: formatMaterial(
                 registration.material,
