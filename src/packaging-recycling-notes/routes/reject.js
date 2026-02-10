@@ -4,6 +4,7 @@ import {
   PRN_NUMBER_MAX_LENGTH,
   PRN_STATUS
 } from '#packaging-recycling-notes/domain/model.js'
+import { EXTERNAL_API_TAG } from '#plugins/external-api-error-formatter.js'
 import { createExternalTransitionHandler } from './external-transition-handler.js'
 
 export const packagingRecyclingNotesRejectPath =
@@ -20,7 +21,7 @@ export const packagingRecyclingNotesReject = {
   path: packagingRecyclingNotesRejectPath,
   options: {
     auth: { strategy: 'api-gateway-client' },
-    tags: ['api'],
+    tags: ['api', EXTERNAL_API_TAG],
     validate: {
       params: Joi.object({
         prnNumber: Joi.string().max(PRN_NUMBER_MAX_LENGTH).required()
