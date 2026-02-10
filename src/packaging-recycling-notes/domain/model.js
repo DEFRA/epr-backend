@@ -49,9 +49,9 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   id: string;
  *   accreditationNumber: string;
  *   accreditationYear: number;
- *   material: string;
- *   submittedToRegulator: string;
- *   glassRecyclingProcess?: string;
+ *   material: import('#domain/organisations/model.js').Material;
+ *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
+ *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
  *   siteAddress?: {
  *     line1: string;
  *     line2?: string;
@@ -76,6 +76,10 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   at: Date;
  *   by: Actor;
  * }} BusinessOperation
+ */
+
+/**
+ * @typedef {'created' | 'issued' | 'accepted' | 'rejected' | 'cancelled' | 'deleted'} BusinessOperationSlot
  */
 
 /**
@@ -110,9 +114,9 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *     history: PrnStatusHistoryItem[];
  *   };
  *   createdAt: Date;
- *   createdBy: { id: string; name: string };
+ *   createdBy: Actor;
  *   updatedAt: Date;
- *   updatedBy: { id: string; name: string } | null;
+ *   updatedBy: Actor | null;
  * }} PackagingRecyclingNote
  */
 

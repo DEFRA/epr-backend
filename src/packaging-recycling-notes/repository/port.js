@@ -17,7 +17,7 @@ export class PrnNumberConflictError extends Error {
  * @property {{ id: string; name: string }} updatedBy - User making the change
  * @property {Date} updatedAt - Timestamp of the change
  * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
- * @property {{ slot: string; at: Date; by: { id: string; name: string; position?: string } }} [operation] - Business operation to record on the status object
+ * @property {{ slot: import('#packaging-recycling-notes/domain/model.js').BusinessOperationSlot; at: Date; by: import('#packaging-recycling-notes/domain/model.js').Actor }} [operation] - Business operation to record on the status object
  */
 
 /**
