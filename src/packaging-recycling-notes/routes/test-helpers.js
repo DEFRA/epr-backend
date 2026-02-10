@@ -3,7 +3,12 @@ import { MATERIAL } from '#domain/organisations/model.js'
 
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
+const draftDate = '2026-01-10T10:00:00Z'
+const authorisedDate = '2026-01-12T10:00:00Z'
 const issuedDate = '2026-01-15T10:00:00Z'
+
+const creator = { id: 'user-123', name: 'Test User' }
+const issuer = { id: 'user-issuer', name: 'Issuer User' }
 
 export const createMockIssuedPrn = (overrides = {}) => ({
   id: prnId,
@@ -32,34 +37,34 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   status: {
     currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
     created: {
-      at: new Date('2026-01-10T10:00:00Z'),
-      by: { id: 'user-123', name: 'Test User' }
+      at: new Date(authorisedDate),
+      by: creator
     },
     issued: {
       at: new Date(issuedDate),
-      by: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
+      by: { ...issuer, position: 'Manager' }
     },
     history: [
       {
         status: PRN_STATUS.DRAFT,
-        at: new Date('2026-01-10T10:00:00Z'),
-        by: { id: 'user-123', name: 'Test User' }
+        at: new Date(draftDate),
+        by: creator
       },
       {
         status: PRN_STATUS.AWAITING_AUTHORISATION,
-        at: new Date('2026-01-12T10:00:00Z'),
-        by: { id: 'user-123', name: 'Test User' }
+        at: new Date(authorisedDate),
+        by: creator
       },
       {
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
         at: new Date(issuedDate),
-        by: { id: 'user-issuer', name: 'Issuer User' }
+        by: issuer
       }
     ]
   },
-  createdAt: new Date('2026-01-10T10:00:00Z'),
-  createdBy: { id: 'user-123', name: 'Test User' },
+  createdAt: new Date(draftDate),
+  createdBy: creator,
   updatedAt: new Date(issuedDate),
-  updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+  updatedBy: issuer,
   ...overrides
 })
