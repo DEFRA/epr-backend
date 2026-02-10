@@ -26,6 +26,7 @@ function buildAwaitingAcceptanceAtDate(issuedAt) {
     prnNumber: `FBS-AA-${Date.now()}-${Math.random()}`,
     status: {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      currentStatusAt: issuedAt,
       created: {
         at: new Date(issuedAt.getTime() - TWO_HOURS_MS),
         by: { id: 'raiser', name: 'Raiser' }
@@ -61,6 +62,7 @@ function buildCancelledAtDate(cancelledAt) {
     prnNumber: `FBS-CA-${Date.now()}-${Math.random()}`,
     status: {
       currentStatus: PRN_STATUS.CANCELLED,
+      currentStatusAt: cancelledAt,
       created: {
         at: new Date(issuedAt.getTime() - ONE_HOUR_MS),
         by: { id: 'raiser', name: 'Raiser' }
@@ -264,6 +266,7 @@ export const testFindByStatusBehaviour = (it) => {
             prnNumber: `FBS-CC-${Date.now()}-${Math.random()}`,
             status: {
               currentStatus: PRN_STATUS.CANCELLED,
+              currentStatusAt: cancelledAt,
               created: {
                 at: new Date(issuedAt.getTime() - ONE_HOUR_MS),
                 by: { id: 'raiser', name: 'Raiser' }

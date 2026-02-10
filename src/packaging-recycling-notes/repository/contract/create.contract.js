@@ -114,17 +114,13 @@ export const testCreateBehaviour = (it) => {
         expect(found.status.history[0].status).toBe('draft')
       })
 
-      it('sets currentStatusAt from the history entry matching the current status', async () => {
+      it('preserves the provided currentStatusAt value', async () => {
         const prnInput = buildDraftPrn()
 
         const created = await repository.create(prnInput)
 
-        const expectedDate = prnInput.status.history.findLast(
-          (e) => e.status === prnInput.status.currentStatus
-        ).at
-
         expect(new Date(created.status.currentStatusAt).getTime()).toBe(
-          expectedDate.getTime()
+          prnInput.status.currentStatusAt.getTime()
         )
       })
 

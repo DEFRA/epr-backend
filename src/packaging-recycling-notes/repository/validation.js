@@ -13,9 +13,5 @@ export const validatePrnInsert = (data) => {
     throw Boom.badData(`Invalid PRN data: ${details}`)
   }
 
-  value.status.currentStatusAt = value.status.history.findLast(
-    (e) => e.status === value.status.currentStatus
-  )?.at
-
   return value
 }

@@ -50,6 +50,7 @@ export const buildPrn = (overrides = {}) => {
     isDecemberWaste: false,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
+      currentStatusAt: now,
       history: [
         {
           status: PRN_STATUS.DRAFT,
@@ -77,6 +78,7 @@ export const buildDraftPrn = (overrides = {}) => {
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
+      currentStatusAt: now,
       history: [
         {
           status: PRN_STATUS.DRAFT,
@@ -99,6 +101,7 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      currentStatusAt: now,
       created: {
         at: now,
         by: DEFAULT_RAISER
@@ -135,6 +138,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      currentStatusAt: now,
       created: {
         at: authorisedAt,
         by: DEFAULT_RAISER
@@ -185,6 +189,7 @@ export const buildCancelledPrn = (overrides = {}) => {
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.CANCELLED,
+      currentStatusAt: cancelledAt,
       created: { at: authorisedAt, by: DEFAULT_RAISER },
       issued: {
         at: issuedAt,
@@ -235,6 +240,7 @@ export const buildDeletedPrn = (overrides = {}) => {
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.DELETED,
+      currentStatusAt: now,
       created: {
         at: authorisedAt,
         by: DEFAULT_RAISER
