@@ -13,6 +13,8 @@ jobs:
   pr-prep:
     name: Preparation
     runs-on: ubuntu-latest
+    outputs:
+      docs-only: ${{ steps.check.outputs.docs-only }}
     steps:
       - name: Check branch name
         uses: actions/github-script@v8
@@ -50,14 +52,6 @@ jobs:
             } else {
               console.log('PR description already contains a link to the ticket')
             }
-
-  detect-changes:
-    name: Detect Changed Files
-    runs-on: ubuntu-latest
-    needs: pr-prep
-    outputs:
-      docs-only: ${{ steps.check.outputs.docs-only }}
-    steps:
       - name: Check for docs-only changes
         id: check
         uses: actions/github-script@v8
@@ -79,8 +73,8 @@ jobs:
   pr-validator:
     name: Run Pull Request Checks
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.docs-only != 'true'
+    needs: pr-prep
+    if: needs.pr-prep.outputs.docs-only != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -104,8 +98,8 @@ jobs:
   test-journey:
     name: Run Journey Tests
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.docs-only != 'true'
+    needs: pr-prep
+    if: needs.pr-prep.outputs.docs-only != 'true'
     steps:
       - uses: actions/checkout@v6
 
