@@ -9,7 +9,9 @@ import {
   buildPrnIssuedTransaction,
   performDeductTotalBalanceForPrnIssue,
   buildPrnCancellationTransaction,
-  performCreditAvailableBalanceForPrnCancellation
+  performCreditAvailableBalanceForPrnCancellation,
+  buildIssuedPrnCancellationTransaction,
+  performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { audit } from '@defra/cdp-auditing'
@@ -1181,6 +1183,153 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           availableAmount: 70,
           transactions: expect.arrayContaining([
             expect.objectContaining({ amount: 10 })
+          ]),
+          version: 1
+        }),
+        expect.any(Array)
+      )
+    })
+  })
+
+  describe('buildIssuedPrnCancellationTransaction', () => {
+    it('should build a credit transaction that restores both amount and availableAmount', () => {
+      const currentBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 400,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const transaction = buildIssuedPrnCancellationTransaction({
+        prnId: 'prn-123',
+        tonnage: 60,
+        userId: 'user-abc',
+        currentBalance
+      })
+
+      expect(transaction.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.CREDIT)
+      expect(transaction.amount).toBe(60)
+      expect(transaction.openingAmount).toBe(400)
+      expect(transaction.closingAmount).toBe(460)
+      expect(transaction.openingAvailableAmount).toBe(350)
+      expect(transaction.closingAvailableAmount).toBe(410)
+      expect(transaction.entities).toHaveLength(1)
+      expect(transaction.entities[0].id).toBe('prn-123')
+      expect(transaction.entities[0].type).toBe(
+        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
+      )
+      expect(transaction.createdBy).toEqual({
+        id: 'user-abc',
+        name: 'user-abc'
+      })
+      expect(transaction.id).toBeDefined()
+      expect(transaction.createdAt).toBeDefined()
+    })
+  })
+
+  describe('performCreditFullBalanceForIssuedPrnCancellation', () => {
+    it('should credit tonnage back to both amount and available balance and save', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 400,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performCreditFullBalanceForIssuedPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 60,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 460,
+          availableAmount: 410,
+          version: 2
+        }),
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+            amount: 60
+          })
+        ])
+      )
+    })
+
+    it('should throw if no balance exists', async () => {
+      const findBalance = vi.fn().mockResolvedValue(null)
+      const saveBalance = vi.fn()
+
+      await expect(
+        performCreditFullBalanceForIssuedPrnCancellation({
+          creditParams: {
+            accreditationId: 'acc-1',
+            organisationId: 'org-1',
+            prnId: 'prn-123',
+            tonnage: 60,
+            userId: 'user-abc'
+          },
+          findBalance,
+          saveBalance
+        })
+      ).rejects.toThrow(Boom.Boom)
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
+    it('should handle balance with undefined transactions and version', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 400,
+        availableAmount: 350,
+        transactions: undefined,
+        version: undefined,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performCreditFullBalanceForIssuedPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 60,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 460,
+          availableAmount: 410,
+          transactions: expect.arrayContaining([
+            expect.objectContaining({ amount: 60 })
           ]),
           version: 1
         }),

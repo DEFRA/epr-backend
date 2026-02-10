@@ -3,7 +3,8 @@ import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
-  performCreditAvailableBalanceForPrnCancellation
+  performCreditAvailableBalanceForPrnCancellation,
+  performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -145,6 +146,13 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     },
     creditAvailableBalanceForPrnCancellation: async (creditParams) => {
       return performCreditAvailableBalanceForPrnCancellation({
+        creditParams,
+        findBalance: findBalance(db),
+        saveBalance: saveBalance(db)
+      })
+    },
+    creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
+      return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
