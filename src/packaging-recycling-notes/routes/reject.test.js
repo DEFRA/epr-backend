@@ -215,7 +215,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     })
 
     describe('error handling', () => {
-      it('returns 404 when PRN not found', async () => {
+      it('returns 404 with spec error format when PRN not found', async () => {
         lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           null
         )
@@ -226,9 +226,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+        expect(JSON.parse(response.payload)).toEqual({
+          code: 'NOT_FOUND',
+          message: `Packaging recycling note not found: ${prnNumber}`
+        })
       })
 
-      it('returns 409 when PRN is already accepted', async () => {
+      it('returns 409 with spec error format when PRN is already accepted', async () => {
         const acceptedPrn = createMockIssuedPrn({
           status: {
             currentStatus: PRN_STATUS.ACCEPTED,
@@ -251,6 +255,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload)).toMatchObject({
+          code: 'CONFLICT'
+        })
       })
 
       it('returns 409 when PRN is already awaiting cancellation', async () => {
@@ -276,6 +283,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload)).toMatchObject({
+          code: 'CONFLICT'
+        })
       })
 
       it('returns 409 when PRN is cancelled', async () => {
@@ -301,6 +311,9 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload)).toMatchObject({
+          code: 'CONFLICT'
+        })
       })
 
       it('returns 409 when PRN is still in draft', async () => {
@@ -326,19 +339,25 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload)).toMatchObject({
+          code: 'CONFLICT'
+        })
       })
 
-      it('returns 422 for invalid rejectedAt format', async () => {
+      it('returns 400 with spec error format for invalid rejectedAt format', async () => {
         const response = await server.inject({
           method: 'POST',
           url: rejectUrl,
           payload: { rejectedAt: 'not-a-date' }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(JSON.parse(response.payload)).toMatchObject({
+          code: 'BAD_REQUEST'
+        })
       })
 
-      it('returns 500 when repository throws unexpected error', async () => {
+      it('returns 500 with spec error format when repository throws unexpected error', async () => {
         lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
           new Error('Database connection lost')
         )
@@ -349,6 +368,10 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+        expect(JSON.parse(response.payload)).toEqual({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An internal server error occurred'
+        })
       })
     })
   })

@@ -12,6 +12,7 @@ import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
+import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
 import { mockWorkersPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
 import { router } from '#plugins/router.js'
@@ -193,6 +194,7 @@ export async function createTestServer(options = {}) {
     authPlugin,
     externalApiAuthPlugin,
     authFailureLogger,
+    externalApiErrorFormatter,
     {
       plugin: featureFlagsPlugin,
       options: { config, featureFlags: options.featureFlags }
