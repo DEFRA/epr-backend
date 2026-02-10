@@ -299,7 +299,7 @@ describe('updatePrnStatus', () => {
       operation: {
         slot: 'issued',
         at: expect.any(Date),
-        by: { id: 'user-789', name: 'Test User', position: '' }
+        by: { id: 'user-789', name: 'Test User' }
       },
       prnNumber: expect.stringMatching(/^ER26\d{5}$/)
     })
@@ -474,7 +474,7 @@ describe('updatePrnStatus', () => {
       operation: {
         slot: 'issued',
         at: expect.any(Date),
-        by: { id: 'user-789', name: 'Test User', position: '' }
+        by: { id: 'user-789', name: 'Test User' }
       },
       prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
     })

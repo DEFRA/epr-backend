@@ -237,7 +237,7 @@ export async function updatePrnStatus({
     updateParams.operation = {
       slot: 'issued',
       at: now,
-      by: { id: user.id, name: user.name, position: '' }
+      by: { id: user.id, name: user.name }
     }
 
     const accreditation = await organisationsRepository.findAccreditationById(
