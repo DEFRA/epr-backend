@@ -43,7 +43,7 @@ import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packagin
  * @typedef {Object} CreateTestServerOptions
  * @property {Object} [featureFlags] - Optional feature flags override
  * @property {Object} [repositories] - Optional repository overrides (for mocks or custom instances)
- * @property {Object} [workers] - Optional worker overrides (passed to mockSqsCommandExecutorPlugin)
+ * @property {Object} [executors] - Optional command executor overrides (passed to mockSqsCommandExecutorPlugin)
  */
 
 /**
@@ -175,7 +175,7 @@ function attachLoggerMocks(testServer) {
 
 /**
  * Creates a test server with in-memory repositories.
- * Accepts optional overrides for repositories and workers.
+ * Accepts optional overrides for repositories and executors.
  *
  * @param {CreateTestServerOptions} [options]
  * @returns {Promise<TestServer>}
@@ -200,7 +200,7 @@ export async function createTestServer(options = {}) {
       options: { config, featureFlags: options.featureFlags }
     },
     ...buildRepositoryPlugins(options.repositories ?? {}),
-    { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
+    { plugin: mockSqsCommandExecutorPlugin, options: options.executors },
     router
   ]
 

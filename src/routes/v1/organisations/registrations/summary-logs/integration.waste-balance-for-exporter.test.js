@@ -280,7 +280,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
           organisationsRepository: () => organisationsRepository,
           wasteBalancesRepository: wasteBalancesRepositoryFactory
         },
-        workers: {
+        executors: {
           summaryLogsWorker: submitterWorker
         },
         featureFlags

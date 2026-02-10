@@ -390,7 +390,7 @@ describe('Advanced validation scenarios', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository
         },
-        workers: {
+        executors: {
           summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
@@ -568,7 +568,7 @@ describe('Advanced validation scenarios', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository
         },
-        workers: {
+        executors: {
           summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
