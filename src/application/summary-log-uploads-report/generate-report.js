@@ -1,6 +1,5 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {Registration, Accreditation} from '#repositories/organisations/port.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
 
 import {
@@ -33,7 +32,7 @@ function buildLookupKey(organisationId, registrationId) {
  *   type: string;
  *   businessName: string;
  *   orgId: number;
- *   registrationNumber: string;
+ *   registrationNumber: string | undefined;
  *   accreditationNo: string;
  *   reprocessingSite: string;
  *   packagingWasteCategory: string;
@@ -113,9 +112,8 @@ function processBatch(batch, registrationLookup) {
       summaryLogStats.organisationId,
       summaryLogStats.registrationId
     )
-    return registrationLookup.has(key)
-      ? [transformRow(registrationLookup.get(key), summaryLogStats)]
-      : []
+    const formattedInfo = registrationLookup.get(key)
+    return formattedInfo ? [transformRow(formattedInfo, summaryLogStats)] : []
   })
 }
 

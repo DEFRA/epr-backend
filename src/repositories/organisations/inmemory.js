@@ -1,3 +1,5 @@
+/** @import {Organisation} from '#domain/organisations/model.js' */
+
 import Boom from '@hapi/boom'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
@@ -12,10 +14,6 @@ import {
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
 const CONSISTENCY_RETRY_DELAY_MS = 5
-
-/**
- * @typedef {{ id: string, [key: string]: any }} Organisation
- */
 
 const initializeItems = (items) =>
   items?.map((item) => ({

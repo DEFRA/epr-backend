@@ -1,4 +1,4 @@
-/** @import {User, Organisation} from '#domain/organisations/model.js' */
+/** @import {User, Organisation, Material, GlassRecyclingProcess} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -103,7 +103,8 @@
  *  accreditationId?: string;
  *  approvedPersons: User[]
  *  formSubmissionTime: Date;
- *  material: string;
+ *  material: Material;
+ *  glassRecyclingProcess?: GlassRecyclingProcess[];
  *  orgName: string;
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
@@ -114,7 +115,7 @@
 
 /**
  * @typedef {RegistrationBase & {
- *  cbduNumber: string;
+ *  registrationNumber: string;
  *  status: 'approved'|'suspended';
  *  validFrom: string;
  *  validTo: string;
@@ -123,6 +124,7 @@
 
 /**
  * @typedef {RegistrationBase & {
+ *  registrationNumber?: string;
  *  cbduNumber?: string;
  *  status: 'created'|'rejected'|'archived';
  *  validFrom?: string;
