@@ -338,6 +338,28 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
 
+      it('succeeds when issuedToOrganisation has null tradingName', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            ...validPayload,
+            issuedToOrganisation: {
+              id: 'producer-org-789',
+              name: 'Producer Org',
+              tradingName: null
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+
+        const createArg =
+          lumpyPackagingRecyclingNotesRepository.create.mock.calls[0][0]
+        expect(createArg.issuedToOrganisation).not.toHaveProperty('tradingName')
+      })
+
       it('should include issuer notes when provided', async () => {
         const notes = 'Test issuer notes'
 
