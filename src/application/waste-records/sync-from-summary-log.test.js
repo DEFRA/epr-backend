@@ -17,6 +17,8 @@ const TEST_WEIGHT_100_5 = 100.5
 const TEST_WEIGHT_200_75 = 200.75
 const TEST_WEIGHT_250_5 = 250.5
 
+const testUser = { id: 'test-user', email: 'test@example.com' }
+
 describe('syncFromSummaryLog', () => {
   let wasteRecordRepository
   let wasteBalancesRepository
@@ -78,7 +80,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     // Verify records were saved
     const savedRecords = await wasteRecordRepository.findByRegistration(
@@ -148,7 +150,7 @@ describe('syncFromSummaryLog', () => {
       organisationsRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
       'org-1',
@@ -157,7 +159,7 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', undefined)
+    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', testUser)
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -232,7 +234,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     // Verify record was updated
     const savedRecords = await wasteRecordRepository.findByRegistration(
@@ -319,7 +321,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     // Verify no new version was created
     const savedRecords = await wasteRecordRepository.findByRegistration(
@@ -404,7 +406,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     const savedRecords = await wasteRecordRepository.findByRegistration(
       'org-1',
@@ -499,7 +501,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     const savedRecords = await wasteRecordRepository.findByRegistration(
       'org-1',
@@ -572,7 +574,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     const savedRecords = await wasteRecordRepository.findByRegistration(
       'org-1',
@@ -631,7 +633,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     // Only the known table should have been processed
     const savedRecords = await wasteRecordRepository.findByRegistration(
@@ -694,7 +696,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     const savedRecords = await wasteRecordRepository.findByRegistration(
       'org-1',
@@ -760,7 +762,7 @@ describe('syncFromSummaryLog', () => {
       organisationsRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
@@ -772,7 +774,7 @@ describe('syncFromSummaryLog', () => {
         })
       ]),
       'acc-1',
-      undefined
+      testUser
     )
   })
 
@@ -798,7 +800,7 @@ describe('syncFromSummaryLog', () => {
       organisationsRepository: undefined
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     // If it didn't crash, it passed the check
     expect(true).toBe(true)
@@ -830,7 +832,7 @@ describe('syncFromSummaryLog', () => {
       organisationsRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, testUser)
 
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalled()
   })
@@ -884,7 +886,7 @@ describe('syncFromSummaryLog', () => {
         wasteRecordRepository
       })
 
-      const result = await sync(summaryLog)
+      const result = await sync(summaryLog, testUser)
 
       expect(result).toEqual({
         created: 2,
@@ -971,7 +973,7 @@ describe('syncFromSummaryLog', () => {
         wasteRecordRepository
       })
 
-      const result = await sync(summaryLog)
+      const result = await sync(summaryLog, testUser)
 
       expect(result).toEqual({
         created: 1,
@@ -1053,7 +1055,7 @@ describe('syncFromSummaryLog', () => {
         wasteRecordRepository
       })
 
-      const result = await sync(summaryLog)
+      const result = await sync(summaryLog, testUser)
 
       expect(result).toEqual({
         created: 0,
