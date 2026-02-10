@@ -205,7 +205,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         )
       })
 
-      it('transitions from awaiting_acceptance to accepted', async () => {
+      it('blocks producer transitions via internal route', async () => {
         const awaitingAcceptancePrn = createMockPrn({
           prnNumber: 'ER2600001',
           status: {
@@ -230,22 +230,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.ACCEPTED }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.OK)
-
-        const body = JSON.parse(response.payload)
-        expect(body.status).toBe(PRN_STATUS.ACCEPTED)
-
-        expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            id: prnId,
-            status: PRN_STATUS.ACCEPTED
-          })
-        )
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.payload).toContain('Invalid status transition')
       })
 
-      it('does not affect waste balance on acceptance', async () => {
+      it('does not trigger waste balance changes for blocked transitions', async () => {
         const awaitingAcceptancePrn = createMockPrn({
           prnNumber: 'ER2600001',
           status: {
@@ -270,7 +259,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.ACCEPTED }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
         expect(
           wasteBalancesRepository.deductAvailableBalanceForPrnCreation
         ).not.toHaveBeenCalled()

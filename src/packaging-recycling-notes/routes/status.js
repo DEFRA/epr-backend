@@ -8,7 +8,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  PRN_ACTOR
+} from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
@@ -20,6 +23,17 @@ export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
 
 const statusValues = Object.values(PRN_STATUS)
+
+/**
+ * Maps PRN current status to the actor type that uses this internal route.
+ * Statuses not in this map have no valid internal actor, so transitions
+ * from those statuses will be rejected by the domain validation.
+ */
+const INTERNAL_ACTOR_BY_STATUS = Object.freeze({
+  [PRN_STATUS.DRAFT]: PRN_ACTOR.REPROCESSOR_EXPORTER,
+  [PRN_STATUS.AWAITING_AUTHORISATION]: PRN_ACTOR.SIGNATORY,
+  [PRN_STATUS.AWAITING_CANCELLATION]: PRN_ACTOR.SIGNATORY
+})
 
 const updateStatusPayloadSchema = Joi.object({
   status: Joi.string()
@@ -91,6 +105,8 @@ export const packagingRecyclingNotesUpdateStatus = {
         throw Boom.notFound(`PRN not found: ${id}`)
       }
 
+      const actor = INTERNAL_ACTOR_BY_STATUS[previousPrn.status.currentStatus]
+
       const updatedPrn = await updatePrnStatus({
         prnRepository: lumpyPackagingRecyclingNotesRepository,
         wasteBalancesRepository,
@@ -99,6 +115,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         organisationId,
         accreditationId,
         newStatus,
+        actor,
         user,
         providedPrn: previousPrn
       })

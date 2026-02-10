@@ -3,7 +3,7 @@ import Boom from '@hapi/boom'
 import { prnMetrics } from './metrics.js'
 import {
   PRN_STATUS,
-  PRN_STATUS_TRANSITIONS
+  isValidTransition
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -176,6 +176,7 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
  * @param {string} params.organisationId
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
  * @param {{ id: string; name: string }} params.user
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
@@ -188,6 +189,7 @@ export async function updatePrnStatus({
   organisationId,
   accreditationId,
   newStatus,
+  actor,
   user,
   providedPrn
 }) {
@@ -202,8 +204,7 @@ export async function updatePrnStatus({
   }
 
   const currentStatus = prn.status.currentStatus
-  const allowedTransitions = PRN_STATUS_TRANSITIONS[currentStatus] || []
-  if (!allowedTransitions.includes(newStatus)) {
+  if (!isValidTransition(currentStatus, newStatus, actor)) {
     throw Boom.badRequest(
       `Invalid status transition: ${currentStatus} -> ${newStatus}`
     )

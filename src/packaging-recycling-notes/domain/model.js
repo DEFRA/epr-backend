@@ -16,25 +16,63 @@ export const PRN_STATUS = Object.freeze({
 })
 
 /**
- * Valid status transitions for PRNs
- * @type {Record<PrnStatus, PrnStatus[]>}
+ * Actor types that can trigger PRN status transitions
+ * @typedef {typeof PRN_ACTOR[keyof typeof PRN_ACTOR]} PrnActor
+ */
+export const PRN_ACTOR = Object.freeze({
+  REPROCESSOR_EXPORTER: 'reprocessor_exporter',
+  SIGNATORY: 'signatory',
+  PRODUCER: 'producer'
+})
+
+/**
+ * @typedef {{ status: PrnStatus; actors: PrnActor[] }} PrnTransition
+ */
+
+/**
+ * Actor-aware status transitions for PRNs.
+ * Each transition specifies which actor types are permitted to trigger it.
+ * @type {Record<PrnStatus, PrnTransition[]>}
  */
 export const PRN_STATUS_TRANSITIONS = Object.freeze({
-  [PRN_STATUS.DRAFT]: [PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DISCARDED],
+  [PRN_STATUS.DRAFT]: [
+    {
+      status: PRN_STATUS.AWAITING_AUTHORISATION,
+      actors: [PRN_ACTOR.REPROCESSOR_EXPORTER]
+    },
+    { status: PRN_STATUS.DISCARDED, actors: [PRN_ACTOR.REPROCESSOR_EXPORTER] }
+  ],
   [PRN_STATUS.AWAITING_AUTHORISATION]: [
-    PRN_STATUS.AWAITING_ACCEPTANCE,
-    PRN_STATUS.DELETED
+    { status: PRN_STATUS.AWAITING_ACCEPTANCE, actors: [PRN_ACTOR.SIGNATORY] },
+    { status: PRN_STATUS.DELETED, actors: [PRN_ACTOR.SIGNATORY] }
   ],
   [PRN_STATUS.AWAITING_ACCEPTANCE]: [
-    PRN_STATUS.ACCEPTED,
-    PRN_STATUS.AWAITING_CANCELLATION
+    { status: PRN_STATUS.ACCEPTED, actors: [PRN_ACTOR.PRODUCER] },
+    { status: PRN_STATUS.AWAITING_CANCELLATION, actors: [PRN_ACTOR.PRODUCER] }
   ],
   [PRN_STATUS.ACCEPTED]: [],
-  [PRN_STATUS.AWAITING_CANCELLATION]: [PRN_STATUS.CANCELLED],
+  [PRN_STATUS.AWAITING_CANCELLATION]: [
+    { status: PRN_STATUS.CANCELLED, actors: [PRN_ACTOR.SIGNATORY] }
+  ],
   [PRN_STATUS.CANCELLED]: [],
   [PRN_STATUS.DELETED]: [],
   [PRN_STATUS.DISCARDED]: []
 })
+
+/**
+ * Checks whether a status transition is valid for a given actor.
+ * @param {PrnStatus} currentStatus
+ * @param {PrnStatus} newStatus
+ * @param {PrnActor} actor
+ * @returns {boolean}
+ */
+export function isValidTransition(currentStatus, newStatus, actor) {
+  const transitions = PRN_STATUS_TRANSITIONS[currentStatus]
+  if (!transitions) return false
+  return transitions.some(
+    (t) => t.status === newStatus && t.actors.includes(actor)
+  )
+}
 
 /**
  * @typedef {{

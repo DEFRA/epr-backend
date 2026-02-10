@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  PRN_ACTOR
+} from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 
@@ -51,6 +54,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('PRN not found')
@@ -76,6 +80,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('PRN not found')
@@ -101,6 +106,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('PRN not found')
@@ -127,6 +133,60 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+    ).rejects.toThrow('Invalid status transition')
+  })
+
+  it('throws bad request when actor is not permitted for transition', async () => {
+    const prnRepository = createMockPrnRepository({
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
+        status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+    })
+    const wasteBalancesRepository = {}
+
+    // Only PRODUCER can transition from awaiting_acceptance to accepted
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository: defaultOrganisationsRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.ACCEPTED,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+    ).rejects.toThrow('Invalid status transition')
+  })
+
+  it('throws bad request when signatory tries producer transition', async () => {
+    const prnRepository = createMockPrnRepository({
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
+        status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+      })
+    })
+    const wasteBalancesRepository = {}
+
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository: defaultOrganisationsRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.ACCEPTED,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Invalid status transition')
@@ -163,6 +223,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
       user: { id: 'user-789', name: 'Test User' }
     })
 
@@ -200,6 +261,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
@@ -241,6 +303,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
       user: { id: 'user-789', name: 'Test User' }
     })
 
@@ -287,6 +350,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
     })
 
@@ -335,6 +399,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
     })
 
@@ -376,6 +441,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
     })
 
@@ -415,6 +481,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
@@ -457,6 +524,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      actor: PRN_ACTOR.SIGNATORY,
       user: { id: 'user-789', name: 'Test User' }
     })
 
@@ -507,6 +575,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Unable to generate unique PRN number after all retries')
@@ -547,6 +616,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow()
@@ -585,6 +655,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Database connection failed')
@@ -621,6 +692,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Failed to update PRN status')
@@ -656,6 +728,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('Failed to update PRN status')
@@ -691,6 +764,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient available waste balance')
@@ -731,6 +805,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient total waste balance')
@@ -772,6 +847,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -807,6 +883,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient available waste balance')
@@ -840,6 +917,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.SIGNATORY,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Insufficient total waste balance')
@@ -878,6 +956,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -920,6 +999,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -968,6 +1048,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -994,6 +1075,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('PRN not found')
@@ -1021,6 +1103,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+          actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Invalid status transition')
@@ -1056,6 +1139,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DISCARDED,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -1096,6 +1180,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DISCARDED,
+        actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -1125,6 +1210,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.DISCARDED,
+          actor: PRN_ACTOR.SIGNATORY,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('Invalid status transition')
@@ -1162,6 +1248,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
 
@@ -1201,6 +1288,7 @@ describe('updatePrnStatus', () => {
           organisationId: 'org-123',
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.DELETED,
+          actor: PRN_ACTOR.SIGNATORY,
           user: { id: 'user-789', name: 'Test User' }
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
