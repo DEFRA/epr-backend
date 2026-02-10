@@ -278,7 +278,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           validFrom: '2026-01-01',
           wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
           submittedToRegulator: 'ea',
-          glassProcessingType: ['remelt'],
+          glassRecyclingProcess: ['remelt'],
           site: {
             address: { line1: '123 Glass Lane', postcode: 'GL1 2AB' }
           }

@@ -40,6 +40,29 @@ export const packagingRecyclingNotesCreatePath =
  * @param {boolean} params.isExport
  * @param {Date} params.now
  */
+const snapshotAccreditation = (accreditation) => {
+  const snapshot = {
+    id: accreditation.id,
+    accreditationNumber: accreditation.accreditationNumber,
+    accreditationYear: deriveAccreditationYear(accreditation),
+    material: accreditation.material,
+    submittedToRegulator: accreditation.submittedToRegulator
+  }
+
+  if (
+    accreditation.material === 'glass' &&
+    accreditation.glassRecyclingProcess?.[0]
+  ) {
+    snapshot.glassRecyclingProcess = accreditation.glassRecyclingProcess[0]
+  }
+
+  if (accreditation.site?.address) {
+    snapshot.siteAddress = accreditation.site.address
+  }
+
+  return snapshot
+}
+
 const buildPrnData = ({
   organisation,
   registrationId,
@@ -52,20 +75,7 @@ const buildPrnData = ({
   schemaVersion: 2,
   organisation,
   registrationId,
-  accreditation: {
-    id: accreditation.id,
-    accreditationNumber: accreditation.accreditationNumber,
-    accreditationYear: deriveAccreditationYear(accreditation),
-    material: accreditation.material,
-    submittedToRegulator: accreditation.submittedToRegulator,
-    ...(accreditation.material === 'glass' &&
-      accreditation.glassProcessingType?.[0] && {
-        glassRecyclingProcess: accreditation.glassProcessingType[0]
-      }),
-    ...(accreditation.site?.address && {
-      siteAddress: accreditation.site.address
-    })
-  },
+  accreditation: snapshotAccreditation(accreditation),
   issuedToOrganisation: payload.issuedToOrganisation,
   tonnage: payload.tonnage,
   isExport,
