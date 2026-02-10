@@ -237,6 +237,80 @@ describe('SQS command queue consumer integration', () => {
     )
 
     it(
+      'deletes message from queue after successful processing',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
+        )
+
+        const summaryLogId = `delete-on-success-${Date.now()}`
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              summaryLogId
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        })
+
+        consumer.start()
+
+        // Wait for the command to be processed successfully
+        await vi.waitFor(
+          () => {
+            expect(mockValidator).toHaveBeenCalledWith(summaryLogId)
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        // Wait for visibility timeout to expire so any undeleted message
+        // reappears (VisibilityTimeout is 1s in test fixture)
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        // Message should be properly deleted — not still on the main queue
+        const mainResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(mainResponse.Messages ?? []).toHaveLength(0)
+
+        // Message should NOT have been redelivered to the DLQ either —
+        // a successfully processed message must be deleted, not retried
+        // until it exhausts maxReceiveCount
+        const dlqResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: dlqUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(dlqResponse.Messages ?? []).toHaveLength(0)
+      }
+    )
+
+    it(
       'deletes invalid message after logging error',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {

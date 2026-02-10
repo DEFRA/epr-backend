@@ -215,7 +215,7 @@ const handleCommandError = async ({
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
  * @param {number|null} maxReceiveCount
- * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<void>}
+ * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<import('@aws-sdk/client-sqs').Message | void>}
  */
 const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   const { logger, summaryLogsRepository } = deps
@@ -257,6 +257,8 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
+
+    return message
   } catch (err) {
     await handleCommandError({
       err,
