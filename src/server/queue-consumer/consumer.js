@@ -222,7 +222,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
 
   const command = parseCommandMessage(message, logger)
   if (!command) {
-    return
+    return undefined
   }
 
   const { command: commandType, summaryLogId } = command
@@ -247,7 +247,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
 
       /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
       default:
-        return
+        return undefined
     }
 
     logger.info({
@@ -269,6 +269,8 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
       summaryLogsRepository,
       logger
     })
+
+    return undefined
   }
 }
 
