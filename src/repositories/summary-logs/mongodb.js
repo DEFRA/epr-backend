@@ -156,14 +156,9 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
           lastSuccessful: {
             $max: {
               $cond: [
-                {
-                  $convert: {
-                    input: { $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] },
-                    to: 'bool'
-                  }
-                },
-                null,
-                '$submittedAt'
+                { $not: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }] },
+                '$submittedAt',
+                null
               ]
             }
           },

@@ -34,7 +34,7 @@
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
- * @property {() => Promise<Map<string, SummaryLogStats>>} findAllSummaryLogStatsByRegistrationId
+ * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  */
 

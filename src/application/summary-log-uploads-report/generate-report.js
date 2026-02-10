@@ -108,22 +108,15 @@ function buildRegistrationLookup(organisations) {
  * @returns {SummaryLogUploadReportRow[]}
  */
 function processBatch(batch, registrationLookup) {
-  return batch
-    .filter((summaryLogStats) => {
-      const key = buildLookupKey(
-        summaryLogStats.organisationId,
-        summaryLogStats.registrationId
-      )
-      return registrationLookup.has(key)
-    })
-    .map((summaryLogStats) => {
-      const key = buildLookupKey(
-        summaryLogStats.organisationId,
-        summaryLogStats.registrationId
-      )
-      const formattedInfo = registrationLookup.get(key)
-      return transformRow(formattedInfo, summaryLogStats)
-    })
+  return batch.flatMap((summaryLogStats) => {
+    const key = buildLookupKey(
+      summaryLogStats.organisationId,
+      summaryLogStats.registrationId
+    )
+    return registrationLookup.has(key)
+      ? [transformRow(registrationLookup.get(key), summaryLogStats)]
+      : []
+  })
 }
 
 /**
@@ -153,7 +146,6 @@ export async function generateSummaryLogUploadsReport(
 ) {
   logger.info({ message: 'Summary log uploads report generation started' })
 
-  logger.info({ message: 'Fetching all summary log statistics' })
   const summaryLogsStatsList =
     await summaryLogsRepo.findAllSummaryLogStatsByRegistrationId()
   logger.info({
@@ -172,15 +164,7 @@ export async function generateSummaryLogUploadsReport(
     message: `Retrieved ${organisations.length} organisations from repository`
   })
 
-  logger.info({ message: 'Building registration lookup map' })
   const registrationLookup = buildRegistrationLookup(organisations)
-  logger.info({
-    message: `Built registration lookup with ${registrationLookup.size} entries`
-  })
-
-  logger.info({
-    message: 'Starting transformation of summary log stats to report rows'
-  })
   const reportRows = await transform(summaryLogsStatsList, registrationLookup)
   logger.info({
     message: `Transformation complete: ${reportRows.length} rows generated`
