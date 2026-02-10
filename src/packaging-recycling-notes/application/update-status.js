@@ -3,7 +3,7 @@ import Boom from '@hapi/boom'
 import { prnMetrics } from './metrics.js'
 import {
   PRN_STATUS,
-  isValidTransition
+  validateTransition
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -179,6 +179,7 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
  * @param {{ id: string; name: string }} params.user
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
+ * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 export async function updatePrnStatus({
@@ -191,7 +192,8 @@ export async function updatePrnStatus({
   newStatus,
   actor,
   user,
-  providedPrn
+  providedPrn,
+  updatedAt
 }) {
   const prn = providedPrn ?? (await prnRepository.findById(id))
 
@@ -204,11 +206,7 @@ export async function updatePrnStatus({
   }
 
   const currentStatus = prn.status.currentStatus
-  if (!isValidTransition(currentStatus, newStatus, actor)) {
-    throw Boom.badRequest(
-      `Invalid status transition: ${currentStatus} -> ${newStatus}`
-    )
-  }
+  validateTransition(currentStatus, newStatus, actor)
 
   await applyWasteBalanceEffects(wasteBalancesRepository, {
     currentStatus,
@@ -220,7 +218,7 @@ export async function updatePrnStatus({
     userId: user.id
   })
 
-  const now = new Date()
+  const now = updatedAt ?? new Date()
   const updateParams = {
     id,
     status: newStatus,

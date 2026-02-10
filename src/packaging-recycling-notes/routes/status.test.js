@@ -646,7 +646,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(response.payload).toContain('Invalid status transition')
+        expect(response.payload).toContain('No transition exists from')
       })
 
       it('returns 400 when PRN has unknown current status', async () => {
@@ -671,7 +671,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(response.payload).toContain('Invalid status transition')
+        expect(response.payload).toContain('No transition exists from')
       })
 
       it('returns 422 for invalid PRN id format', async () => {
@@ -764,7 +764,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(response.payload).toContain('Invalid status transition')
+        expect(response.payload).toContain('is not permitted to transition')
       })
 
       it('does not trigger waste balance changes for blocked transitions', async () => {

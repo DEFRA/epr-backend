@@ -74,6 +74,50 @@ export function isValidTransition(currentStatus, newStatus, actor) {
   )
 }
 
+export class StatusConflictError extends Error {
+  constructor(currentStatus, newStatus) {
+    super(`No transition exists from ${currentStatus} to ${newStatus}`)
+    this.currentStatus = currentStatus
+    this.newStatus = newStatus
+  }
+}
+
+export class UnauthorisedTransitionError extends Error {
+  constructor(currentStatus, newStatus, actor) {
+    super(
+      `Actor ${actor} is not permitted to transition from ${currentStatus} to ${newStatus}`
+    )
+    this.currentStatus = currentStatus
+    this.newStatus = newStatus
+    this.actor = actor
+  }
+}
+
+/**
+ * Validates a status transition, throwing a descriptive error on failure.
+ * @param {PrnStatus} currentStatus
+ * @param {PrnStatus} newStatus
+ * @param {PrnActor} actor
+ * @throws {StatusConflictError} when no transition from currentStatus to newStatus exists
+ * @throws {UnauthorisedTransitionError} when the transition exists but the actor is not permitted
+ */
+export function validateTransition(currentStatus, newStatus, actor) {
+  const transitions = PRN_STATUS_TRANSITIONS[currentStatus] ?? []
+  const transitionExists = transitions.some((t) => t.status === newStatus)
+
+  if (!transitionExists) {
+    throw new StatusConflictError(currentStatus, newStatus)
+  }
+
+  const actorPermitted = transitions.some(
+    (t) => t.status === newStatus && t.actors.includes(actor)
+  )
+
+  if (!actorPermitted) {
+    throw new UnauthorisedTransitionError(currentStatus, newStatus, actor)
+  }
+}
+
 /**
  * @typedef {{
  *   id: string;

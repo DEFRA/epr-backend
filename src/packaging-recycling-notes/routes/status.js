@@ -10,7 +10,9 @@ import {
 } from '#common/enums/index.js'
 import {
   PRN_STATUS,
-  PRN_ACTOR
+  PRN_ACTOR,
+  StatusConflictError,
+  UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
@@ -136,6 +138,13 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       return h.response(buildResponse(updatedPrn)).code(StatusCodes.OK)
     } catch (error) {
+      if (
+        error instanceof StatusConflictError ||
+        error instanceof UnauthorisedTransitionError
+      ) {
+        throw Boom.badRequest(error.message)
+      }
+
       if (error.isBoom) {
         throw error
       }

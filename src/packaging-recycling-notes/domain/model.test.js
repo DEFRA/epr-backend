@@ -4,7 +4,10 @@ import {
   PRN_STATUS,
   PRN_STATUS_TRANSITIONS,
   PRN_ACTOR,
-  isValidTransition
+  isValidTransition,
+  validateTransition,
+  StatusConflictError,
+  UnauthorisedTransitionError
 } from './model.js'
 
 describe('PRN_STATUS_TRANSITIONS', () => {
@@ -71,5 +74,74 @@ describe('PRN_STATUS_TRANSITIONS', () => {
     ['unknown', PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
   ])('rejects %s -> %s for %s', (from, to, actor) => {
     expect(isValidTransition(from, to, actor)).toBe(false)
+  })
+})
+
+describe('validateTransition', () => {
+  it('does not throw for valid transitions', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.PRODUCER
+      )
+    ).not.toThrow()
+  })
+
+  it('throws StatusConflictError when no transition exists from current to new status', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.DRAFT,
+        PRN_ACTOR.PRODUCER
+      )
+    ).toThrow(StatusConflictError)
+  })
+
+  it('throws StatusConflictError for terminal states', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.CANCELLED,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.PRODUCER
+      )
+    ).toThrow(StatusConflictError)
+  })
+
+  it('throws UnauthorisedTransitionError when transition exists but actor is not permitted', () => {
+    expect(() =>
+      validateTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.SIGNATORY
+      )
+    ).toThrow(UnauthorisedTransitionError)
+  })
+
+  it('includes status details in StatusConflictError', () => {
+    try {
+      validateTransition(
+        PRN_STATUS.ACCEPTED,
+        PRN_STATUS.DRAFT,
+        PRN_ACTOR.PRODUCER
+      )
+    } catch (error) {
+      expect(error.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+      expect(error.newStatus).toBe(PRN_STATUS.DRAFT)
+    }
+  })
+
+  it('includes actor details in UnauthorisedTransitionError', () => {
+    try {
+      validateTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        PRN_ACTOR.SIGNATORY
+      )
+    } catch (error) {
+      expect(error.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(error.newStatus).toBe(PRN_STATUS.ACCEPTED)
+      expect(error.actor).toBe(PRN_ACTOR.SIGNATORY)
+    }
   })
 })

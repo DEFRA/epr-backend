@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import {
   PRN_STATUS,
-  PRN_ACTOR
+  PRN_ACTOR,
+  StatusConflictError,
+  UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -112,7 +114,7 @@ describe('updatePrnStatus', () => {
     ).rejects.toThrow('PRN not found')
   })
 
-  it('throws bad request for invalid status transition', async () => {
+  it('throws StatusConflictError when no transition exists between statuses', async () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
@@ -136,10 +138,10 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
-    ).rejects.toThrow('Invalid status transition')
+    ).rejects.toThrow(StatusConflictError)
   })
 
-  it('throws bad request when actor is not permitted for transition', async () => {
+  it('throws UnauthorisedTransitionError when actor is not permitted for transition', async () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
@@ -163,10 +165,10 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
         user: { id: 'user-789', name: 'Test User' }
       })
-    ).rejects.toThrow('Invalid status transition')
+    ).rejects.toThrow(UnauthorisedTransitionError)
   })
 
-  it('throws bad request when signatory tries producer transition', async () => {
+  it('throws UnauthorisedTransitionError when signatory tries producer transition', async () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue({
         id: '507f1f77bcf86cd799439011',
@@ -189,7 +191,7 @@ describe('updatePrnStatus', () => {
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
       })
-    ).rejects.toThrow('Invalid status transition')
+    ).rejects.toThrow(UnauthorisedTransitionError)
   })
 
   it('deducts available waste balance when transitioning to awaiting_authorisation', async () => {
@@ -265,6 +267,54 @@ describe('updatePrnStatus', () => {
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
+  })
+
+  it('uses provided updatedAt timestamp instead of current time', async () => {
+    const explicitTimestamp = new Date('2026-01-15T12:00:00Z')
+    const updatedPrn = {
+      id: '507f1f77bcf86cd799439011',
+      organisation: { id: 'org-123' },
+      accreditation: { id: 'acc-456' },
+      tonnage: 100,
+      status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+    }
+    const prnRepository = createMockPrnRepository({
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456' },
+        tonnage: 100,
+        status: { currentStatus: PRN_STATUS.DRAFT }
+      }),
+      updateStatus: vi.fn().mockResolvedValue(updatedPrn)
+    })
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
+    }
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository: defaultOrganisationsRepository,
+      id: '507f1f77bcf86cd799439011',
+      organisationId: 'org-123',
+      accreditationId: 'acc-456',
+      newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
+      user: { id: 'user-789', name: 'Test User' },
+      updatedAt: explicitTimestamp
+    })
+
+    expect(prnRepository.updateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        updatedAt: explicitTimestamp
+      })
+    )
   })
 
   it('updates status and returns updated PRN', async () => {
@@ -1106,7 +1156,7 @@ describe('updatePrnStatus', () => {
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
           user: { id: 'user-789', name: 'Test User' }
         })
-      ).rejects.toThrow('Invalid status transition')
+      ).rejects.toThrow(StatusConflictError)
 
       expect(mockRecordStatusTransition).not.toHaveBeenCalled()
     })
@@ -1213,7 +1263,7 @@ describe('updatePrnStatus', () => {
           actor: PRN_ACTOR.SIGNATORY,
           user: { id: 'user-789', name: 'Test User' }
         })
-      ).rejects.toThrow('Invalid status transition')
+      ).rejects.toThrow(StatusConflictError)
     })
   })
 
