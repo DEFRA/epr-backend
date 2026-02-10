@@ -215,9 +215,10 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload)).toMatchObject({
-          code: 'CONFLICT'
-        })
+        const payload = JSON.parse(response.payload)
+        expect(payload.code).toBe('CONFLICT')
+        expect(payload.message).toEqual(expect.any(String))
+        expect(Object.keys(payload)).toEqual(['code', 'message'])
       })
 
       it('returns 409 when PRN is awaiting cancellation', async () => {
@@ -243,9 +244,10 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload)).toMatchObject({
-          code: 'CONFLICT'
-        })
+        const payload = JSON.parse(response.payload)
+        expect(payload.code).toBe('CONFLICT')
+        expect(payload.message).toEqual(expect.any(String))
+        expect(Object.keys(payload)).toEqual(['code', 'message'])
       })
 
       it('returns 409 when PRN is cancelled', async () => {
@@ -271,9 +273,10 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload)).toMatchObject({
-          code: 'CONFLICT'
-        })
+        const payload = JSON.parse(response.payload)
+        expect(payload.code).toBe('CONFLICT')
+        expect(payload.message).toEqual(expect.any(String))
+        expect(Object.keys(payload)).toEqual(['code', 'message'])
       })
 
       it('returns 400 with spec error format for invalid acceptedAt format', async () => {
@@ -284,9 +287,10 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(JSON.parse(response.payload)).toMatchObject({
-          code: 'BAD_REQUEST'
-        })
+        const payload = JSON.parse(response.payload)
+        expect(payload.code).toBe('BAD_REQUEST')
+        expect(payload.message).toEqual(expect.any(String))
+        expect(Object.keys(payload)).toEqual(['code', 'message'])
       })
 
       it('returns 500 with spec error format when repository throws unexpected error', async () => {
