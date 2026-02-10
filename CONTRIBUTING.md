@@ -14,6 +14,7 @@
     * [Testing endpoints](#testing-endpoints)
     * [Development](#development)
     * [Testing](#testing)
+      * [Journey tests](#journey-tests)
     * [Production](#production)
     * [Npm scripts](#npm-scripts)
     * [Update dependencies](#update-dependencies)
@@ -147,7 +148,14 @@ To test the application run:
 npm run test
 ```
 
-Additional integration tests are available in the [epr-backend-journey-tests test suite](https://github.com/DEFRA/epr-backend-journey-tests)
+#### Journey tests
+
+Journey tests live in [DEFRA/epr-backend-journey-tests](https://github.com/DEFRA/epr-backend-journey-tests).
+
+To develop journey tests alongside your work, create a branch in that repo matching your backend branch name.
+The CI picks up the matching branch automatically, and uses `main` where no match is found.
+
+Merging journey test branches back to main is a separate manual step.
 
 To generate data locally for testing (This assumes your service and relevant Docker services are running), please refer to the [Test Data Generation documentation](https://github.com/DEFRA/epr-backend-journey-tests?tab=readme-ov-file#running-the-data-generator-for-epr-backend)
 

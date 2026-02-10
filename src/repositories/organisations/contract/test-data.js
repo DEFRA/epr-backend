@@ -136,6 +136,16 @@ const mergeArrayById = (existing, updates) => {
  * @param {Object} updates - Fields to update
  * @returns {Object} Organisation object without id, ready for replace()
  */
+export const buildLinkedDefraOrg = (orgId, orgName) => ({
+  orgId,
+  orgName,
+  linkedBy: {
+    email: 'linker@example.com',
+    id: crypto.randomUUID()
+  },
+  linkedAt: new Date().toISOString()
+})
+
 export const prepareOrgUpdate = (org, updates = {}) => {
   const { id: _, ...orgWithoutId } = org
 

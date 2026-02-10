@@ -431,6 +431,14 @@ const baseConfig = {
       default: '3600',
       env: 'PUBLIC_REGISTER_URL_EXPIRY'
     }
+  },
+  summaryLogReport: {
+    batchSize: {
+      doc: 'Summary log upload generation batch size. This is used for yielding back to event loop',
+      format: String,
+      default: '100',
+      env: 'SUMMARY_LOG_BATCH_SIZE'
+    }
   }
 }
 

@@ -10,34 +10,11 @@ on:
       - synchronize
 
 jobs:
-  detect-changes:
-    name: Detect Changed Files
-    runs-on: ubuntu-latest
-    outputs:
-      docs-only: ${{ steps.check.outputs.docs-only }}
-    steps:
-      - name: Check for docs-only changes
-        id: check
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
-
-            const docsOnly = files.length > 0 && files.every(file => file.filename.endsWith('.md'));
-
-            core.setOutput('docs-only', docsOnly);
-            console.log(`Documentation-only changes: ${docsOnly}`);
-            console.log(`Changed files: ${files.map(f => f.filename).join(', ')}`)
-
   pr-prep:
     name: Preparation
     runs-on: ubuntu-latest
-    needs: detect-changes
+    outputs:
+      docs-only: ${{ steps.check.outputs.docs-only }}
     steps:
       - name: Check branch name
         uses: actions/github-script@v8
@@ -75,12 +52,29 @@ jobs:
             } else {
               console.log('PR description already contains a link to the ticket')
             }
+      - name: Check for docs-only changes
+        id: check
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            const docsOnly = files.length > 0 && files.every(file => file.filename.endsWith('.md'));
+
+            core.setOutput('docs-only', docsOnly);
+            console.log(`Documentation-only changes: ${docsOnly}`);
+            console.log(`Changed files: ${files.map(f => f.filename).join(', ')}`)
 
   pr-validator:
     name: Run Pull Request Checks
     runs-on: ubuntu-latest
-    needs: [pr-prep, detect-changes]
-    if: needs.detect-changes.outputs.docs-only != 'true'
+    needs: pr-prep
+    if: needs.pr-prep.outputs.docs-only != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -101,21 +95,89 @@ jobs:
           restore-keys: |
             mongodb-binaries-${{ runner.os }}-
 
-      - name: Test Docker Image Build
-        run: |
-          set +e
-          docker build --no-cache --tag cdp-node-backend-template .
-          exit $?
-
   test-journey:
     name: Run Journey Tests
     runs-on: ubuntu-latest
-    needs: [pr-validator, detect-changes]
-    if: needs.detect-changes.outputs.docs-only != 'true'
+    needs: pr-prep
+    if: needs.pr-prep.outputs.docs-only != 'true'
     steps:
       - uses: actions/checkout@v6
+
+      - name: Check for matching journey test branch
+        id: journey-branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          if git ls-remote --heads https://github.com/DEFRA/epr-backend-journey-tests.git "$BRANCH" | grep -q .; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Record build start time
+        id: build-timer
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - run: docker build -t defradigital/epr-backend:${{github.sha}} .
-      - uses: DEFRA/epr-backend-journey-tests/run-journey-tests@main
+
+      - name: Record test start time
+        id: test-timer
+        run: echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Run journey tests on ${{ steps.journey-branch.outputs.ref }}
+        uses: DEFRA/epr-backend-journey-tests/run-journey-tests@main
         with:
           epr-backend: ${{github.sha}}
-          branch: main
+          branch: ${{ steps.journey-branch.outputs.ref }}
+
+      - name: Write journey test summary
+        if: always()
+        run: |
+          {
+            if compgen -G "allure-results/*-result.json" > /dev/null; then
+              DOCKER_SECS=$(( ${{ steps.test-timer.outputs.start }} - ${{ steps.build-timer.outputs.start }} ))
+              TEST_SECS=$(( $(date +%s) - ${{ steps.test-timer.outputs.start }} ))
+
+              fmt_secs() {
+                if [ "$1" -ge 60 ]; then echo "$(( $1 / 60 ))m $(( $1 % 60 ))s"
+                else echo "${1}s"
+                fi
+              }
+
+              DOCKER_DUR=$(fmt_secs $DOCKER_SECS)
+              TEST_DUR=$(fmt_secs $TEST_SECS)
+
+              IFS=$'\t' read -r PASSED FAILED TOTAL < <(jq -sr '
+                [
+                  (map(select(.status == "passed")) | length),
+                  (map(select(.status == "failed" or .status == "broken")) | length),
+                  length
+                ] | @tsv
+              ' allure-results/*-result.json)
+
+              SLOW_JOURNEY=$(jq -sr '
+                def fmt_secs:
+                  if . >= 60 then "\(. / 60 | floor)m \(. % 60)s"
+                  else "\(.)s"
+                  end;
+                sort_by(-.stop + .start) | .[0:5][]
+                | ((.stop - .start) / 1000 | round) as $secs
+                | "| \(.name) | \($secs | fmt_secs) |"
+              ' allure-results/*-result.json)
+
+              cat <<EOF
+          ## Journey Tests
+
+          | | Passed | Failed | Total |
+          |---|---|---|---|
+          | Tests | $PASSED | $FAILED | $TOTAL |
+
+          Docker build: $DOCKER_DUR | Tests: $TEST_DUR
+
+          ### Slowest Journey Tests
+
+          | Test | Duration |
+          |---|---|
+          $SLOW_JOURNEY
+          EOF
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

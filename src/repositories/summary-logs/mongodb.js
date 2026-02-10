@@ -5,7 +5,8 @@ import {
 } from '#common/enums/event.js'
 import {
   SUMMARY_LOG_STATUS,
-  calculateExpiresAt
+  calculateExpiresAt,
+  SUMMARY_LOG_FAILURE_STATUS
 } from '#domain/summary-logs/status.js'
 import {
   validateId,
@@ -135,6 +136,66 @@ const findLatestSubmittedForOrgReg =
     return { id: _id, version, summaryLog }
   }
 
+const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .aggregate([
+      {
+        $match: {
+          status: {
+            $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            organisationId: '$organisationId',
+            registrationId: '$registrationId'
+          },
+          lastSuccessful: {
+            $max: {
+              $cond: [
+                { $not: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }] },
+                '$submittedAt',
+                null
+              ]
+            }
+          },
+          lastFailed: {
+            $max: {
+              $cond: [
+                { $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] },
+                '$submittedAt',
+                null
+              ]
+            }
+          },
+          successfulCount: {
+            $sum: {
+              $cond: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }, 0, 1]
+            }
+          },
+          failedCount: {
+            $sum: {
+              $cond: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }, 1, 0]
+            }
+          }
+        }
+      }
+    ])
+    .toArray()
+
+  return docs.map((doc) => ({
+    organisationId: doc._id.organisationId,
+    registrationId: doc._id.registrationId,
+    lastSuccessful: doc.lastSuccessful ? new Date(doc.lastSuccessful) : null,
+    lastFailed: doc.lastFailed ? new Date(doc.lastFailed) : null,
+    successfulCount: doc.successfulCount,
+    failedCount: doc.failedCount
+  }))
+}
+
 const transitionToSubmittingExclusive = (db) => async (logId) => {
   const validatedId = validateId(logId)
 
@@ -226,6 +287,8 @@ export const createSummaryLogsRepository = async (db) => {
     update: update(db, logger),
     findById: findById(db),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
+    findAllSummaryLogStatsByRegistrationId:
+      findAllSummaryLogStatsByRegistrationId(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
   })
 }

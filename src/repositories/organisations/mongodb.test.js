@@ -3,7 +3,12 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
-import { buildOrganisation, prepareOrgUpdate } from './contract/test-data.js'
+import crypto from 'node:crypto'
+import {
+  buildLinkedDefraOrg,
+  buildOrganisation,
+  prepareOrgUpdate
+} from './contract/test-data.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
@@ -58,6 +63,45 @@ describe('MongoDB organisations repository', () => {
       await expect(repository.insert(orgData)).rejects.toThrow(
         'Unexpected database error'
       )
+    })
+  })
+
+  describe('findAllLinked query filtering', () => {
+    it('excludes documents where linkedDefraOrganisation exists but orgId is null', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+
+      const validLinkedOrg = buildOrganisation({
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Valid Org'
+        )
+      })
+      await repository.insert(validLinkedOrg)
+
+      const nullOrgIdDoc = buildOrganisation()
+      await repository.insert(nullOrgIdDoc)
+      await collection.updateOne(
+        { _id: ObjectId.createFromHexString(nullOrgIdDoc.id) },
+        {
+          $set: {
+            linkedDefraOrganisation: {
+              orgId: null,
+              orgName: 'Incomplete Link'
+            }
+          }
+        }
+      )
+
+      const result = await repository.findAllLinked()
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe(validLinkedOrg.id)
     })
   })
 

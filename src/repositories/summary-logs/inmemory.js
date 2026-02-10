@@ -8,6 +8,9 @@ import {
   validateSummaryLogInsert,
   validateSummaryLogUpdate
 } from './validation.js'
+import { SUMMARY_LOG_FAILURE_STATUS } from '#domain/summary-logs/status.js'
+
+const FAILURE_STATUS = new Set(SUMMARY_LOG_FAILURE_STATUS)
 
 const scheduleStaleCacheSync = (storage, staleCache) => {
   // Schedule sync for next tick to simulate replication lag
@@ -116,6 +119,46 @@ const findLatestSubmittedForOrgReg =
     }
   }
 
+const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
+  const statsMap = Array.from(staleCache.values()).reduce(
+    (acc, { summaryLog: doc }) => {
+      const { organisationId, registrationId, status, submittedAt } = doc
+      const key = `${organisationId}:${registrationId}`
+
+      const group = acc.get(key) || {
+        organisationId,
+        registrationId,
+        lastSuccessful: null,
+        lastFailed: null,
+        successfulCount: 0,
+        failedCount: 0
+      }
+
+      // 1. Determine the category
+      const prefix = FAILURE_STATUS.has(status) ? 'failed' : 'successful'
+      const dateKey = prefix === 'failed' ? 'lastFailed' : 'lastSuccessful'
+
+      // 2. Update count and date logic once
+      group[`${prefix}Count`]++
+
+      if (!group[dateKey] || submittedAt > group[dateKey]) {
+        group[dateKey] = submittedAt
+      }
+
+      return acc.set(key, group)
+    },
+    new Map()
+  )
+
+  return Array.from(statsMap.values(), (stats) => ({
+    ...stats,
+    lastSuccessful: stats.lastSuccessful
+      ? new Date(stats.lastSuccessful)
+      : null,
+    lastFailed: stats.lastFailed ? new Date(stats.lastFailed) : null
+  }))
+}
+
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
     const validatedId = validateId(logId)
@@ -188,6 +231,8 @@ export const createInMemorySummaryLogsRepository = () => {
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
+    findAllSummaryLogStatsByRegistrationId:
+      findAllSummaryLogStatsByRegistrationId(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
       storage,
       staleCache
