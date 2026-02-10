@@ -25,11 +25,13 @@ export const testFindAllLinkedBehaviour = (it) => {
       expect(result).toEqual([])
     })
 
-    it('returns only linked organisations', async () => {
+    it('returns only linked organisations with summary fields', async () => {
       const defraOrgId = crypto.randomUUID()
-      const linkedOrg = buildOrganisation({
-        linkedDefraOrganisation: buildLinkedDefraOrg(defraOrgId, 'Linked Org')
-      })
+      const linkedDefraOrganisation = buildLinkedDefraOrg(
+        defraOrgId,
+        'Linked Org'
+      )
+      const linkedOrg = buildOrganisation({ linkedDefraOrganisation })
       const unlinkedOrg = buildOrganisation()
 
       await Promise.all(
@@ -39,8 +41,13 @@ export const testFindAllLinkedBehaviour = (it) => {
       const result = await repository.findAllLinked()
 
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(linkedOrg.id)
-      expect(result[0].linkedDefraOrganisation.orgId).toBe(defraOrgId)
+      expect(result[0]).toEqual({
+        id: linkedOrg.id,
+        orgId: linkedOrg.orgId,
+        companyDetails: { name: linkedOrg.companyDetails.name },
+        status: 'created',
+        linkedDefraOrganisation
+      })
     })
 
     it('returns all linked organisations when multiple exist', async () => {

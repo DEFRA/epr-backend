@@ -5,16 +5,6 @@ import { linkedOrganisationsResponseSchema } from './response.schema.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
-const toLinkedOrganisationSummary = (org) => ({
-  id: org.id,
-  orgId: org.orgId,
-  companyDetails: {
-    name: org.companyDetails.name
-  },
-  status: org.status,
-  linkedDefraOrganisation: org.linkedDefraOrganisation
-})
-
 export const linkedOrganisationsGetAllPath = '/v1/linked-organisations'
 
 export const linkedOrganisationsGetAll = {
@@ -44,8 +34,6 @@ export const linkedOrganisationsGetAll = {
     const organisations =
       await request.organisationsRepository.findAllLinked(filter)
 
-    return h
-      .response(organisations.map(toLinkedOrganisationSummary))
-      .code(StatusCodes.OK)
+    return h.response(organisations).code(StatusCodes.OK)
   }
 }

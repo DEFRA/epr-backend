@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import {
   createInitialStatusHistory,
+  getCurrentStatus,
   mapDocumentWithCurrentStatuses,
   prepareForReplace,
   SCHEMA_VERSION
@@ -165,6 +166,24 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const LINKED_ORG_PROJECTION = {
+  orgId: 1,
+  'companyDetails.name': 1,
+  statusHistory: 1,
+  linkedDefraOrganisation: 1
+}
+
+const toLinkedOrganisationSummary = (doc) => ({
+  id: doc._id.toString(),
+  orgId: doc.orgId,
+  companyDetails: { name: doc.companyDetails.name },
+  status: getCurrentStatus(doc),
+  linkedDefraOrganisation: {
+    ...doc.linkedDefraOrganisation,
+    linkedAt: new Date(doc.linkedDefraOrganisation.linkedAt).toISOString()
+  }
+})
+
 const performFindAllLinked =
   (db) =>
   async (filter = {}) => {
@@ -177,8 +196,11 @@ const performFindAllLinked =
       }
     }
 
-    const docs = await db.collection(COLLECTION_NAME).find(query).toArray()
-    return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+    const docs = await db
+      .collection(COLLECTION_NAME)
+      .find(query, { projection: LINKED_ORG_PROJECTION })
+      .toArray()
+    return docs.map(toLinkedOrganisationSummary)
   }
 
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {

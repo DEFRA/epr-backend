@@ -152,6 +152,17 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
+const toLinkedOrganisationSummary = (org) => ({
+  id: org._id.toString(),
+  orgId: org.orgId,
+  companyDetails: { name: org.companyDetails.name },
+  status: getCurrentStatus(org),
+  linkedDefraOrganisation: {
+    ...org.linkedDefraOrganisation,
+    linkedAt: new Date(org.linkedDefraOrganisation.linkedAt).toISOString()
+  }
+})
+
 const performFindAllLinked =
   (staleCache) =>
   async (filter = {}) => {
@@ -164,9 +175,7 @@ const performFindAllLinked =
       )
     }
 
-    return matches.map((org) =>
-      mapDocumentWithCurrentStatuses(structuredClone(org))
-    )
+    return matches.map(toLinkedOrganisationSummary)
   }
 
 const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
