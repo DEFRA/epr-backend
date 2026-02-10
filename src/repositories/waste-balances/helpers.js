@@ -525,7 +525,7 @@ export const buildIssuedPrnCancellationTransaction = ({
       id: prnId,
       currentVersionId: prnId,
       previousVersionIds: [],
-      type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
+      type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
     }
   ]
 })

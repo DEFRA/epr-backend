@@ -64,7 +64,7 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
       expect(result.transactions[0].amount).toBe(25.5)
       expect(result.transactions[0].entities[0].id).toBe('prn-456')
       expect(result.transactions[0].entities[0].type).toBe(
-        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
+        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
       )
     })
 

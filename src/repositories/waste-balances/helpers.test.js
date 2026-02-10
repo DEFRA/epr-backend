@@ -1220,7 +1220,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(transaction.entities).toHaveLength(1)
       expect(transaction.entities[0].id).toBe('prn-123')
       expect(transaction.entities[0].type).toBe(
-        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
+        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
       )
       expect(transaction.createdBy).toEqual({
         id: 'user-abc',

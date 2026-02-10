@@ -14,7 +14,8 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
   PRN_CREATED: 'prn:created',
   PRN_ISSUED: 'prn:issued',
   PRN_ACCEPTED: 'prn:accepted',
-  PRN_CANCELLED: 'prn:cancelled'
+  PRN_CANCELLED: 'prn:cancelled',
+  PRN_CANCELLED_POST_ISSUE: 'prn:cancelled_post_issue'
 })
 
 /**
