@@ -19,11 +19,22 @@
  */
 
 /**
+ * @typedef {Object} SummaryLogStats
+ * @property {string} organisationId - Organisation ID
+ * @property {string} registrationId - Registration ID
+ * @property {Date|null} lastSuccessful - Date of last submitted log
+ * @property {Date|null} lastFailed - Date of last failed log
+ * @property {number} successfulCount - Count of submitted logs
+ * @property {number} failedCount - Count of failed logs
+ */
+
+/**
  * @typedef {Object} SummaryLogsRepository
  * @property {(id: string, summaryLog: Object) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
+ * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  */
 
