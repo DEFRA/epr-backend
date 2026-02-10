@@ -213,6 +213,21 @@ describe('GET /v1/packaging-recycling-notes', () => {
         expect(item.issuerNotes).toBe(mockPrn.notes)
       })
 
+      it('uses default limit of 200 when not provided', async () => {
+        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
+          { items: [], nextCursor: null, hasMore: false }
+        )
+
+        await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance`
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.findByStatus
+        ).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }))
+      })
+
       it('does not pass dates to repository when not provided', async () => {
         lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
           { items: [], nextCursor: null, hasMore: false }
