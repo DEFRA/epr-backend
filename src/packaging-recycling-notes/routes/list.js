@@ -8,6 +8,10 @@ import {
 } from '#common/enums/index.js'
 import { mapToExternalPrn } from '#packaging-recycling-notes/application/external-prn-mapper.js'
 
+/**
+ * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ */
+
 const ALLOWED_STATUSES = ['awaiting_acceptance', 'cancelled']
 const DEFAULT_LIMIT = 200
 const MAX_LIMIT = 500
@@ -48,6 +52,7 @@ export const packagingRecyclingNotesList = {
       })
     }
   },
+  /** @param {import('#common/hapi-types.js').HapiRequest & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request */
   handler: async (request, h) => {
     const { lumpyPackagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query

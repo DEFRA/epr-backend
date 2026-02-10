@@ -128,13 +128,8 @@ const mergeArrayById = (existing, updates) => {
 }
 
 /**
- * Builds a replacement object for organisationsRepository.replace()
- * Removes the id field and merges updates
- * Smartly merges registrations/accreditations by ID: updates existing, adds new
- *
- * @param {Object} org - Current organisation object
- * @param {Object} updates - Fields to update
- * @returns {Object} Organisation object without id, ready for replace()
+ * @param {string} orgId
+ * @param {string} orgName
  */
 export const buildLinkedDefraOrg = (orgId, orgName) => ({
   orgId,
