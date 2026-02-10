@@ -39,6 +39,14 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
   return results
 }
 
+const matchesDateRange = (statusAt, dateFrom, dateTo) => {
+  if (!dateFrom && !dateTo) return true
+  if (!statusAt) return false
+  if (dateFrom && statusAt < dateFrom) return false
+  if (dateTo && statusAt > dateTo) return false
+  return true
+}
+
 const performFindByStatus =
   (storage) =>
   async ({ statuses, dateFrom, dateTo, cursor, limit }) => {
@@ -46,12 +54,11 @@ const performFindByStatus =
     for (const prn of storage.values()) {
       const matchesStatus = statuses.includes(prn.status.currentStatus)
       const afterCursor = !cursor || prn.id > cursor
-      const statusAt = prn.status.currentStatusAt
-      const matchesDate =
-        (!dateFrom && !dateTo) ||
-        (statusAt &&
-          (!dateFrom || statusAt >= dateFrom) &&
-          (!dateTo || statusAt <= dateTo))
+      const matchesDate = matchesDateRange(
+        prn.status.currentStatusAt,
+        dateFrom,
+        dateTo
+      )
 
       if (matchesStatus && afterCursor && matchesDate) {
         matching.push(structuredClone(prn))

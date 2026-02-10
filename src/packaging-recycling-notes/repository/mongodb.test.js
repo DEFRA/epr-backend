@@ -378,8 +378,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      // Should not throw
-      await createPackagingRecyclingNotesRepository(mockDb)
+      const factory = await createPackagingRecyclingNotesRepository(mockDb)
+      expect(factory).toBeTypeOf('function')
     })
 
     it('re-throws non-NamespaceNotFound errors from createIndex', async () => {
