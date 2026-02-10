@@ -52,147 +52,61 @@ describe('PRN_STATUS_TRANSITIONS', () => {
     })
   })
 
-  describe('reprocessor/exporter transitions', () => {
-    it('allows draft to awaiting_authorisation for reprocessor/exporter', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.DRAFT,
-          PRN_STATUS.AWAITING_AUTHORISATION,
-          PRN_ACTOR.REPROCESSOR_EXPORTER
-        )
-      ).toBe(true)
-    })
-
-    it('allows draft to discarded for reprocessor/exporter', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.DRAFT,
-          PRN_STATUS.DISCARDED,
-          PRN_ACTOR.REPROCESSOR_EXPORTER
-        )
-      ).toBe(true)
-    })
-
-    it('blocks signatory from draft transitions', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.DRAFT,
-          PRN_STATUS.AWAITING_AUTHORISATION,
-          PRN_ACTOR.SIGNATORY
-        )
-      ).toBe(false)
-    })
+  it.each([
+    [
+      PRN_STATUS.DRAFT,
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
+    [PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED, PRN_ACTOR.REPROCESSOR_EXPORTER],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_ACTOR.SIGNATORY
+    ],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.DELETED,
+      PRN_ACTOR.SIGNATORY
+    ],
+    [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED, PRN_ACTOR.PRODUCER],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.AWAITING_CANCELLATION,
+      PRN_ACTOR.PRODUCER
+    ],
+    [
+      PRN_STATUS.AWAITING_CANCELLATION,
+      PRN_STATUS.CANCELLED,
+      PRN_ACTOR.SIGNATORY
+    ]
+  ])('allows %s -> %s for %s', (from, to, actor) => {
+    expect(isValidTransition(from, to, actor)).toBe(true)
   })
 
-  describe('signatory transitions', () => {
-    it('allows awaiting_authorisation to awaiting_acceptance for signatory', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_AUTHORISATION,
-          PRN_STATUS.AWAITING_ACCEPTANCE,
-          PRN_ACTOR.SIGNATORY
-        )
-      ).toBe(true)
-    })
-
-    it('allows awaiting_authorisation to deleted for signatory', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_AUTHORISATION,
-          PRN_STATUS.DELETED,
-          PRN_ACTOR.SIGNATORY
-        )
-      ).toBe(true)
-    })
-
-    it('allows awaiting_cancellation to cancelled for signatory', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_CANCELLATION,
-          PRN_STATUS.CANCELLED,
-          PRN_ACTOR.SIGNATORY
-        )
-      ).toBe(true)
-    })
-
-    it('blocks reprocessor/exporter from signatory transitions', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_AUTHORISATION,
-          PRN_STATUS.AWAITING_ACCEPTANCE,
-          PRN_ACTOR.REPROCESSOR_EXPORTER
-        )
-      ).toBe(false)
-    })
-  })
-
-  describe('producer transitions', () => {
-    it('allows awaiting_acceptance to accepted for producer', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_ACCEPTANCE,
-          PRN_STATUS.ACCEPTED,
-          PRN_ACTOR.PRODUCER
-        )
-      ).toBe(true)
-    })
-
-    it('allows awaiting_acceptance to awaiting_cancellation for producer', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_ACCEPTANCE,
-          PRN_STATUS.AWAITING_CANCELLATION,
-          PRN_ACTOR.PRODUCER
-        )
-      ).toBe(true)
-    })
-
-    it('blocks signatory from producer transitions', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_ACCEPTANCE,
-          PRN_STATUS.ACCEPTED,
-          PRN_ACTOR.SIGNATORY
-        )
-      ).toBe(false)
-    })
-
-    it('blocks reprocessor/exporter from producer transitions', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.AWAITING_ACCEPTANCE,
-          PRN_STATUS.ACCEPTED,
-          PRN_ACTOR.REPROCESSOR_EXPORTER
-        )
-      ).toBe(false)
-    })
-  })
-
-  describe('invalid transitions', () => {
-    it('rejects transitions not in the map regardless of actor', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.DRAFT,
-          PRN_STATUS.ACCEPTED,
-          PRN_ACTOR.PRODUCER
-        )
-      ).toBe(false)
-    })
-
-    it('rejects transitions from terminal states', () => {
-      expect(
-        isValidTransition(
-          PRN_STATUS.ACCEPTED,
-          PRN_STATUS.DRAFT,
-          PRN_ACTOR.PRODUCER
-        )
-      ).toBe(false)
-    })
-
-    it('rejects transitions for unknown current status', () => {
-      expect(
-        isValidTransition('unknown', PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER)
-      ).toBe(false)
-    })
+  it.each([
+    [PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION, PRN_ACTOR.SIGNATORY],
+    [PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION, PRN_ACTOR.PRODUCER],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
+    [
+      PRN_STATUS.AWAITING_AUTHORISATION,
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_ACTOR.PRODUCER
+    ],
+    [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED, PRN_ACTOR.SIGNATORY],
+    [
+      PRN_STATUS.AWAITING_ACCEPTANCE,
+      PRN_STATUS.ACCEPTED,
+      PRN_ACTOR.REPROCESSOR_EXPORTER
+    ],
+    [PRN_STATUS.DRAFT, PRN_STATUS.ACCEPTED, PRN_ACTOR.PRODUCER],
+    [PRN_STATUS.ACCEPTED, PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER],
+    ['unknown', PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER]
+  ])('rejects %s -> %s for %s', (from, to, actor) => {
+    expect(isValidTransition(from, to, actor)).toBe(false)
   })
 })
