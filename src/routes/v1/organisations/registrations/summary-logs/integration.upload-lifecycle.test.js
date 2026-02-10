@@ -1,3 +1,5 @@
+import { StatusCodes } from 'http-status-codes'
+import { ObjectId } from 'mongodb'
 import { createEmptyLoads } from '#application/summary-logs/classify-loads.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -8,7 +10,6 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-
 import {
   asStandardUser,
   createUploadPayload,
@@ -19,6 +20,9 @@ import {
   setupIntegrationEnvironment
 } from './test-helpers/index.js'
 
+const TEST_RESULT_OK = 'should return OK'
+const TEST_RESULT_ACCEPTED = 'should return ACCEPTED'
+
 describe('Summary logs upload lifecycle', () => {
   let server
   let summaryLogsRepository
@@ -28,16 +32,18 @@ describe('Summary logs upload lifecycle', () => {
   setupAuthContext()
 
   beforeEach(async () => {
-    const env = await setupIntegrationEnvironment({
-      registrationNumber: 'REG-123',
-      accreditationNumber: 'ACC-123',
-      extractorData: {
-        'file-123': {
-          meta: createStandardMeta('REPROCESSOR_INPUT'),
-          data: {}
+    const env = await setupIntegrationEnvironment(
+      /** @type {any} */ ({
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-123',
+        extractorData: {
+          'file-123': {
+            meta: createStandardMeta('REPROCESSOR_INPUT'),
+            data: {}
+          }
         }
-      }
-    })
+      })
+    )
     server = env.server
     summaryLogsRepository = env.summaryLogsRepository
     organisationId = env.organisationId
@@ -57,8 +63,8 @@ describe('Summary logs upload lifecycle', () => {
       })
     })
 
-    it('should return OK', () => {
-      expect(response.statusCode).toBe(200)
+    it(TEST_RESULT_OK, () => {
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     it('should return preprocessing status', () => {
@@ -66,6 +72,34 @@ describe('Summary logs upload lifecycle', () => {
         status: SUMMARY_LOG_STATUS.PREPROCESSING
       })
     })
+  })
+})
+
+describe('Summary logs upload lifecycle - valid file', () => {
+  let server
+  let organisationId
+  let registrationId
+  let summaryLogsRepository
+
+  setupAuthContext()
+
+  beforeEach(async () => {
+    const env = await setupIntegrationEnvironment(
+      /** @type {any} */ ({
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-123',
+        extractorData: {
+          'file-123': {
+            meta: createStandardMeta('REPROCESSOR_INPUT'),
+            data: {}
+          }
+        }
+      })
+    )
+    server = env.server
+    summaryLogsRepository = env.summaryLogsRepository
+    organisationId = env.organisationId
+    registrationId = env.registrationId
   })
 
   describe('marking upload as completed with valid file', () => {
@@ -88,8 +122,8 @@ describe('Summary logs upload lifecycle', () => {
       })
     })
 
-    it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+    it(TEST_RESULT_ACCEPTED, () => {
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     it('should log completion with file location', () => {
@@ -124,7 +158,7 @@ describe('Summary logs upload lifecycle', () => {
       })
 
       it('should return OK', () => {
-        expect(response.statusCode).toBe(200)
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('should return complete validation response with no issues', () => {
@@ -151,6 +185,32 @@ describe('Summary logs upload lifecycle', () => {
       })
     })
   })
+})
+
+describe('Summary logs upload lifecycle - rejected and pending files', () => {
+  let organisationId
+  let registrationId
+  let server
+
+  setupAuthContext()
+
+  beforeEach(async () => {
+    const env = await setupIntegrationEnvironment(
+      /** @type {any} */ ({
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-123',
+        extractorData: {
+          'file-123': {
+            meta: createStandardMeta('REPROCESSOR_INPUT'),
+            data: {}
+          }
+        }
+      })
+    )
+    server = env.server
+    organisationId = env.organisationId
+    registrationId = env.registrationId
+  })
 
   describe('marking upload as completed with rejected file', () => {
     const summaryLogId = 'summary-888'
@@ -173,8 +233,8 @@ describe('Summary logs upload lifecycle', () => {
       })
     })
 
-    it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+    it(TEST_RESULT_ACCEPTED, () => {
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     it('should log completion', () => {
@@ -201,8 +261,8 @@ describe('Summary logs upload lifecycle', () => {
         })
       })
 
-      it('should return OK', () => {
-        expect(response.statusCode).toBe(200)
+      it(TEST_RESULT_OK, () => {
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('should return rejected status with validation failure code', () => {
@@ -240,8 +300,8 @@ describe('Summary logs upload lifecycle', () => {
       })
     })
 
-    it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+    it(TEST_RESULT_ACCEPTED, () => {
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     it('should log completion', () => {

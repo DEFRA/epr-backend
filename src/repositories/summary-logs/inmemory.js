@@ -82,6 +82,18 @@ const findById = (staleCache) => async (id) => {
   return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
 
+const findAll = (staleCache) => async () => {
+  const all = []
+  for (const [id, doc] of staleCache) {
+    all.push({
+      id,
+      version: doc.version,
+      summaryLog: structuredClone(doc.summaryLog)
+    })
+  }
+  return all
+}
+
 const findLatestSubmittedForOrgReg =
   (staleCache) => async (organisationId, registrationId) => {
     let latestId = null
@@ -187,6 +199,7 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
+    findAll: findAll(staleCache),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
       storage,

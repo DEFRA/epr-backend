@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -97,7 +98,7 @@ describe('Advanced validation scenarios', () => {
         })
 
         it('should return ACCEPTED', () => {
-          expect(uploadResponse.statusCode).toBe(202)
+          expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
         })
 
         describe('retrieving summary log with fatal errors', () => {
@@ -119,7 +120,7 @@ describe('Advanced validation scenarios', () => {
           })
 
           it('should return OK', () => {
-            expect(response.statusCode).toBe(200)
+            expect(response.statusCode).toBe(StatusCodes.OK)
           })
 
           it('should return invalid status due to fatal errors', () => {
@@ -208,7 +209,7 @@ describe('Advanced validation scenarios', () => {
     })
 
     it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     describe('retrieving summary log with fatal header errors', () => {
@@ -230,7 +231,7 @@ describe('Advanced validation scenarios', () => {
       })
 
       it('should return OK', () => {
-        expect(response.statusCode).toBe(200)
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('should return invalid status with validation failures due to fatal errors', () => {
@@ -363,7 +364,7 @@ describe('Advanced validation scenarios', () => {
     })
 
     it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     describe('retrieving summary log with combined errors', () => {
@@ -385,7 +386,7 @@ describe('Advanced validation scenarios', () => {
       })
 
       it('should return OK', () => {
-        expect(response.statusCode).toBe(200)
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('should return invalid status due to fatal meta error', () => {
@@ -501,7 +502,7 @@ describe('Advanced validation scenarios', () => {
     })
 
     it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     describe('retrieving summary log with meta syntax fatal error', () => {
@@ -523,7 +524,7 @@ describe('Advanced validation scenarios', () => {
       })
 
       it('should return OK', () => {
-        expect(response.statusCode).toBe(200)
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('should return invalid status due to fatal meta syntax error', () => {
@@ -619,7 +620,7 @@ describe('Advanced validation scenarios', () => {
     })
 
     it('should return ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
+      expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     describe('retrieving summary log with unrecognised tables', () => {
@@ -641,7 +642,7 @@ describe('Advanced validation scenarios', () => {
       })
 
       it('should return OK', () => {
-        expect(response.statusCode).toBe(200)
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
       it('should return invalid status with validation failure', () => {
@@ -696,7 +697,7 @@ describe('Advanced validation scenarios', () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(response.statusCode).toBe(200)
+      expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.validation).toEqual({
         failures: [],

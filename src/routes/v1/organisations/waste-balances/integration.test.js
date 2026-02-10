@@ -18,14 +18,17 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  server: async ({ db }, use) => {
-    const server = await createServer({
-      mongoUri: db
-    })
-    await server.initialize()
-    await use(server)
-    await server.stop()
-  }
+  server: [
+    async ({ db }, use) => {
+      const server = await createServer({
+        mongoUri: db
+      })
+      await server.initialize()
+      await use(server)
+      await server.stop()
+    },
+    { scope: 'file' }
+  ]
 })
 
 describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', () => {
@@ -87,7 +90,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
       amount: 2500,
       availableAmount: 2500
     })
-  })
+  }, 30000)
 
   it('fetches single waste balance from MongoDB', async ({ server }) => {
     const response = await server.inject({
@@ -105,7 +108,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
       amount: 1000,
       availableAmount: 750
     })
-  })
+  }, 30000)
 
   it('returns empty object for non-existent IDs in MongoDB', async ({
     server

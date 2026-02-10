@@ -66,6 +66,17 @@ export const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
 const POLL_INTERVAL_MS = 50
 const DEFAULT_MAX_ATTEMPTS = 20
 
+const DEFAULT_VALID_FROM = '2025-01-01'
+const DEFAULT_VALID_TO = '2025-12-31'
+const DEFAULT_MATERIAL = 'paper'
+const DEFAULT_WASTE_PROCESSING_TYPE = 'reprocessor'
+const DEFAULT_REPROCESSING_TYPE = 'input'
+const DEFAULT_REGULATOR = 'ea'
+const DEFAULT_REGISTRATION_ID = 'REG-12345'
+const DEFAULT_ACCREDITATION_ID = 'ACC-2025-001'
+const DEFAULT_TEST_REG_NO = 'REG-123'
+const DEFAULT_TEST_ACC_NO = 'ACC-123'
+
 /**
  * @typedef {object} PollOptions
  * @property {string} [waitWhile] Status to wait while (defaults to VALIDATING)
@@ -123,8 +134,8 @@ export const pollForValidation = (
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,
-  extractorData,
-  { reprocessingType = 'input' } = {}
+  /** @type {any} */ extractorData,
+  { reprocessingType = DEFAULT_REPROCESSING_TYPE } = {}
 ) => {
   const mockLogger = {
     info: vi.fn(),
@@ -143,16 +154,16 @@ export const createTestInfrastructure = async (
     registrations: [
       {
         id: registrationId,
-        registrationNumber: 'REG-123',
-        material: 'paper',
-        wasteProcessingType: 'reprocessor',
+        registrationNumber: DEFAULT_TEST_REG_NO,
+        material: DEFAULT_MATERIAL,
+        wasteProcessingType: DEFAULT_WASTE_PROCESSING_TYPE,
         reprocessingType,
         formSubmissionTime: new Date(),
-        submittedToRegulator: 'ea',
-        validFrom: '2025-01-01',
-        validTo: '2025-12-31',
+        submittedToRegulator: DEFAULT_REGULATOR,
+        validFrom: DEFAULT_VALID_FROM,
+        validTo: DEFAULT_VALID_TO,
         accreditation: {
-          accreditationNumber: 'ACC-123'
+          accreditationNumber: DEFAULT_TEST_ACC_NO
         }
       }
     ]
@@ -188,33 +199,16 @@ export const createTestInfrastructure = async (
   return { server, summaryLogsRepository }
 }
 
-export const setupIntegrationEnvironment = async ({
-  organisationId = new ObjectId().toString(),
-  registrationId = new ObjectId().toString(),
-  accreditationId = new ObjectId().toString(),
-  registrationNumber = 'REG-12345',
-  accreditationNumber = 'ACC-2025-001',
-  extractorData,
-  wasteProcessingType = 'reprocessor',
-  reprocessingType = 'input',
-  material = 'paper',
-  featureFlags: featureFlagsOverrides = {},
-  extraRepositories = {},
-  extraWorkers = {}
-} = {}) => {
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn()
-  }
-
-  const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-  const uploadsRepository = createInMemoryUploadsRepository()
-  const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
+const buildIntegrationOrganisation = ({
+  organisationId,
+  registrationId,
+  accreditationId,
+  registrationNumber,
+  accreditationNumber,
+  material,
+  wasteProcessingType,
+  reprocessingType
+}) => {
   const testOrg = buildOrganisation({
     registrations: [
       buildRegistration({
@@ -225,9 +219,9 @@ export const setupIntegrationEnvironment = async ({
         wasteProcessingType,
         reprocessingType,
         formSubmissionTime: new Date(),
-        submittedToRegulator: 'ea',
-        validFrom: '2025-01-01',
-        validTo: '2025-12-31',
+        submittedToRegulator: DEFAULT_REGULATOR,
+        validFrom: DEFAULT_VALID_FROM,
+        validTo: DEFAULT_VALID_TO,
         accreditationId
       })
     ],
@@ -236,27 +230,23 @@ export const setupIntegrationEnvironment = async ({
           {
             id: accreditationId,
             accreditationNumber,
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31'
+            validFrom: DEFAULT_VALID_FROM,
+            validTo: DEFAULT_VALID_TO
           }
         ]
       : []
   })
   testOrg.id = organisationId
+  return testOrg
+}
 
-  const organisationsRepository = createInMemoryOrganisationsRepository([
-    testOrg
-  ])()
-
-  const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
-  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
-  const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    [],
-    { organisationsRepository }
-  )
-  const wasteBalancesRepository = wasteBalancesRepositoryFactory()
-
+const buildIntegrationInfrastructure = async ({
+  summaryLogsRepository,
+  organisationsRepository,
+  wasteRecordsRepository,
+  extractorData,
+  featureFlagsOverrides
+}) => {
   const fileDataMap = { ...extractorData }
   const summaryLogExtractor = {
     extract: async (summaryLog) => {
@@ -280,6 +270,120 @@ export const setupIntegrationEnvironment = async ({
     ...featureFlagsOverrides
   })
 
+  return { summaryLogExtractor, validateSummaryLog, featureFlags, fileDataMap }
+}
+
+const createSummaryLogIntegrationServer = async ({
+  summaryLogsRepositoryFactory,
+  uploadsRepository,
+  wasteRecordsRepositoryFactory,
+  organisationsRepository,
+  wasteBalancesRepositoryFactory,
+  extraRepositories,
+  submitterWorker,
+  extraWorkers,
+  featureFlags
+}) => {
+  return createTestServer({
+    repositories: {
+      summaryLogsRepository: summaryLogsRepositoryFactory,
+      uploadsRepository,
+      wasteRecordsRepository: wasteRecordsRepositoryFactory,
+      organisationsRepository: () => organisationsRepository,
+      wasteBalancesRepository: wasteBalancesRepositoryFactory,
+      ...extraRepositories
+    },
+    workers: {
+      summaryLogsWorker: submitterWorker,
+      ...extraWorkers
+    },
+    featureFlags
+  })
+}
+
+/**
+ * @typedef {Object} IntegrationEnvironmentOptions
+ * @property {string} [organisationId]
+ * @property {string} [registrationId]
+ * @property {string} [accreditationId]
+ * @property {string} [registrationNumber]
+ * @property {string} [accreditationNumber]
+ * @property {Object} [extractorData]
+ * @property {string} [wasteProcessingType]
+ * @property {string} [reprocessingType]
+ * @property {string} [material]
+ * @property {Object} [featureFlags]
+ * @property {Object} [extraRepositories]
+ * @property {Object} [extraWorkers]
+ */
+
+/**
+ * Setup a complete integration environment for summary log tests.
+ * @param {IntegrationEnvironmentOptions} [options]
+ */
+export const setupIntegrationEnvironment = async (
+  /** @type {IntegrationEnvironmentOptions} */ options = {}
+) => {
+  const {
+    organisationId = new ObjectId().toString(),
+    registrationId = new ObjectId().toString(),
+    accreditationId = new ObjectId().toString(),
+    registrationNumber = DEFAULT_REGISTRATION_ID,
+    accreditationNumber = DEFAULT_ACCREDITATION_ID,
+    extractorData = {},
+    wasteProcessingType = DEFAULT_WASTE_PROCESSING_TYPE,
+    reprocessingType = DEFAULT_REPROCESSING_TYPE,
+    material = DEFAULT_MATERIAL,
+    featureFlags: featureFlagsOverrides = {},
+    extraRepositories = {},
+    extraWorkers = {}
+  } = options || {}
+
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn()
+  }
+
+  const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+  const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+  const uploadsRepository = createInMemoryUploadsRepository()
+
+  const testOrg = buildIntegrationOrganisation({
+    organisationId,
+    registrationId,
+    accreditationId,
+    registrationNumber,
+    accreditationNumber,
+    material,
+    wasteProcessingType,
+    reprocessingType
+  })
+
+  const organisationsRepository = createInMemoryOrganisationsRepository([
+    testOrg
+  ])()
+  const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
+  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
+
+  const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
+    [],
+    { organisationsRepository }
+  )
+  const wasteBalancesRepository = wasteBalancesRepositoryFactory()
+
+  const { summaryLogExtractor, validateSummaryLog, featureFlags, fileDataMap } =
+    await buildIntegrationInfrastructure({
+      summaryLogsRepository,
+      organisationsRepository,
+      wasteRecordsRepository,
+      extractorData,
+      featureFlagsOverrides
+    })
+
   const syncWasteRecordsFn = syncFromSummaryLog({
     extractor: summaryLogExtractor,
     wasteRecordRepository: wasteRecordsRepository,
@@ -293,19 +397,15 @@ export const setupIntegrationEnvironment = async ({
     syncWasteRecords: syncWasteRecordsFn
   })
 
-  const server = await createTestServer({
-    repositories: {
-      summaryLogsRepository: summaryLogsRepositoryFactory,
-      uploadsRepository,
-      wasteRecordsRepository: wasteRecordsRepositoryFactory,
-      organisationsRepository: () => organisationsRepository,
-      wasteBalancesRepository: wasteBalancesRepositoryFactory,
-      ...extraRepositories
-    },
-    workers: {
-      summaryLogsWorker: submitterWorker,
-      ...extraWorkers
-    },
+  const server = await createSummaryLogIntegrationServer({
+    summaryLogsRepositoryFactory,
+    uploadsRepository,
+    wasteRecordsRepositoryFactory,
+    organisationsRepository,
+    wasteBalancesRepositoryFactory,
+    extraRepositories,
+    submitterWorker,
+    extraWorkers,
     featureFlags
   })
 
@@ -324,9 +424,12 @@ export const setupIntegrationEnvironment = async ({
     accreditationId,
     syncWasteRecords: async (log) => {
       if (log) {
-        return syncWasteRecordsFn(log)
+        await syncWasteRecordsFn(log)
+        return
       }
-      const logs = await summaryLogsRepository.findAll()
+      /** @type {any} */
+      const repo = summaryLogsRepository
+      const logs = await repo.findAll()
       for (const l of logs) {
         if (l.summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) {
           await syncWasteRecordsFn(l.summaryLog)

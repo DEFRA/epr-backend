@@ -23,6 +23,7 @@
  * @property {(id: string, summaryLog: Object) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
+ * @property {() => Promise<SummaryLogWithId[]>} findAll
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  */

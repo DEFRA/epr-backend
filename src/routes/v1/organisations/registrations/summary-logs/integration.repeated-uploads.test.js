@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
+import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 
 import {
@@ -22,7 +23,83 @@ import {
   createWasteBalanceMeta
 } from './test-helpers/index.js'
 
-describe('Repeated uploads of identical data', () => {
+const performFirstSubmission = async ({
+  env,
+  organisationId,
+  registrationId,
+  firstSummaryLogId,
+  firstFileId,
+  uploadData,
+  sharedMeta
+}) => {
+  const firstSubmissionStatus = await performSubmission(
+    env,
+    organisationId,
+    registrationId,
+    firstSummaryLogId,
+    firstFileId,
+    {
+      filename: 'waste-data-1.xlsx',
+      uploadData,
+      sharedMeta
+    }
+  )
+
+  if (firstSubmissionStatus !== SUMMARY_LOG_STATUS.SUBMITTED) {
+    const response = await env.server.inject({
+      method: 'GET',
+      url: buildGetUrl(organisationId, registrationId, firstSummaryLogId),
+      ...asStandardUser({ linkedOrgId: organisationId })
+    })
+    throw new Error(`First submission failed validation: ${response.payload}`)
+  }
+}
+
+const performRepeatedUploadSetup = async ({
+  env,
+  organisationId,
+  registrationId,
+  firstSummaryLogId,
+  firstFileId,
+  secondSummaryLogId,
+  secondFileId,
+  uploadData,
+  sharedMeta
+}) => {
+  await performFirstSubmission({
+    env,
+    organisationId,
+    registrationId,
+    firstSummaryLogId,
+    firstFileId,
+    uploadData,
+    sharedMeta
+  })
+
+  // === Second upload: upload the same data again ===
+  const secondUploadResponse = await env.server.inject({
+    method: 'POST',
+    url: buildPostUrl(organisationId, registrationId, secondSummaryLogId),
+    payload: createUploadPayload(
+      organisationId,
+      registrationId,
+      UPLOAD_STATUS.COMPLETE,
+      secondFileId,
+      'waste-data.xlsx'
+    )
+  })
+
+  await pollForValidation(
+    env.server,
+    organisationId,
+    registrationId,
+    secondSummaryLogId
+  )
+
+  return secondUploadResponse
+}
+
+describe('Repeated uploads - Classification', () => {
   let organisationId
   let registrationId
 
@@ -35,12 +112,12 @@ describe('Repeated uploads of identical data', () => {
     getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
-        () => HttpResponse.json({ success: true }, { status: 200 })
+        () => HttpResponse.json({ success: true }, { status: StatusCodes.OK })
       )
     )
   })
 
-  describe('when the same data is uploaded and submitted twice', () => {
+  describe('when the same data is uploaded and submitted twice - classification', () => {
     const firstSummaryLogId = 'summary-log-first-upload'
     const secondSummaryLogId = 'summary-log-second-upload'
     const firstFileId = 'file-first-upload'
@@ -69,67 +146,36 @@ describe('Repeated uploads of identical data', () => {
         updateWasteBalanceTransactions: vi.fn()
       }
 
-      env = await setupIntegrationEnvironment({
-        organisationId,
-        registrationId,
-        accreditationId,
-        material: 'paper',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        extractorData,
-        extraRepositories: {
-          wasteBalancesRepository: () => mockWasteBalancesRepository
-        }
-      })
+      env = await setupIntegrationEnvironment(
+        /** @type {any} */ ({
+          organisationId,
+          registrationId,
+          accreditationId,
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'input',
+          extractorData,
+          extraRepositories: {
+            wasteBalancesRepository: () => mockWasteBalancesRepository
+          }
+        })
+      )
 
-      // === First upload: upload, validate, submit ===
-      const firstSubmissionStatus = await performSubmission(
+      secondUploadResponse = await performRepeatedUploadSetup({
         env,
         organisationId,
         registrationId,
         firstSummaryLogId,
         firstFileId,
-        {
-          filename: 'waste-data-1.xlsx',
-          uploadData,
-          sharedMeta
-        }
-      )
-
-      if (firstSubmissionStatus !== SUMMARY_LOG_STATUS.SUBMITTED) {
-        const response = await env.server.inject({
-          method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, firstSummaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
-        })
-        throw new Error(
-          `First submission failed validation: ${response.payload}`
-        )
-      }
-
-      // === Second upload: upload the same data again ===
-      secondUploadResponse = await env.server.inject({
-        method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, secondSummaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          secondFileId,
-          'waste-data.xlsx'
-        )
+        secondSummaryLogId,
+        secondFileId,
+        uploadData,
+        sharedMeta
       })
-
-      await pollForValidation(
-        env.server,
-        organisationId,
-        registrationId,
-        secondSummaryLogId
-      )
     })
 
     it('should accept the second upload', () => {
-      expect(secondUploadResponse.statusCode).toBe(202)
+      expect(secondUploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
     })
 
     it('should classify all loads as unchanged on second upload', async () => {
@@ -139,7 +185,7 @@ describe('Repeated uploads of identical data', () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(response.statusCode).toBe(200)
+      expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
 
       // Check no validation failures first - will show issues if any
@@ -157,6 +203,80 @@ describe('Repeated uploads of identical data', () => {
         payload.loads.unchanged.valid.count +
         payload.loads.unchanged.invalid.count
       expect(totalUnchanged).toBeGreaterThan(0)
+    })
+  })
+})
+
+describe('Repeated uploads - Waste Records', () => {
+  let organisationId
+  let registrationId
+
+  const { getServer } = setupAuthContext()
+
+  beforeEach(() => {
+    organisationId = new ObjectId().toString()
+    registrationId = new ObjectId().toString()
+
+    getServer().use(
+      http.post(
+        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        () => HttpResponse.json({ success: true }, { status: StatusCodes.OK })
+      )
+    )
+  })
+
+  describe('when the same data is uploaded and submitted twice - waste records', () => {
+    const firstSummaryLogId = 'summary-log-first-upload'
+    const secondSummaryLogId = 'summary-log-second-upload'
+    const firstFileId = 'file-first-upload'
+    const secondFileId = 'file-second-upload'
+
+    let env
+
+    beforeEach(async () => {
+      const accreditationId = new ObjectId().toString()
+      const sharedMeta = createWasteBalanceMeta('REPROCESSOR_INPUT')
+      const sharedRows = [
+        { rowId: 1001, tonnageReceived: 850 },
+        { rowId: 1002, tonnageReceived: 765 }
+      ]
+      const uploadData = createReprocessorInputUploadData(sharedRows)
+
+      const extractorData = {
+        [firstFileId]: { meta: sharedMeta, data: uploadData },
+        [secondFileId]: { meta: sharedMeta, data: uploadData }
+      }
+
+      const mockWasteBalancesRepository = {
+        updateWasteBalanceTransactions: vi.fn()
+      }
+
+      env = await setupIntegrationEnvironment(
+        /** @type {any} */ ({
+          organisationId,
+          registrationId,
+          accreditationId,
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'input',
+          extractorData,
+          extraRepositories: {
+            wasteBalancesRepository: () => mockWasteBalancesRepository
+          }
+        })
+      )
+
+      await performRepeatedUploadSetup({
+        env,
+        organisationId,
+        registrationId,
+        firstSummaryLogId,
+        firstFileId,
+        secondSummaryLogId,
+        secondFileId,
+        uploadData,
+        sharedMeta
+      })
     })
 
     it(

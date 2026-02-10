@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -133,7 +134,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       })
 
       it('should return ACCEPTED', () => {
-        expect(uploadResponse.statusCode).toBe(202)
+        expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
       })
 
       describe('retrieving summary log with fatal errors', () => {
@@ -155,7 +156,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         })
 
         it('should return OK', () => {
-          expect(response.statusCode).toBe(200)
+          expect(response.statusCode).toBe(StatusCodes.OK)
         })
 
         it('should return invalid status due to fatal errors', () => {
@@ -354,7 +355,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       })
 
       it('should return ACCEPTED', () => {
-        expect(uploadResponse.statusCode).toBe(202)
+        expect(uploadResponse.statusCode).toBe(StatusCodes.ACCEPTED)
       })
 
       describe('retrieving summary log with data errors', () => {
@@ -376,7 +377,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         })
 
         it('should return OK', () => {
-          expect(response.statusCode).toBe(200)
+          expect(response.statusCode).toBe(StatusCodes.OK)
         })
 
         it('should return invalid status because EWC_CODE validation errors are now fatal', () => {
