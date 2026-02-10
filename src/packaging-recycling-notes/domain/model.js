@@ -68,7 +68,9 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  */
 export function isValidTransition(currentStatus, newStatus, actor) {
   const transitions = PRN_STATUS_TRANSITIONS[currentStatus]
-  if (!transitions) return false
+  if (!transitions) {
+    return false
+  }
   return transitions.some(
     (t) => t.status === newStatus && t.actors.includes(actor)
   )

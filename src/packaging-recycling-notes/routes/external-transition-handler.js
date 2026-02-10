@@ -86,29 +86,33 @@ export function createExternalTransitionHandler({
 
         return h.response().code(StatusCodes.NO_CONTENT)
       } catch (error) {
-        if (error instanceof StatusConflictError) {
-          throw Boom.conflict(error.message)
-        }
-
-        if (error instanceof UnauthorisedTransitionError) {
-          throw Boom.badRequest(error.message)
-        }
-
-        if (error.isBoom) {
-          throw error
-        }
-
-        logger.error({
-          err: error,
-          message: `Failure on ${path}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-          }
-        })
-
-        throw Boom.badImplementation(`Failure on ${path}`)
+        handleTransitionError(error, path, logger)
       }
     }
   }
+}
+
+function handleTransitionError(error, path, logger) {
+  if (error instanceof StatusConflictError) {
+    throw Boom.conflict(error.message)
+  }
+
+  if (error instanceof UnauthorisedTransitionError) {
+    throw Boom.badRequest(error.message)
+  }
+
+  if (error.isBoom) {
+    throw error
+  }
+
+  logger.error({
+    err: error,
+    message: `Failure on ${path}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    }
+  })
+
+  throw Boom.badImplementation(`Failure on ${path}`)
 }
