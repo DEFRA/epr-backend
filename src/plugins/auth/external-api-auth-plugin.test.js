@@ -26,6 +26,7 @@ describe('external API auth plugin', () => {
 
   beforeAll(async () => {
     server = Hapi.server({ port: 0 })
+    await server.register(Jwt)
     await server.register({
       plugin: externalApiAuthPlugin.plugin,
       options: { clientId }
@@ -55,8 +56,7 @@ describe('external API auth plugin', () => {
     expect(response.statusCode).toBe(200)
     expect(response.result).toEqual({
       id: clientId,
-      name: 'RPD',
-      scope: ['external_client']
+      name: 'RPD'
     })
   })
 
