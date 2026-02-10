@@ -3,7 +3,8 @@ import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
-  performCreditAvailableBalanceForPrnCancellation
+  performCreditAvailableBalanceForPrnCancellation,
+  performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 
 /**
@@ -109,6 +110,13 @@ export const createInMemoryWasteBalancesRepository = (
     },
     creditAvailableBalanceForPrnCancellation: async (creditParams) => {
       return performCreditAvailableBalanceForPrnCancellation({
+        creditParams,
+        findBalance: findBalance(wasteBalanceStorage),
+        saveBalance: saveBalance(wasteBalanceStorage)
+      })
+    },
+    creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
+      return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage)

@@ -494,6 +494,86 @@ export const buildPrnCancellationTransaction = ({
 })
 
 /**
+ * Build a credit transaction for cancelling an issued PRN that restores both
+ * amount and availableAmount. Reverses both the creation ringfence and the
+ * issue deduction.
+ *
+ * @param {Object} params
+ * @param {string} params.prnId - PRN identifier
+ * @param {number} params.tonnage - Tonnage to restore
+ * @param {string} params.userId - User performing the action
+ * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
+ * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ */
+export const buildIssuedPrnCancellationTransaction = ({
+  prnId,
+  tonnage,
+  userId,
+  currentBalance
+}) => ({
+  id: randomUUID(),
+  type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+  createdAt: new Date().toISOString(),
+  createdBy: { id: userId, name: userId },
+  amount: tonnage,
+  openingAmount: currentBalance.amount,
+  closingAmount: currentBalance.amount + tonnage,
+  openingAvailableAmount: currentBalance.availableAmount,
+  closingAvailableAmount: currentBalance.availableAmount + tonnage,
+  entities: [
+    {
+      id: prnId,
+      currentVersionId: prnId,
+      previousVersionIds: [],
+      type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
+    }
+  ]
+})
+
+/**
+ * Credit both amount and available balance for issued PRN cancellation.
+ * Reverses both the creation ringfence and the issue deduction.
+ *
+ * @param {Object} params
+ * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
+ * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ */
+export const performCreditFullBalanceForIssuedPrnCancellation = async ({
+  creditParams,
+  findBalance,
+  saveBalance
+}) => {
+  const { accreditationId, prnId, tonnage, userId } = creditParams
+  const validatedAccreditationId = validateAccreditationId(accreditationId)
+
+  const wasteBalance = await findBalance(validatedAccreditationId)
+
+  if (!wasteBalance) {
+    throw Boom.internal(
+      `Waste balance not found for accreditation ${validatedAccreditationId} during PRN cancellation`
+    )
+  }
+
+  const transaction = buildIssuedPrnCancellationTransaction({
+    prnId,
+    tonnage,
+    userId,
+    currentBalance: wasteBalance
+  })
+
+  const updatedBalance = {
+    ...wasteBalance,
+    amount: transaction.closingAmount,
+    availableAmount: transaction.closingAvailableAmount,
+    transactions: [...(wasteBalance.transactions || []), transaction],
+    version: (wasteBalance.version || 0) + 1
+  }
+
+  await saveBalance(updatedBalance, [transaction])
+}
+
+/**
  * Credit available balance for PRN cancellation (reversing the ringfenced tonnage).
  *
  * @param {Object} params

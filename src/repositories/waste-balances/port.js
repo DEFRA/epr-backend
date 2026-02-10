@@ -26,6 +26,15 @@
  */
 
 /**
+ * @typedef {Object} CreditFullBalanceParams
+ * @property {string} accreditationId
+ * @property {string} organisationId
+ * @property {string} prnId
+ * @property {number} tonnage
+ * @property {string} userId
+ */
+
+/**
  * @typedef {Object} WasteBalancesRepository
  * @property {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} findByAccreditationId
  * @property {(accreditationIds: string[]) => Promise<import('#domain/waste-balances/model.js').WasteBalance[]>} findByAccreditationIds
@@ -33,6 +42,7 @@
  * @property {(params: DeductAvailableBalanceParams) => Promise<void>} deductAvailableBalanceForPrnCreation
  * @property {(params: DeductTotalBalanceParams) => Promise<void>} deductTotalBalanceForPrnIssue
  * @property {(params: CreditAvailableBalanceParams) => Promise<void>} creditAvailableBalanceForPrnCancellation
+ * @property {(params: CreditFullBalanceParams) => Promise<void>} creditFullBalanceForIssuedPrnCancellation
  */
 
 /**
