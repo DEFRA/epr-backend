@@ -8,6 +8,7 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { packagingRecyclingNotesAcceptPath } from '#packaging-recycling-notes/routes/accept.js'
+import { packagingRecyclingNotesListPath } from '#packaging-recycling-notes/routes/list.js'
 import { packagingRecyclingNotesRejectPath } from '#packaging-recycling-notes/routes/reject.js'
 
 /**
@@ -145,6 +146,31 @@ describe('Packaging Recycling Notes', () => {
       })
 
       expect(hasRoute(server, packagingRecyclingNotesRejectPath)).toBe(false)
+
+      await server.stop()
+    })
+
+    it('registers list route when external API flag is enabled', async () => {
+      const server = await createTestServer({
+        featureFlags: createInMemoryFeatureFlags({
+          packagingRecyclingNotesExternalApi: true
+        })
+      })
+
+      expect(hasRoute(server, packagingRecyclingNotesListPath)).toBe(true)
+
+      await server.stop()
+    })
+
+    it('does not register list route when external API flag is disabled', async () => {
+      const server = await createTestServer({
+        featureFlags: createInMemoryFeatureFlags({
+          lumpyPackagingRecyclingNotes: true,
+          packagingRecyclingNotesExternalApi: false
+        })
+      })
+
+      expect(hasRoute(server, packagingRecyclingNotesListPath)).toBe(false)
 
       await server.stop()
     })
