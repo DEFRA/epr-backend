@@ -21,18 +21,19 @@ export const authFailureLogger = {
         (request, h) => {
           const response = request.response
 
-          if (
-            response.isBoom &&
-            response.output.statusCode === StatusCodes.UNAUTHORIZED
-          ) {
-            request.logger.warn({
-              message: `${response.message} (path: ${request.path}, method: ${request.method})`,
-              err: response,
-              event: {
-                category: LOGGING_EVENT_CATEGORIES.AUTH,
-                action: LOGGING_EVENT_ACTIONS.AUTH_FAILED
-              }
-            })
+          if ('isBoom' in response && response.isBoom) {
+            const boom = /** @type {import('@hapi/boom').Boom} */ (response)
+
+            if (boom.output.statusCode === StatusCodes.UNAUTHORIZED) {
+              request.logger.warn({
+                message: `${boom.message} (path: ${request.path}, method: ${request.method})`,
+                err: boom,
+                event: {
+                  category: LOGGING_EVENT_CATEGORIES.AUTH,
+                  action: LOGGING_EVENT_ACTIONS.AUTH_FAILED
+                }
+              })
+            }
           }
 
           return h.continue

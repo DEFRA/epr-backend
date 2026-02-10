@@ -109,8 +109,7 @@ describe('createCommandQueueConsumer', () => {
 
       expect(logger.info).toHaveBeenCalledWith({
         message:
-          'Resolved queue URL: http://localhost:4566/000000000000/test-queue',
-        queueName: 'test-queue'
+          'Resolved queue URL: http://localhost:4566/000000000000/test-queue for queueName=test-queue'
       })
     })
 
@@ -130,7 +129,8 @@ describe('createCommandQueueConsumer', () => {
       expect(Consumer.create).toHaveBeenCalledWith({
         queueUrl: 'http://localhost:4566/000000000000/test-queue',
         sqs: sqsClient,
-        handleMessage: expect.any(Function)
+        handleMessage: expect.any(Function),
+        handleMessageTimeout: 300000
       })
     })
 
@@ -154,6 +154,15 @@ describe('createCommandQueueConsumer', () => {
 
       expect(mockConsumer.on).toHaveBeenCalledWith(
         'processing_error',
+        expect.any(Function)
+      )
+    })
+
+    it('attaches timeout_error handler', async () => {
+      await createConsumer()
+
+      expect(mockConsumer.on).toHaveBeenCalledWith(
+        'timeout_error',
         expect.any(Function)
       )
     })
@@ -191,6 +200,101 @@ describe('createCommandQueueConsumer', () => {
         }
       })
     })
+
+    it('logs timeout error with command info and marks as failed', async () => {
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'validate',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.error).toHaveBeenCalledWith({
+        err: error,
+        message:
+          'Command timed out: validate for summaryLogId=summary-123 messageId=msg-123',
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+        }
+      })
+    })
+
+    it('marks summary log as validation_failed on validate timeout', async () => {
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+      })
+
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'validate',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+        })
+      )
+    })
+
+    it('marks summary log as submission_failed on submit timeout', async () => {
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING }
+      })
+
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'submit',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+        })
+      )
+    })
+
+    it('logs timeout with messageId when message body is invalid', async () => {
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-456',
+        Body: 'not json'
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Command timed out for messageId=msg-456'
+        })
+      )
+    })
   })
 
   describe('message handling', () => {
@@ -210,15 +314,27 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'Failed to parse SQS message body, messageId=msg-123',
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.SERVER,
-              action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-            }
-          })
-        )
+        expect(logger.error).toHaveBeenCalledWith({
+          message: 'Failed to parse SQS message body for messageId=msg-123',
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+          }
+        })
+      })
+
+      it('uses unknown as fallback when MessageId is missing', async () => {
+        const message = { Body: 'not valid json' }
+
+        await handleMessage(message)
+
+        expect(logger.error).toHaveBeenCalledWith({
+          message: 'Failed to parse SQS message body for messageId=unknown',
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+          }
+        })
       })
 
       it('handles missing body', async () => {
@@ -229,7 +345,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message: "command" is required, messageId=msg-123, command={}'
+              'Invalid command message for messageId=msg-123: "command" is required'
           })
         )
       })
@@ -245,7 +361,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message: "command" is required, messageId=msg-123, command={"summaryLogId":"log-123"}'
+              'Invalid command message for messageId=msg-123: "command" is required'
           })
         )
       })
@@ -261,7 +377,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message: "summaryLogId" is required, messageId=msg-123, command={"command":"validate"}'
+              'Invalid command message for messageId=msg-123: "summaryLogId" is required'
           })
         )
       })
@@ -277,7 +393,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message: "command" must be one of [validate, submit], messageId=msg-123, command={"command":"unknown","summaryLogId":"log-123"}'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
           })
         )
       })
@@ -299,7 +415,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Command completed: validate for summaryLogId=log-123, messageId=msg-123'
+              'Command completed: validate for summaryLogId=log-123 messageId=msg-123'
           })
         )
       })
@@ -346,12 +462,10 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.warn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message:
-              'Cannot mark as validation_failed: summary log not found, summaryLogId=log-123'
-          })
-        )
+        expect(logger.warn).toHaveBeenCalledWith({
+          message:
+            'Cannot mark as validation_failed: summary log not found, summaryLogId=log-123'
+        })
       })
 
       it('skips marking as failed if not in processing status', async () => {
@@ -395,13 +509,11 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            err: updateError,
-            message:
-              'Failed to mark summary log as validation_failed, summaryLogId=log-123'
-          })
-        )
+        expect(logger.error).toHaveBeenCalledWith({
+          err: updateError,
+          message:
+            'Failed to mark summary log as validation_failed, summaryLogId=log-123'
+        })
       })
     })
 
@@ -472,15 +584,14 @@ describe('createCommandQueueConsumer', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Command failed: submit for summaryLogId=log-123'
-          })
-        )
-        expect(logger.warn).toHaveBeenCalledWith(
-          expect.objectContaining({
             message:
-              'Cannot mark as submission_failed: summary log not found, summaryLogId=log-123'
+              'Command failed: submit for summaryLogId=log-123 messageId=msg-123'
           })
         )
+        expect(logger.warn).toHaveBeenCalledWith({
+          message:
+            'Cannot mark as submission_failed: summary log not found, summaryLogId=log-123'
+        })
       })
 
       it('throws when summary log not in submitting status', async () => {
@@ -578,13 +689,11 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            err: updateError,
-            message:
-              'Failed to mark summary log as submission_failed, summaryLogId=log-123'
-          })
-        )
+        expect(logger.error).toHaveBeenCalledWith({
+          err: updateError,
+          message:
+            'Failed to mark summary log as submission_failed, summaryLogId=log-123'
+        })
       })
     })
   })

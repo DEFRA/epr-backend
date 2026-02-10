@@ -1,10 +1,8 @@
 import { describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import {
-  createPackagingRecyclingNotesRepository,
-  PrnNumberConflictError
-} from './mongodb.js'
+import { createPackagingRecyclingNotesRepository } from './mongodb.js'
+import { PrnNumberConflictError } from './port.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'

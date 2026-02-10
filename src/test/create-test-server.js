@@ -10,6 +10,7 @@ import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
+import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
 import { mockWorkersPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
@@ -25,7 +26,7 @@ import { createInMemoryWasteBalancesRepositoryPlugin } from '#repositories/waste
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
-import { createInMemoryLumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -105,7 +106,7 @@ const repositoryConfigs = [
   },
   {
     name: 'lumpyPackagingRecyclingNotesRepository',
-    createDefault: createInMemoryLumpyPackagingRecyclingNotesRepositoryPlugin
+    createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
   }
 ]
 
@@ -190,6 +191,7 @@ export async function createTestServer(options = {}) {
     pulse,
     Jwt,
     authPlugin,
+    externalApiAuthPlugin,
     authFailureLogger,
     {
       plugin: featureFlagsPlugin,

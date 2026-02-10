@@ -346,6 +346,18 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_LUMPY_PACKAGING_RECYCLING_NOTES'
+    },
+    packagingRecyclingNotesExternalApi: {
+      doc: 'Feature Flag: Enable external PRN acceptance API endpoint',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES_EXTERNAL_API'
+    },
+    sqsCommands: {
+      doc: 'Feature Flag: Use SQS command executor instead of Piscina workers',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SQS_COMMANDS'
     }
   },
   formSubmissionOverrides: {
@@ -387,9 +399,10 @@ const baseConfig = {
   },
   commandQueue: {
     endpoint: {
-      doc: 'AWS SQS endpoint for command queue',
+      doc: 'AWS SQS endpoint for command queue (only set for local development)',
       format: String,
-      default: 'http://127.0.0.1:4566',
+      nullable: true,
+      default: null,
       env: 'COMMAND_QUEUE_SQS_ENDPOINT'
     },
     queueName: {

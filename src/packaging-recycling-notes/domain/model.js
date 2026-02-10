@@ -1,3 +1,7 @@
+/** @import { Material } from '#domain/organisations/model.js' */
+
+export const PRN_NUMBER_MAX_LENGTH = 20
+
 /**
  * Status values for Packaging Recycling Notes (PRNs)
  * @typedef {typeof PRN_STATUS[keyof typeof PRN_STATUS]} PrnStatus
@@ -7,7 +11,7 @@ export const PRN_STATUS = Object.freeze({
   AWAITING_AUTHORISATION: 'awaiting_authorisation',
   AWAITING_ACCEPTANCE: 'awaiting_acceptance',
   ACCEPTED: 'accepted',
-  REJECTED: 'rejected',
+  AWAITING_CANCELLATION: 'awaiting_cancellation',
   CANCELLED: 'cancelled',
   DELETED: 'deleted',
   DISCARDED: 'discarded'
@@ -23,9 +27,12 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
     PRN_STATUS.AWAITING_ACCEPTANCE,
     PRN_STATUS.DELETED
   ],
-  [PRN_STATUS.AWAITING_ACCEPTANCE]: [PRN_STATUS.ACCEPTED, PRN_STATUS.REJECTED],
+  [PRN_STATUS.AWAITING_ACCEPTANCE]: [
+    PRN_STATUS.ACCEPTED,
+    PRN_STATUS.AWAITING_CANCELLATION
+  ],
   [PRN_STATUS.ACCEPTED]: [],
-  [PRN_STATUS.REJECTED]: [],
+  [PRN_STATUS.AWAITING_CANCELLATION]: [PRN_STATUS.CANCELLED],
   [PRN_STATUS.CANCELLED]: [],
   [PRN_STATUS.DELETED]: [],
   [PRN_STATUS.DISCARDED]: []
@@ -56,7 +63,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   accreditationId: string;
  *   issuedToOrganisation: IssuedToOrganisation;
  *   tonnage: number;
- *   material: string;
+ *   material: Material;
  *   isExport: boolean;
  *   notes?: string;
  *   isDecemberWaste: boolean;
@@ -70,7 +77,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   createdAt: Date;
  *   createdBy: { id: string; name: string };
  *   updatedAt: Date;
- *   updatedBy: { id: string; name: string } ;
+ *   updatedBy: { id: string; name: string } | null;
  * }} PackagingRecyclingNote
  */
 

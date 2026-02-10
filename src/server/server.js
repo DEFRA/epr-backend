@@ -14,6 +14,7 @@ import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
+import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags } from '#plugins/feature-flags.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
@@ -27,7 +28,8 @@ import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-
 import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { router } from '#plugins/router.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
-import { commandQueueConsumerPlugin } from '#adapters/queue-consumer/queue-consumer.plugin.js'
+import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
+import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
@@ -93,6 +95,12 @@ function getSwaggerPlugins() {
 
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
+
+  // v8 ignore next 3 - SQS branch tested via sqs-command-executor.plugin.test.js
+  const workerPlugin = config.get('featureFlags.sqsCommands')
+    ? { plugin: sqsCommandExecutorPlugin, options: { config } }
+    : piscinaWorkersPlugin
+
   return [
     {
       plugin: mongoDbPlugin,
@@ -112,7 +120,7 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
-    piscinaWorkersPlugin,
+    workerPlugin,
     lumpyPackagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
@@ -149,6 +157,7 @@ async function createServer(options = {}) {
     pulse,
     Jwt,
     authPlugin,
+    externalApiAuthPlugin,
     authFailureLogger
   ]
 

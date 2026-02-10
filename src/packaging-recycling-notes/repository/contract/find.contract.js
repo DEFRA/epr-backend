@@ -1,5 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildDraftPrn, buildDeletedPrn } from './test-data.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  buildDraftPrn,
+  buildDeletedPrn,
+  buildAwaitingAcceptancePrn
+} from './test-data.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -40,6 +45,58 @@ export const testFindBehaviour = (it) => {
         const found = await repository.findById(prn1.id)
 
         expect(found.organisationId).toBe('org-A')
+      })
+    })
+
+    describe('findByPrnNumber', () => {
+      it('returns null when PRN number not found', async () => {
+        const result = await repository.findByPrnNumber('NONEXISTENT001')
+
+        expect(result).toBeNull()
+      })
+
+      it('retrieves a PRN by its PRN number', async () => {
+        const prnInput = buildAwaitingAcceptancePrn({
+          prnNumber: `FIND-${Date.now()}`
+        })
+
+        const created = await repository.create(prnInput)
+        const found = await repository.findByPrnNumber(created.prnNumber)
+
+        expect(found).toBeTruthy()
+        expect(found.id).toBe(created.id)
+        expect(found.prnNumber).toBe(created.prnNumber)
+      })
+
+      it('returns PRN with correct status', async () => {
+        const prnNumber = `STATUS-${Date.now()}`
+        await repository.create(buildAwaitingAcceptancePrn({ prnNumber }))
+
+        const found = await repository.findByPrnNumber(prnNumber)
+
+        expect(found.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      })
+
+      it('does not return PRNs with different PRN numbers', async () => {
+        const prnNumber1 = `A-${Date.now()}`
+        const prnNumber2 = `B-${Date.now()}`
+
+        await repository.create(
+          buildAwaitingAcceptancePrn({
+            prnNumber: prnNumber1,
+            tonnage: 100
+          })
+        )
+        await repository.create(
+          buildAwaitingAcceptancePrn({
+            prnNumber: prnNumber2,
+            tonnage: 200
+          })
+        )
+
+        const found = await repository.findByPrnNumber(prnNumber1)
+
+        expect(found.tonnage).toBe(100)
       })
     })
 

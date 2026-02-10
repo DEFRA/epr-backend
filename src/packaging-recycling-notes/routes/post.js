@@ -13,6 +13,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').CreatePrnResponse} CreatePrnResponse */
+/** @typedef {import('#domain/organisations/model.js').Material} Material */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -20,7 +21,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * @typedef {{
  *   issuedToOrganisation: { id: string; name: string; tradingName?: string };
  *   tonnage: number;
- *   material: string;
+ *   material: Material;
  *   notes?: string;
  * }} PackagingRecyclingNotesCreatePayload
  */
@@ -81,7 +82,7 @@ const buildResponse = (prn, { wasteProcessingType }) => ({
   issuedToOrganisation: prn.issuedToOrganisation,
   material: prn.material,
   notes: prn.notes ?? null,
-  processToBeUsed: getProcessCode(prn.material),
+  processToBeUsed: /** @type {string} */ (getProcessCode(prn.material)),
   status: prn.status.currentStatus,
   tonnage: prn.tonnage,
   wasteProcessingType

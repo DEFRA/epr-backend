@@ -6,6 +6,11 @@ import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
+/**
+ * @typedef {Object} CommandQueueConsumerPluginOptions
+ * @property {{get: (key: string) => string}} config
+ */
+
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
@@ -17,7 +22,10 @@ export const commandQueueConsumerPlugin = {
     'uploadsRepository'
   ],
 
-  register: async (server, options) => {
+  register: async (
+    /** @type {import('#common/hapi-types.js').HapiServer} */ server,
+    /** @type {CommandQueueConsumerPluginOptions} */ options
+  ) => {
     const { config } = options
 
     const queueName = config.get('commandQueue.queueName')
@@ -49,8 +57,7 @@ export const commandQueueConsumerPlugin = {
     // Start consuming on server start
     server.events.on('start', async () => {
       server.logger.info({
-        message: 'Starting SQS command queue consumer',
-        queueName,
+        message: `Starting SQS command queue consumer for queue: ${queueName}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
