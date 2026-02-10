@@ -25,9 +25,10 @@ export const packagingRecyclingNotesUpdateStatusPath =
 const statusValues = Object.values(PRN_STATUS)
 
 /**
- * Maps PRN current status to the actor type that uses this internal route.
- * Statuses not in this map have no valid internal actor, so transitions
- * from those statuses will be rejected by the domain validation.
+ * Infers the actor the requester is acting as, based on the PRN's current
+ * status. Until the auth system carries actor identity, this is our best
+ * proxy. Statuses not in this map have no valid internal actor, so
+ * transitions from those statuses will be rejected by the domain validation.
  */
 const INTERNAL_ACTOR_BY_STATUS = Object.freeze({
   [PRN_STATUS.DRAFT]: PRN_ACTOR.REPROCESSOR_EXPORTER,
@@ -105,8 +106,8 @@ export const packagingRecyclingNotesUpdateStatus = {
         throw Boom.notFound(`PRN not found: ${id}`)
       }
 
-      // Undefined for statuses without a valid internal actor (e.g.
-      // awaiting_acceptance). Domain validation rejects undefined actors.
+      // Infer the actor role from PRN status. Undefined for statuses
+      // without a valid internal actor — domain validation rejects these.
       const actor = INTERNAL_ACTOR_BY_STATUS[previousPrn.status.currentStatus]
 
       const updatedPrn = await updatePrnStatus({
