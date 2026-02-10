@@ -1,4 +1,5 @@
 import { testFindBehaviour } from './contract/find.contract.js'
+import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
 import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
 import { testFindByLinkedDefraOrgIdBehaviour } from './contract/find-by-linked-defra-org-id.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
@@ -14,6 +15,7 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testInsertBehaviour(repositoryFactory)
   testReplaceBehaviour(repositoryFactory)
   testFindBehaviour(repositoryFactory)
+  testFindByIdsBehaviour(repositoryFactory)
   testFindAllIdsBehaviour(repositoryFactory)
   testFindByLinkedDefraOrgIdBehaviour(repositoryFactory)
   testFindRegistrationByIdBehaviour(repositoryFactory)
