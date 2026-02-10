@@ -131,9 +131,9 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   id: string;
  *   accreditationNumber: string;
  *   accreditationYear: number;
- *   material: string;
- *   submittedToRegulator: string;
- *   glassRecyclingProcess?: string;
+ *   material: import('#domain/organisations/model.js').Material;
+ *   submittedToRegulator: import('#domain/organisations/model.js').RegulatorValue;
+ *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess;
  *   siteAddress?: {
  *     line1: string;
  *     line2?: string;
@@ -147,9 +147,28 @@ export function validateTransition(currentStatus, newStatus, actor) {
 
 /**
  * @typedef {{
+ *   id: string;
+ *   name: string;
+ *   position?: string;
+ * }} Actor
+ */
+
+/**
+ * @typedef {{
+ *   at: Date;
+ *   by: Actor;
+ * }} BusinessOperation
+ */
+
+/**
+ * @typedef {'created' | 'issued' | 'accepted' | 'rejected' | 'cancelled' | 'deleted'} BusinessOperationSlot
+ */
+
+/**
+ * @typedef {{
  *   status: PrnStatus;
- *   updatedAt: Date;
- *   updatedBy: { id: string; name: string };
+ *   at: Date;
+ *   by: Actor;
  * }} PrnStatusHistoryItem
  */
 
@@ -166,16 +185,20 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   isExport: boolean;
  *   notes?: string;
  *   isDecemberWaste: boolean;
- *   issuedAt: Date | null;
- *   issuedBy: { id: string; name: string; position: string } | null;
  *   status: {
  *     currentStatus: PrnStatus;
+ *     created?: BusinessOperation;
+ *     issued?: BusinessOperation;
+ *     accepted?: BusinessOperation;
+ *     rejected?: BusinessOperation;
+ *     cancelled?: BusinessOperation;
+ *     deleted?: BusinessOperation;
  *     history: PrnStatusHistoryItem[];
  *   };
  *   createdAt: Date;
- *   createdBy: { id: string; name: string };
+ *   createdBy: Actor;
  *   updatedAt: Date;
- *   updatedBy: { id: string; name: string } | null;
+ *   updatedBy: Actor | null;
  * }} PackagingRecyclingNote
  */
 
@@ -198,7 +221,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
 /**
  * @typedef {CreatePrnResponse & {
  *   issuedAt: Date | null;
- *   issuedBy: { id: string; name: string; position: string } | null;
+ *   issuedBy: Actor | null;
  *   prnNumber: string | null;
  * }} GetPrnResponse
  */

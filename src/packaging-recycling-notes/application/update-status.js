@@ -11,6 +11,14 @@ import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/po
 /** Suffixes A-Z for collision avoidance */
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
+const STATUS_OPERATION_SLOT = Object.freeze({
+  [PRN_STATUS.AWAITING_AUTHORISATION]: 'created',
+  [PRN_STATUS.ACCEPTED]: 'accepted',
+  [PRN_STATUS.AWAITING_CANCELLATION]: 'rejected',
+  [PRN_STATUS.DELETED]: 'deleted',
+  [PRN_STATUS.CANCELLED]: 'cancelled'
+})
+
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository
@@ -228,11 +236,10 @@ export async function updatePrnStatus({
 
   // Issue with PRN number generation and collision retry
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    updateParams.issuedAt = now
-    updateParams.issuedBy = {
-      id: user.id,
-      name: user.name,
-      position: ''
+    updateParams.operation = {
+      slot: 'issued',
+      at: now,
+      by: { id: user.id, name: user.name }
     }
 
     const accreditation = await organisationsRepository.findAccreditationById(
@@ -254,6 +261,12 @@ export async function updatePrnStatus({
     })
 
     return issuedPrn
+  }
+
+  // Add business operation slot for transitions that have one
+  const operationSlot = STATUS_OPERATION_SLOT[newStatus]
+  if (operationSlot) {
+    updateParams.operation = { slot: operationSlot, at: now, by: user }
   }
 
   // Simple status update without PRN number

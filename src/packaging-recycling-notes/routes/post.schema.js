@@ -9,7 +9,7 @@ export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
   issuedToOrganisation: Joi.object({
     id: Joi.string().required(),
     name: Joi.string().required(),
-    tradingName: Joi.string().allow('', null).optional()
+    tradingName: Joi.string().empty(Joi.valid(null, '')).optional()
   }).required(),
   tonnage: Joi.number().integer().min(POSITIVE_INTEGER).required(),
   material: Joi.string()

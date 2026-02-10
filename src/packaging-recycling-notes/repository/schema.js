@@ -51,24 +51,35 @@ const userSummarySchema = Joi.object({
   name: Joi.string().required()
 })
 
-const issuedBySchema = Joi.object({
+const actorSchema = Joi.object({
   id: Joi.string().required(),
   name: Joi.string().required(),
-  position: Joi.string().allow('').required()
+  position: Joi.string().optional()
+})
+
+const businessOperationSchema = Joi.object({
+  at: Joi.date().required(),
+  by: actorSchema.required()
 })
 
 const statusHistoryItemSchema = Joi.object({
   status: Joi.string()
     .valid(...statusValues)
     .required(),
-  updatedAt: Joi.date().required(),
-  updatedBy: userSummarySchema.required()
+  at: Joi.date().required(),
+  by: actorSchema.required()
 })
 
 const statusSchema = Joi.object({
   currentStatus: Joi.string()
     .valid(...statusValues)
     .required(),
+  created: businessOperationSchema.optional(),
+  issued: businessOperationSchema.optional(),
+  accepted: businessOperationSchema.optional(),
+  rejected: businessOperationSchema.optional(),
+  cancelled: businessOperationSchema.optional(),
+  deleted: businessOperationSchema.optional(),
   history: Joi.array().items(statusHistoryItemSchema).min(1).required()
 })
 
@@ -89,8 +100,6 @@ export const prnInsertSchema = Joi.object({
   isExport: Joi.boolean().required(),
   notes: Joi.string().optional(),
   isDecemberWaste: Joi.boolean().required(),
-  issuedAt: Joi.date().allow(null).required(),
-  issuedBy: issuedBySchema.allow(null).required(),
   status: statusSchema.required(),
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.required(),

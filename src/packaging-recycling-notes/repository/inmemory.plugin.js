@@ -41,15 +41,7 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
 
 const performUpdateStatus =
   (storage) =>
-  async ({
-    id,
-    status,
-    updatedBy,
-    updatedAt,
-    prnNumber,
-    issuedAt,
-    issuedBy
-  }) => {
+  async ({ id, status, updatedBy, updatedAt, prnNumber, operation }) => {
     const prn = storage.get(id)
     if (!prn) {
       return null
@@ -63,26 +55,25 @@ const performUpdateStatus =
       }
     }
 
+    const statusUpdate = {
+      ...prn.status,
+      currentStatus: status,
+      history: [...prn.status.history, { status, at: updatedAt, by: updatedBy }]
+    }
+
+    if (operation) {
+      statusUpdate[operation.slot] = { at: operation.at, by: operation.by }
+    }
+
     const updated = {
       ...prn,
       updatedBy,
       updatedAt,
-      status: {
-        currentStatus: status,
-        history: [...prn.status.history, { status, updatedAt, updatedBy }]
-      }
+      status: statusUpdate
     }
 
     if (prnNumber) {
       updated.prnNumber = prnNumber
-    }
-
-    if (issuedAt) {
-      updated.issuedAt = issuedAt
-    }
-
-    if (issuedBy) {
-      updated.issuedBy = issuedBy
     }
 
     storage.set(id, structuredClone(updated))

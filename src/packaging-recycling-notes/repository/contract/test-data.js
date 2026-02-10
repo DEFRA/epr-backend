@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
+const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
 const PRN_SUFFIX_DIGITS = 5
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
@@ -44,15 +45,13 @@ export const buildPrn = (overrides = {}) => {
     tonnage: 100,
     isExport: false,
     isDecemberWaste: false,
-    issuedAt: null,
-    issuedBy: null,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: now,
-          updatedBy: DEFAULT_CREATOR
+          at: now,
+          by: DEFAULT_CREATOR
         }
       ],
       ...statusOverrides
@@ -69,21 +68,23 @@ export const buildPrn = (overrides = {}) => {
  * Builds a PRN in draft status.
  * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
  */
-export const buildDraftPrn = (overrides = {}) =>
-  buildPrn({
+export const buildDraftPrn = (overrides = {}) => {
+  const now = new Date()
+  return buildPrn({
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.DRAFT,
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(),
-          updatedBy: DEFAULT_CREATOR
+          at: now,
+          by: DEFAULT_CREATOR
         }
       ],
       ...overrides.status
     }
   })
+}
 
 /**
  * Builds a PRN in awaiting_authorisation status.
@@ -95,16 +96,20 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      created: {
+        at: now,
+        by: DEFAULT_RAISER
+      },
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS),
-          updatedBy: DEFAULT_CREATOR
+          at: new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS),
+          by: DEFAULT_CREATOR
         },
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedAt: now,
-          updatedBy: { id: 'user-raiser', name: 'Raiser User' }
+          at: now,
+          by: DEFAULT_RAISER
         }
       ],
       ...overrides.status
@@ -118,31 +123,38 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
  */
 export const buildAwaitingAcceptancePrn = (overrides = {}) => {
   const now = new Date()
+  const draftAt = new Date(
+    now.getTime() - AWAITING_ACCEPTANCE_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
+  )
+  const authorisedAt = new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS)
   return buildPrn({
     prnNumber: `ER26${Date.now().toString().slice(-PRN_SUFFIX_DIGITS)}`,
-    issuedAt: now,
-    issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      created: {
+        at: authorisedAt,
+        by: DEFAULT_RAISER
+      },
+      issued: {
+        at: now,
+        by: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
+      },
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(
-            now.getTime() -
-              AWAITING_ACCEPTANCE_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
-          ),
-          updatedBy: DEFAULT_CREATOR
+          at: draftAt,
+          by: DEFAULT_CREATOR
         },
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
-          updatedBy: { id: 'user-raiser', name: 'Raiser User' }
+          at: authorisedAt,
+          by: DEFAULT_RAISER
         },
         {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedAt: now,
-          updatedBy: { id: 'user-issuer', name: 'Issuer User' }
+          at: now,
+          by: { id: 'user-issuer', name: 'Issuer User' }
         }
       ],
       ...overrides.status
@@ -156,20 +168,35 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
  */
 export const buildDeletedPrn = (overrides = {}) => {
   const now = new Date()
+  const draftAt = new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS)
+  const authorisedAt = new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS)
   return buildPrn({
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.DELETED,
+      created: {
+        at: authorisedAt,
+        by: DEFAULT_RAISER
+      },
+      deleted: {
+        at: now,
+        by: { id: 'user-deleter', name: 'Deleter User' }
+      },
       history: [
         {
           status: PRN_STATUS.DRAFT,
-          updatedAt: new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS),
-          updatedBy: DEFAULT_CREATOR
+          at: draftAt,
+          by: DEFAULT_CREATOR
+        },
+        {
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          at: authorisedAt,
+          by: DEFAULT_RAISER
         },
         {
           status: PRN_STATUS.DELETED,
-          updatedAt: now,
-          updatedBy: { id: 'user-deleter', name: 'Deleter User' }
+          at: now,
+          by: { id: 'user-deleter', name: 'Deleter User' }
         }
       ],
       ...overrides.status

@@ -46,9 +46,7 @@ const mockPrns = [
     createdAt: new Date('2026-01-15T10:00:00Z'),
     createdBy: { id: 'user-1', name: 'Test User' },
     updatedAt: new Date('2026-01-15T10:00:00Z'),
-    updatedBy: null,
-    issuedAt: null,
-    issuedBy: null
+    updatedBy: null
   },
   {
     id: 'prn-002',
@@ -71,13 +69,17 @@ const mockPrns = [
     tonnage: 120,
     isExport: false,
     isDecemberWaste: false,
-    status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE },
+    status: {
+      currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      issued: {
+        at: new Date('2026-01-20T09:00:00Z'),
+        by: { id: 'user-1', name: 'Test User' }
+      }
+    },
     createdAt: new Date('2026-01-18T14:30:00Z'),
     createdBy: { id: 'user-1', name: 'Test User' },
     updatedAt: new Date('2026-01-18T14:30:00Z'),
-    updatedBy: null,
-    issuedAt: new Date('2026-01-20T09:00:00Z'),
-    issuedBy: null
+    updatedBy: null
   }
 ]
 

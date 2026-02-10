@@ -176,7 +176,7 @@ const findByAccreditation = async (db, accreditationId) => {
  */
 const updateStatus = async (
   db,
-  { id, status, updatedBy, updatedAt, prnNumber, issuedAt, issuedBy }
+  { id, status, updatedBy, updatedAt, prnNumber, operation }
 ) => {
   const setFields = {
     'status.currentStatus': status,
@@ -188,12 +188,11 @@ const updateStatus = async (
     setFields.prnNumber = prnNumber
   }
 
-  if (issuedAt) {
-    setFields.issuedAt = issuedAt
-  }
-
-  if (issuedBy) {
-    setFields.issuedBy = issuedBy
+  if (operation) {
+    setFields[`status.${operation.slot}`] = {
+      at: operation.at,
+      by: operation.by
+    }
   }
 
   try {
@@ -202,7 +201,7 @@ const updateStatus = async (
       {
         $set: setFields,
         $push: /** @type {*} */ ({
-          'status.history': { status, updatedAt, updatedBy }
+          'status.history': { status, at: updatedAt, by: updatedBy }
         })
       },
       { returnDocument: 'after' }

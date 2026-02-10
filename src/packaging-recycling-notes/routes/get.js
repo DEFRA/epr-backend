@@ -28,7 +28,7 @@ const buildResponse = (prns, { wasteProcessingType }) =>
     material: prn.accreditation?.material,
     status: prn.status.currentStatus,
     createdAt: prn.createdAt,
-    issuedAt: prn.issuedAt ?? null,
+    issuedAt: prn.status.issued?.at ?? null,
     wasteProcessingType
   }))
 

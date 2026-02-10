@@ -20,6 +20,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
 const organisationId = 'org-123'
@@ -46,12 +47,16 @@ const createMockPrn = (overrides = {}) => ({
   tonnage: 100,
   isExport: false,
   isDecemberWaste: false,
-  issuedAt: null,
-  issuedBy: null,
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    history: [{ status: PRN_STATUS.DRAFT, updatedAt: new Date() }]
+    history: [
+      {
+        status: PRN_STATUS.DRAFT,
+        at: new Date(),
+        by: { id: 'user-123', name: 'Test User' }
+      }
+    ]
   },
   createdAt: new Date(),
   createdBy: { id: 'user-123', name: 'Test User' },
@@ -59,54 +64,6 @@ const createMockPrn = (overrides = {}) => ({
   updatedBy: null,
   ...overrides
 })
-
-const createInMemoryPackagingRecyclingNotesRepository = (initialPrns = []) => {
-  const store = new Map(initialPrns.map((prn) => [prn.id, { ...prn }]))
-
-  return () => ({
-    create: vi.fn(async (prn) => {
-      const id = `prn-${Date.now()}`
-      const created = { ...prn, id }
-      store.set(id, created)
-      return created
-    }),
-    findById: vi.fn(async (id) => {
-      const prn = store.get(id)
-      return prn ? { ...prn } : null
-    }),
-    updateStatus: vi.fn(
-      async ({
-        id,
-        status,
-        updatedBy,
-        updatedAt,
-        prnNumber,
-        issuedAt,
-        issuedBy
-      }) => {
-        const prn = store.get(id)
-        if (!prn) return null
-
-        prn.status.currentStatus = status
-        prn.status.history.push({ status, updatedAt, updatedBy })
-        prn.updatedAt = updatedAt
-        prn.updatedBy = updatedBy
-        if (prnNumber) {
-          prn.prnNumber = prnNumber
-        }
-        if (issuedAt) {
-          prn.issuedAt = issuedAt
-        }
-        if (issuedBy) {
-          prn.issuedBy = issuedBy
-        }
-        store.set(id, prn)
-
-        return { ...prn }
-      }
-    )
-  })
-}
 
 const defaultOrganisationsRepository = {
   findAccreditationById: vi.fn(async () => ({
@@ -140,6 +97,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     beforeAll(async () => {
       lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
+      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'findById')
+      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'updateStatus')
 
       wasteBalancesRepository = {
         findByAccreditationId: vi
@@ -231,7 +190,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -267,7 +227,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -300,7 +261,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -338,7 +300,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -366,7 +329,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -415,7 +379,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -464,7 +429,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -501,7 +467,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             history: [
               {
                 status: PRN_STATUS.AWAITING_AUTHORISATION,
-                updatedAt: new Date()
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
               }
             ]
           }
@@ -630,7 +597,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           id: createdPrnId,
           status: {
             currentStatus: PRN_STATUS.ACCEPTED,
-            history: [{ status: PRN_STATUS.ACCEPTED, updatedAt: new Date() }]
+            history: [
+              {
+                status: PRN_STATUS.ACCEPTED,
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
+              }
+            ]
           }
         })
 
@@ -655,7 +628,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           id: unknownStatusPrnId,
           status: {
             currentStatus: 'unknown_status',
-            history: [{ status: 'unknown_status', updatedAt: new Date() }]
+            history: [
+              {
+                status: 'unknown_status',
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
+              }
+            ]
           }
         })
 
@@ -825,6 +804,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     beforeAll(async () => {
       lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
+      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'findById')
+      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'updateStatus')
 
       wasteBalancesRepository = {
         findByAccreditationId: vi
@@ -903,7 +884,8 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           history: [
             {
               status: PRN_STATUS.AWAITING_AUTHORISATION,
-              updatedAt: new Date()
+              at: new Date(),
+              by: { id: 'user-123', name: 'Test User' }
             }
           ]
         }

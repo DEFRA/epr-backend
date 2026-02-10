@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import {
   createInitialStatusHistory,
+  getCurrentStatus,
   mapDocumentWithCurrentStatuses,
   prepareForReplace,
   SCHEMA_VERSION
@@ -165,6 +166,61 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const LINKED_ORG_PROJECTION = {
+  orgId: 1,
+  'companyDetails.name': 1,
+  statusHistory: 1,
+  linkedDefraOrganisation: 1
+}
+
+const toLinkedOrganisationSummary = (doc) => ({
+  id: doc._id.toString(),
+  orgId: doc.orgId,
+  companyDetails: { name: doc.companyDetails.name },
+  status: getCurrentStatus(doc),
+  linkedDefraOrganisation: {
+    ...doc.linkedDefraOrganisation,
+    linkedAt: new Date(doc.linkedDefraOrganisation.linkedAt).toISOString()
+  }
+})
+
+const performFindAllLinked =
+  (db) =>
+  async (filter = {}) => {
+    const query = { 'linkedDefraOrganisation.orgId': { $ne: null } }
+
+    if (filter.name) {
+      query['companyDetails.name'] = {
+        $regex: escapeRegex(filter.name),
+        $options: 'i'
+      }
+    }
+
+    const docs = await db
+      .collection(COLLECTION_NAME)
+      .find(query, { projection: LINKED_ORG_PROJECTION })
+      .toArray()
+    return docs.map(toLinkedOrganisationSummary)
+  }
+
+const performFindByIds = (db) => async (ids) => {
+  if (!ids || ids.length === 0) {
+    return []
+  }
+
+  const objectIds = ids.map((id) => {
+    const validatedId = validateId(id)
+    return ObjectId.createFromHexString(validatedId)
+  })
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ _id: { $in: objectIds } })
+    .toArray()
+
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   const doc = await db
     .collection(COLLECTION_NAME)
@@ -263,6 +319,8 @@ export const createOrganisationsRepository = async (
       replace: performReplace(db),
       findById,
       findAll: performFindAll(db),
+      findAllLinked: performFindAllLinked(db),
+      findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
