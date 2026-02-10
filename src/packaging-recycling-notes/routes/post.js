@@ -83,7 +83,6 @@ const buildPrnData = ({
   isDecemberWaste: false,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    created: { at: now, by: user },
     history: [{ status: PRN_STATUS.DRAFT, at: now, by: user }]
   },
   createdAt: now,

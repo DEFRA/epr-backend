@@ -134,7 +134,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
-      it('creates PRN with draft status, created operation, and history', async () => {
+      it('creates PRN with draft status and history but no created operation', async () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
@@ -142,26 +142,17 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        const createArg =
+          lumpyPackagingRecyclingNotesRepository.create.mock.calls[0][0]
+        expect(createArg.status.currentStatus).toBe(PRN_STATUS.DRAFT)
+        expect(createArg.status).not.toHaveProperty('created')
+        expect(createArg.status.history).toStrictEqual([
           expect.objectContaining({
-            status: expect.objectContaining({
-              currentStatus: PRN_STATUS.DRAFT,
-              created: expect.objectContaining({
-                at: expect.any(Date),
-                by: expect.objectContaining({ id: expect.any(String) })
-              }),
-              history: expect.arrayContaining([
-                expect.objectContaining({
-                  status: PRN_STATUS.DRAFT,
-                  at: expect.any(Date),
-                  by: expect.objectContaining({ id: expect.any(String) })
-                })
-              ])
-            })
+            status: PRN_STATUS.DRAFT,
+            at: expect.any(Date),
+            by: expect.objectContaining({ id: expect.any(String) })
           })
-        )
+        ])
       })
 
       it('sets createdBy and updatedBy to the authenticated user', async () => {
@@ -191,9 +182,6 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             createdBy: { id: userId, name: userName },
             updatedBy: { id: userId, name: userName },
             status: expect.objectContaining({
-              created: expect.objectContaining({
-                by: { id: userId, name: userName }
-              }),
               history: expect.arrayContaining([
                 expect.objectContaining({
                   by: { id: userId, name: userName }

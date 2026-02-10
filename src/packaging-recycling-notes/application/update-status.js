@@ -12,6 +12,7 @@ import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/po
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 const STATUS_OPERATION_SLOT = Object.freeze({
+  [PRN_STATUS.AWAITING_AUTHORISATION]: 'created',
   [PRN_STATUS.DELETED]: 'deleted',
   [PRN_STATUS.CANCELLED]: 'cancelled'
 })

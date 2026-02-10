@@ -50,7 +50,6 @@ const createMockPrn = (overrides = {}) => ({
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    created: { at: new Date(), by: { id: 'user-123', name: 'Test User' } },
     history: [
       {
         status: PRN_STATUS.DRAFT,

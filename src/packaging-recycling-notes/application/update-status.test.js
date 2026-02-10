@@ -249,7 +249,12 @@ describe('updatePrnStatus', () => {
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_AUTHORISATION,
       updatedBy: { id: 'user-789', name: 'Test User' },
-      updatedAt: expect.any(Date)
+      updatedAt: expect.any(Date),
+      operation: {
+        slot: 'created',
+        at: expect.any(Date),
+        by: { id: 'user-789', name: 'Test User' }
+      }
     })
   })
 
