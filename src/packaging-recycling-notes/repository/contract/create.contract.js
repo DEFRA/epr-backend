@@ -128,25 +128,6 @@ export const testCreateBehaviour = (it) => {
         )
       })
 
-      it('omits currentStatusAt when no history entry matches the current status', async () => {
-        const prnInput = buildDraftPrn({
-          status: {
-            currentStatus: 'cancelled',
-            history: [
-              {
-                status: 'draft',
-                at: new Date(),
-                by: { id: 'u', name: 'U' }
-              }
-            ]
-          }
-        })
-
-        const created = await repository.create(prnInput)
-
-        expect(created.status.currentStatusAt).toBeUndefined()
-      })
-
       it('generates unique ids for each created PRN', async () => {
         const prn1 = await repository.create(buildDraftPrn())
         const prn2 = await repository.create(buildDraftPrn())

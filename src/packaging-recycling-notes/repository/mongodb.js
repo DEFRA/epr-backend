@@ -158,12 +158,6 @@ const findByPrnNumber = async (db, prnNumber) => {
  */
 const create = async (db, prn) => {
   const validated = validatePrnInsert(prn)
-  const currentStatusAt = validated.status.history.findLast(
-    (e) => e.status === validated.status.currentStatus
-  )?.at
-  if (currentStatusAt) {
-    validated.status.currentStatusAt = currentStatusAt
-  }
   const result = await db.collection(COLLECTION_NAME).insertOne(validated)
 
   return {
@@ -195,8 +189,6 @@ const findByAccreditation = async (db, accreditationId) => {
     )
   )
 }
-
-const DEFAULT_FIND_BY_STATUS_LIMIT = 200
 
 /**
  * @param {import('./port.js').FindByStatusParams} params
@@ -233,18 +225,17 @@ function buildFindByStatusFilter({ statuses, dateFrom, dateTo, cursor }) {
  * @returns {Promise<import('./port.js').PaginatedResult>}
  */
 const findByStatus = async (db, params) => {
-  const effectiveLimit = params.limit ?? DEFAULT_FIND_BY_STATUS_LIMIT
   const filter = buildFindByStatusFilter(params)
 
   const docs = await db
     .collection(COLLECTION_NAME)
     .find(filter)
     .sort({ _id: 1 })
-    .limit(effectiveLimit + 1)
+    .limit(params.limit + 1)
     .toArray()
 
-  const hasMore = docs.length > effectiveLimit
-  const items = hasMore ? docs.slice(0, effectiveLimit) : docs
+  const hasMore = docs.length > params.limit
+  const items = hasMore ? docs.slice(0, params.limit) : docs
 
   return {
     items:

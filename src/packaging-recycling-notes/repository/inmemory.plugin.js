@@ -20,12 +20,6 @@ const performFindByPrnNumber = (storage) => async (prnNumber) => {
 
 const performCreate = (storage) => async (prn) => {
   const validated = validatePrnInsert(prn)
-  const currentStatusAt = validated.status.history.findLast(
-    (e) => e.status === validated.status.currentStatus
-  )?.at
-  if (currentStatusAt) {
-    validated.status.currentStatusAt = currentStatusAt
-  }
   const id = new ObjectId().toHexString()
   const prnWithId = { ...validated, id }
   storage.set(id, structuredClone(prnWithId))
@@ -45,13 +39,9 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
   return results
 }
 
-const DEFAULT_FIND_BY_STATUS_LIMIT = 200
-
 const performFindByStatus =
   (storage) =>
   async ({ statuses, dateFrom, dateTo, cursor, limit }) => {
-    const effectiveLimit = limit ?? DEFAULT_FIND_BY_STATUS_LIMIT
-
     const matching = []
     for (const prn of storage.values()) {
       const matchesStatus = statuses.includes(prn.status.currentStatus)
@@ -70,8 +60,8 @@ const performFindByStatus =
 
     matching.sort((a, b) => a.id.localeCompare(b.id))
 
-    const hasMore = matching.length > effectiveLimit
-    const items = matching.slice(0, effectiveLimit)
+    const hasMore = matching.length > limit
+    const items = matching.slice(0, limit)
 
     return {
       items,

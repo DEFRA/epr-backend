@@ -8,6 +8,7 @@ import {
 
 const ONE_HOUR_MS = 3600000
 const TWO_HOURS_MS = 7200000
+const DEFAULT_LIMIT = 200
 
 /**
  * Returns a unique far-future timestamp for test isolation.
@@ -130,7 +131,8 @@ export const testFindByStatusBehaviour = (it) => {
 
         // ACCEPTED is never created by any contract test
         const result = await repository.findByStatus({
-          statuses: [PRN_STATUS.ACCEPTED]
+          statuses: [PRN_STATUS.ACCEPTED],
+          limit: DEFAULT_LIMIT
         })
 
         expect(result.items).toEqual([])
@@ -144,7 +146,8 @@ export const testFindByStatusBehaviour = (it) => {
         )
 
         const result = await repository.findByStatus({
-          statuses: [PRN_STATUS.CANCELLED]
+          statuses: [PRN_STATUS.CANCELLED],
+          limit: DEFAULT_LIMIT
         })
 
         const ids = itemIds(result)
@@ -166,7 +169,8 @@ export const testFindByStatusBehaviour = (it) => {
         const result = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.CANCELLED],
           dateFrom: new Date(baseTime - ONE_HOUR_MS),
-          dateTo: new Date(baseTime + TWO_HOURS_MS)
+          dateTo: new Date(baseTime + TWO_HOURS_MS),
+          limit: DEFAULT_LIMIT
         })
 
         const ids = itemIds(result)
@@ -179,7 +183,8 @@ export const testFindByStatusBehaviour = (it) => {
 
         // ACCEPTED is never created by any contract test
         const result = await repository.findByStatus({
-          statuses: [PRN_STATUS.ACCEPTED]
+          statuses: [PRN_STATUS.ACCEPTED],
+          limit: DEFAULT_LIMIT
         })
 
         expect(result.items).toEqual([])
@@ -197,19 +202,22 @@ export const testFindByStatusBehaviour = (it) => {
 
         const afterIssue = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE],
-          dateFrom: new Date(baseTime - ONE_HOUR_MS)
+          dateFrom: new Date(baseTime - ONE_HOUR_MS),
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(afterIssue)).toContain(createdId)
 
         const exactlyAtIssue = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE],
-          dateFrom: issuedAt
+          dateFrom: issuedAt,
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(exactlyAtIssue)).toContain(createdId)
 
         const tooLate = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE],
-          dateFrom: new Date(baseTime + ONE_HOUR_MS)
+          dateFrom: new Date(baseTime + ONE_HOUR_MS),
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(tooLate)).not.toContain(createdId)
       })
@@ -224,21 +232,24 @@ export const testFindByStatusBehaviour = (it) => {
 
         const dateToOnly = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE],
-          dateTo: new Date(baseTime + ONE_HOUR_MS)
+          dateTo: new Date(baseTime + ONE_HOUR_MS),
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(dateToOnly)).toContain(createdId)
 
         const exactlyAtIssue = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE],
           dateFrom: new Date(baseTime - ONE_HOUR_MS),
-          dateTo: issuedAt
+          dateTo: issuedAt,
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(exactlyAtIssue)).toContain(createdId)
 
         const tooEarly = await repository.findByStatus({
           statuses: [PRN_STATUS.AWAITING_ACCEPTANCE],
           dateFrom: new Date(baseTime - TWO_HOURS_MS),
-          dateTo: new Date(baseTime - ONE_HOUR_MS)
+          dateTo: new Date(baseTime - ONE_HOUR_MS),
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(tooEarly)).not.toContain(createdId)
       })
@@ -305,7 +316,8 @@ export const testFindByStatusBehaviour = (it) => {
         const matchesCancellation = await repository.findByStatus({
           statuses: [PRN_STATUS.CANCELLED],
           dateFrom: new Date(cancelledAt.getTime() - ONE_HOUR_MS),
-          dateTo: new Date(cancelledAt.getTime() + ONE_HOUR_MS)
+          dateTo: new Date(cancelledAt.getTime() + ONE_HOUR_MS),
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(matchesCancellation)).toContain(createdId)
 
@@ -313,7 +325,8 @@ export const testFindByStatusBehaviour = (it) => {
         const onlyCoversIssued = await repository.findByStatus({
           statuses: [PRN_STATUS.CANCELLED],
           dateFrom: new Date(issuedAt.getTime() - ONE_HOUR_MS),
-          dateTo: new Date(issuedAt.getTime() + ONE_HOUR_MS)
+          dateTo: new Date(issuedAt.getTime() + ONE_HOUR_MS),
+          limit: DEFAULT_LIMIT
         })
         expect(itemIds(onlyCoversIssued)).not.toContain(createdId)
       })
@@ -336,7 +349,8 @@ export const testFindByStatusBehaviour = (it) => {
         )
 
         const result = await repository.findByStatus({
-          statuses: [PRN_STATUS.CANCELLED]
+          statuses: [PRN_STATUS.CANCELLED],
+          limit: DEFAULT_LIMIT
         })
 
         const ids = itemIds(result)
@@ -440,7 +454,8 @@ export const testFindByStatusBehaviour = (it) => {
 
         const result = await repository.findByStatus({
           statuses: [PRN_STATUS.CANCELLED],
-          cursor: sentinel.id
+          cursor: sentinel.id,
+          limit: DEFAULT_LIMIT
         })
 
         const ids = itemIds(result)
@@ -502,7 +517,8 @@ export const testFindByStatusBehaviour = (it) => {
         )
 
         const result = await repository.findByStatus({
-          statuses: [PRN_STATUS.CANCELLED]
+          statuses: [PRN_STATUS.CANCELLED],
+          limit: DEFAULT_LIMIT
         })
 
         const match = result.items.find((p) => p.id === created.id)

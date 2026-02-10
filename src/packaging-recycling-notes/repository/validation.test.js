@@ -16,6 +16,17 @@ describe('validatePrnInsert', () => {
     expect(result.bogus).toBeUndefined()
   })
 
+  it('sets currentStatusAt from the history entry matching the current status', () => {
+    const data = buildValidPrnInsert()
+    const result = validatePrnInsert(data)
+
+    const expectedDate = data.status.history.findLast(
+      (e) => e.status === data.status.currentStatus
+    ).at
+
+    expect(result.status.currentStatusAt).toEqual(expectedDate)
+  })
+
   it('throws Boom.badData for invalid data', () => {
     const data = buildValidPrnInsert()
     delete data.organisation
