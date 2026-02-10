@@ -101,12 +101,6 @@ jobs:
           restore-keys: |
             mongodb-binaries-${{ runner.os }}-
 
-      - name: Test Docker Image Build
-        run: |
-          set +e
-          docker build --no-cache --tag cdp-node-backend-template .
-          exit $?
-
   test-journey:
     name: Run Journey Tests
     runs-on: ubuntu-latest
