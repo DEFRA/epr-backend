@@ -2,7 +2,6 @@ import { ObjectId } from 'mongodb'
 import { registerRepository } from '#plugins/register-repository.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
-import { matchesStatusDateRange } from './status-date-filter.js'
 import { validatePrnInsert } from './validation.js'
 
 const performFindById = (storage) => async (id) => {
@@ -21,6 +20,12 @@ const performFindByPrnNumber = (storage) => async (prnNumber) => {
 
 const performCreate = (storage) => async (prn) => {
   const validated = validatePrnInsert(prn)
+  const currentStatusAt = validated.status.history.findLast(
+    (e) => e.status === validated.status.currentStatus
+  )?.at
+  if (currentStatusAt) {
+    validated.status.currentStatusAt = currentStatusAt
+  }
   const id = new ObjectId().toHexString()
   const prnWithId = { ...validated, id }
   storage.set(id, structuredClone(prnWithId))
@@ -51,8 +56,12 @@ const performFindByStatus =
     for (const prn of storage.values()) {
       const matchesStatus = statuses.includes(prn.status.currentStatus)
       const afterCursor = !cursor || prn.id > cursor
+      const statusAt = prn.status.currentStatusAt
       const matchesDate =
-        (!dateFrom && !dateTo) || matchesStatusDateRange(prn, dateFrom, dateTo)
+        (!dateFrom && !dateTo) ||
+        (statusAt &&
+          (!dateFrom || statusAt >= dateFrom) &&
+          (!dateTo || statusAt <= dateTo))
 
       if (matchesStatus && afterCursor && matchesDate) {
         matching.push(structuredClone(prn))
@@ -90,6 +99,7 @@ const performUpdateStatus =
     const statusUpdate = {
       ...prn.status,
       currentStatus: status,
+      currentStatusAt: updatedAt,
       history: [...prn.status.history, { status, at: updatedAt, by: updatedBy }]
     }
 

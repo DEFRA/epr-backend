@@ -114,6 +114,39 @@ export const testCreateBehaviour = (it) => {
         expect(found.status.history[0].status).toBe('draft')
       })
 
+      it('sets currentStatusAt from the history entry matching the current status', async () => {
+        const prnInput = buildDraftPrn()
+
+        const created = await repository.create(prnInput)
+
+        const expectedDate = prnInput.status.history.findLast(
+          (e) => e.status === prnInput.status.currentStatus
+        ).at
+
+        expect(new Date(created.status.currentStatusAt).getTime()).toBe(
+          expectedDate.getTime()
+        )
+      })
+
+      it('omits currentStatusAt when no history entry matches the current status', async () => {
+        const prnInput = buildDraftPrn({
+          status: {
+            currentStatus: 'cancelled',
+            history: [
+              {
+                status: 'draft',
+                at: new Date(),
+                by: { id: 'u', name: 'U' }
+              }
+            ]
+          }
+        })
+
+        const created = await repository.create(prnInput)
+
+        expect(created.status.currentStatusAt).toBeUndefined()
+      })
+
       it('generates unique ids for each created PRN', async () => {
         const prn1 = await repository.create(buildDraftPrn())
         const prn2 = await repository.create(buildDraftPrn())

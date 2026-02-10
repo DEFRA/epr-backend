@@ -74,6 +74,7 @@ const statusSchema = Joi.object({
   currentStatus: Joi.string()
     .valid(...statusValues)
     .required(),
+  currentStatusAt: Joi.date().optional(),
   created: businessOperationSchema.optional(),
   issued: businessOperationSchema.optional(),
   accepted: businessOperationSchema.optional(),

@@ -189,6 +189,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   isDecemberWaste: boolean;
  *   status: {
  *     currentStatus: PrnStatus;
+ *     currentStatusAt?: Date;
  *     created?: BusinessOperation;
  *     issued?: BusinessOperation;
  *     accepted?: BusinessOperation;

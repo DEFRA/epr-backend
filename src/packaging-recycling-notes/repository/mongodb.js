@@ -72,6 +72,25 @@ async function ensureOrganisationStatusIndex(collection) {
   )
 }
 
+/**
+ * Ensures the status_currentStatusAt compound index exists.
+ * Covers findByStatus queries: status + date range + cursor pagination.
+ *
+ * @param {import('mongodb').Collection} collection
+ */
+async function ensureStatusDateIndex(collection) {
+  try {
+    await collection.createIndex(
+      { 'status.currentStatus': 1, 'status.currentStatusAt': 1, _id: 1 },
+      { name: 'status_currentStatusAt' }
+    )
+  } catch (error) {
+    if (error.codeName !== 'NamespaceNotFound') {
+      throw error
+    }
+  }
+}
+
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
@@ -80,6 +99,8 @@ async function ensureCollection(db) {
   // Unique index for PRN numbers - sparse to allow null values
   // Uses helper to handle migration from older non-unique index
   await ensurePrnNumberIndex(collection)
+
+  await ensureStatusDateIndex(collection)
 
   return collection
 }
@@ -137,6 +158,12 @@ const findByPrnNumber = async (db, prnNumber) => {
  */
 const create = async (db, prn) => {
   const validated = validatePrnInsert(prn)
+  const currentStatusAt = validated.status.history.findLast(
+    (e) => e.status === validated.status.currentStatus
+  )?.at
+  if (currentStatusAt) {
+    validated.status.currentStatusAt = currentStatusAt
+  }
   const result = await db.collection(COLLECTION_NAME).insertOne(validated)
 
   return {
@@ -183,33 +210,18 @@ function buildFindByStatusFilter({ statuses, dateFrom, dateTo, cursor }) {
     filter._id = { $gt: ObjectId.createFromHexString(cursor) }
   }
 
-  const needsDateFilter = dateFrom || dateTo
+  filter['status.currentStatus'] = { $in: statuses }
 
-  if (!needsDateFilter) {
-    filter['status.currentStatus'] = { $in: statuses }
-    return filter
-  }
-
-  /** @type {Record<string, Date>} */
-  const dateCondition = {}
-  if (dateFrom) {
-    dateCondition.$gte = dateFrom
-  }
-  if (dateTo) {
-    dateCondition.$lte = dateTo
-  }
-
-  const conditions = statuses.map((status) => ({
-    'status.currentStatus': status,
-    'status.history': {
-      $elemMatch: { status, at: dateCondition }
+  if (dateFrom || dateTo) {
+    /** @type {Record<string, Date>} */
+    const dateCondition = {}
+    if (dateFrom) {
+      dateCondition.$gte = dateFrom
     }
-  }))
-
-  if (conditions.length === 1) {
-    Object.assign(filter, conditions[0])
-  } else {
-    filter.$or = conditions
+    if (dateTo) {
+      dateCondition.$lte = dateTo
+    }
+    filter['status.currentStatusAt'] = dateCondition
   }
 
   return filter
@@ -260,6 +272,7 @@ const updateStatus = async (
 ) => {
   const setFields = {
     'status.currentStatus': status,
+    'status.currentStatusAt': updatedAt,
     updatedAt,
     updatedBy
   }
