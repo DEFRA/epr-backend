@@ -244,7 +244,7 @@ const findByStatus = async (db, params) => {
           }))
         )
       ),
-    nextCursor: hasMore ? items[items.length - 1]._id.toHexString() : null,
+    nextCursor: hasMore ? items.at(-1)._id.toHexString() : null,
     hasMore
   }
 }

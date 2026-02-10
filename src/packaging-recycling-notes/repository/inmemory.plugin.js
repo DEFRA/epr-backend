@@ -49,32 +49,24 @@ const performFindByStatus =
 
     const matching = []
     for (const prn of storage.values()) {
-      if (!statuses.includes(prn.status.currentStatus)) {
-        continue
-      }
+      const matchesStatus = statuses.includes(prn.status.currentStatus)
+      const afterCursor = !cursor || prn.id > cursor
+      const matchesDate =
+        (!dateFrom && !dateTo) || matchesStatusDateRange(prn, dateFrom, dateTo)
 
-      if (cursor && prn.id <= cursor) {
-        continue
+      if (matchesStatus && afterCursor && matchesDate) {
+        matching.push(structuredClone(prn))
       }
-
-      if (
-        (dateFrom || dateTo) &&
-        !matchesStatusDateRange(prn, dateFrom, dateTo)
-      ) {
-        continue
-      }
-
-      matching.push(structuredClone(prn))
     }
 
-    matching.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    matching.sort((a, b) => a.id.localeCompare(b.id))
 
     const hasMore = matching.length > effectiveLimit
     const items = matching.slice(0, effectiveLimit)
 
     return {
       items,
-      nextCursor: hasMore ? items[items.length - 1].id : null,
+      nextCursor: hasMore ? items.at(-1).id : null,
       hasMore
     }
   }

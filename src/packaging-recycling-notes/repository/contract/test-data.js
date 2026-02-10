@@ -3,10 +3,12 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
+const DEFAULT_ISSUER = { id: 'user-issuer', name: 'Issuer User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
 const PRN_SUFFIX_DIGITS = 5
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 const CANCELLED_HISTORY_STEPS = 5
+const CANCELLED_ISSUED_STEP_OFFSET = 3
 
 /**
  * Builds a valid PRN for testing with sensible defaults.
@@ -139,7 +141,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
       },
       issued: {
         at: now,
-        by: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
+        by: { ...DEFAULT_ISSUER, position: 'Manager' }
       },
       history: [
         {
@@ -155,7 +157,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
         {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           at: now,
-          by: { id: 'user-issuer', name: 'Issuer User' }
+          by: DEFAULT_ISSUER
         }
       ],
       ...overrides.status
@@ -173,7 +175,9 @@ export const buildCancelledPrn = (overrides = {}) => {
     now.getTime() - CANCELLED_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
   )
   const authorisedAt = new Date(now.getTime() - 4 * STATUS_HISTORY_OFFSET_MS)
-  const issuedAt = new Date(now.getTime() - 3 * STATUS_HISTORY_OFFSET_MS)
+  const issuedAt = new Date(
+    now.getTime() - CANCELLED_ISSUED_STEP_OFFSET * STATUS_HISTORY_OFFSET_MS
+  )
   const rejectedAt = new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS)
   const cancelledAt = new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS)
   return buildPrn({
@@ -184,7 +188,7 @@ export const buildCancelledPrn = (overrides = {}) => {
       created: { at: authorisedAt, by: DEFAULT_RAISER },
       issued: {
         at: issuedAt,
-        by: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
+        by: { ...DEFAULT_ISSUER, position: 'Manager' }
       },
       rejected: { at: rejectedAt, by: { id: 'rpd', name: 'RPD' } },
       cancelled: {
@@ -201,7 +205,7 @@ export const buildCancelledPrn = (overrides = {}) => {
         {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           at: issuedAt,
-          by: { id: 'user-issuer', name: 'Issuer User' }
+          by: DEFAULT_ISSUER
         },
         {
           status: PRN_STATUS.AWAITING_CANCELLATION,
