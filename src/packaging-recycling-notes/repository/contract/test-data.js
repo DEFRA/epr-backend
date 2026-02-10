@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
+const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
 const PRN_SUFFIX_DIGITS = 5
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
@@ -97,7 +98,7 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
       currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       created: {
         at: now,
-        by: { id: 'user-raiser', name: 'Raiser User' }
+        by: DEFAULT_RAISER
       },
       history: [
         {
@@ -108,7 +109,7 @@ export const buildAwaitingAuthorisationPrn = (overrides = {}) => {
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           at: now,
-          by: { id: 'user-raiser', name: 'Raiser User' }
+          by: DEFAULT_RAISER
         }
       ],
       ...overrides.status
@@ -133,7 +134,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       created: {
         at: authorisedAt,
-        by: { id: 'user-raiser', name: 'Raiser User' }
+        by: DEFAULT_RAISER
       },
       issued: {
         at: now,
@@ -148,7 +149,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           at: authorisedAt,
-          by: { id: 'user-raiser', name: 'Raiser User' }
+          by: DEFAULT_RAISER
         },
         {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -175,7 +176,7 @@ export const buildDeletedPrn = (overrides = {}) => {
       currentStatus: PRN_STATUS.DELETED,
       created: {
         at: authorisedAt,
-        by: { id: 'user-raiser', name: 'Raiser User' }
+        by: DEFAULT_RAISER
       },
       deleted: {
         at: now,
@@ -190,7 +191,7 @@ export const buildDeletedPrn = (overrides = {}) => {
         {
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           at: authorisedAt,
-          by: { id: 'user-raiser', name: 'Raiser User' }
+          by: DEFAULT_RAISER
         },
         {
           status: PRN_STATUS.DELETED,
