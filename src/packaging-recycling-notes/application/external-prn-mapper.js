@@ -84,7 +84,6 @@ const mapAccreditation = (accreditation) => {
 export function mapToExternalPrn(prn) {
   const mapped = {
     id: prn.id,
-    prnNumber: prn.prnNumber,
     status: mapStatus(prn.status),
     issuedByOrganisation: mapOrganisation(prn.organisation),
     issuedToOrganisation: mapOrganisation(prn.issuedToOrganisation),
@@ -92,6 +91,10 @@ export function mapToExternalPrn(prn) {
     isDecemberWaste: prn.isDecemberWaste,
     isExport: prn.isExport,
     tonnageValue: prn.tonnage
+  }
+
+  if (prn.prnNumber) {
+    mapped.prnNumber = prn.prnNumber
   }
 
   if (prn.notes) {
