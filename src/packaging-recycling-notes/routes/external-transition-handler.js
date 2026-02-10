@@ -86,23 +86,23 @@ export function createExternalTransitionHandler({
 
         return h.response().code(StatusCodes.NO_CONTENT)
       } catch (error) {
-        handleTransitionError(error, path, logger)
+        throw mapTransitionError(error, path, logger)
       }
     }
   }
 }
 
-function handleTransitionError(error, path, logger) {
+function mapTransitionError(error, path, logger) {
   if (error instanceof StatusConflictError) {
-    throw Boom.conflict(error.message)
+    return Boom.conflict(error.message)
   }
 
   if (error instanceof UnauthorisedTransitionError) {
-    throw Boom.badRequest(error.message)
+    return Boom.badRequest(error.message)
   }
 
   if (error.isBoom) {
-    throw error
+    return error
   }
 
   logger.error({
@@ -114,5 +114,5 @@ function handleTransitionError(error, path, logger) {
     }
   })
 
-  throw Boom.badImplementation(`Failure on ${path}`)
+  return Boom.badImplementation(`Failure on ${path}`)
 }
