@@ -21,11 +21,28 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
+ * @typedef {Object} FindByStatusParams
+ * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus[]} statuses
+ * @property {Date} [dateFrom]
+ * @property {Date} [dateTo]
+ * @property {string} [cursor]
+ * @property {number} limit
+ */
+
+/**
+ * @typedef {Object} PaginatedResult
+ * @property {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} items
+ * @property {string | null} nextCursor
+ * @property {boolean} hasMore
+ */
+
+/**
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
  * @property {(prn: Omit<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} create
  * @property {(accreditationId: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
+ * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
  */
 
