@@ -9,6 +9,7 @@ import {
 import { mapToExternalPrn } from '#packaging-recycling-notes/application/external-prn-mapper.js'
 
 const ALLOWED_STATUSES = ['awaiting_acceptance', 'cancelled']
+const MAX_LIMIT = 500
 
 export const packagingRecyclingNotesListPath = '/v1/packaging-recycling-notes'
 
@@ -51,11 +52,13 @@ export const packagingRecyclingNotesList = {
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
 
     try {
+      const effectiveLimit = limit ? Math.min(limit, MAX_LIMIT) : undefined
+
       const result = await lumpyPackagingRecyclingNotesRepository.findByStatus({
         statuses,
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,
-        limit,
+        limit: effectiveLimit,
         cursor
       })
 

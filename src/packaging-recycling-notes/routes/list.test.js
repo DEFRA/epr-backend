@@ -284,6 +284,21 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
+
+      it('caps limit at the maximum when exceeded', async () => {
+        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
+          { items: [], nextCursor: null, hasMore: false }
+        )
+
+        await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance&limit=10000`
+        })
+
+        const callArgs =
+          lumpyPackagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
+        expect(callArgs.limit).toBe(500)
+      })
     })
 
     describe('error handling', () => {
