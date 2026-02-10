@@ -28,20 +28,32 @@ export const createMockIssuedPrn = (overrides = {}) => ({
   tonnage: 100,
   isExport: false,
   isDecemberWaste: false,
-  issuedAt: new Date(issuedDate),
-  issuedBy: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' },
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+    created: {
+      at: new Date('2026-01-10T10:00:00Z'),
+      by: { id: 'user-123', name: 'Test User' }
+    },
+    issued: {
+      at: new Date(issuedDate),
+      by: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
+    },
     history: [
-      { status: PRN_STATUS.DRAFT, updatedAt: new Date('2026-01-10T10:00:00Z') },
+      {
+        status: PRN_STATUS.DRAFT,
+        at: new Date('2026-01-10T10:00:00Z'),
+        by: { id: 'user-123', name: 'Test User' }
+      },
       {
         status: PRN_STATUS.AWAITING_AUTHORISATION,
-        updatedAt: new Date('2026-01-12T10:00:00Z')
+        at: new Date('2026-01-12T10:00:00Z'),
+        by: { id: 'user-123', name: 'Test User' }
       },
       {
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
-        updatedAt: new Date(issuedDate)
+        at: new Date(issuedDate),
+        by: { id: 'user-issuer', name: 'Issuer User' }
       }
     ]
   },

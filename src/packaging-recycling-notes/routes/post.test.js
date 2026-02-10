@@ -134,7 +134,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
-      it('creates PRN with draft status and history', async () => {
+      it('creates PRN with draft status, created operation, and history', async () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
@@ -148,9 +148,15 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           expect.objectContaining({
             status: expect.objectContaining({
               currentStatus: PRN_STATUS.DRAFT,
+              created: expect.objectContaining({
+                at: expect.any(Date),
+                by: expect.objectContaining({ id: expect.any(String) })
+              }),
               history: expect.arrayContaining([
                 expect.objectContaining({
-                  status: PRN_STATUS.DRAFT
+                  status: PRN_STATUS.DRAFT,
+                  at: expect.any(Date),
+                  by: expect.objectContaining({ id: expect.any(String) })
                 })
               ])
             })
@@ -185,9 +191,12 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             createdBy: { id: userId, name: userName },
             updatedBy: { id: userId, name: userName },
             status: expect.objectContaining({
+              created: expect.objectContaining({
+                by: { id: userId, name: userName }
+              }),
               history: expect.arrayContaining([
                 expect.objectContaining({
-                  updatedBy: { id: userId, name: userName }
+                  by: { id: userId, name: userName }
                 })
               ])
             })

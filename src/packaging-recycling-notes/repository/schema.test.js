@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { prnInsertSchema } from './schema.js'
-import { buildPrn as buildValidPrnInsert } from './contract/test-data.js'
+import {
+  buildPrn as buildValidPrnInsert,
+  buildAwaitingAcceptancePrn
+} from './contract/test-data.js'
 
 describe('PRN insert schema', () => {
   describe('valid documents', () => {
@@ -101,14 +104,15 @@ describe('PRN insert schema', () => {
       expect(error).toBeUndefined()
     })
 
-    it('accepts null issuedBy', () => {
-      const data = buildValidPrnInsert({ issuedBy: null })
+    it('accepts business operation slots on status', () => {
+      const data = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeUndefined()
+      expect(data.status.created).toBeDefined()
     })
 
-    it('accepts null issuedAt', () => {
-      const data = buildValidPrnInsert({ issuedAt: null })
+    it('accepts status with issued operation', () => {
+      const data = buildAwaitingAcceptancePrn()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeUndefined()
     })

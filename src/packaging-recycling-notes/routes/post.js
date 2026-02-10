@@ -71,11 +71,10 @@ const buildPrnData = ({
   isExport,
   notes: payload.notes || undefined,
   isDecemberWaste: false,
-  issuedAt: null,
-  issuedBy: null,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: user }]
+    created: { at: now, by: user },
+    history: [{ status: PRN_STATUS.DRAFT, at: now, by: user }]
   },
   createdAt: now,
   createdBy: user,

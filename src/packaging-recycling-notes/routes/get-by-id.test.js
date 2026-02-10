@@ -43,14 +43,18 @@ const mockPrn = {
   tonnage: 50,
   isExport: false,
   isDecemberWaste: true,
-  status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
+  status: {
+    currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+    issued: {
+      at: new Date('2026-01-16T14:30:00Z'),
+      by: { id: 'auth-user', name: 'John Smith', position: 'Director' }
+    }
+  },
   createdAt: new Date('2026-01-15T10:00:00Z'),
   createdBy: { id: 'user-1', name: 'Test User' },
   updatedAt: new Date('2026-01-15T10:00:00Z'),
   updatedBy: null,
-  notes: 'Test notes',
-  issuedAt: new Date('2026-01-16T14:30:00Z'),
-  issuedBy: { id: 'auth-user', name: 'John Smith', position: 'Director' }
+  notes: 'Test notes'
 }
 
 const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
@@ -165,9 +169,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdAt: new Date('2026-01-15T10:00:00Z'),
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
-          updatedBy: null,
-          issuedAt: null,
-          issuedBy: null
+          updatedBy: null
           // accreditationYear, isDecemberWaste, notes not present
         }
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
@@ -214,9 +216,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdAt: new Date('2026-01-15T10:00:00Z'),
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
-          updatedBy: null,
-          issuedAt: null,
-          issuedBy: null
+          updatedBy: null
         }
         lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           issuedPrn

@@ -60,12 +60,14 @@ export const packagingRecyclingNotesReject = {
         ? new Date(payload.rejectedAt)
         : new Date()
 
+      const actor = { id: 'rpd', name: 'RPD' }
       const updatedPrn =
         await lumpyPackagingRecyclingNotesRepository.updateStatus({
           id: prn.id,
           status: PRN_STATUS.AWAITING_CANCELLATION,
-          updatedBy: { id: 'rpd', name: 'RPD' },
-          updatedAt: rejectedAt
+          updatedBy: actor,
+          updatedAt: rejectedAt,
+          operation: { slot: 'rejected', at: rejectedAt, by: actor }
         })
 
       await prnMetrics.recordStatusTransition({

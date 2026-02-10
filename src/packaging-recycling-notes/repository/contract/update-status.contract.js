@@ -40,7 +40,7 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(updated.status.history[1].status).toBe(
           PRN_STATUS.AWAITING_AUTHORISATION
         )
-        expect(updated.status.history[1].updatedBy).toEqual({
+        expect(updated.status.history[1].by).toEqual({
           id: 'user-raiser',
           name: 'Raiser User'
         })
@@ -131,122 +131,49 @@ export const testUpdateStatusBehaviour = (it) => {
       })
     })
 
-    describe('issuedAt assignment', () => {
-      it('sets issuedAt when provided', async () => {
+    describe('business operation slots', () => {
+      it('sets the named operation slot when provided', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const issuedAt = new Date()
+        const now = new Date()
+        const actor = { id: 'user-issuer', name: 'Issuer User' }
 
         const updated = await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: issuedAt,
-          prnNumber: `ER26${Date.now().toString().slice(-5)}Z`,
-          issuedAt
-        })
-
-        expect(new Date(updated.issuedAt).getTime()).toBe(issuedAt.getTime())
-      })
-
-      it('persists issuedAt so it can be retrieved', async () => {
-        const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const issuedAt = new Date()
-
-        await repository.updateStatus({
-          id: created.id,
-          status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: issuedAt,
-          prnNumber: `ER26${Date.now().toString().slice(-5)}W`,
-          issuedAt
-        })
-
-        const found = await repository.findById(created.id)
-        expect(new Date(found.issuedAt).getTime()).toBe(issuedAt.getTime())
-      })
-
-      it('does not set issuedAt when not provided', async () => {
-        const created = await repository.create(buildDraftPrn())
-
-        const updated = await repository.updateStatus({
-          id: created.id,
-          status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
-          updatedAt: new Date()
-        })
-
-        expect(updated.issuedAt).toBeNull()
-      })
-    })
-
-    describe('authorisation fields', () => {
-      it('sets issuedAt when provided', async () => {
-        const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const issuedAt = new Date()
-
-        const updated = await repository.updateStatus({
-          id: created.id,
-          status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: issuedAt,
+          updatedBy: actor,
+          updatedAt: now,
           prnNumber: `ER26${Date.now().toString().slice(-5)}Q`,
-          issuedAt,
-          issuedBy: {
-            id: 'user-issuer',
-            name: 'Issuer User',
-            position: 'Manager'
-          }
+          operation: { slot: 'issued', at: now, by: actor }
         })
 
-        expect(new Date(updated.issuedAt).getTime()).toBe(issuedAt.getTime())
+        expect(new Date(updated.status.issued.at).getTime()).toBe(now.getTime())
+        expect(updated.status.issued.by).toEqual(actor)
       })
 
-      it('sets issuedBy when provided', async () => {
+      it('persists the operation slot so it can be retrieved', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const issuedBy = {
+        const now = new Date()
+        const actor = {
           id: 'user-issuer',
           name: 'Issuer User',
           position: 'Manager'
         }
 
-        const updated = await repository.updateStatus({
-          id: created.id,
-          status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: new Date(),
-          prnNumber: `ER26${Date.now().toString().slice(-5)}R`,
-          issuedAt: new Date(),
-          issuedBy
-        })
-
-        expect(updated.issuedBy).toEqual(issuedBy)
-      })
-
-      it('persists issuedAt and issuedBy so they can be retrieved', async () => {
-        const created = await repository.create(buildAwaitingAuthorisationPrn())
-        const issuedAt = new Date()
-        const issuedBy = {
-          id: 'user-issuer',
-          name: 'Issuer User',
-          position: ''
-        }
-
         await repository.updateStatus({
           id: created.id,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: issuedAt,
+          updatedAt: now,
           prnNumber: `ER26${Date.now().toString().slice(-5)}S`,
-          issuedAt,
-          issuedBy
+          operation: { slot: 'issued', at: now, by: actor }
         })
 
         const found = await repository.findById(created.id)
-        expect(new Date(found.issuedAt).getTime()).toBe(issuedAt.getTime())
-        expect(found.issuedBy).toEqual(issuedBy)
+        expect(new Date(found.status.issued.at).getTime()).toBe(now.getTime())
+        expect(found.status.issued.by).toEqual(actor)
       })
 
-      it('does not set issuedAt/issuedBy when not provided', async () => {
+      it('does not add operation slot when not provided', async () => {
         const created = await repository.create(buildDraftPrn())
 
         const updated = await repository.updateStatus({
@@ -256,9 +183,7 @@ export const testUpdateStatusBehaviour = (it) => {
           updatedAt: new Date()
         })
 
-        // issuedAt/issuedBy are null by default in the PRN model
-        expect(updated.issuedAt).toBeNull()
-        expect(updated.issuedBy).toBeNull()
+        expect(updated.status.issued).toBeUndefined()
       })
     })
 

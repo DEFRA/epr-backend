@@ -65,9 +65,24 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
 
 /**
  * @typedef {{
+ *   id: string;
+ *   name: string;
+ *   position?: string;
+ * }} Actor
+ */
+
+/**
+ * @typedef {{
+ *   at: Date;
+ *   by: Actor;
+ * }} BusinessOperation
+ */
+
+/**
+ * @typedef {{
  *   status: PrnStatus;
- *   updatedAt: Date;
- *   updatedBy: { id: string; name: string };
+ *   at: Date;
+ *   by: Actor;
  * }} PrnStatusHistoryItem
  */
 
@@ -84,10 +99,14 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   isExport: boolean;
  *   notes?: string;
  *   isDecemberWaste: boolean;
- *   issuedAt: Date | null;
- *   issuedBy: { id: string; name: string; position: string } | null;
  *   status: {
  *     currentStatus: PrnStatus;
+ *     created?: BusinessOperation;
+ *     issued?: BusinessOperation;
+ *     accepted?: BusinessOperation;
+ *     rejected?: BusinessOperation;
+ *     cancelled?: BusinessOperation;
+ *     deleted?: BusinessOperation;
  *     history: PrnStatusHistoryItem[];
  *   };
  *   createdAt: Date;
@@ -116,7 +135,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
 /**
  * @typedef {CreatePrnResponse & {
  *   issuedAt: Date | null;
- *   issuedBy: { id: string; name: string; position: string } | null;
+ *   issuedBy: Actor | null;
  *   prnNumber: string | null;
  * }} GetPrnResponse
  */
