@@ -14,6 +14,22 @@ import { updatePrnStatus } from '#packaging-recycling-notes/application/update-s
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /**
+ * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {WasteBalancesRepository} from '#repositories/waste-balances/port.js'
+ * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ */
+
+/**
+ * @typedef {import('#common/hapi-types.js').HapiRequest & {
+ *   lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   wasteBalancesRepository: WasteBalancesRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   systemLogsRepository: SystemLogsRepository
+ * }} ExternalTransitionRequest
+ */
+
+/**
  * Creates a Hapi route handler for external PRN status transitions.
  *
  * @param {Object} options
@@ -30,6 +46,7 @@ export function createExternalTransitionHandler({
   path
 }) {
   return {
+    /** @param {ExternalTransitionRequest} request */
     handler: async (request, h) => {
       const {
         lumpyPackagingRecyclingNotesRepository,
@@ -57,7 +74,9 @@ export function createExternalTransitionHandler({
           ? new Date(payload[timestampField])
           : new Date()
 
-        const user = request.auth.credentials
+        const user = /** @type {{ id: string; name: string }} */ (
+          request.auth.credentials
+        )
 
         const updatedPrn = await updatePrnStatus({
           prnRepository: lumpyPackagingRecyclingNotesRepository,
