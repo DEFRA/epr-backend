@@ -222,7 +222,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
 
   const command = parseCommandMessage(message, logger)
   if (!command) {
-    return undefined
+    return message
   }
 
   const { command: commandType, summaryLogId } = command
@@ -247,7 +247,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
 
       /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
       default:
-        return undefined
+        return message
     }
 
     logger.info({
@@ -270,7 +270,9 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
       logger
     })
 
-    return undefined
+    // handleCommandError returns (rather than throwing) for permanent errors,
+    // so acknowledge the message to prevent SQS retrying it
+    return message
   }
 }
 
