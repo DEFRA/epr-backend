@@ -28,7 +28,6 @@ import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
-import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { getConfig } from '#root/config.js'
@@ -97,11 +96,6 @@ function getSwaggerPlugins() {
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
-  // v8 ignore next 3 - SQS branch tested via sqs-command-executor.plugin.test.js
-  const workerPlugin = config.get('featureFlags.sqsCommands')
-    ? { plugin: sqsCommandExecutorPlugin, options: { config } }
-    : piscinaWorkersPlugin
-
   return [
     {
       plugin: mongoDbPlugin,
@@ -121,7 +115,7 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
-    workerPlugin,
+    { plugin: sqsCommandExecutorPlugin, options: { config } },
     packagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
@@ -145,7 +139,7 @@ async function createServer(options = {}) {
   // mongo*Plugin   - individual repository plugins
   // s3*Plugin      - S3 repository plugins
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
-  // workers        - sets up worker thread pools and attaches to `request` objects
+  // sqsCommandExecutor - sets up SQS command executor and attaches to `request` objects
   // router         - routes used in the app
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies

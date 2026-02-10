@@ -14,7 +14,7 @@ import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
-import { mockWorkersPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
+import { mockSqsCommandExecutorPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
 import { router } from '#plugins/router.js'
 import { registerRepository } from '#plugins/register-repository.js'
 import { getConfig } from '#root/config.js'
@@ -43,7 +43,7 @@ import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packagin
  * @typedef {Object} CreateTestServerOptions
  * @property {Object} [featureFlags] - Optional feature flags override
  * @property {Object} [repositories] - Optional repository overrides (for mocks or custom instances)
- * @property {Object} [workers] - Optional worker overrides (passed to mockWorkersPlugin)
+ * @property {Object} [workers] - Optional worker overrides (passed to mockSqsCommandExecutorPlugin)
  */
 
 /**
@@ -200,7 +200,7 @@ export async function createTestServer(options = {}) {
       options: { config, featureFlags: options.featureFlags }
     },
     ...buildRepositoryPlugins(options.repositories ?? {}),
-    { plugin: mockWorkersPlugin, options: options.workers },
+    { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     router
   ]
 

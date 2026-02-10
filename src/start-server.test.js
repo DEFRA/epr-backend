@@ -106,6 +106,11 @@ vi.mock('#server/queue-consumer/queue-consumer.plugin.js', () => ({
   }
 }))
 
+vi.mock(
+  '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
+  async () => import('#adapters/validators/summary-logs/mock.plugin.js')
+)
+
 vi.mock('@defra/cdp-auditing', () => ({
   enableAuditing: (...args) => mockEnabledAuditing(...args)
 }))
