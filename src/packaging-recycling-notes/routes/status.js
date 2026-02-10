@@ -105,6 +105,8 @@ export const packagingRecyclingNotesUpdateStatus = {
         throw Boom.notFound(`PRN not found: ${id}`)
       }
 
+      // Undefined for statuses without a valid internal actor (e.g.
+      // awaiting_acceptance). Domain validation rejects undefined actors.
       const actor = INTERNAL_ACTOR_BY_STATUS[previousPrn.status.currentStatus]
 
       const updatedPrn = await updatePrnStatus({
