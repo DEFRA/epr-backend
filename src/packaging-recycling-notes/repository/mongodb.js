@@ -169,6 +169,86 @@ const findByAccreditation = async (db, accreditationId) => {
   )
 }
 
+const DEFAULT_FIND_BY_STATUS_LIMIT = 200
+
+/**
+ * @param {import('./port.js').FindByStatusParams} params
+ * @returns {import('mongodb').Filter<import('mongodb').Document>}
+ */
+function buildFindByStatusFilter({ statuses, dateFrom, dateTo, cursor }) {
+  /** @type {import('mongodb').Filter<import('mongodb').Document>} */
+  const filter = {}
+
+  if (cursor) {
+    filter._id = { $gt: ObjectId.createFromHexString(cursor) }
+  }
+
+  const needsDateFilter = dateFrom || dateTo
+
+  if (!needsDateFilter) {
+    filter['status.currentStatus'] = { $in: statuses }
+    return filter
+  }
+
+  /** @type {Record<string, Date>} */
+  const dateCondition = {}
+  if (dateFrom) {
+    dateCondition.$gte = dateFrom
+  }
+  if (dateTo) {
+    dateCondition.$lte = dateTo
+  }
+
+  const conditions = statuses.map((status) => ({
+    'status.currentStatus': status,
+    'status.history': {
+      $elemMatch: { status, at: dateCondition }
+    }
+  }))
+
+  if (conditions.length === 1) {
+    Object.assign(filter, conditions[0])
+  } else {
+    filter.$or = conditions
+  }
+
+  return filter
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {import('./port.js').FindByStatusParams} params
+ * @returns {Promise<import('./port.js').PaginatedResult>}
+ */
+const findByStatus = async (db, params) => {
+  const effectiveLimit = params.limit ?? DEFAULT_FIND_BY_STATUS_LIMIT
+  const filter = buildFindByStatusFilter(params)
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find(filter)
+    .sort({ _id: 1 })
+    .limit(effectiveLimit + 1)
+    .toArray()
+
+  const hasMore = docs.length > effectiveLimit
+  const items = hasMore ? docs.slice(0, effectiveLimit) : docs
+
+  return {
+    items:
+      /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} */ (
+        /** @type {unknown} */ (
+          items.map((doc) => ({
+            ...doc,
+            id: doc._id.toHexString()
+          }))
+        )
+      ),
+    nextCursor: hasMore ? items[items.length - 1]._id.toHexString() : null,
+    hasMore
+  }
+}
+
 /**
  * @param {import('mongodb').Db} db
  * @param {import('./port.js').UpdateStatusParams} params
@@ -241,6 +321,7 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
     create: (prn) => create(db, prn),
     findByAccreditation: (accreditationId) =>
       findByAccreditation(db, accreditationId),
+    findByStatus: (params) => findByStatus(db, params),
     updateStatus: (params) => updateStatus(db, params)
   })
 }

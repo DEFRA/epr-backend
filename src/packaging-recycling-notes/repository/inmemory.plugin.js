@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 import { registerRepository } from '#plugins/register-repository.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
+import { matchesStatusDateRange } from './status-date-filter.js'
 import { validatePrnInsert } from './validation.js'
 
 const performFindById = (storage) => async (id) => {
@@ -38,6 +39,45 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
   }
   return results
 }
+
+const DEFAULT_FIND_BY_STATUS_LIMIT = 200
+
+const performFindByStatus =
+  (storage) =>
+  async ({ statuses, dateFrom, dateTo, cursor, limit }) => {
+    const effectiveLimit = limit ?? DEFAULT_FIND_BY_STATUS_LIMIT
+
+    const matching = []
+    for (const prn of storage.values()) {
+      if (!statuses.includes(prn.status.currentStatus)) {
+        continue
+      }
+
+      if (cursor && prn.id <= cursor) {
+        continue
+      }
+
+      if (
+        (dateFrom || dateTo) &&
+        !matchesStatusDateRange(prn, dateFrom, dateTo)
+      ) {
+        continue
+      }
+
+      matching.push(structuredClone(prn))
+    }
+
+    matching.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+
+    const hasMore = matching.length > effectiveLimit
+    const items = matching.slice(0, effectiveLimit)
+
+    return {
+      items,
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore
+    }
+  }
 
 const performUpdateStatus =
   (storage) =>
@@ -95,6 +135,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByPrnNumber: performFindByPrnNumber(storage),
     create: performCreate(storage),
     findByAccreditation: performFindByAccreditation(storage),
+    findByStatus: performFindByStatus(storage),
     updateStatus: performUpdateStatus(storage)
   })
 }

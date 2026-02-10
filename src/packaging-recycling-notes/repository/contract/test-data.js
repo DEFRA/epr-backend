@@ -6,6 +6,7 @@ const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
 const PRN_SUFFIX_DIGITS = 5
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
+const CANCELLED_HISTORY_STEPS = 5
 
 /**
  * Builds a valid PRN for testing with sensible defaults.
@@ -155,6 +156,62 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           at: now,
           by: { id: 'user-issuer', name: 'Issuer User' }
+        }
+      ],
+      ...overrides.status
+    }
+  })
+}
+
+/**
+ * Builds a PRN in cancelled status (full lifecycle: issued → rejected by RPD → cancelled).
+ * @param {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} overrides
+ */
+export const buildCancelledPrn = (overrides = {}) => {
+  const now = new Date()
+  const draftAt = new Date(
+    now.getTime() - CANCELLED_HISTORY_STEPS * STATUS_HISTORY_OFFSET_MS
+  )
+  const authorisedAt = new Date(now.getTime() - 4 * STATUS_HISTORY_OFFSET_MS)
+  const issuedAt = new Date(now.getTime() - 3 * STATUS_HISTORY_OFFSET_MS)
+  const rejectedAt = new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS)
+  const cancelledAt = new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS)
+  return buildPrn({
+    prnNumber: `ER26${Date.now().toString().slice(-PRN_SUFFIX_DIGITS)}`,
+    ...overrides,
+    status: {
+      currentStatus: PRN_STATUS.CANCELLED,
+      created: { at: authorisedAt, by: DEFAULT_RAISER },
+      issued: {
+        at: issuedAt,
+        by: { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
+      },
+      rejected: { at: rejectedAt, by: { id: 'rpd', name: 'RPD' } },
+      cancelled: {
+        at: cancelledAt,
+        by: { id: 'user-canceller', name: 'Canceller User' }
+      },
+      history: [
+        { status: PRN_STATUS.DRAFT, at: draftAt, by: DEFAULT_CREATOR },
+        {
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          at: authorisedAt,
+          by: DEFAULT_RAISER
+        },
+        {
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          at: issuedAt,
+          by: { id: 'user-issuer', name: 'Issuer User' }
+        },
+        {
+          status: PRN_STATUS.AWAITING_CANCELLATION,
+          at: rejectedAt,
+          by: { id: 'rpd', name: 'RPD' }
+        },
+        {
+          status: PRN_STATUS.CANCELLED,
+          at: cancelledAt,
+          by: { id: 'user-canceller', name: 'Canceller User' }
         }
       ],
       ...overrides.status
