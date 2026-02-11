@@ -65,7 +65,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     })
 
     afterEach(() => {
-      vi.clearAllMocks()
+      vi.resetAllMocks()
     })
 
     afterAll(async () => {

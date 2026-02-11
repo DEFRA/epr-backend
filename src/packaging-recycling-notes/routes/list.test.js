@@ -55,7 +55,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
     })
 
     afterEach(() => {
-      vi.clearAllMocks()
+      vi.resetAllMocks()
     })
 
     afterAll(async () => {
