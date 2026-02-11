@@ -96,11 +96,11 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
     let organisationsRepository
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository =
+      packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository(mockPrns)()
 
       organisationsRepository = {
@@ -112,12 +112,12 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true
+          packagingRecyclingNotes: true
         })
       })
 
@@ -142,7 +142,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByAccreditation
+          packagingRecyclingNotesRepository.findByAccreditation
         ).toHaveBeenCalledWith(accreditationId)
 
         const payload = JSON.parse(response.payload)
@@ -178,7 +178,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       })
 
       it('returns empty array when no PRNs exist', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByAccreditation.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByAccreditation.mockResolvedValueOnce(
           []
         )
 
@@ -209,7 +209,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        lumpyPackagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
           Boom.default.notFound('Registration not found')
         )
 
@@ -223,7 +223,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.findByAccreditation.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -244,7 +244,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository:
+          packagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository(),
           organisationsRepository: () => ({
             findAccreditationById: vi.fn(async () => ({
@@ -254,7 +254,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
           })
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: false
+          packagingRecyclingNotes: false
         })
       })
 

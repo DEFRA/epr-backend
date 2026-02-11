@@ -28,7 +28,7 @@ describe('createExternalTransitionHandler', () => {
     })
 
     const request = {
-      lumpyPackagingRecyclingNotesRepository: {
+      packagingRecyclingNotesRepository: {
         findByPrnNumber: vi.fn().mockResolvedValue(awaitingCancellationPrn)
       },
       wasteBalancesRepository: {},

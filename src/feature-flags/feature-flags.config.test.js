@@ -80,21 +80,21 @@ describe('createConfigFeatureFlags', () => {
     )
   })
 
-  it('returns true when lumpyPackagingRecyclingNotes flag is enabled', () => {
+  it('returns true when packagingRecyclingNotes flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(true)
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(true)
     expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.lumpyPackagingRecyclingNotes'
+      'featureFlags.packagingRecyclingNotes'
     )
   })
 
-  it('returns false when lumpyPackagingRecyclingNotes flag is disabled', () => {
+  it('returns false when packagingRecyclingNotes flag is disabled', () => {
     const config = { get: vi.fn().mockReturnValue(false) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
     expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.lumpyPackagingRecyclingNotes'
+      'featureFlags.packagingRecyclingNotes'
     )
   })
 })

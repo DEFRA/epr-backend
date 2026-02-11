@@ -22,7 +22,7 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiRequest & {
- *   lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+ *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
  *   wasteBalancesRepository: WasteBalancesRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   systemLogsRepository: SystemLogsRepository
@@ -49,7 +49,7 @@ export function createExternalTransitionHandler({
     /** @param {ExternalTransitionRequest} request */
     handler: async (request, h) => {
       const {
-        lumpyPackagingRecyclingNotesRepository,
+        packagingRecyclingNotesRepository,
         wasteBalancesRepository,
         organisationsRepository,
         params,
@@ -60,9 +60,7 @@ export function createExternalTransitionHandler({
 
       try {
         const prn =
-          await lumpyPackagingRecyclingNotesRepository.findByPrnNumber(
-            prnNumber
-          )
+          await packagingRecyclingNotesRepository.findByPrnNumber(prnNumber)
 
         if (!prn) {
           throw Boom.notFound(
@@ -79,7 +77,7 @@ export function createExternalTransitionHandler({
         )
 
         const updatedPrn = await updatePrnStatus({
-          prnRepository: lumpyPackagingRecyclingNotesRepository,
+          prnRepository: packagingRecyclingNotesRepository,
           wasteBalancesRepository,
           organisationsRepository,
           id: prn.id,
