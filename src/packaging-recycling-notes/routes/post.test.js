@@ -28,8 +28,7 @@ const validPayload = {
     name: 'Producer Org',
     tradingName: 'Producer Trading'
   },
-  tonnage: 100,
-  material: MATERIAL.PLASTIC
+  tonnage: 100
 }
 
 describe(`${packagingRecyclingNotesCreatePath} route`, () => {
@@ -101,7 +100,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         const body = JSON.parse(response.payload)
         expect(body.id).toBeDefined()
         expect(body.tonnage).toBe(validPayload.tonnage)
-        expect(body.material).toBe(validPayload.material)
+        expect(body.material).toBe(MATERIAL.PLASTIC)
         expect(body.issuedToOrganisation).toStrictEqual(
           validPayload.issuedToOrganisation
         )
@@ -266,7 +265,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: { ...validPayload, material: MATERIAL.GLASS }
+          payload: validPayload
         })
 
         expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
@@ -404,20 +403,6 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: {
             ...validPayload,
             tonnage: 10.5
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when material is invalid', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: {
-            ...validPayload,
-            material: 'invalid_material'
           }
         })
 
