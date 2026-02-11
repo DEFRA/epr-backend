@@ -154,11 +154,11 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
   const repository = factory()
 
   return {
-    name: 'lumpyPackagingRecyclingNotesRepository',
+    name: 'packagingRecyclingNotesRepository',
     register: (server) => {
       registerRepository(
         server,
-        'lumpyPackagingRecyclingNotesRepository',
+        'packagingRecyclingNotesRepository',
         () => repository
       )
     }

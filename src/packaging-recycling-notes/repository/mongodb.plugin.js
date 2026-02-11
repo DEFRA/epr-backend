@@ -2,11 +2,11 @@ import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
 /**
- * Plugin to register the lumpy packaging recycling notes MongoDB repository
+ * Plugin to register the packaging recycling notes MongoDB repository
  * @type {import('@hapi/hapi').Plugin<{db: import('mongodb').Db}>}
  */
-export const lumpyPackagingRecyclingNotesRepositoryPlugin = {
-  name: 'lumpyPackagingRecyclingNotesRepository',
+export const packagingRecyclingNotesRepositoryPlugin = {
+  name: 'packagingRecyclingNotesRepository',
   dependencies: ['mongodb'],
   register: async (
     /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
@@ -17,7 +17,7 @@ export const lumpyPackagingRecyclingNotesRepositoryPlugin = {
 
     registerRepository(
       server,
-      'lumpyPackagingRecyclingNotesRepository',
+      'packagingRecyclingNotesRepository',
       createRepository
     )
   }
