@@ -110,7 +110,7 @@ const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
 
 export const createReprocessorReceivedRowValues = (overrides = {}) => {
-  const tonnage = overrides.tonnageReceived ?? 1000
+  const tonnage = overrides.tonnageReceived
   const d = {
     rowId: 1001,
     dateReceived: DEFAULT_DATE,
@@ -526,16 +526,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const fileDataMap = {}
   const dynamicExtractor = {
     extract: async (summaryLog) => {
-      const fileId = summaryLog?.file?.id
-      if (
-        !fileId ||
-        !Object.prototype.hasOwnProperty.call(fileDataMap, fileId)
-      ) {
-        throw new Error(
-          `No test file data found in fileDataMap for summary log file id: ${fileId}`
-        )
-      }
-      return fileDataMap[fileId]
+      return fileDataMap[summaryLog?.file?.id]
     }
   }
 
