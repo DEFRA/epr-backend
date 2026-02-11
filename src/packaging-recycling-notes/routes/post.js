@@ -13,7 +13,6 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').CreatePrnResponse} CreatePrnResponse */
-/** @typedef {import('#domain/organisations/model.js').Material} Material */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -21,7 +20,6 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * @typedef {{
  *   issuedToOrganisation: { id: string; name: string; tradingName?: string };
  *   tonnage: number;
- *   material: Material;
  *   notes?: string;
  * }} PackagingRecyclingNotesCreatePayload
  */
