@@ -1,19 +1,26 @@
 import { StatusCodes } from 'http-status-codes'
 import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
   afterAll,
-  afterEach
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi
 } from 'vitest'
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createMockIssuedPrn } from './test-helpers.js'
+import {
+  createMockIssuedPrn,
+  generateExternalApiToken
+} from './test-helpers.js'
+
+const authHeaders = {
+  authorization: `Bearer ${generateExternalApiToken()}`
+}
 
 const listUrl = '/v1/packaging-recycling-notes'
 
@@ -66,7 +73,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -90,7 +98,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance,cancelled`
+          url: `${listUrl}?statuses=awaiting_acceptance,cancelled`,
+          headers: authHeaders
         })
 
         expect(
@@ -114,7 +123,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&dateFrom=${dateFrom}&dateTo=${dateTo}`
+          url: `${listUrl}?statuses=awaiting_acceptance&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+          headers: authHeaders
         })
 
         expect(
@@ -137,7 +147,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&cursor=${cursor}`
+          url: `${listUrl}?statuses=awaiting_acceptance&cursor=${cursor}`,
+          headers: authHeaders
         })
 
         expect(
@@ -154,7 +165,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&limit=50`
+          url: `${listUrl}?statuses=awaiting_acceptance&limit=50`,
+          headers: authHeaders
         })
 
         expect(
@@ -172,7 +184,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         const payload = JSON.parse(response.payload)
@@ -189,7 +202,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=cancelled`
+          url: `${listUrl}?statuses=cancelled`,
+          headers: authHeaders
         })
 
         const payload = JSON.parse(response.payload)
@@ -207,7 +221,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         const payload = JSON.parse(response.payload)
@@ -234,7 +249,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         expect(
@@ -251,7 +267,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         const callArgs =
@@ -265,7 +282,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
       it('returns 422 when statuses is missing', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: listUrl
+          url: listUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -274,7 +292,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
       it('returns 422 when statuses contains an invalid value', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=invalid_status`
+          url: `${listUrl}?statuses=invalid_status`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -283,7 +302,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
       it('returns 422 when dateFrom is not a valid ISO date', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&dateFrom=not-a-date`
+          url: `${listUrl}?statuses=awaiting_acceptance&dateFrom=not-a-date`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -292,7 +312,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
       it('returns 422 when dateTo is not a valid ISO date', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&dateTo=not-a-date`
+          url: `${listUrl}?statuses=awaiting_acceptance&dateTo=not-a-date`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -301,7 +322,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
       it('returns 422 when limit is not a positive integer', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&limit=-1`
+          url: `${listUrl}?statuses=awaiting_acceptance&limit=-1`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -310,7 +332,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
       it('returns 422 when limit is zero', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&limit=0`
+          url: `${listUrl}?statuses=awaiting_acceptance&limit=0`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -325,7 +348,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance&limit=10000`
+          url: `${listUrl}?statuses=awaiting_acceptance&limit=10000`,
+          headers: authHeaders
         })
 
         const callArgs =
@@ -342,7 +366,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -356,7 +381,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

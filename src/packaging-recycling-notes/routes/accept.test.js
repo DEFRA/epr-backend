@@ -199,7 +199,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: acceptUrl
+          url: acceptUrl,
+          headers: authHeaders
         })
 
         expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
