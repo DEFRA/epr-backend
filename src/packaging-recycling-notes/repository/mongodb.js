@@ -226,7 +226,11 @@ const findByStatus = async (db, params) => {
     items: items.map((doc) =>
       validatePrnRead({ ...doc, id: doc._id.toHexString() })
     ),
-    nextCursor: hasMore ? items.at(-1)._id.toHexString() : null,
+    nextCursor: hasMore
+      ? /** @type {import('mongodb').WithId<import('mongodb').Document>} */ (
+          items.at(-1)
+        )._id.toHexString()
+      : null,
     hasMore
   }
 }
