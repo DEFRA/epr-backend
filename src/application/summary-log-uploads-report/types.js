@@ -4,8 +4,8 @@
  * @property {string} type - Type of registration (Reprocessor/Exporter)
  * @property {string} businessName - Organisation business name
  * @property {number} orgId - Organisation ID
- * @property {string | undefined} registrationNumber - Registration number
- * @property {string} accreditationNo - Accreditation number (if applicable)
+ * @property {string} registrationNumber - Registration number (empty string if not set)
+ * @property {string} accreditationNumber - Accreditation number (empty string if not set)
  * @property {string} reprocessingSite - Registered reprocessing site address (if applicable)
  * @property {string} packagingWasteCategory - Material type
  * @property {string} lastSuccessfulUpload - ISO timestamp of last successful upload or empty string if never succeeded
