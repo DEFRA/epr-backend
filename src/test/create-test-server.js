@@ -106,7 +106,7 @@ const repositoryConfigs = [
     createDefault: createInMemoryPublicRegisterRepositoryPlugin
   },
   {
-    name: 'lumpyPackagingRecyclingNotesRepository',
+    name: 'packagingRecyclingNotesRepository',
     createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
   }
 ]

@@ -335,11 +335,11 @@ const baseConfig = {
       default: 'false',
       env: 'FEATURE_FLAG_GLASS_MIGRATION'
     },
-    lumpyPackagingRecyclingNotes: {
-      doc: 'Feature Flag: Enable Lumpy Packaging Recycling Note creation (accelerated implementation)',
+    packagingRecyclingNotes: {
+      doc: 'Feature Flag: Enable Packaging Recycling Note creation',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_LUMPY_PACKAGING_RECYCLING_NOTES'
+      env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES'
     },
     packagingRecyclingNotesExternalApi: {
       doc: 'Feature Flag: Enable external PRN acceptance API endpoint',

@@ -12,11 +12,11 @@ import { packagingRecyclingNotesListPath } from '#packaging-recycling-notes/rout
 import { packagingRecyclingNotesRejectPath } from '#packaging-recycling-notes/routes/reject.js'
 
 /**
- * Tests for Lumpy Packaging Recycling Notes feature flag.
+ * Tests for Packaging Recycling Notes feature flag.
  *
- * The lumpy PRN implementation is COMPLETELY SEPARATE from the engineering team's:
- * - Different feature flag: isCreateLumpyPackagingRecyclingNotesEnabled
- * - Different repository: lumpyPackagingRecyclingNotesRepository
+ * The PRN implementation is COMPLETELY SEPARATE from the engineering team's:
+ * - Different feature flag: isCreatePackagingRecyclingNotesEnabled
+ * - Different repository: packagingRecyclingNotesRepository
  * - Different routes: /packaging-recycling-notes
  *
  * No code is shared between the two implementations.
@@ -63,37 +63,37 @@ describe('Packaging Recycling Notes', () => {
     const server = await createServer({
       featureFlags: {
         dbExists: true,
-        isCreateLumpyPackagingRecyclingNotesEnabled: () => true
+        isCreatePackagingRecyclingNotesEnabled: () => true
       }
     })
 
-    expect(
-      server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
-    ).toBe(true)
+    expect(server.featureFlags.isCreatePackagingRecyclingNotesEnabled()).toBe(
+      true
+    )
   })
 
   it('enables when flag is true & collection does not yet exist', async () => {
     const server = await createServer({
       featureFlags: {
-        isCreateLumpyPackagingRecyclingNotesEnabled: () => true
+        isCreatePackagingRecyclingNotesEnabled: () => true
       }
     })
 
-    expect(
-      server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
-    ).toBe(true)
+    expect(server.featureFlags.isCreatePackagingRecyclingNotesEnabled()).toBe(
+      true
+    )
   })
 
   it('disables when flag is not true', async () => {
     const server = await createServer({
       featureFlags: {
-        isCreateLumpyPackagingRecyclingNotesEnabled: () => false
+        isCreatePackagingRecyclingNotesEnabled: () => false
       }
     })
 
-    expect(
-      server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
-    ).toBe(false)
+    expect(server.featureFlags.isCreatePackagingRecyclingNotesEnabled()).toBe(
+      false
+    )
   })
 
   describe('external API flag', () => {
@@ -115,7 +115,7 @@ describe('Packaging Recycling Notes', () => {
     it('does not register accept route when external API flag is disabled', async () => {
       const server = await createTestServer({
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true,
+          packagingRecyclingNotes: true,
           packagingRecyclingNotesExternalApi: false
         })
       })
@@ -140,7 +140,7 @@ describe('Packaging Recycling Notes', () => {
     it('does not register reject route when external API flag is disabled', async () => {
       const server = await createTestServer({
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true,
+          packagingRecyclingNotes: true,
           packagingRecyclingNotesExternalApi: false
         })
       })
@@ -165,7 +165,7 @@ describe('Packaging Recycling Notes', () => {
     it('does not register list route when external API flag is disabled', async () => {
       const server = await createTestServer({
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true,
+          packagingRecyclingNotes: true,
           packagingRecyclingNotesExternalApi: false
         })
       })

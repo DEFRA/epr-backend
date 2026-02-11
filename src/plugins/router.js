@@ -28,7 +28,7 @@ const router = {
           : []
 
         const packagingRecyclingNotesRoutesBehindFeatureFlag =
-          featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
+          featureFlags.isCreatePackagingRecyclingNotesEnabled()
             ? Object.values(packagingRecyclingNotesRoutes)
             : []
 

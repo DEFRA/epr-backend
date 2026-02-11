@@ -14,8 +14,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   getGlassMigrationMode() {
     return flags.glassMigration ?? 'disabled'
   },
-  isCreateLumpyPackagingRecyclingNotesEnabled() {
-    return flags.lumpyPackagingRecyclingNotes ?? false
+  isCreatePackagingRecyclingNotesEnabled() {
+    return flags.packagingRecyclingNotes ?? false
   },
   isPackagingRecyclingNotesExternalApiEnabled() {
     return flags.packagingRecyclingNotesExternalApi ?? false

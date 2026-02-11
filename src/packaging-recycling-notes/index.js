@@ -1,8 +1,8 @@
 /**
- * Lumpy PRNs (Packaging Recycling Notes) Module
+ * PRNs (Packaging Recycling Notes) Module
  *
  * This module contains all domain logic, repositories, and routes for
- * the "lumpy PRNs" accelerated delivery.
+ * PRNs.
  *
  * @module packaging-recycling-notes
  */
