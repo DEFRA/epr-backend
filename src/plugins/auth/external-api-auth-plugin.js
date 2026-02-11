@@ -1,5 +1,7 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 
+import { StatusCodes } from 'http-status-codes'
+
 export const externalApiAuthPlugin = {
   plugin: {
     name: 'external-api-auth',
@@ -25,15 +27,16 @@ export const externalApiAuthPlugin = {
           }
 
           if (tokenClientId !== clientId) {
+            const statusCode = StatusCodes.FORBIDDEN
+
             return {
               isValid: false,
               response: h
                 .response({
-                  statusCode: 403,
-                  error: 'Forbidden',
-                  message: 'Unrecognised client'
+                  statusCode,
+                  error: 'Forbidden'
                 })
-                .code(403)
+                .code(statusCode)
                 .takeover()
             }
           }
