@@ -114,6 +114,32 @@ describe('external API auth plugin', () => {
     expect(response.statusCode).toBe(401)
   })
 
+  it('should return 401 when token is expired', async () => {
+    const token = generateExternalApiToken(clientId, {
+      exp: Math.floor(Date.now() / 1000) - 60
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { authorization: `Bearer ${token}` }
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
+  it('should return 401 when exp claim is missing', async () => {
+    const token = generateExternalApiToken(clientId, { exp: undefined })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { authorization: `Bearer ${token}` }
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
   it('should return 403 when client_id does not match expected value', async () => {
     const token = generateExternalApiToken('wrong-client-id')
 

@@ -26,6 +26,7 @@ export const externalApiAuthPlugin = {
         ) => {
           const {
             client_id: tokenClientId,
+            exp,
             scope,
             token_use: tokenUse
           } = artifacts.decoded.payload
@@ -35,6 +36,10 @@ export const externalApiAuthPlugin = {
           }
 
           if (!scope?.includes(EXPECTED_SCOPE)) {
+            return { isValid: false }
+          }
+
+          if (!exp || exp <= Math.floor(Date.now() / 1000)) {
             return { isValid: false }
           }
 
