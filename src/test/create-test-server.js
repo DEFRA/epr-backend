@@ -127,10 +127,9 @@ function buildRepositoryPlugins(repoOverrides) {
 
 /**
  * Creates a Hapi server with test configuration.
- * @param {ReturnType<typeof getConfig>} config
  * @returns {import('@hapi/hapi').Server}
  */
-function createHapiServer(config) {
+function createHapiServer() {
   return Hapi.server({
     host: config.get('host'),
     port: config.get('port'),
@@ -181,7 +180,7 @@ function attachLoggerMocks(testServer) {
  * @returns {Promise<TestServer>}
  */
 export async function createTestServer(options = {}) {
-  const server = createHapiServer(config)
+  const server = createHapiServer()
 
   const plugins = [
     requestLogger,
