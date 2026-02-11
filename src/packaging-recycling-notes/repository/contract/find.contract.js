@@ -106,6 +106,17 @@ export const testFindBehaviour = (it) => {
       })
     })
 
+    describe('findByPrnNumber', () => {
+      it('does not leak _id in returned PRN', async () => {
+        const prnNumber = `NOID-${Date.now()}`
+        await repository.create(buildAwaitingAcceptancePrn({ prnNumber }))
+
+        const found = await repository.findByPrnNumber(prnNumber)
+
+        expect(found._id).toBeUndefined()
+      })
+    })
+
     describe('findByAccreditation', () => {
       it('returns empty array when no PRNs for accreditation', async () => {
         const result = await repository.findByAccreditation(
