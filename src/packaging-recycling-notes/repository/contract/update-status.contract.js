@@ -87,6 +87,19 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(result).toBeNull()
       })
 
+      it('does not leak _id in returned PRN', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-test', name: 'Test User' },
+          updatedAt: new Date()
+        })
+
+        expect(updated._id).toBeUndefined()
+      })
+
       it('returns the updated PRN with id', async () => {
         const created = await repository.create(buildDraftPrn())
 
