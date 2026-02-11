@@ -24,7 +24,7 @@ export const validatePrnRead = (data) => {
 
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badData(`Invalid PRN document: ${details}`)
+    throw Boom.badImplementation(`Invalid PRN document ${data.id}: ${details}`)
   }
 
   return value

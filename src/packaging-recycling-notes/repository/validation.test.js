@@ -97,7 +97,7 @@ describe('validatePrnRead', () => {
     expect(result).not.toHaveProperty('notes')
   })
 
-  it('throws Boom.badData for invalid read data', () => {
+  it('throws Boom.badImplementation for invalid read data', () => {
     const data = buildReadDocument()
     delete data.id
 
@@ -107,8 +107,19 @@ describe('validatePrnRead', () => {
       validatePrnRead(data)
     } catch (error) {
       expect(error.isBoom).toBe(true)
-      expect(error.output.statusCode).toBe(422)
+      expect(error.output.statusCode).toBe(500)
       expect(error.message).toContain('Invalid PRN document')
+    }
+  })
+
+  it('includes the document id in the error message', () => {
+    const data = buildReadDocument({ id: 'abc-123' })
+    delete data.organisation
+
+    try {
+      validatePrnRead(data)
+    } catch (error) {
+      expect(error.message).toContain('abc-123')
     }
   })
 
