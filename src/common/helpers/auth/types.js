@@ -43,17 +43,20 @@
 /**
  * AWS Cognito access token payload
  *
+ * Standard claims: iss, sub, exp, iat, jti, scope, auth_time
+ * Cognito-specific: client_id, token_use, version,
+ *
  * @typedef {{
- *   sub: string
- *   token_use: string
- *   scope: string
- *   auth_time: number
  *   iss: string
+ *   sub: string
  *   exp: number
  *   iat: number
- *   version: number
  *   jti: string
+ *   scope: string
+ *   auth_time: number
  *   client_id: string
+ *   token_use: 'access'
+ *   version: number
  * }} CognitoAccessTokenPayload
  */
 

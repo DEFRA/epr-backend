@@ -14,7 +14,7 @@ export const externalApiAuthPlugin = {
       const { clientId } = options
 
       server.auth.strategy('api-gateway-client', 'jwt', {
-        keys: { key: 'not-verified', algorithms: ['HS256'] },
+        keys: { key: 'not-verified', algorithms: ['RS256'] },
         verify: false,
         validate: (
           /** @type {{ decoded: { payload: CognitoAccessTokenPayload } }} */ artifacts,

@@ -1,25 +1,13 @@
+import {
+  generateExternalApiToken,
+  generateExternalApiTokenWithoutClientId
+} from '#packaging-recycling-notes/routes/test-helpers.js'
 import Hapi from '@hapi/hapi'
 import Jwt from '@hapi/jwt'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { externalApiAuthPlugin } from './external-api-auth-plugin.js'
 
 const clientId = 'test-client-id'
-
-function generateToken(payload) {
-  return Jwt.token.generate(
-    {
-      sub: payload.client_id ?? clientId,
-      token_use: 'access',
-      scope: 'epr-backend-resource-srv/access',
-      auth_time: 1734387454,
-      iss: 'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_test',
-      version: 2,
-      jti: '00000000-0000-0000-0000-000000000000',
-      ...payload
-    },
-    { key: 'unused', algorithm: 'HS256' }
-  )
-}
 
 describe('external API auth plugin', () => {
   let server
@@ -45,7 +33,7 @@ describe('external API auth plugin', () => {
   })
 
   it('should authenticate with valid JWT and matching client_id', async () => {
-    const token = generateToken({ client_id: clientId })
+    const token = generateExternalApiToken(clientId)
 
     const response = await server.inject({
       method: 'GET',
@@ -91,18 +79,7 @@ describe('external API auth plugin', () => {
   })
 
   it('should return 401 when client_id claim is missing', async () => {
-    const tokenWithoutClientId = Jwt.token.generate(
-      {
-        sub: 'some-sub',
-        token_use: 'access',
-        scope: 'epr-backend-resource-srv/access',
-        auth_time: 1734387454,
-        iss: 'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_test',
-        version: 2,
-        jti: '00000000-0000-0000-0000-000000000000'
-      },
-      { key: 'unused', algorithm: 'HS256' }
-    )
+    const tokenWithoutClientId = generateExternalApiTokenWithoutClientId()
 
     const response = await server.inject({
       method: 'GET',
@@ -114,7 +91,7 @@ describe('external API auth plugin', () => {
   })
 
   it('should return 403 when client_id does not match expected value', async () => {
-    const token = generateToken({ client_id: 'wrong-client-id' })
+    const token = generateExternalApiToken('wrong-client-id')
 
     const response = await server.inject({
       method: 'GET',
