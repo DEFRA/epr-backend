@@ -43,7 +43,7 @@ export const externalApiAuthPlugin = {
 
           return {
             isValid: true,
-            credentials: { id: clientId, name: 'RPD' }
+            credentials: { id: clientId, isMachine: true, name: 'RPD' }
           }
         }
       })

@@ -17,7 +17,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
 import { registerRepository } from '#plugins/register-repository.js'
 import { router } from '#plugins/router.js'
-import { getConfig } from '#root/config.js'
+import { config } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
@@ -181,7 +181,6 @@ function attachLoggerMocks(testServer) {
  * @returns {Promise<TestServer>}
  */
 export async function createTestServer(options = {}) {
-  const config = getConfig()
   const server = createHapiServer(config)
 
   const plugins = [

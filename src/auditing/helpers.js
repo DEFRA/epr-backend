@@ -8,11 +8,16 @@ import { config } from '#root/config.js'
  * @param {import('#common/hapi-types.js').HapiRequest} request
  */
 function extractUserDetails(request) {
-  return {
-    id: request.auth?.credentials?.id,
-    email: request.auth?.credentials?.email,
-    scope: request.auth?.credentials?.scope
-  }
+  return request.auth?.credentials?.isMachine
+    ? {
+        id: request.auth.credentials.id,
+        name: request.auth.credentials.name
+      }
+    : {
+        id: request.auth?.credentials?.id,
+        email: request.auth?.credentials?.email,
+        scope: request.auth?.credentials?.scope
+      }
 }
 
 /**
@@ -38,4 +43,4 @@ function isPayloadSmallEnoughToAudit(payload) {
   return payloadSize < config.get('audit.maxPayloadSizeBytes')
 }
 
-export { extractUserDetails, recordSystemLog, isPayloadSmallEnoughToAudit }
+export { extractUserDetails, isPayloadSmallEnoughToAudit, recordSystemLog }

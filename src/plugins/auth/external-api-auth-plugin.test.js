@@ -56,6 +56,7 @@ describe('external API auth plugin', () => {
     expect(response.statusCode).toBe(200)
     expect(response.result).toEqual({
       id: clientId,
+      isMachine: true,
       name: 'RPD'
     })
   })

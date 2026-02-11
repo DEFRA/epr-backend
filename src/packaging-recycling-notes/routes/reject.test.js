@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
+import { randomUUID } from 'node:crypto'
 import {
   afterAll,
   afterEach,
@@ -11,6 +12,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
@@ -18,12 +20,19 @@ import {
   generateExternalApiToken
 } from './test-helpers.js'
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 const prnId = '507f1f77bcf86cd799439011'
 const prnNumber = 'ER2600001'
+const externalApiClientId = randomUUID()
 
 const rejectUrl = `/v1/packaging-recycling-notes/${prnNumber}/reject`
 const authHeaders = {
-  authorization: `Bearer ${generateExternalApiToken()}`
+  authorization: `Bearer ${generateExternalApiToken(externalApiClientId)}`
 }
 
 describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
@@ -41,6 +50,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         findByAccreditation: vi.fn(),
         updateStatus: vi.fn()
       }
+
+      config.set(
+        'packagingRecyclingNotesExternalApi.clientId',
+        externalApiClientId
+      )
 
       server = await createTestServer({
         repositories: {
@@ -120,16 +134,26 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             id: prnId,
             status: PRN_STATUS.AWAITING_CANCELLATION,
             updatedBy: expect.objectContaining({
-              id: 'stub-client-id',
+              id: externalApiClientId,
               name: 'RPD'
             }),
             operation: expect.objectContaining({
               slot: 'rejected',
               by: expect.objectContaining({
-                id: 'stub-client-id',
+                id: externalApiClientId,
                 name: 'RPD'
               })
             })
+          })
+        )
+
+        // CDP audit event
+        expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+        const auditPayload = mockCdpAuditing.mock.calls[0][0]
+        expect(auditPayload.user).toStrictEqual(
+          expect.objectContaining({
+            id: externalApiClientId,
+            name: 'RPD'
           })
         )
       })
