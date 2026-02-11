@@ -18,8 +18,8 @@ const summaryLogUploadReportRowSchema = Joi.object({
     .required(),
   businessName: Joi.string().required(),
   orgId: Joi.number().required(),
-  registrationNumber: Joi.string().required(),
-  accreditationNo: Joi.string().allow('').required(),
+  registrationNumber: Joi.string().allow('').required(),
+  accreditationNumber: Joi.string().allow('').required(),
   reprocessingSite: Joi.string().allow('').required(),
   packagingWasteCategory: Joi.string()
     .valid(
