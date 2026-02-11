@@ -1,10 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { prnInsertSchema } from './schema.js'
+import { ObjectId } from 'mongodb'
+import { prnInsertSchema, prnReadSchema } from './schema.js'
 import {
   buildPrn as buildValidPrnInsert,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from './contract/test-data.js'
+
+const buildReadDocument = (overrides = {}) => ({
+  id: '507f1f77bcf86cd799439011',
+  ...buildValidPrnInsert(),
+  ...overrides
+})
 
 describe('PRN insert schema', () => {
   describe('valid documents', () => {
@@ -41,6 +48,12 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({ notes: 'Some issuer notes' })
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeUndefined()
+    })
+
+    it('rejects null notes on insert', () => {
+      const data = buildValidPrnInsert({ notes: null })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
     })
 
     it('accepts glassRecyclingProcess when material is glass', () => {
@@ -452,5 +465,57 @@ describe('PRN insert schema', () => {
       expect(error).toBeUndefined()
       expect(value.bogus).toBeUndefined()
     })
+  })
+})
+
+describe('PRN read schema', () => {
+  it('accepts a valid read document with id', () => {
+    const data = buildReadDocument()
+    const { error } = prnReadSchema.validate(data)
+    expect(error).toBeUndefined()
+  })
+
+  it('rejects when id is missing', () => {
+    const data = buildReadDocument()
+    delete data.id
+    const { error } = prnReadSchema.validate(data)
+    expect(error).toBeDefined()
+  })
+
+  it('strips MongoDB _id when stripUnknown is enabled', () => {
+    const objectId = new ObjectId()
+    const data = { ...buildReadDocument(), _id: objectId }
+    const { error, value } = prnReadSchema.validate(data, {
+      stripUnknown: true
+    })
+    expect(error).toBeUndefined()
+    expect(value._id).toBeUndefined()
+    expect(value.id).toBeDefined()
+  })
+
+  it('accepts documents in all lifecycle stages', () => {
+    const awaitingAuth = buildReadDocument({
+      ...buildAwaitingAuthorisationPrn()
+    })
+    const awaitingAcceptance = buildReadDocument({
+      ...buildAwaitingAcceptancePrn()
+    })
+
+    expect(prnReadSchema.validate(awaitingAuth).error).toBeUndefined()
+    expect(prnReadSchema.validate(awaitingAcceptance).error).toBeUndefined()
+  })
+
+  it('coerces null notes to absent', () => {
+    const data = buildReadDocument({ notes: null })
+    const { error, value } = prnReadSchema.validate(data)
+    expect(error).toBeUndefined()
+    expect(value).not.toHaveProperty('notes')
+  })
+
+  it('rejects when required fields from insert schema are missing', () => {
+    const data = buildReadDocument()
+    delete data.organisation
+    const { error } = prnReadSchema.validate(data)
+    expect(error).toBeDefined()
   })
 })
