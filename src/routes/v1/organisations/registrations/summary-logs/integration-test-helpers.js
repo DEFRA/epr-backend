@@ -527,7 +527,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const dynamicExtractor = {
     extract: async (summaryLog) => {
       const fileId = summaryLog?.file?.id
-      if (!fileId || !Object.prototype.hasOwnProperty.call(fileDataMap, fileId)) {
+      if (
+        !fileId ||
+        !Object.prototype.hasOwnProperty.call(fileDataMap, fileId)
+      ) {
         throw new Error(
           `No test file data found in fileDataMap for summary log file id: ${fileId}`
         )
