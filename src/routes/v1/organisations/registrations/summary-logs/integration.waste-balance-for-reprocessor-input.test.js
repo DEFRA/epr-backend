@@ -294,9 +294,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         }
       }
 
-      const featureFlags = createInMemoryFeatureFlags({
-        summaryLogs: true
-      })
+      const featureFlags = createInMemoryFeatureFlags()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,

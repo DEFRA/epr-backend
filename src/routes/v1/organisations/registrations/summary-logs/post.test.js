@@ -46,7 +46,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
           summaryLogsRepository: () => summaryLogsRepository,
           uploadsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()
@@ -151,7 +151,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
             createInMemorySummaryLogsRepository()(mockLogger),
           uploadsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()
@@ -212,7 +212,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
             createInMemorySummaryLogsRepository()(mockLogger),
           uploadsRepository: createInMemoryUploadsRepository()
         },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()

@@ -244,9 +244,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         summaryLogExtractor: dynamicExtractor
       })
 
-      const featureFlags = createInMemoryFeatureFlags({
-        summaryLogs: true
-      })
+      const featureFlags = createInMemoryFeatureFlags()
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: dynamicExtractor,

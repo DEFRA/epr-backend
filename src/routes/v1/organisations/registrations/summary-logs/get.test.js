@@ -29,7 +29,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory
       },
-      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      featureFlags: createInMemoryFeatureFlags()
     })
 
     return { server, summaryLogsRepository }
