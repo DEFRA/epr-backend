@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   linkItemsToOrganisations,
@@ -163,7 +164,14 @@ export class MigrationOrchestrator {
       pendingMigration
     )
 
-    await upsertOrganisations(this.organisationsRepository, migrationItems)
+    const { failed } = await upsertOrganisations(
+      this.organisationsRepository,
+      migrationItems
+    )
+
+    if (failed.length > 0) {
+      throw Boom.internal(`Failed to persist migrated organisation ${id}`)
+    }
 
     logger.info({
       message: `Successfully migrated organisation ${id}`
