@@ -409,6 +409,34 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
+      it('returns 201 when material is provided', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            ...validPayload,
+            material: MATERIAL.STEEL
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+      })
+
+      it('returns 422 when material is invalid', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            ...validPayload,
+            material: 'invalid_material'
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('returns 422 when notes exceeds 200 characters', async () => {
         const response = await server.inject({
           method: 'POST',
