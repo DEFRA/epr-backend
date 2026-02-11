@@ -2,6 +2,9 @@
 
 import { StatusCodes } from 'http-status-codes'
 
+const EXPECTED_SCOPE = 'epr-backend-resource-srv/access'
+const EXPECTED_TOKEN_USE = 'access'
+
 export const externalApiAuthPlugin = {
   plugin: {
     name: 'external-api-auth',
@@ -21,7 +24,20 @@ export const externalApiAuthPlugin = {
           _request,
           h
         ) => {
-          const tokenClientId = artifacts.decoded.payload.client_id
+          const {
+            client_id: tokenClientId,
+            scope,
+            token_use: tokenUse
+          } = artifacts.decoded.payload
+
+          if (tokenUse !== EXPECTED_TOKEN_USE) {
+            return { isValid: false }
+          }
+
+          if (!scope?.includes(EXPECTED_SCOPE)) {
+            return { isValid: false }
+          }
+
           if (!tokenClientId) {
             return { isValid: false }
           }

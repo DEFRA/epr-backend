@@ -50,12 +50,19 @@ const baseCognitoClaims = (clientId) => ({
   auth_time: 1734387454,
   client_id: clientId,
   token_use: /** @type {const} */ ('access'),
-  version: 2,
+  version: 2
 })
 
-/** @param {string} [clientId] @returns {string} */
-export const generateExternalApiToken = (clientId = 'stub-client-id') =>
-  Jwt.token.generate(baseCognitoClaims(clientId), jwtSecret, generateTokenOptions)
+/** @param {string} [clientId] @param {Partial<CognitoAccessTokenPayload>} [claimOverrides] @returns {string} */
+export const generateExternalApiToken = (
+  clientId = 'stub-client-id',
+  claimOverrides = {}
+) =>
+  Jwt.token.generate(
+    { ...baseCognitoClaims(clientId), ...claimOverrides },
+    jwtSecret,
+    generateTokenOptions
+  )
 
 /** @returns {string} */
 export const generateExternalApiTokenWithoutClientId = () => {

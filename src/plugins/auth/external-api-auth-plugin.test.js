@@ -90,6 +90,30 @@ describe('external API auth plugin', () => {
     expect(response.statusCode).toBe(401)
   })
 
+  it('should return 401 when token_use is not access', async () => {
+    const token = generateExternalApiToken(clientId, { token_use: 'id' })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { authorization: `Bearer ${token}` }
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
+  it('should return 401 when scope does not match', async () => {
+    const token = generateExternalApiToken(clientId, { scope: 'wrong/scope' })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { authorization: `Bearer ${token}` }
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
   it('should return 403 when client_id does not match expected value', async () => {
     const token = generateExternalApiToken('wrong-client-id')
 
