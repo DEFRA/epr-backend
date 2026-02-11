@@ -39,11 +39,13 @@ const issuer = { id: 'user-issuer', name: 'Issuer User' }
 /** @returns {number} */
 const nowInSeconds = () => Math.floor(Date.now() / 1000)
 
+const ONE_HOUR = 3600
+
 /** @param {string} clientId @returns {Required<CognitoAccessTokenPayload>} */
 const baseCognitoClaims = (clientId) => ({
   iss: 'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_test',
   sub: clientId,
-  exp: nowInSeconds() + 3600,
+  exp: nowInSeconds() + ONE_HOUR,
   iat: nowInSeconds(),
   jti: '00000000-0000-0000-0000-000000000000',
   scope: 'epr-backend-resource-srv/access',
