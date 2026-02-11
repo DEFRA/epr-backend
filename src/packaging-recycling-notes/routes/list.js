@@ -52,15 +52,15 @@ export const packagingRecyclingNotesList = {
       })
     }
   },
-  /** @param {import('#common/hapi-types.js').HapiRequest & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request */
+  /** @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request */
   handler: async (request, h) => {
-    const { lumpyPackagingRecyclingNotesRepository, logger } = request
+    const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
-      const result = await lumpyPackagingRecyclingNotesRepository.findByStatus({
+      const result = await packagingRecyclingNotesRepository.findByStatus({
         statuses,
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,

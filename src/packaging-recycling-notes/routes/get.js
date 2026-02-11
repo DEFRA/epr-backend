@@ -40,12 +40,12 @@ export const packagingRecyclingNotesList = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
-      lumpyPackagingRecyclingNotesRepository,
+      packagingRecyclingNotesRepository,
       organisationsRepository,
       params,
       logger
@@ -54,9 +54,7 @@ export const packagingRecyclingNotesList = {
 
     try {
       const [prns, accreditation] = await Promise.all([
-        lumpyPackagingRecyclingNotesRepository.findByAccreditation(
-          accreditationId
-        ),
+        packagingRecyclingNotesRepository.findByAccreditation(accreditationId),
         organisationsRepository.findAccreditationById(
           organisationId,
           accreditationId

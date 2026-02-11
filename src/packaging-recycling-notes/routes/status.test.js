@@ -77,7 +77,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
     let wasteBalancesRepository
     let organisationsRepository
     const mockPrn = createMockPrn()
@@ -95,10 +95,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository =
+      packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
-      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'findById')
-      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'updateStatus')
+      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
+      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
 
       wasteBalancesRepository = {
         findByAccreditationId: vi
@@ -118,13 +118,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
           wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true
+          packagingRecyclingNotes: true
         })
       })
 
@@ -155,7 +155,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(body.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             id: prnId,
@@ -165,7 +165,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('does not generate PRN number for non-issuing transitions', async () => {
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
 
@@ -177,7 +177,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         const callArgs =
-          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
+          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
         expect(callArgs).not.toHaveProperty('prnNumber')
       })
     })
@@ -197,7 +197,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
@@ -211,7 +211,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             prnNumber: expect.stringMatching(/^ER26\d{5}$/)
@@ -234,7 +234,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           exporterPrn
         )
 
@@ -246,7 +246,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             prnNumber: expect.stringMatching(/^EX26\d{5}$/)
@@ -268,7 +268,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
@@ -285,7 +285,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             prnNumber: expect.stringMatching(/^WR26\d{5}$/)
@@ -307,7 +307,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
@@ -336,12 +336,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
         // First call throws conflict, second succeeds
-        lumpyPackagingRecyclingNotesRepository.updateStatus
+        packagingRecyclingNotesRepository.updateStatus
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
           .mockResolvedValueOnce({
             ...awaitingAuthPrn,
@@ -363,12 +363,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         // Should have been called twice - once without suffix, once with A
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledTimes(2)
 
         // Second call should have suffix A
         const secondCall =
-          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[1][0]
+          packagingRecyclingNotesRepository.updateStatus.mock.calls[1][0]
         expect(secondCall.prnNumber).toMatch(/^ER26\d{5}A$/)
       })
 
@@ -386,12 +386,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
         // First three calls throw conflict, fourth succeeds
-        lumpyPackagingRecyclingNotesRepository.updateStatus
+        packagingRecyclingNotesRepository.updateStatus
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345A'))
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345B'))
@@ -413,12 +413,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledTimes(4)
 
         // Fourth call should have suffix C
         const fourthCall =
-          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[3][0]
+          packagingRecyclingNotesRepository.updateStatus.mock.calls[3][0]
         expect(fourthCall.prnNumber).toMatch(/^ER26\d{5}C$/)
       })
 
@@ -436,12 +436,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
         // All 27 attempts (no suffix + A-Z) throw conflict
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockRejectedValue(
+        packagingRecyclingNotesRepository.updateStatus.mockRejectedValue(
           new PrnNumberConflictError('ER2612345')
         )
 
@@ -456,7 +456,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         // Should have tried 27 times (no suffix + A through Z)
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledTimes(27)
       })
 
@@ -474,12 +474,12 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
         )
 
         // First call throws conflict, second throws database error
-        lumpyPackagingRecyclingNotesRepository.updateStatus
+        packagingRecyclingNotesRepository.updateStatus
           .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
           .mockRejectedValueOnce(new Error('Database connection lost'))
 
@@ -494,7 +494,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         // Should have only tried twice before non-collision error
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledTimes(2)
       })
 
@@ -502,7 +502,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const userId = 'specific-test-user-id'
         const userName = 'Test User Name'
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
 
@@ -523,7 +523,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             updatedBy: { id: userId, name: userName }
@@ -532,7 +532,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('falls back to unknown when credentials have no id or name', async () => {
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
 
@@ -550,7 +550,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             updatedBy: { id: 'unknown', name: 'unknown' }
@@ -563,9 +563,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       it('returns 404 when PRN not found', async () => {
         const nonExistentId = '507f1f77bcf86cd799439099'
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          null
-        )
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(null)
 
         const response = await server.inject({
           method: 'POST',
@@ -607,7 +605,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createdPrn
         )
 
@@ -638,7 +636,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           unknownStatusPrn
         )
 
@@ -679,10 +677,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('returns 500 when updateStatus returns null', async () => {
         // Reset PRN to draft status for this test
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
           null
         )
 
@@ -698,10 +696,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('returns 500 when repository throws non-Boom error', async () => {
         // Reset PRN to draft status for this test
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -731,7 +729,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAcceptancePrn
         )
 
@@ -760,7 +758,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAcceptancePrn
         )
 
@@ -784,7 +782,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
   describe('waste balance deduction on PRN creation', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
     let wasteBalancesRepository
     let organisationsRepository
     const mockPrn = createMockPrn({ tonnage: 50.5 })
@@ -802,10 +800,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository =
+      packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
-      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'findById')
-      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'updateStatus')
+      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
+      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
 
       wasteBalancesRepository = {
         findByAccreditationId: vi
@@ -825,13 +823,13 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
           wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true
+          packagingRecyclingNotes: true
         })
       })
 
@@ -854,9 +852,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockResolvedValueOnce(
         undefined
       )
-      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-        mockPrn
-      )
+      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(mockPrn)
 
       const response = await server.inject({
         method: 'POST',
@@ -891,7 +887,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         }
       })
 
-      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         awaitingAuthPrn
       )
 
@@ -909,7 +905,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     it('returns 400 when no waste balance exists', async () => {
       wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(null)
-      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         createMockPrn()
       )
 
@@ -934,7 +930,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockRejectedValueOnce(
         new Error('Database write failed')
       )
-      lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+      packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         createMockPrn()
       )
 
@@ -955,7 +951,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () => ({
+          packagingRecyclingNotesRepository: () => ({
             findById: vi.fn(),
             create: vi.fn(),
             updateStatus: vi.fn()
@@ -963,7 +959,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           organisationsRepository: () => defaultOrganisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: false
+          packagingRecyclingNotes: false
         })
       })
 

@@ -22,10 +22,10 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository = {
+      packagingRecyclingNotesRepository = {
         findById: vi.fn(),
         findByPrnNumber: vi.fn(),
         findByAccreditation: vi.fn(),
@@ -36,8 +36,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
           wasteBalancesRepository: () => ({}),
           organisationsRepository: () => ({})
         },
@@ -58,13 +58,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
     describe('successful listing', () => {
       it('returns 200 with mapped items', async () => {
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          {
-            items: [mockPrn],
-            nextCursor: null,
-            hasMore: false
-          }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [mockPrn],
+          nextCursor: null,
+          hasMore: false
+        })
 
         const response = await server.inject({
           method: 'GET',
@@ -84,9 +82,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
       })
 
       it('passes statuses to repository as array', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         await server.inject({
           method: 'GET',
@@ -94,7 +94,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByStatus
+          packagingRecyclingNotesRepository.findByStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             statuses: ['awaiting_acceptance', 'cancelled']
@@ -103,9 +103,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
       })
 
       it('passes date range filters to repository', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         const dateFrom = '2026-01-01T00:00:00Z'
         const dateTo = '2026-01-31T23:59:59Z'
@@ -116,7 +118,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByStatus
+          packagingRecyclingNotesRepository.findByStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             dateFrom: new Date(dateFrom),
@@ -127,9 +129,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
       it('passes cursor to repository', async () => {
         const cursor = '507f1f77bcf86cd799439012'
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         await server.inject({
           method: 'GET',
@@ -137,14 +141,16 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByStatus
+          packagingRecyclingNotesRepository.findByStatus
         ).toHaveBeenCalledWith(expect.objectContaining({ cursor }))
       })
 
       it('passes limit to repository', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         await server.inject({
           method: 'GET',
@@ -152,15 +158,17 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByStatus
+          packagingRecyclingNotesRepository.findByStatus
         ).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }))
       })
 
       it('returns nextCursor when hasMore is true', async () => {
         const nextCursor = '507f1f77bcf86cd799439099'
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [createMockIssuedPrn()], nextCursor, hasMore: true }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [createMockIssuedPrn()],
+          nextCursor,
+          hasMore: true
+        })
 
         const response = await server.inject({
           method: 'GET',
@@ -173,9 +181,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
       })
 
       it('returns empty items array when no PRNs match', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         const response = await server.inject({
           method: 'GET',
@@ -189,9 +199,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
       it('maps each item using external PRN mapper', async () => {
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [mockPrn], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [mockPrn],
+          nextCursor: null,
+          hasMore: false
+        })
 
         const response = await server.inject({
           method: 'GET',
@@ -214,9 +226,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
       })
 
       it('uses default limit of 200 when not provided', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         await server.inject({
           method: 'GET',
@@ -224,14 +238,16 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.findByStatus
+          packagingRecyclingNotesRepository.findByStatus
         ).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }))
       })
 
       it('does not pass dates to repository when not provided', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         await server.inject({
           method: 'GET',
@@ -239,7 +255,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         const callArgs =
-          lumpyPackagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
+          packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
         expect(callArgs.dateFrom).toBeUndefined()
         expect(callArgs.dateTo).toBeUndefined()
       })
@@ -301,9 +317,11 @@ describe('GET /v1/packaging-recycling-notes', () => {
       })
 
       it('caps limit at the maximum when exceeded', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce(
-          { items: [], nextCursor: null, hasMore: false }
-        )
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
 
         await server.inject({
           method: 'GET',
@@ -311,14 +329,14 @@ describe('GET /v1/packaging-recycling-notes', () => {
         })
 
         const callArgs =
-          lumpyPackagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
+          packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
         expect(callArgs.limit).toBe(500)
       })
     })
 
     describe('error handling', () => {
       it('returns 500 when repository throws unexpected error', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.findByStatus.mockRejectedValueOnce(
           new Error('Database connection lost')
         )
 
@@ -332,7 +350,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
       it('passes through Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        lumpyPackagingRecyclingNotesRepository.findByStatus.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.findByStatus.mockRejectedValueOnce(
           Boom.default.forbidden('Access denied')
         )
 

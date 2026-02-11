@@ -79,12 +79,12 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository, systemLogsRepository: SystemLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
-      lumpyPackagingRecyclingNotesRepository,
+      packagingRecyclingNotesRepository,
       wasteBalancesRepository,
       organisationsRepository,
       params,
@@ -101,8 +101,7 @@ export const packagingRecyclingNotesUpdateStatus = {
 
     try {
       // Fetch PRN before update to capture previous state for audit
-      const previousPrn =
-        await lumpyPackagingRecyclingNotesRepository.findById(id)
+      const previousPrn = await packagingRecyclingNotesRepository.findById(id)
 
       if (!previousPrn) {
         throw Boom.notFound(`PRN not found: ${id}`)
@@ -113,7 +112,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       const actor = INTERNAL_ACTOR_BY_STATUS[previousPrn.status.currentStatus]
 
       const updatedPrn = await updatePrnStatus({
-        prnRepository: lumpyPackagingRecyclingNotesRepository,
+        prnRepository: packagingRecyclingNotesRepository,
         wasteBalancesRepository,
         organisationsRepository,
         id,

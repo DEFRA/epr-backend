@@ -109,24 +109,24 @@ describe('createInMemoryFeatureFlags', () => {
     })
   })
 
-  describe('isCreateLumpyPackagingRecyclingNotesEnabled', () => {
-    it('returns true when lumpyPackagingRecyclingNotes flag is enabled', () => {
+  describe('isCreatePackagingRecyclingNotesEnabled', () => {
+    it('returns true when packagingRecyclingNotes flag is enabled', () => {
       const flags = createInMemoryFeatureFlags({
-        lumpyPackagingRecyclingNotes: true
+        packagingRecyclingNotes: true
       })
-      expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(true)
+      expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(true)
     })
 
-    it('returns false when lumpyPackagingRecyclingNotes flag is disabled', () => {
+    it('returns false when packagingRecyclingNotes flag is disabled', () => {
       const flags = createInMemoryFeatureFlags({
-        lumpyPackagingRecyclingNotes: false
+        packagingRecyclingNotes: false
       })
-      expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
+      expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
     })
 
-    it('returns false when lumpyPackagingRecyclingNotes flag is not provided', () => {
+    it('returns false when packagingRecyclingNotes flag is not provided', () => {
       const flags = createInMemoryFeatureFlags({})
-      expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
+      expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
     })
   })
 })

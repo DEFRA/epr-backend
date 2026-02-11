@@ -37,13 +37,13 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
     let organisationsRepository
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository =
+      packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
-      vi.spyOn(lumpyPackagingRecyclingNotesRepository, 'create')
+      vi.spyOn(packagingRecyclingNotesRepository, 'create')
 
       organisationsRepository = {
         findById: vi.fn(async () => ({
@@ -67,12 +67,12 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: true
+          packagingRecyclingNotes: true
         })
       })
 
@@ -122,9 +122,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             organisation: expect.objectContaining({ id: organisationId }),
             registrationId,
@@ -143,7 +141,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         })
 
         const createArg =
-          lumpyPackagingRecyclingNotesRepository.create.mock.calls[0][0]
+          packagingRecyclingNotesRepository.create.mock.calls[0][0]
         expect(createArg.status.currentStatus).toBe(PRN_STATUS.DRAFT)
         expect(createArg.status).not.toHaveProperty('created')
         expect(createArg.status.history).toStrictEqual([
@@ -175,9 +173,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             createdBy: { id: userId, name: userName },
             updatedBy: { id: userId, name: userName },
@@ -206,9 +202,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             createdBy: expect.objectContaining({ id: 'unknown' })
           })
@@ -223,9 +217,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             isExport: false
           })
@@ -249,9 +241,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             isExport: true
           })
@@ -279,9 +269,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: { ...validPayload, material: MATERIAL.GLASS }
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.create
-        ).toHaveBeenCalledWith(
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             accreditation: expect.objectContaining({
               material: MATERIAL.GLASS,
@@ -301,7 +289,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         })
 
         const createArg =
-          lumpyPackagingRecyclingNotesRepository.create.mock.calls[0][0]
+          packagingRecyclingNotesRepository.create.mock.calls[0][0]
         expect(createArg.accreditation).not.toHaveProperty(
           'glassRecyclingProcess'
         )
@@ -344,7 +332,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.CREATED)
 
         const createArg =
-          lumpyPackagingRecyclingNotesRepository.create.mock.calls[0][0]
+          packagingRecyclingNotesRepository.create.mock.calls[0][0]
         expect(createArg.issuedToOrganisation).not.toHaveProperty('tradingName')
       })
 
@@ -466,7 +454,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        lumpyPackagingRecyclingNotesRepository.create.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
           Boom.default.notFound('Organisation not found')
         )
 
@@ -481,7 +469,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        lumpyPackagingRecyclingNotesRepository.create.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -503,7 +491,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository:
+          packagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository(),
           organisationsRepository: () => ({
             findById: vi.fn(async () => ({
@@ -523,7 +511,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           })
         },
         featureFlags: createInMemoryFeatureFlags({
-          lumpyPackagingRecyclingNotes: false
+          packagingRecyclingNotes: false
         })
       })
 

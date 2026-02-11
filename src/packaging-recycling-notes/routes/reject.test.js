@@ -25,10 +25,10 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository = {
+      packagingRecyclingNotesRepository = {
         findById: vi.fn(),
         findByPrnNumber: vi.fn(),
         create: vi.fn(),
@@ -38,8 +38,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
           wasteBalancesRepository: () => ({}),
           organisationsRepository: () => ({})
         },
@@ -60,25 +60,23 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     describe('successful rejection', () => {
       it('returns 204 when PRN is awaiting acceptance', async () => {
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-              history: [
-                ...mockPrn.status.history,
-                {
-                  status: PRN_STATUS.AWAITING_CANCELLATION,
-                  at: new Date(),
-                  by: { id: 'rpd', name: 'RPD' }
-                }
-              ]
-            }
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            history: [
+              ...mockPrn.status.history,
+              {
+                status: PRN_STATUS.AWAITING_CANCELLATION,
+                at: new Date(),
+                by: { id: 'rpd', name: 'RPD' }
+              }
+            ]
           }
-        )
+        })
 
         const response = await server.inject({
           method: 'POST',
@@ -91,18 +89,16 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
       it('calls updateStatus with awaiting_cancellation status, PRN id, and RPD user', async () => {
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-              history: []
-            }
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            history: []
           }
-        )
+        })
 
         await server.inject({
           method: 'POST',
@@ -110,7 +106,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             id: prnId,
@@ -127,18 +123,16 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
       it('uses provided rejectedAt timestamp', async () => {
         const rejectedAt = '2026-02-01T10:30:00Z'
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-              history: []
-            }
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            history: []
           }
-        )
+        })
 
         await server.inject({
           method: 'POST',
@@ -147,7 +141,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             updatedAt: new Date(rejectedAt)
@@ -158,18 +152,16 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
       it('uses current time when rejectedAt not provided', async () => {
         const beforeCall = new Date()
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-              history: []
-            }
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            history: []
           }
-        )
+        })
 
         await server.inject({
           method: 'POST',
@@ -177,7 +169,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         const callArgs =
-          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
+          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
         expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
           beforeCall.getTime()
         )
@@ -186,18 +178,16 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
       it('uses current time when payload is null', async () => {
         const beforeCall = new Date()
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: {
-              currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-              history: []
-            }
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+            history: []
           }
-        )
+        })
 
         const response = await server.inject({
           method: 'POST',
@@ -207,7 +197,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
         const callArgs =
-          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
+          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
         expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
           beforeCall.getTime()
         )
@@ -216,7 +206,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
 
     describe('error handling', () => {
       it('returns 404 with spec error format when PRN not found', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           null
         )
 
@@ -245,7 +235,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           acceptedPrn
         )
 
@@ -274,7 +264,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           awaitingCancellationPrn
         )
 
@@ -303,7 +293,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           cancelledPrn
         )
 
@@ -332,7 +322,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           draftPrn
         )
 
@@ -363,7 +353,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
       })
 
       it('returns 500 with spec error format when repository throws unexpected error', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
           new Error('Database connection lost')
         )
 

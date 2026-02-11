@@ -9,7 +9,7 @@
  * @property {() => GlassMigrationMode} getGlassMigrationMode
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled
  * @property {() => boolean} isSummaryLogsEnabled
- * @property {() => boolean} isCreateLumpyPackagingRecyclingNotesEnabled
+ * @property {() => boolean} isCreatePackagingRecyclingNotesEnabled
  * @property {() => boolean} isPackagingRecyclingNotesExternalApiEnabled
  */
 

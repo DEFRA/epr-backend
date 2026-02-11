@@ -25,7 +25,7 @@ import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
-import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
+import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
@@ -122,7 +122,7 @@ function getProductionPlugins(config) {
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
     workerPlugin,
-    lumpyPackagingRecyclingNotesRepositoryPlugin,
+    packagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
       options: { config }
