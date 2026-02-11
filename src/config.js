@@ -448,8 +448,10 @@ const config = convict(baseConfig)
 
 config.validate({ allowed: 'strict' })
 
-function getConfig(overrides) {
-  return convict(baseConfig, overrides)
+function getConfig(overrides = {}) {
+  const cfg = convict(baseConfig)
+  cfg.load(overrides)
+  return cfg
 }
 
 export { config, getConfig }

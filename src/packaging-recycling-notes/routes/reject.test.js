@@ -12,7 +12,6 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
@@ -51,12 +50,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         updateStatus: vi.fn()
       }
 
-      config.set(
-        'packagingRecyclingNotesExternalApi.clientId',
-        externalApiClientId
-      )
-
       server = await createTestServer({
+        config: {
+          packagingRecyclingNotesExternalApi: {
+            clientId: externalApiClientId
+          }
+        },
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,

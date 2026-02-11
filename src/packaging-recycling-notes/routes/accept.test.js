@@ -60,12 +60,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         creditAvailableBalanceForPrnCancellation: vi.fn()
       }
 
-      config.set(
-        'packagingRecyclingNotesExternalApi.clientId',
-        externalApiClientId
-      )
-
       server = await createTestServer({
+        config: {
+          packagingRecyclingNotesExternalApi: {
+            clientId: externalApiClientId
+          }
+        },
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
