@@ -47,10 +47,20 @@ describe('upsertOrganisations', () => {
       organisationsRepository.insert.mockResolvedValue()
       organisationsRepository.replace.mockResolvedValue()
 
-      await upsertOrganisations(organisationsRepository, organisations)
+      const result = await upsertOrganisations(
+        organisationsRepository,
+        organisations
+      )
 
       expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
       expect(organisationsRepository.replace).toHaveBeenCalledTimes(1)
+      expect(result).toEqual({
+        successful: [
+          { success: true, id: org1Id.toString(), action: 'inserted' },
+          { success: true, id: org2Id.toString(), action: 'updated' }
+        ],
+        failed: []
+      })
       expect(logger.info).toHaveBeenCalledWith({
         message:
           'Persisted transformed submissions: 2/2 organisations processed (1 inserted, 1 updated, 0 failed)'
@@ -68,8 +78,15 @@ describe('upsertOrganisations', () => {
       const error = new Error('Insert failed')
       organisationsRepository.insert.mockRejectedValue(error)
 
-      await upsertOrganisations(organisationsRepository, organisations)
+      const result = await upsertOrganisations(
+        organisationsRepository,
+        organisations
+      )
 
+      expect(result).toEqual({
+        successful: [],
+        failed: [{ success: false, id: org1IdStr, phase: 'insert' }]
+      })
       expect(logger.error).toHaveBeenCalledWith({
         err: error,
         message: 'Error inserting organisation',
@@ -96,8 +113,15 @@ describe('upsertOrganisations', () => {
       const error = new Error('Version conflict')
       organisationsRepository.replace.mockRejectedValue(error)
 
-      await upsertOrganisations(organisationsRepository, organisations)
+      const result = await upsertOrganisations(
+        organisationsRepository,
+        organisations
+      )
 
+      expect(result).toEqual({
+        successful: [],
+        failed: [{ success: false, id: org1IdStr, phase: 'update' }]
+      })
       expect(logger.error).toHaveBeenCalledWith({
         err: error,
         message: 'Error updating organisation',
@@ -129,8 +153,15 @@ describe('upsertOrganisations', () => {
       organisationsRepository.insert.mockRejectedValue(new Error('Failed'))
       organisationsRepository.replace.mockResolvedValue()
 
-      await upsertOrganisations(organisationsRepository, organisations)
+      const result = await upsertOrganisations(
+        organisationsRepository,
+        organisations
+      )
 
+      expect(result).toEqual({
+        successful: [{ success: true, id: org2IdStr, action: 'updated' }],
+        failed: [{ success: false, id: org1IdStr, phase: 'insert' }]
+      })
       expect(logger.info).toHaveBeenCalledWith({
         message:
           'Persisted transformed submissions: 1/2 organisations processed (0 inserted, 1 updated, 1 failed)'

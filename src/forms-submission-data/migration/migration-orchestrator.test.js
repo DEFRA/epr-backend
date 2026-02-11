@@ -30,7 +30,7 @@ vi.mock('./migration-delta-calculator.js', () => ({
 }))
 
 vi.mock('./organisation-persistence.js', () => ({
-  upsertOrganisations: vi.fn()
+  upsertOrganisations: vi.fn().mockResolvedValue({ successful: [], failed: [] })
 }))
 
 vi.mock('#formsubmission/link-form-submissions.js', () => ({
@@ -423,6 +423,41 @@ describe('MigrationOrchestrator', () => {
           organisations: new Set([orgId]),
           accreditations: new Set([accrId])
         })
+      )
+    })
+
+    it('should throw when upsert fails', async () => {
+      const orgId = new ObjectId().toString()
+      const org = createOrg(orgId)
+
+      formsSubmissionRepository.findOrganisationById.mockResolvedValue({
+        id: orgId
+      })
+      formsSubmissionRepository.findRegistrationsBySystemReference.mockResolvedValue(
+        []
+      )
+      formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
+        []
+      )
+      organisationsRepository.findAllIds.mockResolvedValue({
+        organisations: new Set(),
+        registrations: new Set(),
+        accreditations: new Set()
+      })
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [],
+        accreditations: []
+      })
+
+      upsertOrganisations.mockResolvedValueOnce({
+        successful: [],
+        failed: [{ success: false, id: orgId, phase: 'insert' }]
+      })
+
+      await expect(orchestrator.migrateById(orgId)).rejects.toThrow(
+        `Failed to persist migrated organisation ${orgId}`
       )
     })
 
