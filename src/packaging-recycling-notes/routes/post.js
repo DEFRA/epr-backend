@@ -79,7 +79,7 @@ const buildPrnData = ({
   issuedToOrganisation: payload.issuedToOrganisation,
   tonnage: payload.tonnage,
   isExport,
-  notes: payload.notes || undefined,
+  ...(payload.notes && { notes: payload.notes }),
   isDecemberWaste: false,
   status: {
     currentStatus: PRN_STATUS.DRAFT,

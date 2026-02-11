@@ -109,5 +109,6 @@ export const prnInsertSchema = Joi.object({
 })
 
 export const prnReadSchema = prnInsertSchema.keys({
-  id: Joi.string().required()
+  id: Joi.string().required(),
+  notes: Joi.string().empty(null).optional()
 })

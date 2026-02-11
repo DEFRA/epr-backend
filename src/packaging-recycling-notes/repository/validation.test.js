@@ -91,6 +91,12 @@ describe('validatePrnRead', () => {
     expect(result.id).toBe('507f1f77bcf86cd799439011')
   })
 
+  it('coerces null notes to absent', () => {
+    const data = buildReadDocument({ notes: null })
+    const result = validatePrnRead(data)
+    expect(result).not.toHaveProperty('notes')
+  })
+
   it('throws Boom.badData for invalid read data', () => {
     const data = buildReadDocument()
     delete data.id

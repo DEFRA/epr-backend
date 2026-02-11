@@ -336,6 +336,19 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(createArg.issuedToOrganisation).not.toHaveProperty('tradingName')
       })
 
+      it('omits notes key from stored data when no notes provided', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        const createArg =
+          packagingRecyclingNotesRepository.create.mock.calls[0][0]
+        expect(createArg).not.toHaveProperty('notes')
+      })
+
       it('should include issuer notes when provided', async () => {
         const notes = 'Test issuer notes'
 

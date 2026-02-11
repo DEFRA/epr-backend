@@ -50,6 +50,12 @@ describe('PRN insert schema', () => {
       expect(error).toBeUndefined()
     })
 
+    it('rejects null notes on insert', () => {
+      const data = buildValidPrnInsert({ notes: null })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
     it('accepts glassRecyclingProcess when material is glass', () => {
       const data = buildValidPrnInsert({
         accreditation: {
@@ -497,6 +503,13 @@ describe('PRN read schema', () => {
 
     expect(prnReadSchema.validate(awaitingAuth).error).toBeUndefined()
     expect(prnReadSchema.validate(awaitingAcceptance).error).toBeUndefined()
+  })
+
+  it('coerces null notes to absent', () => {
+    const data = buildReadDocument({ notes: null })
+    const { error, value } = prnReadSchema.validate(data)
+    expect(error).toBeUndefined()
+    expect(value).not.toHaveProperty('notes')
   })
 
   it('rejects when required fields from insert schema are missing', () => {
