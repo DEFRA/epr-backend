@@ -260,7 +260,7 @@ describe('Repeated uploads of identical data', () => {
         }
       }
 
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {

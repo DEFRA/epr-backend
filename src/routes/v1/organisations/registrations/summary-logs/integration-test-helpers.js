@@ -185,7 +185,7 @@ export const createTestInfrastructure = async (
     summaryLogExtractor
   })
 
-  const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+  const featureFlags = createInMemoryFeatureFlags()
 
   const server = await createTestServer({
     repositories: {

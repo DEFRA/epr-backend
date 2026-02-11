@@ -319,12 +319,6 @@ const baseConfig = {
     }
   },
   featureFlags: {
-    summaryLogs: {
-      doc: 'Feature Flag: Summary Logs',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_SUMMARY_LOGS'
-    },
     formsDataMigration: {
       doc: 'Feature Flag: Runs forms data migration on startup',
       format: Boolean,

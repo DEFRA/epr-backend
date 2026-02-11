@@ -369,7 +369,7 @@ describe('Submission and placeholder tests', () => {
         }
       }
 
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
@@ -740,7 +740,7 @@ describe('Submission and placeholder tests', () => {
         wasteRecordsRepository,
         summaryLogExtractor
       })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {

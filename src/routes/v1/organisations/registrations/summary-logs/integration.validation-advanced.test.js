@@ -383,7 +383,7 @@ describe('Advanced validation scenarios', () => {
         wasteRecordsRepository,
         summaryLogExtractor
       })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
@@ -561,7 +561,7 @@ describe('Advanced validation scenarios', () => {
         wasteRecordsRepository,
         summaryLogExtractor
       })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
@@ -778,7 +778,7 @@ describe('Advanced validation scenarios', () => {
         })
       )
 
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+      const featureFlags = createInMemoryFeatureFlags()
 
       server = await createTestServer({
         repositories: {
