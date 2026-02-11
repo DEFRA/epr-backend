@@ -110,7 +110,7 @@ const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
 
 export const createReprocessorReceivedRowValues = (overrides = {}) => {
-  const tonnage = overrides.tonnageReceived
+  const tonnage = overrides.tonnageReceived ?? 1000
   const d = {
     rowId: 1001,
     dateReceived: DEFAULT_DATE,
@@ -343,8 +343,10 @@ export const pollWhileStatus = async (
   summaryLogId,
   options = {}
 ) => {
-  const waitWhile = options.waitWhile
-  const maxAttempts = options.maxAttempts || DEFAULT_MAX_ATTEMPTS
+  const {
+    waitWhile = SUMMARY_LOG_STATUS.VALIDATING,
+    maxAttempts = DEFAULT_MAX_ATTEMPTS
+  } = options
   let attempts = 0
   let status = waitWhile
 
@@ -483,9 +485,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   reprocessingType = 'input',
   material = 'paper',
   organisationId = new ObjectId().toString(),
-  registrationId = new ObjectId().toString(),
-  accreditationId = 'ACC-123'
+  registrationId = new ObjectId().toString()
 } = {}) => {
+  const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
   const mockLogger = {
     info: vi.fn(),
@@ -524,7 +526,13 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const fileDataMap = {}
   const dynamicExtractor = {
     extract: async (summaryLog) => {
-      return fileDataMap[summaryLog.file.id]
+      const fileId = summaryLog?.file?.id
+      if (!fileId || !Object.prototype.hasOwnProperty.call(fileDataMap, fileId)) {
+        throw new Error(
+          `No test file data found in fileDataMap for summary log file id: ${fileId}`
+        )
+      }
+      return fileDataMap[fileId]
     }
   }
 
