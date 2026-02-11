@@ -2,21 +2,10 @@ import { http, HttpResponse } from 'msw'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
-import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
+  UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -26,63 +15,19 @@ import {
   buildSubmitUrl,
   createUploadPayload,
   pollForValidation,
-  pollWhileStatus
+  pollWhileStatus,
+  setupWasteBalanceIntegrationEnvironment,
+  createWasteBalanceMeta,
+  createReprocessorReceivedRowValues,
+  createReprocessorSentOnRowValues,
+  REPROCESSOR_RECEIVED_HEADERS,
+  REPROCESSOR_SENT_ON_HEADERS
 } from './integration-test-helpers.js'
 
-const RECEIVED_HEADERS = [
-  'ROW_ID',
-  'DATE_RECEIVED_FOR_REPROCESSING',
-  'EWC_CODE',
-  'DESCRIPTION_WASTE',
-  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-  'GROSS_WEIGHT',
-  'TARE_WEIGHT',
-  'PALLET_WEIGHT',
-  'NET_WEIGHT',
-  'BAILING_WIRE_PROTOCOL',
-  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-  'WEIGHT_OF_NON_TARGET_MATERIALS',
-  'RECYCLABLE_PROPORTION_PERCENTAGE',
-  'TONNAGE_RECEIVED_FOR_RECYCLING',
-  'SUPPLIER_NAME',
-  'SUPPLIER_ADDRESS',
-  'SUPPLIER_POSTCODE',
-  'SUPPLIER_EMAIL',
-  'SUPPLIER_PHONE_NUMBER',
-  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
-  'YOUR_REFERENCE',
-  'WEIGHBRIDGE_TICKET',
-  'CARRIER_NAME',
-  'CBD_REG_NUMBER',
-  'CARRIER_VEHICLE_REGISTRATION_NUMBER'
-]
-
-const SENT_ON_HEADERS = [
-  'ROW_ID',
-  'DATE_LOAD_LEFT_SITE',
-  'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
-  'FINAL_DESTINATION_FACILITY_TYPE',
-  'FINAL_DESTINATION_NAME',
-  'FINAL_DESTINATION_ADDRESS',
-  'FINAL_DESTINATION_POSTCODE',
-  'FINAL_DESTINATION_EMAIL',
-  'FINAL_DESTINATION_PHONE',
-  'YOUR_REFERENCE',
-  'DESCRIPTION_WASTE',
-  'EWC_CODE',
-  'WEIGHBRIDGE_TICKET'
-]
-
 describe('Submission and placeholder tests (Reprocessor Input)', () => {
-  let organisationId
-  let registrationId
-
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
-    organisationId = new ObjectId().toString()
-    registrationId = new ObjectId().toString()
-
     getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
@@ -96,256 +41,26 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     const fileId = 'file-submit-repro-123'
     const filename = 'waste-data-repro.xlsx'
 
-    const sharedMeta = {
-      REGISTRATION_NUMBER: {
-        value: 'REG-12345',
-        location: { sheet: 'Data', row: 1, column: 'B' }
-      },
-      PROCESSING_TYPE: {
-        value: 'REPROCESSOR_INPUT',
-        location: { sheet: 'Data', row: 2, column: 'B' }
-      },
-      MATERIAL: {
-        value: 'Paper_and_board',
-        location: { sheet: 'Data', row: 3, column: 'B' }
-      },
-      TEMPLATE_VERSION: {
-        value: 5,
-        location: { sheet: 'Data', row: 4, column: 'B' }
-      },
-      ACCREDITATION_NUMBER: {
-        value: 'ACC-2025-001',
-        location: { sheet: 'Data', row: 5, column: 'B' }
-      }
-    }
-
-    const createReceivedRowValues = (overrides = {}) => {
-      const tonnage = overrides.tonnageReceived ?? 850
-      const d = {
-        rowId: 1001,
-        dateReceived: '2025-01-15T00:00:00.000Z',
-        ewcCode: '15 01 01',
-        wasteDescription: 'Paper - other',
-        prnIssued: 'No',
-        grossWeight: tonnage + 150,
-        tareWeight: 100,
-        palletWeight: 50,
-        netWeight: tonnage,
-        bailingWire: 'No',
-        recyclablePropMethod: 'Actual weight (100%)',
-        nonTargetWeight: 0,
-        recyclablePropPct: 1,
-        tonnageReceived: tonnage,
-        supplierName: 'Supplier A',
-        supplierAddress: '123 Street',
-        supplierPostcode: 'AB1 2CD',
-        supplierEmail: 'supplier@example.com',
-        supplierPhone: '0123456789',
-        yourReference: 'REF123',
-        weighbridgeTicket: 'WB123',
-        carrierName: 'Carrier A',
-        cbdRegNumber: 'CBD123',
-        carrierVehicleReg: 'AB12 CDE',
-        ...overrides
-      }
-      return [
-        d.rowId,
-        d.dateReceived,
-        d.ewcCode,
-        d.wasteDescription,
-        d.prnIssued,
-        d.grossWeight,
-        d.tareWeight,
-        d.palletWeight,
-        d.netWeight,
-        d.bailingWire,
-        d.recyclablePropMethod,
-        d.nonTargetWeight,
-        d.recyclablePropPct,
-        d.tonnageReceived,
-        d.supplierName,
-        d.supplierAddress,
-        d.supplierPostcode,
-        d.supplierEmail,
-        d.supplierPhone,
-        'Activities', // activitiesCarriedOutBySupplier
-        d.yourReference,
-        d.weighbridgeTicket,
-        d.carrierName,
-        d.cbdRegNumber,
-        d.carrierVehicleReg
-      ]
-    }
-
-    const createSentOnRowValues = (overrides = {}) => {
-      const d = {
-        rowId: 5001,
-        dateLeft: '2025-01-20T00:00:00.000Z',
-        tonnageSent: 100,
-        destinationType: 'Reprocessor',
-        destinationName: 'Dest A',
-        destinationAddress: '456 Road',
-        destinationPostcode: 'XY9 8ZW',
-        destinationEmail: 'dest@example.com',
-        destinationPhone: '0987654321',
-        yourReference: 'REF456',
-        wasteDescription: 'Paper',
-        ewcCode: '15 01 01',
-        weighbridgeTicket: 'WB456',
-        ...overrides
-      }
-      return [
-        d.rowId,
-        d.dateLeft,
-        d.tonnageSent,
-        d.destinationType,
-        d.destinationName,
-        d.destinationAddress,
-        d.destinationPostcode,
-        d.destinationEmail,
-        d.destinationPhone,
-        d.yourReference,
-        d.wasteDescription,
-        d.ewcCode,
-        d.weighbridgeTicket
-      ]
-    }
+    const sharedMeta = createWasteBalanceMeta('REPROCESSOR_INPUT')
 
     const createUploadData = (receivedRows = [], sentOnRows = []) => ({
       RECEIVED_LOADS_FOR_REPROCESSING: {
         location: { sheet: 'Received', row: 7, column: 'A' },
-        headers: RECEIVED_HEADERS,
+        headers: REPROCESSOR_RECEIVED_HEADERS,
         rows: receivedRows.map((row, index) => ({
           rowNumber: 8 + index,
-          values: createReceivedRowValues(row)
+          values: createReprocessorReceivedRowValues(row)
         }))
       },
       SENT_ON_LOADS: {
         location: { sheet: 'Sent', row: 7, column: 'A' },
-        headers: SENT_ON_HEADERS,
+        headers: REPROCESSOR_SENT_ON_HEADERS,
         rows: sentOnRows.map((row, index) => ({
           rowNumber: 8 + index,
-          values: createSentOnRowValues(row)
+          values: createReprocessorSentOnRowValues(row)
         }))
       }
     })
-
-    const setupIntegrationEnvironment = async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-        trace: vi.fn(),
-        fatal: vi.fn()
-      }
-
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-      const uploadsRepository = createInMemoryUploadsRepository()
-      const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository()
-      const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
-      const accreditationId = new ObjectId().toString()
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-12345',
-            status: 'approved',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            accreditationId
-          }
-        ],
-        accreditations: [
-          {
-            id: accreditationId,
-            accreditationNumber: 'ACC-2025-001',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([], { organisationsRepository })
-      const wasteBalancesRepository = wasteBalancesRepositoryFactory()
-
-      const fileDataMap = {}
-      const dynamicExtractor = {
-        extract: async (summaryLog) => {
-          const fileId = summaryLog.file.id
-          if (!fileDataMap[fileId]) {
-            throw new Error(`No data found for file ${fileId}`)
-          }
-          return fileDataMap[fileId]
-        }
-      }
-
-      const featureFlags = createInMemoryFeatureFlags()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor: dynamicExtractor
-      })
-
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: dynamicExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        wasteBalancesRepository,
-        organisationsRepository
-      })
-
-      const submitterWorker = {
-        validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
-          await syncWasteRecords(summaryLog)
-          await summaryLogsRepository.update(
-            summaryLogId,
-            version,
-            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-          )
-        }
-      }
-
-      const server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory,
-          organisationsRepository: () => organisationsRepository,
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        workers: {
-          summaryLogsWorker: submitterWorker
-        },
-        featureFlags
-      })
-
-      return {
-        server,
-        wasteBalancesRepository,
-        accreditationId,
-        fileDataMap
-      }
-    }
 
     const uploadAndValidate = async (
       env,
@@ -354,7 +69,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       filename,
       uploadData
     ) => {
-      const { server, fileDataMap } = env
+      const { server, fileDataMap, organisationId, registrationId } = env
 
       fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
 
@@ -385,7 +100,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     }
 
     const submitAndPoll = async (env, summaryLogId) => {
-      const { server } = env
+      const { server, organisationId, registrationId } = env
 
       await server.inject({
         method: 'POST',
@@ -416,7 +131,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     }
 
     it('should update waste balance with credits from received loads', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -449,7 +164,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should update waste balance with debits from sent on loads', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData(
@@ -484,7 +199,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create credit transaction if PRN was issued on received load', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -509,7 +224,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create transaction for received load outside accreditation period', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -542,7 +257,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create transaction for sent on load outside accreditation period', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData(
@@ -583,7 +298,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should handle revisions correctly (credit -> debit)', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: Valid credit
@@ -628,7 +343,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create transaction if mandatory fields are missing (AC01d)', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -662,7 +377,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should correctly calculate tonnage with bailing wire deduction (Requirement Note)', async () => {
-      const env = await setupIntegrationEnvironment()
+      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
       const { wasteBalancesRepository, accreditationId } = env
 
       // (1000 gross - 100 tare - 50 pallet) = 850 net
