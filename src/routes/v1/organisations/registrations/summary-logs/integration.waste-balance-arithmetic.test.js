@@ -18,7 +18,6 @@ import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balan
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { MATERIAL } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
 
 import {
@@ -433,8 +432,7 @@ describe('Waste balance arithmetic integration tests', () => {
           name: 'Producer Org',
           tradingName: 'Producer Trading'
         },
-        tonnage,
-        material: MATERIAL.PAPER
+        tonnage
       }
     })
 
