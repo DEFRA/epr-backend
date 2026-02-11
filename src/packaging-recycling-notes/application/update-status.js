@@ -241,8 +241,8 @@ export async function updatePrnStatus({
 
   if (
     !prn ||
-    prn.organisation?.id !== organisationId ||
-    prn.accreditation?.id !== accreditationId
+    prn.organisation.id !== organisationId ||
+    prn.accreditation.id !== accreditationId
   ) {
     throw Boom.notFound(`PRN not found: ${id}`)
   }
@@ -284,13 +284,13 @@ export async function updatePrnStatus({
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       regulator: accreditation.submittedToRegulator,
       isExport: prn.isExport,
-      accreditationYear: prn.accreditation?.accreditationYear
+      accreditationYear: prn.accreditation.accreditationYear
     })
 
     await prnMetrics.recordStatusTransition({
       fromStatus: currentStatus,
       toStatus: newStatus,
-      material: prn.accreditation?.material,
+      material: prn.accreditation.material,
       isExport: prn.isExport
     })
 
@@ -313,7 +313,7 @@ export async function updatePrnStatus({
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,
     toStatus: newStatus,
-    material: prn.accreditation?.material,
+    material: prn.accreditation.material,
     isExport: prn.isExport
   })
 

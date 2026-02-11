@@ -146,8 +146,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         })
       })
 
-      it('returns defaults for optional fields when not present', async () => {
-        const legacyPrn = {
+      it('returns null for optional fields when not present', async () => {
+        const draftPrn = {
           id: prnId,
           schemaVersion: 2,
           organisation: { id: organisationId, name: 'Test Organisation' },
@@ -155,6 +155,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           accreditation: {
             id: accreditationId,
             accreditationNumber: 'ACC-2026-001',
+            accreditationYear: 2026,
             material: 'glass',
             submittedToRegulator: 'ea',
             glassRecyclingProcess: 'glass_re_melt'
@@ -165,15 +166,26 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           },
           tonnage: 50,
           isExport: false,
-          status: { currentStatus: PRN_STATUS.DRAFT },
+          isDecemberWaste: false,
+          status: {
+            currentStatus: PRN_STATUS.DRAFT,
+            currentStatusAt: new Date('2026-01-15T10:00:00Z'),
+            history: [
+              {
+                status: PRN_STATUS.DRAFT,
+                at: new Date('2026-01-15T10:00:00Z'),
+                by: { id: 'user-1', name: 'Test User' }
+              }
+            ]
+          },
           createdAt: new Date('2026-01-15T10:00:00Z'),
           createdBy: { id: 'user-1', name: 'Test User' },
           updatedAt: new Date('2026-01-15T10:00:00Z'),
           updatedBy: null
-          // accreditationYear, isDecemberWaste, notes not present
+          // prnNumber, notes, status.issued not present
         }
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          legacyPrn
+          draftPrn
         )
 
         const response = await server.inject({
@@ -185,9 +197,10 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
 
         const payload = JSON.parse(response.payload)
-        expect(payload.accreditationYear).toBeNull()
-        expect(payload.isDecemberWaste).toBe(false)
+        expect(payload.prnNumber).toBeNull()
         expect(payload.notes).toBeNull()
+        expect(payload.issuedAt).toBeNull()
+        expect(payload.issuedBy).toBeNull()
       })
 
       it('returns prnNumber when PRN has been issued', async () => {

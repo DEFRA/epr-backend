@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
-import { validatePrnInsert } from './validation.js'
+import { validatePrnInsert, validatePrnRead } from './validation.js'
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -119,12 +119,7 @@ const findById = async (db, id) => {
     return null
   }
 
-  return /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
-    /** @type {unknown} */ ({
-      ...doc,
-      id: doc._id.toHexString()
-    })
-  )
+  return validatePrnRead({ ...doc, id: doc._id.toHexString() })
 }
 
 /**
@@ -180,13 +175,8 @@ const findByAccreditation = async (db, accreditationId) => {
     })
     .toArray()
 
-  return /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} */ (
-    /** @type {unknown} */ (
-      docs.map((doc) => ({
-        ...doc,
-        id: doc._id.toHexString()
-      }))
-    )
+  return docs.map((doc) =>
+    validatePrnRead({ ...doc, id: doc._id.toHexString() })
   )
 }
 
