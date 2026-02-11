@@ -1,5 +1,13 @@
 import { http, HttpResponse } from 'msw'
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach
+} from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -166,7 +174,9 @@ describe('Waste balance arithmetic integration tests', () => {
 
   describe('series of credits and debits', () => {
     it('should maintain correct balance through multiple summary log submissions and PRN creations', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Step 1: Submit first summary log with 100 + 200 = 300 tonnes
@@ -246,7 +256,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle interleaved credits and debits correctly', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Interleave summary log submissions and PRN creations
@@ -345,7 +357,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle decimal tonnage values correctly', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100.5 (decimal tonnes from summary log)
@@ -407,7 +421,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should reject PRN creation when tonnage exceeds available balance', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -444,7 +460,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should reject PRN issue when tonnage exceeds total balance', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -499,7 +517,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should deduct from total balance when PRN is issued', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200
@@ -537,7 +557,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle complete PRN lifecycle with multiple PRNs', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 500
@@ -609,7 +631,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle revisions that affect running totals', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Initial submission: 100 tonnes
@@ -676,7 +700,9 @@ describe('Waste balance arithmetic integration tests', () => {
 
   describe('PRN deletion', () => {
     it('should restore available balance when deleting from awaiting_authorisation', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200
@@ -712,7 +738,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should not change balance when discarding from draft', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200
@@ -742,7 +770,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should only restore the deleted PRN tonnage among multiple raised PRNs', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 500
@@ -779,7 +809,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should allow new PRN creation using restored balance', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -817,7 +849,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should handle deletion interleaved with issuance', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 500
@@ -872,7 +906,9 @@ describe('Waste balance arithmetic integration tests', () => {
 
   describe('transaction audit trail', () => {
     it('should record correct transaction history for series of operations', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 100
@@ -933,7 +969,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
 
     it('should record deletion credit with PRN_CANCELLED entity type', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Credit: 200

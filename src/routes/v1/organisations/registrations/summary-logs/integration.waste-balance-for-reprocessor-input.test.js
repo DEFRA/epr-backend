@@ -131,7 +131,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     }
 
     it('should update waste balance with credits from received loads', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -164,7 +167,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should update waste balance with debits from sent on loads', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData(
@@ -199,7 +205,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create credit transaction if PRN was issued on received load', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -224,7 +233,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create transaction for received load outside accreditation period', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -257,7 +269,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create transaction for sent on load outside accreditation period', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData(
@@ -298,7 +313,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should handle revisions correctly (credit -> debit)', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: Valid credit
@@ -343,7 +361,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should not create transaction if mandatory fields are missing (AC01d)', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -377,7 +398,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     it('should correctly calculate tonnage with bailing wire deduction (Requirement Note)', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'input' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // (1000 gross - 100 tare - 50 pallet) = 850 net

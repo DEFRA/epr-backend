@@ -133,7 +133,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     }
 
     it('should update waste balance with transactions', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const firstUploadData = createUploadData([
@@ -185,7 +187,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should update waste balance correctly when a revised summary log is submitted', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const firstUploadData = createUploadData([
@@ -274,7 +278,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should not create transaction for a row where PRN was already issued', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -313,7 +319,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should not create transaction for a row that falls outside the accreditation period', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -355,7 +363,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should handle submission with missing mandatory fields', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
 
       const response = await uploadAndValidate(
         env,
@@ -375,7 +385,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should create debit transaction when a row previously within accreditation period is revised to fall outside', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: row within accreditation period
@@ -440,7 +452,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should create debit transaction when a row is revised to have PRN issued', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: row without PRN issued (gets credited)
@@ -497,7 +511,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should create credit transaction when a row is revised from PRN issued to no PRN', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // First submission: row with PRN already issued (no credit)
@@ -550,7 +566,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
     })
 
     it('should track multiple sequential revisions to the same row with correct running balance', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'exporter' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const revisions = [

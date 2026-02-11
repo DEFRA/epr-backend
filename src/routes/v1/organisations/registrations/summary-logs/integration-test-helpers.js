@@ -616,7 +616,13 @@ const createTestSubmitterWorker = ({
  * @param {string} material
  * @returns {Object} Test organisation with registrations and accreditations
  */
-const buildComplexTestOrg = (registrationId, accreditationId, processingType, reprocessingType, material) => {
+const buildComplexTestOrg = (
+  registrationId,
+  accreditationId,
+  processingType,
+  reprocessingType,
+  material
+) => {
   return buildOrganisation({
     status: 'active',
     registrations: [

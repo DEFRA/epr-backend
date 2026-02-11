@@ -132,7 +132,10 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
     }
 
     it('should update waste balance with credits from reprocessed loads', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'output' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'output'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -166,7 +169,10 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
     })
 
     it('should not create transaction if ADD_PRODUCT_WEIGHT is No', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'output' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'output'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -200,7 +206,10 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
     })
 
     it('should not create transaction for reprocessed load outside accreditation period', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'output' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'output'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData([
@@ -234,7 +243,10 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
     })
 
     it('should update waste balance correctly when a reprocessed load is updated', async () => {
-      const env = await setupWasteBalanceIntegrationEnvironment({ processingType: 'reprocessor', reprocessingType: 'output' })
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'output'
+      })
       const { wasteBalancesRepository, accreditationId } = env
 
       // 1. Initial Submission: 100 tonnes
