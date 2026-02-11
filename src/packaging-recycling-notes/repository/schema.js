@@ -107,3 +107,8 @@ export const prnInsertSchema = Joi.object({
   updatedAt: Joi.date().required(),
   updatedBy: userSummarySchema.allow(null).required()
 })
+
+export const prnReadSchema = prnInsertSchema.keys({
+  id: Joi.string().required(),
+  notes: Joi.string().empty(null).optional()
+})

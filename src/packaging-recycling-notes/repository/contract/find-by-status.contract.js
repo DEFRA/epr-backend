@@ -512,6 +512,23 @@ export const testFindByStatusBehaviour = (it) => {
         expect(page2.nextCursor).toBeNull()
       })
 
+      it('does not leak _id in returned items', async () => {
+        const created = await repository.create(
+          buildCancelledPrn({
+            prnNumber: `FBS-NID-${Date.now()}-${Math.random()}`
+          })
+        )
+
+        const result = await repository.findByStatus({
+          statuses: [PRN_STATUS.CANCELLED],
+          limit: DEFAULT_LIMIT
+        })
+
+        const match = result.items.find((p) => p.id === created.id)
+        expect(match).toBeDefined()
+        expect(match._id).toBeUndefined()
+      })
+
       it('returns items with ids populated as strings', async () => {
         const created = await repository.create(
           buildCancelledPrn({

@@ -92,7 +92,7 @@ function updateOrganisation(organisationsRepository, item) {
 /**
  * @param {OrganisationsRepository} organisationsRepository
  * @param {OrganisationMigrationItem[]} organisations
- * @returns {Promise<void>}
+ * @returns {Promise<{successful: import('#formsubmission/types.js').SuccessResult[], failed: import('#formsubmission/types.js').FailureResult[]}>}
  */
 export async function upsertOrganisations(
   organisationsRepository,
@@ -120,4 +120,6 @@ export async function upsertOrganisations(
   logger.info({
     message: `Persisted transformed submissions: ${successful.length}/${organisations.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${failed.length} failed)`
   })
+
+  return { successful, failed }
 }
