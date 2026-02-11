@@ -148,6 +148,33 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
 }
 
 /**
+ * Credits both amount and availableAmount when cancelling an issued PRN.
+ * Reverses both the creation ringfence and the issue deduction.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {Object} params
+ */
+async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
+  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+  if (balance) {
+    await wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
+      accreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId
+    })
+  } else {
+    throw Boom.badRequest(
+      `No waste balance found for accreditation: ${accreditationId}`
+    )
+  }
+}
+
+/**
  * Applies waste balance side effects for a status transition.
  * Each transition type is mutually exclusive based on newStatus.
  *
@@ -166,6 +193,13 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
   ) {
     await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+  }
+
+  if (
+    newStatus === PRN_STATUS.CANCELLED &&
+    currentStatus === PRN_STATUS.AWAITING_CANCELLATION
+  ) {
+    await creditFullBalanceIfNeeded(wasteBalancesRepository, balanceParams)
   }
 
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {

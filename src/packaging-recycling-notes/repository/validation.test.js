@@ -16,6 +16,27 @@ describe('validatePrnInsert', () => {
     expect(result.bogus).toBeUndefined()
   })
 
+  it('preserves the provided currentStatusAt value', () => {
+    const providedDate = new Date('2020-01-01T00:00:00.000Z')
+    const data = buildValidPrnInsert({
+      status: {
+        currentStatus: 'draft',
+        currentStatusAt: providedDate,
+        history: [
+          {
+            status: 'draft',
+            at: new Date('2025-06-15T12:00:00.000Z'),
+            by: { id: 'user-1', name: 'Test User' }
+          }
+        ]
+      }
+    })
+
+    const result = validatePrnInsert(data)
+
+    expect(result.status.currentStatusAt).toEqual(providedDate)
+  })
+
   it('throws Boom.badData for invalid data', () => {
     const data = buildValidPrnInsert()
     delete data.organisation

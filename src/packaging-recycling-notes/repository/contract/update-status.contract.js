@@ -60,6 +60,22 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(new Date(updated.updatedAt).getTime()).toBe(updateTime.getTime())
       })
 
+      it('sets currentStatusAt to the transition timestamp', async () => {
+        const created = await repository.create(buildDraftPrn())
+        const updateTime = new Date()
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
+          updatedAt: updateTime
+        })
+
+        expect(new Date(updated.status.currentStatusAt).getTime()).toBe(
+          updateTime.getTime()
+        )
+      })
+
       it('returns null when PRN not found', async () => {
         const result = await repository.updateStatus({
           id: '000000000000000000000000',

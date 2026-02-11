@@ -4,6 +4,7 @@ import { testUpdateWasteBalanceTransactionsBehaviour } from './contract/updateWa
 import { testDeductAvailableBalanceForPrnCreationBehaviour } from './contract/deductAvailableBalanceForPrnCreation.contract.js'
 import { testDeductTotalBalanceForPrnIssueBehaviour } from './contract/deductTotalBalanceForPrnIssue.contract.js'
 import { testCreditAvailableBalanceForPrnCancellationBehaviour } from './contract/creditAvailableBalanceForPrnCancellation.contract.js'
+import { testCreditFullBalanceForIssuedPrnCancellationBehaviour } from './contract/creditFullBalanceForIssuedPrnCancellation.contract.js'
 
 export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testFindByAccreditationIdBehaviour(repositoryFactory)
@@ -12,4 +13,5 @@ export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testDeductAvailableBalanceForPrnCreationBehaviour(repositoryFactory)
   testDeductTotalBalanceForPrnIssueBehaviour(repositoryFactory)
   testCreditAvailableBalanceForPrnCancellationBehaviour(repositoryFactory)
+  testCreditFullBalanceForIssuedPrnCancellationBehaviour(repositoryFactory)
 }

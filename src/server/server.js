@@ -16,7 +16,7 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
-import { lumpyPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
+import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
@@ -122,7 +122,7 @@ function getProductionPlugins(config) {
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
     workerPlugin,
-    lumpyPackagingRecyclingNotesRepositoryPlugin,
+    packagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
       options: { config }

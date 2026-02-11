@@ -1276,6 +1276,82 @@ describe('updatePrnStatus', () => {
     })
   })
 
+  describe('post-issue cancellation waste balance reversal', () => {
+    it('credits both amount and availableAmount when confirming cancellation of issued PRN', async () => {
+      const prnRepository = createMockPrnRepository({
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
+          tonnage: 60,
+          status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
+        }),
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.CANCELLED }
+        })
+      })
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi
+          .fn()
+          .mockResolvedValue({ accreditationId: 'acc-456' }),
+        creditFullBalanceForIssuedPrnCancellation: vi.fn().mockResolvedValue({})
+      }
+
+      await updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository: defaultOrganisationsRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.CANCELLED,
+        actor: PRN_ACTOR.SIGNATORY,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+
+      expect(
+        wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation
+      ).toHaveBeenCalledWith({
+        accreditationId: 'acc-456',
+        organisationId: 'org-123',
+        prnId: '507f1f77bcf86cd799439011',
+        tonnage: 60,
+        userId: 'user-789'
+      })
+    })
+
+    it('throws error when cancelling issued PRN without waste balance', async () => {
+      const prnRepository = createMockPrnRepository({
+        findById: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          organisation: { id: 'org-123' },
+          accreditation: { id: 'acc-456' },
+          tonnage: 60,
+          status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
+        }),
+        updateStatus: vi.fn()
+      })
+      const wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue(null)
+      }
+
+      await expect(
+        updatePrnStatus({
+          prnRepository,
+          wasteBalancesRepository,
+          organisationsRepository: defaultOrganisationsRepository,
+          id: '507f1f77bcf86cd799439011',
+          organisationId: 'org-123',
+          accreditationId: 'acc-456',
+          newStatus: PRN_STATUS.CANCELLED,
+          actor: PRN_ACTOR.SIGNATORY,
+          user: { id: 'user-789', name: 'Test User' }
+        })
+      ).rejects.toThrow('No waste balance found for accreditation: acc-456')
+    })
+  })
+
   describe('deletion waste balance credit', () => {
     it('credits available waste balance when deleting from awaiting_authorisation', async () => {
       const prnRepository = {

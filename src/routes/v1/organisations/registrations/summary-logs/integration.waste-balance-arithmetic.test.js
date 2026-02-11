@@ -246,7 +246,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     const featureFlags = createInMemoryFeatureFlags({
       summaryLogs: true,
-      lumpyPackagingRecyclingNotes: true
+      packagingRecyclingNotes: true
     })
 
     const syncWasteRecords = syncFromSummaryLog({
@@ -276,7 +276,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
     // PRN repository
     const prnStorage = new Map()
-    const lumpyPackagingRecyclingNotesRepository = {
+    const packagingRecyclingNotesRepository = {
       create: async (prn) => {
         const id = new ObjectId().toHexString()
         const prnWithId = { ...prn, id }
@@ -325,8 +325,8 @@ describe('Waste balance arithmetic integration tests', () => {
         wasteRecordsRepository: wasteRecordsRepositoryFactory,
         organisationsRepository: () => organisationsRepository,
         wasteBalancesRepository: wasteBalancesRepositoryFactory,
-        lumpyPackagingRecyclingNotesRepository: () =>
-          lumpyPackagingRecyclingNotesRepository
+        packagingRecyclingNotesRepository: () =>
+          packagingRecyclingNotesRepository
       },
       workers: {
         summaryLogsWorker: submitterWorker
@@ -337,7 +337,7 @@ describe('Waste balance arithmetic integration tests', () => {
     return {
       server,
       wasteBalancesRepository,
-      lumpyPackagingRecyclingNotesRepository,
+      packagingRecyclingNotesRepository,
       fileDataMap,
       organisationId,
       registrationId,

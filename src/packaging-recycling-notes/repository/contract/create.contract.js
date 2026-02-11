@@ -114,6 +114,16 @@ export const testCreateBehaviour = (it) => {
         expect(found.status.history[0].status).toBe('draft')
       })
 
+      it('preserves the provided currentStatusAt value', async () => {
+        const prnInput = buildDraftPrn()
+
+        const created = await repository.create(prnInput)
+
+        expect(new Date(created.status.currentStatusAt).getTime()).toBe(
+          prnInput.status.currentStatusAt.getTime()
+        )
+      })
+
       it('generates unique ids for each created PRN', async () => {
         const prn1 = await repository.create(buildDraftPrn())
         const prn2 = await repository.create(buildDraftPrn())

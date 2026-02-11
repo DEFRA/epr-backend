@@ -39,6 +39,52 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
   return results
 }
 
+const matchesDateRange = (statusAt, dateFrom, dateTo) => {
+  if (!dateFrom && !dateTo) {
+    return true
+  }
+  if (!statusAt) {
+    return false
+  }
+  if (dateFrom && statusAt < dateFrom) {
+    return false
+  }
+  if (dateTo && statusAt > dateTo) {
+    return false
+  }
+  return true
+}
+
+const performFindByStatus =
+  (storage) =>
+  async ({ statuses, dateFrom, dateTo, cursor, limit }) => {
+    const matching = []
+    for (const prn of storage.values()) {
+      const matchesStatus = statuses.includes(prn.status.currentStatus)
+      const afterCursor = !cursor || prn.id > cursor
+      const matchesDate = matchesDateRange(
+        prn.status.currentStatusAt,
+        dateFrom,
+        dateTo
+      )
+
+      if (matchesStatus && afterCursor && matchesDate) {
+        matching.push(structuredClone(prn))
+      }
+    }
+
+    matching.sort((a, b) => a.id.localeCompare(b.id))
+
+    const hasMore = matching.length > limit
+    const items = matching.slice(0, limit)
+
+    return {
+      items,
+      nextCursor: hasMore ? items.at(-1).id : null,
+      hasMore
+    }
+  }
+
 const performUpdateStatus =
   (storage) =>
   async ({ id, status, updatedBy, updatedAt, prnNumber, operation }) => {
@@ -58,6 +104,7 @@ const performUpdateStatus =
     const statusUpdate = {
       ...prn.status,
       currentStatus: status,
+      currentStatusAt: updatedAt,
       history: [...prn.status.history, { status, at: updatedAt, by: updatedBy }]
     }
 
@@ -95,6 +142,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByPrnNumber: performFindByPrnNumber(storage),
     create: performCreate(storage),
     findByAccreditation: performFindByAccreditation(storage),
+    findByStatus: performFindByStatus(storage),
     updateStatus: performUpdateStatus(storage)
   })
 }
@@ -106,11 +154,11 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
   const repository = factory()
 
   return {
-    name: 'lumpyPackagingRecyclingNotesRepository',
+    name: 'packagingRecyclingNotesRepository',
     register: (server) => {
       registerRepository(
         server,
-        'lumpyPackagingRecyclingNotesRepository',
+        'packagingRecyclingNotesRepository',
         () => repository
       )
     }

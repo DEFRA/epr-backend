@@ -31,10 +31,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let lumpyPackagingRecyclingNotesRepository
+    let packagingRecyclingNotesRepository
+    let wasteBalancesRepository
 
     beforeAll(async () => {
-      lumpyPackagingRecyclingNotesRepository = {
+      packagingRecyclingNotesRepository = {
         findById: vi.fn(),
         findByPrnNumber: vi.fn(),
         create: vi.fn(),
@@ -42,11 +43,19 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         updateStatus: vi.fn()
       }
 
+      wasteBalancesRepository = {
+        findByAccreditationId: vi.fn(),
+        findByAccreditationIds: vi.fn(),
+        deductAvailableBalanceForPrnCreation: vi.fn(),
+        deductTotalBalanceForPrnIssue: vi.fn(),
+        creditAvailableBalanceForPrnCancellation: vi.fn()
+      }
+
       server = await createTestServer({
         repositories: {
-          lumpyPackagingRecyclingNotesRepository: () =>
-            lumpyPackagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => ({}),
+          packagingRecyclingNotesRepository: () =>
+            packagingRecyclingNotesRepository,
+          wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => ({})
         },
         featureFlags: createInMemoryFeatureFlags({
@@ -66,25 +75,23 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     describe('successful acceptance', () => {
       it('returns 204 when PRN is awaiting acceptance', async () => {
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: {
-              currentStatus: PRN_STATUS.ACCEPTED,
-              history: [
-                ...mockPrn.status.history,
-                {
-                  status: PRN_STATUS.ACCEPTED,
-                  at: new Date(),
-                  by: { id: 'rpd', name: 'RPD' }
-                }
-              ]
-            }
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: {
+            currentStatus: PRN_STATUS.ACCEPTED,
+            history: [
+              ...mockPrn.status.history,
+              {
+                status: PRN_STATUS.ACCEPTED,
+                at: new Date(),
+                by: { id: 'rpd', name: 'RPD' }
+              }
+            ]
           }
-        )
+        })
 
         const response = await server.inject({
           method: 'POST',
@@ -98,15 +105,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
 
       it('calls updateStatus with accepted status and PRN id', async () => {
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
-          }
-        )
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+        })
 
         await server.inject({
           method: 'POST',
@@ -115,7 +120,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             id: prnId,
@@ -134,15 +139,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
       it('uses provided acceptedAt timestamp', async () => {
         const acceptedAt = '2026-02-01T10:30:00Z'
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
-          }
-        )
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+        })
 
         await server.inject({
           method: 'POST',
@@ -152,7 +155,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             updatedAt: new Date(acceptedAt)
@@ -163,15 +166,13 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
       it('uses current time when acceptedAt not provided', async () => {
         const beforeCall = new Date()
         const mockPrn = createMockIssuedPrn()
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
-          {
-            ...mockPrn,
-            status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
-          }
-        )
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+        })
 
         await server.inject({
           method: 'POST',
@@ -180,16 +181,43 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         })
 
         const callArgs =
-          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
+          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
         expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
           beforeCall.getTime()
         )
+      })
+
+      it('does not affect waste balance', async () => {
+        const mockPrn = createMockIssuedPrn()
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+          mockPrn
+        )
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: acceptUrl
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+        expect(
+          wasteBalancesRepository.deductAvailableBalanceForPrnCreation
+        ).not.toHaveBeenCalled()
+        expect(
+          wasteBalancesRepository.deductTotalBalanceForPrnIssue
+        ).not.toHaveBeenCalled()
+        expect(
+          wasteBalancesRepository.creditAvailableBalanceForPrnCancellation
+        ).not.toHaveBeenCalled()
       })
     })
 
     describe('error handling', () => {
       it('returns 404 with spec error format when PRN not found', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           null
         )
 
@@ -219,7 +247,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           acceptedPrn
         )
 
@@ -249,7 +277,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           rejectedPrn
         )
 
@@ -279,7 +307,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
             ]
           }
         })
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           cancelledPrn
         )
 
@@ -312,7 +340,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
       })
 
       it('returns 500 with spec error format when repository throws unexpected error', async () => {
-        lumpyPackagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
+        packagingRecyclingNotesRepository.findByPrnNumber.mockRejectedValueOnce(
           new Error('Database connection lost')
         )
 

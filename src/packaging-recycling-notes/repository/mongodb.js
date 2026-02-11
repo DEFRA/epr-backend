@@ -72,6 +72,25 @@ async function ensureOrganisationStatusIndex(collection) {
   )
 }
 
+/**
+ * Ensures the status_currentStatusAt compound index exists.
+ * Covers findByStatus queries: status + date range + cursor pagination.
+ *
+ * @param {import('mongodb').Collection} collection
+ */
+async function ensureStatusDateIndex(collection) {
+  try {
+    await collection.createIndex(
+      { 'status.currentStatus': 1, 'status.currentStatusAt': 1, _id: 1 },
+      { name: 'status_currentStatusAt' }
+    )
+  } catch (error) {
+    if (error.codeName !== 'NamespaceNotFound') {
+      throw error
+    }
+  }
+}
+
 async function ensureCollection(db) {
   const collection = db.collection(COLLECTION_NAME)
 
@@ -80,6 +99,8 @@ async function ensureCollection(db) {
   // Unique index for PRN numbers - sparse to allow null values
   // Uses helper to handle migration from older non-unique index
   await ensurePrnNumberIndex(collection)
+
+  await ensureStatusDateIndex(collection)
 
   return collection
 }
@@ -170,6 +191,68 @@ const findByAccreditation = async (db, accreditationId) => {
 }
 
 /**
+ * @param {import('./port.js').FindByStatusParams} params
+ * @returns {import('mongodb').Filter<import('mongodb').Document>}
+ */
+function buildFindByStatusFilter({ statuses, dateFrom, dateTo, cursor }) {
+  /** @type {import('mongodb').Filter<import('mongodb').Document>} */
+  const filter = {}
+
+  if (cursor) {
+    filter._id = { $gt: ObjectId.createFromHexString(cursor) }
+  }
+
+  filter['status.currentStatus'] = { $in: statuses }
+
+  if (dateFrom || dateTo) {
+    /** @type {Record<string, Date>} */
+    const dateCondition = {}
+    if (dateFrom) {
+      dateCondition.$gte = dateFrom
+    }
+    if (dateTo) {
+      dateCondition.$lte = dateTo
+    }
+    filter['status.currentStatusAt'] = dateCondition
+  }
+
+  return filter
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {import('./port.js').FindByStatusParams} params
+ * @returns {Promise<import('./port.js').PaginatedResult>}
+ */
+const findByStatus = async (db, params) => {
+  const filter = buildFindByStatusFilter(params)
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find(filter)
+    .sort({ _id: 1 })
+    .limit(params.limit + 1)
+    .toArray()
+
+  const hasMore = docs.length > params.limit
+  const items = hasMore ? docs.slice(0, params.limit) : docs
+
+  return {
+    items:
+      /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} */ (
+        /** @type {unknown} */ (
+          items.map((doc) => ({
+            ...doc,
+            id: doc._id.toHexString()
+          }))
+        )
+      ),
+    nextCursor: hasMore ? items.at(-1)._id.toHexString() : null,
+    hasMore
+  }
+}
+
+/**
  * @param {import('mongodb').Db} db
  * @param {import('./port.js').UpdateStatusParams} params
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
@@ -180,6 +263,7 @@ const updateStatus = async (
 ) => {
   const setFields = {
     'status.currentStatus': status,
+    'status.currentStatusAt': updatedAt,
     updatedAt,
     updatedBy
   }
@@ -241,6 +325,7 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
     create: (prn) => create(db, prn),
     findByAccreditation: (accreditationId) =>
       findByAccreditation(db, accreditationId),
+    findByStatus: (params) => findByStatus(db, params),
     updateStatus: (params) => updateStatus(db, params)
   })
 }
