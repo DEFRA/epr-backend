@@ -71,7 +71,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
           businessName: 'ACME ltd',
           orgId,
           registrationNumber: 'REG1',
-          accreditationNo: 'ACC1',
+          accreditationNumber: 'ACC1',
           reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
           packagingWasteCategory: 'Glass-remelt',
           lastSuccessfulUpload: submittedAt,
