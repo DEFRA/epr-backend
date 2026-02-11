@@ -1,13 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  beforeEach,
-  afterEach
-} from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 
 import {
   SUMMARY_LOG_STATUS,

@@ -1,6 +1,4 @@
 import { http, HttpResponse } from 'msw'
-import { vi } from 'vitest'
-import { ObjectId } from 'mongodb'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -18,8 +16,7 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   createWasteBalanceMeta,
   createReprocessedRowValues,
-  REPROCESSED_LOADS_HEADERS,
-  pollWhileStatus
+  REPROCESSED_LOADS_HEADERS
 } from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests (Reprocessor Output)', () => {

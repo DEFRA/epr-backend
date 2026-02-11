@@ -18,7 +18,6 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createTestServer } from '#test/create-test-server.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { asStandardUser } from '#test/inject-auth.js'
-import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
 // eslint-disable-next-line n/no-unpublished-import
@@ -105,7 +104,6 @@ export const EXPORTER_HEADERS = [
   'CONTAINER_NUMBER'
 ]
 
-const DEFAULT_TONNAGE = 850
 const TARE_PLUS_PALLET_WEIGHT = 150
 const DEFAULT_DATE = '2025-01-15T00:00:00.000Z'
 const VALID_FROM = '2025-01-01'
