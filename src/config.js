@@ -320,7 +320,7 @@ const baseConfig = {
     cognitoUserPoolId: {
       doc: 'Cognito User Pool ID for external API JWT verification',
       format: String,
-      default: 'eu-west-2_ZJcyFKABL',
+      default: 'eu-west-2_ZJcyFKABL', // dev cognito user pool
       env: 'JWT_COGNITO_USER_POOL_ID'
     },
     jwksUri: {
