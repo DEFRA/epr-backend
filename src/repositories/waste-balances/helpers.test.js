@@ -350,7 +350,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           organisationsRepository: {}
         },
         findBalance: vi.fn(),
-        saveBalance: vi.fn()
+        saveBalance: vi.fn(),
+        user: { id: 'user-1', email: 'user@example.com' }
       })
 
       expect(result).toBeUndefined()
@@ -424,7 +425,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       )
     })
 
-    it('should save balance but skip audit when user is not provided', async () => {
+    it('should always call audit when balance is updated', async () => {
       const wasteRecords = [
         {
           id: 'rec-1',
@@ -432,6 +433,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           data: {}
         }
       ]
+      const user = { id: 'user-1', email: 'user@example.com' }
       const accreditation = { id: 'acc-1' }
       const wasteBalance = {
         id: 'bal-1',
@@ -463,11 +465,11 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
-        // user undefined
+        saveBalance,
+        user
       })
 
-      expect(audit).not.toHaveBeenCalled()
+      expect(audit).toHaveBeenCalledWith(expect.objectContaining({ user }))
       expect(saveBalance).toHaveBeenCalled()
     })
 
@@ -543,7 +545,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           accreditationId: 'acc-1',
           dependencies: {}, // missing organisationsRepository
           findBalance: vi.fn(),
-          saveBalance: vi.fn()
+          saveBalance: vi.fn(),
+          user: { id: 'user-1', email: 'user@example.com' }
         })
       ).rejects.toThrow('organisationsRepository dependency is required')
     })
@@ -563,7 +566,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           accreditationId: 'acc-1',
           dependencies,
           findBalance: vi.fn(),
-          saveBalance: vi.fn()
+          saveBalance: vi.fn(),
+          user: { id: 'user-1', email: 'user@example.com' }
         })
       ).rejects.toThrow('Accreditation not found: acc-1')
     })
@@ -591,7 +595,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
+        saveBalance,
+        user: { id: 'user-1', email: 'user@example.com' }
       })
 
       expect(saveBalance).not.toHaveBeenCalled()
@@ -623,7 +628,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
+        saveBalance,
+        user: { id: 'user-1', email: 'user@example.com' }
       })
 
       // Should not save balance

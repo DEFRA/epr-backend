@@ -188,7 +188,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
-   * @param {Object} [user] - User context for the sync
+   * @param {{id: string, email: string}} user - User context for the sync
    * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
   return async (summaryLog, user) => {

@@ -15,7 +15,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} wasteRecordsRepository
  * @property {object} wasteBalancesRepository
  * @property {object} summaryLogExtractor
- * @property {object} [user]
+ * @property {{id: string, email: string}} user
  */
 
 /**
