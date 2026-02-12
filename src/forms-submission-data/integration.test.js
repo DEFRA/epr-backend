@@ -3,6 +3,7 @@ import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/repro
 import { MATERIAL } from '#domain/organisations/model.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { describe, expect, it } from 'vitest'
@@ -10,6 +11,8 @@ import { createFormDataMigrator } from './migration/migration-orchestrator.js'
 
 describe('Migration Integration Tests with Fixtures', () => {
   let sharedOrganisationsRepo
+  let sharedSystemLogsRepo
+
   function loadFixtures(fixtureType) {
     const fixturesDir = join(
       process.cwd(),
@@ -25,8 +28,34 @@ describe('Migration Integration Tests with Fixtures', () => {
     })
   }
 
+  async function verifyIncrementalMigrationAudit(
+    organisationId,
+    expectedAccreditationsCount
+  ) {
+    const orgLogs =
+      await sharedSystemLogsRepo.findByOrganisationId(organisationId)
+    expect(orgLogs.length).toBeGreaterThan(0)
+
+    const incrementalMigrationLogs = orgLogs.filter(
+      (log) => log.event?.action === 'incremental-form-migration'
+    )
+    expect(incrementalMigrationLogs.length).toBeGreaterThan(0)
+
+    // Verify the audit log contains correct state transitions
+    const latestLog =
+      incrementalMigrationLogs[incrementalMigrationLogs.length - 1]
+    const { previous, next } = latestLog.context
+
+    // Verify previous state had no accreditations
+    expect(previous.accreditations || []).toHaveLength(0)
+
+    // Verify next state has expected accreditations count
+    expect(next.accreditations).toHaveLength(expectedAccreditationsCount)
+  }
+
   beforeAll(() => {
     sharedOrganisationsRepo = createInMemoryOrganisationsRepository()()
+    sharedSystemLogsRepo = createSystemLogsRepository()()
   })
 
   function createFormsRepo(includeAllAccreditations) {
@@ -68,7 +97,8 @@ describe('Migration Integration Tests with Fixtures', () => {
       // Run initial migration
       const formsDataMigration = createFormDataMigrator(
         formsRepo,
-        sharedOrganisationsRepo
+        sharedOrganisationsRepo,
+        sharedSystemLogsRepo
       )
       await formsDataMigration.migrate()
 
@@ -117,7 +147,8 @@ describe('Migration Integration Tests with Fixtures', () => {
       // Run migration again with all accreditations
       const formsDataMigration = createFormDataMigrator(
         formsRepo,
-        sharedOrganisationsRepo
+        sharedOrganisationsRepo,
+        sharedSystemLogsRepo
       )
       await formsDataMigration.migrate()
 
@@ -151,6 +182,9 @@ describe('Migration Integration Tests with Fixtures', () => {
       expect(glassReg.accreditationId).toBe(
         reprocessorGlassAccreditation._id.$oid
       )
+
+      await verifyIncrementalMigrationAudit(org503181.id, 1)
+      await verifyIncrementalMigrationAudit(org503176.id, 3)
     })
   })
 })

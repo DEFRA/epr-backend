@@ -7,11 +7,13 @@ import { MigrationOrchestrator } from '#formsubmission/migration/migration-orche
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 
 /**
  * @typedef {HapiRequest & {
  *   formSubmissionsRepository: FormSubmissionsRepository
  *   organisationsRepository: OrganisationsRepository
+ *   systemLogsRepository: SystemLogsRepository
  *   params: { id: string }
  * }} MigrateRequest
  */
@@ -34,12 +36,17 @@ const params = Joi.object({
  * @param {Object} h - Hapi response toolkit
  */
 async function handler(request, h) {
-  const { formSubmissionsRepository, organisationsRepository } = request
+  const {
+    formSubmissionsRepository,
+    organisationsRepository,
+    systemLogsRepository
+  } = request
   const { id } = request.params
 
   const orchestrator = new MigrationOrchestrator(
     formSubmissionsRepository,
-    organisationsRepository
+    organisationsRepository,
+    systemLogsRepository
   )
 
   const result = await orchestrator.migrateById(id)
