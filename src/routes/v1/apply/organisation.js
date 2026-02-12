@@ -22,6 +22,9 @@ import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'
 
+const DUPLICATE_KEY_ERROR_CODE = 11000
+const MAX_ORG_ID_RETRIES = 3
+
 /**
  * @typedef {{answers: object, email: string, orgName: string, rawSubmissionData: object, regulatorEmail: string}} OrganisationPayload
  */
@@ -102,18 +105,29 @@ export const organisation = {
       payload
 
     try {
-      const orgId = await getNextOrgId(collection)
+      let orgId
+      let insertedId
 
-      const { insertedId } = await collection.insertOne(
-        organisationFactory({
-          orgId,
-          orgName,
-          email,
-          nations: null,
-          answers,
-          rawSubmissionData
-        })
-      )
+      for (let attempt = 0; attempt < MAX_ORG_ID_RETRIES; attempt++) {
+        orgId = await getNextOrgId(collection)
+        try {
+          const result = await collection.insertOne(
+            organisationFactory({
+              orgId,
+              orgName,
+              email,
+              nations: null,
+              answers,
+              rawSubmissionData
+            })
+          )
+          insertedId = result.insertedId
+          break
+        } catch (insertError) {
+          if (insertError.code !== DUPLICATE_KEY_ERROR_CODE) throw insertError
+          if (attempt === MAX_ORG_ID_RETRIES - 1) throw insertError
+        }
+      }
 
       const referenceNumber = insertedId.toString()
 

@@ -11,7 +11,9 @@ const ORGANISATION_COLLECTION = 'organisation'
  * @param {import('mongodb').Db} db
  */
 async function ensureCollections(db) {
-  await db.collection(ORGANISATION_COLLECTION).createIndex({ orgId: 1 })
+  await db
+    .collection(ORGANISATION_COLLECTION)
+    .createIndex({ orgId: 1 }, { unique: true })
   await db
     .collection(REGISTRATIONS_COLLECTION)
     .createIndex({ referenceNumber: 1 })

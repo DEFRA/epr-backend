@@ -223,6 +223,64 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
+  it('retries with new orgId on duplicate key error', async ({ server }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    const duplicateKeyError = new Error('E11000 duplicate key error')
+    duplicateKeyError.code = 11000
+
+    mockInsertOne
+      .mockRejectedValueOnce(duplicateKeyError)
+      .mockResolvedValueOnce({
+        insertedId: { toString: () => '12345678901234567890abcd' }
+      })
+
+    // Return count=1 on first call (produces 500122), count=2 on retry (produces 500123)
+    mockCountDocuments.mockReturnValueOnce(1).mockReturnValueOnce(2)
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: organisationFixture
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.OK)
+    expect(mockInsertOne).toHaveBeenCalledTimes(2)
+    expect(mockCountDocuments).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives up after max retries on persistent duplicate key errors', async ({
+    server
+  }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    const duplicateKeyError = new Error('E11000 duplicate key error')
+    duplicateKeyError.code = 11000
+
+    mockInsertOne
+      .mockRejectedValueOnce(duplicateKeyError)
+      .mockRejectedValueOnce(duplicateKeyError)
+      .mockRejectedValueOnce(duplicateKeyError)
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: organisationFixture
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.INTERNAL_SERVER_ERROR)
+  })
+
   it('returns 500 if error is thrown by insertOne', async ({ server }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
