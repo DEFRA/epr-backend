@@ -479,6 +479,13 @@ export const createSummaryLogsValidator = ({
     }
 
     const { version, summaryLog } = result
+
+    if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
+      throw new PermanentError(
+        `Summary log must be in validating status. Current status: ${summaryLog.status}`
+      )
+    }
+
     const {
       file: { id: fileId, name: filename }
     } = summaryLog
