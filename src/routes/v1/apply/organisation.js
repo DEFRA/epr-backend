@@ -6,8 +6,6 @@ import {
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
-  DUPLICATE_SUBMISSION_ADJUSTMENT,
-  ORG_ID_START_NUMBER,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '#common/enums/index.js'
@@ -39,7 +37,7 @@ async function getNextOrgId(db) {
     throw new Error('Failed to generate orgId: counter returned invalid result')
   }
 
-  return ORG_ID_START_NUMBER + result.seq + DUPLICATE_SUBMISSION_ADJUSTMENT
+  return result.seq
 }
 
 async function sendConfirmationEmails(email, regulatorEmail, context) {

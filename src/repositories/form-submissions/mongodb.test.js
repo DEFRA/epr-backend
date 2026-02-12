@@ -121,26 +121,42 @@ describe('MongoDB form submissions repository', () => {
   })
 
   describe('orgId counter seeding', () => {
-    it('initialises counter to 0 when no organisations exist', async ({
+    it('initialises counter to ORG_ID_START_NUMBER when no organisations exist', async ({
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
       await createFormSubmissionsRepository(db)
 
       const counter = await db.collection('counters').findOne({ _id: 'orgId' })
-      expect(counter.seq).toBe(0)
+      expect(counter.seq).toBe(500000)
     })
 
-    it('initialises counter to existing org count', async ({
+    it('initialises counter to highest existing orgId from form-submissions', async ({
       mongoClient,
       seedOrganisations
     }) => {
-      await seedOrganisations()
+      const orgs = await seedOrganisations()
+      const maxOrgId = Math.max(...orgs.map((o) => o.orgId))
       const db = mongoClient.db(DATABASE_NAME)
       await createFormSubmissionsRepository(db)
 
       const counter = await db.collection('counters').findOne({ _id: 'orgId' })
-      expect(counter.seq).toBe(3)
+      expect(counter.seq).toBe(maxOrgId)
+    })
+
+    it('initialises counter to highest orgId from epr-organisations when higher', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      const eprOrgId = 500999
+      await db.collection('epr-organisations').insertOne({ orgId: eprOrgId })
+
+      await createFormSubmissionsRepository(db)
+
+      const counter = await db.collection('counters').findOne({ _id: 'orgId' })
+      expect(counter.seq).toBe(eprOrgId)
+
+      await db.collection('epr-organisations').deleteMany({})
     })
 
     it('does not overwrite counter on subsequent calls', async ({
@@ -151,12 +167,12 @@ describe('MongoDB form submissions repository', () => {
 
       await db
         .collection('counters')
-        .updateOne({ _id: 'orgId' }, { $inc: { seq: 5 } })
+        .updateOne({ _id: 'orgId' }, { $set: { seq: 600000 } })
 
       await createFormSubmissionsRepository(db)
 
       const counter = await db.collection('counters').findOne({ _id: 'orgId' })
-      expect(counter.seq).toBe(5)
+      expect(counter.seq).toBe(600000)
     })
   })
 

@@ -24,8 +24,7 @@ const mockInsertOne = vi.fn().mockResolvedValue({
 // @vitest-environment node
 /* @vitest-config { "test": { "fileParallelism": false } } */
 
-// seq: 2 produces orgId = 500000 + 2 + 120 = 500122
-const mockFindOneAndUpdate = vi.fn().mockResolvedValue({ seq: 2 })
+const mockFindOneAndUpdate = vi.fn().mockResolvedValue({ seq: 500122 })
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)

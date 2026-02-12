@@ -4,6 +4,7 @@ import { ORG_ID_START_NUMBER } from '#common/enums/db.js'
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
 const ORGANISATION_COLLECTION = 'organisation'
+const EPR_ORGANISATIONS_COLLECTION = 'epr-organisations'
 const COUNTERS_COLLECTION = 'counters'
 
 /**
@@ -25,21 +26,45 @@ async function ensureCollections(db) {
 }
 
 /**
+ * Finds the highest orgId across form-submissions and epr-organisations.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<number>}
+ */
+async function findHighestOrgId(db) {
+  const findMax = async (collectionName) => {
+    const [doc] = await db
+      .collection(collectionName)
+      .find({ orgId: { $gte: ORG_ID_START_NUMBER } })
+      .sort({ orgId: -1 })
+      .limit(1)
+      .toArray()
+    return doc?.orgId ?? 0
+  }
+
+  const [formsMax, eprMax] = await Promise.all([
+    findMax(ORGANISATION_COLLECTION),
+    findMax(EPR_ORGANISATIONS_COLLECTION)
+  ])
+
+  return Math.max(formsMax, eprMax)
+}
+
+/**
  * Seeds the orgId counter from existing data on first run.
  * Uses $setOnInsert so it only writes when the counter doesn't exist yet.
  *
  * @param {import('mongodb').Db} db
  */
 async function seedOrgIdCounter(db) {
-  const existingCount = await db
-    .collection(ORGANISATION_COLLECTION)
-    .countDocuments({ orgId: { $gte: ORG_ID_START_NUMBER } })
+  const highestOrgId = await findHighestOrgId(db)
+  const seq = highestOrgId || ORG_ID_START_NUMBER
 
   await db
     .collection(COUNTERS_COLLECTION)
     .updateOne(
       { _id: /** @type {*} */ ('orgId') },
-      { $setOnInsert: { seq: existingCount } },
+      { $setOnInsert: { seq } },
       { upsert: true }
     )
 }
