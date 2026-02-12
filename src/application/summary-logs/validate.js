@@ -461,6 +461,20 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
  * @param {SummaryLogExtractor} params.summaryLogExtractor
  * @returns {Function} Function that validates a summary log by ID
  */
+const assertValidatingStatus = (result, summaryLogId) => {
+  if (!result) {
+    throw new PermanentError(
+      `Summary log not found: summaryLogId=${summaryLogId}`
+    )
+  }
+
+  if (result.summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
+    throw new PermanentError(
+      `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
+    )
+  }
+}
+
 export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
@@ -471,21 +485,9 @@ export const createSummaryLogsValidator = ({
 
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
-
-    if (!result) {
-      throw new PermanentError(
-        `Summary log not found: summaryLogId=${summaryLogId}`
-      )
-    }
+    assertValidatingStatus(result, summaryLogId)
 
     const { version, summaryLog } = result
-
-    if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
-      throw new PermanentError(
-        `Summary log must be in validating status. Current status: ${summaryLog.status}`
-      )
-    }
-
     const {
       file: { id: fileId, name: filename }
     } = summaryLog
