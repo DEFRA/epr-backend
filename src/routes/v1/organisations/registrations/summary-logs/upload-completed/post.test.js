@@ -143,7 +143,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       repositories: {
         summaryLogsRepository: (_logger) => summaryLogsRepository
       },
-      workers: {
+      executors: {
         summaryLogsWorker
       },
       featureFlags
@@ -628,7 +628,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         repositories: {
           summaryLogsRepository: createInMemorySummaryLogsRepository()
         },
-        workers: {
+        executors: {
           summaryLogsWorker: transitionValidator
         },
         featureFlags

@@ -22,8 +22,7 @@
       "#routes/*": ["./src/routes/*"],
       "#server/*": ["./src/server/*"],
       "#test/*": ["./src/test/*"],
-      "#vite/*": ["./.vite/*"],
-      "#workers/*": ["./src/workers/*"]
+      "#vite/*": ["./.vite/*"]
     }
   },
   "include": ["src/**/*"],

@@ -326,7 +326,7 @@ describe('Waste balance arithmetic integration tests', () => {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository
       },
-      workers: {
+      executors: {
         summaryLogsWorker: submitterWorker
       },
       featureFlags

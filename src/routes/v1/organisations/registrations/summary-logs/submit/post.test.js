@@ -61,7 +61,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       repositories: {
         summaryLogsRepository: (_logger) => summaryLogsRepository
       },
-      workers: {
+      executors: {
         summaryLogsWorker
       },
       featureFlags

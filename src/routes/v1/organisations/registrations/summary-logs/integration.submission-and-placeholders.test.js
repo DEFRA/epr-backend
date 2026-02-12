@@ -379,7 +379,7 @@ describe('Submission and placeholder tests', () => {
           organisationsRepository: () => organisationsRepository,
           systemLogsRepository: createSystemLogsRepository()
         },
-        workers: {
+        executors: {
           summaryLogsWorker: submitterWorker
         },
         featureFlags
@@ -747,7 +747,7 @@ describe('Submission and placeholder tests', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository
         },
-        workers: {
+        executors: {
           summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags

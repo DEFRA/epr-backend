@@ -221,7 +221,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
           organisationsRepository: () => organisationsRepository,
           wasteBalancesRepository: wasteBalancesRepositoryFactory
         },
-        workers: {
+        executors: {
           summaryLogsWorker: submitterWorker
         },
         featureFlags

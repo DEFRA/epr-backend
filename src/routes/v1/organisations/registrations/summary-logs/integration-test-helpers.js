@@ -192,7 +192,7 @@ export const createTestInfrastructure = async (
       summaryLogsRepository: summaryLogsRepositoryFactory,
       uploadsRepository
     },
-    workers: {
+    executors: {
       summaryLogsWorker: { validate: validateSummaryLog }
     },
     featureFlags

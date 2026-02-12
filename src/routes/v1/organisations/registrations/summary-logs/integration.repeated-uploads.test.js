@@ -269,7 +269,7 @@ describe('Repeated uploads of identical data', () => {
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
           organisationsRepository: () => organisationsRepository
         },
-        workers: {
+        executors: {
           summaryLogsWorker
         },
         featureFlags
