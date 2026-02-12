@@ -34,6 +34,11 @@ async function getNextOrgId(db) {
       { $inc: { seq: 1 } },
       { upsert: true, returnDocument: 'after' }
     )
+
+  if (!result || result.seq === undefined) {
+    throw new Error('Failed to generate orgId: counter returned invalid result')
+  }
+
   return ORG_ID_START_NUMBER + result.seq + DUPLICATE_SUBMISSION_ADJUSTMENT
 }
 

@@ -102,6 +102,7 @@ describe('MongoDB form submissions repository', () => {
       .db(DATABASE_NAME)
       .collection('organisation')
       .deleteMany({})
+    await mongoClient.db(DATABASE_NAME).collection('counters').deleteMany({})
   })
 
   it('should create repository instance', async ({
@@ -117,6 +118,46 @@ describe('MongoDB form submissions repository', () => {
     expect(repository.findAccreditationById).toBeDefined()
     expect(repository.findAllOrganisations).toBeDefined()
     expect(repository.findOrganisationById).toBeDefined()
+  })
+
+  describe('orgId counter seeding', () => {
+    it('initialises counter to 0 when no organisations exist', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      await createFormSubmissionsRepository(db)
+
+      const counter = await db.collection('counters').findOne({ _id: 'orgId' })
+      expect(counter.seq).toBe(0)
+    })
+
+    it('initialises counter to existing org count', async ({
+      mongoClient,
+      seedOrganisations
+    }) => {
+      await seedOrganisations()
+      const db = mongoClient.db(DATABASE_NAME)
+      await createFormSubmissionsRepository(db)
+
+      const counter = await db.collection('counters').findOne({ _id: 'orgId' })
+      expect(counter.seq).toBe(3)
+    })
+
+    it('does not overwrite counter on subsequent calls', async ({
+      mongoClient
+    }) => {
+      const db = mongoClient.db(DATABASE_NAME)
+      await createFormSubmissionsRepository(db)
+
+      await db
+        .collection('counters')
+        .updateOne({ _id: 'orgId' }, { $inc: { seq: 5 } })
+
+      await createFormSubmissionsRepository(db)
+
+      const counter = await db.collection('counters').findOne({ _id: 'orgId' })
+      expect(counter.seq).toBe(5)
+    })
   })
 
   testFormSubmissionsRepositoryContract(it)

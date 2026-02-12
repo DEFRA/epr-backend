@@ -24,6 +24,7 @@ const mockInsertOne = vi.fn().mockResolvedValue({
 // @vitest-environment node
 /* @vitest-config { "test": { "fileParallelism": false } } */
 
+// seq: 2 produces orgId = 500000 + 2 + 120 = 500122
 const mockFindOneAndUpdate = vi.fn().mockResolvedValue({ seq: 2 })
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -223,6 +224,32 @@ describe(`${url} route`, () => {
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
+  })
+
+  it('returns 500 if counter returns invalid result', async ({ server }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockImplementation((name) => {
+      if (name === 'counters') {
+        return { findOneAndUpdate: vi.fn().mockResolvedValue(null) }
+      }
+      return { insertOne: mockInsertOne }
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: organisationFixture
+    })
+
+    expect(response.statusCode).toEqual(StatusCodes.INTERNAL_SERVER_ERROR)
+    expect(server.loggerMocks.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: expect.objectContaining({
+          message: 'Failed to generate orgId: counter returned invalid result'
+        })
+      })
+    )
   })
 
   it('returns 500 if error is thrown by insertOne', async ({ server }) => {
