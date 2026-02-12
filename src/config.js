@@ -449,7 +449,6 @@ const baseConfig = {
   }
 }
 
-/* v8 ignore next 7 */
 function deriveJwtConfig(cfg) {
   cfg.load({
     packagingRecyclingNotesExternalApi: {
@@ -460,12 +459,10 @@ function deriveJwtConfig(cfg) {
 
 const config = convict(baseConfig)
 
-/* v8 ignore next */
 deriveJwtConfig(config)
 
 config.validate({ allowed: 'strict' })
 
-/* v8 ignore next 6 */
 function getConfig(overrides = {}) {
   const cfg = convict(baseConfig)
   cfg.load(overrides)
