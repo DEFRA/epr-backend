@@ -397,7 +397,7 @@ const baseConfig = {
       format: String,
       nullable: true,
       default: null,
-      env: 'COMMAND_QUEUE_SQS_ENDPOINT'
+      env: 'SQS_ENDPOINT'
     },
     queueName: {
       doc: 'SQS queue name for backend commands',
