@@ -1,7 +1,7 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 
 import Jwt from '@hapi/jwt'
-import { generateKeyPairSync } from 'crypto'
+import { generateKeyPairSync } from 'node:crypto'
 
 import { MATERIAL } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
