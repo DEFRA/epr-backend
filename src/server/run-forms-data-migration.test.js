@@ -4,6 +4,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -21,6 +22,10 @@ vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
 }))
 
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn()
+}))
+
 describe('runFormsDataMigration', () => {
   let mockServer
   let mockFeatureFlags
@@ -28,6 +33,7 @@ describe('runFormsDataMigration', () => {
   let mockOrganisationsRepository
   let mockLock
   let mockFormsDataMigration
+  const mockSystemLogsRepository = {}
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -61,6 +67,7 @@ describe('runFormsDataMigration', () => {
     createOrganisationsRepository.mockReturnValue(
       () => mockOrganisationsRepository
     )
+    createSystemLogsRepository.mockResolvedValue(() => mockSystemLogsRepository)
     createFormDataMigrator.mockReturnValue(mockFormsDataMigration)
 
     logger.info = vi.fn()

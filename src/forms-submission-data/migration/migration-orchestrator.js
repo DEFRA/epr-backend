@@ -12,6 +12,7 @@ import { upsertOrganisations } from './organisation-persistence.js'
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {FormDataMigrator, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
  */
 
@@ -19,10 +20,16 @@ export class MigrationOrchestrator {
   /**
    * @param {FormSubmissionsRepository} formsSubmissionRepository
    * @param {OrganisationsRepository} organisationsRepository
+   * @param {SystemLogsRepository} systemLogsRepository
    */
-  constructor(formsSubmissionRepository, organisationsRepository) {
+  constructor(
+    formsSubmissionRepository,
+    organisationsRepository,
+    systemLogsRepository
+  ) {
     this.formsSubmissionRepository = formsSubmissionRepository
     this.organisationsRepository = organisationsRepository
+    this.systemLogsRepository = systemLogsRepository
   }
 
   linkRegistrations(organisations, registrations) {
@@ -166,6 +173,7 @@ export class MigrationOrchestrator {
 
     const { failed } = await upsertOrganisations(
       this.organisationsRepository,
+      this.systemLogsRepository,
       migrationItems
     )
 
@@ -212,22 +220,29 @@ export class MigrationOrchestrator {
       pendingMigration
     )
 
-    await upsertOrganisations(this.organisationsRepository, migrationItems)
+    await upsertOrganisations(
+      this.organisationsRepository,
+      this.systemLogsRepository,
+      migrationItems
+    )
   }
 }
 
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationsRepository} organisationsRepository
+ * @param {SystemLogsRepository} systemLogsRepository
  * @returns {FormDataMigrator}
  */
 export function createFormDataMigrator(
   formsSubmissionRepository,
-  organisationsRepository
+  organisationsRepository,
+  systemLogsRepository
 ) {
   const orchestrator = new MigrationOrchestrator(
     formsSubmissionRepository,
-    organisationsRepository
+    organisationsRepository,
+    systemLogsRepository
   )
 
   /** @type {FormDataMigrator} */
