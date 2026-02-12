@@ -396,7 +396,7 @@ const baseConfig = {
       doc: 'AWS SQS endpoint for command queue (only set for local development)',
       format: String,
       nullable: true,
-      default: process.env.COMMAND_QUEUE_SQS_ENDPOINT ?? null,
+      default: null,
       env: 'SQS_ENDPOINT'
     },
     queueName: {
