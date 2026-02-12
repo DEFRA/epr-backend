@@ -195,9 +195,7 @@ async function createServer(options = {}) {
 
   server.ext('onPostStart', () => {
     logFilesUploadedFromForms(server, options)
-    runFormsDataMigration(server, {
-      shouldTruncateEprOrganisations: config.get('truncateEprOrganisations')
-    })
+    runFormsDataMigration(server)
     runGlassMigration(server)
   })
 

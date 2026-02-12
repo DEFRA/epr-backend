@@ -2,17 +2,6 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { truncateEprOrganisations } from '#common/helpers/collections/truncate-epr-organisations.js'
-
-async function truncateEprOrg(options, server) {
-  if (options.shouldTruncateEprOrganisations) {
-    await truncateEprOrganisations(server.db)
-  } else {
-    logger.info({
-      message: `Truncating epr-organisations collection is disabled`
-    })
-  }
-}
 
 export const runFormsDataMigration = async (server, options = {}) => {
   try {
@@ -30,7 +19,6 @@ export const runFormsDataMigration = async (server, options = {}) => {
         return
       }
       try {
-        await truncateEprOrg(options, server)
         const formSubmissionsRepository = (
           await createFormSubmissionsRepository(server.db)
         )()
