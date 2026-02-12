@@ -28,7 +28,7 @@ export const runFormsDataMigration = async (server, options = {}) => {
         )()
         const systemLogsRepository = (
           await createSystemLogsRepository(server.db)
-        )()
+        )(logger)
 
         const formsDataMigration = createFormDataMigrator(
           formSubmissionsRepository,
