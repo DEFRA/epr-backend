@@ -157,7 +157,7 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
             $max: {
               $cond: [
                 { $not: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }] },
-                '$submittedAt',
+                '$createdAt',
                 null
               ]
             }
@@ -166,7 +166,7 @@ const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
             $max: {
               $cond: [
                 { $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] },
-                '$submittedAt',
+                '$createdAt',
                 null
               ]
             }

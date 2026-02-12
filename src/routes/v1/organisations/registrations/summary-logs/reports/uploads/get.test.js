@@ -44,14 +44,14 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
       const org = await buildApprovedOrg(organisationsRepository, { orgId })
       const registration = org.registrations[0]
 
-      const submittedAt = '2026-01-20T14:30:00.000Z'
+      const createdAt = '2026-01-20T14:30:00.000Z'
 
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationId: org.id,
           registrationId: registration.id,
-          submittedAt
+          createdAt
         })
       )
 
@@ -64,22 +64,25 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
 
       const payload = JSON.parse(response.payload)
-      expect(payload).toEqual([
-        {
-          appropriateAgency: 'EA',
-          type: 'Reprocessor',
-          businessName: 'ACME ltd',
-          orgId,
-          registrationNumber: 'REG1',
-          accreditationNumber: 'ACC1',
-          reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
-          packagingWasteCategory: 'Glass-remelt',
-          lastSuccessfulUpload: submittedAt,
-          lastFailedUpload: '',
-          successfulUploads: 1,
-          failedUploads: 0
-        }
-      ])
+      expect(payload).toEqual({
+        summaryLogUploads: [
+          {
+            appropriateAgency: 'EA',
+            type: 'Reprocessor',
+            businessName: 'ACME ltd',
+            orgId,
+            registrationNumber: 'REG1',
+            accreditationNumber: 'ACC1',
+            reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
+            packagingWasteCategory: 'Glass-remelt',
+            lastSuccessfulUpload: createdAt,
+            lastFailedUpload: '',
+            successfulUploads: 1,
+            failedUploads: 0
+          }
+        ],
+        generatedAt: expect.any(String)
+      })
     })
   })
 

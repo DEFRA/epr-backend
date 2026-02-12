@@ -122,7 +122,7 @@ const findLatestSubmittedForOrgReg =
 const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
   const statsMap = Array.from(staleCache.values()).reduce(
     (acc, { summaryLog: doc }) => {
-      const { organisationId, registrationId, status, submittedAt } = doc
+      const { organisationId, registrationId, status, createdAt } = doc
       const key = `${organisationId}:${registrationId}`
 
       const group = acc.get(key) || {
@@ -141,8 +141,8 @@ const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
       // 2. Update count and date logic once
       group[`${prefix}Count`]++
 
-      if (!group[dateKey] || submittedAt > group[dateKey]) {
-        group[dateKey] = submittedAt
+      if (!group[dateKey] || createdAt > group[dateKey]) {
+        group[dateKey] = createdAt
       }
 
       return acc.set(key, group)

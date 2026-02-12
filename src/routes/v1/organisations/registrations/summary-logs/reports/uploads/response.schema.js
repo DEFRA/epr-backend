@@ -40,6 +40,9 @@ const summaryLogUploadReportRowSchema = Joi.object({
   failedUploads: Joi.number().required()
 })
 
-export const summaryLogUploadsReportResponseSchema = Joi.array()
-  .items(summaryLogUploadReportRowSchema)
-  .required()
+export const summaryLogUploadsReportResponseSchema = Joi.object({
+  summaryLogUploads: Joi.array()
+    .items(summaryLogUploadReportRowSchema)
+    .required(),
+  generatedAt: Joi.string().isoDate().required()
+}).required()
