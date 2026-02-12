@@ -38,7 +38,7 @@ async function seedOrgIdCounter(db) {
   await db
     .collection(COUNTERS_COLLECTION)
     .updateOne(
-      { _id: 'orgId' },
+      { _id: /** @type {*} */ ('orgId') },
       { $setOnInsert: { seq: existingCount } },
       { upsert: true }
     )
