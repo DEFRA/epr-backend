@@ -16,7 +16,6 @@ services:
     environment:
       AUDIT_ENABLED: false
       SQS_ENDPOINT: http://localstack:4566
-      COMMAND_QUEUE_SQS_ENDPOINT: http://localstack:4566
       GOVUK_NOTIFY_API_KEY: /run/secrets/govuk_notify_api_key
       LOCALSTACK_ENDPOINT: http://localstack:4566
       MONGO_URI: mongodb://mongodb:27017/
