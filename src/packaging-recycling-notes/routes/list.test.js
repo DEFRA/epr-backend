@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
+import { randomUUID } from 'node:crypto'
 import {
   afterAll,
   afterEach,
@@ -18,8 +19,10 @@ import {
   generateExternalApiToken
 } from './test-helpers.js'
 
+const externalApiClientId = randomUUID()
+
 const authHeaders = {
-  authorization: `Bearer ${generateExternalApiToken()}`
+  authorization: `Bearer ${generateExternalApiToken(externalApiClientId)}`
 }
 
 const listUrl = '/v1/packaging-recycling-notes'
@@ -42,6 +45,12 @@ describe('GET /v1/packaging-recycling-notes', () => {
       }
 
       server = await createTestServer({
+        config: {
+          packagingRecyclingNotesExternalApi: {
+            clientId: externalApiClientId,
+            cognitoUserPoolId: 'eu-west-2_test'
+          }
+        },
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,

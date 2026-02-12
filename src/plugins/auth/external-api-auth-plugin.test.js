@@ -10,9 +10,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { externalApiAuthPlugin } from './external-api-auth-plugin.js'
 
 const clientId = 'test-client-id'
-const config = getConfig({
-  packagingRecyclingNotesExternalApi: { clientId }
-})
 
 describe('external API auth plugin', () => {
   setupAuthContext(true)
@@ -24,7 +21,14 @@ describe('external API auth plugin', () => {
     await server.register(Jwt)
     await server.register({
       plugin: externalApiAuthPlugin.plugin,
-      options: { config }
+      options: {
+        config: getConfig({
+          packagingRecyclingNotesExternalApi: {
+            clientId,
+            cognitoUserPoolId: 'eu-west-2_test'
+          }
+        })
+      }
     })
 
     server.route({

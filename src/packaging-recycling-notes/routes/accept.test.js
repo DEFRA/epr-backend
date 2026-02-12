@@ -63,7 +63,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
       server = await createTestServer({
         config: {
           packagingRecyclingNotesExternalApi: {
-            clientId: externalApiClientId
+            clientId: externalApiClientId,
+            cognitoUserPoolId: 'eu-west-2_test'
           }
         },
         repositories: {
