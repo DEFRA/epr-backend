@@ -84,6 +84,8 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
       register: (server) => {
         const mockCollection = {
           createIndex: vi.fn().mockResolvedValue(undefined),
+          countDocuments: vi.fn().mockResolvedValue(0),
+          updateOne: vi.fn().mockResolvedValue(undefined),
           indexes: vi.fn().mockResolvedValue([])
         }
         server.decorate('server', 'db', {

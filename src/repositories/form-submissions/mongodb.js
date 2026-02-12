@@ -1,8 +1,10 @@
 import { ObjectId } from 'mongodb'
+import { ORG_ID_START_NUMBER } from '#common/enums/db.js'
 
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
 const ORGANISATION_COLLECTION = 'organisation'
+const COUNTERS_COLLECTION = 'counters'
 
 /**
  * Ensures the collections exist with required indexes.
@@ -18,6 +20,28 @@ async function ensureCollections(db) {
   await db
     .collection(ACCREDITATIONS_COLLECTION)
     .createIndex({ referenceNumber: 1 })
+
+  await seedOrgIdCounter(db)
+}
+
+/**
+ * Seeds the orgId counter from existing data on first run.
+ * Uses $setOnInsert so it only writes when the counter doesn't exist yet.
+ *
+ * @param {import('mongodb').Db} db
+ */
+async function seedOrgIdCounter(db) {
+  const existingCount = await db
+    .collection(ORGANISATION_COLLECTION)
+    .countDocuments({ orgId: { $gte: ORG_ID_START_NUMBER } })
+
+  await db
+    .collection(COUNTERS_COLLECTION)
+    .updateOne(
+      { _id: 'orgId' },
+      { $setOnInsert: { seq: existingCount } },
+      { upsert: true }
+    )
 }
 
 const mapDocument = (doc) => {

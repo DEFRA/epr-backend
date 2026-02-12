@@ -26,14 +26,15 @@ export const organisationPath = '/v1/apply/organisation'
  * @typedef {{answers: object, email: string, orgName: string, rawSubmissionData: object, regulatorEmail: string}} OrganisationPayload
  */
 
-async function getNextOrgId(collection) {
-  const count =
-    (await collection.countDocuments({
-      orgId: {
-        $gte: ORG_ID_START_NUMBER
-      }
-    })) + DUPLICATE_SUBMISSION_ADJUSTMENT
-  return ORG_ID_START_NUMBER + count + 1
+async function getNextOrgId(db) {
+  const result = await db
+    .collection('counters')
+    .findOneAndUpdate(
+      { _id: 'orgId' },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: 'after' }
+    )
+  return ORG_ID_START_NUMBER + result.seq + DUPLICATE_SUBMISSION_ADJUSTMENT
 }
 
 async function sendConfirmationEmails(email, regulatorEmail, context) {
@@ -102,7 +103,7 @@ export const organisation = {
       payload
 
     try {
-      const orgId = await getNextOrgId(collection)
+      const orgId = await getNextOrgId(db)
 
       const { insertedId } = await collection.insertOne(
         organisationFactory({

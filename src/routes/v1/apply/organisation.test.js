@@ -24,7 +24,7 @@ const mockInsertOne = vi.fn().mockResolvedValue({
 // @vitest-environment node
 /* @vitest-config { "test": { "fileParallelism": false } } */
 
-const mockCountDocuments = vi.fn(() => 1)
+const mockFindOneAndUpdate = vi.fn().mockResolvedValue({ seq: 2 })
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -38,7 +38,7 @@ describe(`${url} route`, () => {
   beforeEach(() => {
     mockAudit.mockClear()
     mockInsertOne.mockClear()
-    mockCountDocuments.mockClear()
+    mockFindOneAndUpdate.mockClear()
   })
 
   it('returns 200 and echoes back payload on valid request', async ({
@@ -46,9 +46,11 @@ describe(`${url} route`, () => {
   }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
-    collectionSpy.mockReturnValue({
-      countDocuments: mockCountDocuments,
-      insertOne: mockInsertOne
+    collectionSpy.mockImplementation((name) => {
+      if (name === 'counters') {
+        return { findOneAndUpdate: mockFindOneAndUpdate }
+      }
+      return { insertOne: mockInsertOne }
     })
 
     const response = await server.inject({
@@ -226,9 +228,11 @@ describe(`${url} route`, () => {
   it('returns 500 if error is thrown by insertOne', async ({ server }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
-    collectionSpy.mockReturnValue({
-      countDocuments: mockCountDocuments,
-      insertOne: mockInsertOne
+    collectionSpy.mockImplementation((name) => {
+      if (name === 'counters') {
+        return { findOneAndUpdate: mockFindOneAndUpdate }
+      }
+      return { insertOne: mockInsertOne }
     })
 
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
@@ -264,9 +268,11 @@ describe(`${url} route`, () => {
   it('returns 500 if error is thrown by sendEmail', async ({ server }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
-    collectionSpy.mockReturnValue({
-      countDocuments: mockCountDocuments,
-      insertOne: mockInsertOne
+    collectionSpy.mockImplementation((name) => {
+      if (name === 'counters') {
+        return { findOneAndUpdate: mockFindOneAndUpdate }
+      }
+      return { insertOne: mockInsertOne }
     })
 
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
