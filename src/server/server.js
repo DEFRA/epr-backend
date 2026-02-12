@@ -160,9 +160,7 @@ async function createServer(options = {}) {
     authPlugin,
     {
       plugin: externalApiAuthPlugin.plugin,
-      options: {
-        clientId: config.get('packagingRecyclingNotesExternalApi.clientId')
-      }
+      options: { config }
     },
     authFailureLogger,
     externalApiErrorFormatter

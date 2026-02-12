@@ -2,6 +2,7 @@ import {
   generateExternalApiToken,
   generateExternalApiTokenWithoutClientId
 } from '#packaging-recycling-notes/routes/test-helpers.js'
+import { getConfig } from '#root/config.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import Hapi from '@hapi/hapi'
 import Jwt from '@hapi/jwt'
@@ -9,6 +10,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { externalApiAuthPlugin } from './external-api-auth-plugin.js'
 
 const clientId = 'test-client-id'
+const config = getConfig({
+  packagingRecyclingNotesExternalApi: { clientId }
+})
 
 describe('external API auth plugin', () => {
   setupAuthContext(true)
@@ -20,7 +24,7 @@ describe('external API auth plugin', () => {
     await server.register(Jwt)
     await server.register({
       plugin: externalApiAuthPlugin.plugin,
-      options: { clientId }
+      options: { config }
     })
 
     server.route({

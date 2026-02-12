@@ -1,6 +1,5 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 
-import { config } from '#root/config.js'
 import { StatusCodes } from 'http-status-codes'
 
 const EXPECTED_TOKEN_USE = 'access'
@@ -12,10 +11,10 @@ export const externalApiAuthPlugin = {
     version: '1.0.0',
     /**
      * @param {import('@hapi/hapi').Server} server
-     * @param {{ clientId: string, keys: object, verify: object | false }} options
+     * @param {{ config: import('convict').Config }} options
      */
-    register: (server, options) => {
-      const { clientId } = options
+    register: (server, { config }) => {
+      const clientId = config.get('packagingRecyclingNotesExternalApi.clientId')
 
       server.auth.strategy('api-gateway-client', 'jwt', {
         keys: [
