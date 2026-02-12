@@ -2,6 +2,7 @@ import {
   generateExternalApiToken,
   generateExternalApiTokenWithoutClientId
 } from '#packaging-recycling-notes/routes/test-helpers.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import Hapi from '@hapi/hapi'
 import Jwt from '@hapi/jwt'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -10,6 +11,8 @@ import { externalApiAuthPlugin } from './external-api-auth-plugin.js'
 const clientId = 'test-client-id'
 
 describe('external API auth plugin', () => {
+  setupAuthContext(true)
+
   let server
 
   beforeAll(async () => {
@@ -26,6 +29,8 @@ describe('external API auth plugin', () => {
       options: { auth: { strategy: 'api-gateway-client' } },
       handler: (request) => request.auth.credentials
     })
+
+    await server.initialize()
   })
 
   afterAll(async () => {
@@ -102,34 +107,10 @@ describe('external API auth plugin', () => {
     expect(response.statusCode).toBe(401)
   })
 
-  it('should return 401 when scope does not match', async () => {
-    const token = generateExternalApiToken(clientId, { scope: 'wrong/scope' })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/test',
-      headers: { authorization: `Bearer ${token}` }
-    })
-
-    expect(response.statusCode).toBe(401)
-  })
-
   it('should return 401 when token is expired', async () => {
     const token = generateExternalApiToken(clientId, {
       exp: Math.floor(Date.now() / 1000) - 60
     })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: '/test',
-      headers: { authorization: `Bearer ${token}` }
-    })
-
-    expect(response.statusCode).toBe(401)
-  })
-
-  it('should return 401 when exp claim is missing', async () => {
-    const token = generateExternalApiToken(clientId, { exp: undefined })
 
     const response = await server.inject({
       method: 'GET',

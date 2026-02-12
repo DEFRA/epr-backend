@@ -23,6 +23,13 @@ const privateKey = keyPair.privateKey
 
 const kid = 'test-cognito-key-id'
 
+export const testPublicKey = {
+  ...keyPair.publicKey,
+  kid,
+  use: 'sig',
+  alg: 'RS256'
+}
+
 /** @type {{key: string, algorithm: 'RS256'}} */
 const jwtSecret = { key: privateKey, algorithm: 'RS256' }
 const generateTokenOptions = { header: { kid } }

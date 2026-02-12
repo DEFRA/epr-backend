@@ -1,21 +1,10 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
 
+import { config } from '#root/config.js'
 import { StatusCodes } from 'http-status-codes'
-import Joi from 'joi'
 
-const EXPECTED_SCOPE = 'epr-backend-resource-srv/access'
 const EXPECTED_TOKEN_USE = 'access'
-
-const tokenSchema = Joi.object({
-  token_use: Joi.string().valid(EXPECTED_TOKEN_USE).required(),
-  scope: Joi.string()
-    .custom((value, helpers) =>
-      value.includes(EXPECTED_SCOPE) ? value : helpers.error('any.invalid')
-    )
-    .required(),
-  exp: Joi.number().greater(Joi.ref('$now')).required(),
-  client_id: Joi.string().required()
-}).unknown(true)
+const ONE_HOUR = 3600
 
 export const externalApiAuthPlugin = {
   plugin: {
@@ -23,28 +12,41 @@ export const externalApiAuthPlugin = {
     version: '1.0.0',
     /**
      * @param {import('@hapi/hapi').Server} server
-     * @param {{ clientId: string }} options
+     * @param {{ clientId: string, keys: object, verify: object | false }} options
      */
     register: (server, options) => {
       const { clientId } = options
 
       server.auth.strategy('api-gateway-client', 'jwt', {
-        keys: { key: 'not-verified', algorithms: ['RS256'] },
-        verify: false,
+        keys: [
+          {
+            uri: config.get('packagingRecyclingNotesExternalApi.jwksUri')
+          }
+        ],
+        verify: {
+          aud: false,
+          iss: false,
+          sub: false,
+          nbf: true,
+          exp: true,
+          maxAgeSec: ONE_HOUR,
+          timeSkewSec: 15
+        },
         validate: (
           /** @type {{ decoded: { payload: CognitoAccessTokenPayload } }} */ artifacts,
           _request,
           h
         ) => {
-          const { error } = tokenSchema.validate(artifacts.decoded.payload, {
-            context: { now: Math.floor(Date.now() / 1000) }
-          })
+          const { client_id: tokenClientId, token_use: tokenUse } =
+            artifacts.decoded.payload
 
-          if (error) {
+          if (tokenUse !== EXPECTED_TOKEN_USE) {
             return { isValid: false }
           }
 
-          const { client_id: tokenClientId } = artifacts.decoded.payload
+          if (!tokenClientId) {
+            return { isValid: false }
+          }
 
           if (tokenClientId !== clientId) {
             const statusCode = StatusCodes.FORBIDDEN

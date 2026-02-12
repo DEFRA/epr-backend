@@ -316,6 +316,17 @@ const baseConfig = {
       format: String,
       default: 'stub-client-id',
       env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_CLIENT_ID'
+    },
+    cognitoUserPoolId: {
+      doc: 'Cognito User Pool ID for external API JWT verification',
+      format: String,
+      default: 'eu-west-2_test',
+      env: 'JWT_COGNITO_USER_POOL_ID'
+    },
+    jwksUri: {
+      doc: 'Derived JWKS URI for JWT verification',
+      format: String,
+      default: ''
     }
   },
   featureFlags: {
@@ -444,13 +455,24 @@ const baseConfig = {
   }
 }
 
+function deriveJwtConfig(cfg) {
+  cfg.load({
+    packagingRecyclingNotesExternalApi: {
+      jwksUri: `https://cognito-idp.eu-west-2.amazonaws.com/${cfg.get('packagingRecyclingNotesExternalApi.cognitoUserPoolId')}/.well-known/jwks.json`
+    }
+  })
+}
+
 const config = convict(baseConfig)
+
+deriveJwtConfig(config)
 
 config.validate({ allowed: 'strict' })
 
 function getConfig(overrides = {}) {
   const cfg = convict(baseConfig)
   cfg.load(overrides)
+  deriveJwtConfig(cfg)
   return cfg
 }
 
