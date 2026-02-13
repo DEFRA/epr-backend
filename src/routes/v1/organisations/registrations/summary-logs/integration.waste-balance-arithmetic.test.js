@@ -172,79 +172,67 @@ describe('Waste balance arithmetic integration tests', () => {
       const { wasteBalancesRepository, accreditationId } = env
 
       // Step 1: Submit first summary log with 100 + 200 = 300 tonnes
-      const firstTonnage = 100
-      const secondTonnage = 200
-      const initialTotal = 300
       await performSummaryLogSubmission(
         env,
         'log-1',
         'file-1',
         'waste-1.xlsx',
         createUploadData([
-          { rowId: 1001, exportTonnage: firstTonnage },
-          { rowId: 1002, exportTonnage: secondTonnage }
+          { rowId: 1001, exportTonnage: 100 },
+          { rowId: 1002, exportTonnage: 200 }
         ])
       )
 
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(initialTotal)
-      expect(balance.availableAmount).toBeCloseTo(initialTotal)
+      expect(balance.amount).toBeCloseTo(300) // 100 + 200 = 300
+      expect(balance.availableAmount).toBeCloseTo(300)
 
       // Step 2: Create PRN for 50 tonnes and raise it (deduct from available)
-      const prn1Tonnage = 50
-      const availableAfterPrn1 = 250
-      const prn1 = await createPrn(env, prn1Tonnage)
+      const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(initialTotal) // Total unchanged
-      expect(balance.availableAmount).toBeCloseTo(availableAfterPrn1) // 300 - 50 = 250
+      expect(balance.amount).toBeCloseTo(300) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(250) // 300 - 50 = 250
 
       // Step 3: Submit revised summary log with additional row (all rows included)
       // Summary logs represent complete snapshots, so include all rows
-      const thirdTonnage = 150
-      const updatedTotal = 450
-      const availableAfterSubmit2 = 400
       await performSummaryLogSubmission(
         env,
         'log-2',
         'file-2',
         'waste-2.xlsx',
         createUploadData([
-          { rowId: 1001, exportTonnage: firstTonnage },
-          { rowId: 1002, exportTonnage: secondTonnage },
-          { rowId: 2001, exportTonnage: thirdTonnage }
+          { rowId: 1001, exportTonnage: 100 },
+          { rowId: 1002, exportTonnage: 200 },
+          { rowId: 2001, exportTonnage: 150 }
         ])
       )
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(updatedTotal) // 100 + 200 + 150 = 450
-      expect(balance.availableAmount).toBeCloseTo(availableAfterSubmit2) // 450 - 50 = 400
+      expect(balance.amount).toBeCloseTo(450) // 100 + 200 + 150 = 450
+      expect(balance.availableAmount).toBeCloseTo(400) // 450 - 50 = 400
 
       // Step 4: Create another PRN for 75 tonnes
-      const prn2Tonnage = 75
-      const availableAfterPrn2 = 325
-      const prn2 = await createPrn(env, prn2Tonnage)
+      const prn2 = await createPrn(env, 75)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(updatedTotal) // Total unchanged
-      expect(balance.availableAmount).toBeCloseTo(availableAfterPrn2) // 400 - 75 = 325
+      expect(balance.amount).toBeCloseTo(450) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(325) // 400 - 75 = 325
 
       // Step 5: Create a third PRN for 100 tonnes
-      const prn3Tonnage = 100
-      const availableAfterPrn3 = 225
-      const prn3 = await createPrn(env, prn3Tonnage)
+      const prn3 = await createPrn(env, 100)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(updatedTotal) // Total unchanged
-      expect(balance.availableAmount).toBeCloseTo(availableAfterPrn3) // 325 - 100 = 225
+      expect(balance.amount).toBeCloseTo(450) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(225) // 325 - 100 = 225
     })
 
     it('should handle interleaved credits and debits correctly', async () => {
@@ -255,93 +243,80 @@ describe('Waste balance arithmetic integration tests', () => {
 
       // Interleave summary log submissions and PRN creations
       // Credit: 100
-      const initialCredit = 100
       await performSummaryLogSubmission(
         env,
         'log-a',
         'file-a',
         'waste-a.xlsx',
-        createUploadData([{ rowId: 1001, exportTonnage: initialCredit }])
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
       )
 
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(initialCredit)
-      expect(balance.availableAmount).toBeCloseTo(initialCredit)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(100)
 
       // Debit: 30
-      const debit1 = 30
-      const availableAfterPrn1 = 70
-      const prn1 = await createPrn(env, debit1)
+      const prn1 = await createPrn(env, 30)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(initialCredit)
-      expect(balance.availableAmount).toBeCloseTo(availableAfterPrn1)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(70) // 100 - 30 = 70
 
       // Credit: 50 (include previous row 1001 in snapshot)
-      const secondCredit = 50
-      const expectedTotal2 = 150
-      const expectedAvailable2 = 120
       await performSummaryLogSubmission(
         env,
         'log-b',
         'file-b',
         'waste-b.xlsx',
         createUploadData([
-          { rowId: 1001, exportTonnage: initialCredit },
-          { rowId: 2001, exportTonnage: secondCredit }
+          { rowId: 1001, exportTonnage: 100 },
+          { rowId: 2001, exportTonnage: 50 }
         ])
       )
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(expectedTotal2)
-      expect(balance.availableAmount).toBeCloseTo(expectedAvailable2)
+      expect(balance.amount).toBeCloseTo(150) // 100 + 50 = 150
+      expect(balance.availableAmount).toBeCloseTo(120) // 70 + 50 = 120
 
       // Debit: 45
-      const debit2 = 45
-      const expectedAvailable3 = 75
-      const prn2 = await createPrn(env, debit2)
+      const prn2 = await createPrn(env, 45)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(expectedTotal2)
-      expect(balance.availableAmount).toBeCloseTo(expectedAvailable3)
+      expect(balance.amount).toBeCloseTo(150) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(75) // 120 - 45 = 75
 
       // Credit: 200 (include all previous rows in snapshot)
-      const thirdCredit = 200
-      const expectedTotal3 = 350
-      const expectedAvailable4 = 275
       await performSummaryLogSubmission(
         env,
         'log-c',
         'file-c',
         'waste-c.xlsx',
         createUploadData([
-          { rowId: 1001, exportTonnage: initialCredit },
-          { rowId: 2001, exportTonnage: secondCredit },
-          { rowId: 3001, exportTonnage: thirdCredit }
+          { rowId: 1001, exportTonnage: 100 },
+          { rowId: 2001, exportTonnage: 50 },
+          { rowId: 3001, exportTonnage: 200 }
         ])
       )
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(expectedTotal3)
-      expect(balance.availableAmount).toBeCloseTo(expectedAvailable4)
+      expect(balance.amount).toBeCloseTo(350) // 100 + 50 + 200 = 350
+      expect(balance.availableAmount).toBeCloseTo(275) // 75 + 200 = 275
 
       // Debit: 125
-      const debit3 = 125
-      const expectedAvailable5 = 150
-      const prn3 = await createPrn(env, debit3)
+      const prn3 = await createPrn(env, 125)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(expectedTotal3)
-      expect(balance.availableAmount).toBeCloseTo(expectedAvailable5)
+      expect(balance.amount).toBeCloseTo(350) // Total unchanged
+      expect(balance.availableAmount).toBeCloseTo(150) // 275 - 125 = 150
 
       // Final verification: total credits = 100 + 50 + 200 = 350
       // Total debits = 30 + 45 + 125 = 200
