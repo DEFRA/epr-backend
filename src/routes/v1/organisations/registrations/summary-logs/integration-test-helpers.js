@@ -110,7 +110,7 @@ const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
 
 export const createReprocessorReceivedRowValues = (overrides = {}) => {
-  const tonnage = overrides.tonnageReceived
+  const tonnage = overrides.tonnageReceived ?? 1000
   const d = {
     rowId: 1001,
     dateReceived: DEFAULT_DATE,
@@ -442,13 +442,13 @@ export const createTestInfrastructure = async (
   const uploadsRepository = createInMemoryUploadsRepository()
   const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-  const testOrg = buildComplexTestOrg(
+  const testOrg = buildComplexTestOrg({
     registrationId,
-    'ACC-123',
-    'reprocessor',
+    accreditationId: 'ACC-123',
+    processingType: 'reprocessor',
     reprocessingType,
-    'paper'
-  )
+    material: 'paper'
+  })
   testOrg.id = organisationId
 
   const organisationsRepository = createInMemoryOrganisationsRepository([
@@ -500,13 +500,13 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const uploadsRepository = createInMemoryUploadsRepository()
   const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-  const testOrg = buildComplexTestOrg(
+  const testOrg = buildComplexTestOrg({
     registrationId,
     accreditationId,
     processingType,
     reprocessingType,
     material
-  )
+  })
   testOrg.id = organisationId
   testOrg.status = 'active'
 
@@ -526,7 +526,13 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const fileDataMap = {}
   const dynamicExtractor = {
     extract: async (summaryLog) => {
-      return fileDataMap[summaryLog?.file?.id]
+      const fileId = summaryLog?.file?.id
+      if (!fileId || !Object.hasOwn(fileDataMap, fileId)) {
+        throw new Error(
+          `No test file data found in fileDataMap for summary log file id: ${fileId}`
+        )
+      }
+      return fileDataMap[fileId]
     }
   }
 
@@ -608,21 +614,22 @@ const createTestSubmitterWorker = ({
 })
 
 /**
- * Creates dummy accreditation data for an organisation.
- * @param {string} registrationId
- * @param {string} accreditationId
- * @param {string} processingType
- * @param {string} reprocessingType
- * @param {string} material
+ * Creates a complex test organisation with registrations and accreditations.
+ * @param {object} options
+ * @param {string} options.registrationId
+ * @param {string} options.accreditationId
+ * @param {string} options.processingType
+ * @param {string} options.reprocessingType
+ * @param {string} options.material
  * @returns {Object} Test organisation with registrations and accreditations
  */
-const buildComplexTestOrg = (
+const buildComplexTestOrg = ({
   registrationId,
   accreditationId,
   processingType,
   reprocessingType,
   material
-) => {
+}) => {
   return buildOrganisation({
     status: 'active',
     registrations: [
