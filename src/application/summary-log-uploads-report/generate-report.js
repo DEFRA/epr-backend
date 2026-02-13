@@ -136,12 +136,13 @@ async function transform(summaryLogsStatsList, registrationLookup) {
 /**
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationRepo - Organisation repository
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepo - Summary logs repository
- * @returns {Promise<SummaryLogUploadReportRow[]>} Array of report row objects
+ * @returns {Promise<{reportRows: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
  */
 export async function generateSummaryLogUploadsReport(
   organisationRepo,
   summaryLogsRepo
 ) {
+  const generatedAt = new Date().toISOString()
   logger.info({ message: 'Summary log uploads report generation started' })
 
   const summaryLogsStatsList =
@@ -163,10 +164,13 @@ export async function generateSummaryLogUploadsReport(
   })
 
   const registrationLookup = buildRegistrationLookup(organisations)
-  const reportRows = await transform(summaryLogsStatsList, registrationLookup)
+  const summaryLogUploads = await transform(
+    summaryLogsStatsList,
+    registrationLookup
+  )
   logger.info({
-    message: `Transformation complete: ${reportRows.length} rows generated`
+    message: `Transformation complete: ${summaryLogUploads.length} rows generated`
   })
 
-  return reportRows
+  return { summaryLogUploads, generatedAt }
 }

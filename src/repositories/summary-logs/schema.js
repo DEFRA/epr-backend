@@ -55,6 +55,7 @@ export const summaryLogInsertSchema = Joi.object({
   registrationId: Joi.string().optional(),
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),
+  createdAt: Joi.string().isoDate().required(),
   submittedAt: Joi.when('status', {
     is: Joi.valid(
       SUMMARY_LOG_STATUS.SUBMITTING,

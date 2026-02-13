@@ -35,7 +35,7 @@ export const getSummaryLogUploadsReport = {
   handler: async (request, h) => {
     const { organisationsRepository, summaryLogsRepository, logger } = request
     try {
-      const reportRows = await generateSummaryLogUploadsReport(
+      const reportData = await generateSummaryLogUploadsReport(
         organisationsRepository,
         summaryLogsRepository
       )
@@ -48,7 +48,7 @@ export const getSummaryLogUploadsReport = {
         }
       })
 
-      return h.response(reportRows).code(StatusCodes.OK)
+      return h.response(reportData).code(StatusCodes.OK)
     } catch (error) {
       logger.error({
         err: error,
