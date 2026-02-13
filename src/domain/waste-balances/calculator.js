@@ -7,13 +7,7 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
-import {
-  add,
-  subtract,
-  toNumber,
-  isZero,
-  abs
-} from './decimal-utils.js'
+import { add, subtract, toNumber, isZero, abs } from './decimal-utils.js'
 
 /**
  * Create Transaction Object
