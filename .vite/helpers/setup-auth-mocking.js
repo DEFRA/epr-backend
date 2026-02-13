@@ -1,4 +1,7 @@
 import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
+import { cognitoJwksUrl } from './mock-cognito-jwks.js'
+
+export { cognitoJwksUrl }
 
 export function setupAuthContext(disabledMocks) {
   let mockOidcServer
