@@ -4,9 +4,11 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
+import { auditIncrementalFormMigration } from '#auditing/incremental-form-migration.js'
 
 /**
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {OrganisationMigrationItem} from '#formsubmission/types.js'
  */
 
@@ -57,45 +59,62 @@ function insertOrganisation(organisationsRepository, item) {
     })
 }
 
-function updateOrganisation(organisationsRepository, item) {
+async function updateOrganisation(
+  organisationsRepository,
+  systemLogsRepository,
+  item
+) {
   const { id, version, ...orgWithoutIdAndVersion } = /** @type {any} */ (
     item.value
   )
-  return organisationsRepository
-    .replace(id, version, removeUndefinedValues(orgWithoutIdAndVersion))
-    .then(
-      () =>
-        /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
-          success: true,
-          id,
-          action: 'updated'
-        })
+
+  try {
+    const previous = await organisationsRepository.findById(id)
+
+    await organisationsRepository.replace(
+      id,
+      version,
+      removeUndefinedValues(orgWithoutIdAndVersion)
     )
-    .catch((error) => {
-      logger.error({
-        err: error,
-        message: 'Error updating organisation',
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
-          reference: id
-        }
-      })
-      return /** @type {import('#formsubmission/types.js').FailureResult} */ ({
-        success: false,
-        id,
-        phase: 'update'
-      })
+    const next = await organisationsRepository.findById(id, version + 1)
+    await auditIncrementalFormMigration(
+      systemLogsRepository,
+      id,
+      previous,
+      next
+    )
+    return /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
+      success: true,
+      id,
+      action: 'updated'
     })
+  } catch (error) {
+    logger.error({
+      err: error,
+      message: 'Error updating organisation',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+        reference: id
+      }
+    })
+    return /** @type {import('#formsubmission/types.js').FailureResult} */ ({
+      success: false,
+      id,
+      phase: 'update'
+    })
+  }
 }
 
 /**
  * @param {OrganisationsRepository} organisationsRepository
+ * @param {SystemLogsRepository} systemLogsRepository
  * @param {OrganisationMigrationItem[]} organisations
  * @returns {Promise<{successful: import('#formsubmission/types.js').SuccessResult[], failed: import('#formsubmission/types.js').FailureResult[]}>}
  */
 export async function upsertOrganisations(
   organisationsRepository,
+  systemLogsRepository,
   organisations
 ) {
   const toInsert = organisations.filter((item) => item.operation === 'insert')
@@ -105,7 +124,7 @@ export async function upsertOrganisations(
     insertOrganisation(organisationsRepository, item)
   )
   const updatePromises = toUpdate.map((item) =>
-    updateOrganisation(organisationsRepository, item)
+    updateOrganisation(organisationsRepository, systemLogsRepository, item)
   )
 
   const results = await Promise.allSettled([
