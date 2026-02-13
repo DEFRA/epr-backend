@@ -11,7 +11,6 @@ import {
   add,
   subtract,
   toNumber,
-  toDecimal,
   isZero,
   abs
 } from './decimal-utils.js'
