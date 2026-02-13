@@ -13,7 +13,7 @@ const COUNTERS_COLLECTION = 'counters'
  *
  * @param {import('mongodb').Db} db
  */
-async function ensureCollections(db) {
+async function ensureCollections(db, logger) {
   await db.collection(ORGANISATION_COLLECTION).createIndex({ orgId: 1 })
   await db
     .collection(REGISTRATIONS_COLLECTION)
@@ -22,7 +22,7 @@ async function ensureCollections(db) {
     .collection(ACCREDITATIONS_COLLECTION)
     .createIndex({ referenceNumber: 1 })
 
-  await seedOrgIdCounter(db)
+  await seedOrgIdCounter(db, logger)
 }
 
 /**
@@ -39,7 +39,7 @@ async function findHighestOrgId(db) {
       .sort({ orgId: -1 })
       .limit(1)
       .toArray()
-    return doc?.orgId ?? 0
+    return doc?.orgId ?? ORG_ID_START_NUMBER
   }
 
   const [formsMax, eprMax] = await Promise.all([
@@ -56,9 +56,8 @@ async function findHighestOrgId(db) {
  *
  * @param {import('mongodb').Db} db
  */
-async function seedOrgIdCounter(db) {
-  const highestOrgId = await findHighestOrgId(db)
-  const seq = highestOrgId || ORG_ID_START_NUMBER
+async function seedOrgIdCounter(db, logger) {
+  const seq = await findHighestOrgId(db)
 
   await db
     .collection(COUNTERS_COLLECTION)
@@ -67,6 +66,8 @@ async function seedOrgIdCounter(db) {
       { $setOnInsert: { seq } },
       { upsert: true }
     )
+
+  logger.info(`orgId counter seeded at ${seq}`)
 }
 
 const mapDocument = (doc) => {
@@ -188,8 +189,8 @@ const findAllFormSubmissionIds = (db) => async () => {
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {Promise<import('./port.js').FormSubmissionsRepositoryFactory>}
  */
-export const createFormSubmissionsRepository = async (db) => {
-  await ensureCollections(db)
+export const createFormSubmissionsRepository = async (db, logger) => {
+  await ensureCollections(db, logger)
 
   return () => {
     return {
