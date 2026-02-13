@@ -33,7 +33,7 @@ async function getNextOrgId(db) {
       { upsert: true, returnDocument: 'after' }
     )
 
-  if (!result || result.seq === undefined) {
+  if (result?.seq === undefined) {
     throw new Error('Failed to generate orgId: counter returned invalid result')
   }
 
