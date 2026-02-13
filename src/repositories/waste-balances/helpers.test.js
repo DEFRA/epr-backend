@@ -29,6 +29,17 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
 }))
 
+vi.mock('#root/config.js', () => ({
+  config: {
+    get: vi.fn((key) => {
+      if (key === 'audit.maxPayloadSizeBytes') {
+        return 10000
+      }
+      return undefined
+    })
+  }
+}))
+
 vi.mock('#domain/waste-balances/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
 }))
@@ -532,6 +543,83 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       )
 
       // No system log insert attempt should be made (and no crash)
+    })
+
+    it('should send reduced context to CDP audit when payload exceeds size limit', async () => {
+      // Create enough large transactions to exceed the 10000 byte mock limit
+      const largeTransactions = Array.from({ length: 50 }, (_, i) => ({
+        id: `trans-${i}`,
+        type: 'credit',
+        amount: 100,
+        entities: [{ id: `entity-${i}`, data: 'x'.repeat(200) }]
+      }))
+
+      const wasteRecords = [{ id: 'rec-1', organisationId: 'org-1', data: {} }]
+      const user = { id: 'user-1' }
+      const accreditation = { id: 'acc-1' }
+      const wasteBalance = {
+        id: 'bal-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 100,
+        transactions: [],
+        version: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+      const saveBalance = vi.fn().mockResolvedValue()
+
+      const dependencies = {
+        organisationsRepository: {
+          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+        },
+        systemLogsRepository: {
+          insert: vi.fn().mockResolvedValue()
+        }
+      }
+
+      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+        newTransactions: largeTransactions,
+        newAmount: 200,
+        newAvailableAmount: 200
+      })
+
+      await performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId: 'acc-1',
+        dependencies,
+        findBalance,
+        saveBalance,
+        user
+      })
+
+      // CDP audit should get reduced context
+      expect(audit).toHaveBeenCalledWith({
+        event: {
+          category: 'waste-reporting',
+          subCategory: 'waste-balance',
+          action: 'update'
+        },
+        context: {
+          accreditationId: 'acc-1',
+          amount: 200,
+          availableAmount: 200,
+          transactionCount: 50
+        },
+        user
+      })
+
+      // System log should still get full context
+      expect(dependencies.systemLogsRepository.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: {
+            accreditationId: 'acc-1',
+            amount: 200,
+            availableAmount: 200,
+            newTransactions: largeTransactions
+          }
+        })
+      )
     })
 
     it('should throw error when organisationsRepository dependency is missing', async () => {
