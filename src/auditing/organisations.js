@@ -1,8 +1,8 @@
-import { audit } from '@defra/cdp-auditing'
 import {
   extractUserDetails,
   recordSystemLog,
-  isPayloadSmallEnoughToAudit
+  isPayloadSmallEnoughToAudit,
+  safeAudit
 } from './helpers.js'
 
 /**
@@ -42,7 +42,7 @@ async function auditOrganisationUpdate(
         context: { organisationId }
       }
 
-  audit(safeAuditingPayload)
+  safeAudit(safeAuditingPayload)
   await recordSystemLog(request, payload)
 }
 

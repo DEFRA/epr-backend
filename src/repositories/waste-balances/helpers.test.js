@@ -40,6 +40,12 @@ vi.mock('#root/config.js', () => ({
   }
 }))
 
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    warn: vi.fn()
+  }
+}))
+
 vi.mock('#domain/waste-balances/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
 }))
