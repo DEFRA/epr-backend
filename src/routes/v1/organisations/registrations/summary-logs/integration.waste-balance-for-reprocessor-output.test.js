@@ -157,9 +157,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
 
-      const transaction1 = balance.transactions.find(
-        (t) => Math.abs(t.amount - 100) < 0.001
-      )
+      const transaction1 = balance.transactions.find((t) => t.amount === 100)
       expect(transaction1).toBeDefined()
       expect(transaction1.type).toBe('credit')
       expect(transaction1.entities[0].id).toBe('3001')

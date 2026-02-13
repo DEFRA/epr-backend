@@ -5,7 +5,7 @@ import Decimal from 'decimal.js'
  * - Precision: 34 significant digits (matches MongoDB Decimal128 spec)
  * - Rounding: ROUND_HALF_UP (standard financial rounding)
  */
-Decimal.set({
+const ConfiguredDecimal = Decimal.clone({
   precision: 34,
   rounding: Decimal.ROUND_HALF_UP
 })
@@ -19,12 +19,12 @@ Decimal.set({
  */
 export function toDecimal(value) {
   if (value === null || value === undefined) {
-    return new Decimal(0)
+    return new ConfiguredDecimal(0)
   }
-  if (value instanceof Decimal) {
+  if (value instanceof ConfiguredDecimal) {
     return value
   }
-  return new Decimal(value)
+  return new ConfiguredDecimal(value)
 }
 
 /**
@@ -64,6 +64,17 @@ export function add(a, b) {
  */
 export function subtract(a, b) {
   return toDecimal(a).minus(toDecimal(b))
+}
+
+/**
+ * Multiply two values using exact decimal arithmetic.
+ *
+ * @param {number|string|Decimal} a - First value
+ * @param {number|string|Decimal} b - Second value
+ * @returns {Decimal} Product as Decimal
+ */
+export function multiply(a, b) {
+  return toDecimal(a).times(toDecimal(b))
 }
 
 /**

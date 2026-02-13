@@ -13,7 +13,8 @@ import {
   toNumber,
   isZero,
   abs,
-  greaterThan
+  greaterThan,
+  multiply
 } from './decimal-utils.js'
 
 /**
@@ -81,7 +82,7 @@ export const buildTransaction = (
 const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
   const sign =
     transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
-  const netAmount = transaction.amount * sign
+  const netAmount = multiply(transaction.amount, sign)
 
   const entityIds = (transaction.entities || []).map((e) => String(e.id))
   const uniqueEntityIds = new Set(entityIds)
