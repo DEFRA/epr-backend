@@ -153,15 +153,15 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(balance.transactions).toHaveLength(2)
 
       // 100 + 200 = 300
-      expect(balance.amount).toBeCloseTo(300)
-      expect(balance.availableAmount).toBeCloseTo(300)
+      expect(balance.amount).toBe(300)
+      expect(balance.availableAmount).toBe(300)
 
       const transaction1 = balance.transactions.find(
         (t) => t.entities[0].id === '1001'
       )
       expect(transaction1).toBeDefined()
       expect(transaction1.type).toBe('credit')
-      expect(transaction1.amount).toBeCloseTo(100)
+      expect(transaction1.amount).toBe(100)
     })
 
     it('should update waste balance with debits from sent on loads', async () => {
@@ -191,15 +191,15 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(balance.transactions).toHaveLength(2)
 
       // 500 (credit) - 100 (debit) = 400
-      expect(balance.amount).toBeCloseTo(400)
-      expect(balance.availableAmount).toBeCloseTo(400)
+      expect(balance.amount).toBe(400)
+      expect(balance.availableAmount).toBe(400)
 
       const debitTx = balance.transactions.find(
         (t) => t.entities[0].id === '5001'
       )
       expect(debitTx).toBeDefined()
       expect(debitTx.type).toBe('debit')
-      expect(debitTx.amount).toBeCloseTo(100)
+      expect(debitTx.amount).toBe(100)
     })
 
     it('should not create credit transaction if PRN was issued on received load', async () => {
@@ -226,7 +226,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.amount).toBe(200)
       expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
@@ -262,7 +262,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.amount).toBe(200)
       expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
@@ -302,12 +302,12 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       // 500 (credit) - 50 (debit) = 450
       // Row 5001 should be ignored
-      expect(balance.amount).toBeCloseTo(450)
+      expect(balance.amount).toBe(450)
 
       const debitTx = balance.transactions.find((t) => t.type === 'debit')
       expect(debitTx).toBeDefined()
       expect(debitTx.entities[0].id).toBe('5002')
-      expect(debitTx.amount).toBeCloseTo(50)
+      expect(debitTx.amount).toBe(50)
     })
 
     it('should handle revisions correctly (credit -> debit)', async () => {
@@ -332,7 +332,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.amount).toBe(100)
 
       // Second submission: Revised to PRN Issued (should reverse credit)
       const secondUploadData = createUploadData([
@@ -349,13 +349,13 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(0)
+      expect(balance.amount).toBe(0)
 
       // Should have original credit and corrective debit
       expect(balance.transactions).toHaveLength(2)
       const debitTx = balance.transactions.find((t) => t.type === 'debit')
       expect(debitTx.entities[0].id).toBe('1001')
-      expect(debitTx.amount).toBeCloseTo(100)
+      expect(debitTx.amount).toBe(100)
     })
 
     it('should not create transaction if mandatory fields are missing (AC01d)', async () => {
@@ -391,7 +391,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       // Only row 1002 should contribute
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.amount).toBe(200)
       expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
@@ -429,7 +429,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      expect(balance.amount).toBeCloseTo(848.725)
+      expect(balance.amount).toBe(848.725)
     })
   })
 })
