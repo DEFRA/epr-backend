@@ -7,7 +7,14 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
-import { add, subtract, toNumber, isZero, abs } from './decimal-utils.js'
+import {
+  add,
+  subtract,
+  toNumber,
+  isZero,
+  abs,
+  greaterThan
+} from './decimal-utils.js'
 
 /**
  * Create Transaction Object
@@ -151,10 +158,9 @@ export const calculateWasteBalanceUpdates = ({
 
     // Only create transaction if there is a difference (exact decimal comparison)
     if (!isZero(delta)) {
-      const type =
-        toNumber(delta) > 0
-          ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
-          : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+      const type = greaterThan(delta, 0)
+        ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+        : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
 
       // Create Transaction
       const transaction = buildTransaction(
