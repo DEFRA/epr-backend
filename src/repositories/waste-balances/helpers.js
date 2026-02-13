@@ -1,7 +1,9 @@
 import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
-import { audit } from '@defra/cdp-auditing'
-import { isPayloadSmallEnoughToAudit } from '#root/auditing/helpers.js'
+import {
+  isPayloadSmallEnoughToAudit,
+  safeAudit
+} from '#root/auditing/helpers.js'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { randomUUID } from 'node:crypto'
 import {
@@ -215,7 +217,7 @@ const recordAuditLogs = async (
         }
       }
 
-  audit(safeAuditingPayload)
+  safeAudit(safeAuditingPayload)
 
   if (dependencies.systemLogsRepository) {
     await dependencies.systemLogsRepository.insert({

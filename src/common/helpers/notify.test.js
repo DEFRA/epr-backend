@@ -45,6 +45,9 @@ vi.mock('#root/config.js', () => ({
       if (key === 'isDevelopment') {
         return false
       }
+      if (key === 'audit.maxPayloadSizeBytes') {
+        return 1000000
+      }
       return null
     })
   }
@@ -60,6 +63,7 @@ describe('sendEmail', () => {
     config.get.mockImplementation((key) => {
       if (key === 'govukNotifyApiKeyPath') return 'dummy-key'
       if (key === 'isDevelopment') return false
+      if (key === 'audit.maxPayloadSizeBytes') return 1000000
       return null
     })
   })
