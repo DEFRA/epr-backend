@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
 import { audit } from '@defra/cdp-auditing'
+import { isPayloadSmallEnoughToAudit } from '#root/auditing/helpers.js'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { randomUUID } from 'node:crypto'
 import {
@@ -202,7 +203,19 @@ const recordAuditLogs = async (
     user
   }
 
-  audit(payload)
+  const safeAuditPayload = isPayloadSmallEnoughToAudit(payload)
+    ? payload
+    : {
+        ...payload,
+        context: {
+          accreditationId: updatedBalance.accreditationId,
+          amount: updatedBalance.amount,
+          availableAmount: updatedBalance.availableAmount,
+          transactionCount: newTransactions.length
+        }
+      }
+
+  audit(safeAuditPayload)
 
   if (dependencies.systemLogsRepository) {
     await dependencies.systemLogsRepository.insert({
