@@ -56,38 +56,48 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 const matchesFindByStatusCriteria = (prn, params) => {
-  const { statuses, dateFrom, dateTo, cursor, excludeOrganisationIds, excludePrnIds } = params
+  const {
+    statuses,
+    dateFrom,
+    dateTo,
+    cursor,
+    excludeOrganisationIds,
+    excludePrnIds
+  } = params
 
   if (!statuses.includes(prn.status.currentStatus)) return false
   if (cursor && prn.id <= cursor) return false
-  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) return false
-  if (excludeOrganisationIds?.length && excludeOrganisationIds.includes(prn.organisation.id)) return false
+  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo))
+    return false
+  if (
+    excludeOrganisationIds?.length &&
+    excludeOrganisationIds.includes(prn.organisation.id)
+  )
+    return false
   if (excludePrnIds?.length && excludePrnIds.includes(prn.id)) return false
 
   return true
 }
 
-const performFindByStatus =
-  (storage) =>
-  async (params) => {
-    const matching = []
-    for (const prn of storage.values()) {
-      if (matchesFindByStatusCriteria(prn, params)) {
-        matching.push(structuredClone(prn))
-      }
-    }
-
-    matching.sort((a, b) => a.id.localeCompare(b.id))
-
-    const hasMore = matching.length > limit
-    const items = matching.slice(0, limit)
-
-    return {
-      items,
-      nextCursor: hasMore ? items.at(-1).id : null,
-      hasMore
+const performFindByStatus = (storage) => async (params) => {
+  const matching = []
+  for (const prn of storage.values()) {
+    if (matchesFindByStatusCriteria(prn, params)) {
+      matching.push(structuredClone(prn))
     }
   }
+
+  matching.sort((a, b) => a.id.localeCompare(b.id))
+
+  const hasMore = matching.length > limit
+  const items = matching.slice(0, limit)
+
+  return {
+    items,
+    nextCursor: hasMore ? items.at(-1).id : null,
+    hasMore
+  }
+}
 
 const performUpdateStatus =
   (storage) =>
