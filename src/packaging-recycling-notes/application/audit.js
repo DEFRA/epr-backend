@@ -1,8 +1,8 @@
-import { audit } from '@defra/cdp-auditing'
 import {
   extractUserDetails,
   recordSystemLog,
-  isPayloadSmallEnoughToAudit
+  isPayloadSmallEnoughToAudit,
+  safeAudit
 } from '#root/auditing/helpers.js'
 
 /**
@@ -40,7 +40,7 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
         context: { organisationId, prnId }
       }
 
-  audit(safeAuditingPayload)
+  safeAudit(safeAuditingPayload)
   await recordSystemLog(request, payload)
 }
 
