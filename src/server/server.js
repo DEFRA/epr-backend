@@ -1,38 +1,38 @@
 import Hapi from '@hapi/hapi'
 import Inert from '@hapi/inert'
+import Jwt from '@hapi/jwt'
 import Vision from '@hapi/vision'
 import HapiSwagger from 'hapi-swagger'
-import Jwt from '@hapi/jwt'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
+import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
+import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
+import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
+import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
+import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags } from '#plugins/feature-flags.js'
+import { router } from '#plugins/router.js'
+import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
-import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
-import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
-import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
-import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
-import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
-import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
-import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
-import { router } from '#plugins/router.js'
-import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
-import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
-import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
+import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/mongodb.plugin.js'
+import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
+import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runGlassMigration } from '#server/run-glass-migration.js'
 
@@ -158,7 +158,10 @@ async function createServer(options = {}) {
     pulse,
     Jwt,
     authPlugin,
-    externalApiAuthPlugin,
+    {
+      plugin: externalApiAuthPlugin.plugin,
+      options: { config }
+    },
     authFailureLogger,
     externalApiErrorFormatter
   ]

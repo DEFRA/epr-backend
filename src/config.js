@@ -310,6 +310,21 @@ const baseConfig = {
       default: '["me@example.com", "you@example.com"]'
     }
   },
+  packagingRecyclingNotesExternalApi: {
+    clientId: {
+      doc: 'Client id for external API access',
+      format: String,
+      default: 'stub-client-id',
+      env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_CLIENT_ID'
+    },
+    jwksUrl: {
+      doc: 'Derived JWKS URL for JWT verification',
+      format: String,
+      default:
+        'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_ZJcyFKABL/.well-known/jwks.json', // dev
+      env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL'
+    }
+  },
   featureFlags: {
     formsDataMigration: {
       doc: 'Feature Flag: Runs forms data migration on startup',
@@ -434,8 +449,10 @@ const config = convict(baseConfig)
 
 config.validate({ allowed: 'strict' })
 
-function getConfig(overrides) {
-  return convict(baseConfig, overrides)
+function getConfig(overrides = {}) {
+  const cfg = convict(baseConfig)
+  cfg.load(overrides)
+  return cfg
 }
 
 export { config, getConfig }
