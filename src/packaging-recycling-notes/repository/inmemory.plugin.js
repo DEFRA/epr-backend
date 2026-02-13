@@ -65,21 +65,30 @@ const matchesFindByStatusCriteria = (prn, params) => {
     excludePrnIds
   } = params
 
-  if (!statuses.includes(prn.status.currentStatus)) return false
-  if (cursor && prn.id <= cursor) return false
-  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo))
+  if (!statuses.includes(prn.status.currentStatus)) {
     return false
+  }
+  if (cursor && prn.id <= cursor) {
+    return false
+  }
+  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
+    return false
+  }
   if (
     excludeOrganisationIds?.length &&
     excludeOrganisationIds.includes(prn.organisation.id)
-  )
+  ) {
     return false
-  if (excludePrnIds?.length && excludePrnIds.includes(prn.id)) return false
+  }
+  if (excludePrnIds?.length && excludePrnIds.includes(prn.id)) {
+    return false
+  }
 
   return true
 }
 
 const performFindByStatus = (storage) => async (params) => {
+  const { limit } = params
   const matching = []
   for (const prn of storage.values()) {
     if (matchesFindByStatusCriteria(prn, params)) {
