@@ -42,14 +42,14 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('generates report with registration info only', async () => {
-    const createdAt = '2026-01-15T10:30:00.000Z'
+    const submittedAt = '2026-01-15T10:30:00.000Z'
 
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
-        createdAt
+        submittedAt
       })
     )
 
@@ -67,7 +67,7 @@ describe('generateSummaryLogUploadsReport', () => {
         registrationNumber: registration.registrationNumber,
         reprocessingSite: expect.any(String),
         packagingWasteCategory: expect.any(String),
-        lastSuccessfulUpload: createdAt,
+        lastSuccessfulUpload: submittedAt,
         lastFailedUpload: '',
         successfulUploads: 1,
         failedUploads: 0
@@ -77,14 +77,14 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('generates report with registration and accreditation details', async () => {
-    const createdAt = '2026-01-15T10:30:00.000Z'
+    const submittedAt = '2026-01-15T10:30:00.000Z'
 
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
-        createdAt
+        submittedAt
       })
     )
 
@@ -97,7 +97,7 @@ describe('generateSummaryLogUploadsReport', () => {
       expect.objectContaining({
         registrationNumber: registration.registrationNumber,
         accreditationNumber: accreditation.accreditationNumber,
-        lastSuccessfulUpload: createdAt
+        lastSuccessfulUpload: submittedAt
       })
     ])
   })
@@ -120,7 +120,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
-        createdAt: firstSuccessfulAt
+        submittedAt: firstSuccessfulAt
       })
     )
 
@@ -129,7 +129,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
-        createdAt: latestSuccessfulAt
+        submittedAt: latestSuccessfulAt
       })
     )
 
@@ -157,7 +157,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org2.id,
         registrationId: registration2.id,
-        createdAt: firstSuccessfulAt
+        submittedAt: firstSuccessfulAt
       })
     )
 
@@ -166,7 +166,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org2.id,
         registrationId: registration2.id,
-        createdAt: latestSuccessfulAt
+        submittedAt: latestSuccessfulAt
       })
     )
 

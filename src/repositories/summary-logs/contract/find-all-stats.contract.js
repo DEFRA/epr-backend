@@ -39,15 +39,15 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
     it('returns aggregated statistics with latest timestamp and correct count for registration with two successful uploads', async () => {
       const { organisationId, registrationId } = generateOrgReg()
 
-      const firstCreatedAt = '2024-01-10T10:00:00.000Z'
-      const latestCreatedAt = '2024-01-20T15:30:00.000Z'
+      const firstSubmittedAt = '2024-01-10T10:00:00.000Z'
+      const latestSubmittedCreatedAt = '2024-01-20T15:30:00.000Z'
 
       await repo.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          createdAt: firstCreatedAt
+          submittedAt: firstSubmittedAt
         })
       )
 
@@ -56,7 +56,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          createdAt: latestCreatedAt
+          submittedAt: latestSubmittedCreatedAt
         })
       )
 
@@ -73,7 +73,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         {
           organisationId,
           registrationId,
-          lastSuccessful: new Date(latestCreatedAt),
+          lastSuccessful: new Date(latestSubmittedCreatedAt),
           lastFailed: null,
           successfulCount: 2,
           failedCount: 0
@@ -129,8 +129,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
     it('returns aggregated statistics with both successful and failed counts and their respective latest timestamps for a single registration', async () => {
       const { organisationId, registrationId } = generateOrgReg()
 
-      const firstSuccessfulCreatedAt = '2024-01-10T10:00:00.000Z'
-      const latestSuccessfulCreatedAt = '2024-01-20T15:30:00.000Z'
+      const firstSubmittedAt = '2024-01-10T10:00:00.000Z'
+      const latestSubmittedAt = '2024-01-20T15:30:00.000Z'
 
       const firstFailedCreatedAt = '2024-02-01T09:00:00.000Z'
       const latestFailedCreatedAt = '2024-02-10T16:45:00.000Z'
@@ -140,7 +140,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          createdAt: firstSuccessfulCreatedAt
+          submittedAt: firstSubmittedAt
         })
       )
 
@@ -149,7 +149,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          createdAt: latestSuccessfulCreatedAt
+          submittedAt: latestSubmittedAt
         })
       )
 
@@ -158,7 +158,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
-          createdAt: firstFailedCreatedAt
+          createdAt: firstFailedCreatedAt,
+          submittedAt: firstFailedCreatedAt
         })
       )
 
@@ -167,7 +168,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
-          createdAt: latestFailedCreatedAt
+          createdAt: latestFailedCreatedAt,
+          submittedAt: latestFailedCreatedAt
         })
       )
 
@@ -184,7 +186,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         {
           organisationId,
           registrationId,
-          lastSuccessful: new Date(latestSuccessfulCreatedAt),
+          lastSuccessful: new Date(latestSubmittedAt),
           lastFailed: new Date(latestFailedCreatedAt),
           successfulCount: 2,
           failedCount: 2
@@ -196,8 +198,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
       const org1 = generateOrgReg()
       const org2 = generateOrgReg()
 
-      const org1FirstCreatedAt = '2024-01-10T10:00:00.000Z'
-      const org1LatestCreatedAt = '2024-01-20T15:30:00.000Z'
+      const org1FirstSubmittedAt = '2024-01-10T10:00:00.000Z'
+      const org1LatestSubmittedAt = '2024-01-20T15:30:00.000Z'
 
       const org2FirstFailedCreatedAt = '2024-02-01T09:00:00.000Z'
       const org2LatestFailedCreatedAt = '2024-02-05T14:30:00.000Z'
@@ -207,7 +209,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId: org1.organisationId,
           registrationId: org1.registrationId,
-          createdAt: org1FirstCreatedAt
+          submittedAt: org1FirstSubmittedAt
         })
       )
 
@@ -216,7 +218,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId: org1.organisationId,
           registrationId: org1.registrationId,
-          createdAt: org1LatestCreatedAt
+          submittedAt: org1LatestSubmittedAt
         })
       )
 
@@ -251,7 +253,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         {
           organisationId: org1.organisationId,
           registrationId: org1.registrationId,
-          lastSuccessful: new Date(org1LatestCreatedAt), // Validates against inserted data
+          lastSuccessful: new Date(org1LatestSubmittedAt), // Validates against inserted data
           lastFailed: null,
           successfulCount: 2,
           failedCount: 0
@@ -279,15 +281,15 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
     it('return latest successful timestamp even when its out of order', async () => {
       const { organisationId, registrationId } = generateOrgReg()
 
-      const latestCreatedAt = '2024-05-20T10:00:00.000Z'
-      const olderCreatedAt = '2024-01-10T10:00:00.000Z'
+      const latestSubmittedAt = '2024-05-20T10:00:00.000Z'
+      const olderSubmittedAt = '2024-01-10T10:00:00.000Z'
 
       await repo.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          createdAt: latestCreatedAt
+          submittedAt: latestSubmittedAt
         })
       )
 
@@ -296,7 +298,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          createdAt: olderCreatedAt
+          submittedAt: olderSubmittedAt
         })
       )
 
@@ -309,7 +311,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
 
       expect(matchingStats[0]).toMatchObject({
         successfulCount: 2,
-        lastSuccessful: new Date(latestCreatedAt) // Should still be the latestCreatedAt, not olderCreatedAt
+        lastSuccessful: new Date(latestSubmittedAt) // Should still be the latestCreatedAt, not olderCreatedAt
       })
     })
   })

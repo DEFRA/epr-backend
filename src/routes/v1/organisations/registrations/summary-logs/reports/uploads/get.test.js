@@ -44,14 +44,14 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
       const org = await buildApprovedOrg(organisationsRepository, { orgId })
       const registration = org.registrations[0]
 
-      const createdAt = '2026-01-20T14:30:00.000Z'
+      const submittedAt = '2026-01-20T14:30:00.000Z'
 
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationId: org.id,
           registrationId: registration.id,
-          createdAt
+          submittedAt
         })
       )
 
@@ -75,7 +75,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
             accreditationNumber: 'ACC1',
             reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
             packagingWasteCategory: 'Glass-remelt',
-            lastSuccessfulUpload: createdAt,
+            lastSuccessfulUpload: submittedAt,
             lastFailedUpload: '',
             successfulUploads: 1,
             failedUploads: 0
