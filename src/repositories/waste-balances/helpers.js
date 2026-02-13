@@ -203,7 +203,7 @@ const recordAuditLogs = async (
     user
   }
 
-  const safeAuditPayload = isPayloadSmallEnoughToAudit(payload)
+  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
     ? payload
     : {
         ...payload,
@@ -215,7 +215,7 @@ const recordAuditLogs = async (
         }
       }
 
-  audit(safeAuditPayload)
+  audit(safeAuditingPayload)
 
   if (dependencies.systemLogsRepository) {
     await dependencies.systemLogsRepository.insert({
