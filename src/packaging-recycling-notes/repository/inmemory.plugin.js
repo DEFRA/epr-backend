@@ -55,39 +55,24 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
   return true
 }
 
+const matchesFindByStatusCriteria = (prn, params) => {
+  const { statuses, dateFrom, dateTo, cursor, excludeOrganisationIds, excludePrnIds } = params
+
+  if (!statuses.includes(prn.status.currentStatus)) return false
+  if (cursor && prn.id <= cursor) return false
+  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) return false
+  if (excludeOrganisationIds?.length && excludeOrganisationIds.includes(prn.organisation.id)) return false
+  if (excludePrnIds?.length && excludePrnIds.includes(prn.id)) return false
+
+  return true
+}
+
 const performFindByStatus =
   (storage) =>
-  async ({
-    statuses,
-    dateFrom,
-    dateTo,
-    cursor,
-    limit,
-    excludeOrganisationIds,
-    excludePrnIds
-  }) => {
+  async (params) => {
     const matching = []
     for (const prn of storage.values()) {
-      const matchesStatus = statuses.includes(prn.status.currentStatus)
-      const afterCursor = !cursor || prn.id > cursor
-      const matchesDate = matchesDateRange(
-        prn.status.currentStatusAt,
-        dateFrom,
-        dateTo
-      )
-      const matchesOrgFilter =
-        !excludeOrganisationIds?.length ||
-        !excludeOrganisationIds.includes(prn.organisation.id)
-      const matchesIdFilter =
-        !excludePrnIds?.length || !excludePrnIds.includes(prn.id)
-
-      if (
-        matchesStatus &&
-        afterCursor &&
-        matchesDate &&
-        matchesOrgFilter &&
-        matchesIdFilter
-      ) {
+      if (matchesFindByStatusCriteria(prn, params)) {
         matching.push(structuredClone(prn))
       }
     }

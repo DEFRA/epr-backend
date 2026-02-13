@@ -6,13 +6,14 @@ const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const DEFAULT_ISSUER = { id: 'user-issuer', name: 'Issuer User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
 const TEST_PRN_RANDOM_RANGE = 100000
+const TEST_PRN_NUMBER_LENGTH = 5
 
 /**
  * Generates a PRN number for test data.
  * Uses TT prefix (Test/Test) to distinguish from real PRNs ([ENSW][RX]).
  */
 function generateTestPrnNumber() {
-  return `TT26${String(randomInt(TEST_PRN_RANDOM_RANGE)).padStart(5, '0')}`
+  return `TT26${String(randomInt(TEST_PRN_RANDOM_RANGE)).padStart(TEST_PRN_NUMBER_LENGTH, '0')}`
 }
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 const CANCELLED_HISTORY_STEPS = 5

@@ -13,7 +13,7 @@ export function parseExcludedPrnIds() {
   }
 
   if (!Array.isArray(parsed)) {
-    throw new Error('Invalid excludedPrnIds configuration: not an array')
+    throw new TypeError('Invalid excludedPrnIds configuration: not an array')
   }
 
   return parsed.filter((item) => typeof item === 'string' && item.length > 0)
