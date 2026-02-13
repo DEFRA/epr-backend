@@ -30,7 +30,7 @@ async function getNextOrgId(db) {
     .findOneAndUpdate(
       { _id: 'orgId' },
       { $inc: { seq: 1 } },
-      { upsert: true, returnDocument: 'after' }
+      { returnDocument: 'after' }
     )
 
   if (result?.seq === undefined) {
