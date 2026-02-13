@@ -57,7 +57,15 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 
 const performFindByStatus =
   (storage) =>
-  async ({ statuses, dateFrom, dateTo, cursor, limit }) => {
+  async ({
+    statuses,
+    dateFrom,
+    dateTo,
+    cursor,
+    limit,
+    excludeOrganisationIds,
+    excludePrnIds
+  }) => {
     const matching = []
     for (const prn of storage.values()) {
       const matchesStatus = statuses.includes(prn.status.currentStatus)
@@ -67,8 +75,19 @@ const performFindByStatus =
         dateFrom,
         dateTo
       )
+      const matchesOrgFilter =
+        !excludeOrganisationIds?.length ||
+        !excludeOrganisationIds.includes(prn.organisation.id)
+      const matchesIdFilter =
+        !excludePrnIds?.length || !excludePrnIds.includes(prn.id)
 
-      if (matchesStatus && afterCursor && matchesDate) {
+      if (
+        matchesStatus &&
+        afterCursor &&
+        matchesDate &&
+        matchesOrgFilter &&
+        matchesIdFilter
+      ) {
         matching.push(structuredClone(prn))
       }
     }

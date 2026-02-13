@@ -30,6 +30,11 @@ const authHeaders = {
 
 const listUrl = '/v1/packaging-recycling-notes'
 
+const visibilityFilter = {
+  excludeOrganisationIds: ['aabbccddee112233aabbccdd'],
+  excludePrnIds: ['507f1f77bcf86cd799439099']
+}
+
 describe('GET /v1/packaging-recycling-notes', () => {
   setupAuthContext()
 
@@ -64,6 +69,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
           packagingRecyclingNotesExternalApi: true
         })
       })
+
+      server.app.prnVisibilityFilter = visibilityFilter
     })
 
     afterEach(() => {
@@ -287,6 +294,85 @@ describe('GET /v1/packaging-recycling-notes', () => {
           packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
         expect(callArgs.dateFrom).toBeUndefined()
         expect(callArgs.dateTo).toBeUndefined()
+      })
+    })
+
+    describe('visibility filtering', () => {
+      it('passes visibility filter exclusions to repository', async () => {
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
+
+        await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
+        })
+
+        expect(
+          packagingRecyclingNotesRepository.findByStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            excludeOrganisationIds: visibilityFilter.excludeOrganisationIds,
+            excludePrnIds: visibilityFilter.excludePrnIds
+          })
+        )
+      })
+
+      it('passes empty exclusion arrays when no visibility filter is configured', async () => {
+        const saved = server.app.prnVisibilityFilter
+        delete server.app.prnVisibilityFilter
+
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
+
+        await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
+        })
+
+        const callArgs =
+          packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
+        expect(callArgs.excludeOrganisationIds).toEqual([])
+        expect(callArgs.excludePrnIds).toEqual([])
+
+        server.app.prnVisibilityFilter = saved
+      })
+
+      it('passes exclusions alongside other query parameters', async () => {
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [],
+          nextCursor: null,
+          hasMore: false
+        })
+
+        const dateFrom = '2026-01-01T00:00:00Z'
+        const cursor = '507f1f77bcf86cd799439012'
+
+        await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance,cancelled&dateFrom=${dateFrom}&cursor=${cursor}&limit=50`,
+          headers: authHeaders
+        })
+
+        expect(
+          packagingRecyclingNotesRepository.findByStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            statuses: ['awaiting_acceptance', 'cancelled'],
+            dateFrom: new Date(dateFrom),
+            cursor,
+            limit: 50,
+            excludeOrganisationIds: visibilityFilter.excludeOrganisationIds,
+            excludePrnIds: visibilityFilter.excludePrnIds
+          })
+        )
       })
     })
 

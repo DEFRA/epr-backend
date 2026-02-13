@@ -1,11 +1,19 @@
-import { randomUUID } from 'node:crypto'
+import { randomInt, randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const DEFAULT_CREATOR = { id: 'user-creator', name: 'Creator User' }
 const DEFAULT_RAISER = { id: 'user-raiser', name: 'Raiser User' }
 const DEFAULT_ISSUER = { id: 'user-issuer', name: 'Issuer User' }
 const STATUS_HISTORY_OFFSET_MS = 1000
-const PRN_SUFFIX_DIGITS = 5
+const TEST_PRN_RANDOM_RANGE = 100000
+
+/**
+ * Generates a PRN number for test data.
+ * Uses TT prefix (Test/Test) to distinguish from real PRNs ([ENSW][RX]).
+ */
+function generateTestPrnNumber() {
+  return `TT26${String(randomInt(TEST_PRN_RANDOM_RANGE)).padStart(5, '0')}`
+}
 const AWAITING_ACCEPTANCE_HISTORY_STEPS = 3
 const CANCELLED_HISTORY_STEPS = 5
 const CANCELLED_ISSUED_STEP_OFFSET = 3
@@ -134,7 +142,7 @@ export const buildAwaitingAcceptancePrn = (overrides = {}) => {
   )
   const authorisedAt = new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS)
   return buildPrn({
-    prnNumber: `ER26${Date.now().toString().slice(-PRN_SUFFIX_DIGITS)}`,
+    prnNumber: generateTestPrnNumber(),
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -185,7 +193,7 @@ export const buildCancelledPrn = (overrides = {}) => {
   const rejectedAt = new Date(now.getTime() - 2 * STATUS_HISTORY_OFFSET_MS)
   const cancelledAt = new Date(now.getTime() - STATUS_HISTORY_OFFSET_MS)
   return buildPrn({
-    prnNumber: `ER26${Date.now().toString().slice(-PRN_SUFFIX_DIGITS)}`,
+    prnNumber: generateTestPrnNumber(),
     ...overrides,
     status: {
       currentStatus: PRN_STATUS.CANCELLED,

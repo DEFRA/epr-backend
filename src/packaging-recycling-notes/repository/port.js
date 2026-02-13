@@ -27,6 +27,8 @@ export class PrnNumberConflictError extends Error {
  * @property {Date} [dateTo]
  * @property {string} [cursor]
  * @property {number} limit
+ * @property {string[]} [excludeOrganisationIds]
+ * @property {string[]} [excludePrnIds]
  */
 
 /**

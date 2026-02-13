@@ -56,6 +56,8 @@ export const packagingRecyclingNotesList = {
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
+    const { excludeOrganisationIds = [], excludePrnIds = [] } =
+      request.server.app.prnVisibilityFilter ?? {}
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
@@ -65,7 +67,9 @@ export const packagingRecyclingNotesList = {
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,
         limit: effectiveLimit,
-        cursor
+        cursor,
+        excludeOrganisationIds,
+        excludePrnIds
       })
 
       const response = {
