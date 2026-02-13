@@ -40,6 +40,7 @@ export const buildRejectedFile = (overrides = {}) => {
 // ============================================================================
 
 const DEFAULT_SUBMITTED_AT = '2024-01-01T00:00:00.000Z'
+const DEFAULT_CREATED_AT = '2024-01-01T00:00:00.000Z'
 
 /**
  * Creates a factory function for a given status with default values.
@@ -61,6 +62,7 @@ const createFactory = (status, getDefaults = () => ({})) => {
     return {
       status,
       expiresAt: calculateExpiresAt(status),
+      createdAt: DEFAULT_CREATED_AT,
       ...defaults,
       ...(file && { file }),
       ...rest
@@ -131,6 +133,7 @@ export const summaryLogFactory = {
       status: SUMMARY_LOG_STATUS.SUBMITTED,
       expiresAt: null,
       file,
+      createdAt: DEFAULT_CREATED_AT,
       submittedAt: DEFAULT_SUBMITTED_AT,
       ...rest
     }

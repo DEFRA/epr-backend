@@ -366,12 +366,6 @@ const baseConfig = {
     default: '[]',
     env: 'SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH'
   },
-  truncateEprOrganisations: {
-    doc: 'epr-organisations collection will be truncated when this is true. This is meant to be used until migration is being tested(day1).',
-    format: Boolean,
-    default: false,
-    env: 'TRUNCATE_EPR_ORGANISATIONS'
-  },
   govukNotifyApiKeyPath: {
     doc: 'Path to file containing GOV.UK Notify API key (used in development to read secret from file)',
     format: String,
@@ -397,7 +391,7 @@ const baseConfig = {
       format: String,
       nullable: true,
       default: null,
-      env: 'COMMAND_QUEUE_SQS_ENDPOINT'
+      env: 'SQS_ENDPOINT'
     },
     queueName: {
       doc: 'SQS queue name for backend commands',

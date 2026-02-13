@@ -45,6 +45,7 @@ vi.mock('#formsubmission/data-migration-config.js', () => ({
 describe('MigrationOrchestrator', () => {
   let formsSubmissionRepository
   let organisationsRepository
+  let systemLogsRepository
   let migrator
 
   // Reusable mock helpers
@@ -111,9 +112,14 @@ describe('MigrationOrchestrator', () => {
       findById: vi.fn()
     }
 
+    systemLogsRepository = {
+      insert: vi.fn()
+    }
+
     migrator = createFormDataMigrator(
       formsSubmissionRepository,
-      organisationsRepository
+      organisationsRepository,
+      systemLogsRepository
     )
 
     // Default mock implementations
@@ -168,6 +174,7 @@ describe('MigrationOrchestrator', () => {
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
         organisationsRepository,
+        systemLogsRepository,
         [
           {
             value: expect.objectContaining({
@@ -206,6 +213,7 @@ describe('MigrationOrchestrator', () => {
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
         organisationsRepository,
+        systemLogsRepository,
         [
           {
             value: expect.objectContaining({
@@ -247,6 +255,7 @@ describe('MigrationOrchestrator', () => {
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
         organisationsRepository,
+        systemLogsRepository,
         expect.arrayContaining([
           {
             value: expect.objectContaining({
@@ -278,7 +287,8 @@ describe('MigrationOrchestrator', () => {
 
       orchestrator = new MigrationOrchestrator(
         formsSubmissionRepository,
-        organisationsRepository
+        organisationsRepository,
+        systemLogsRepository
       )
     })
 
@@ -327,6 +337,7 @@ describe('MigrationOrchestrator', () => {
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
         organisationsRepository,
+        systemLogsRepository,
         [{ value: expect.objectContaining({ id: orgId }), operation: 'insert' }]
       )
 
@@ -500,6 +511,7 @@ describe('MigrationOrchestrator', () => {
 
       expect(upsertOrganisations).toHaveBeenCalledWith(
         organisationsRepository,
+        systemLogsRepository,
         [
           {
             value: expect.objectContaining({

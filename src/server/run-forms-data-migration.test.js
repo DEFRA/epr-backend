@@ -4,7 +4,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { truncateEprOrganisations } from '#common/helpers/collections/truncate-epr-organisations.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -22,8 +22,8 @@ vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
 }))
 
-vi.mock('#common/helpers/collections/truncate-epr-organisations.js', () => ({
-  truncateEprOrganisations: vi.fn()
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn()
 }))
 
 describe('runFormsDataMigration', () => {
@@ -33,6 +33,7 @@ describe('runFormsDataMigration', () => {
   let mockOrganisationsRepository
   let mockLock
   let mockFormsDataMigration
+  const mockSystemLogsRepository = {}
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -66,6 +67,7 @@ describe('runFormsDataMigration', () => {
     createOrganisationsRepository.mockReturnValue(
       () => mockOrganisationsRepository
     )
+    createSystemLogsRepository.mockResolvedValue(() => mockSystemLogsRepository)
     createFormDataMigrator.mockReturnValue(mockFormsDataMigration)
 
     logger.info = vi.fn()
@@ -86,26 +88,6 @@ describe('runFormsDataMigration', () => {
       message: 'Form data migration completed successfully'
     })
     expect(mockLock.free).toHaveBeenCalled()
-    expect(truncateEprOrganisations).not.toHaveBeenCalled()
-  })
-
-  it('should truncate when feature flag is enabled and shouldTruncateEprOrganisation is passed in options', async () => {
-    mockFeatureFlags.isFormsDataMigrationEnabled.mockReturnValue(true)
-
-    await runFormsDataMigration(mockServer, {
-      shouldTruncateEprOrganisations: true
-    })
-
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Starting form data migration. Feature flag enabled: true'
-    })
-    expect(mockServer.locker.lock).toHaveBeenCalledWith('forms-data-migration')
-    expect(mockFormsDataMigration.migrate).toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Form data migration completed successfully'
-    })
-    expect(mockLock.free).toHaveBeenCalled()
-    expect(truncateEprOrganisations).toHaveBeenCalled()
   })
 
   it('should not run migration when feature flag is disabled', async () => {
@@ -117,7 +99,6 @@ describe('runFormsDataMigration', () => {
       message: 'Starting form data migration. Feature flag enabled: false'
     })
     expect(createFormDataMigrator).not.toHaveBeenCalled()
-    expect(truncateEprOrganisations).not.toHaveBeenCalled()
   })
 
   it('should use options.featureFlags when provided', async () => {
@@ -130,7 +111,6 @@ describe('runFormsDataMigration', () => {
     })
 
     expect(createFormDataMigrator).not.toHaveBeenCalled()
-    expect(truncateEprOrganisations).not.toHaveBeenCalled()
   })
 
   it('should handle errors gracefully', async () => {
