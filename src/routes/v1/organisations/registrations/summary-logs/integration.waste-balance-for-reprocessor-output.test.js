@@ -154,8 +154,8 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       expect(balance.transactions).toHaveLength(2)
 
       // 100 + 200 = 300
-      expect(balance.amount).toBeCloseTo(300)
-      expect(balance.availableAmount).toBeCloseTo(300)
+      expect(balance.amount).toBe(300)
+      expect(balance.availableAmount).toBe(300)
 
       const transaction1 = balance.transactions.find(
         (t) => Math.abs(t.amount - 100) < 0.001
@@ -198,7 +198,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.amount).toBe(200)
       expect(balance.transactions[0].entities[0].id).toBe('3002')
     })
 
@@ -235,7 +235,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.amount).toBe(200)
       expect(balance.transactions[0].entities[0].id).toBe('3002')
     })
 
@@ -261,7 +261,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
 
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.amount).toBe(100)
 
       // 2. Update Submission: 150 tonnes (Increase)
       const uploadData2 = createUploadData([
@@ -282,13 +282,13 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(150)
+      expect(balance.amount).toBe(150)
 
       // Check for the delta transaction
       const transactions = balance.transactions
       expect(transactions).toHaveLength(2)
       const deltaTransaction = transactions[1]
-      expect(deltaTransaction.amount).toBeCloseTo(50)
+      expect(deltaTransaction.amount).toBe(50)
       expect(deltaTransaction.type).toBe('credit')
 
       // 3. Update Submission: 120 tonnes (Decrease)
@@ -310,12 +310,12 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
 
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
-      expect(balance.amount).toBeCloseTo(120)
+      expect(balance.amount).toBe(120)
 
       // Check for the debit transaction
       expect(balance.transactions).toHaveLength(3)
       const debitTransaction = balance.transactions[2]
-      expect(debitTransaction.amount).toBeCloseTo(30)
+      expect(debitTransaction.amount).toBe(30)
       expect(debitTransaction.type).toBe('debit')
     })
   })
