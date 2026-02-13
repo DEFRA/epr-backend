@@ -3,7 +3,10 @@ import {
   generateExternalApiTokenWithoutClientId
 } from '#packaging-recycling-notes/routes/test-helpers.js'
 import { getConfig } from '#root/config.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import {
+  cognitoJwksUrl,
+  setupAuthContext
+} from '#vite/helpers/setup-auth-mocking.js'
 import Hapi from '@hapi/hapi'
 import Jwt from '@hapi/jwt'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -25,7 +28,7 @@ describe('external API auth plugin', () => {
         config: getConfig({
           packagingRecyclingNotesExternalApi: {
             clientId,
-            cognitoUserPoolId: 'eu-west-2_test'
+            jwksUrl: cognitoJwksUrl
           }
         })
       }

@@ -19,7 +19,7 @@ export const externalApiAuthPlugin = {
       server.auth.strategy('api-gateway-client', 'jwt', {
         keys: [
           {
-            uri: config.get('packagingRecyclingNotesExternalApi.jwksUri')
+            uri: config.get('packagingRecyclingNotesExternalApi.jwksUrl')
           }
         ],
         verify: {

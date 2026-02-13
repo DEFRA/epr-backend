@@ -14,7 +14,10 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import {
+  setupAuthContext,
+  cognitoJwksUrl
+} from '#vite/helpers/setup-auth-mocking.js'
 import {
   createMockIssuedPrn,
   generateExternalApiToken
@@ -64,7 +67,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         config: {
           packagingRecyclingNotesExternalApi: {
             clientId: externalApiClientId,
-            cognitoUserPoolId: 'eu-west-2_test'
+            jwksUrl: cognitoJwksUrl
           }
         },
         repositories: {
