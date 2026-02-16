@@ -11,12 +11,12 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  */
 
-const ALLOWED_STATUSES = Object.values(PRN_STATUS)
 const DEFAULT_LIMIT = 500
 
 export const adminPackagingRecyclingNotesListPath =
@@ -53,21 +53,7 @@ export const adminPackagingRecyclingNotesList = {
     tags: ['api'],
     validate: {
       query: Joi.object({
-        statuses: Joi.string()
-          .custom((value, helpers) => {
-            const statuses = value.split(',')
-            const invalid = statuses.filter(
-              (s) => !ALLOWED_STATUSES.includes(s)
-            )
-            if (invalid.length > 0) {
-              return helpers.error('any.invalid')
-            }
-            return statuses
-          })
-          .required()
-          .messages({
-            'any.invalid': `statuses must be one or more of: ${ALLOWED_STATUSES.join(', ')}`
-          }),
+        statuses: createStatusesValidator(Object.values(PRN_STATUS)),
         limit: Joi.number().integer().min(1).max(1000).optional(),
         cursor: Joi.string().optional()
       })
