@@ -21,6 +21,11 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
+import {
+  add,
+  subtract,
+  toNumber
+} from '#domain/waste-balances/decimal-utils.js'
 
 const getTableName = (recordType, processingType) => {
   if (processingType === PROCESSING_TYPES.EXPORTER) {
@@ -347,7 +352,9 @@ export const buildPrnCreationTransaction = ({
   openingAmount: currentBalance.amount,
   closingAmount: currentBalance.amount, // Total unchanged
   openingAvailableAmount: currentBalance.availableAmount,
-  closingAvailableAmount: currentBalance.availableAmount - tonnage, // Available deducted
+  closingAvailableAmount: toNumber(
+    subtract(currentBalance.availableAmount, tonnage)
+  ), // Available deducted
   entities: [
     {
       id: prnId,
@@ -420,7 +427,7 @@ export const buildPrnIssuedTransaction = ({
   createdBy: { id: userId, name: userId },
   amount: tonnage,
   openingAmount: currentBalance.amount,
-  closingAmount: currentBalance.amount - tonnage, // Total deducted
+  closingAmount: toNumber(subtract(currentBalance.amount, tonnage)), // Total deducted
   openingAvailableAmount: currentBalance.availableAmount,
   closingAvailableAmount: currentBalance.availableAmount, // Available unchanged
   entities: [
@@ -497,7 +504,9 @@ export const buildPrnCancellationTransaction = ({
   openingAmount: currentBalance.amount,
   closingAmount: currentBalance.amount, // Total unchanged
   openingAvailableAmount: currentBalance.availableAmount,
-  closingAvailableAmount: currentBalance.availableAmount + tonnage, // Available restored
+  closingAvailableAmount: toNumber(
+    add(currentBalance.availableAmount, tonnage)
+  ), // Available restored
   entities: [
     {
       id: prnId,
@@ -532,9 +541,11 @@ export const buildIssuedPrnCancellationTransaction = ({
   createdBy: { id: userId, name: userId },
   amount: tonnage,
   openingAmount: currentBalance.amount,
-  closingAmount: currentBalance.amount + tonnage,
+  closingAmount: toNumber(add(currentBalance.amount, tonnage)),
   openingAvailableAmount: currentBalance.availableAmount,
-  closingAvailableAmount: currentBalance.availableAmount + tonnage,
+  closingAvailableAmount: toNumber(
+    add(currentBalance.availableAmount, tonnage)
+  ),
   entities: [
     {
       id: prnId,
