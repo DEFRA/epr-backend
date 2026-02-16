@@ -116,9 +116,9 @@ describe('field-schemas', () => {
   })
 
   describe('createThreeDigitIdSchema', () => {
-    it('accepts 100', () => {
+    it('accepts 1 (minimum)', () => {
       const schema = createThreeDigitIdSchema()
-      expect(schema.validate(100).error).toBeUndefined()
+      expect(schema.validate(1).error).toBeUndefined()
     })
 
     it('accepts 999', () => {
@@ -131,12 +131,26 @@ describe('field-schemas', () => {
       expect(schema.validate(500).error).toBeUndefined()
     })
 
-    it('rejects 99 (too low)', () => {
+    it('accepts 99', () => {
       const schema = createThreeDigitIdSchema()
-      const { error } = schema.validate(99)
+      expect(schema.validate(99).error).toBeUndefined()
+    })
+
+    it('rejects 0 (too low)', () => {
+      const schema = createThreeDigitIdSchema()
+      const { error } = schema.validate(0)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe(
-        'must be a 3-digit number (100-999)'
+        'must be a number between 1 and 999'
+      )
+    })
+
+    it('rejects negative numbers', () => {
+      const schema = createThreeDigitIdSchema()
+      const { error } = schema.validate(-1)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe(
+        'must be a number between 1 and 999'
       )
     })
 
@@ -145,7 +159,7 @@ describe('field-schemas', () => {
       const { error } = schema.validate(1000)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe(
-        'must be a 3-digit number (100-999)'
+        'must be a number between 1 and 999'
       )
     })
 
@@ -154,7 +168,7 @@ describe('field-schemas', () => {
       const { error } = schema.validate(100.5)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe(
-        'must be a 3-digit number (100-999)'
+        'must be a number between 1 and 999'
       )
     })
 
