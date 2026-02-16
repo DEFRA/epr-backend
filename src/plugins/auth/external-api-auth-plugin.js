@@ -1,23 +1,73 @@
+/** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
+
+import { StatusCodes } from 'http-status-codes'
+
+const EXPECTED_TOKEN_USE = 'access'
+const ONE_HOUR = 3600
+
 export const externalApiAuthPlugin = {
   plugin: {
     name: 'external-api-auth',
     version: '1.0.0',
-    register: (server) => {
-      server.auth.scheme('api-gateway-client-scheme', () => ({
-        authenticate: (_request, h) => {
-          // TODO(PAE-1058): Replace stub with Cognito client ID verification.
-          // The CDP API gateway validates the JWT signature before requests
-          // reach us. This stub should be replaced with logic that:
-          // 1. Extracts the Bearer token from the Authorization header
-          // 2. Decodes the JWT (no signature check needed)
-          // 3. Validates client_id claim against config allow-list
-          return h.authenticated({
-            credentials: { id: 'rpd', name: 'RPD' }
-          })
-        }
-      }))
+    /**
+     * @param {import('@hapi/hapi').Server} server
+     * @param {{ config: import('convict').Config }} options
+     */
+    register: (server, { config }) => {
+      const clientId = config.get('packagingRecyclingNotesExternalApi.clientId')
 
-      server.auth.strategy('api-gateway-client', 'api-gateway-client-scheme')
+      server.auth.strategy('api-gateway-client', 'jwt', {
+        keys: [
+          {
+            uri: config.get('packagingRecyclingNotesExternalApi.jwksUrl')
+          }
+        ],
+        verify: {
+          aud: false,
+          iss: false,
+          sub: false,
+          nbf: true,
+          exp: true,
+          maxAgeSec: ONE_HOUR,
+          timeSkewSec: 15
+        },
+        validate: (
+          /** @type {{ decoded: { payload: CognitoAccessTokenPayload } }} */ artifacts,
+          _request,
+          h
+        ) => {
+          const { client_id: tokenClientId, token_use: tokenUse } =
+            artifacts.decoded.payload
+
+          if (tokenUse !== EXPECTED_TOKEN_USE) {
+            return { isValid: false }
+          }
+
+          if (!tokenClientId) {
+            return { isValid: false }
+          }
+
+          if (tokenClientId !== clientId) {
+            const statusCode = StatusCodes.FORBIDDEN
+
+            return {
+              isValid: false,
+              response: h
+                .response({
+                  statusCode,
+                  error: 'Forbidden'
+                })
+                .code(statusCode)
+                .takeover()
+            }
+          }
+
+          return {
+            isValid: true,
+            credentials: { id: clientId, isMachine: true, name: 'RPD' }
+          }
+        }
+      })
     }
   }
 }

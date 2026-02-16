@@ -24,6 +24,7 @@ export default defineConfig({
         '**/*.plugin.js',
         '**/*.port.js',
         '**/*.sh',
+        '**/*-test-helpers.js',
         '**/*.xlsx',
         '**/.DS_Store',
         '**/types.js',

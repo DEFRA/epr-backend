@@ -2,6 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 export const runFormsDataMigration = async (server, options = {}) => {
   try {
@@ -20,15 +21,19 @@ export const runFormsDataMigration = async (server, options = {}) => {
       }
       try {
         const formSubmissionsRepository = (
-          await createFormSubmissionsRepository(server.db)
+          await createFormSubmissionsRepository(server.db, logger)
         )()
         const organisationsRepository = (
           await createOrganisationsRepository(server.db)
         )()
+        const systemLogsRepository = (
+          await createSystemLogsRepository(server.db)
+        )(logger)
 
         const formsDataMigration = createFormDataMigrator(
           formSubmissionsRepository,
-          organisationsRepository
+          organisationsRepository,
+          systemLogsRepository
         )
 
         await formsDataMigration.migrate()

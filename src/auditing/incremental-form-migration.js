@@ -7,7 +7,7 @@ import { isPayloadSmallEnoughToAudit, safeAudit } from './helpers.js'
 const SYSTEM_USER = { id: 'system', email: 'system', scope: [] }
 
 /**
- * Audit a glass migration for an organisation.
+ * Audit an incremental form migration for an organisation.
  * This is a system-initiated action (no user request context).
  * Logs the full organisation state before and after migration.
  *
@@ -16,7 +16,7 @@ const SYSTEM_USER = { id: 'system', email: 'system', scope: [] }
  * @param {Object} previous - Organisation state before migration
  * @param {Object} next - Organisation state after migration
  */
-async function auditGlassMigration(
+async function auditIncrementalFormMigration(
   systemLogsRepository,
   organisationId,
   previous,
@@ -26,7 +26,7 @@ async function auditGlassMigration(
     event: {
       category: 'entity',
       subCategory: 'epr-organisations',
-      action: 'glass-migration'
+      action: 'incremental-form-migration'
     },
     context: {
       organisationId,
@@ -55,4 +55,4 @@ async function auditGlassMigration(
   })
 }
 
-export { auditGlassMigration }
+export { auditIncrementalFormMigration }

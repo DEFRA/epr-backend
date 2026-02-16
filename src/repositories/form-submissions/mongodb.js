@@ -1,8 +1,11 @@
 import { ObjectId } from 'mongodb'
+import { ORG_ID_START_NUMBER } from '#common/enums/db.js'
 
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
 const ORGANISATION_COLLECTION = 'organisation'
+const EPR_ORGANISATIONS_COLLECTION = 'epr-organisations'
+const COUNTERS_COLLECTION = 'counters'
 
 /**
  * Ensures the collections exist with required indexes.
@@ -10,7 +13,7 @@ const ORGANISATION_COLLECTION = 'organisation'
  *
  * @param {import('mongodb').Db} db
  */
-async function ensureCollections(db) {
+async function ensureCollections(db, logger) {
   await db.collection(ORGANISATION_COLLECTION).createIndex({ orgId: 1 })
   await db
     .collection(REGISTRATIONS_COLLECTION)
@@ -18,6 +21,53 @@ async function ensureCollections(db) {
   await db
     .collection(ACCREDITATIONS_COLLECTION)
     .createIndex({ referenceNumber: 1 })
+
+  await seedOrgIdCounter(db, logger)
+}
+
+/**
+ * Finds the highest orgId across form-submissions and epr-organisations.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<number>}
+ */
+async function findHighestOrgId(db) {
+  const findMax = async (collectionName) => {
+    const [doc] = await db
+      .collection(collectionName)
+      .find({ orgId: { $gte: ORG_ID_START_NUMBER } })
+      .sort({ orgId: -1 })
+      .limit(1)
+      .toArray()
+    return doc?.orgId ?? ORG_ID_START_NUMBER
+  }
+
+  const [formsMax, eprMax] = await Promise.all([
+    findMax(ORGANISATION_COLLECTION),
+    findMax(EPR_ORGANISATIONS_COLLECTION)
+  ])
+
+  return Math.max(formsMax, eprMax)
+}
+
+/**
+ * Seeds the orgId counter from existing data on first run.
+ * Uses $setOnInsert so it only writes when the counter doesn't exist yet.
+ *
+ * @param {import('mongodb').Db} db
+ */
+async function seedOrgIdCounter(db, logger) {
+  const seq = await findHighestOrgId(db)
+
+  await db
+    .collection(COUNTERS_COLLECTION)
+    .updateOne(
+      { _id: /** @type {*} */ ('orgId') },
+      { $setOnInsert: { seq } },
+      { upsert: true }
+    )
+
+  logger.info(`orgId counter seeded at ${seq}`)
 }
 
 const mapDocument = (doc) => {
@@ -139,8 +189,8 @@ const findAllFormSubmissionIds = (db) => async () => {
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {Promise<import('./port.js').FormSubmissionsRepositoryFactory>}
  */
-export const createFormSubmissionsRepository = async (db) => {
-  await ensureCollections(db)
+export const createFormSubmissionsRepository = async (db, logger) => {
+  await ensureCollections(db, logger)
 
   return () => {
     return {

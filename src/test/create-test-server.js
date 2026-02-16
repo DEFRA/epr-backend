@@ -4,6 +4,7 @@ import { vi } from 'vitest'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
+import { mockWorkersPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
@@ -14,20 +15,19 @@ import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
-import { mockWorkersPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
-import { router } from '#plugins/router.js'
 import { registerRepository } from '#plugins/register-repository.js'
+import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
 
+import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
+import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
-import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
-import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
-import { createInMemoryWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
-import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
-import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
-import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/inmemory.plugin.js'
+import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -40,10 +40,12 @@ import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packagin
  */
 
 /**
- * @typedef {Object} CreateTestServerOptions
- * @property {Object} [featureFlags] - Optional feature flags override
- * @property {Object} [repositories] - Optional repository overrides (for mocks or custom instances)
- * @property {Object} [workers] - Optional worker overrides (passed to mockWorkersPlugin)
+ * @typedef {{
+ *   config?: Record<string, any>
+ *   featureFlags?: object
+ *   repositories?: object
+ *   workers?: object
+ * }} CreateTestServerOptions
  */
 
 /**
@@ -127,7 +129,7 @@ function buildRepositoryPlugins(repoOverrides) {
 
 /**
  * Creates a Hapi server with test configuration.
- * @param {ReturnType<typeof getConfig>} config
+ * @param {import('convict').Config<Record<string, any>>} config
  * @returns {import('@hapi/hapi').Server}
  */
 function createHapiServer(config) {
@@ -181,7 +183,7 @@ function attachLoggerMocks(testServer) {
  * @returns {Promise<TestServer>}
  */
 export async function createTestServer(options = {}) {
-  const config = getConfig()
+  const config = getConfig(options.config ?? {})
   const server = createHapiServer(config)
 
   const plugins = [
@@ -192,7 +194,10 @@ export async function createTestServer(options = {}) {
     pulse,
     Jwt,
     authPlugin,
-    externalApiAuthPlugin,
+    {
+      plugin: externalApiAuthPlugin.plugin,
+      options: { config }
+    },
     authFailureLogger,
     externalApiErrorFormatter,
     {
