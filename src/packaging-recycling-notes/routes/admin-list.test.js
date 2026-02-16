@@ -98,6 +98,34 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       expect(payload.nextCursor).toBeUndefined()
     })
 
+    it('returns null for optional fields when not present', async () => {
+      const mockPrn = createMockIssuedPrn({
+        prnNumber: undefined,
+        notes: undefined,
+        status: {
+          currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+          currentStatusAt: new Date(),
+          history: []
+        }
+      })
+      packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+        items: [mockPrn],
+        nextCursor: null,
+        hasMore: false
+      })
+
+      const response = await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=awaiting_authorisation`
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.items[0].prnNumber).toBeNull()
+      expect(payload.items[0].notes).toBeNull()
+      expect(payload.items[0].issuedAt).toBeNull()
+      expect(payload.items[0].issuedBy).toBeNull()
+    })
+
     it('returns exporter waste processing type for export PRNs', async () => {
       const mockPrn = createMockIssuedPrn({ isExport: true })
       packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
