@@ -31,8 +31,7 @@ const authHeaders = {
 const listUrl = '/v1/packaging-recycling-notes'
 
 const visibilityFilter = {
-  excludeOrganisationIds: ['aabbccddee112233aabbccdd'],
-  excludePrnIds: ['507f1f77bcf86cd799439099']
+  excludeOrganisationIds: ['excluded-org-id']
 }
 
 describe('GET /v1/packaging-recycling-notes', () => {
@@ -297,34 +296,57 @@ describe('GET /v1/packaging-recycling-notes', () => {
       })
     })
 
-    describe('visibility filtering', () => {
-      it('passes visibility filter exclusions to repository', async () => {
+    describe('test organisation filtering', () => {
+      it('excludes PRNs belonging to test organisations from results', async () => {
+        const testOrgPrn = createMockIssuedPrn({
+          id: 'test-org-prn-id',
+          organisation: { id: 'excluded-org-id', name: 'Test Org' }
+        })
+        const realOrgPrn = createMockIssuedPrn({
+          id: 'real-org-prn-id',
+          organisation: { id: 'real-org-id', name: 'Real Org' }
+        })
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [],
+          items: [testOrgPrn, realOrgPrn],
           nextCursor: null,
           hasMore: false
         })
 
-        await server.inject({
+        const response = await server.inject({
           method: 'GET',
           url: `${listUrl}?statuses=awaiting_acceptance`,
           headers: authHeaders
         })
 
-        expect(
-          packagingRecyclingNotesRepository.findByStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            excludeOrganisationIds: visibilityFilter.excludeOrganisationIds,
-            excludePrnIds: visibilityFilter.excludePrnIds
-          })
-        )
+        const payload = JSON.parse(response.payload)
+        expect(payload.items).toHaveLength(1)
+        expect(payload.items[0].id).toBe('real-org-prn-id')
       })
 
-      it('passes empty exclusion arrays when no visibility filter is configured', async () => {
+      it('returns all PRNs when no visibility filter is configured', async () => {
         const saved = server.app.prnVisibilityFilter
-        delete server.app.prnVisibilityFilter
+        server.app.prnVisibilityFilter = undefined
 
+        const mockPrn = createMockIssuedPrn()
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [mockPrn],
+          nextCursor: null,
+          hasMore: false
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
+        })
+
+        const payload = JSON.parse(response.payload)
+        expect(payload.items).toHaveLength(1)
+
+        server.app.prnVisibilityFilter = saved
+      })
+
+      it('does not pass exclusion params to repository', async () => {
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
           items: [],
           nextCursor: null,
@@ -339,40 +361,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const callArgs =
           packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
-        expect(callArgs.excludeOrganisationIds).toEqual([])
-        expect(callArgs.excludePrnIds).toEqual([])
-
-        server.app.prnVisibilityFilter = saved
-      })
-
-      it('passes exclusions alongside other query parameters', async () => {
-        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [],
-          nextCursor: null,
-          hasMore: false
-        })
-
-        const dateFrom = '2026-01-01T00:00:00Z'
-        const cursor = '507f1f77bcf86cd799439012'
-
-        await server.inject({
-          method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance,cancelled&dateFrom=${dateFrom}&cursor=${cursor}&limit=50`,
-          headers: authHeaders
-        })
-
-        expect(
-          packagingRecyclingNotesRepository.findByStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            statuses: ['awaiting_acceptance', 'cancelled'],
-            dateFrom: new Date(dateFrom),
-            cursor,
-            limit: 50,
-            excludeOrganisationIds: visibilityFilter.excludeOrganisationIds,
-            excludePrnIds: visibilityFilter.excludePrnIds
-          })
-        )
+        expect(callArgs.excludeOrganisationIds).toBeUndefined()
+        expect(callArgs.excludePrnIds).toBeUndefined()
       })
     })
 

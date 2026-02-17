@@ -1,7 +1,6 @@
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { registerRepository } from '#plugins/register-repository.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-import { EXCLUDED_PRN_IDS } from '#common/helpers/parse-excluded-prn-ids.js'
 import { createPrnVisibilityFilter } from '#packaging-recycling-notes/application/prn-visibility-filter.js'
 
 /**
@@ -25,8 +24,7 @@ export const packagingRecyclingNotesRepositoryPlugin = {
     )
 
     server.app.prnVisibilityFilter = await createPrnVisibilityFilter(db, {
-      testOrganisationIds: TEST_ORGANISATION_IDS,
-      excludePrnIds: EXCLUDED_PRN_IDS
+      testOrganisationIds: TEST_ORGANISATION_IDS
     })
   }
 }

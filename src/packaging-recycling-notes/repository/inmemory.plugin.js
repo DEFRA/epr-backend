@@ -56,14 +56,7 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 const matchesFindByStatusCriteria = (prn, params) => {
-  const {
-    statuses,
-    dateFrom,
-    dateTo,
-    cursor,
-    excludeOrganisationIds,
-    excludePrnIds
-  } = params
+  const { statuses, dateFrom, dateTo, cursor } = params
 
   if (!statuses.includes(prn.status.currentStatus)) {
     return false
@@ -72,15 +65,6 @@ const matchesFindByStatusCriteria = (prn, params) => {
     return false
   }
   if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
-    return false
-  }
-  if (
-    excludeOrganisationIds?.length &&
-    excludeOrganisationIds.includes(prn.organisation.id)
-  ) {
-    return false
-  }
-  if (excludePrnIds?.length && excludePrnIds.includes(prn.id)) {
     return false
   }
 

@@ -394,12 +394,6 @@ const baseConfig = {
     default: '[]',
     env: 'TEST_ORGANISATIONS'
   },
-  excludedPrnIds: {
-    doc: 'JSON array of PRN IDs to exclude from external API results',
-    format: String,
-    default: '[]',
-    env: 'EXCLUDED_PRN_IDS'
-  },
   skipTransformingTestOrganisations: {
     doc: 'JSON array of test organisation mongo ids e.g. ["697a3c0e0587e4d4d7f3d533"]',
     format: String,

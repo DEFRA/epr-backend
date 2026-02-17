@@ -56,7 +56,7 @@ export const packagingRecyclingNotesList = {
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
-    const { excludeOrganisationIds = [], excludePrnIds = [] } =
+    const { excludeOrganisationIds = [] } =
       request.server.app.prnVisibilityFilter ?? {}
 
     try {
@@ -67,13 +67,17 @@ export const packagingRecyclingNotesList = {
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,
         limit: effectiveLimit,
-        cursor,
-        excludeOrganisationIds,
-        excludePrnIds
+        cursor
       })
 
+      // Filter out test organisation PRNs from external API results
+      const excludeSet = new Set(excludeOrganisationIds)
+      const filteredItems = excludeSet.size
+        ? result.items.filter((prn) => !excludeSet.has(prn.organisation.id))
+        : result.items
+
       const response = {
-        items: result.items.map(mapToExternalPrn),
+        items: filteredItems.map(mapToExternalPrn),
         hasMore: result.hasMore
       }
 
