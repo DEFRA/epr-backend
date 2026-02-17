@@ -516,7 +516,7 @@ describe('Waste Balance Calculator', () => {
     expect(result.newAmount).toBe(10.0)
   })
 
-  it('should generate debit to reverse existing credit when record becomes excluded (PAE-1108)', () => {
+  it('should generate debit to reverse existing credit when record becomes excluded', () => {
     const record = buildWasteRecord({
       rowId: 'row-1',
       excludedFromWasteBalance: true,

@@ -151,7 +151,7 @@ export const findOrCreateWasteBalance = async ({
 /**
  * Annotates each waste record with whether it is excluded from waste balance.
  * Excluded records are still passed to the calculator so that any existing
- * credits can be reversed via the delta mechanism (PAE-1108).
+ * credits can be reversed via the delta mechanism.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @returns {import('#domain/waste-records/model.js').WasteRecord[]}

@@ -298,7 +298,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
     })
 
-    it('should mark EXCLUDED record as excluded (PAE-1108)', () => {
+    it('should mark EXCLUDED record as excluded', () => {
       const excludedRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.EXPORTED,

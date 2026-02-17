@@ -562,7 +562,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(balance.transactions[0].entities[0].id).toBe('7001')
     })
 
-    it('should create debit transaction when a mandatory field is removed making a row excluded (PAE-1108)', async () => {
+    it('should create debit transaction when a mandatory field is removed making a row excluded', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
@@ -622,7 +622,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(debitTx.entities[0].id).toBe('1001')
     })
 
-    it('should create debit transaction when gross weight is removed making a row excluded (PAE-1108)', async () => {
+    it('should create debit transaction when gross weight is removed making a row excluded', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
@@ -671,6 +671,34 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(debitTx).toBeDefined()
       expect(debitTx.amount).toBe(100)
       expect(debitTx.entities[0].id).toBe('1001')
+    })
+
+    it('should not create any transaction when a new incomplete row is uploaded', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Upload a row missing DATE_RECEIVED_BY_OSR — excluded from the start.
+      // Should not create a waste balance at all (no transactions needed).
+      const uploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100, dateReceivedByOsr: '' }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-new-incomplete-1',
+        'file-new-incomplete-1',
+        'waste-data-v1.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // No balance should exist — the excluded row produces delta=0
+      // so no transactions are generated and no balance is created
+      expect(balance).toBeNull()
     })
 
     it('should track multiple sequential revisions to the same row with correct running balance', async () => {
