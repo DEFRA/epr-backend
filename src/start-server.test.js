@@ -85,6 +85,7 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
         const mockCollection = {
           createIndex: vi.fn().mockResolvedValue(undefined),
           find: vi.fn().mockReturnValue({
+            toArray: vi.fn().mockResolvedValue([]),
             sort: vi.fn().mockReturnValue({
               limit: vi.fn().mockReturnValue({
                 toArray: vi.fn().mockResolvedValue([])
