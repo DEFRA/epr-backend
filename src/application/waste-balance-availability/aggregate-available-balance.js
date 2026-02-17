@@ -1,8 +1,7 @@
 import {
-  MATERIAL,
-  TONNAGE_MONITORING_MATERIALS
-} from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+  buildEffectiveMaterialStages,
+  formatMaterialResults
+} from '#application/common/material-aggregation.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
@@ -36,28 +35,7 @@ const buildMaterialLookupStage = () => ({
 
 const buildAggregationPipeline = () => [
   buildMaterialLookupStage(),
-  {
-    $addFields: {
-      orgId: { $arrayElemAt: ['$orgData.orgId', 0] },
-      material: { $arrayElemAt: ['$orgData.material', 0] },
-      glassRecyclingProcess: {
-        $arrayElemAt: ['$orgData.glassRecyclingProcess', 0]
-      }
-    }
-  },
-  { $match: { orgId: { $nin: TEST_ORGANISATION_IDS } } },
-  { $match: { material: { $ne: null } } },
-  {
-    $addFields: {
-      effectiveMaterial: {
-        $cond: {
-          if: { $eq: ['$material', MATERIAL.GLASS] },
-          then: { $arrayElemAt: ['$glassRecyclingProcess', 0] },
-          else: '$material'
-        }
-      }
-    }
-  },
+  ...buildEffectiveMaterialStages(),
   {
     $group: {
       _id: '$effectiveMaterial',
@@ -67,22 +45,6 @@ const buildAggregationPipeline = () => [
   { $sort: { _id: 1 } }
 ]
 
-const formatResults = (results) => {
-  const allMaterials = TONNAGE_MONITORING_MATERIALS
-  const materialAmountMap = new Map(
-    results.map((r) => [r._id, r.availableAmount])
-  )
-
-  const materials = allMaterials.map((material) => ({
-    material,
-    availableAmount: materialAmountMap.get(material) || 0
-  }))
-
-  const total = materials.reduce((sum, item) => sum + item.availableAmount, 0)
-
-  return { materials, total }
-}
-
 export const aggregateAvailableBalance = async (db) => {
   const pipeline = buildAggregationPipeline()
 
@@ -91,7 +53,7 @@ export const aggregateAvailableBalance = async (db) => {
     .aggregate(pipeline)
     .toArray()
 
-  const { materials, total } = formatResults(results)
+  const { materials, total } = formatMaterialResults(results, 'availableAmount')
 
   return {
     generatedAt: new Date().toISOString(),
