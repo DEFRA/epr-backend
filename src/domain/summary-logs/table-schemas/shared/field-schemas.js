@@ -17,9 +17,9 @@ const DEFAULT_MAX_WEIGHT = 1000
 /**
  * 3-digit ID constraints
  *
- * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 100-999.
+ * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 1-999.
  */
-const THREE_DIGIT_ID_MIN = 100
+const THREE_DIGIT_ID_MIN = 1
 const THREE_DIGIT_ID_MAX = 999
 
 /**
@@ -66,7 +66,7 @@ export const createDateFieldSchema = () =>
   })
 
 /**
- * Creates a 3-digit ID field schema (100-999)
+ * Creates a 3-digit ID field schema (1-999)
  *
  * @returns {Joi.NumberSchema} Joi number schema
  */

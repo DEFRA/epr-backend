@@ -519,8 +519,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('OSR_ID validation (3-digit number)', () => {
-      it('accepts minimum value (100)', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 100 })
+      it('accepts minimum value (1)', () => {
+        const { error } = validationSchema.validate({ OSR_ID: 1 })
         expect(error).toBeUndefined()
       })
 
@@ -534,11 +534,11 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error).toBeUndefined()
       })
 
-      it('rejects value below minimum (99)', () => {
-        const { error } = validationSchema.validate({ OSR_ID: 99 })
+      it('rejects value below minimum (0)', () => {
+        const { error } = validationSchema.validate({ OSR_ID: 0 })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
-          'must be a 3-digit number (100-999)'
+          'must be a number between 1 and 999'
         )
       })
 
@@ -546,7 +546,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const { error } = validationSchema.validate({ OSR_ID: 1000 })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
-          'must be a 3-digit number (100-999)'
+          'must be a number between 1 and 999'
         )
       })
 
@@ -563,8 +563,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('INTERIM_SITE_ID validation (3-digit number)', () => {
-      it('accepts minimum value (100)', () => {
-        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 100 })
+      it('accepts minimum value (1)', () => {
+        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1 })
         expect(error).toBeUndefined()
       })
 
@@ -573,11 +573,11 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error).toBeUndefined()
       })
 
-      it('rejects value below minimum (99)', () => {
-        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 99 })
+      it('rejects value below minimum (0)', () => {
+        const { error } = validationSchema.validate({ INTERIM_SITE_ID: 0 })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
-          'must be a 3-digit number (100-999)'
+          'must be a number between 1 and 999'
         )
       })
 
@@ -585,7 +585,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1000 })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
-          'must be a 3-digit number (100-999)'
+          'must be a number between 1 and 999'
         )
       })
     })
