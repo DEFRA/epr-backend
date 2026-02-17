@@ -12,7 +12,7 @@ export function setupAuthContext(disabledMocks) {
       global.fetchMock?.disableMocks()
     }
     mockOidcServer = createMockOidcServers()
-    mockOidcServer.listen({ onUnhandledRequest: 'warn' })
+    mockOidcServer.listen({ onUnhandledRequest: 'error' })
   })
 
   afterEach(() => {
