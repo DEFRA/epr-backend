@@ -55,35 +55,42 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
   return true
 }
 
-const performFindByStatus =
-  (storage) =>
-  async ({ statuses, dateFrom, dateTo, cursor, limit }) => {
-    const matching = []
-    for (const prn of storage.values()) {
-      const matchesStatus = statuses.includes(prn.status.currentStatus)
-      const afterCursor = !cursor || prn.id > cursor
-      const matchesDate = matchesDateRange(
-        prn.status.currentStatusAt,
-        dateFrom,
-        dateTo
-      )
+const matchesFindByStatusCriteria = (prn, params) => {
+  const { statuses, dateFrom, dateTo, cursor } = params
 
-      if (matchesStatus && afterCursor && matchesDate) {
-        matching.push(structuredClone(prn))
-      }
-    }
+  if (!statuses.includes(prn.status.currentStatus)) {
+    return false
+  }
+  if (cursor && prn.id <= cursor) {
+    return false
+  }
+  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
+    return false
+  }
 
-    matching.sort((a, b) => a.id.localeCompare(b.id))
+  return true
+}
 
-    const hasMore = matching.length > limit
-    const items = matching.slice(0, limit)
-
-    return {
-      items,
-      nextCursor: hasMore ? items.at(-1).id : null,
-      hasMore
+const performFindByStatus = (storage) => async (params) => {
+  const { limit } = params
+  const matching = []
+  for (const prn of storage.values()) {
+    if (matchesFindByStatusCriteria(prn, params)) {
+      matching.push(structuredClone(prn))
     }
   }
+
+  matching.sort((a, b) => a.id.localeCompare(b.id))
+
+  const hasMore = matching.length > limit
+  const items = matching.slice(0, limit)
+
+  return {
+    items,
+    nextCursor: hasMore ? items.at(-1).id : null,
+    hasMore
+  }
+}
 
 const performUpdateStatus =
   (storage) =>
