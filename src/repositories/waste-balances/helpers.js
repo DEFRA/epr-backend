@@ -149,14 +149,14 @@ export const findOrCreateWasteBalance = async ({
 }
 
 /**
- * Annotates each waste record with whether it is excluded from waste balance.
+ * Marks each waste record as excluded or included in the waste balance.
  * Excluded records are still passed to the calculator so that any existing
  * credits can be reversed via the delta mechanism.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @returns {import('#domain/waste-records/model.js').WasteRecord[]}
  */
-export const annotateRecordsWithExclusion = (wasteRecords) => {
+export const markExcludedRecords = (wasteRecords) => {
   const processingType = wasteRecords[0]?.data?.processingType
 
   const getTableSchema = processingType
@@ -306,7 +306,7 @@ export const performUpdateWasteBalanceTransactions = async ({
   saveBalance,
   user
 }) => {
-  const annotatedRecords = annotateRecordsWithExclusion(wasteRecords)
+  const annotatedRecords = markExcludedRecords(wasteRecords)
 
   if (annotatedRecords.length === 0) {
     return

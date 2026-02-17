@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   findOrCreateWasteBalance,
   performUpdateWasteBalanceTransactions,
-  annotateRecordsWithExclusion,
+  markExcludedRecords,
   buildPrnCreationTransaction,
   performDeductAvailableBalanceForPrnCreation,
   buildPrnIssuedTransaction,
@@ -51,9 +51,9 @@ vi.mock('#domain/waste-balances/calculator.js', () => ({
 }))
 
 describe('src/repositories/waste-balances/helpers.js', () => {
-  describe('annotateRecordsWithExclusion', () => {
+  describe('markExcludedRecords', () => {
     it('should return empty array when wasteRecords is empty', () => {
-      const result = annotateRecordsWithExclusion([])
+      const result = markExcludedRecords([])
       expect(result).toEqual([])
     })
 
@@ -69,7 +69,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         data: {} // no processingType
       }
 
-      const result = annotateRecordsWithExclusion([record1, record2])
+      const result = markExcludedRecords([record1, record2])
 
       expect(result).toHaveLength(2)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -94,7 +94,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = annotateRecordsWithExclusion([sentOnRecord])
+      const result = markExcludedRecords([sentOnRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -112,7 +112,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      const result = annotateRecordsWithExclusion([unknownTypeRecord])
+      const result = markExcludedRecords([unknownTypeRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -127,7 +127,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      const result = annotateRecordsWithExclusion([reprocessorRecord])
+      const result = markExcludedRecords([reprocessorRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -151,7 +151,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = annotateRecordsWithExclusion([processedRecord])
+      const result = markExcludedRecords([processedRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -178,7 +178,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = annotateRecordsWithExclusion([sentOnRecord])
+      const result = markExcludedRecords([sentOnRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -205,7 +205,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = annotateRecordsWithExclusion([receivedRecord])
+      const result = markExcludedRecords([receivedRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -232,7 +232,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = annotateRecordsWithExclusion([exportedRecord])
+      const result = markExcludedRecords([exportedRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -250,7 +250,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      const result = annotateRecordsWithExclusion([unknownProcRecord])
+      const result = markExcludedRecords([unknownProcRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -274,7 +274,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = annotateRecordsWithExclusion([sentOnRecord])
+      const result = markExcludedRecords([sentOnRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -292,7 +292,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      const result = annotateRecordsWithExclusion([unknownRecord])
+      const result = markExcludedRecords([unknownRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(false)
@@ -316,7 +316,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.EXCLUDED })
 
-      const result = annotateRecordsWithExclusion([excludedRecord])
+      const result = markExcludedRecords([excludedRecord])
 
       expect(result).toHaveLength(1)
       expect(result[0].excludedFromWasteBalance).toBe(true)
