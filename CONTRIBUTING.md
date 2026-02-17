@@ -405,7 +405,7 @@ Add the following to [.vscode/settings.json](.vscode/settings.json) to enable
     },
     "dev": {
       "baseUrl": "https://ephemeral-protected.api.dev.cdp-int.defra.cloud/epr-backend",
-      "clientId": "3c8h0trqsqhlfrp91u8uv6a80",
+      "clientId": "7qgg5p2i3c2qchb2eruplk4lnm",
       "tokenUrl": "https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com"
     }
   }
@@ -426,7 +426,7 @@ CLIENT_SECRET=<client-secret-value>
 curl --request POST \
   --url https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com/oauth2/token \
   --data grant_type=client_credentials \
-  --data client_id=3c8h0trqsqhlfrp91u8uv6a80 \
+  --data client_id=7qgg5p2i3c2qchb2eruplk4lnm \
   --data client_secret=${CLIENT_SECRET}
 ```
 
