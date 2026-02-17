@@ -40,7 +40,15 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
             })
           }),
           collection: () => options,
-          find: () => ({ toArray: async () => [] }),
+          find: () => ({
+            toArray: async () => [],
+            sort: () => ({
+              limit: () => ({
+                toArray: () => Promise.resolve([])
+              })
+            })
+          }),
+          updateOne: () => {},
           createIndex: () => {},
           createCollection: () => {},
           indexes: async () => []

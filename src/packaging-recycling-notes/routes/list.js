@@ -7,6 +7,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { mapToExternalPrn } from '#packaging-recycling-notes/application/external-prn-mapper.js'
+import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
@@ -26,21 +27,7 @@ export const packagingRecyclingNotesList = {
     tags: ['api'],
     validate: {
       query: Joi.object({
-        statuses: Joi.string()
-          .custom((value, helpers) => {
-            const statuses = value.split(',')
-            const invalid = statuses.filter(
-              (s) => !ALLOWED_STATUSES.includes(s)
-            )
-            if (invalid.length > 0) {
-              return helpers.error('any.invalid')
-            }
-            return statuses
-          })
-          .required()
-          .messages({
-            'any.invalid': `statuses must be one or more of: ${ALLOWED_STATUSES.join(', ')}`
-          }),
+        statuses: createStatusesValidator(ALLOWED_STATUSES),
         dateFrom: Joi.string().isoDate().optional().messages({
           'string.isoDate': 'dateFrom must be a valid ISO 8601 date-time'
         }),
