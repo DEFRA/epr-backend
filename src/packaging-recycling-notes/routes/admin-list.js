@@ -37,7 +37,9 @@ const buildResponseItem = (prn) => ({
   notes: prn.notes ?? null,
   issuedAt: prn.status.issued?.at ?? null,
   issuedBy: prn.status.issued?.by ?? null,
+  accreditationNumber: prn.accreditation.accreditationNumber ?? null,
   accreditationYear: prn.accreditation.accreditationYear,
+  submittedToRegulator: prn.accreditation.submittedToRegulator ?? null,
   wasteProcessingType: prn.isExport
     ? WASTE_PROCESSING_TYPE.EXPORTER
     : WASTE_PROCESSING_TYPE.REPROCESSOR,
