@@ -562,122 +562,116 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(balance.transactions[0].entities[0].id).toBe('7001')
     })
 
-    it.fails(
-      'should create debit transaction when a mandatory field is removed making a row excluded (PAE-1108)',
-      async () => {
-        const env = await setupWasteBalanceIntegrationEnvironment({
-          processingType: 'exporter'
-        })
-        const { wasteBalancesRepository, accreditationId } = env
+    it('should create debit transaction when a mandatory field is removed making a row excluded (PAE-1108)', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
 
-        // First submission: row with all mandatory fields filled — contributes to balance
-        const firstUploadData = createUploadData([
-          { rowId: 1001, exportTonnage: 100 }
-        ])
+      // First submission: row with all mandatory fields filled — contributes to balance
+      const firstUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 }
+      ])
 
-        await performSubmission(
-          env,
-          'summary-exclusion-1',
-          'file-exclusion-1',
-          'waste-data-v1.xlsx',
-          firstUploadData
-        )
+      await performSubmission(
+        env,
+        'summary-exclusion-1',
+        'file-exclusion-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
 
-        let balance =
-          await wasteBalancesRepository.findByAccreditationId(accreditationId)
-        expect(balance.amount).toBe(100)
-        expect(balance.transactions).toHaveLength(1)
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(100)
+      expect(balance.transactions).toHaveLength(1)
 
-        // Second submission: same row but DATE_RECEIVED_BY_OSR removed.
-        // Row should now be EXCLUDED from waste balance and the
-        // original credit should be reversed with a debit transaction.
-        const secondUploadData = createUploadData([
-          { rowId: 1001, exportTonnage: 100, dateReceivedByOsr: '' }
-        ])
+      // Second submission: same row but DATE_RECEIVED_BY_OSR removed.
+      // Row should now be EXCLUDED from waste balance and the
+      // original credit should be reversed with a debit transaction.
+      const secondUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100, dateReceivedByOsr: '' }
+      ])
 
-        await performSubmission(
-          env,
-          'summary-exclusion-2',
-          'file-exclusion-2',
-          'waste-data-v2.xlsx',
-          secondUploadData
-        )
+      await performSubmission(
+        env,
+        'summary-exclusion-2',
+        'file-exclusion-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
 
-        balance =
-          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-        // Balance should be 0 — the original credit was reversed
-        expect(balance.amount).toBe(0)
-        expect(balance.availableAmount).toBe(0)
+      // Balance should be 0 — the original credit was reversed
+      expect(balance.amount).toBe(0)
+      expect(balance.availableAmount).toBe(0)
 
-        // Should have 2 transactions: original credit and corrective debit
-        expect(balance.transactions).toHaveLength(2)
+      // Should have 2 transactions: original credit and corrective debit
+      expect(balance.transactions).toHaveLength(2)
 
-        const creditTx = balance.transactions.find((t) => t.type === 'credit')
-        expect(creditTx).toBeDefined()
-        expect(creditTx.amount).toBe(100)
-        expect(creditTx.entities[0].id).toBe('1001')
+      const creditTx = balance.transactions.find((t) => t.type === 'credit')
+      expect(creditTx).toBeDefined()
+      expect(creditTx.amount).toBe(100)
+      expect(creditTx.entities[0].id).toBe('1001')
 
-        const debitTx = balance.transactions.find((t) => t.type === 'debit')
-        expect(debitTx).toBeDefined()
-        expect(debitTx.amount).toBe(100)
-        expect(debitTx.entities[0].id).toBe('1001')
-      }
-    )
+      const debitTx = balance.transactions.find((t) => t.type === 'debit')
+      expect(debitTx).toBeDefined()
+      expect(debitTx.amount).toBe(100)
+      expect(debitTx.entities[0].id).toBe('1001')
+    })
 
-    it.fails(
-      'should create debit transaction when gross weight is removed making a row excluded (PAE-1108)',
-      async () => {
-        const env = await setupWasteBalanceIntegrationEnvironment({
-          processingType: 'exporter'
-        })
-        const { wasteBalancesRepository, accreditationId } = env
+    it('should create debit transaction when gross weight is removed making a row excluded (PAE-1108)', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
 
-        // First submission: row with all mandatory fields filled
-        const firstUploadData = createUploadData([
-          { rowId: 1001, exportTonnage: 100 }
-        ])
+      // First submission: row with all mandatory fields filled
+      const firstUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 }
+      ])
 
-        await performSubmission(
-          env,
-          'summary-gross-1',
-          'file-gross-1',
-          'waste-data-v1.xlsx',
-          firstUploadData
-        )
+      await performSubmission(
+        env,
+        'summary-gross-1',
+        'file-gross-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
 
-        let balance =
-          await wasteBalancesRepository.findByAccreditationId(accreditationId)
-        expect(balance.amount).toBe(100)
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(100)
 
-        // Second submission: same row but GROSS_WEIGHT removed
-        const secondUploadData = createUploadData([
-          { rowId: 1001, exportTonnage: 100, grossWeight: '' }
-        ])
+      // Second submission: same row but GROSS_WEIGHT removed
+      const secondUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100, grossWeight: '' }
+      ])
 
-        await performSubmission(
-          env,
-          'summary-gross-2',
-          'file-gross-2',
-          'waste-data-v2.xlsx',
-          secondUploadData
-        )
+      await performSubmission(
+        env,
+        'summary-gross-2',
+        'file-gross-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
 
-        balance =
-          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-        // Balance should be 0 — the original credit was reversed
-        expect(balance.amount).toBe(0)
-        expect(balance.availableAmount).toBe(0)
+      // Balance should be 0 — the original credit was reversed
+      expect(balance.amount).toBe(0)
+      expect(balance.availableAmount).toBe(0)
 
-        expect(balance.transactions).toHaveLength(2)
+      expect(balance.transactions).toHaveLength(2)
 
-        const debitTx = balance.transactions.find((t) => t.type === 'debit')
-        expect(debitTx).toBeDefined()
-        expect(debitTx.amount).toBe(100)
-        expect(debitTx.entities[0].id).toBe('1001')
-      }
-    )
+      const debitTx = balance.transactions.find((t) => t.type === 'debit')
+      expect(debitTx).toBeDefined()
+      expect(debitTx.amount).toBe(100)
+      expect(debitTx.entities[0].id).toBe('1001')
+    })
 
     it('should track multiple sequential revisions to the same row with correct running balance', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({

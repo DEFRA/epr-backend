@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   findOrCreateWasteBalance,
   performUpdateWasteBalanceTransactions,
-  filterValidRecords,
+  annotateRecordsWithExclusion,
   buildPrnCreationTransaction,
   performDeductAvailableBalanceForPrnCreation,
   buildPrnIssuedTransaction,
@@ -51,13 +51,13 @@ vi.mock('#domain/waste-balances/calculator.js', () => ({
 }))
 
 describe('src/repositories/waste-balances/helpers.js', () => {
-  describe('filterValidRecords', () => {
+  describe('annotateRecordsWithExclusion', () => {
     it('should return empty array when wasteRecords is empty', () => {
-      const result = filterValidRecords([])
+      const result = annotateRecordsWithExclusion([])
       expect(result).toEqual([])
     })
 
-    it('should include all records when processingType is not available', () => {
+    it('should mark all records as not excluded when processingType is not available', () => {
       const record1 = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.EXPORTED,
@@ -69,14 +69,14 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         data: {} // no processingType
       }
 
-      const result = filterValidRecords([record1, record2])
+      const result = annotateRecordsWithExclusion([record1, record2])
 
       expect(result).toHaveLength(2)
-      expect(result[0]).toBe(record1)
-      expect(result[1]).toBe(record2)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
+      expect(result[1].excludedFromWasteBalance).toBe(false)
     })
 
-    it('should handle SENT_ON record type for exporters', () => {
+    it('should mark INCLUDED SENT_ON record as not excluded for exporters', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.SENT_ON,
@@ -85,7 +85,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      // Mock validation to return INCLUDED
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
       const createTableSchemaGetterSpy = vi.spyOn(
         tableSchemas,
@@ -95,16 +94,16 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = filterValidRecords([sentOnRecord])
+      const result = annotateRecordsWithExclusion([sentOnRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(sentOnRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
     })
 
-    it('should include record when exporter has unknown record type (no matching schema)', () => {
+    it('should mark record as not excluded when exporter has unknown record type (no matching schema)', () => {
       const unknownTypeRecord = {
         organisationId: 'org-1',
         type: 'unknown-type',
@@ -113,15 +112,13 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      // No mocking needed - the real getTableName returns null for unknown types
-      // and the record should be included when no schema is found
-      const result = filterValidRecords([unknownTypeRecord])
+      const result = annotateRecordsWithExclusion([unknownTypeRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(unknownTypeRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
     })
 
-    it('should include record when processingType is not EXPORTER (no schema lookup)', () => {
+    it('should mark record as not excluded when processingType is not EXPORTER (no schema lookup)', () => {
       const reprocessorRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.EXPORTED,
@@ -130,15 +127,13 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      // For non-exporter processing types, getTableName returns null
-      // so no schema validation occurs and record is included
-      const result = filterValidRecords([reprocessorRecord])
+      const result = annotateRecordsWithExclusion([reprocessorRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(reprocessorRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
     })
 
-    it('should handle PROCESSED record type for reprocessor output', () => {
+    it('should mark INCLUDED PROCESSED record as not excluded for reprocessor output', () => {
       const processedRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.PROCESSED,
@@ -156,16 +151,16 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = filterValidRecords([processedRecord])
+      const result = annotateRecordsWithExclusion([processedRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(processedRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
     })
 
-    it('should handle SENT_ON record type for reprocessor output', () => {
+    it('should mark INCLUDED SENT_ON record as not excluded for reprocessor output', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.SENT_ON,
@@ -183,16 +178,16 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = filterValidRecords([sentOnRecord])
+      const result = annotateRecordsWithExclusion([sentOnRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(sentOnRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
     })
 
-    it('should handle RECEIVED record type for reprocessor input', () => {
+    it('should mark INCLUDED RECEIVED record as not excluded for reprocessor input', () => {
       const receivedRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.RECEIVED,
@@ -210,16 +205,16 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = filterValidRecords([receivedRecord])
+      const result = annotateRecordsWithExclusion([receivedRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(receivedRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
     })
 
-    it('should handle EXPORTED record type for exporters', () => {
+    it('should mark INCLUDED EXPORTED record as not excluded for exporters', () => {
       const exportedRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.EXPORTED,
@@ -237,16 +232,16 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = filterValidRecords([exportedRecord])
+      const result = annotateRecordsWithExclusion([exportedRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(exportedRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
     })
 
-    it('should include record when processingType is completely unknown', () => {
+    it('should mark record as not excluded when processingType is completely unknown', () => {
       const unknownProcRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.EXPORTED,
@@ -255,13 +250,13 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      const result = filterValidRecords([unknownProcRecord])
+      const result = annotateRecordsWithExclusion([unknownProcRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(unknownProcRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
     })
 
-    it('should handle SENT_ON record type for reprocessor input', () => {
+    it('should mark INCLUDED SENT_ON record as not excluded for reprocessor input', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
         type: WASTE_RECORD_TYPE.SENT_ON,
@@ -279,16 +274,16 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
-      const result = filterValidRecords([sentOnRecord])
+      const result = annotateRecordsWithExclusion([sentOnRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(sentOnRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
     })
 
-    it('should handle unknown record type for reprocessor output', () => {
+    it('should mark record as not excluded for unknown record type in reprocessor output', () => {
       const unknownRecord = {
         organisationId: 'org-1',
         type: 'UNKNOWN',
@@ -297,10 +292,37 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         }
       }
 
-      const result = filterValidRecords([unknownRecord])
+      const result = annotateRecordsWithExclusion([unknownRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(unknownRecord)
+      expect(result[0].excludedFromWasteBalance).toBe(false)
+    })
+
+    it('should mark EXCLUDED record as excluded (PAE-1108)', () => {
+      const excludedRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER
+        }
+      }
+
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.EXCLUDED })
+
+      const result = annotateRecordsWithExclusion([excludedRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].excludedFromWasteBalance).toBe(true)
+
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
     })
   })
 
