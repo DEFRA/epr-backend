@@ -10,6 +10,7 @@ import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
+import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
 import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
@@ -56,7 +57,8 @@ const router = {
           ...Object.values(linkedOrganisationsRoutes),
           ...packagingRecyclingNotesRoutesBehindFeatureFlag,
           ...packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag,
-          ...summaryLogUploadsReportRoutes
+          ...summaryLogUploadsReportRoutes,
+          adminPackagingRecyclingNotesList
         ])
       })
     }
