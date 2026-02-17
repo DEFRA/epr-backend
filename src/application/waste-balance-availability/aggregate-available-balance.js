@@ -10,11 +10,11 @@ const buildMaterialLookupStage = () => ({
   $lookup: {
     from: ORGANISATIONS_COLLECTION,
     let: {
-      orgId: '$organisationId',
+      orgId: { $toObjectId: '$organisationId' },
       accId: '$accreditationId'
     },
     pipeline: [
-      { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$orgId'] } } },
+      { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
       { $unwind: '$registrations' },
       {
         $match: {

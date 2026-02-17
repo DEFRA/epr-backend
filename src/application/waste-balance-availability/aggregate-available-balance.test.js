@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { aggregateAvailableBalance } from './aggregate-available-balance.js'
+import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 
 const createMockDb = (aggregateResults) => ({
   collection: vi.fn(() => ({
@@ -48,18 +49,10 @@ describe('aggregateAvailableBalance', () => {
 
     const result = await aggregateAvailableBalance(db)
 
-    const expectedMaterials = [
-      'aluminium',
-      'fibre',
-      'glass_other',
-      'glass_re_melt',
-      'paper',
-      'plastic',
-      'steel',
-      'wood'
-    ]
     const actualMaterials = result.materials.map((m) => m.material)
-    expect(actualMaterials.sort()).toEqual(expectedMaterials.sort())
+    expect(actualMaterials.sort()).toEqual(
+      [...TONNAGE_MONITORING_MATERIALS].sort()
+    )
   })
 
   it('should return generatedAt timestamp', async () => {

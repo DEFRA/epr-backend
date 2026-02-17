@@ -65,7 +65,7 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
       expect(JSON.parse(response.payload)).toEqual(mockBalanceData)
     })
 
-    it('calls aggregateAvailableBalance with db', async () => {
+    it('calls aggregateAvailableBalance once', async () => {
       const mockBalanceData = {
         generatedAt: '2026-01-29T12:00:00.000Z',
         materials: [],
