@@ -6,16 +6,13 @@
 
 Backend APIs for: Packaging Extended Producer Responsibilities
 
+<!-- prettier-ignore-start -->
+<!-- TOC -->
+
 - [pEPR Backend](#pepr-backend)
   - [API endpoints](#api-endpoints)
   - [Docker](#docker)
     - [Running with Docker Compose](#running-with-docker-compose)
-  - [Cognito](#cognito)
-    - [Prerequisites](#prerequisites)
-    - [Visual Studio Code](#visual-studio-code)
-    - [Curl / other access](#curl--other-access)
-      - [AWS Cognito](#aws-cognito)
-      - [Cognito stub](#cognito-stub)
   - [Contributing](#contributing)
   - [Architecture](#architecture)
   - [Runbooks](#runbooks)
@@ -23,6 +20,9 @@ Backend APIs for: Packaging Extended Producer Responsibilities
   - [Workarounds](#workarounds)
   - [Licence](#licence)
     - [About the licence](#about-the-licence)
+
+<!-- TOC -->
+<!-- prettier-ignore-end -->
 
 ## API endpoints
 
@@ -78,94 +78,6 @@ docker compose --profile stub up
 - cdp-defra-id-stub (authentication stub, `--profile stub`)
 
 **Note:** Running the backend requires `GOVUK_NOTIFY_API_KEY` environment variable.
-
-## Cognito
-
-We have some [external endpoints](src/packaging-recycling-notes) that require Cognito auth
-
-### Prerequisites
-
-If you intend to use AWS Cognito you need to source the following from the environment you'll be targetting
-
-- Cognito client secret
-- [Developer API key](https://portal.cdp-int.defra.cloud/documentation/how-to/developer-api-key.md)
-
-### Visual Studio Code
-
-If you use VS Code you use [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) to make [requests](requests.http).
-
-Add the following to [.vscode/settings.json](.vscode/settings.json) to enable
-[environment switching](https://github.com/Huachao/vscode-restclient/blob/master/README.md#environments):
-
-```json
-{
-  "rest-client.environmentVariables": {
-    "local": {
-      "baseUrl": "http://localhost:3001",
-      "clientId": "5357lgchj0h0fuomqyas5r87u",
-      "tokenUrl": "http://localhost:9229"
-    },
-    "dev": {
-      "baseUrl": "https://ephemeral-protected.api.dev.cdp-int.defra.cloud/epr-backend",
-      "clientId": "3c8h0trqsqhlfrp91u8uv6a80",
-      "tokenUrl": "https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com"
-    }
-  }
-}
-```
-
-### Curl / other access
-
-You can also get tokens via curl, there's also a [Python example in the CDP docs](https://portal.cdp-int.defra.cloud/documentation/how-to/apis.md#get-a-cognito-token)
-
-#### AWS Cognito
-
-Get Cognito Token
-
-```sh
-CLIENT_SECRET=<client-secret-value>
-
-curl --request POST \
-  --url https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com/oauth2/token \
-  --data grant_type=client_credentials \
-  --data client_id=3c8h0trqsqhlfrp91u8uv6a80 \
-  --data client_secret=${CLIENT_SECRET}
-```
-
-List Packaging Recycling Notes
-
-```sh
-TOKEN=<access_token value>
-DEVELOPER_API_KEY=<developer-api-key-value>
-
-curl --request GET \
-  --url 'https://ephemeral-protected.api.dev.cdp-int.defra.cloud/epr-backend/v1/packaging-recycling-notes?statuses=awaiting_acceptance' \
-  --header "authorization: Bearer ${TOKEN}" \
-  --header "x-api-key: ${DEVELOPER_API_KEY}"
-```
-
-#### Cognito stub
-
-Get Cognito Token
-
-```sh
-curl --request POST \
-  --url http://localhost:9229/ \
-  --header 'content-type: application/x-amz-json-1.1' \
-  --header 'x-amz-target: AWSCognitoIdentityProviderService.InitiateAuth' \
-  --data '{"AuthFlow": "USER_PASSWORD_AUTH","ClientId": "5357lgchj0h0fuomqyas5r87u","AuthParameters": {"USERNAME": "hello@example.com","PASSWORD": "testPassword"}}'
-```
-
-List Packaging Recycling Notes
-
-```sh
-TOKEN=<AuthenticationResult.AccessToken value>
-
-curl --request GET \
-  --url 'http://localhost:3001/v1/packaging-recycling-notes?statuses=awaiting_acceptance' \
-  --header "authorization: Bearer ${TOKEN}" \
-  --header 'user-agent: vscode-restclient'
-```
 
 ## Contributing
 
