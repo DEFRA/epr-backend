@@ -359,23 +359,7 @@ docker run -e PORT=3001 -p 3001:3001 epr-backend
 
 ### Docker Compose
 
-A local environment with:
-
-- Localstack for AWS services (S3, SQS)
-- Redis
-- MongoDB
-- This service.
-- A commented out frontend example.
-
-```bash
-docker compose up --build -d
-```
-
-See the running services with:
-
-```bash
-docker compose ps
-```
+Use the compose setup in our [service repo](https://github.com/DEFRA/epr-re-ex-service/blob/main/CONTRIBUTING.md#docker-compose)
 
 ## Cognito
 
