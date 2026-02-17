@@ -1,14 +1,4 @@
 ###########################################################################
-# REST Client for Visual Studio Code
-#
-# see:
-#   - .vscode/settings for environment config - switchable with the command
-#     palette
-#   - https://github.com/Huachao/vscode-restclient/blob/master/README.md#environments
-###########################################################################
-
-
-###########################################################################
 # AWS Cognito auth
 #
 # reqs:
