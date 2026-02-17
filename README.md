@@ -6,22 +6,23 @@
 
 Backend APIs for: Packaging Extended Producer Responsibilities
 
-<!-- prettier-ignore-start -->
-<!-- TOC -->
-* [pEPR Backend](#pepr-backend)
-  * [API endpoints](#api-endpoints)
-  * [Docker](#docker)
-    * [Running with Docker Compose](#running-with-docker-compose)
-  * [Contributing](#contributing)
-  * [Architecture](#architecture)
-  * [Runbooks](#runbooks)
-  * [Known issues](#known-issues)
-  * [Workarounds](#workarounds)
-  * [Licence](#licence)
-    * [About the licence](#about-the-licence)
-<!-- TOC -->
-
-<!-- prettier-ignore-end -->
+- [pEPR Backend](#pepr-backend)
+  - [API endpoints](#api-endpoints)
+  - [Docker](#docker)
+    - [Running with Docker Compose](#running-with-docker-compose)
+  - [Cognito](#cognito)
+    - [Prerequisites](#prerequisites)
+    - [Visual Studio Code](#visual-studio-code)
+    - [Curl / other access](#curl--other-access)
+      - [AWS Cognito](#aws-cognito)
+      - [Cognito stub](#cognito-stub)
+  - [Contributing](#contributing)
+  - [Architecture](#architecture)
+  - [Runbooks](#runbooks)
+  - [Known issues](#known-issues)
+  - [Workarounds](#workarounds)
+  - [Licence](#licence)
+    - [About the licence](#about-the-licence)
 
 ## API endpoints
 
@@ -78,7 +79,7 @@ docker compose --profile stub up
 
 **Note:** Running the backend requires `GOVUK_NOTIFY_API_KEY` environment variable.
 
-## Cognito
+## Cognito
 
 We have some [external endpoints](src/packaging-recycling-notes) that require Cognito auth
 
