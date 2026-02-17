@@ -149,19 +149,24 @@ export const findOrCreateWasteBalance = async ({
 }
 
 /**
- * Filters waste records to include only those that pass schema validation.
+ * Marks each waste record as excluded or included in the waste balance.
+ * Excluded records are still passed to the calculator so that any existing
+ * credits can be reversed via the delta mechanism.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @returns {import('#domain/waste-records/model.js').WasteRecord[]}
  */
-export const filterValidRecords = (wasteRecords) => {
+export const markExcludedRecords = (wasteRecords) => {
   const processingType = wasteRecords[0]?.data?.processingType
 
   const getTableSchema = processingType
     ? createTableSchemaGetter(processingType, PROCESSING_TYPE_TABLES)
     : null
 
-  return wasteRecords.filter((record) => isRecordValid(record, getTableSchema))
+  return wasteRecords.map((record) => ({
+    ...record,
+    excludedFromWasteBalance: !isRecordValid(record, getTableSchema)
+  }))
 }
 
 const getAccreditation = async (
@@ -301,9 +306,9 @@ export const performUpdateWasteBalanceTransactions = async ({
   saveBalance,
   user
 }) => {
-  const validRecords = filterValidRecords(wasteRecords)
+  const annotatedRecords = markExcludedRecords(wasteRecords)
 
-  if (validRecords.length === 0) {
+  if (annotatedRecords.length === 0) {
     return
   }
 
@@ -311,7 +316,7 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   const result = await calculateAndApplyUpdates(
     dependencies,
-    validRecords,
+    annotatedRecords,
     validatedAccreditationId,
     findBalance
   )

@@ -100,6 +100,10 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * @returns {number}
  */
 const getTargetAmount = (record, accreditation) => {
+  if (record.excludedFromWasteBalance) {
+    return 0
+  }
+
   const fields =
     extractExporterFields(record) ||
     extractReprocessorInputFields(record) ||

@@ -562,6 +562,145 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(balance.transactions[0].entities[0].id).toBe('7001')
     })
 
+    it('should create debit transaction when a mandatory field is removed making a row excluded', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // First submission: row with all mandatory fields filled — contributes to balance
+      const firstUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-exclusion-1',
+        'file-exclusion-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(100)
+      expect(balance.transactions).toHaveLength(1)
+
+      // Second submission: same row but DATE_RECEIVED_BY_OSR removed.
+      // Row should now be EXCLUDED from waste balance and the
+      // original credit should be reversed with a debit transaction.
+      const secondUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100, dateReceivedByOsr: '' }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-exclusion-2',
+        'file-exclusion-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Balance should be 0 — the original credit was reversed
+      expect(balance.amount).toBe(0)
+      expect(balance.availableAmount).toBe(0)
+
+      // Should have 2 transactions: original credit and corrective debit
+      expect(balance.transactions).toHaveLength(2)
+
+      const creditTx = balance.transactions.find((t) => t.type === 'credit')
+      expect(creditTx).toBeDefined()
+      expect(creditTx.amount).toBe(100)
+      expect(creditTx.entities[0].id).toBe('1001')
+
+      const debitTx = balance.transactions.find((t) => t.type === 'debit')
+      expect(debitTx).toBeDefined()
+      expect(debitTx.amount).toBe(100)
+      expect(debitTx.entities[0].id).toBe('1001')
+    })
+
+    it('should create debit transaction when gross weight is removed making a row excluded', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // First submission: row with all mandatory fields filled
+      const firstUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-gross-1',
+        'file-gross-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(100)
+
+      // Second submission: same row but GROSS_WEIGHT removed
+      const secondUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100, grossWeight: '' }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-gross-2',
+        'file-gross-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Balance should be 0 — the original credit was reversed
+      expect(balance.amount).toBe(0)
+      expect(balance.availableAmount).toBe(0)
+
+      expect(balance.transactions).toHaveLength(2)
+
+      const debitTx = balance.transactions.find((t) => t.type === 'debit')
+      expect(debitTx).toBeDefined()
+      expect(debitTx.amount).toBe(100)
+      expect(debitTx.entities[0].id).toBe('1001')
+    })
+
+    it('should not create any transaction when a new incomplete row is uploaded', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // Upload a row missing DATE_RECEIVED_BY_OSR — excluded from the start.
+      // Should not create a waste balance at all (no transactions needed).
+      const uploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100, dateReceivedByOsr: '' }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-new-incomplete-1',
+        'file-new-incomplete-1',
+        'waste-data-v1.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // No balance should exist — the excluded row produces delta=0
+      // so no transactions are generated and no balance is created
+      expect(balance).toBeNull()
+    })
+
     it('should track multiple sequential revisions to the same row with correct running balance', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
