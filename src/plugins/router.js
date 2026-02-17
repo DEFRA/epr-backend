@@ -9,6 +9,7 @@ import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
+import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
@@ -54,6 +55,7 @@ const router = {
           ...wasteBalances,
           ...Object.values(publicRegisterRoutes),
           ...Object.values(tonnageMonitoringRoutes),
+          ...Object.values(wasteBalanceAvailabilityRoutes),
           ...Object.values(linkedOrganisationsRoutes),
           ...packagingRecyclingNotesRoutesBehindFeatureFlag,
           ...packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag,
