@@ -49,6 +49,9 @@ const mapOrganisation = (org) => {
   if (org.tradingName) {
     mapped.tradingName = org.tradingName
   }
+  if (org.registrationType) {
+    mapped.registrationType = org.registrationType
+  }
   return mapped
 }
 
