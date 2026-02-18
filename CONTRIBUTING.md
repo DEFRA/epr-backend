@@ -359,23 +359,7 @@ docker run -e PORT=3001 -p 3001:3001 epr-backend
 
 ### Docker Compose
 
-A local environment with:
-
-- Localstack for AWS services (S3, SQS)
-- Redis
-- MongoDB
-- This service.
-- A commented out frontend example.
-
-```bash
-docker compose up --build -d
-```
-
-See the running services with:
-
-```bash
-docker compose ps
-```
+Use the compose setup in our [service repo](https://github.com/DEFRA/epr-re-ex-service/blob/main/CONTRIBUTING.md#docker-compose)
 
 ## Cognito
 
@@ -405,7 +389,7 @@ Add the following to [.vscode/settings.json](.vscode/settings.json) to enable
     },
     "dev": {
       "baseUrl": "https://ephemeral-protected.api.dev.cdp-int.defra.cloud/epr-backend",
-      "clientId": "3c8h0trqsqhlfrp91u8uv6a80",
+      "clientId": "7qgg5p2i3c2qchb2eruplk4lnm",
       "tokenUrl": "https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com"
     }
   }
@@ -426,7 +410,7 @@ CLIENT_SECRET=<client-secret-value>
 curl --request POST \
   --url https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com/oauth2/token \
   --data grant_type=client_credentials \
-  --data client_id=3c8h0trqsqhlfrp91u8uv6a80 \
+  --data client_id=7qgg5p2i3c2qchb2eruplk4lnm \
   --data client_secret=${CLIENT_SECRET}
 ```
 

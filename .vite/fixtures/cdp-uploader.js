@@ -1,19 +1,22 @@
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createCallbackReceiver } from '#adapters/repositories/uploads/test-helpers/callback-receiver.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test as baseTest } from 'vitest'
 import {
   GenericContainer,
   Network,
-  Wait,
   SocatContainer,
-  TestContainers
+  TestContainers,
+  Wait
 } from 'testcontainers'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
-import { createCallbackReceiver } from '#adapters/repositories/uploads/test-helpers/callback-receiver.js'
+import { test as baseTest } from 'vitest'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const COMPOSE_DIR = path.resolve(__dirname, '../../compose')
+const LOCALSTACK_READY_HOOKS_DIR = path.resolve(
+  __dirname,
+  'cdp-uploader/localstack'
+)
 
 const LOCALSTACK_IMAGE = 'localstack/localstack:3.0.2'
 const REDIS_IMAGE = 'redis:7.2.11-alpine3.21'
@@ -71,40 +74,78 @@ const cdpUploaderStackFixture = {
       // Create shared network for containers to communicate
       const network = await new Network().start()
 
-      // Start LocalStack and Redis in parallel
-      // LocalStack uses copied init script to create buckets and queues
-      const [localstackContainer, redisContainer] = await Promise.all([
-        new GenericContainer(LOCALSTACK_IMAGE)
-          .withExposedPorts(LOCALSTACK_PORT)
-          .withEnvironment({
-            SERVICES: 's3,sqs',
-            DEFAULT_REGION: REGION,
-            AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
-            AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
-          })
-          .withCopyFilesToContainer([
-            {
-              source: path.join(COMPOSE_DIR, '01-start-localstack.sh'),
-              target: '/etc/localstack/init/ready.d/01-start-localstack.sh',
-              mode: 0o755
-            }
-          ])
-          .withStartupTimeout(90000)
-          .withWaitStrategy(
-            Wait.forLogMessage(/Creating queues/).withStartupTimeout(90000)
-          )
-          .withNetwork(network)
-          .withNetworkAliases('localstack')
-          .start(),
+      // Start LocalStack, Redis, and CDP Uploader all in parallel.
 
-        new GenericContainer(REDIS_IMAGE)
-          .withExposedPorts(REDIS_PORT)
-          .withStartupTimeout(30000)
-          .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
-          .withNetwork(network)
-          .withNetworkAliases('redis')
-          .start()
-      ])
+      // NOTE: CDP Uploader is AMD64-only. On ARM Macs, port forwarding is broken
+      // due to Rosetta emulation issues with testcontainers. We use SocatContainer
+      // as a proxy to work around this. On x86, SocatContainer is unnecessary but
+      // harmless, and keeping the setup consistent across architectures is simpler.
+      const [localstackContainer, redisContainer, cdpUploaderContainer] =
+        await Promise.all([
+          new GenericContainer(LOCALSTACK_IMAGE)
+            .withExposedPorts(LOCALSTACK_PORT)
+            .withEnvironment({
+              SERVICES: 's3,sqs',
+              DEFAULT_REGION: REGION,
+              AWS_REGION: REGION,
+              AWS_DEFAULT_REGION: REGION,
+              AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
+              AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
+            })
+            .withCopyDirectoriesToContainer([
+              {
+                source: LOCALSTACK_READY_HOOKS_DIR,
+                target: '/etc/localstack/init/ready.d',
+                mode: 0o555
+              }
+            ])
+            .withWaitStrategy(
+              Wait.forSuccessfulCommand(
+                'test -f /tmp/READY'
+              ).withStartupTimeout(90000)
+            )
+            .withNetwork(network)
+            .withNetworkAliases('localstack')
+            .start(),
+
+          new GenericContainer(REDIS_IMAGE)
+            .withExposedPorts(REDIS_PORT)
+            .withStartupTimeout(30000)
+            .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+            .withNetwork(network)
+            .withNetworkAliases('redis')
+            .start(),
+
+          new GenericContainer(CDP_UPLOADER_IMAGE)
+            .withStartupTimeout(120000)
+            .withEnvironment({
+              AWS_REGION: REGION,
+              AWS_DEFAULT_REGION: REGION,
+              AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
+              AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey,
+              CONSUMER_BUCKETS: 're-ex-summary-logs',
+              MOCK_VIRUS_RESULT_DELAY: '1',
+              MOCK_VIRUS_SCAN_ENABLED: 'true',
+              NODE_ENV: 'development',
+              PORT: String(CDP_UPLOADER_PORT),
+              REDIS_HOST: 'redis',
+              S3_ENDPOINT: 'http://localstack:4566',
+              SQS_ENDPOINT: 'http://localstack:4566',
+              USE_SINGLE_INSTANCE_CACHE: 'true'
+            })
+            // Enable host.docker.internal on Linux (already available on Docker Desktop)
+            .withExtraHosts([
+              { host: 'host.docker.internal', ipAddress: 'host-gateway' }
+            ])
+            .withWaitStrategy(
+              Wait.forLogMessage(
+                /Server started successfully/
+              ).withStartupTimeout(120000)
+            )
+            .withNetwork(network)
+            .withNetworkAliases('cdp-uploader')
+            .start()
+        ])
 
       const localstackPort = localstackContainer.getMappedPort(LOCALSTACK_PORT)
       const localstackEndpoint = `http://127.0.0.1:${localstackPort}`
@@ -112,56 +153,18 @@ const cdpUploaderStackFixture = {
       const redisPort = redisContainer.getMappedPort(REDIS_PORT)
       const redisHost = '127.0.0.1'
 
-      // Start CDP Uploader (depends on LocalStack and Redis being ready)
-      // NOTE: CDP Uploader is AMD64-only. On ARM Macs, port forwarding is broken
-      // due to Rosetta emulation issues with testcontainers. We use SocatContainer
-      // as a proxy to work around this. On x86, SocatContainer is unnecessary but
-      // harmless, and keeping the setup consistent across architectures is simpler.
-      const cdpUploaderContainer = await new GenericContainer(
-        CDP_UPLOADER_IMAGE
-      )
-        // Don't expose ports - we'll use SocatContainer as a proxy
-        .withStartupTimeout(120000)
-        .withEnvironment({
-          AWS_REGION: REGION,
-          AWS_DEFAULT_REGION: REGION,
-          AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
-          AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey,
-          CONSUMER_BUCKETS: 're-ex-summary-logs',
-          MOCK_VIRUS_RESULT_DELAY: '1',
-          MOCK_VIRUS_SCAN_ENABLED: 'true',
-          NODE_ENV: 'development',
-          PORT: String(CDP_UPLOADER_PORT),
-          REDIS_HOST: 'redis',
-          S3_ENDPOINT: 'http://localstack:4566',
-          SQS_ENDPOINT: 'http://localstack:4566',
-          USE_SINGLE_INSTANCE_CACHE: 'true'
-        })
-        // Enable host.docker.internal on Linux (already available on Docker Desktop)
-        .withExtraHosts([
-          { host: 'host.docker.internal', ipAddress: 'host-gateway' }
-        ])
-        .withWaitStrategy(
-          Wait.forLogMessage(/Server started successfully/).withStartupTimeout(
-            120000
-          )
-        )
-        .withNetwork(network)
-        .withNetworkAliases('cdp-uploader')
-        .start()
-
       // Use SocatContainer as a TCP proxy to CDP Uploader (see ARM note above)
       const socatContainer = await new SocatContainer()
         .withStartupTimeout(30000)
         .withNetwork(network)
         .withTarget(CDP_UPLOADER_PORT, 'cdp-uploader', CDP_UPLOADER_PORT)
+        .withWaitStrategy(
+          Wait.forHttp('/health', CDP_UPLOADER_PORT).withStartupTimeout(30000)
+        )
         .start()
 
       const cdpUploaderPort = socatContainer.getMappedPort(CDP_UPLOADER_PORT)
       const cdpUploaderUrl = `http://${socatContainer.getHost()}:${cdpUploaderPort}`
-
-      // Give CDP Uploader a moment to fully initialise
-      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       await use({
         network,
