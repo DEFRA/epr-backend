@@ -86,7 +86,7 @@ const cdpUploaderStackFixture = {
             {
               source: path.join(COMPOSE_DIR, '01-start-localstack.sh'),
               target: '/etc/localstack/init/ready.d/01-start-localstack.sh',
-              mode: 0o755
+              mode: 0o555
             }
           ])
           .withStartupTimeout(90000)
