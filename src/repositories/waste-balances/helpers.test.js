@@ -11,7 +11,9 @@ import {
   buildPrnCancellationTransaction,
   performCreditAvailableBalanceForPrnCancellation,
   buildIssuedPrnCancellationTransaction,
-  performCreditFullBalanceForIssuedPrnCancellation
+  performCreditFullBalanceForIssuedPrnCancellation,
+  buildRoundingCorrectionTransaction,
+  performApplyRoundingCorrectionToWasteBalance
 } from './helpers.js'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { audit } from '@defra/cdp-auditing'
@@ -1448,6 +1450,235 @@ describe('src/repositories/waste-balances/helpers.js', () => {
             expect.objectContaining({ amount: 60 })
           ]),
           version: 1
+        }),
+        expect.any(Array)
+      )
+    })
+  })
+
+  describe('buildRoundingCorrectionTransaction', () => {
+    it('should build a ROUNDING_CORRECTION transaction with a positive delta', () => {
+      const currentBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 537.5199999999999,
+        availableAmount: 537.5199999999999,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const transaction = buildRoundingCorrectionTransaction({
+        amountDelta: 0.0000000000001,
+        availableAmountDelta: 0.0000000000001,
+        currentBalance
+      })
+
+      expect(transaction.type).toBe(
+        WASTE_BALANCE_TRANSACTION_TYPE.ROUNDING_CORRECTION
+      )
+      expect(transaction.amount).toBeCloseTo(0.0000000000001)
+      expect(transaction.openingAmount).toBe(537.5199999999999)
+      expect(transaction.closingAmount).toBeCloseTo(537.52)
+      expect(transaction.openingAvailableAmount).toBe(537.5199999999999)
+      expect(transaction.closingAvailableAmount).toBeCloseTo(537.52)
+      expect(transaction.entities).toHaveLength(1)
+      expect(transaction.entities[0].type).toBe(
+        WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.ROUNDING_CORRECTION
+      )
+      expect(transaction.createdBy).toBeUndefined()
+      expect(transaction.id).toBeDefined()
+      expect(transaction.createdAt).toBeDefined()
+    })
+
+    it('should build a ROUNDING_CORRECTION transaction with a negative delta', () => {
+      const currentBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 100.00000000000001,
+        availableAmount: 100.00000000000001,
+        transactions: [],
+        version: 2,
+        schemaVersion: 1
+      }
+
+      const transaction = buildRoundingCorrectionTransaction({
+        amountDelta: -0.00000000000001,
+        availableAmountDelta: -0.00000000000001,
+        currentBalance
+      })
+
+      expect(transaction.type).toBe(
+        WASTE_BALANCE_TRANSACTION_TYPE.ROUNDING_CORRECTION
+      )
+      expect(transaction.amount).toBeGreaterThan(0) // abs value
+      expect(transaction.closingAmount).toBeCloseTo(100)
+      expect(transaction.closingAvailableAmount).toBeCloseTo(100)
+    })
+  })
+
+  describe('performApplyRoundingCorrectionToWasteBalance', () => {
+    it('should apply a correction when balances have rounding errors', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 537.5199999999999,
+        availableAmount: 537.5199999999999,
+        transactions: [],
+        version: 5,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performApplyRoundingCorrectionToWasteBalance({
+        correctionParams: {
+          accreditationId: 'acc-1',
+          correctedAmount: 537.52,
+          correctedAvailableAmount: 537.52
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(findBalance).toHaveBeenCalledWith('acc-1')
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 537.52,
+          availableAmount: 537.52,
+          version: 6
+        }),
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: WASTE_BALANCE_TRANSACTION_TYPE.ROUNDING_CORRECTION
+          })
+        ])
+      )
+    })
+
+    it('should do nothing when the balance is already correct', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 100,
+        availableAmount: 100,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performApplyRoundingCorrectionToWasteBalance({
+        correctionParams: {
+          accreditationId: 'acc-1',
+          correctedAmount: 100,
+          correctedAvailableAmount: 100
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
+    it('should do nothing when no balance exists', async () => {
+      const findBalance = vi.fn().mockResolvedValue(null)
+      const saveBalance = vi.fn()
+
+      await performApplyRoundingCorrectionToWasteBalance({
+        correctionParams: {
+          accreditationId: 'acc-1',
+          correctedAmount: 100,
+          correctedAvailableAmount: 100
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
+
+    it('should apply independent corrections when amount and availableAmount deltas differ', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 100.0000000000001,
+        availableAmount: 50.0000000000002,
+        transactions: [],
+        version: 1,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performApplyRoundingCorrectionToWasteBalance({
+        correctionParams: {
+          accreditationId: 'acc-1',
+          correctedAmount: 100,
+          correctedAvailableAmount: 50
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 100,
+          availableAmount: 50,
+          version: 2
+        }),
+        expect.any(Array)
+      )
+    })
+
+    it('should append to existing transactions', async () => {
+      const existingTransaction = {
+        id: 'existing-tx',
+        type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+        amount: 100
+      }
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 100.0000000000001,
+        availableAmount: 100.0000000000001,
+        transactions: [existingTransaction],
+        version: 2,
+        schemaVersion: 1
+      }
+
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
+
+      await performApplyRoundingCorrectionToWasteBalance({
+        correctionParams: {
+          accreditationId: 'acc-1',
+          correctedAmount: 100,
+          correctedAvailableAmount: 100
+        },
+        findBalance,
+        saveBalance
+      })
+
+      expect(saveBalance).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactions: expect.arrayContaining([
+            existingTransaction,
+            expect.objectContaining({
+              type: WASTE_BALANCE_TRANSACTION_TYPE.ROUNDING_CORRECTION
+            })
+          ]),
+          version: 3
         }),
         expect.any(Array)
       )

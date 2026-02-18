@@ -3,10 +3,15 @@
  */
 
 /**
+ * @typedef {'disabled' | 'enabled' | 'dry-run'} WasteBalanceRoundingCorrectionMode
+ */
+
+/**
  * @typedef {Object} FeatureFlags
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
  * @property {() => GlassMigrationMode} getGlassMigrationMode
+ * @property {() => WasteBalanceRoundingCorrectionMode} getWasteBalanceRoundingCorrectionMode
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled
  * @property {() => boolean} isCreatePackagingRecyclingNotesEnabled
  * @property {() => boolean} isPackagingRecyclingNotesExternalApiEnabled
