@@ -1,10 +1,18 @@
 import Joi from 'joi'
-import { createDataSyntaxValidator } from './data-syntax.js'
+import {
+  createDataSyntaxValidator,
+  JOI_MESSAGE_TO_ERROR_CODE
+} from './data-syntax.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
+import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
+import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
+import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
+import { TONNAGE_RECEIVED_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-input/validators/tonnage-received-validator.js'
+import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 
 describe('createDataSyntaxValidator', () => {
   // Minimal test schemas using domain schema structure
@@ -1001,7 +1009,7 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(errors[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
       expect(errors[0].context.errorCode).toBe(
-        VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO
+        VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO
       )
     })
 
@@ -1075,5 +1083,37 @@ describe('createDataSyntaxValidator', () => {
       expect(errors[0].code).toBe(VALIDATION_CODE.FIELD_REQUIRED)
       expect(errors[0].context.errorCode).toBeUndefined()
     })
+  })
+})
+
+describe('JOI_MESSAGE_TO_ERROR_CODE coverage', () => {
+  const allMessageSources = [
+    { name: 'MESSAGES', messages: MESSAGES },
+    { name: 'NET_WEIGHT_MESSAGES', messages: NET_WEIGHT_MESSAGES },
+    { name: 'TONNAGE_EXPORT_MESSAGES', messages: TONNAGE_EXPORT_MESSAGES },
+    { name: 'TONNAGE_RECEIVED_MESSAGES', messages: TONNAGE_RECEIVED_MESSAGES },
+    {
+      name: 'UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES',
+      messages: UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES
+    }
+  ]
+
+  it.each(allMessageSources)(
+    'maps every $name value to an errorCode',
+    ({ messages }) => {
+      const mappedMessages = Object.keys(JOI_MESSAGE_TO_ERROR_CODE)
+
+      for (const message of Object.values(messages)) {
+        expect(mappedMessages).toContain(message)
+      }
+    }
+  )
+
+  it('maps every errorCode to a valid VALIDATION_CODE', () => {
+    const validCodes = Object.values(VALIDATION_CODE)
+
+    for (const errorCode of Object.values(JOI_MESSAGE_TO_ERROR_CODE)) {
+      expect(validCodes).toContain(errorCode)
+    }
   })
 })

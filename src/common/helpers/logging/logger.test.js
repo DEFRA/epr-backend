@@ -117,6 +117,23 @@ describe('loggerOptions.serializers.err', () => {
     expect(result.message).toContain('Unauthorized')
     expect(result.message).toContain('Token issuer not recognised')
   })
+
+  test('falls back to [unserializable] when Boom data has circular references', () => {
+    const circular = {}
+    circular.self = circular
+
+    const boomError = new Error('JWKS endpoint error')
+    boomError.isBoom = true
+    boomError.output = {
+      statusCode: 502,
+      payload: { error: 'Bad Gateway', message: 'JWKS endpoint error' }
+    }
+    boomError.data = circular
+
+    const result = errorSerializer(boomError)
+
+    expect(result.message).toBe('JWKS endpoint error | data: [unserializable]')
+  })
 })
 
 describe('loggerOptions.serializers.res', () => {
