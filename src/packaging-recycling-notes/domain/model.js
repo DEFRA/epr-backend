@@ -125,6 +125,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   id: string;
  *   name: string;
  *   tradingName?: string;
+ *   registrationType?: string;
  * }} OrganisationNameAndId
  */
 
