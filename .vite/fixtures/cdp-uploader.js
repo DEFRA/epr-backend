@@ -155,13 +155,13 @@ const cdpUploaderStackFixture = {
         .withStartupTimeout(30000)
         .withNetwork(network)
         .withTarget(CDP_UPLOADER_PORT, 'cdp-uploader', CDP_UPLOADER_PORT)
+        .withWaitStrategy(
+          Wait.forHttp('/health', CDP_UPLOADER_PORT).withStartupTimeout(30000)
+        )
         .start()
 
       const cdpUploaderPort = socatContainer.getMappedPort(CDP_UPLOADER_PORT)
       const cdpUploaderUrl = `http://${socatContainer.getHost()}:${cdpUploaderPort}`
-
-      // Give CDP Uploader a moment to fully initialise
-      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       await use({
         network,
