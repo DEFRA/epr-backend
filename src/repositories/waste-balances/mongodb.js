@@ -4,7 +4,8 @@ import {
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
   performCreditAvailableBalanceForPrnCancellation,
-  performCreditFullBalanceForIssuedPrnCancellation
+  performCreditFullBalanceForIssuedPrnCancellation,
+  performApplyRoundingCorrectionToWasteBalance
 } from './helpers.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -45,6 +46,18 @@ const performFindByAccreditationIds = (db) => async (accreditationIds) => {
   const docs = await db
     .collection(WASTE_BALANCE_COLLECTION_NAME)
     .find({ accreditationId: { $in: accreditationIds } })
+    .toArray()
+
+  return docs.map((doc) => {
+    const { _id, ...domainFields } = doc
+    return structuredClone({ id: _id.toString(), ...domainFields })
+  })
+}
+
+const performFindAll = (db) => async () => {
+  const docs = await db
+    .collection(WASTE_BALANCE_COLLECTION_NAME)
+    .find({})
     .toArray()
 
   return docs.map((doc) => {
@@ -116,6 +129,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
   return () => ({
     findByAccreditationId: performFindByAccreditationId(db),
     findByAccreditationIds: performFindByAccreditationIds(db),
+    findAll: performFindAll(db),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
@@ -154,6 +168,13 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
       return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
+        findBalance: findBalance(db),
+        saveBalance: saveBalance(db)
+      })
+    },
+    applyRoundingCorrectionToWasteBalance: async (correctionParams) => {
+      return performApplyRoundingCorrectionToWasteBalance({
+        correctionParams,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })

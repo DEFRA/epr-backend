@@ -350,6 +350,12 @@ const baseConfig = {
       default: 'false',
       env: 'FEATURE_FLAG_GLASS_MIGRATION'
     },
+    wasteBalanceRoundingCorrection: {
+      doc: 'Feature Flag: Fix floating-point rounding errors in waste balance totals on startup (PAE-1082). Values: false (disabled), true (enabled), dry-run (report only)',
+      format: ['false', 'true', 'dry-run'],
+      default: 'false',
+      env: 'FEATURE_FLAG_WASTE_BALANCE_ROUNDING_CORRECTION'
+    },
     packagingRecyclingNotes: {
       doc: 'Feature Flag: Enable Packaging Recycling Note creation',
       format: Boolean,

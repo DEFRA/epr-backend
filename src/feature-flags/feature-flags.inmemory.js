@@ -14,6 +14,9 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   getGlassMigrationMode() {
     return flags.glassMigration ?? 'disabled'
   },
+  getWasteBalanceRoundingCorrectionMode() {
+    return flags.wasteBalanceRoundingCorrection ?? 'disabled'
+  },
   isCreatePackagingRecyclingNotesEnabled() {
     return flags.packagingRecyclingNotes ?? false
   },

@@ -24,6 +24,7 @@ const privateKey = keyPair.privateKey
 const kid = 'test-cognito-key-id'
 
 export const testPublicKey = {
+  // @ts-ignore - keyPair.publicKey is a JsonWebKey object spread
   ...keyPair.publicKey,
   kid,
   use: 'sig',

@@ -21,6 +21,16 @@ export const createConfigFeatureFlags = (config) => ({
     }
     return 'disabled'
   },
+  getWasteBalanceRoundingCorrectionMode() {
+    const value = config.get('featureFlags.wasteBalanceRoundingCorrection')
+    if (value === 'true') {
+      return 'enabled'
+    }
+    if (value === 'dry-run') {
+      return 'dry-run'
+    }
+    return 'disabled'
+  },
   isCreatePackagingRecyclingNotesEnabled() {
     return config.get('featureFlags.packagingRecyclingNotes')
   },

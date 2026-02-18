@@ -4,7 +4,8 @@ import {
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
   performCreditAvailableBalanceForPrnCancellation,
-  performCreditFullBalanceForIssuedPrnCancellation
+  performCreditFullBalanceForIssuedPrnCancellation,
+  performApplyRoundingCorrectionToWasteBalance
 } from './helpers.js'
 
 /**
@@ -80,6 +81,7 @@ export const createInMemoryWasteBalancesRepository = (
   return () => ({
     findByAccreditationId: performFindByAccreditationId(wasteBalanceStorage),
     findByAccreditationIds: performFindByAccreditationIds(wasteBalanceStorage),
+    findAll: async () => wasteBalanceStorage.map((b) => structuredClone(b)),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
@@ -118,6 +120,13 @@ export const createInMemoryWasteBalancesRepository = (
     creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
       return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
+        findBalance: findBalance(wasteBalanceStorage),
+        saveBalance: saveBalance(wasteBalanceStorage)
+      })
+    },
+    applyRoundingCorrectionToWasteBalance: async (correctionParams) => {
+      return performApplyRoundingCorrectionToWasteBalance({
+        correctionParams,
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage)
       })

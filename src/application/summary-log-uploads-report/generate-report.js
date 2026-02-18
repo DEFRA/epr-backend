@@ -136,7 +136,7 @@ async function transform(summaryLogsStatsList, registrationLookup) {
 /**
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationRepo - Organisation repository
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepo - Summary logs repository
- * @returns {Promise<{reportRows: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
+ * @returns {Promise<{summaryLogUploads: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
  */
 export async function generateSummaryLogUploadsReport(
   organisationRepo,
