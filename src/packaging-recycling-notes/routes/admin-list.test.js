@@ -87,8 +87,14 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       expect(payload.items[0].prnNumber).toBe(mockPrn.prnNumber)
       expect(payload.items[0].isDecemberWaste).toBe(mockPrn.isDecemberWaste)
       expect(payload.items[0].notes).toBe(mockPrn.notes)
+      expect(payload.items[0].accreditationNumber).toBe(
+        mockPrn.accreditation.accreditationNumber
+      )
       expect(payload.items[0].accreditationYear).toBe(
         mockPrn.accreditation.accreditationYear
+      )
+      expect(payload.items[0].submittedToRegulator).toBe(
+        mockPrn.accreditation.submittedToRegulator
       )
       expect(payload.items[0].wasteProcessingType).toBe(
         WASTE_PROCESSING_TYPE.REPROCESSOR
@@ -124,6 +130,30 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       expect(payload.items[0].notes).toBeNull()
       expect(payload.items[0].issuedAt).toBeNull()
       expect(payload.items[0].issuedBy).toBeNull()
+    })
+
+    it('returns null for accreditationNumber and submittedToRegulator when not present', async () => {
+      const mockPrn = createMockIssuedPrn({
+        accreditation: {
+          id: 'acc-789',
+          accreditationYear: 2026,
+          material: 'plastic'
+        }
+      })
+      packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+        items: [mockPrn],
+        nextCursor: null,
+        hasMore: false
+      })
+
+      const response = await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=awaiting_acceptance`
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.items[0].accreditationNumber).toBeNull()
+      expect(payload.items[0].submittedToRegulator).toBeNull()
     })
 
     it('returns exporter waste processing type for export PRNs', async () => {
