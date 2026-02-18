@@ -5,7 +5,9 @@ import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 
 const validationIssueSchema = Joi.object({
   type: Joi.string().valid('error', 'warning').optional(),
+  /** @deprecated Use errorCode for specific validation codes */
   code: Joi.string().required(),
+  errorCode: Joi.string().optional(),
   header: Joi.string().optional(),
   column: Joi.string().optional(),
   actual: Joi.any().optional(),

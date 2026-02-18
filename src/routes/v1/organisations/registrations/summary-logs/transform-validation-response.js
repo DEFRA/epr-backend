@@ -9,6 +9,10 @@ import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 const transformFatalIssue = (issue) => {
   const result = { code: issue.code }
 
+  if (issue.context?.errorCode) {
+    result.errorCode = issue.context.errorCode
+  }
+
   if (issue.context?.location) {
     result.location = { ...issue.context.location }
   }
@@ -46,6 +50,10 @@ const transformDataIssue = (issue) => {
     code: issue.code,
     header: issue.context?.location?.header,
     column: issue.context?.location?.column
+  }
+
+  if (issue.context?.errorCode) {
+    result.errorCode = issue.context.errorCode
   }
 
   if (issue.context?.actual !== undefined) {

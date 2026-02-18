@@ -531,4 +531,141 @@ describe('transformValidationResponse', () => {
       ).toBe('VALID_ERROR')
     })
   })
+
+  describe('errorCode field', () => {
+    it('includes errorCode in data issues when present in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'INVALID_TYPE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'GROSS_WEIGHT'
+              },
+              errorCode: 'MUST_BE_A_NUMBER',
+              actual: 'abc'
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      const issue =
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0]
+      expect(issue.code).toBe('INVALID_TYPE')
+      expect(issue.errorCode).toBe('MUST_BE_A_NUMBER')
+    })
+
+    it('omits errorCode from data issues when not in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'VALUE_OUT_OF_RANGE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'ROW_ID'
+              },
+              actual: 9999
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      const issue =
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0]
+      expect(issue.code).toBe('VALUE_OUT_OF_RANGE')
+      expect(issue.errorCode).toBeUndefined()
+    })
+
+    it('includes errorCode in fatal issues when present in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'INVALID_TYPE',
+            context: {
+              location: { sheet: 'Received', table: 'TABLE', row: 8 },
+              errorCode: 'MUST_BE_A_NUMBER',
+              actual: 'abc'
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.failures[0].code).toBe('INVALID_TYPE')
+      expect(result.validation.failures[0].errorCode).toBe('MUST_BE_A_NUMBER')
+    })
+
+    it('omits errorCode from fatal issues when not in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'technical',
+            message: 'System error',
+            code: 'VALIDATION_SYSTEM_ERROR'
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.failures[0].code).toBe('VALIDATION_SYSTEM_ERROR')
+      expect(result.validation.failures[0].errorCode).toBeUndefined()
+    })
+
+    it('passes response schema validation with errorCode', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'INVALID_TYPE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'GROSS_WEIGHT'
+              },
+              errorCode: 'MUST_BE_A_NUMBER',
+              actual: 'abc'
+            }
+          }
+        ]
+      }
+
+      const httpResponse = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        ...transformValidationResponse(validation)
+      }
+      const { error } = summaryLogResponseSchema.validate(httpResponse)
+      expect(error).toBeUndefined()
+    })
+  })
 })

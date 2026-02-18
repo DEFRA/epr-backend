@@ -154,7 +154,7 @@ describe('createDataSyntaxValidator', () => {
           })
           .messages({
             'custom.netWeightCalculationMismatch':
-              'must equal VALUE_A × VALUE_B'
+              'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
           })
           .unknown(true)
           .prefs({ abortEarly: false }),
@@ -912,7 +912,9 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(fatals).toHaveLength(1)
       expect(fatals[0].message).toContain('CALCULATED_RESULT')
-      expect(fatals[0].message).toContain('must equal VALUE_A × VALUE_B')
+      expect(fatals[0].message).toContain(
+        'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
+      )
       expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
     })
   })
@@ -957,6 +959,121 @@ describe('createDataSyntaxValidator', () => {
       const result = validateDataSyntax(parsed)
 
       expect(result.validatedData.data.TEST_TABLE.rows).toEqual([])
+    })
+  })
+
+  describe('errorCode (specific validation codes)', () => {
+    it('sets errorCode for string.base errors', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+      })
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(errors[0].context.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_STRING)
+    })
+
+    it('sets errorCode for number.base errors', () => {
+      const result = validate({
+        TEST_TABLE: {
+          ROW_ID: 1000,
+          TEXT_FIELD: 'hello',
+          NUMBER_FIELD: 'not-a-number'
+        }
+      })
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(errors[0].context.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_NUMBER)
+    })
+
+    it('sets errorCode for number.greater errors', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
+      })
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
+      expect(errors[0].context.errorCode).toBe(
+        VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO
+      )
+    })
+
+    it('sets errorCode for date.base errors', () => {
+      const result = validate({
+        DATE_TABLE: { ROW_ID: 1000, DATE_FIELD: 'not-a-date' }
+      })
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].code).toBe(VALIDATION_CODE.INVALID_DATE)
+      expect(errors[0].context.errorCode).toBe(
+        VALIDATION_CODE.MUST_BE_A_VALID_DATE
+      )
+    })
+
+    it('sets errorCode for any.only errors', () => {
+      const result = validate({
+        VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Maybe' }
+      })
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatals[0].context.errorCode).toBe(
+        VALIDATION_CODE.MUST_BE_YES_OR_NO
+      )
+    })
+
+    it('sets errorCode for calculation mismatch errors', () => {
+      const result = validate({
+        CALCULATED_TABLE: {
+          ROW_ID: 1000,
+          VALUE_A: 10,
+          VALUE_B: 5,
+          CALCULATED_RESULT: 100
+        }
+      })
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
+      expect(fatals[0].context.errorCode).toBe(
+        VALIDATION_CODE.NET_WEIGHT_CALCULATION_MISMATCH
+      )
+    })
+
+    it('does not set errorCode for unmapped messages', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+      })
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
+      expect(fatals[0].context.errorCode).toBeUndefined()
+    })
+
+    it('does not set errorCode for MISSING_REQUIRED_FIELD issues', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: null, NUMBER_FIELD: null }
+      })
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].code).toBe(VALIDATION_CODE.FIELD_REQUIRED)
+      expect(errors[0].context.errorCode).toBeUndefined()
     })
   })
 })
