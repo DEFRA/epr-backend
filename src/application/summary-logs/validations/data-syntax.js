@@ -217,6 +217,80 @@ const buildCellLocation = ({
       }
     : { table: tableName, header: fieldName }
 
+const toApplicationIssue = ({
+  issue,
+  classification,
+  fatalFields,
+  headerToIndexMap,
+  rowObject,
+  tableName,
+  rowNumber,
+  location
+}) => {
+  const fieldName = String(issue.field)
+  const colIndex = headerToIndexMap.get(fieldName)
+  const isValidationError = issue.code === 'VALIDATION_ERROR'
+
+  const message = issue.message
+    ? `Invalid value in column '${fieldName}': ${issue.message}`
+    : `Missing required field: ${fieldName}`
+
+  const code = isValidationError
+    ? mapJoiTypeToErrorCode(issue.type)
+    : VALIDATION_CODE.FIELD_REQUIRED
+
+  const errorCode = isValidationError
+    ? mapMessageToErrorCode(issue.message)
+    : undefined
+
+  const isFatalField =
+    classification.outcome === ROW_OUTCOME.REJECTED &&
+    fatalFields.includes(fieldName)
+
+  const context = {
+    location: buildCellLocation({
+      tableName,
+      rowNumber,
+      fieldName,
+      colIndex,
+      location
+    }),
+    actual: rowObject[fieldName]
+  }
+
+  if (errorCode) {
+    context.errorCode = errorCode
+  }
+
+  return {
+    category: VALIDATION_CATEGORY.TECHNICAL,
+    severity: isFatalField ? 'fatal' : 'error',
+    message,
+    code,
+    context
+  }
+}
+
+const recordIssues = (rowIssues, issues) => {
+  for (const rowIssue of rowIssues) {
+    if (rowIssue.severity === 'fatal') {
+      issues.addFatal(
+        rowIssue.category,
+        rowIssue.message,
+        rowIssue.code,
+        rowIssue.context
+      )
+    } else {
+      issues.addError(
+        rowIssue.category,
+        rowIssue.message,
+        rowIssue.code,
+        rowIssue.context
+      )
+    }
+  }
+}
+
 /**
  * Validates all rows using the classifyRow pipeline
  *
@@ -242,93 +316,34 @@ const validateRows = ({
   location,
   issues
 }) => {
-  return rows.map((originalRow) => {
-    const { rowNumber, values } = originalRow
+  const fatalFields = domainSchema.fatalFields || []
 
-    // Build row object from array
+  return rows.map(({ rowNumber, values }) => {
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
       rowObject[headerName] = values[colIndex]
     }
 
-    // Classify row using domain pipeline
     const classification = classifyRow(rowObject, domainSchema)
 
-    // Convert classification issues to application issues with locations
-    const fatalFields = domainSchema.fatalFields || []
-    const rowIssues = classification.issues.map((issue) => {
-      const fieldName = String(issue.field)
-      const colIndex = headerToIndexMap.get(fieldName)
-      const message = issue.message
-        ? `Invalid value in column '${fieldName}': ${issue.message}`
-        : `Missing required field: ${fieldName}`
+    const rowIssues = classification.issues.map((issue) =>
+      toApplicationIssue({
+        issue,
+        classification,
+        fatalFields,
+        headerToIndexMap,
+        rowObject,
+        tableName,
+        rowNumber,
+        location
+      })
+    )
 
-      const isValidationError = issue.code === 'VALIDATION_ERROR'
-
-      const code = isValidationError
-        ? mapJoiTypeToErrorCode(issue.type)
-        : VALIDATION_CODE.FIELD_REQUIRED
-
-      const errorCode = isValidationError
-        ? mapMessageToErrorCode(issue.message)
-        : undefined
-
-      // Determine severity based on whether this is a fatal field
-      const isFatalField =
-        classification.outcome === ROW_OUTCOME.REJECTED &&
-        fatalFields.includes(fieldName)
-      const severity = isFatalField ? 'fatal' : 'error'
-
-      const context = {
-        location: buildCellLocation({
-          tableName,
-          rowNumber,
-          fieldName,
-          colIndex,
-          location
-        }),
-        actual: rowObject[fieldName]
-      }
-
-      if (errorCode) {
-        context.errorCode = errorCode
-      }
-
-      return {
-        category: VALIDATION_CATEGORY.TECHNICAL,
-        severity,
-        message,
-        code,
-        context
-      }
-    })
-
-    // Record issues at appropriate severity
-    // fatalFields validation errors are FATAL (block entire submission)
-    // Other validation errors are ERROR (mark row as invalid but don't block submission)
-    for (const rowIssue of rowIssues) {
-      if (rowIssue.severity === 'fatal') {
-        issues.addFatal(
-          rowIssue.category,
-          rowIssue.message,
-          rowIssue.code,
-          rowIssue.context
-        )
-      } else {
-        issues.addError(
-          rowIssue.category,
-          rowIssue.message,
-          rowIssue.code,
-          rowIssue.context
-        )
-      }
-    }
-
-    const rowId = String(rowObject[domainSchema.rowIdField])
+    recordIssues(rowIssues, issues)
 
     return {
       data: rowObject,
-      rowId,
+      rowId: String(rowObject[domainSchema.rowIdField]),
       outcome: classification.outcome,
       issues: rowIssues
     }
