@@ -64,6 +64,7 @@ describe('transformValidationResponse', () => {
           failures: [
             {
               code: 'REGISTRATION_MISMATCH',
+              errorCode: 'REGISTRATION_MISMATCH',
               location: { field: 'REGISTRATION_NUMBER' },
               actual: 'REG99999',
               expected: 'REG12345'
@@ -92,7 +93,8 @@ describe('transformValidationResponse', () => {
         validation: {
           failures: [
             {
-              code: 'VALIDATION_SYSTEM_ERROR'
+              code: 'VALIDATION_SYSTEM_ERROR',
+              errorCode: 'VALIDATION_SYSTEM_ERROR'
             }
           ],
           concerns: {}
@@ -131,6 +133,7 @@ describe('transformValidationResponse', () => {
           failures: [
             {
               code: 'SEQUENTIAL_ROW_REMOVED',
+              errorCode: 'SEQUENTIAL_ROW_REMOVED',
               location: {
                 sheet: 'Received',
                 table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -243,6 +246,7 @@ describe('transformValidationResponse', () => {
                     {
                       type: 'error',
                       code: 'VALUE_OUT_OF_RANGE',
+                      errorCode: 'VALUE_OUT_OF_RANGE',
                       header: 'ROW_ID',
                       column: 'B',
                       actual: 9999
@@ -250,6 +254,7 @@ describe('transformValidationResponse', () => {
                     {
                       type: 'error',
                       code: 'INVALID_DATE',
+                      errorCode: 'INVALID_DATE',
                       header: 'DATE_RECEIVED',
                       column: 'C',
                       actual: 'invalid-date'
@@ -565,7 +570,7 @@ describe('transformValidationResponse', () => {
       expect(issue.errorCode).toBe('MUST_BE_A_NUMBER')
     })
 
-    it('omits errorCode from data issues when not in context', () => {
+    it('defaults errorCode to code for data issues without context errorCode', () => {
       const validation = {
         issues: [
           {
@@ -593,7 +598,7 @@ describe('transformValidationResponse', () => {
         result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
           .issues[0]
       expect(issue.code).toBe('VALUE_OUT_OF_RANGE')
-      expect(issue.errorCode).toBeUndefined()
+      expect(issue.errorCode).toBe('VALUE_OUT_OF_RANGE')
     })
 
     it('includes errorCode in fatal issues when present in context', () => {
@@ -619,7 +624,7 @@ describe('transformValidationResponse', () => {
       expect(result.validation.failures[0].errorCode).toBe('MUST_BE_A_NUMBER')
     })
 
-    it('omits errorCode from fatal issues when not in context', () => {
+    it('defaults errorCode to code for fatal issues without context errorCode', () => {
       const validation = {
         issues: [
           {
@@ -634,7 +639,9 @@ describe('transformValidationResponse', () => {
       const result = transformValidationResponse(validation)
 
       expect(result.validation.failures[0].code).toBe('VALIDATION_SYSTEM_ERROR')
-      expect(result.validation.failures[0].errorCode).toBeUndefined()
+      expect(result.validation.failures[0].errorCode).toBe(
+        'VALIDATION_SYSTEM_ERROR'
+      )
     })
 
     it('passes response schema validation with errorCode', () => {
