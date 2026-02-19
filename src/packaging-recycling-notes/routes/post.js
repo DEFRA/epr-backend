@@ -51,6 +51,25 @@ const snapshotAccreditation = (accreditation) => {
   return snapshot
 }
 
+const snapshotOrganisation = (org, organisationId) => ({
+  id: organisationId,
+  name: org.companyDetails.name,
+  ...(org.companyDetails.tradingName && {
+    tradingName: org.companyDetails.tradingName
+  })
+})
+
+const snapshotIssuedToOrganisation = (resolvedOrg) => ({
+  id: resolvedOrg.id,
+  name: resolvedOrg.name,
+  ...(resolvedOrg.tradingName && {
+    tradingName: resolvedOrg.tradingName
+  }),
+  ...(resolvedOrg.registrationType && {
+    registrationType: resolvedOrg.registrationType
+  })
+})
+
 const buildPrnData = ({
   organisation,
   registrationId,
@@ -161,24 +180,9 @@ export const packagingRecyclingNotesCreate = {
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
-      const organisation = {
-        id: organisationId,
-        name: org.companyDetails.name,
-        ...(org.companyDetails.tradingName && {
-          tradingName: org.companyDetails.tradingName
-        })
-      }
-
-      const issuedToOrganisation = {
-        id: resolvedIssuedToOrg.id,
-        name: resolvedIssuedToOrg.name,
-        ...(resolvedIssuedToOrg.tradingName && {
-          tradingName: resolvedIssuedToOrg.tradingName
-        }),
-        ...(resolvedIssuedToOrg.registrationType && {
-          registrationType: resolvedIssuedToOrg.registrationType
-        })
-      }
+      const organisation = snapshotOrganisation(org, organisationId)
+      const issuedToOrganisation =
+        snapshotIssuedToOrganisation(resolvedIssuedToOrg)
 
       const prnData = buildPrnData({
         organisation,
