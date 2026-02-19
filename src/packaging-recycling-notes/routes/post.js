@@ -51,6 +51,11 @@ const snapshotAccreditation = (accreditation) => {
   return snapshot
 }
 
+const snapshotUser = (auth) => ({
+  id: auth.credentials?.id ?? 'unknown',
+  name: auth.credentials?.name ?? 'unknown'
+})
+
 const snapshotOrganisation = (org, organisationId) => ({
   id: organisationId,
   name: org.companyDetails.name,
@@ -160,10 +165,7 @@ export const packagingRecyclingNotesCreate = {
       auth
     } = request
     const { organisationId, registrationId, accreditationId } = params
-    const user = {
-      id: auth.credentials?.id ?? 'unknown',
-      name: auth.credentials?.name ?? 'unknown'
-    }
+    const user = snapshotUser(auth)
     const now = new Date()
 
     try {
