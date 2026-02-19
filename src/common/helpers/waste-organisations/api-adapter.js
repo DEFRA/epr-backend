@@ -11,7 +11,7 @@ const PRODUCER_TYPES = new Set(['LARGE_PRODUCER', 'COMPLIANCE_SCHEME'])
  * @param {Array<{ id: string; name: string; registrations?: Array<{ type: string; registrationYear: number | string }>; [key: string]: unknown }>} organisations
  * @param {{ warn: (data: object, message: string) => void }} logger
  * @param {number} currentYear
- * @returns {Array<{ registrationType?: string; [key: string]: unknown }>}
+ * @returns {Array<{ id: string; name: string; tradingName?: string | null; registrationType?: string; [key: string]: unknown }>}
  */
 function extractRegistrationTypes(organisations, logger, currentYear) {
   return organisations.map((org) => {
@@ -64,7 +64,7 @@ export function createApiWasteOrganisationsService(logger) {
       const currentYear = new Date().getFullYear()
       const params = new URLSearchParams({
         registrations: ['LARGE_PRODUCER', 'COMPLIANCE_SCHEME'],
-        registrationYears: [currentYear],
+        registrationYears: [String(currentYear)],
         statuses: ['REGISTERED']
       })
 
