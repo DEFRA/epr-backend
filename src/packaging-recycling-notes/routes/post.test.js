@@ -509,7 +509,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
 
     describe('organisation resolution errors', () => {
-      it('returns 404 when issuedToOrganisation ID is not found in waste organisations API', async () => {
+      it('returns 422 when issuedToOrganisation ID is not found in waste organisations API', async () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
@@ -520,7 +520,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
     })
 

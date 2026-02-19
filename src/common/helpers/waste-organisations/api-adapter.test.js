@@ -145,12 +145,11 @@ describe('#createApiWasteOrganisationsService', () => {
       expect(org).not.toHaveProperty('registrations')
     })
 
-    it('throws a 404 Boom error when the organisation is not found', async () => {
+    it('returns null when the organisation is not found', async () => {
       const service = createApiWasteOrganisationsService(mockLogger)
 
-      await expect(
-        service.getOrganisationById('org-does-not-exist')
-      ).rejects.toSatisfy((err) => err.isBoom && err.output.statusCode === 404)
+      const result = await service.getOrganisationById('org-does-not-exist')
+      expect(result).toBeNull()
     })
 
     it('sends correct basic auth header', async () => {

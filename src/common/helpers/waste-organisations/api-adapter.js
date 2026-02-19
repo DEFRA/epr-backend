@@ -1,5 +1,3 @@
-import Boom from '@hapi/boom'
-
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import { config } from '#root/config.js'
 
@@ -44,7 +42,7 @@ function extractRegistrationTypes(organisations, logger, currentYear) {
 
 /**
  * @typedef {{
- *   getOrganisationById: (id: string) => Promise<{ id: string; name: string; tradingName?: string | null; registrationType?: string; [key: string]: unknown }>
+ *   getOrganisationById: (id: string) => Promise<{ id: string; name: string; tradingName?: string | null; registrationType?: string; [key: string]: unknown } | null>
  * }} WasteOrganisationsService
  */
 
@@ -82,15 +80,7 @@ export function createApiWasteOrganisationsService(logger) {
         logger,
         currentYear
       )
-      const organisation = organisations.find((o) => o.id === id)
-
-      if (!organisation) {
-        throw Boom.notFound(
-          `Organisation ${id} not found in waste organisations API`
-        )
-      }
-
-      return organisation
+      return organisations.find((o) => o.id === id) ?? null
     }
   }
 }

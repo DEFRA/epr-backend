@@ -1,5 +1,3 @@
-import Boom from '@hapi/boom'
-
 /** @import {WasteOrganisationsService} from './api-adapter.js' */
 
 /**
@@ -10,15 +8,7 @@ import Boom from '@hapi/boom'
 export function createInMemoryWasteOrganisationsService(organisations = []) {
   return {
     async getOrganisationById(id) {
-      const organisation = organisations.find((o) => o.id === id)
-
-      if (!organisation) {
-        throw Boom.notFound(
-          `Organisation ${id} not found in waste organisations API`
-        )
-      }
-
-      return organisation
+      return organisations.find((o) => o.id === id) ?? null
     }
   }
 }

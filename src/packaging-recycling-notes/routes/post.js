@@ -179,6 +179,12 @@ export const packagingRecyclingNotesCreate = {
           payload.issuedToOrganisation.id
         )
       ])
+      if (!resolvedIssuedToOrg) {
+        throw Boom.badData(
+          `Organisation ${payload.issuedToOrganisation.id} not found in waste organisations API`
+        )
+      }
+
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
