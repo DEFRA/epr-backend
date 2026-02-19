@@ -12,13 +12,14 @@ import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-co
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
+/** @typedef {import('#common/helpers/waste-organisations/api-adapter.js').WasteOrganisationsService} WasteOrganisationsService */
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').CreatePrnResponse} CreatePrnResponse */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 /**
  * @typedef {{
- *   issuedToOrganisation: { id: string; name: string; tradingName?: string; registrationType?: string };
+ *   issuedToOrganisation: { id: string };
  *   tonnage: number;
  *   notes?: string;
  * }} PackagingRecyclingNotesCreatePayload
@@ -27,17 +28,6 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 export const packagingRecyclingNotesCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
 
-/**
- * Build PRN data for creation
- * @param {Object} params
- * @param {{ id: string; name: string; tradingName?: string }} params.organisation
- * @param {string} params.registrationId
- * @param {Object} params.accreditation
- * @param {PackagingRecyclingNotesCreatePayload} params.payload
- * @param {{ id: string; name: string }} params.user
- * @param {boolean} params.isExport
- * @param {Date} params.now
- */
 const snapshotAccreditation = (accreditation) => {
   const snapshot = {
     id: accreditation.id,
@@ -65,6 +55,7 @@ const buildPrnData = ({
   organisation,
   registrationId,
   accreditation,
+  issuedToOrganisation,
   payload,
   user,
   isExport,
@@ -74,7 +65,7 @@ const buildPrnData = ({
   organisation,
   registrationId,
   accreditation: snapshotAccreditation(accreditation),
-  issuedToOrganisation: payload.issuedToOrganisation,
+  issuedToOrganisation,
   tonnage: payload.tonnage,
   isExport,
   ...(payload.notes && { notes: payload.notes }),
@@ -136,13 +127,14 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository, wasteOrganisationsService: WasteOrganisationsService}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
+      wasteOrganisationsService,
       params,
       payload,
       logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
@@ -156,12 +148,15 @@ export const packagingRecyclingNotesCreate = {
     const now = new Date()
 
     try {
-      const [accreditation, org] = await Promise.all([
+      const [accreditation, org, resolvedIssuedToOrg] = await Promise.all([
         organisationsRepository.findAccreditationById(
           organisationId,
           accreditationId
         ),
-        organisationsRepository.findById(organisationId)
+        organisationsRepository.findById(organisationId),
+        wasteOrganisationsService.getOrganisationById(
+          payload.issuedToOrganisation.id
+        )
       ])
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
@@ -174,10 +169,22 @@ export const packagingRecyclingNotesCreate = {
         })
       }
 
+      const issuedToOrganisation = {
+        id: resolvedIssuedToOrg.id,
+        name: resolvedIssuedToOrg.name,
+        ...(resolvedIssuedToOrg.tradingName && {
+          tradingName: resolvedIssuedToOrg.tradingName
+        }),
+        ...(resolvedIssuedToOrg.registrationType && {
+          registrationType: resolvedIssuedToOrg.registrationType
+        })
+      }
+
       const prnData = buildPrnData({
         organisation,
         registrationId,
         accreditation,
+        issuedToOrganisation,
         payload,
         user,
         isExport,

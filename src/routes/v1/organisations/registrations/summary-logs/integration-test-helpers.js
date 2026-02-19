@@ -13,6 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
+import { createInMemoryWasteOrganisationsService } from '#common/helpers/waste-organisations/inmemory-adapter.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { createTestServer } from '#test/create-test-server.js'
@@ -560,6 +561,15 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const packagingRecyclingNotesRepository =
     packagingRecyclingNotesRepositoryFactory()
 
+  const wasteOrganisationsService = createInMemoryWasteOrganisationsService([
+    {
+      id: 'producer-org-123',
+      name: 'Producer Org',
+      tradingName: 'Producer Trading',
+      registrationType: 'LARGE_PRODUCER'
+    }
+  ])
+
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,
@@ -568,7 +578,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       wasteRecordsRepository: () => wasteRecordsRepository,
       packagingRecyclingNotesRepository: () =>
         packagingRecyclingNotesRepository,
-      organisationsRepository: () => organisationsRepository
+      organisationsRepository: () => organisationsRepository,
+      wasteOrganisationsService: () => wasteOrganisationsService
     },
     workers: {
       summaryLogsWorker: createTestSubmitterWorker({
