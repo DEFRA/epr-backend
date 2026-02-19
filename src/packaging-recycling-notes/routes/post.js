@@ -18,7 +18,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
  * @typedef {{
- *   issuedToOrganisation: { id: string; name: string; tradingName?: string };
+ *   issuedToOrganisation: { id: string; name: string; tradingName?: string; registrationType?: string };
  *   tonnage: number;
  *   notes?: string;
  * }} PackagingRecyclingNotesCreatePayload
