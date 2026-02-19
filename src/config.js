@@ -98,9 +98,9 @@ const baseConfig = {
       env: 'AUDIT_ENABLED'
     },
     maxPayloadSizeBytes: {
-      doc: 'Is auditing enabled',
+      doc: 'Maximum audit payload size in bytes',
       format: Number,
-      default: 1000000, // 1MB
+      default: 32768, // 32KB - must stay within OS pipe buffer limits to avoid log corruption
       env: 'AUDIT_MAX_PAYLOAD_SIZE_BYTES'
     }
   },
