@@ -10,11 +10,10 @@ const PRODUCER_TYPES = new Set(['LARGE_PRODUCER', 'COMPLIANCE_SCHEME'])
  * on missing or ambiguous producer registrations.
  * @param {Array<{ id: string; name: string; registrations?: Array<{ type: string; registrationYear: number | string }>; [key: string]: unknown }>} organisations
  * @param {{ warn: (data: object, message: string) => void }} logger
+ * @param {number} currentYear
  * @returns {Array<{ registrationType?: string; [key: string]: unknown }>}
  */
-function extractRegistrationTypes(organisations, logger) {
-  const currentYear = new Date().getFullYear()
-
+function extractRegistrationTypes(organisations, logger, currentYear) {
   return organisations.map((org) => {
     const { registrations, ...rest } = org
 
@@ -80,7 +79,8 @@ export function createApiWasteOrganisationsService(logger) {
 
       const organisations = extractRegistrationTypes(
         response.organisations,
-        logger
+        logger,
+        currentYear
       )
       const organisation = organisations.find((o) => o.id === id)
 
