@@ -99,7 +99,9 @@
   },
   "overrides": {
     "@isaacs/brace-expansion": "5.0.1",
-    "glob": "11.1.0"
+    "fast-xml-parser": "5.3.6",
+    "glob": "11.1.0",
+    "minimatch": "10.2.1"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.18",
