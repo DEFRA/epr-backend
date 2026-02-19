@@ -64,6 +64,7 @@ describe('transformValidationResponse', () => {
           failures: [
             {
               code: 'REGISTRATION_MISMATCH',
+              errorCode: 'REGISTRATION_MISMATCH',
               location: { field: 'REGISTRATION_NUMBER' },
               actual: 'REG99999',
               expected: 'REG12345'
@@ -92,7 +93,8 @@ describe('transformValidationResponse', () => {
         validation: {
           failures: [
             {
-              code: 'VALIDATION_SYSTEM_ERROR'
+              code: 'VALIDATION_SYSTEM_ERROR',
+              errorCode: 'VALIDATION_SYSTEM_ERROR'
             }
           ],
           concerns: {}
@@ -131,6 +133,7 @@ describe('transformValidationResponse', () => {
           failures: [
             {
               code: 'SEQUENTIAL_ROW_REMOVED',
+              errorCode: 'SEQUENTIAL_ROW_REMOVED',
               location: {
                 sheet: 'Received',
                 table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -243,6 +246,7 @@ describe('transformValidationResponse', () => {
                     {
                       type: 'error',
                       code: 'VALUE_OUT_OF_RANGE',
+                      errorCode: 'VALUE_OUT_OF_RANGE',
                       header: 'ROW_ID',
                       column: 'B',
                       actual: 9999
@@ -250,6 +254,7 @@ describe('transformValidationResponse', () => {
                     {
                       type: 'error',
                       code: 'INVALID_DATE',
+                      errorCode: 'INVALID_DATE',
                       header: 'DATE_RECEIVED',
                       column: 'C',
                       actual: 'invalid-date'
@@ -529,6 +534,145 @@ describe('transformValidationResponse', () => {
         result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
           .issues[0].code
       ).toBe('VALID_ERROR')
+    })
+  })
+
+  describe('errorCode field', () => {
+    it('includes errorCode in data issues when present in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'INVALID_TYPE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'GROSS_WEIGHT'
+              },
+              errorCode: 'MUST_BE_A_NUMBER',
+              actual: 'abc'
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      const issue =
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0]
+      expect(issue.code).toBe('INVALID_TYPE')
+      expect(issue.errorCode).toBe('MUST_BE_A_NUMBER')
+    })
+
+    it('defaults errorCode to code for data issues without context errorCode', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'VALUE_OUT_OF_RANGE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'ROW_ID'
+              },
+              actual: 9999
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      const issue =
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0]
+      expect(issue.code).toBe('VALUE_OUT_OF_RANGE')
+      expect(issue.errorCode).toBe('VALUE_OUT_OF_RANGE')
+    })
+
+    it('includes errorCode in fatal issues when present in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'INVALID_TYPE',
+            context: {
+              location: { sheet: 'Received', table: 'TABLE', row: 8 },
+              errorCode: 'MUST_BE_A_NUMBER',
+              actual: 'abc'
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.failures[0].code).toBe('INVALID_TYPE')
+      expect(result.validation.failures[0].errorCode).toBe('MUST_BE_A_NUMBER')
+    })
+
+    it('defaults errorCode to code for fatal issues without context errorCode', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'technical',
+            message: 'System error',
+            code: 'VALIDATION_SYSTEM_ERROR'
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.failures[0].code).toBe('VALIDATION_SYSTEM_ERROR')
+      expect(result.validation.failures[0].errorCode).toBe(
+        'VALIDATION_SYSTEM_ERROR'
+      )
+    })
+
+    it('passes response schema validation with errorCode', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'INVALID_TYPE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'GROSS_WEIGHT'
+              },
+              errorCode: 'MUST_BE_A_NUMBER',
+              actual: 'abc'
+            }
+          }
+        ]
+      }
+
+      const httpResponse = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        ...transformValidationResponse(validation)
+      }
+      const { error } = summaryLogResponseSchema.validate(httpResponse)
+      expect(error).toBeUndefined()
     })
   })
 })
