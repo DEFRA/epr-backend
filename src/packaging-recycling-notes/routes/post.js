@@ -119,6 +119,30 @@ const deriveAccreditationYear = (accreditation) => {
   return new Date(accreditation.validFrom).getFullYear()
 }
 
+const logAndThrowServerError = (error, logger) => {
+  if (error.isBoom) {
+    throw error
+  }
+
+  logger.error({
+    err: error,
+    message: `Failure on ${packagingRecyclingNotesCreatePath}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    },
+    http: {
+      response: {
+        status_code: StatusCodes.INTERNAL_SERVER_ERROR
+      }
+    }
+  })
+
+  throw Boom.badImplementation(
+    `Failure on ${packagingRecyclingNotesCreatePath}`
+  )
+}
+
 /**
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
  * @param {{ wasteProcessingType: string }} accreditation
@@ -217,27 +241,7 @@ export const packagingRecyclingNotesCreate = {
         .response(buildResponse(prn, accreditation))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${packagingRecyclingNotesCreatePath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.INTERNAL_SERVER_ERROR
-          }
-        }
-      })
-
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesCreatePath}`
-      )
+      logAndThrowServerError(error, logger)
     }
   }
 }
