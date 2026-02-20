@@ -49,6 +49,7 @@ export const createTableSchemaGetter = (processingType, registry) => {
  * @returns {Record<string, string[]>} Union of all unfilledValues across all schemas
  */
 export const aggregateEmptyCellValues = (registry) => {
+  /** @type {Record<string, string[]>} */
   const result = {}
   for (const tables of Object.values(registry)) {
     for (const schema of Object.values(tables)) {

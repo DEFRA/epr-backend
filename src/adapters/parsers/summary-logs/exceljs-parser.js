@@ -539,6 +539,8 @@ export { extractCellValue }
  * @property {number} [maxWorksheets] - Maximum allowed worksheets
  * @property {number} [maxRowsPerSheet] - Maximum allowed rows per worksheet
  * @property {number} [maxColumnsPerSheet] - Maximum allowed columns per worksheet
+ * @property {Record<string, string[]>} [emptyCellValues] - Per-column values to normalise to null
+ * @property {Record<string, string>} [metaPlaceholders] - Per-field metadata placeholders to normalise to null
  */
 
 /**
