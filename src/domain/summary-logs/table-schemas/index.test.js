@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PROCESSING_TYPE_TABLES } from './index.js'
+import { PROCESSING_TYPE_TABLES, aggregateEmptyCellValues } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 
 describe('table-schemas', () => {
@@ -92,6 +92,111 @@ describe('table-schemas', () => {
       it('has SENT_ON_LOADS table', () => {
         expect(tables).toHaveProperty('SENT_ON_LOADS')
       })
+    })
+  })
+
+  describe('aggregateEmptyCellValues', () => {
+    it('returns empty object for registry with no unfilledValues', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: { unfilledValues: {} }
+        }
+      }
+
+      expect(aggregateEmptyCellValues(registry)).toEqual({})
+    })
+
+    it('collects unfilledValues from a single schema', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: {
+            unfilledValues: {
+              DROPDOWN: ['Choose option']
+            }
+          }
+        }
+      }
+
+      expect(aggregateEmptyCellValues(registry)).toEqual({
+        DROPDOWN: ['Choose option']
+      })
+    })
+
+    it('merges unfilledValues across schemas and processing types', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: {
+            unfilledValues: { FIELD_A: ['Choose option'] }
+          }
+        },
+        TYPE_B: {
+          TABLE_2: {
+            unfilledValues: { FIELD_B: ['Choose option'] }
+          }
+        }
+      }
+
+      expect(aggregateEmptyCellValues(registry)).toEqual({
+        FIELD_A: ['Choose option'],
+        FIELD_B: ['Choose option']
+      })
+    })
+
+    it('deduplicates values for the same field across schemas', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: {
+            unfilledValues: { DROPDOWN: ['Choose option'] }
+          }
+        },
+        TYPE_B: {
+          TABLE_2: {
+            unfilledValues: { DROPDOWN: ['Choose option'] }
+          }
+        }
+      }
+
+      expect(aggregateEmptyCellValues(registry)).toEqual({
+        DROPDOWN: ['Choose option']
+      })
+    })
+
+    it('merges distinct values for the same field across schemas', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: {
+            unfilledValues: { DROPDOWN: ['Choose option'] }
+          }
+        },
+        TYPE_B: {
+          TABLE_2: {
+            unfilledValues: { DROPDOWN: ['Select one'] }
+          }
+        }
+      }
+
+      expect(aggregateEmptyCellValues(registry)).toEqual({
+        DROPDOWN: ['Choose option', 'Select one']
+      })
+    })
+
+    it('produces correct result for the real PROCESSING_TYPE_TABLES registry', () => {
+      const result = aggregateEmptyCellValues(PROCESSING_TYPE_TABLES)
+
+      // All dropdown fields use 'Choose option'
+      expect(result.EWC_CODE).toContain('Choose option')
+      expect(result.DESCRIPTION_WASTE).toContain('Choose option')
+      expect(result.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE).toContain(
+        'Choose option'
+      )
+      expect(result.BAILING_WIRE_PROTOCOL).toContain('Choose option')
+      expect(result.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION).toContain(
+        'Choose option'
+      )
+      expect(result.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE).toContain(
+        'Choose option'
+      )
+      expect(result.EXPORT_CONTROLS).toContain('Choose option')
     })
   })
 })
