@@ -8,6 +8,7 @@ import { secureContext } from '@defra/hapi-secure-context'
 
 import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
+import { wasteOrganisationsPlugin } from '#common/helpers/waste-organisations/plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
@@ -123,6 +124,7 @@ function getProductionPlugins(config) {
     s3PublicRegisterRepositoryPlugin,
     workerPlugin,
     packagingRecyclingNotesRepositoryPlugin,
+    wasteOrganisationsPlugin,
     {
       plugin: commandQueueConsumerPlugin,
       options: { config }

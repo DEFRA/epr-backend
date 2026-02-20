@@ -16,17 +16,36 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryWasteOrganisationsService } from '#common/helpers/waste-organisations/inmemory-adapter.js'
 import { packagingRecyclingNotesCreatePath } from './post.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 const accreditationId = 'acc-789'
 
+const resolvedOrganisation = {
+  id: 'producer-org-789',
+  name: 'Producer Org',
+  tradingName: 'Producer Trading',
+  registrationType: 'LARGE_PRODUCER'
+}
+
+const organisationWithNullTradingName = {
+  id: 'producer-no-trading-name',
+  name: 'No Trading Name Org',
+  tradingName: null
+}
+
+const wasteOrganisationsService = createInMemoryWasteOrganisationsService([
+  resolvedOrganisation,
+  organisationWithNullTradingName
+])
+
 const validPayload = {
   issuedToOrganisation: {
     id: 'producer-org-789',
-    name: 'Producer Org',
-    tradingName: 'Producer Trading'
+    name: 'Ignored By Backend',
+    tradingName: 'Also Ignored'
   },
   tonnage: 100
 }
@@ -68,7 +87,8 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          wasteOrganisationsService: () => wasteOrganisationsService
         },
         featureFlags: createInMemoryFeatureFlags({
           packagingRecyclingNotes: true
@@ -101,9 +121,6 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.id).toBeDefined()
         expect(body.tonnage).toBe(validPayload.tonnage)
         expect(body.material).toBe(MATERIAL.PLASTIC)
-        expect(body.issuedToOrganisation).toStrictEqual(
-          validPayload.issuedToOrganisation
-        )
         expect(body.status).toBe(PRN_STATUS.DRAFT)
         expect(body.createdAt).toBeDefined()
         expect(body.processToBeUsed).toBe('R3') // plastic uses R3
@@ -111,6 +128,23 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(body.isDecemberWaste).toBe(false)
         expect(body.accreditationYear).toBe(2026)
         expect(body.wasteProcessingType).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
+      })
+
+      it('resolves issuedToOrganisation from the waste organisations API, not the payload', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        const body = JSON.parse(response.payload)
+        expect(body.issuedToOrganisation).toStrictEqual({
+          id: 'producer-org-789',
+          name: 'Producer Org',
+          tradingName: 'Producer Trading',
+          registrationType: 'LARGE_PRODUCER'
+        })
       })
 
       it('creates PRN with correct organisation and registration', async () => {
@@ -126,7 +160,10 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             organisation: expect.objectContaining({ id: organisationId }),
             registrationId,
             accreditation: expect.objectContaining({ id: accreditationId }),
-            issuedToOrganisation: validPayload.issuedToOrganisation
+            issuedToOrganisation: expect.objectContaining({
+              id: 'producer-org-789',
+              name: 'Producer Org'
+            })
           })
         )
       })
@@ -313,21 +350,13 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
 
-      it('accepts registrationType on issuedToOrganisation', async () => {
-        const response = await server.inject({
+      it('stores registrationType resolved from the waste organisations API', async () => {
+        await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: {
-            ...validPayload,
-            issuedToOrganisation: {
-              ...validPayload.issuedToOrganisation,
-              registrationType: 'LARGE_PRODUCER'
-            }
-          }
+          payload: validPayload
         })
-
-        expect(response.statusCode).toBe(StatusCodes.CREATED)
 
         const createArg =
           packagingRecyclingNotesRepository.create.mock.calls[0][0]
@@ -336,18 +365,14 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
-      it('succeeds when issuedToOrganisation has null tradingName', async () => {
+      it('omits tradingName when the resolved organisation has null tradingName', async () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
-            ...validPayload,
-            issuedToOrganisation: {
-              id: 'producer-org-789',
-              name: 'Producer Org',
-              tradingName: null
-            }
+            issuedToOrganisation: { id: 'producer-no-trading-name' },
+            tonnage: 100
           }
         })
 
@@ -386,6 +411,29 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         const body = JSON.parse(response.payload)
         expect(body.notes).toBe(notes)
+      })
+
+      it('ignores name and tradingName sent in the payload', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            issuedToOrganisation: {
+              id: 'producer-org-789',
+              name: 'Totally Wrong Name',
+              tradingName: 'Totally Wrong Trading Name'
+            },
+            tonnage: 100
+          }
+        })
+
+        const createArg =
+          packagingRecyclingNotesRepository.create.mock.calls[0][0]
+        expect(createArg.issuedToOrganisation.name).toBe('Producer Org')
+        expect(createArg.issuedToOrganisation.tradingName).toBe(
+          'Producer Trading'
+        )
       })
     })
 
@@ -453,6 +501,22 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: {
             ...validPayload,
             notes: 'a'.repeat(201)
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+    })
+
+    describe('organisation resolution errors', () => {
+      it('returns 422 when issuedToOrganisation ID is not found in waste organisations API', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            issuedToOrganisation: { id: 'non-existent-org' },
+            tonnage: 100
           }
         })
 

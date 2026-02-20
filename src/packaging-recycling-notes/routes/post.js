@@ -12,13 +12,14 @@ import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-co
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
+/** @typedef {import('#common/helpers/waste-organisations/api-adapter.js').WasteOrganisationsService} WasteOrganisationsService */
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').CreatePrnResponse} CreatePrnResponse */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 /**
  * @typedef {{
- *   issuedToOrganisation: { id: string; name: string; tradingName?: string; registrationType?: string };
+ *   issuedToOrganisation: { id: string };
  *   tonnage: number;
  *   notes?: string;
  * }} PackagingRecyclingNotesCreatePayload
@@ -27,17 +28,6 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 export const packagingRecyclingNotesCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes'
 
-/**
- * Build PRN data for creation
- * @param {Object} params
- * @param {{ id: string; name: string; tradingName?: string }} params.organisation
- * @param {string} params.registrationId
- * @param {Object} params.accreditation
- * @param {PackagingRecyclingNotesCreatePayload} params.payload
- * @param {{ id: string; name: string }} params.user
- * @param {boolean} params.isExport
- * @param {Date} params.now
- */
 const snapshotAccreditation = (accreditation) => {
   const snapshot = {
     id: accreditation.id,
@@ -61,10 +51,35 @@ const snapshotAccreditation = (accreditation) => {
   return snapshot
 }
 
+const snapshotUser = (auth) => ({
+  id: auth.credentials?.id ?? 'unknown',
+  name: auth.credentials?.name ?? 'unknown'
+})
+
+const snapshotOrganisation = (org, organisationId) => ({
+  id: organisationId,
+  name: org.companyDetails.name,
+  ...(org.companyDetails.tradingName && {
+    tradingName: org.companyDetails.tradingName
+  })
+})
+
+const snapshotIssuedToOrganisation = (resolvedOrg) => ({
+  id: resolvedOrg.id,
+  name: resolvedOrg.name,
+  ...(resolvedOrg.tradingName && {
+    tradingName: resolvedOrg.tradingName
+  }),
+  ...(resolvedOrg.registrationType && {
+    registrationType: resolvedOrg.registrationType
+  })
+})
+
 const buildPrnData = ({
   organisation,
   registrationId,
   accreditation,
+  issuedToOrganisation,
   payload,
   user,
   isExport,
@@ -74,7 +89,7 @@ const buildPrnData = ({
   organisation,
   registrationId,
   accreditation: snapshotAccreditation(accreditation),
-  issuedToOrganisation: payload.issuedToOrganisation,
+  issuedToOrganisation,
   tonnage: payload.tonnage,
   isExport,
   ...(payload.notes && { notes: payload.notes }),
@@ -102,6 +117,30 @@ const deriveAccreditationYear = (accreditation) => {
     )
   }
   return new Date(accreditation.validFrom).getFullYear()
+}
+
+const logAndThrowServerError = (error, logger) => {
+  if (error.isBoom) {
+    throw error
+  }
+
+  logger.error({
+    err: error,
+    message: `Failure on ${packagingRecyclingNotesCreatePath}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    },
+    http: {
+      response: {
+        status_code: StatusCodes.INTERNAL_SERVER_ERROR
+      }
+    }
+  })
+
+  throw Boom.badImplementation(
+    `Failure on ${packagingRecyclingNotesCreatePath}`
+  )
 }
 
 /**
@@ -136,48 +175,52 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository, wasteOrganisationsService: WasteOrganisationsService}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       packagingRecyclingNotesRepository,
       organisationsRepository,
+      wasteOrganisationsService,
       params,
       payload,
       logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
       auth
     } = request
     const { organisationId, registrationId, accreditationId } = params
-    const user = {
-      id: auth.credentials?.id ?? 'unknown',
-      name: auth.credentials?.name ?? 'unknown'
-    }
+    const user = snapshotUser(auth)
     const now = new Date()
 
     try {
-      const [accreditation, org] = await Promise.all([
+      const [accreditation, org, resolvedIssuedToOrg] = await Promise.all([
         organisationsRepository.findAccreditationById(
           organisationId,
           accreditationId
         ),
-        organisationsRepository.findById(organisationId)
+        organisationsRepository.findById(organisationId),
+        wasteOrganisationsService.getOrganisationById(
+          payload.issuedToOrganisation.id
+        )
       ])
+      if (!resolvedIssuedToOrg) {
+        throw Boom.badData(
+          `Organisation ${payload.issuedToOrganisation.id} not found in waste organisations API`
+        )
+      }
+
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
-      const organisation = {
-        id: organisationId,
-        name: org.companyDetails.name,
-        ...(org.companyDetails.tradingName && {
-          tradingName: org.companyDetails.tradingName
-        })
-      }
+      const organisation = snapshotOrganisation(org, organisationId)
+      const issuedToOrganisation =
+        snapshotIssuedToOrganisation(resolvedIssuedToOrg)
 
       const prnData = buildPrnData({
         organisation,
         registrationId,
         accreditation,
+        issuedToOrganisation,
         payload,
         user,
         isExport,
@@ -198,27 +241,7 @@ export const packagingRecyclingNotesCreate = {
         .response(buildResponse(prn, accreditation))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      if (error.isBoom) {
-        throw error
-      }
-
-      logger.error({
-        err: error,
-        message: `Failure on ${packagingRecyclingNotesCreatePath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.INTERNAL_SERVER_ERROR
-          }
-        }
-      })
-
-      throw Boom.badImplementation(
-        `Failure on ${packagingRecyclingNotesCreatePath}`
-      )
+      logAndThrowServerError(error, logger)
     }
   }
 }

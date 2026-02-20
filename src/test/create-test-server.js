@@ -21,6 +21,7 @@ import { getConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
+import { createInMemoryWasteOrganisationsPlugin } from '#common/helpers/waste-organisations/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
@@ -110,6 +111,10 @@ const repositoryConfigs = [
   {
     name: 'packagingRecyclingNotesRepository',
     createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
+  },
+  {
+    name: 'wasteOrganisationsService',
+    createDefault: createInMemoryWasteOrganisationsPlugin
   }
 ]
 
