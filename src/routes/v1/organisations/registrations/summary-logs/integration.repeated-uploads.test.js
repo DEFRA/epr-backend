@@ -70,6 +70,7 @@ describe('Repeated uploads of identical data', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
 
       // Set up organisation with registration
+      const accreditationId = 'acc-repeated-upload-test'
       const testOrg = buildOrganisation({
         registrations: [
           {
@@ -84,8 +85,24 @@ describe('Repeated uploads of identical data', () => {
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
-            accreditation: {
-              accreditationNumber: 'ACC-2025-001'
+            accreditationId
+          }
+        ],
+        accreditations: [
+          {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2025-001',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt'],
+            wasteProcessingType: 'reprocessor',
+            submittedToRegulator: 'ea',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: {
+              address: {
+                line1: '123 Test Street',
+                postcode: 'AB1 2CD'
+              }
             }
           }
         ]

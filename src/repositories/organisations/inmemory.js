@@ -262,20 +262,27 @@ const performFindRegistrationById =
       throw Boom.notFound(`Registration with id ${registrationId} not found`)
     }
 
-    // Hydrate with accreditation if accreditationId exists
-    if (registration.accreditationId) {
-      const accreditation = org.accreditations?.find(
-        (a) => a.id === registration.accreditationId
+    // Hydrate with accreditation - every registration must have a valid accreditation
+    if (!registration.accreditationId) {
+      throw Boom.notFound(
+        `Registration ${registrationId} does not have an accreditation`
       )
-      if (accreditation) {
-        return structuredClone({
-          ...registration,
-          accreditation
-        })
-      }
     }
 
-    return structuredClone(registration)
+    const accreditation = org.accreditations?.find(
+      (a) => a.id === registration.accreditationId
+    )
+
+    if (!accreditation) {
+      throw Boom.notFound(
+        `Accreditation ${registration.accreditationId} not found for registration ${registrationId}`
+      )
+    }
+
+    return structuredClone({
+      ...registration,
+      accreditation
+    })
   }
 
 const performFindAccreditationById =

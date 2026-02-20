@@ -15,36 +15,35 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       repository = await organisationsRepository()
     })
 
-    it('returns registration when both organisation ID and registration ID are valid', async () => {
-      const registration1 = buildRegistration({
-        orgName: 'Test Org 1'
-      })
+    it('returns registration with hydrated accreditation when both organisation ID and registration ID are valid', async () => {
+      const accreditation = buildAccreditation()
 
-      const registration2 = buildRegistration({
-        orgName: 'Test Org 2',
-        material: 'plastic',
-        wasteProcessingType: 'exporter',
-        cbduNumber: 'CBDU222222',
-        formSubmissionTime: '2025-08-21T19:34:44.944Z'
+      const registration = buildRegistration({
+        orgName: 'Test Org 1',
+        accreditationId: accreditation.id
       })
 
       const org = buildOrganisation({
-        registrations: [registration1, registration2]
+        registrations: [registration],
+        accreditations: [accreditation]
       })
 
       await repository.insert(org)
 
       const result = await repository.findRegistrationById(
         org.id,
-        registration1.id
+        registration.id
       )
 
       expect(result).toMatchObject({
-        id: registration1.id,
-        orgName: registration1.orgName,
-        material: registration1.material,
-        wasteProcessingType: registration1.wasteProcessingType,
-        cbduNumber: registration1.cbduNumber
+        id: registration.id,
+        orgName: registration.orgName,
+        material: registration.material,
+        wasteProcessingType: registration.wasteProcessingType,
+        cbduNumber: registration.cbduNumber,
+        accreditation: expect.objectContaining({
+          id: accreditation.id
+        })
       })
     })
 
@@ -75,7 +74,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('returns registration without accreditation field when accreditationId is undefined', async () => {
+    it('throws 404 when registration has no accreditationId', async () => {
       const registration = buildRegistration({
         material: 'plastic',
         wasteProcessingType: 'exporter',
@@ -88,15 +87,15 @@ export const testFindRegistrationByIdBehaviour = (it) => {
 
       await repository.insert(org)
 
-      const result = await repository.findRegistrationById(
-        org.id,
-        registration.id
-      )
-
-      expect(result.accreditation).toBeUndefined()
+      await expect(
+        repository.findRegistrationById(org.id, registration.id)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('returns registration without accreditation field when accreditationId does not match any accreditation', async () => {
+    it('throws 404 when accreditationId does not match any accreditation', async () => {
       const registration = buildRegistration({
         cbduNumber: 'CBDU333333',
         accreditationId: new ObjectId().toString()
@@ -108,12 +107,12 @@ export const testFindRegistrationByIdBehaviour = (it) => {
 
       await repository.insert(org)
 
-      const result = await repository.findRegistrationById(
-        org.id,
-        registration.id
-      )
-
-      expect(result.accreditation).toBeUndefined()
+      await expect(
+        repository.findRegistrationById(org.id, registration.id)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
     it('throws 404 when organisation does not exist', async () => {
@@ -174,10 +173,14 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws timeout error when minimumOrgVersion never arrives', async () => {
-      const registration = buildRegistration()
+      const accreditation = buildAccreditation()
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
 
       const org = buildOrganisation({
-        registrations: [registration]
+        registrations: [registration],
+        accreditations: [accreditation]
       })
 
       await repository.insert(org)
@@ -193,10 +196,14 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('waits for minimumOrgVersion and returns registration when version arrives', async () => {
-      const registration = buildRegistration()
+      const accreditation = buildAccreditation()
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
 
       const org = buildOrganisation({
-        registrations: [registration]
+        registrations: [registration],
+        accreditations: [accreditation]
       })
 
       await repository.insert(org)
@@ -223,10 +230,14 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('waits for minimumOrgVersion and throws 404 when registration does not exist', async () => {
-      const registration = buildRegistration()
+      const accreditation = buildAccreditation()
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
 
       const org = buildOrganisation({
-        registrations: [registration]
+        registrations: [registration],
+        accreditations: [accreditation]
       })
 
       await repository.insert(org)

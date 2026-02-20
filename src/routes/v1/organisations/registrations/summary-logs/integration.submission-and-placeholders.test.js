@@ -74,6 +74,7 @@ describe('Submission and placeholder tests', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
+      const accreditationId = 'acc-submit-test'
       const testOrg = buildOrganisation({
         registrations: [
           {
@@ -87,8 +88,23 @@ describe('Submission and placeholder tests', () => {
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
-            accreditation: {
-              accreditationNumber: 'ACC-2025-001'
+            accreditationId
+          }
+        ],
+        accreditations: [
+          {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2025-001',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            submittedToRegulator: 'ea',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: {
+              address: {
+                line1: '123 Test Street',
+                postcode: 'AB1 2CD'
+              }
             }
           }
         ]
@@ -535,6 +551,9 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('A4').value = '__EPR_META_TEMPLATE_VERSION'
       worksheet.getCell('B4').value = 5
 
+      worksheet.getCell('A5').value = '__EPR_META_ACCREDITATION_NUMBER'
+      worksheet.getCell('B5').value = 'ACC-PLACEHOLDER'
+
       worksheet.getCell('A6').value =
         '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
       // Waste balance fields (Section 1)
@@ -692,16 +711,38 @@ describe('Submission and placeholder tests', () => {
       uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
+      const placeholderAccreditationId = 'acc-placeholder-test'
       const testOrg = buildOrganisation({
         registrations: [
           {
             id: registrationId,
             registrationNumber: 'REG-123',
+            status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
             formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
+            submittedToRegulator: 'ea',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            accreditationId: placeholderAccreditationId
+          }
+        ],
+        accreditations: [
+          {
+            id: placeholderAccreditationId,
+            accreditationNumber: 'ACC-PLACEHOLDER',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            submittedToRegulator: 'ea',
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
+            site: {
+              address: {
+                line1: '123 Test Street',
+                postcode: 'AB1 2CD'
+              }
+            }
           }
         ]
       })
