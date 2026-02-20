@@ -36,3 +36,12 @@ export const PROCESSING_TYPE_TO_REPROCESSING_TYPE = Object.freeze({
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: 'input',
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: 'output'
 })
+
+/**
+ * Per-field placeholder values for metadata fields in Excel templates.
+ * When a metadata field contains its placeholder value, the parser
+ * normalises it to null.
+ */
+export const META_PLACEHOLDERS = Object.freeze({
+  [SUMMARY_LOG_META_FIELDS.MATERIAL]: 'Choose material'
+})

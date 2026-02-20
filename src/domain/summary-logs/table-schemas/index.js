@@ -40,3 +40,30 @@ export const createTableSchemaGetter = (processingType, registry) => {
   const tables = registry[processingType]
   return (tableName) => tables?.[tableName] || null
 }
+
+/**
+ * Aggregates unfilledValues from all table schemas across all processing types
+ * into a single per-column map for the parser's emptyCellValues option.
+ *
+ * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
+ * @returns {Record<string, string[]>} Union of all unfilledValues across all schemas
+ */
+export const aggregateEmptyCellValues = (registry) => {
+  const result = {}
+  for (const tables of Object.values(registry)) {
+    for (const schema of Object.values(tables)) {
+      for (const [field, values] of Object.entries(schema.unfilledValues)) {
+        if (!result[field]) {
+          result[field] = [...values]
+        } else {
+          for (const value of values) {
+            if (!result[field].includes(value)) {
+              result[field].push(value)
+            }
+          }
+        }
+      }
+    }
+  }
+  return result
+}
