@@ -45,6 +45,7 @@ export default defineConfig({
         functions: 100
       }
     },
-    setupFiles: ['.vite/setup-auditing.js', '.vite/setup-files.js']
+    setupFiles: ['.vite/setup-auditing.js', '.vite/setup-files.js'],
+    pool: 'forks'
   }
 })
