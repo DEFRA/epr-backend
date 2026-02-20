@@ -1089,8 +1089,8 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
 
-    describe('skip header rows', () => {
-      it('should skip header row', async () => {
+    describe('ROW_ID header and null rows (passed through for domain-layer filtering)', () => {
+      it('should return header description rows for domain-layer filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             [
@@ -1106,12 +1106,16 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          {
+            rowNumber: 2,
+            values: ['Row ID', 'Date received', 'Supplier reference']
+          },
           { rowNumber: 3, values: [12345678910, '2025-05-25', 'ABC123'] },
           { rowNumber: 4, values: [98765432100, '2025-05-26', 'DEF456'] }
         ])
       })
 
-      it('should skip header row and example row', async () => {
+      it('should return header row but still skip example row', async () => {
         const result = await parseWorkbook({
           Test: [
             [
@@ -1129,12 +1133,16 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          {
+            rowNumber: 2,
+            values: ['Row ID', 'Date received', null, 'Supplier reference']
+          },
           { rowNumber: 4, values: [98765432100, '2025-05-26', null, 'DEF456'] },
           { rowNumber: 5, values: [11122233344, '2025-05-27', null, 'GHI789'] }
         ])
       })
 
-      it('should be case-sensitive for "Row ID" skip text', async () => {
+      it('should return all ROW_ID text variants without filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
@@ -1146,13 +1154,14 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          { rowNumber: 2, values: ['Row ID', '2025-05-25'] },
           { rowNumber: 3, values: ['row id', '2025-05-26'] },
           { rowNumber: 4, values: ['ROW_ID', '2025-05-27'] },
           { rowNumber: 5, values: ['ROW ID', '2025-05-28'] }
         ])
       })
 
-      it('should skip header row when ROW_ID starts with "Row ID" but contains additional text', async () => {
+      it('should return richText header row for domain-layer filtering', async () => {
         const workbook = new ExcelJS.Workbook()
         const worksheet = workbook.addWorksheet('Test')
 
@@ -1160,7 +1169,6 @@ describe('ExcelJSSummaryLogsParser', () => {
         worksheet.getCell('B1').value = 'ROW_ID'
         worksheet.getCell('C1').value = 'DATE_RECEIVED'
 
-        // Header row with richText containing "Row ID" plus additional description
         worksheet.getCell('B2').value = {
           richText: [
             { font: { bold: true }, text: 'Row ID' },
@@ -1169,7 +1177,6 @@ describe('ExcelJSSummaryLogsParser', () => {
         }
         worksheet.getCell('C2').value = 'Date received'
 
-        // Data rows
         worksheet.getCell('B3').value = 1001
         worksheet.getCell('C3').value = '2025-05-25'
 
@@ -1180,12 +1187,16 @@ describe('ExcelJSSummaryLogsParser', () => {
         const result = await parse(buffer)
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          {
+            rowNumber: 2,
+            values: ['Row ID\n(Automatically generated)', 'Date received']
+          },
           { rowNumber: 3, values: [1001, '2025-05-25'] },
           { rowNumber: 4, values: [1002, '2025-05-26'] }
         ])
       })
 
-      it('should skip header row when ROW_ID is plain text starting with "Row ID"', async () => {
+      it('should return plain text header row for domain-layer filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
@@ -1196,19 +1207,20 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          { rowNumber: 2, values: ['Row ID (auto)', 'Date received'] },
           { rowNumber: 3, values: [1001, '2025-05-25'] },
           { rowNumber: 4, values: [1002, '2025-05-26'] }
         ])
       })
 
-      it('should skip rows where ROW_ID is null (template rows with default dropdown values)', async () => {
+      it('should return null ROW_ID rows for domain-layer filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED', 'HAS_VALUE'],
             [null, 1001, '2025-05-25', 'Yes'],
             [null, 1002, '2025-05-26', 'No'],
-            [null, null, null, 'No'], // Empty row with default dropdown value
-            [null, null, null, 'No'], // Another empty row
+            [null, null, null, 'No'],
+            [null, null, null, 'No'],
             [null, 1003, '2025-05-27', 'Yes']
           ]
         })
@@ -1216,6 +1228,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         expect(result.data.TEST_TABLE.rows).toEqual([
           { rowNumber: 2, values: [1001, '2025-05-25', 'Yes'] },
           { rowNumber: 3, values: [1002, '2025-05-26', 'No'] },
+          { rowNumber: 4, values: [null, null, 'No'] },
+          { rowNumber: 5, values: [null, null, 'No'] },
           { rowNumber: 6, values: [1003, '2025-05-27', 'Yes'] }
         ])
       })
