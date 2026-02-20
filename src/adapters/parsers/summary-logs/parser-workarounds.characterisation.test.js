@@ -131,21 +131,19 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
     })
   })
 
-  describe('WORKAROUND 2: "Row ID" header row skipping', () => {
+  describe('RESOLVED WORKAROUND 2: "Row ID" header row filtering (moved to domain layer)', () => {
     /**
-     * The parser skips rows where the ROW_ID column contains text starting
-     * with "Row ID". This handles user-facing header rows in templates.
-     *
-     * PROBLEM: The parser knows about "ROW_ID" column and "Row ID" text.
-     * IDEAL: Templates should place markers BELOW user-facing headers.
+     * Previously the parser skipped rows where ROW_ID starts with "Row ID".
+     * Now the parser returns these rows and data-syntax.js filters them
+     * using the schema's rowIdField.
      */
 
-    it('skips rows where ROW_ID column starts with "Row ID"', async () => {
+    it('parser returns header rows; domain layer filters them', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
           ['__EPR_DATA_TEST', 'ROW_ID', 'DATE', 'WEIGHT'],
-          [null, 'Row ID', 'Date received', 'Weight (kg)'], // User-facing header
+          [null, 'Row ID', 'Date received', 'Weight (kg)'],
           [null, 1001, '2025-01-15', 100],
           [null, 1002, '2025-01-16', 200]
         ]
@@ -153,21 +151,24 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       const parsed = await parse(buffer)
 
-      // User-facing header row is skipped at parse time
+      // Parser now returns the header row
       expect(parsed.data.TEST.rows).toEqual([
+        {
+          rowNumber: 2,
+          values: ['Row ID', 'Date received', 'Weight (kg)']
+        },
         { rowNumber: 3, values: [1001, '2025-01-15', 100] },
         { rowNumber: 4, values: [1002, '2025-01-16', 200] }
       ])
     })
 
-    it('skips rows with richText "Row ID" (actual template format)', async () => {
+    it('parser returns richText header rows; domain layer filters them', async () => {
       const workbook = new ExcelJS.Workbook()
       workbook.addWorksheet('Cover')
       const worksheet = workbook.addWorksheet('Test')
 
       worksheet.getRow(1).values = ['__EPR_DATA_TEST', 'ROW_ID', 'DATE']
 
-      // Real templates use richText with bold "Row ID" and description
       worksheet.getCell('B2').value = {
         richText: [
           { font: { bold: true }, text: 'Row ID' },
@@ -181,24 +182,28 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       const buffer = await workbook.xlsx.writeBuffer()
       const parsed = await parse(buffer)
 
+      // Parser returns the richText header row
       expect(parsed.data.TEST.rows).toEqual([
+        {
+          rowNumber: 2,
+          values: ['Row ID\n(Automatically generated)', 'Date received']
+        },
         { rowNumber: 3, values: [1001, '2025-01-15'] }
       ])
     })
 
-    it('only applies to tables with a ROW_ID column', async () => {
+    it('tables without ROW_ID column are unaffected', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
-          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'], // No ROW_ID column
-          [null, 'Row ID', '2025-01-15'], // NOT skipped - no ROW_ID column
+          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'],
+          [null, 'Row ID', '2025-01-15'],
           [null, 'REF001', '2025-01-16']
         ]
       })
 
       const parsed = await parse(buffer)
 
-      // "Row ID" text is NOT skipped because there's no ROW_ID column
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: ['Row ID', '2025-01-15'] },
         { rowNumber: 3, values: ['REF001', '2025-01-16'] }
@@ -206,49 +211,46 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
     })
   })
 
-  describe('WORKAROUND 3: Empty ROW_ID row skipping', () => {
+  describe('RESOLVED WORKAROUND 3: Empty ROW_ID row filtering (moved to domain layer)', () => {
     /**
-     * The parser skips rows where the ROW_ID column is null/undefined.
-     * This handles pre-populated template rows with dropdown defaults but no data.
-     *
-     * PROBLEM: The parser knows about "ROW_ID" column and skips based on it.
-     * IDEAL: Empty row detection should be based on all-null values,
-     *        or templates should not have pre-populated empty rows.
+     * Previously the parser skipped rows where ROW_ID is null/undefined.
+     * Now the parser returns these rows and data-syntax.js filters them
+     * using the schema's rowIdField.
      */
 
-    it('skips rows where ROW_ID is null (template placeholder rows)', async () => {
+    it('parser returns null ROW_ID rows; domain layer filters them', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
           ['__EPR_DATA_TEST', 'ROW_ID', 'DATE', 'DROPDOWN'],
           [null, 1001, '2025-01-15', 'Yes'],
-          [null, null, null, 'No'], // Pre-populated template row
+          [null, null, null, 'No'],
           [null, 1002, '2025-01-16', 'Yes']
         ]
       })
 
       const parsed = await parse(buffer)
 
-      // Row with null ROW_ID is skipped at parse time
+      // Parser now returns the null ROW_ID row
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: [1001, '2025-01-15', 'Yes'] },
+        { rowNumber: 3, values: [null, null, 'No'] },
         { rowNumber: 4, values: [1002, '2025-01-16', 'Yes'] }
       ])
     })
 
-    it('only applies to tables with a ROW_ID column', async () => {
+    it('tables without ROW_ID column are unaffected', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
-          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'], // No ROW_ID column
-          [null, null, '2025-01-15'], // NOT skipped - no ROW_ID column
+          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'],
+          [null, null, '2025-01-15'],
           [null, 'REF001', '2025-01-16']
         ]
       })
 
       const parsed = await parse(buffer)
 
-      // Row with null is NOT skipped because there's no ROW_ID column
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: [null, '2025-01-15'] },
         { rowNumber: 3, values: ['REF001', '2025-01-16'] }
@@ -547,14 +549,23 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         'DROPDOWN_FIELD'
       ])
 
-      // Verify row skipping:
-      // - Row 2 (user headers): SKIPPED by WORKAROUND 2
-      // - Row 3 (example): SKIPPED by "Example" feature
+      // Row skipping after refactoring:
+      // - Row 2 (user headers): RETURNED by parser (domain layer filters later)
+      // - Row 3 (example): SKIPPED by "Example" feature (stays in parser)
       // - Row 4: INCLUDED
       // - Row 5: INCLUDED with normalised dropdown
       // - Row 6: All-null after normalisation → TERMINATES TABLE (WORKAROUND 5)
       // - Row 7: NOT PARSED (table already terminated)
       expect(parsed.data.RECEIVED_LOADS.rows).toEqual([
+        {
+          rowNumber: 2,
+          values: [
+            'Row ID\n(Auto generated)',
+            null,
+            'Date received',
+            'Select option'
+          ]
+        },
         { rowNumber: 4, values: [1001, null, '2025-05-15', 'Option A'] },
         { rowNumber: 5, values: [1002, null, '2025-05-16', null] } // WORKAROUND 1: normalised
         // Row 7 is NOT here - table terminated at Row 6

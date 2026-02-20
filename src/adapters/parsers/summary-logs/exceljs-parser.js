@@ -7,10 +7,8 @@ import {
   MATERIAL_PLACEHOLDER_TEXT,
   META_PREFIX,
   PLACEHOLDER_TEXT,
-  ROW_ID_HEADER,
   SKIP_COLUMN,
-  SKIP_EXAMPLE_ROW_TEXT,
-  SKIP_HEADER_ROW_TEXT
+  SKIP_EXAMPLE_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 
@@ -316,28 +314,9 @@ const updateCollectionWithCell = (
 }
 
 const shouldSkipRow = (draftCollection) => {
-  // Skip "example" rows
   for (const skipIndex of draftCollection.skipColumnIndices) {
     const cellValue = draftCollection.currentRow[skipIndex]
     if (cellValue === SKIP_EXAMPLE_ROW_TEXT) {
-      return true
-    }
-  }
-
-  const rowIdIndex = draftCollection.headers.indexOf(ROW_ID_HEADER)
-  if (rowIdIndex !== -1) {
-    const cellValue = draftCollection.currentRow[rowIdIndex]
-
-    // Skip textual (user-facing) header rows
-    if (
-      typeof cellValue === 'string' &&
-      cellValue.startsWith(SKIP_HEADER_ROW_TEXT)
-    ) {
-      return true
-    }
-
-    // Skip rows where ROW_ID is empty (null/undefined)
-    if (cellValue === null || cellValue === undefined) {
       return true
     }
   }
