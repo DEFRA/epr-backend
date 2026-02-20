@@ -4,13 +4,10 @@ import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
   DATA_PREFIX,
-  MATERIAL_PLACEHOLDER_TEXT,
   META_PREFIX,
-  PLACEHOLDER_TEXT,
   SKIP_COLUMN,
   SKIP_EXAMPLE_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
@@ -222,13 +219,10 @@ const processCellForMetadata = (
       )
     }
 
-    // Normalize MATERIAL placeholder to null
     const metadataName = draftState.metadataContext.metadataName
+    const placeholder = draftState.metaPlaceholders[metadataName]
     const normalisedValue =
-      metadataName === SUMMARY_LOG_META_FIELDS.MATERIAL &&
-      cellValue === MATERIAL_PLACEHOLDER_TEXT
-        ? null
-        : cellValue
+      placeholder && cellValue === placeholder ? null : cellValue
 
     draftState.result.meta[metadataName] = {
       value: normalisedValue,
@@ -281,12 +275,19 @@ const processHeaderCell = (draftCollection, cellValueStr) => {
   }
 }
 
-const processRowCell = (draftCollection, cellValue) => {
+const processRowCell = (
+  draftCollection,
+  cellValue,
+  columnIndex,
+  emptyCellValues
+) => {
+  const headerName = draftCollection.headers[columnIndex]
+  const columnEmptyValues = emptyCellValues[headerName] || []
   const normalisedValue =
     cellValue === null ||
     cellValue === undefined ||
     cellValue === '' ||
-    cellValue === PLACEHOLDER_TEXT
+    columnEmptyValues.includes(cellValue)
       ? null
       : cellValue
   draftCollection.currentRow.push(normalisedValue)
@@ -296,7 +297,8 @@ const updateCollectionWithCell = (
   draftCollection,
   cellValue,
   cellValueStr,
-  colNumber
+  colNumber,
+  emptyCellValues
 ) => {
   const columnIndex = colNumber - draftCollection.startColumn
 
@@ -307,7 +309,7 @@ const updateCollectionWithCell = (
     columnIndex < draftCollection.headers.length &&
     draftCollection.state === CollectionState.ROWS
   ) {
-    processRowCell(draftCollection, cellValue)
+    processRowCell(draftCollection, cellValue, columnIndex, emptyCellValues)
   } else {
     // Cell is outside collection boundaries
   }
@@ -451,7 +453,13 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
     )
 
     for (const collection of draftState.activeCollections) {
-      updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber)
+      updateCollectionWithCell(
+        collection,
+        cellValue,
+        cellValueStr,
+        colNumber,
+        draftState.emptyCellValues
+      )
     }
   }
 
@@ -546,7 +554,9 @@ export const parse = async (buffer, options = {}) => {
     requiredWorksheet = null,
     maxWorksheets = PARSE_DEFAULTS.maxWorksheets,
     maxRowsPerSheet = PARSE_DEFAULTS.maxRowsPerSheet,
-    maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet
+    maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet,
+    emptyCellValues = {},
+    metaPlaceholders = {}
   } = options
 
   const workbook = new ExcelJS.Workbook()
@@ -564,7 +574,9 @@ export const parse = async (buffer, options = {}) => {
   const initialState = {
     result: { meta: {}, data: {} },
     activeCollections: [],
-    metadataContext: null
+    metadataContext: null,
+    emptyCellValues,
+    metaPlaceholders
   }
 
   return produce(initialState, (draft) => {

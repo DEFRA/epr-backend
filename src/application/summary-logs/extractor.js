@@ -2,6 +2,11 @@ import {
   parse,
   PARSE_DEFAULTS
 } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import {
+  PROCESSING_TYPE_TABLES,
+  aggregateEmptyCellValues
+} from '#domain/summary-logs/table-schemas/index.js'
+import { META_PLACEHOLDERS } from '#domain/summary-logs/meta-fields.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
@@ -11,12 +16,16 @@ import {
 const FILE_PROCESSING_CATEGORY = 'file-processing'
 
 /**
- * Summary log spreadsheet validation options.
- * Uses parser defaults with summary-log-specific worksheet requirement.
+ * Summary log spreadsheet parse options.
+ * Uses parser defaults with summary-log-specific worksheet requirement,
+ * per-column placeholder normalisation from domain schemas, and
+ * metadata placeholder normalisation.
  */
 const SUMMARY_LOG_PARSE_OPTIONS = {
   requiredWorksheet: 'Cover',
-  ...PARSE_DEFAULTS
+  ...PARSE_DEFAULTS,
+  emptyCellValues: aggregateEmptyCellValues(PROCESSING_TYPE_TABLES),
+  metaPlaceholders: META_PLACEHOLDERS
 }
 
 const logParsingSummary = (logger, parsedData) => {
