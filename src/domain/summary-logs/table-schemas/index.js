@@ -49,22 +49,14 @@ export const createTableSchemaGetter = (processingType, registry) => {
  * @returns {Record<string, string[]>} Union of all unfilledValues across all schemas
  */
 export const aggregateEmptyCellValues = (registry) => {
-  /** @type {Record<string, string[]>} */
-  const result = {}
-  for (const tables of Object.values(registry)) {
-    for (const schema of Object.values(tables)) {
-      for (const [field, values] of Object.entries(schema.unfilledValues)) {
-        if (!result[field]) {
-          result[field] = [...values]
-        } else {
-          for (const value of values) {
-            if (!result[field].includes(value)) {
-              result[field].push(value)
-            }
-          }
-        }
-      }
+  /** @type {Record<string, Set<string>>} */
+  const sets = {}
+  const allSchemas = Object.values(registry).flatMap(Object.values)
+  for (const { unfilledValues } of allSchemas) {
+    for (const [field, values] of Object.entries(unfilledValues)) {
+      sets[field] ??= new Set()
+      values.forEach((v) => sets[field].add(v))
     }
   }
-  return result
+  return Object.fromEntries(Object.entries(sets).map(([k, v]) => [k, [...v]]))
 }
