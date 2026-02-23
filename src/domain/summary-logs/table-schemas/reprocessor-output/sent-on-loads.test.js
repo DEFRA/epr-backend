@@ -69,8 +69,11 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
       })
     })
 
-    it('has unfilledValues object', () => {
-      expect(typeof schema.unfilledValues).toBe('object')
+    it('has unfilledValues with dropdown placeholders matching template', () => {
+      expect(schema.unfilledValues.FINAL_DESTINATION_FACILITY_TYPE).toContain(
+        'Choose option'
+      )
+      expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
     })
 
     it('has validationSchema (Joi schema for VAL010)', () => {

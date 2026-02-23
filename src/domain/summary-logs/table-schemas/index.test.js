@@ -197,6 +197,9 @@ describe('table-schemas', () => {
         'Choose option'
       )
       expect(result.EXPORT_CONTROLS).toContain('Choose option')
+      expect(result.ADD_PRODUCT_WEIGHT).toContain('Choose option')
+      expect(result.END_OF_WASTE_STANDARDS).toContain('Choose option')
+      expect(result.FINAL_DESTINATION_FACILITY_TYPE).toContain('Choose option')
     })
   })
 })
