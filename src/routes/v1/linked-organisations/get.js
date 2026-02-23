@@ -28,7 +28,7 @@ export const linkedOrganisationsGetAll = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, query: { name?: string }}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
