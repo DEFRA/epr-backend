@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL, TONNAGE_BAND } from '#domain/organisations/model.js'
 
 const prnTonnageRowSchema = Joi.object({
   organisationName: Joi.string().required(),
@@ -8,9 +8,14 @@ const prnTonnageRowSchema = Joi.object({
   material: Joi.string()
     .valid(...Object.values(MATERIAL))
     .required(),
-  tonnageBand: Joi.string().allow(null).optional(),
-  createdTonnage: Joi.number().required(),
-  issuedTonnage: Joi.number().required(),
+  tonnageBand: Joi.string()
+    .valid(...Object.values(TONNAGE_BAND))
+    .allow(null)
+    .optional(),
+  awaitingAuthorisationTonnage: Joi.number().required(),
+  awaitingAcceptanceTonnage: Joi.number().required(),
+  awaitingCancellationTonnage: Joi.number().required(),
+  acceptedTonnage: Joi.number().required(),
   cancelledTonnage: Joi.number().required()
 })
 

@@ -3,12 +3,11 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
-const CREATED_STATUSES = [PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION]
-const ISSUED_STATUSES = [PRN_STATUS.AWAITING_ACCEPTANCE]
-const CANCELLED_STATUSES = [
-  PRN_STATUS.AWAITING_CANCELLATION,
-  PRN_STATUS.CANCELLED
-]
+const AWAITING_AUTHORISATION_STATUSES = [PRN_STATUS.AWAITING_AUTHORISATION]
+const AWAITING_ACCEPTANCE_STATUSES = [PRN_STATUS.AWAITING_ACCEPTANCE]
+const AWAITING_CANCELLATION_STATUSES = [PRN_STATUS.AWAITING_CANCELLATION]
+const ACCEPTED_STATUSES = [PRN_STATUS.ACCEPTED]
+const CANCELLED_STATUSES = [PRN_STATUS.CANCELLED]
 const EXCLUDED_STATUSES = [PRN_STATUS.DELETED, PRN_STATUS.DISCARDED]
 
 const buildTonnageBandLookupStage = () => ({
@@ -29,6 +28,7 @@ const buildTonnageBandLookupStage = () => ({
       {
         $project: {
           _id: 0,
+          orgId: '$orgId',
           tonnageBand: '$accreditations.prnIssuance.tonnageBand'
         }
       }
@@ -54,19 +54,39 @@ const buildAggregationPipeline = () => [
         accNumber: '$accreditation.accreditationNumber',
         material: '$accreditation.material'
       },
-      createdTonnage: {
+      awaitingAuthorisationTonnage: {
         $sum: {
           $cond: [
-            { $in: ['$status.currentStatus', CREATED_STATUSES] },
+            { $in: ['$status.currentStatus', AWAITING_AUTHORISATION_STATUSES] },
             '$tonnage',
             0
           ]
         }
       },
-      issuedTonnage: {
+      awaitingAcceptanceTonnage: {
         $sum: {
           $cond: [
-            { $in: ['$status.currentStatus', ISSUED_STATUSES] },
+            { $in: ['$status.currentStatus', AWAITING_ACCEPTANCE_STATUSES] },
+            '$tonnage',
+            0
+          ]
+        }
+      },
+      awaitingCancellationTonnage: {
+        $sum: {
+          $cond: [
+            {
+              $in: ['$status.currentStatus', AWAITING_CANCELLATION_STATUSES]
+            },
+            '$tonnage',
+            0
+          ]
+        }
+      },
+      acceptedTonnage: {
+        $sum: {
+          $cond: [
+            { $in: ['$status.currentStatus', ACCEPTED_STATUSES] },
             '$tonnage',
             0
           ]
@@ -86,21 +106,26 @@ const buildAggregationPipeline = () => [
   buildTonnageBandLookupStage(),
   {
     $addFields: {
-      tonnageBand: {
-        $ifNull: [{ $first: '$orgLookup.tonnageBand' }, null]
-      }
+      organisationId: {
+        $toString: {
+          $ifNull: [{ $first: '$orgLookup.orgId' }, '$_id.orgId']
+        }
+      },
+      tonnageBand: { $ifNull: [{ $first: '$orgLookup.tonnageBand' }, null] }
     }
   },
   {
     $project: {
       _id: 0,
       organisationName: '$_id.orgName',
-      organisationId: '$_id.orgId',
+      organisationId: 1,
       accreditationNumber: '$_id.accNumber',
       material: '$_id.material',
       tonnageBand: 1,
-      createdTonnage: 1,
-      issuedTonnage: 1,
+      awaitingAuthorisationTonnage: 1,
+      awaitingAcceptanceTonnage: 1,
+      awaitingCancellationTonnage: 1,
+      acceptedTonnage: 1,
       cancelledTonnage: 1
     }
   },
