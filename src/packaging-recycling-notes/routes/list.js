@@ -39,7 +39,18 @@ export const packagingRecyclingNotesList = {
       })
     }
   },
-  /** @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request */
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   query: {
+   *     statuses: string[],
+   *     dateFrom?: string,
+   *     dateTo?: string,
+   *     limit?: number,
+   *     cursor?: string
+   *   }
+   * }} request
+   */
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
