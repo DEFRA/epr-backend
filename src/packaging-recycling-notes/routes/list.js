@@ -73,7 +73,7 @@ export const packagingRecyclingNotesList = {
       }
 
       logger.info({
-        message: `Listed ${result.items.length} PRNs`,
+        message: `Listed ${response.items.length} PRNs`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS

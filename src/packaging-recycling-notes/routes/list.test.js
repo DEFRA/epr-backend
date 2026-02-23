@@ -346,6 +346,34 @@ describe('GET /v1/packaging-recycling-notes', () => {
         server.app.prnVisibilityFilter = saved
       })
 
+      it('logs the filtered count, not the pre-filter count', async () => {
+        const testOrgPrn = createMockIssuedPrn({
+          id: 'test-org-prn-id',
+          organisation: { id: 'excluded-org-id', name: 'Test Org' }
+        })
+        const realOrgPrn = createMockIssuedPrn({
+          id: 'real-org-prn-id',
+          organisation: { id: 'real-org-id', name: 'Real Org' }
+        })
+        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+          items: [testOrgPrn, realOrgPrn],
+          nextCursor: null,
+          hasMore: false
+        })
+
+        await server.inject({
+          method: 'GET',
+          url: `${listUrl}?statuses=awaiting_acceptance`,
+          headers: authHeaders
+        })
+
+        expect(server.loggerMocks.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Listed 1 PRNs'
+          })
+        )
+      })
+
       it('does not pass exclusion params to repository', async () => {
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
           items: [],
