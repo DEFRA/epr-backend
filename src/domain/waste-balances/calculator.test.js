@@ -516,6 +516,83 @@ describe('Waste Balance Calculator', () => {
     expect(result.newAmount).toBe(10.0)
   })
 
+  it('should generate debit to reverse existing credit when record becomes excluded', () => {
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      excludedFromWasteBalance: true,
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '100.0'
+      }
+    })
+
+    const existingTransaction = {
+      id: 'tx-1',
+      type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+      amount: 100.0,
+      entities: [
+        {
+          id: 'row-1',
+          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
+          currentVersionId: 'v1',
+          previousVersionIds: []
+        }
+      ],
+      createdAt: '2023-01-01T00:00:00.000Z',
+      createdBy: { id: 'user-1', name: 'Test User' },
+      openingAmount: 0,
+      closingAmount: 100.0,
+      openingAvailableAmount: 0,
+      closingAvailableAmount: 100.0
+    }
+
+    const currentBalance = {
+      ...emptyBalance,
+      amount: 100,
+      availableAmount: 100,
+      transactions: [existingTransaction]
+    }
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    // Target is 0 (excluded), already credited 100 → delta -100 → DEBIT of 100
+    expect(result.newTransactions).toHaveLength(1)
+    expect(result.newTransactions[0].type).toBe(
+      WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+    )
+    expect(result.newTransactions[0].amount).toBe(100.0)
+    expect(result.newAmount).toBe(0)
+    expect(result.newAvailableAmount).toBe(0)
+  })
+
+  it('should not generate transaction for excluded record with no prior credit', () => {
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      excludedFromWasteBalance: true,
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '100.0'
+      }
+    })
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance: emptyBalance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    // Target is 0 (excluded), already credited 0 → delta 0 → no transaction
+    expect(result.newTransactions).toHaveLength(0)
+    expect(result.newAmount).toBe(0)
+    expect(result.newAvailableAmount).toBe(0)
+  })
+
   it('Should handle transactions with missing entities', () => {
     const balanceWithTransaction = {
       ...emptyBalance,

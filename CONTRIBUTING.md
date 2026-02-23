@@ -2,57 +2,64 @@
 
 <!-- prettier-ignore-start -->
 <!-- TOC -->
-* [Contributing](#contributing)
-  * [Requirements](#requirements)
-    * [Node.js](#nodejs)
-    * [Secrets](#secrets)
-    * [ADR tools](#adr-tools)
-  * [Documentation](#documentation)
-    * [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
-  * [Local development](#local-development)
-    * [Setup](#setup)
-    * [Testing endpoints](#testing-endpoints)
-    * [Development](#development)
-    * [Testing](#testing)
-      * [Journey tests](#journey-tests)
-    * [Production](#production)
-    * [Npm scripts](#npm-scripts)
-    * [Update dependencies](#update-dependencies)
-    * [Formatting](#formatting)
-      * [Windows prettier issue](#windows-prettier-issue)
-    * [Database GUI](#database-gui)
-    * [Database export/restore](#database-exportrestore)
-      * [Exporting from a non-prod CDP environment](#exporting-from-a-non-prod-cdp-environment)
-      * [Exporting a database from a local environment](#exporting-a-database-from-a-local-environment)
-      * [Restoring a database to a local environment](#restoring-a-database-to-a-local-environment)
-  * [Development helpers](#development-helpers)
-    * [MongoDB Locks](#mongodb-locks)
-    * [Proxy](#proxy)
-  * [Docker](#docker)
-    * [Development image](#development-image)
-    * [Production image](#production-image)
-    * [Docker Compose](#docker-compose)
-    * [Logging](#logging)
-      * [Request-scoped vs Global Logger](#request-scoped-vs-global-logger)
-      * [Handling errors](#handling-errors)
-      * [Logging Events](#logging-events)
-    * [Auditing](#auditing)
-  * [Repository](#repository)
-    * [Pull Requests](#pull-requests)
-    * [Dependabot](#dependabot)
-    * [SonarCloud](#sonarcloud)
-  * [Deployments](#deployments)
-    * [Secrets and Environment Variables](#secrets-and-environment-variables)
-  * [Demo applications](#demo-applications)
-    * [DEFRA form test](#defra-form-test)
-  * [GOV.UK Notify Setup](#govuk-notify-setup)
-    * [Access](#access)
-    * [Using Templates](#using-templates)
-    * [Development Notes](#development-notes)
-  * [Scripts](#scripts)
-      * [Mongo performance tests](#mongo-performance-tests)
-<!-- TOC -->
 
+- [Contributing](#contributing)
+  - [Requirements](#requirements)
+    - [Node.js](#nodejs)
+    - [Secrets](#secrets)
+    - [ADR tools](#adr-tools)
+  - [Documentation](#documentation)
+    - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
+  - [Local development](#local-development)
+    - [Setup](#setup)
+    - [Testing endpoints](#testing-endpoints)
+    - [Development](#development)
+    - [Testing](#testing)
+      - [Journey tests](#journey-tests)
+    - [Production](#production)
+    - [Npm scripts](#npm-scripts)
+    - [Update dependencies](#update-dependencies)
+    - [Formatting](#formatting)
+      - [Windows prettier issue](#windows-prettier-issue)
+    - [Database GUI](#database-gui)
+    - [Database export/restore](#database-exportrestore)
+      - [Exporting from a non-prod CDP environment](#exporting-from-a-non-prod-cdp-environment)
+      - [Exporting a database from a local environment](#exporting-a-database-from-a-local-environment)
+      - [Restoring a database to a local environment](#restoring-a-database-to-a-local-environment)
+  - [Development helpers](#development-helpers)
+    - [MongoDB Locks](#mongodb-locks)
+    - [Proxy](#proxy)
+  - [Docker](#docker)
+    - [Development image](#development-image)
+    - [Production image](#production-image)
+    - [Docker Compose](#docker-compose)
+  - [Cognito](#cognito)
+    - [Prerequisites](#prerequisites)
+    - [Visual Studio Code](#visual-studio-code)
+    - [Curl / other access](#curl--other-access)
+      - [AWS Cognito](#aws-cognito)
+      - [Cognito stub](#cognito-stub)
+  - [Logging](#logging)
+    - [Request-scoped vs Global Logger](#request-scoped-vs-global-logger)
+      - [Handling errors](#handling-errors)
+      - [Logging Events](#logging-events)
+  - [Auditing](#auditing)
+  - [Repository](#repository)
+    - [Pull Requests](#pull-requests)
+    - [Dependabot](#dependabot)
+    - [SonarCloud](#sonarcloud)
+  - [Deployments](#deployments)
+    - [Secrets and Environment Variables](#secrets-and-environment-variables)
+  - [Demo applications](#demo-applications)
+    - [DEFRA form test](#defra-form-test)
+  - [GOV.UK Notify Setup](#govuk-notify-setup)
+    - [Access](#access)
+    - [Using Templates](#using-templates)
+    - [Development Notes](#development-notes)
+  - [Scripts](#scripts)
+      - [Mongo performance tests](#mongo-performance-tests)
+
+<!-- TOC -->
 <!-- prettier-ignore-end -->
 
 ## Requirements
@@ -352,25 +359,97 @@ docker run -e PORT=3001 -p 3001:3001 epr-backend
 
 ### Docker Compose
 
-A local environment with:
+Use the compose setup in our [service repo](https://github.com/DEFRA/epr-re-ex-service/blob/main/CONTRIBUTING.md#docker-compose)
 
-- Localstack for AWS services (S3, SQS)
-- Redis
-- MongoDB
-- This service.
-- A commented out frontend example.
+## Cognito
 
-```bash
-docker compose up --build -d
+We have some [external endpoints](src/packaging-recycling-notes) that require Cognito auth
+
+### Prerequisites
+
+If you intend to use AWS Cognito you need to source the following from the environment you'll be targetting
+
+- Cognito client secret
+- [Developer API key](https://portal.cdp-int.defra.cloud/documentation/how-to/developer-api-key.md)
+
+### Visual Studio Code
+
+If you use VS Code you use [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) to make [requests](requests.http).
+
+Add the following to [.vscode/settings.json](.vscode/settings.json) to enable
+[environment switching](https://github.com/Huachao/vscode-restclient/blob/master/README.md#environments):
+
+```json
+{
+  "rest-client.environmentVariables": {
+    "local": {
+      "baseUrl": "http://localhost:3001",
+      "clientId": "5357lgchj0h0fuomqyas5r87u",
+      "tokenUrl": "http://localhost:9229"
+    },
+    "dev": {
+      "baseUrl": "https://ephemeral-protected.api.dev.cdp-int.defra.cloud/epr-backend",
+      "clientId": "7qgg5p2i3c2qchb2eruplk4lnm",
+      "tokenUrl": "https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com"
+    }
+  }
+}
 ```
 
-See the running services with:
+### Curl / other access
 
-```bash
-docker compose ps
+You can also get tokens via curl, there's also a [Python example in the CDP docs](https://portal.cdp-int.defra.cloud/documentation/how-to/apis.md#get-a-cognito-token)
+
+#### AWS Cognito
+
+Get Cognito Token
+
+```sh
+CLIENT_SECRET=<client-secret-value>
+
+curl --request POST \
+  --url https://epr-backend-c63f2.auth.eu-west-2.amazoncognito.com/oauth2/token \
+  --data grant_type=client_credentials \
+  --data client_id=7qgg5p2i3c2qchb2eruplk4lnm \
+  --data client_secret=${CLIENT_SECRET}
 ```
 
-### Logging
+List Packaging Recycling Notes
+
+```sh
+TOKEN=<access_token value>
+DEVELOPER_API_KEY=<developer-api-key-value>
+
+curl --request GET \
+  --url 'https://ephemeral-protected.api.dev.cdp-int.defra.cloud/epr-backend/v1/packaging-recycling-notes?statuses=awaiting_acceptance' \
+  --header "authorization: Bearer ${TOKEN}" \
+  --header "x-api-key: ${DEVELOPER_API_KEY}"
+```
+
+#### Cognito stub
+
+Get Cognito Token
+
+```sh
+curl --request POST \
+  --url http://localhost:9229/ \
+  --header 'content-type: application/x-amz-json-1.1' \
+  --header 'x-amz-target: AWSCognitoIdentityProviderService.InitiateAuth' \
+  --data '{"AuthFlow": "USER_PASSWORD_AUTH","ClientId": "5357lgchj0h0fuomqyas5r87u","AuthParameters": {"USERNAME": "hello@example.com","PASSWORD": "testPassword"}}'
+```
+
+List Packaging Recycling Notes
+
+```sh
+TOKEN=<AuthenticationResult.AccessToken value>
+
+curl --request GET \
+  --url 'http://localhost:3001/v1/packaging-recycling-notes?statuses=awaiting_acceptance' \
+  --header "authorization: Bearer ${TOKEN}" \
+  --header 'user-agent: vscode-restclient'
+```
+
+## Logging
 
 We use [structured logging in ECS format](https://github.com/DEFRA/cdp-documentation/blob/main/how-to/logging.md).
 
@@ -379,7 +458,7 @@ We use [structured logging in ECS format](https://github.com/DEFRA/cdp-documenta
 CDP implements most of the fields suggested by the Defra standards but omits the `event.category` & `event.action` fields,
 to ensure these are provided in logging calls you write, please follow the examples below.
 
-#### Request-scoped vs Global Logger
+### Request-scoped vs Global Logger
 
 **When to use which logger:**
 
@@ -459,7 +538,7 @@ therefore helping yourself and other engineers.
 
 You can find the [enums of event values here]()
 
-### Auditing
+## Auditing
 
 For those operations requiring an audit trial, we use the [CDP Auditing library](https://github.com/DEFRA/cdp-libraries/tree/main/packages/cdp-auditing#readme).
 

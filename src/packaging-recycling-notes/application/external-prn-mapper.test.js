@@ -182,6 +182,30 @@ describe('mapToExternalPrn', () => {
     })
   })
 
+  it('includes registrationType when present on issuedToOrganisation', () => {
+    const prn = buildAwaitingAcceptancePrn({
+      issuedToOrganisation: {
+        id: 'producer-org-789',
+        name: 'Producer Corp',
+        tradingName: 'Producer Trading',
+        registrationType: 'LARGE_PRODUCER'
+      }
+    })
+
+    const result = mapToExternalPrn(prn)
+
+    expect(result.issuedToOrganisation.registrationType).toBe('LARGE_PRODUCER')
+  })
+
+  it('omits registrationType when not present on organisations', () => {
+    const prn = buildAwaitingAcceptancePrn()
+
+    const result = mapToExternalPrn(prn)
+
+    expect(result.issuedToOrganisation).not.toHaveProperty('registrationType')
+    expect(result.issuedByOrganisation).not.toHaveProperty('registrationType')
+  })
+
   it('omits tradingName when not present on organisations', () => {
     const prn = buildAwaitingAcceptancePrn({
       organisation: { id: 'org-123', name: 'Reprocessor Ltd' },

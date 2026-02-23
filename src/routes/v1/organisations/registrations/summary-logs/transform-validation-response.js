@@ -7,7 +7,10 @@ import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
  * @returns {Object} Fatal error in HTTP format
  */
 const transformFatalIssue = (issue) => {
-  const result = { code: issue.code }
+  const result = {
+    code: issue.code,
+    errorCode: issue.context?.errorCode ?? issue.code
+  }
 
   if (issue.context?.location) {
     result.location = { ...issue.context.location }
@@ -44,6 +47,7 @@ const transformDataIssue = (issue) => {
   const result = {
     type: getIssueType(issue.severity),
     code: issue.code,
+    errorCode: issue.context?.errorCode ?? issue.code,
     header: issue.context?.location?.header,
     column: issue.context?.location?.column
   }
@@ -123,7 +127,10 @@ export const transformValidationResponse = (validation) => {
   if ((validation?.failures?.length ?? 0) > 0) {
     return {
       validation: {
-        failures: validation.failures,
+        failures: validation.failures.map((f) => ({
+          ...f,
+          errorCode: f.errorCode ?? f.code
+        })),
         concerns: {}
       }
     }

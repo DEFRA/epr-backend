@@ -1,4 +1,4 @@
-import { audit } from '@defra/cdp-auditing'
+import { safeAudit } from '#root/auditing/helpers.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import {
@@ -6,8 +6,6 @@ import {
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
-  DUPLICATE_SUBMISSION_ADJUSTMENT,
-  ORG_ID_START_NUMBER,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '#common/enums/index.js'
@@ -26,14 +24,20 @@ export const organisationPath = '/v1/apply/organisation'
  * @typedef {{answers: object, email: string, orgName: string, rawSubmissionData: object, regulatorEmail: string}} OrganisationPayload
  */
 
-async function getNextOrgId(collection) {
-  const count =
-    (await collection.countDocuments({
-      orgId: {
-        $gte: ORG_ID_START_NUMBER
-      }
-    })) + DUPLICATE_SUBMISSION_ADJUSTMENT
-  return ORG_ID_START_NUMBER + count + 1
+async function getNextOrgId(db) {
+  const result = await db
+    .collection('counters')
+    .findOneAndUpdate(
+      { _id: 'orgId' },
+      { $inc: { seq: 1 } },
+      { returnDocument: 'after' }
+    )
+
+  if (result?.seq === undefined) {
+    throw new Error('Failed to generate orgId: counter returned invalid result')
+  }
+
+  return result.seq
 }
 
 async function sendConfirmationEmails(email, regulatorEmail, context) {
@@ -102,7 +106,7 @@ export const organisation = {
       payload
 
     try {
-      const orgId = await getNextOrgId(collection)
+      const orgId = await getNextOrgId(db)
 
       const { insertedId } = await collection.insertOne(
         organisationFactory({
@@ -117,7 +121,7 @@ export const organisation = {
 
       const referenceNumber = insertedId.toString()
 
-      audit({
+      safeAudit({
         event: {
           category: AUDIT_EVENT_CATEGORIES.DB,
           action: AUDIT_EVENT_ACTIONS.DB_INSERT

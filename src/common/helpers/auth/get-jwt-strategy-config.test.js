@@ -120,7 +120,7 @@ describe('#getJwtStrategyConfig', () => {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
             oid: 'contact-123',
-            email: 'user@example.com'
+            preferred_username: 'user@example.com'
           }
         }
       }
@@ -145,7 +145,7 @@ describe('#getJwtStrategyConfig', () => {
         iss: entraIdMockOidcWellKnownResponse.issuer,
         aud: mockEntraClientId,
         oid: 'contact-123',
-        email: 'user@example.com'
+        preferred_username: 'user@example.com'
       }
 
       const artifacts = {
@@ -161,18 +161,12 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     test.each([
-      ['a@email.com', 'b@email.com', 'a@email.com'],
-      ['a@email.com', undefined, 'a@email.com'],
-      ['a@email.com', null, 'a@email.com'],
-      [undefined, 'b@email.com', 'b@email.com'],
-      [undefined, undefined, undefined],
-      [undefined, null, null],
-      [null, 'b@email.com', 'b@email.com'],
-      [null, undefined, undefined],
-      [null, null, null]
+      ['b@email.com', 'b@email.com'],
+      [undefined, undefined],
+      [null, null]
     ])(
-      'When token.email is %s and token.preferred_username is %s, parsed email is %s',
-      async (email, preferredUsername, expected) => {
+      'When token.preferred_username is %s, parsed email is %s',
+      async (preferredUsername, expected) => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
@@ -181,7 +175,6 @@ describe('#getJwtStrategyConfig', () => {
               iss: entraIdMockOidcWellKnownResponse.issuer,
               aud: mockEntraClientId,
               oid: 'contact-123',
-              email,
               preferred_username: preferredUsername
             }
           }

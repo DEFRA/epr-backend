@@ -7,8 +7,15 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
-
-const FLOAT_PRECISION_THRESHOLD = 0.000001
+import {
+  add,
+  subtract,
+  toNumber,
+  isZero,
+  abs,
+  greaterThan,
+  multiply
+} from './decimal-utils.js'
 
 /**
  * Create Transaction Object
@@ -27,18 +34,20 @@ export const buildTransaction = (
 ) => {
   const openingAmount = currentAmount
   const openingAvailableAmount = currentAvailableAmount
-  let closingAmount = currentAmount
-  let closingAvailableAmount = currentAvailableAmount
+  let closingAmount
+  let closingAvailableAmount
 
   switch (type) {
     case WASTE_BALANCE_TRANSACTION_TYPE.DEBIT:
-      closingAmount -= amount
-      closingAvailableAmount -= amount
+      closingAmount = toNumber(subtract(currentAmount, amount))
+      closingAvailableAmount = toNumber(
+        subtract(currentAvailableAmount, amount)
+      )
       break
     case WASTE_BALANCE_TRANSACTION_TYPE.CREDIT:
     default:
-      closingAmount += amount
-      closingAvailableAmount += amount
+      closingAmount = toNumber(add(currentAmount, amount))
+      closingAvailableAmount = toNumber(add(currentAvailableAmount, amount))
       break
   }
 
@@ -73,14 +82,14 @@ export const buildTransaction = (
 const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
   const sign =
     transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
-  const netAmount = transaction.amount * sign
+  const netAmount = multiply(transaction.amount, sign)
 
   const entityIds = (transaction.entities || []).map((e) => String(e.id))
   const uniqueEntityIds = new Set(entityIds)
 
   for (const id of uniqueEntityIds) {
     const currentCreditedAmount = creditedAmountMap.get(id) || 0
-    creditedAmountMap.set(id, currentCreditedAmount + netAmount)
+    creditedAmountMap.set(id, toNumber(add(currentCreditedAmount, netAmount)))
   }
 }
 
@@ -91,6 +100,10 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * @returns {number}
  */
 const getTargetAmount = (record, accreditation) => {
+  if (record.excludedFromWasteBalance) {
+    return 0
+  }
+
   const fields =
     extractExporterFields(record) ||
     extractReprocessorInputFields(record) ||
@@ -146,19 +159,18 @@ export const calculateWasteBalanceUpdates = ({
     const alreadyCreditedAmount =
       creditedAmountMap.get(String(record.rowId)) || 0
 
-    const delta = targetAmount - alreadyCreditedAmount
+    const delta = subtract(targetAmount, alreadyCreditedAmount)
 
-    // Only create transaction if there is a difference (handling float precision)
-    if (Math.abs(delta) > FLOAT_PRECISION_THRESHOLD) {
-      const type =
-        delta > 0
-          ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
-          : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+    // Only create transaction if there is a difference (exact decimal comparison)
+    if (!isZero(delta)) {
+      const type = greaterThan(delta, 0)
+        ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+        : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
 
       // Create Transaction
       const transaction = buildTransaction(
         record,
-        Math.abs(delta),
+        toNumber(abs(delta)),
         currentAmount,
         currentAvailableAmount,
         type
