@@ -109,13 +109,7 @@ export const dateRequiredWhenApprovedOrSuspended = () =>
       return value
     })
     .messages({
-      'string.pattern.base': '{{#label}} must be in YYYY-MM-DD format',
-      'string.base':
-        '{{#label}} is required when status is approved or suspended',
-      'any.invalid':
-        '{{#label}} is required when status is approved or suspended',
-      'any.required':
-        '{{#label}} is required when status is approved or suspended'
+      'string.pattern.base': '{{#label}} must be in YYYY-MM-DD format'
     })
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null)
