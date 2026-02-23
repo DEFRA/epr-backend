@@ -9,6 +9,8 @@ const AWAITING_CANCELLATION_STATUSES = [PRN_STATUS.AWAITING_CANCELLATION]
 const ACCEPTED_STATUSES = [PRN_STATUS.ACCEPTED]
 const CANCELLED_STATUSES = [PRN_STATUS.CANCELLED]
 const EXCLUDED_STATUSES = [PRN_STATUS.DELETED, PRN_STATUS.DISCARDED]
+const STATUS_FIELD = 'status.currentStatus'
+const STATUS_PATH = `$${STATUS_FIELD}`
 
 const buildTonnageBandLookupStage = () => ({
   $lookup: {
@@ -37,104 +39,84 @@ const buildTonnageBandLookupStage = () => ({
   }
 })
 
-const buildAggregationPipeline = () => [
-  {
-    $match: {
-      'status.currentStatus': {
-        $nin: EXCLUDED_STATUSES
-      }
-    }
-  },
-  {
-    $group: {
-      _id: {
-        orgId: '$organisation.id',
-        orgName: '$organisation.name',
-        accId: '$accreditation.id',
-        accNumber: '$accreditation.accreditationNumber',
-        material: '$accreditation.material'
-      },
-      awaitingAuthorisationTonnage: {
-        $sum: {
-          $cond: [
-            { $in: ['$status.currentStatus', AWAITING_AUTHORISATION_STATUSES] },
-            '$tonnage',
-            0
-          ]
-        }
-      },
-      awaitingAcceptanceTonnage: {
-        $sum: {
-          $cond: [
-            { $in: ['$status.currentStatus', AWAITING_ACCEPTANCE_STATUSES] },
-            '$tonnage',
-            0
-          ]
-        }
-      },
-      awaitingCancellationTonnage: {
-        $sum: {
-          $cond: [
-            {
-              $in: ['$status.currentStatus', AWAITING_CANCELLATION_STATUSES]
-            },
-            '$tonnage',
-            0
-          ]
-        }
-      },
-      acceptedTonnage: {
-        $sum: {
-          $cond: [
-            { $in: ['$status.currentStatus', ACCEPTED_STATUSES] },
-            '$tonnage',
-            0
-          ]
-        }
-      },
-      cancelledTonnage: {
-        $sum: {
-          $cond: [
-            { $in: ['$status.currentStatus', CANCELLED_STATUSES] },
-            '$tonnage',
-            0
-          ]
-        }
-      }
-    }
-  },
-  buildTonnageBandLookupStage(),
-  {
-    $addFields: {
-      organisationId: {
-        $toString: {
-          $ifNull: [{ $first: '$orgLookup.orgId' }, '$_id.orgId']
-        }
-      },
-      tonnageBand: { $ifNull: [{ $first: '$orgLookup.tonnageBand' }, null] }
-    }
-  },
-  {
-    $project: {
-      _id: 0,
-      organisationName: '$_id.orgName',
-      organisationId: 1,
-      accreditationNumber: '$_id.accNumber',
-      material: '$_id.material',
-      tonnageBand: 1,
-      awaitingAuthorisationTonnage: 1,
-      awaitingAcceptanceTonnage: 1,
-      awaitingCancellationTonnage: 1,
-      acceptedTonnage: 1,
-      cancelledTonnage: 1
-    }
-  },
-  {
-    $sort: {
-      organisationName: 1,
-      accreditationNumber: 1
+const buildStatusTonnageAccumulator = (statuses) => ({
+  $sum: {
+    $cond: [{ $in: [STATUS_PATH, statuses] }, '$tonnage', 0]
+  }
+})
+
+const buildMatchStage = () => ({
+  $match: {
+    [STATUS_FIELD]: {
+      $nin: EXCLUDED_STATUSES
     }
   }
+})
+
+const buildGroupStage = () => ({
+  $group: {
+    _id: {
+      orgId: '$organisation.id',
+      orgName: '$organisation.name',
+      accId: '$accreditation.id',
+      accNumber: '$accreditation.accreditationNumber',
+      material: '$accreditation.material'
+    },
+    awaitingAuthorisationTonnage: buildStatusTonnageAccumulator(
+      AWAITING_AUTHORISATION_STATUSES
+    ),
+    awaitingAcceptanceTonnage: buildStatusTonnageAccumulator(
+      AWAITING_ACCEPTANCE_STATUSES
+    ),
+    awaitingCancellationTonnage: buildStatusTonnageAccumulator(
+      AWAITING_CANCELLATION_STATUSES
+    ),
+    acceptedTonnage: buildStatusTonnageAccumulator(ACCEPTED_STATUSES),
+    cancelledTonnage: buildStatusTonnageAccumulator(CANCELLED_STATUSES)
+  }
+})
+
+const buildAddFieldsStage = () => ({
+  $addFields: {
+    organisationId: {
+      $toString: {
+        $ifNull: [{ $first: '$orgLookup.orgId' }, '$_id.orgId']
+      }
+    },
+    tonnageBand: { $ifNull: [{ $first: '$orgLookup.tonnageBand' }, null] }
+  }
+})
+
+const buildProjectStage = () => ({
+  $project: {
+    _id: 0,
+    organisationName: '$_id.orgName',
+    organisationId: 1,
+    accreditationNumber: '$_id.accNumber',
+    material: '$_id.material',
+    tonnageBand: 1,
+    awaitingAuthorisationTonnage: 1,
+    awaitingAcceptanceTonnage: 1,
+    awaitingCancellationTonnage: 1,
+    acceptedTonnage: 1,
+    cancelledTonnage: 1
+  }
+})
+
+const buildSortStage = () => ({
+  $sort: {
+    organisationName: 1,
+    accreditationNumber: 1
+  }
+})
+
+const buildAggregationPipeline = () => [
+  buildMatchStage(),
+  buildGroupStage(),
+  buildTonnageBandLookupStage(),
+  buildAddFieldsStage(),
+  buildProjectStage(),
+  buildSortStage()
 ]
 
 export const aggregatePrnTonnage = async (db) => {
