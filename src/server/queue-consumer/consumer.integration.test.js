@@ -311,11 +311,14 @@ describe('SQS command queue consumer integration', () => {
     )
 
     it(
-      'deletes invalid message after logging error',
+      'sends invalid message to DLQ after retries exhausted',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
         )
 
         // Send invalid message (missing summaryLogId)
@@ -353,26 +356,37 @@ describe('SQS command queue consumer integration', () => {
           { timeout: 10000 }
         )
 
-        await stopConsumerAndWait(consumer)
+        // Wait for message to land on DLQ after retries exhausted
+        await vi.waitFor(
+          async () => {
+            const dlqResponse = await sqsClient.send(
+              new ReceiveMessageCommand({
+                QueueUrl: dlqUrl,
+                WaitTimeSeconds: 0
+              })
+            )
+            expect(dlqResponse.Messages).toHaveLength(1)
 
-        // Message should be deleted (invalid messages are not retried)
-        const response = await sqsClient.send(
-          new ReceiveMessageCommand({
-            QueueUrl: queueUrl,
-            WaitTimeSeconds: 2
-          })
+            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            expect(dlqBody.command).toBe('validate')
+            expect(dlqBody.badField).toBe('test')
+          },
+          { timeout: 15000, interval: 500 }
         )
 
-        expect(response.Messages ?? []).toHaveLength(0)
+        await stopConsumerAndWait(consumer)
       }
     )
 
     it(
-      'rejects unknown command type via Joi validation',
+      'sends unknown command type to DLQ via Joi validation rejection',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
         )
 
         // Send message with unknown command
@@ -411,6 +425,23 @@ describe('SQS command queue consumer integration', () => {
             )
           },
           { timeout: 10000 }
+        )
+
+        // Wait for message to land on DLQ after retries exhausted
+        await vi.waitFor(
+          async () => {
+            const dlqResponse = await sqsClient.send(
+              new ReceiveMessageCommand({
+                QueueUrl: dlqUrl,
+                WaitTimeSeconds: 0
+              })
+            )
+            expect(dlqResponse.Messages).toHaveLength(1)
+
+            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            expect(dlqBody.summaryLogId).toBe(uniqueId)
+          },
+          { timeout: 15000, interval: 500 }
         )
 
         await stopConsumerAndWait(consumer)
