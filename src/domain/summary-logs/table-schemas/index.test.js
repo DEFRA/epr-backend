@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PROCESSING_TYPE_TABLES, aggregateEmptyCellValues } from './index.js'
+import { PROCESSING_TYPE_TABLES, aggregateUnfilledValues } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 
 describe('table-schemas', () => {
@@ -95,7 +95,7 @@ describe('table-schemas', () => {
     })
   })
 
-  describe('aggregateEmptyCellValues', () => {
+  describe('aggregateUnfilledValues', () => {
     it('returns empty object for registry with no unfilledValues', () => {
       const registry = {
         TYPE_A: {
@@ -103,7 +103,7 @@ describe('table-schemas', () => {
         }
       }
 
-      expect(aggregateEmptyCellValues(registry)).toEqual({})
+      expect(aggregateUnfilledValues(registry)).toEqual({})
     })
 
     it('collects unfilledValues from a single schema', () => {
@@ -117,7 +117,7 @@ describe('table-schemas', () => {
         }
       }
 
-      expect(aggregateEmptyCellValues(registry)).toEqual({
+      expect(aggregateUnfilledValues(registry)).toEqual({
         DROPDOWN: ['Choose option']
       })
     })
@@ -136,7 +136,7 @@ describe('table-schemas', () => {
         }
       }
 
-      expect(aggregateEmptyCellValues(registry)).toEqual({
+      expect(aggregateUnfilledValues(registry)).toEqual({
         FIELD_A: ['Choose option'],
         FIELD_B: ['Choose option']
       })
@@ -156,7 +156,7 @@ describe('table-schemas', () => {
         }
       }
 
-      expect(aggregateEmptyCellValues(registry)).toEqual({
+      expect(aggregateUnfilledValues(registry)).toEqual({
         DROPDOWN: ['Choose option']
       })
     })
@@ -175,13 +175,13 @@ describe('table-schemas', () => {
         }
       }
 
-      expect(aggregateEmptyCellValues(registry)).toEqual({
+      expect(aggregateUnfilledValues(registry)).toEqual({
         DROPDOWN: ['Choose option', 'Select one']
       })
     })
 
     it('produces correct result for the real PROCESSING_TYPE_TABLES registry', () => {
-      const result = aggregateEmptyCellValues(PROCESSING_TYPE_TABLES)
+      const result = aggregateUnfilledValues(PROCESSING_TYPE_TABLES)
 
       // All dropdown fields use 'Choose option'
       expect(result.EWC_CODE).toContain('Choose option')

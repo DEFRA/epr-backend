@@ -279,15 +279,15 @@ const processRowCell = (
   draftCollection,
   cellValue,
   columnIndex,
-  emptyCellValues
+  unfilledValues
 ) => {
   const headerName = draftCollection.headers[columnIndex]
-  const columnEmptyValues = emptyCellValues[headerName] || []
+  const columnUnfilledValues = unfilledValues[headerName] || []
   const normalisedValue =
     cellValue === null ||
     cellValue === undefined ||
     cellValue === '' ||
-    columnEmptyValues.includes(cellValue)
+    columnUnfilledValues.includes(cellValue)
       ? null
       : cellValue
   draftCollection.currentRow.push(normalisedValue)
@@ -298,7 +298,7 @@ const updateCollectionWithCell = (
   cellValue,
   cellValueStr,
   colNumber,
-  emptyCellValues
+  unfilledValues
 ) => {
   const columnIndex = colNumber - draftCollection.startColumn
 
@@ -309,7 +309,7 @@ const updateCollectionWithCell = (
     columnIndex < draftCollection.headers.length &&
     draftCollection.state === CollectionState.ROWS
   ) {
-    processRowCell(draftCollection, cellValue, columnIndex, emptyCellValues)
+    processRowCell(draftCollection, cellValue, columnIndex, unfilledValues)
   } else {
     // Cell is outside collection boundaries
   }
@@ -458,7 +458,7 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
         cellValue,
         cellValueStr,
         colNumber,
-        draftState.emptyCellValues
+        draftState.unfilledValues
       )
     }
   }
@@ -539,7 +539,7 @@ export { extractCellValue }
  * @property {number} [maxWorksheets] - Maximum allowed worksheets
  * @property {number} [maxRowsPerSheet] - Maximum allowed rows per worksheet
  * @property {number} [maxColumnsPerSheet] - Maximum allowed columns per worksheet
- * @property {Record<string, string[]>} [emptyCellValues] - Per-column values to normalise to null
+ * @property {Record<string, string[]>} [unfilledValues] - Per-column values to normalise to null
  * @property {Record<string, string>} [metaPlaceholders] - Per-field metadata placeholders to normalise to null
  */
 
@@ -557,7 +557,7 @@ export const parse = async (buffer, options = {}) => {
     maxWorksheets = PARSE_DEFAULTS.maxWorksheets,
     maxRowsPerSheet = PARSE_DEFAULTS.maxRowsPerSheet,
     maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet,
-    emptyCellValues = {},
+    unfilledValues = {},
     metaPlaceholders = {}
   } = options
 
@@ -577,7 +577,7 @@ export const parse = async (buffer, options = {}) => {
     result: { meta: {}, data: {} },
     activeCollections: [],
     metadataContext: null,
-    emptyCellValues,
+    unfilledValues,
     metaPlaceholders
   }
 

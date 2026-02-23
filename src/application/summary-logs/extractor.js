@@ -4,7 +4,7 @@ import {
 } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   PROCESSING_TYPE_TABLES,
-  aggregateEmptyCellValues
+  aggregateUnfilledValues
 } from '#domain/summary-logs/table-schemas/index.js'
 import { META_PLACEHOLDERS } from '#domain/summary-logs/meta-fields.js'
 
@@ -24,7 +24,7 @@ const FILE_PROCESSING_CATEGORY = 'file-processing'
 const SUMMARY_LOG_PARSE_OPTIONS = {
   requiredWorksheet: 'Cover',
   ...PARSE_DEFAULTS,
-  emptyCellValues: aggregateEmptyCellValues(PROCESSING_TYPE_TABLES),
+  unfilledValues: aggregateUnfilledValues(PROCESSING_TYPE_TABLES),
   metaPlaceholders: META_PLACEHOLDERS
 }
 

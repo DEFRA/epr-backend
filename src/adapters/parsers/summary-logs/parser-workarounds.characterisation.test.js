@@ -9,7 +9,7 @@
  * preserving observable behaviour.
  *
  * RESOLVED WORKAROUNDS:
- * 1. Per-column "Choose option" → null normalisation via emptyCellValues config
+ * 1. Per-column "Choose option" → null normalisation via unfilledValues config
  * 2. "Row ID" header row filtering (moved to domain layer)
  * 3. Empty ROW_ID row filtering (moved to domain layer)
  * 4. "Choose material" → null for MATERIAL metadata via metaPlaceholders config
@@ -75,7 +75,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
   describe('RESOLVED WORKAROUND 1: Per-column "Choose option" normalisation via config', () => {
     /**
      * The parser normalises placeholder values to null per-column, driven by
-     * the emptyCellValues config. Only columns listed in the config are normalised.
+     * the unfilledValues config. Only columns listed in the config are normalised.
      */
 
     it('normalises only configured columns, preserves free-text columns', async () => {
@@ -88,7 +88,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { DROPDOWN: ['Choose option'] }
+        unfilledValues: { DROPDOWN: ['Choose option'] }
       })
 
       expect(parsed.data.TEST_TABLE.rows[0].values).toEqual([
@@ -108,7 +108,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { COL_A: ['Choose option'], COL_B: ['Choose option'] }
+        unfilledValues: { COL_A: ['Choose option'], COL_B: ['Choose option'] }
       })
 
       // Only exact match is normalised
@@ -125,10 +125,10 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { SOME_FIELD: ['Choose option'] }
+        unfilledValues: { SOME_FIELD: ['Choose option'] }
       })
 
-      // Metadata is NOT affected by emptyCellValues
+      // Metadata is NOT affected by unfilledValues
       expect(parsed.meta.SOME_FIELD.value).toBe('Choose option')
     })
   })
@@ -328,7 +328,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: {
+        unfilledValues: {
           DROPDOWN_A: ['Choose option'],
           DROPDOWN_B: ['Choose option']
         }
@@ -351,7 +351,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { DROPDOWN: ['Choose option'] }
+        unfilledValues: { DROPDOWN: ['Choose option'] }
       })
 
       // Row 3 becomes all-null after normalisation → terminates table
@@ -375,7 +375,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { DROPDOWN: ['Choose option'] }
+        unfilledValues: { DROPDOWN: ['Choose option'] }
       })
 
       // Row 3 is NOT treated as empty because 'partial data' is real
@@ -390,7 +390,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
   describe('RESOLVED WORKAROUND 6: unfilledValues drives normalisation', () => {
     /**
      * Domain schemas define unfilledValues with 'Choose option' placeholders.
-     * These are now aggregated and passed to the parser as emptyCellValues,
+     * These are now aggregated and passed to the parser as unfilledValues,
      * driving per-column normalisation. The domain layer's isFilled check
      * still works as a secondary gate for any values the parser didn't normalise.
      */
@@ -405,7 +405,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { DROPDOWN_FIELD: ['Choose option'] }
+        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] }
       })
 
       // Parser normalised to null via config
@@ -439,7 +439,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
     })
 
     it('domain layer catches unfilled values even without parser normalisation', () => {
-      // If a value isn't normalised by the parser (e.g. not in emptyCellValues),
+      // If a value isn't normalised by the parser (e.g. not in unfilledValues),
       // the domain layer's unfilledValues check still catches it
       const rowObjectWithoutNormalisation = {
         ROW_ID: 1001,
@@ -520,7 +520,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         1002,
         null,
         '2025-05-16',
-        'Choose option' // Normalised to null via emptyCellValues
+        'Choose option' // Normalised to null via unfilledValues
       ]
 
       // Row 6: Pre-populated empty row
@@ -539,7 +539,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       const buffer = await workbook.xlsx.writeBuffer()
       const parsed = await parse(buffer, {
-        emptyCellValues: { DROPDOWN_FIELD: ['Choose option'] },
+        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] },
         metaPlaceholders: { MATERIAL: 'Choose material' }
       })
 
@@ -622,7 +622,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const parsed = await parse(buffer, {
-        emptyCellValues: { VALUE: ['Choose option'] }
+        unfilledValues: { VALUE: ['Choose option'] }
       })
 
       // Verify parser normalisation happened

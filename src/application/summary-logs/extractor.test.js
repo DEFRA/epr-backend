@@ -83,7 +83,7 @@ describe('SummaryLogExtractor', () => {
       maxWorksheets: 20,
       maxRowsPerSheet: 55_000,
       maxColumnsPerSheet: 1_000,
-      emptyCellValues: expect.objectContaining({
+      unfilledValues: expect.objectContaining({
         EWC_CODE: ['Choose option'],
         DESCRIPTION_WASTE: ['Choose option'],
         WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: ['Choose option'],

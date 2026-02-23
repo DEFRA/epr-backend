@@ -1759,7 +1759,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
-  describe('placeholder text without emptyCellValues config', () => {
+  describe('placeholder text without unfilledValues config', () => {
     it('should not normalise "Choose option" in data rows without config', async () => {
       const result = await parseWorkbook({
         Test: [
@@ -1788,7 +1788,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         ]
       })
 
-      // Without emptyCellValues, 'Choose option' is NOT normalised
+      // Without unfilledValues, 'Choose option' is NOT normalised
       // Row 3 has a non-null value so it doesn't terminate the table
       // (trailing nulls are not stored by ExcelJS, so WEIGHT is absent)
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
@@ -1836,8 +1836,8 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
-  describe('per-column placeholder normalisation via emptyCellValues', () => {
-    it('should normalise only columns listed in emptyCellValues', async () => {
+  describe('per-column placeholder normalisation via unfilledValues', () => {
+    it('should normalise only columns listed in unfilledValues', async () => {
       const result = await parseWorkbook(
         {
           Cover: [],
@@ -1847,7 +1847,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         },
         {
-          emptyCellValues: {
+          unfilledValues: {
             DROPDOWN: ['Choose option']
           }
         }
@@ -1860,7 +1860,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       ])
     })
 
-    it('should not normalise any columns when emptyCellValues is empty', async () => {
+    it('should not normalise any columns when unfilledValues is empty', async () => {
       const result = await parseWorkbook(
         {
           Cover: [],
@@ -1870,7 +1870,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         },
         {
-          emptyCellValues: {}
+          unfilledValues: {}
         }
       )
 
@@ -1891,7 +1891,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         },
         {
-          emptyCellValues: {
+          unfilledValues: {
             DROPDOWN: ['Choose option', 'Select one']
           }
         }
@@ -1911,11 +1911,11 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         },
         {
-          emptyCellValues: {}
+          unfilledValues: {}
         }
       )
 
-      // null and '' are always normalised regardless of emptyCellValues
+      // null and '' are always normalised regardless of unfilledValues
       expect(result.data.TEST.rows[0].values).toEqual([1001, null, null])
     })
 
@@ -1931,7 +1931,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         },
         {
-          emptyCellValues: {
+          unfilledValues: {
             DROPDOWN_A: ['Choose option'],
             DROPDOWN_B: ['Choose option']
           }
