@@ -4,7 +4,10 @@ import {
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
-import { isEprMarker } from '#domain/summary-logs/markers.js'
+import {
+  isEprMarker,
+  SKIP_HEADER_ROW_TEXT
+} from '#domain/summary-logs/markers.js'
 import {
   classifyRow,
   ROW_OUTCOME
@@ -308,6 +311,34 @@ const recordIssues = (rowIssues, issues) => {
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with outcome and issues attached
  */
+/**
+ * Checks whether a row should be filtered out before validation.
+ *
+ * Rows are filtered when the row ID field contains template artefacts
+ * rather than real data: user-facing header description rows or
+ * pre-populated empty template rows.
+ *
+ * @param {Record<string, *>} rowObject - Row data keyed by header name
+ * @param {string} rowIdField - Name of the row ID field
+ * @returns {boolean} True if the row should be excluded from validation
+ */
+const isTemplateRow = (rowObject, rowIdField) => {
+  const rowIdValue = rowObject[rowIdField]
+
+  if (
+    typeof rowIdValue === 'string' &&
+    rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
+  ) {
+    return true
+  }
+
+  if (rowIdValue === null || rowIdValue === undefined) {
+    return true
+  }
+
+  return false
+}
+
 const validateRows = ({
   tableName,
   headerToIndexMap,
@@ -318,10 +349,14 @@ const validateRows = ({
 }) => {
   const fatalFields = domainSchema.fatalFields || []
 
-  return rows.map(({ rowNumber, values }) => {
+  return rows.flatMap(({ rowNumber, values }) => {
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
       rowObject[headerName] = values[colIndex]
+    }
+
+    if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
+      return []
     }
 
     const classification = classifyRow(rowObject, domainSchema)
@@ -341,12 +376,14 @@ const validateRows = ({
 
     recordIssues(rowIssues, issues)
 
-    return {
-      data: rowObject,
-      rowId: String(rowObject[domainSchema.rowIdField]),
-      outcome: classification.outcome,
-      issues: rowIssues
-    }
+    return [
+      {
+        data: rowObject,
+        rowId: String(rowObject[domainSchema.rowIdField]),
+        outcome: classification.outcome,
+        issues: rowIssues
+      }
+    ]
   })
 }
 
