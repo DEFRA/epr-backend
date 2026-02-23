@@ -1,6 +1,5 @@
 import ExcelJS from 'exceljs'
 
-import { MATERIAL_PLACEHOLDER_TEXT } from '#domain/summary-logs/markers.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
   extractCellValue,
@@ -674,15 +673,60 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
 
-    it('should normalize MATERIAL placeholder text to null', async () => {
+    it('should not normalise metadata placeholders without metaPlaceholders config', async () => {
       const result = await parseWorkbook({
-        Test: [['__EPR_META_MATERIAL', MATERIAL_PLACEHOLDER_TEXT]]
+        Test: [['__EPR_META_MATERIAL', 'Choose material']]
       })
 
       expect(result.meta.MATERIAL).toEqual({
-        value: null,
+        value: 'Choose material',
         location: { sheet: 'Test', row: 1, column: 'B' }
       })
+    })
+  })
+
+  describe('metadata normalisation via metaPlaceholders config', () => {
+    it('should normalise metadata value when field matches metaPlaceholders', async () => {
+      const result = await parseWorkbook(
+        {
+          Test: [['__EPR_META_MATERIAL', 'Choose material']]
+        },
+        {
+          metaPlaceholders: {
+            MATERIAL: 'Choose material'
+          }
+        }
+      )
+
+      expect(result.meta.MATERIAL.value).toBeNull()
+    })
+
+    it('should not normalise metadata for fields not in metaPlaceholders', async () => {
+      const result = await parseWorkbook(
+        {
+          Test: [['__EPR_META_OTHER_FIELD', 'Choose material']]
+        },
+        {
+          metaPlaceholders: {
+            MATERIAL: 'Choose material'
+          }
+        }
+      )
+
+      expect(result.meta.OTHER_FIELD.value).toBe('Choose material')
+    })
+
+    it('should not normalise metadata when metaPlaceholders is empty', async () => {
+      const result = await parseWorkbook(
+        {
+          Test: [['__EPR_META_MATERIAL', 'Choose material']]
+        },
+        {
+          metaPlaceholders: {}
+        }
+      )
+
+      expect(result.meta.MATERIAL.value).toBe('Choose material')
     })
   })
 
@@ -1089,8 +1133,8 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
 
-    describe('skip header rows', () => {
-      it('should skip header row', async () => {
+    describe('ROW_ID header and null rows (passed through for domain-layer filtering)', () => {
+      it('should return header description rows for domain-layer filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             [
@@ -1106,12 +1150,16 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          {
+            rowNumber: 2,
+            values: ['Row ID', 'Date received', 'Supplier reference']
+          },
           { rowNumber: 3, values: [12345678910, '2025-05-25', 'ABC123'] },
           { rowNumber: 4, values: [98765432100, '2025-05-26', 'DEF456'] }
         ])
       })
 
-      it('should skip header row and example row', async () => {
+      it('should return header row but still skip example row', async () => {
         const result = await parseWorkbook({
           Test: [
             [
@@ -1129,12 +1177,16 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          {
+            rowNumber: 2,
+            values: ['Row ID', 'Date received', null, 'Supplier reference']
+          },
           { rowNumber: 4, values: [98765432100, '2025-05-26', null, 'DEF456'] },
           { rowNumber: 5, values: [11122233344, '2025-05-27', null, 'GHI789'] }
         ])
       })
 
-      it('should be case-sensitive for "Row ID" skip text', async () => {
+      it('should return all ROW_ID text variants without filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
@@ -1146,13 +1198,14 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          { rowNumber: 2, values: ['Row ID', '2025-05-25'] },
           { rowNumber: 3, values: ['row id', '2025-05-26'] },
           { rowNumber: 4, values: ['ROW_ID', '2025-05-27'] },
           { rowNumber: 5, values: ['ROW ID', '2025-05-28'] }
         ])
       })
 
-      it('should skip header row when ROW_ID starts with "Row ID" but contains additional text', async () => {
+      it('should return richText header row for domain-layer filtering', async () => {
         const workbook = new ExcelJS.Workbook()
         const worksheet = workbook.addWorksheet('Test')
 
@@ -1160,7 +1213,6 @@ describe('ExcelJSSummaryLogsParser', () => {
         worksheet.getCell('B1').value = 'ROW_ID'
         worksheet.getCell('C1').value = 'DATE_RECEIVED'
 
-        // Header row with richText containing "Row ID" plus additional description
         worksheet.getCell('B2').value = {
           richText: [
             { font: { bold: true }, text: 'Row ID' },
@@ -1169,7 +1221,6 @@ describe('ExcelJSSummaryLogsParser', () => {
         }
         worksheet.getCell('C2').value = 'Date received'
 
-        // Data rows
         worksheet.getCell('B3').value = 1001
         worksheet.getCell('C3').value = '2025-05-25'
 
@@ -1180,12 +1231,16 @@ describe('ExcelJSSummaryLogsParser', () => {
         const result = await parse(buffer)
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          {
+            rowNumber: 2,
+            values: ['Row ID\n(Automatically generated)', 'Date received']
+          },
           { rowNumber: 3, values: [1001, '2025-05-25'] },
           { rowNumber: 4, values: [1002, '2025-05-26'] }
         ])
       })
 
-      it('should skip header row when ROW_ID is plain text starting with "Row ID"', async () => {
+      it('should return plain text header row for domain-layer filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
@@ -1196,19 +1251,20 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
+          { rowNumber: 2, values: ['Row ID (auto)', 'Date received'] },
           { rowNumber: 3, values: [1001, '2025-05-25'] },
           { rowNumber: 4, values: [1002, '2025-05-26'] }
         ])
       })
 
-      it('should skip rows where ROW_ID is null (template rows with default dropdown values)', async () => {
+      it('should return null ROW_ID rows for domain-layer filtering', async () => {
         const result = await parseWorkbook({
           Test: [
             ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED', 'HAS_VALUE'],
             [null, 1001, '2025-05-25', 'Yes'],
             [null, 1002, '2025-05-26', 'No'],
-            [null, null, null, 'No'], // Empty row with default dropdown value
-            [null, null, null, 'No'], // Another empty row
+            [null, null, null, 'No'],
+            [null, null, null, 'No'],
             [null, 1003, '2025-05-27', 'Yes']
           ]
         })
@@ -1216,6 +1272,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         expect(result.data.TEST_TABLE.rows).toEqual([
           { rowNumber: 2, values: [1001, '2025-05-25', 'Yes'] },
           { rowNumber: 3, values: [1002, '2025-05-26', 'No'] },
+          { rowNumber: 4, values: [null, null, 'No'] },
+          { rowNumber: 5, values: [null, null, 'No'] },
           { rowNumber: 6, values: [1003, '2025-05-27', 'Yes'] }
         ])
       })
@@ -1701,8 +1759,8 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
-  describe('placeholder text normalization', () => {
-    it('should normalize "Choose option" to null in data rows', async () => {
+  describe('placeholder text without unfilledValues config', () => {
+    it('should not normalise "Choose option" in data rows without config', async () => {
       const result = await parseWorkbook({
         Test: [
           ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'STATUS', 'TYPE'],
@@ -1712,28 +1770,35 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        { rowNumber: 2, values: [12345678910, null, null] },
-        { rowNumber: 3, values: [98765432100, 'Active', null] }
+        {
+          rowNumber: 2,
+          values: [12345678910, 'Choose option', 'Choose option']
+        },
+        { rowNumber: 3, values: [98765432100, 'Active', 'Choose option'] }
       ])
     })
 
-    it('should treat rows with mix of empty and "Choose option" as empty and terminate section', async () => {
-      // Realistic scenario: blank rows have empty cells plus dropdown defaults
+    it('should not treat "Choose option" row as empty without config', async () => {
       const result = await parseWorkbook({
         Test: [
           ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'DATE', 'EWC_CODE', 'WEIGHT'],
           [null, 12345678910, '2025-01-15', '03 03 08', 1000],
-          [null, null, null, 'Choose option', null], // Blank row: empty + dropdown default
-          [null, 'This should be ignored', '2025-12-31', '03 03 08', 9999]
+          [null, null, null, 'Choose option', null],
+          [null, 98765432100, '2025-12-31', '03 03 08', 9999]
         ]
       })
 
+      // Without unfilledValues, 'Choose option' is NOT normalised
+      // Row 3 has a non-null value so it doesn't terminate the table
+      // (trailing nulls are not stored by ExcelJS, so WEIGHT is absent)
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        { rowNumber: 2, values: [12345678910, '2025-01-15', '03 03 08', 1000] }
+        { rowNumber: 2, values: [12345678910, '2025-01-15', '03 03 08', 1000] },
+        { rowNumber: 3, values: [null, null, 'Choose option'] },
+        { rowNumber: 4, values: [98765432100, '2025-12-31', '03 03 08', 9999] }
       ])
     })
 
-    it('should not normalize "Choose option" in metadata values', async () => {
+    it('should not normalise "Choose option" in metadata values', async () => {
       const result = await parseWorkbook({
         Test: [['__EPR_META_DROPDOWN_DEFAULT', 'Choose option']]
       })
@@ -1741,7 +1806,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.meta.DROPDOWN_DEFAULT.value).toBe('Choose option')
     })
 
-    it('should handle mixed empty values and placeholder text', async () => {
+    it('should still normalise null and empty string in data rows', async () => {
       const result = await parseWorkbook({
         Test: [
           ['__EPR_DATA_WASTE_RECEIVED', 'COL_A', 'COL_B', 'COL_C', 'COL_D'],
@@ -1750,11 +1815,11 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        { rowNumber: 2, values: [null, null, null, 'actual value'] }
+        { rowNumber: 2, values: [null, null, 'Choose option', 'actual value'] }
       ])
     })
 
-    it('should be case-sensitive for placeholder text', async () => {
+    it('should preserve all case variants of "Choose option" without config', async () => {
       const result = await parseWorkbook({
         Test: [
           ['__EPR_DATA_WASTE_RECEIVED', 'COL_A', 'COL_B', 'COL_C'],
@@ -1763,8 +1828,119 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        { rowNumber: 2, values: [null, 'CHOOSE OPTION', 'choose Option'] }
+        {
+          rowNumber: 2,
+          values: ['Choose option', 'CHOOSE OPTION', 'choose Option']
+        }
       ])
+    })
+  })
+
+  describe('per-column placeholder normalisation via unfilledValues', () => {
+    it('should normalise only columns listed in unfilledValues', async () => {
+      const result = await parseWorkbook(
+        {
+          Cover: [],
+          Test: [
+            ['__EPR_DATA_TEST', 'ROW_ID', 'FREE_TEXT', 'DROPDOWN'],
+            [null, 1001, 'Choose option', 'Choose option']
+          ]
+        },
+        {
+          unfilledValues: {
+            DROPDOWN: ['Choose option']
+          }
+        }
+      )
+
+      expect(result.data.TEST.rows[0].values).toEqual([
+        1001,
+        'Choose option', // Free text column - NOT normalised
+        null // Dropdown column - normalised
+      ])
+    })
+
+    it('should not normalise any columns when unfilledValues is empty', async () => {
+      const result = await parseWorkbook(
+        {
+          Cover: [],
+          Test: [
+            ['__EPR_DATA_TEST', 'ROW_ID', 'STATUS'],
+            [null, 1001, 'Choose option']
+          ]
+        },
+        {
+          unfilledValues: {}
+        }
+      )
+
+      expect(result.data.TEST.rows[0].values).toEqual([
+        1001,
+        'Choose option' // NOT normalised
+      ])
+    })
+
+    it('should support multiple unfilled values per column', async () => {
+      const result = await parseWorkbook(
+        {
+          Cover: [],
+          Test: [
+            ['__EPR_DATA_TEST', 'ROW_ID', 'DROPDOWN'],
+            [null, 1001, 'Choose option'],
+            [null, 1002, 'Select one']
+          ]
+        },
+        {
+          unfilledValues: {
+            DROPDOWN: ['Choose option', 'Select one']
+          }
+        }
+      )
+
+      expect(result.data.TEST.rows[0].values).toEqual([1001, null])
+      expect(result.data.TEST.rows[1].values).toEqual([1002, null])
+    })
+
+    it('should still normalise null, undefined, and empty string without config', async () => {
+      const result = await parseWorkbook(
+        {
+          Cover: [],
+          Test: [
+            ['__EPR_DATA_TEST', 'ROW_ID', 'COL_A', 'COL_B'],
+            [null, 1001, null, '']
+          ]
+        },
+        {
+          unfilledValues: {}
+        }
+      )
+
+      // null and '' are always normalised regardless of unfilledValues
+      expect(result.data.TEST.rows[0].values).toEqual([1001, null, null])
+    })
+
+    it('should terminate table when per-column normalisation makes row all-null', async () => {
+      const result = await parseWorkbook(
+        {
+          Cover: [],
+          Test: [
+            ['__EPR_DATA_TEST', 'ROW_ID', 'DROPDOWN_A', 'DROPDOWN_B'],
+            [null, 1001, 'Yes', 'Active'],
+            [null, null, 'Choose option', 'Choose option'],
+            [null, 1002, 'No', 'Inactive']
+          ]
+        },
+        {
+          unfilledValues: {
+            DROPDOWN_A: ['Choose option'],
+            DROPDOWN_B: ['Choose option']
+          }
+        }
+      )
+
+      // Row 3 is all-null after normalisation → terminates table
+      expect(result.data.TEST.rows).toHaveLength(1)
+      expect(result.data.TEST.rows[0].values).toEqual([1001, 'Yes', 'Active'])
     })
   })
 

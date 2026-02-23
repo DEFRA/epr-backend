@@ -24,8 +24,12 @@ describe('createSentOnLoadsSchema', () => {
       expect(schema.requiredHeaders).toContain('WEIGHBRIDGE_TICKET')
     })
 
-    it('has empty unfilledValues object', () => {
-      expect(schema.unfilledValues).toEqual({})
+    it('has unfilledValues with dropdown placeholders matching template', () => {
+      expect(schema.unfilledValues.FINAL_DESTINATION_FACILITY_TYPE).toContain(
+        'Choose option'
+      )
+      expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
+      expect(schema.unfilledValues.EWC_CODE).toContain('Choose option')
     })
 
     it('has fatalFields with waste balance fields only', () => {

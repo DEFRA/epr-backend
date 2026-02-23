@@ -4,12 +4,20 @@ import {
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
-import { isEprMarker } from '#domain/summary-logs/markers.js'
+import {
+  isEprMarker,
+  SKIP_HEADER_ROW_TEXT
+} from '#domain/summary-logs/markers.js'
 import {
   classifyRow,
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/index.js'
+import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
+import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
+import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
+import { TONNAGE_RECEIVED_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-input/validators/tonnage-received-validator.js'
+import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
@@ -87,6 +95,42 @@ const mapJoiTypeToErrorCode = (joiType) => {
   }
   return code
 }
+
+export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
+  [MESSAGES.MUST_BE_A_NUMBER]: VALIDATION_CODE.MUST_BE_A_NUMBER,
+  [MESSAGES.MUST_BE_A_STRING]: VALIDATION_CODE.MUST_BE_A_STRING,
+  [MESSAGES.MUST_BE_A_VALID_DATE]: VALIDATION_CODE.MUST_BE_A_VALID_DATE,
+  [MESSAGES.MUST_BE_GREATER_THAN_ZERO]:
+    VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO,
+  [MESSAGES.MUST_BE_AT_LEAST_ZERO]: VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO,
+  [MESSAGES.MUST_BE_AT_MOST_1]: VALIDATION_CODE.MUST_BE_AT_MOST_1,
+  [MESSAGES.MUST_BE_LESS_THAN_ONE]: VALIDATION_CODE.MUST_BE_LESS_THAN_1,
+  [MESSAGES.MUST_BE_AT_MOST_1000]: VALIDATION_CODE.MUST_BE_AT_MOST_1000,
+  [MESSAGES.MUST_BE_AT_MOST_100_CHARS]:
+    VALIDATION_CODE.MUST_BE_AT_MOST_100_CHARS,
+  [MESSAGES.MUST_BE_YES_OR_NO]: VALIDATION_CODE.MUST_BE_YES_OR_NO,
+  [MESSAGES.MUST_BE_ALPHANUMERIC]: VALIDATION_CODE.MUST_BE_ALPHANUMERIC,
+  [MESSAGES.MUST_BE_3_DIGIT_NUMBER]: VALIDATION_CODE.MUST_BE_3_DIGIT_NUMBER,
+  [MESSAGES.MUST_BE_VALID_EWC_CODE]: VALIDATION_CODE.MUST_BE_VALID_EWC_CODE,
+  [MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD]:
+    VALIDATION_CODE.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD,
+  [MESSAGES.MUST_BE_VALID_WASTE_DESCRIPTION]:
+    VALIDATION_CODE.MUST_BE_VALID_WASTE_DESCRIPTION,
+  [MESSAGES.MUST_BE_VALID_BASEL_CODE]: VALIDATION_CODE.MUST_BE_VALID_BASEL_CODE,
+  [MESSAGES.MUST_BE_VALID_EXPORT_CONTROL]:
+    VALIDATION_CODE.MUST_BE_VALID_EXPORT_CONTROL,
+  [NET_WEIGHT_MESSAGES['custom.netWeightCalculationMismatch']]:
+    VALIDATION_CODE.NET_WEIGHT_CALCULATION_MISMATCH,
+  [TONNAGE_EXPORT_MESSAGES['custom.tonnageCalculationMismatch']]:
+    VALIDATION_CODE.TONNAGE_CALCULATION_MISMATCH,
+  [TONNAGE_RECEIVED_MESSAGES['custom.tonnageCalculationMismatch']]:
+    VALIDATION_CODE.TONNAGE_CALCULATION_MISMATCH,
+  [UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES[
+    'custom.ukPackagingProportionCalculationMismatch'
+  ]]: VALIDATION_CODE.UK_PACKAGING_PROPORTION_CALCULATION_MISMATCH
+})
+
+const mapMessageToErrorCode = (message) => JOI_MESSAGE_TO_ERROR_CODE[message]
 
 /**
  * Builds a map from header names to their column indices
@@ -176,6 +220,80 @@ const buildCellLocation = ({
       }
     : { table: tableName, header: fieldName }
 
+const toApplicationIssue = ({
+  issue,
+  classification,
+  fatalFields,
+  headerToIndexMap,
+  rowObject,
+  tableName,
+  rowNumber,
+  location
+}) => {
+  const fieldName = String(issue.field)
+  const colIndex = headerToIndexMap.get(fieldName)
+  const isValidationError = issue.code === 'VALIDATION_ERROR'
+
+  const message = issue.message
+    ? `Invalid value in column '${fieldName}': ${issue.message}`
+    : `Missing required field: ${fieldName}`
+
+  const code = isValidationError
+    ? mapJoiTypeToErrorCode(issue.type)
+    : VALIDATION_CODE.FIELD_REQUIRED
+
+  const errorCode = isValidationError
+    ? mapMessageToErrorCode(issue.message)
+    : undefined
+
+  const isFatalField =
+    classification.outcome === ROW_OUTCOME.REJECTED &&
+    fatalFields.includes(fieldName)
+
+  const context = {
+    location: buildCellLocation({
+      tableName,
+      rowNumber,
+      fieldName,
+      colIndex,
+      location
+    }),
+    actual: rowObject[fieldName]
+  }
+
+  if (errorCode) {
+    context.errorCode = errorCode
+  }
+
+  return {
+    category: VALIDATION_CATEGORY.TECHNICAL,
+    severity: isFatalField ? 'fatal' : 'error',
+    message,
+    code,
+    context
+  }
+}
+
+const recordIssues = (rowIssues, issues) => {
+  for (const rowIssue of rowIssues) {
+    if (rowIssue.severity === 'fatal') {
+      issues.addFatal(
+        rowIssue.category,
+        rowIssue.message,
+        rowIssue.code,
+        rowIssue.context
+      )
+    } else {
+      issues.addError(
+        rowIssue.category,
+        rowIssue.message,
+        rowIssue.code,
+        rowIssue.context
+      )
+    }
+  }
+}
+
 /**
  * Validates all rows using the classifyRow pipeline
  *
@@ -193,6 +311,34 @@ const buildCellLocation = ({
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with outcome and issues attached
  */
+/**
+ * Checks whether a row should be filtered out before validation.
+ *
+ * Rows are filtered when the row ID field contains template artefacts
+ * rather than real data: user-facing header description rows or
+ * pre-populated empty template rows.
+ *
+ * @param {Record<string, *>} rowObject - Row data keyed by header name
+ * @param {string} rowIdField - Name of the row ID field
+ * @returns {boolean} True if the row should be excluded from validation
+ */
+const isTemplateRow = (rowObject, rowIdField) => {
+  const rowIdValue = rowObject[rowIdField]
+
+  if (
+    typeof rowIdValue === 'string' &&
+    rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
+  ) {
+    return true
+  }
+
+  if (rowIdValue === null || rowIdValue === undefined) {
+    return true
+  }
+
+  return false
+}
+
 const validateRows = ({
   tableName,
   headerToIndexMap,
@@ -201,87 +347,43 @@ const validateRows = ({
   location,
   issues
 }) => {
-  return rows.map((originalRow) => {
-    const { rowNumber, values } = originalRow
+  const fatalFields = domainSchema.fatalFields || []
 
-    // Build row object from array
+  return rows.flatMap(({ rowNumber, values }) => {
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
       rowObject[headerName] = values[colIndex]
     }
 
-    // Classify row using domain pipeline
+    if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
+      return []
+    }
+
     const classification = classifyRow(rowObject, domainSchema)
 
-    // Convert classification issues to application issues with locations
-    const fatalFields = domainSchema.fatalFields || []
-    const rowIssues = classification.issues.map((issue) => {
-      const fieldName = String(issue.field)
-      const colIndex = headerToIndexMap.get(fieldName)
-      const message = issue.message
-        ? `Invalid value in column '${fieldName}': ${issue.message}`
-        : `Missing required field: ${fieldName}`
+    const rowIssues = classification.issues.map((issue) =>
+      toApplicationIssue({
+        issue,
+        classification,
+        fatalFields,
+        headerToIndexMap,
+        rowObject,
+        tableName,
+        rowNumber,
+        location
+      })
+    )
 
-      // Map issue code to application error code
-      // Domain layer only produces VALIDATION_ERROR or MISSING_REQUIRED_FIELD
-      const code =
-        issue.code === 'VALIDATION_ERROR'
-          ? mapJoiTypeToErrorCode(issue.type)
-          : VALIDATION_CODE.FIELD_REQUIRED
+    recordIssues(rowIssues, issues)
 
-      // Determine severity based on whether this is a fatal field
-      const isFatalField =
-        classification.outcome === ROW_OUTCOME.REJECTED &&
-        fatalFields.includes(fieldName)
-      const severity = isFatalField ? 'fatal' : 'error'
-
-      return {
-        category: VALIDATION_CATEGORY.TECHNICAL,
-        severity,
-        message,
-        code,
-        context: {
-          location: buildCellLocation({
-            tableName,
-            rowNumber,
-            fieldName,
-            colIndex,
-            location
-          }),
-          actual: rowObject[fieldName]
-        }
+    return [
+      {
+        data: rowObject,
+        rowId: String(rowObject[domainSchema.rowIdField]),
+        outcome: classification.outcome,
+        issues: rowIssues
       }
-    })
-
-    // Record issues at appropriate severity
-    // fatalFields validation errors are FATAL (block entire submission)
-    // Other validation errors are ERROR (mark row as invalid but don't block submission)
-    for (const rowIssue of rowIssues) {
-      if (rowIssue.severity === 'fatal') {
-        issues.addFatal(
-          rowIssue.category,
-          rowIssue.message,
-          rowIssue.code,
-          rowIssue.context
-        )
-      } else {
-        issues.addError(
-          rowIssue.category,
-          rowIssue.message,
-          rowIssue.code,
-          rowIssue.context
-        )
-      }
-    }
-
-    const rowId = String(rowObject[domainSchema.rowIdField])
-
-    return {
-      data: rowObject,
-      rowId,
-      outcome: classification.outcome,
-      issues: rowIssues
-    }
+    ]
   })
 }
 
