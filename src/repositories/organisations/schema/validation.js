@@ -18,6 +18,19 @@ const formatValidationErrorDetails = (error) => {
     .join('; ')
 }
 
+const formatValidationErrors = (error) => {
+  return error.details.map((d) => ({
+    path: d.path.join('.'),
+    message: d.message
+  }))
+}
+
+const throwBadDataWithValidationErrors = (message, joiError) => {
+  const boomError = Boom.badData(message)
+  boomError.output.payload.validationErrors = formatValidationErrors(joiError)
+  throw boomError
+}
+
 export const validateId = (id) => {
   const { error, value } = idSchema.validate(id)
 
@@ -36,7 +49,10 @@ export const validateOrganisationInsert = (data) => {
 
   if (error) {
     const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid organisation data: ${details}`)
+    throwBadDataWithValidationErrors(
+      `Invalid organisation data: ${details}`,
+      error
+    )
   }
 
   return value
@@ -51,7 +67,10 @@ export const validateOrganisationUpdate = (data, existing = null) => {
 
   if (error) {
     const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid organisation data: ${details}`)
+    throwBadDataWithValidationErrors(
+      `Invalid organisation data: ${details}`,
+      error
+    )
   }
 
   return value
@@ -79,7 +98,10 @@ export const validateRegistration = (data) => {
 
   if (error) {
     const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid registration data: ${details}`)
+    throwBadDataWithValidationErrors(
+      `Invalid registration data: ${details}`,
+      error
+    )
   }
 
   return value
@@ -93,7 +115,10 @@ export const validateAccreditation = (data) => {
 
   if (error) {
     const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid accreditation data: ${details}`)
+    throwBadDataWithValidationErrors(
+      `Invalid accreditation data: ${details}`,
+      error
+    )
   }
 
   return value

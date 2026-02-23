@@ -80,8 +80,20 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
 
 export const requiredWhenApprovedOrSuspended = {
   switch: [
-    { is: REG_ACC_STATUS.APPROVED, then: Joi.required().invalid(null) },
-    { is: REG_ACC_STATUS.SUSPENDED, then: Joi.required().invalid(null) }
+    {
+      is: REG_ACC_STATUS.APPROVED,
+      then: Joi.required().invalid(null).messages({
+        'any.invalid': '{{#label}} is required when status is approved',
+        'any.required': '{{#label}} is required when status is approved'
+      })
+    },
+    {
+      is: REG_ACC_STATUS.SUSPENDED,
+      then: Joi.required().invalid(null).messages({
+        'any.invalid': '{{#label}} is required when status is suspended',
+        'any.required': '{{#label}} is required when status is suspended'
+      })
+    }
   ],
   otherwise: Joi.optional().allow(null)
 }
@@ -96,7 +108,15 @@ export const dateRequiredWhenApprovedOrSuspended = () =>
       }
       return value
     })
-    .messages({ 'string.pattern.base': 'Date must be in YYYY-MM-DD format' })
+    .messages({
+      'string.pattern.base': '{{#label}} must be in YYYY-MM-DD format',
+      'string.base':
+        '{{#label}} is required when status is approved or suspended',
+      'any.invalid':
+        '{{#label}} is required when status is approved or suspended',
+      'any.required':
+        '{{#label}} is required when status is approved or suspended'
+    })
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null)
 

@@ -2,6 +2,8 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   validateAccreditation,
+  validateOrganisationInsert,
+  validateOrganisationUpdate,
   validateRegistration,
   validateStatusHistory
 } from './validation.js'
@@ -47,6 +49,90 @@ describe('validateStatusHistory', () => {
     const result = validateStatusHistory(statusHistory)
 
     expect(result).toEqual(statusHistory)
+  })
+})
+
+describe('validationErrors payload', () => {
+  it('includes structured validationErrors on Boom error for validateRegistration', () => {
+    const invalidRegistration = {
+      id: 'invalid-id',
+      orgName: 'Test Org'
+    }
+
+    try {
+      validateRegistration(invalidRegistration)
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error.isBoom).toBe(true)
+      expect(error.output.payload.validationErrors).toBeInstanceOf(Array)
+      expect(error.output.payload.validationErrors.length).toBeGreaterThan(0)
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('path')
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('message')
+    }
+  })
+
+  it('includes structured validationErrors on Boom error for validateAccreditation', () => {
+    const invalidAccreditation = {
+      id: 'invalid-id'
+    }
+
+    try {
+      validateAccreditation(invalidAccreditation)
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error.isBoom).toBe(true)
+      expect(error.output.payload.validationErrors).toBeInstanceOf(Array)
+      expect(error.output.payload.validationErrors.length).toBeGreaterThan(0)
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('path')
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('message')
+    }
+  })
+
+  it('includes structured validationErrors on Boom error for validateOrganisationUpdate', () => {
+    try {
+      validateOrganisationUpdate({ wasteProcessingTypes: [] })
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error.isBoom).toBe(true)
+      expect(error.output.payload.validationErrors).toBeInstanceOf(Array)
+      expect(error.output.payload.validationErrors.length).toBeGreaterThan(0)
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('path')
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('message')
+    }
+  })
+
+  it('includes structured validationErrors on Boom error for validateOrganisationInsert', () => {
+    try {
+      validateOrganisationInsert({ wasteProcessingTypes: [] })
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      expect(error.isBoom).toBe(true)
+      expect(error.output.payload.validationErrors).toBeInstanceOf(Array)
+      expect(error.output.payload.validationErrors.length).toBeGreaterThan(0)
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('path')
+      expect(error.output.payload.validationErrors[0]).toHaveProperty('message')
+    }
+  })
+
+  it('produces human-readable messages for approval-conditional fields', () => {
+    const registration = buildRegistration({
+      status: REG_ACC_STATUS.APPROVED,
+      registrationNumber: null,
+      validFrom: null,
+      validTo: null
+    })
+
+    try {
+      validateRegistration(registration)
+      expect.unreachable('should have thrown')
+    } catch (error) {
+      const messages = error.output.payload.validationErrors.map(
+        (e) => e.message
+      )
+      expect(
+        messages.some((m) => m.includes('is required when status is'))
+      ).toBe(true)
+    }
   })
 })
 
