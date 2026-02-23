@@ -12,11 +12,24 @@
  */
 
 /**
- * @typedef {{ id: string, email: string, scope: string[], issuer: string, name?: string, currentRelationshipId?: string, linkedOrgId?: string }} HumanCredentials
+ * @typedef {{
+ *   id: string,
+ *   email: string,
+ *   scope: string[],
+ *   issuer: string,
+ *   name?: string,
+ *   currentRelationshipId?: string,
+ *   linkedOrgId?: string
+ * }} HumanCredentials
  */
 
 /**
- * @typedef {{ isAuthenticated: boolean, credentials: MachineCredentials | HumanCredentials, strategy: string, artifacts?: unknown }} RequestAuth
+ * @typedef {{
+ *   isAuthenticated: boolean,
+ *   credentials: MachineCredentials | HumanCredentials,
+ *   strategy: string,
+ *   artifacts?: unknown
+ * }} RequestAuth
  */
 
 /**

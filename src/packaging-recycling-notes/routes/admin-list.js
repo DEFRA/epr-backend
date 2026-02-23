@@ -61,7 +61,16 @@ export const adminPackagingRecyclingNotesList = {
       })
     }
   },
-  /** @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, query: { statuses: string[], limit?: number, cursor?: string }}} request */
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   query: {
+   *     statuses: string[],
+   *     limit?: number,
+   *     cursor?: string
+   *   }
+   * }} request
+   */
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, limit, cursor } = request.query
