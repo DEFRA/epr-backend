@@ -353,7 +353,7 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES_EXTERNAL_API'
-    },
+    }
   },
   formSubmissionOverrides: {
     doc: 'JSON configuration for form submission field overrides (registrations and accreditations) on migration to epr-organisations',
