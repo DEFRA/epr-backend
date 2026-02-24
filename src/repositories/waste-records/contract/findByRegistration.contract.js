@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildVersionData, toWasteRecordVersions } from './test-data.js'
 
-export const testFindByRegistrationBehaviour = (createTest) => {
+export const testFindByRegistrationBehaviour = (it) => {
   describe('findByRegistration', () => {
     let repository
 
@@ -9,13 +9,13 @@ export const testFindByRegistrationBehaviour = (createTest) => {
       repository = await wasteRecordsRepository()
     })
 
-    createTest('returns empty array when no waste records exist', async () => {
+    it('returns empty array when no waste records exist', async () => {
       const result = await repository.findByRegistration('org-1', 'reg-1')
 
       expect(result).toEqual([])
     })
 
-    createTest(
+    it(
       'returns all waste records for specific organisation and registration',
       async () => {
         const { version: version1, data: data1 } = buildVersionData()
@@ -38,7 +38,7 @@ export const testFindByRegistrationBehaviour = (createTest) => {
       }
     )
 
-    createTest(
+    it(
       'does not return waste records from different organisations',
       async () => {
         const { version: org1Version, data: org1Data } = buildVersionData()
@@ -68,7 +68,7 @@ export const testFindByRegistrationBehaviour = (createTest) => {
       }
     )
 
-    createTest(
+    it(
       'does not return waste records from different registrations',
       async () => {
         const { version: reg1Version, data: reg1Data } = buildVersionData()
