@@ -25,7 +25,7 @@ import {
   add,
   subtract,
   toNumber
-} from '#domain/waste-balances/decimal-utils.js'
+} from '#domain/decimal-utils.js'
 
 const getTableName = (recordType, processingType) => {
   if (processingType === PROCESSING_TYPES.EXPORTER) {

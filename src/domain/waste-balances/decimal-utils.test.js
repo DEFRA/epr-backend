@@ -9,7 +9,7 @@ import {
   abs,
   greaterThan,
   isZero
-} from './decimal-utils.js'
+} from '#domain/decimal-utils.js'
 
 describe('decimal-utils', () => {
   describe('toDecimal', () => {

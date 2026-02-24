@@ -1,5 +1,5 @@
-import Decimal from 'decimal.js'
 import { Decimal128 } from 'mongodb'
+import { toDecimalString } from '#domain/decimal-utils.js'
 
 const TONNAGE_FIELD_PATTERN = /(tonnage|weight)/i
 
@@ -8,8 +8,6 @@ const isPlainObject = (value) =>
 
 const isDecimal128 = (value) =>
   value && typeof value === 'object' && value._bsontype === 'Decimal128'
-
-const toDecimalString = (value) => new Decimal(value).toString()
 
 const toMongoPersistedValue = (key, value) => {
   if (typeof value === 'number' && Number.isFinite(value)) {
