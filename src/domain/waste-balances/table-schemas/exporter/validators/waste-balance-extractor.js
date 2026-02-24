@@ -7,6 +7,7 @@ import {
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
+import { roundToTwoDecimalPlaces } from '#domain/waste-balances/decimal-utils.js'
 
 /**
  * Extracted waste balance fields.
@@ -65,13 +66,12 @@ export const extractWasteBalanceFields = (record) => {
     prnIssued:
       value[RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE] ===
       YES_NO_VALUES.YES,
-    transactionAmount:
-      (interimSite
+    transactionAmount: roundToTwoDecimalPlaces(
+      interimSite
         ? value[
             RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
           ]
-        : value[
-            RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-          ]) || 0
+        : value[RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]
+    )
   }
 }

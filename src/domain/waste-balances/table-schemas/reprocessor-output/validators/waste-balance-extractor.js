@@ -11,6 +11,7 @@ import {
   REPROCESSED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
+import { roundToTwoDecimalPlaces } from '#domain/waste-balances/decimal-utils.js'
 
 /**
  * Extracted waste balance fields.
@@ -61,9 +62,9 @@ const extractProcessedFields = (data) => {
   return {
     dispatchDate: new Date(value[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
     prnIssued: false,
-    transactionAmount:
-      value[REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION] ||
-      0
+    transactionAmount: roundToTwoDecimalPlaces(
+      value[REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]
+    )
   }
 }
 
@@ -86,8 +87,8 @@ const extractSentOnFields = (data) => {
   return {
     dispatchDate: new Date(value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
     prnIssued: false,
-    transactionAmount: -(
-      value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON] || 0
+    transactionAmount: -roundToTwoDecimalPlaces(
+      value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]
     )
   }
 }

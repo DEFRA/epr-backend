@@ -92,6 +92,20 @@ describe('extractWasteBalanceFields (REPROCESSOR_OUTPUT)', () => {
     expect(extractWasteBalanceFields(record)).toBeNull()
   })
 
+  it('rounds transactionAmount to two decimal places for processed records', () => {
+    const record = {
+      ...baseRecord,
+      type: WASTE_RECORD_TYPE.PROCESSED,
+      data: {
+        ...validProcessedData,
+        [REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: 100.125
+      }
+    }
+
+    const result = extractWasteBalanceFields(record)
+    expect(result.transactionAmount).toBe(100.13)
+  })
+
   it('defaults transactionAmount to 0 if missing', () => {
     const dataWithoutAmount = { ...validProcessedData }
     delete dataWithoutAmount[
@@ -133,6 +147,20 @@ describe('extractWasteBalanceFields (REPROCESSOR_OUTPUT)', () => {
       prnIssued: false,
       transactionAmount: -50.5
     })
+  })
+
+  it('rounds transactionAmount to two decimal places before negation for sent on records', () => {
+    const record = {
+      ...baseRecord,
+      type: WASTE_RECORD_TYPE.SENT_ON,
+      data: {
+        ...validSentOnData,
+        [SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: 50.125
+      }
+    }
+
+    const result = extractWasteBalanceFields(record)
+    expect(result.transactionAmount).toBe(-50.13)
   })
 
   it('defaults transactionAmount to 0 for sent on record if tonnage is missing', () => {
