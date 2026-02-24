@@ -308,11 +308,11 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
   await ensureCollection(db)
 
   return () => ({
-    findById: (id) => findById(db, id),
-    findByPrnNumber: (prnNumber) => findByPrnNumber(db, prnNumber),
     create: (prn) => create(db, prn),
     findByAccreditation: (accreditationId) =>
       findByAccreditation(db, accreditationId),
+    findById: (id) => findById(db, id),
+    findByPrnNumber: (prnNumber) => findByPrnNumber(db, prnNumber),
     findByStatus: (params) => findByStatus(db, params),
     updateStatus: (params) => updateStatus(db, params)
   })

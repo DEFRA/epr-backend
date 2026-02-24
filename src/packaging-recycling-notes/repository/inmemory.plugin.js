@@ -4,11 +4,24 @@ import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert } from './validation.js'
 
+/** @import { PackagingRecyclingNote } from '../domain/model.js' */
+/** @import { FindByStatusParams, PaginatedResult, UpdateStatusParams } from './port.js' */
+
+/** @typedef {Map<string, PackagingRecyclingNote>} Storage */
+
+/**
+ * @param {Storage} storage
+ * @returns {(id: string) => Promise<PackagingRecyclingNote | null>}
+ */
 const performFindById = (storage) => async (id) => {
   const prn = storage.get(id)
   return prn ? structuredClone(prn) : null
 }
 
+/**
+ * @param {Storage} storage
+ * @returns {(prnNumber: string) => Promise<PackagingRecyclingNote | null>}
+ */
 const performFindByPrnNumber = (storage) => async (prnNumber) => {
   for (const prn of storage.values()) {
     if (prn.prnNumber === prnNumber) {
@@ -18,6 +31,10 @@ const performFindByPrnNumber = (storage) => async (prnNumber) => {
   return null
 }
 
+/**
+ * @param {Storage} storage
+ * @returns {(prn: Omit<PackagingRecyclingNote, 'id'>) => Promise<PackagingRecyclingNote>}
+ */
 const performCreate = (storage) => async (prn) => {
   const validated = validatePrnInsert(prn)
   const id = new ObjectId().toHexString()
@@ -26,6 +43,10 @@ const performCreate = (storage) => async (prn) => {
   return structuredClone(prnWithId)
 }
 
+/**
+ * @param {Storage} storage
+ * @returns {(accreditationId: string) => Promise<PackagingRecyclingNote[]>}
+ */
 const performFindByAccreditation = (storage) => async (accreditationId) => {
   const results = []
   for (const prn of storage.values()) {
@@ -39,6 +60,12 @@ const performFindByAccreditation = (storage) => async (accreditationId) => {
   return results
 }
 
+/**
+ * @param {PackagingRecyclingNote['status']['currentStatusAt'] | undefined} statusAt
+ * @param {FindByStatusParams['dateFrom']} dateFrom
+ * @param {FindByStatusParams['dateTo']} dateTo
+ * @returns {boolean}
+ */
 const matchesDateRange = (statusAt, dateFrom, dateTo) => {
   if (!dateFrom && !dateTo) {
     return true
@@ -55,6 +82,11 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
   return true
 }
 
+/**
+ * @param {PackagingRecyclingNote} prn
+ * @param {FindByStatusParams} params
+ * @returns {boolean}
+ */
 const matchesFindByStatusCriteria = (prn, params) => {
   const { cursor, dateFrom, dateTo, excludeOrganisationIds, statuses } = params
 
@@ -77,6 +109,10 @@ const matchesFindByStatusCriteria = (prn, params) => {
   return true
 }
 
+/**
+ * @param {Storage} storage
+ * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
+ */
 const performFindByStatus = (storage) => async (params) => {
   const { limit } = params
   const matching = []
@@ -98,6 +134,10 @@ const performFindByStatus = (storage) => async (params) => {
   }
 }
 
+/**
+ * @param {Storage} storage
+ * @returns {(params: UpdateStatusParams) => Promise<PackagingRecyclingNote | null>}
+ */
 const performUpdateStatus =
   (storage) =>
   async ({ id, status, updatedBy, updatedAt, prnNumber, operation }) => {
@@ -143,6 +183,7 @@ const performUpdateStatus =
 export function createInMemoryPackagingRecyclingNotesRepository(
   initialData = []
 ) {
+  /** @type {Storage} */
   const storage = new Map()
 
   for (const prn of initialData) {
@@ -151,10 +192,10 @@ export function createInMemoryPackagingRecyclingNotesRepository(
   }
 
   return () => ({
-    findById: performFindById(storage),
-    findByPrnNumber: performFindByPrnNumber(storage),
     create: performCreate(storage),
     findByAccreditation: performFindByAccreditation(storage),
+    findById: performFindById(storage),
+    findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage),
     updateStatus: performUpdateStatus(storage)
   })
