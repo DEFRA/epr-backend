@@ -58,16 +58,35 @@ describe('#fail-action', () => {
       expect(mockRequest.logger.warn).toHaveBeenCalledTimes(1)
     })
 
-    test('includes Joi details in message in non-prod environment', () => {
+    test('includes validation error summary in message in non-prod environment', () => {
       const mockRequest = createMockRequest()
       const joiError = createJoiValidationError()
 
       expect(() => failAction(mockRequest, {}, joiError)).toThrow()
 
       const logCall = mockRequest.logger.warn.mock.calls[0][0]
-      expect(logCall.message).toContain('"redirectUrl" is required')
-      expect(logCall.message).toContain('| data:')
-      expect(logCall.message).toContain('any.required')
+      expect(logCall.message).toBe(
+        '"redirectUrl" is required | 1 validation error(s): "redirectUrl" is required'
+      )
+    })
+
+    test('caps validation error messages at 5 in non-prod environment', () => {
+      const mockRequest = createMockRequest()
+      const joiError = new Error('Validation failed')
+      joiError.isJoi = true
+      joiError.details = Array.from({ length: 8 }, (_, i) => ({
+        message: `"field${i}" is required`,
+        path: [`field${i}`],
+        type: 'any.required',
+        context: { key: `field${i}`, label: `field${i}` }
+      }))
+
+      expect(() => failAction(mockRequest, {}, joiError)).toThrow()
+
+      const logCall = mockRequest.logger.warn.mock.calls[0][0]
+      expect(logCall.message).toBe(
+        'Validation failed | 8 validation error(s): "field0" is required; "field1" is required; "field2" is required; "field3" is required; "field4" is required ...and 3 more'
+      )
     })
 
     test('passes Boom error under err key for serialisation', () => {
@@ -202,6 +221,6 @@ describe('#fail-action (production)', () => {
 
     const logCall = mockRequest.logger.warn.mock.calls[0][0]
     expect(logCall.message).toBe('"redirectUrl" is required')
-    expect(logCall.message).not.toContain('| data:')
+    expect(logCall.message).not.toContain('validation error(s)')
   })
 })

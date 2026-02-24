@@ -195,10 +195,9 @@ describe('SummaryLogExtractor', () => {
           category: 'file-processing'
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       'OrganisationDetails',
-      JSON.stringify(['Name', 'Type']),
-      JSON.stringify(['Widget Ltd', 'Retailer']),
+      2,
       2,
       'Sheet1',
       5,
@@ -250,10 +249,9 @@ describe('SummaryLogExtractor', () => {
           category: 'file-processing'
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       'EmptyTable',
-      JSON.stringify(['Column1', 'Column2']),
-      'null',
+      2,
       0,
       'Sheet1',
       1,
@@ -261,7 +259,7 @@ describe('SummaryLogExtractor', () => {
     )
   })
 
-  it('should handle data table with only one row (example row)', async () => {
+  it('should handle data table with only one row', async () => {
     const parsedData = {
       meta: {},
       data: {
@@ -283,10 +281,9 @@ describe('SummaryLogExtractor', () => {
           category: 'file-processing'
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       'SingleRowTable',
-      JSON.stringify(['Column1', 'Column2']),
-      'null',
+      2,
       1,
       'Sheet1',
       1,

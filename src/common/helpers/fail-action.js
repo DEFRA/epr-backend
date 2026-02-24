@@ -7,6 +7,7 @@ import { getConfig } from '#root/config.js'
 
 const config = getConfig()
 const isProductionEnvironment = config.get('cdpEnvironment') === 'prod'
+const MAX_LOGGED_VALIDATION_ERRORS = 5
 
 /**
  * Checks if an error is a Joi ValidationError.
@@ -30,6 +31,14 @@ function isJoiValidationError(error) {
  * @param {unknown} error
  * @returns {error is import('@hapi/boom').Boom}
  */
+function formatValidationMessage(error) {
+  const shown = error.details.slice(0, MAX_LOGGED_VALIDATION_ERRORS)
+  const messages = shown.map((d) => d.message).join('; ')
+  const remaining = error.details.length - shown.length
+  const suffix = remaining > 0 ? ` ...and ${remaining} more` : ''
+  return `${error.message} | ${error.details.length} validation error(s): ${messages}${suffix}`
+}
+
 function isBoomError(error) {
   return (
     error !== null &&
@@ -58,7 +67,7 @@ export function failAction(request, _h, error) {
 
     const message = isProductionEnvironment
       ? error.message
-      : `${error.message} | data: ${JSON.stringify(error.details)}`
+      : formatValidationMessage(error)
 
     request.logger.warn({
       err: boomError,

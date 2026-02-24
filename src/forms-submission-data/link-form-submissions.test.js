@@ -130,14 +130,25 @@ describe('linkItemsToOrganisations', () => {
     expect(org3.registrations).toBeUndefined()
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: '2 organisations without registrations'
+      message: `2 organisations without registrations: ${org2Id}, ${org3Id}`
     })
-    expect(logger.info).toHaveBeenCalledWith({
-      message: `Organisation without any registrations: id=${org2Id}`
-    })
-    expect(logger.info).toHaveBeenCalledWith({
-      message: `Organisation without any registrations: id=${org3Id}`
-    })
+  })
+
+  it('caps organisations-without-items log at 10 items', () => {
+    const allOrgs = Array.from({ length: 12 }, (_, i) => ({
+      id: new ObjectId().toString(),
+      name: `Org ${i}`
+    }))
+
+    linkItemsToOrganisations(allOrgs, [], 'registrations', new Set())
+
+    const logCall = logger.info.mock.calls.find(([arg]) =>
+      arg.message?.includes('organisations without registrations')
+    )
+    expect(logCall).toBeDefined()
+    const [{ message }] = logCall
+    expect(message).toMatch(/^12 organisations without registrations:/)
+    expect(message).toContain('(2 more not shown)')
   })
 
   it('logs error when registrations cannot be linked to organisations', () => {
@@ -170,14 +181,35 @@ describe('linkItemsToOrganisations', () => {
     expect(org1.registrations[0].id).toBe(reg1Id)
 
     expect(logger.warn).toHaveBeenCalledWith({
-      message: '2 registrations not linked to an organisation'
+      message: `2 registrations not linked to an organisation: id=${reg2Id},systemReference=${org2Id},orgId=200; id=${reg3Id},systemReference=${org3Id},orgId=300`
     })
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `registrations not linked: id=${reg2Id}, systemReference=${org2Id}, orgId=200`
-    })
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `registrations not linked: id=${reg3Id}, systemReference=${org3Id}, orgId=300`
-    })
+  })
+
+  it('caps unlinked items log at 10 items', () => {
+    const org1Id = new ObjectId().toString()
+    const organisations = [{ id: org1Id, name: 'Org 1' }]
+    const registrations = Array.from({ length: 12 }, (_, i) => ({
+      id: new ObjectId().toString(),
+      systemReference: new ObjectId().toString(),
+      orgId: 1000 + i
+    }))
+    // One registration links to org1, 11 are unlinked
+    registrations[0].systemReference = org1Id
+
+    linkItemsToOrganisations(
+      organisations,
+      registrations,
+      'registrations',
+      new Set()
+    )
+
+    const logCall = logger.warn.mock.calls.find(([arg]) =>
+      arg.message?.includes('not linked to an organisation')
+    )
+    expect(logCall).toBeDefined()
+    const [{ message }] = logCall
+    expect(message).toMatch(/^11 registrations not linked to an organisation:/)
+    expect(message).toContain('(1 more not shown)')
   })
 
   it('handles multiple registrations for the same organisation', () => {
@@ -256,10 +288,7 @@ describe('linkItemsToOrganisations', () => {
 
     // reg2Id should be logged as unlinked
     expect(logger.warn).toHaveBeenCalledWith({
-      message: '1 registrations not linked to an organisation'
-    })
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `registrations not linked: id=${reg2Id}, systemReference=${org1Id}, orgId=300`
+      message: `1 registrations not linked to an organisation: id=${reg2Id},systemReference=${org1Id},orgId=300`
     })
   })
 })
@@ -425,6 +454,41 @@ describe('linkRegistrationToAccreditations', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Registrations : 0/2 linked to accreditations'
     })
+  })
+
+  it('caps unlinked accreditations log at 10 items', () => {
+    const org1Id = new ObjectId().toString()
+    const accreditations = Array.from({ length: 12 }, () => ({
+      id: new ObjectId().toString(),
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      material: MATERIAL.WOOD,
+      formSubmissionTime: oneDayAgo
+    }))
+    const registrations = Array.from({ length: 12 }, () => ({
+      id: new ObjectId().toString(),
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      material: MATERIAL.PAPER,
+      formSubmissionTime: oneDayAgo
+    }))
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations,
+        accreditations
+      }
+    ]
+
+    linkRegistrationToAccreditations(organisations)
+
+    const logCall = logger.warn.mock.calls.find(([arg]) =>
+      arg.message?.includes('cant be linked to registrations')
+    )
+    expect(logCall).toBeDefined()
+    const [{ message }] = logCall
+    expect(message).toContain('unlinked accreditations count=12')
+    expect(message).toContain(';...(2 more)')
   })
 
   it('link registrations from multiple org to accreditations', () => {

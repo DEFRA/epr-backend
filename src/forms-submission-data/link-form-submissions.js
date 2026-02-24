@@ -25,20 +25,21 @@ function getOrganisationsById(organisations) {
   )
 }
 
+const MAX_LOGGED_ITEMS = 10
+
 function logOrganisationsWithoutItems(organisations, propertyName) {
   const orgsWithoutItems = organisations.filter(
     (org) => (org[propertyName] ?? []).length === 0
   )
 
   if (orgsWithoutItems.length > 0) {
+    const shown = orgsWithoutItems.slice(0, MAX_LOGGED_ITEMS)
+    const ids = shown.map((org) => org.id).join(', ')
+    const remaining = orgsWithoutItems.length - shown.length
+    const suffix = remaining > 0 ? ` (${remaining} more not shown)` : ''
     logger.info({
-      message: `${orgsWithoutItems.length} organisations without ${propertyName}`
+      message: `${orgsWithoutItems.length} organisations without ${propertyName}: ${ids}${suffix}`
     })
-    for (const org of orgsWithoutItems) {
-      logger.info({
-        message: `Organisation without any ${propertyName}: id=${org.id}`
-      })
-    }
   }
 }
 
@@ -85,14 +86,18 @@ function logUnlinkedItems(unlinkedItems, propertyName) {
     return
   }
 
+  const shown = unlinkedItems.slice(0, MAX_LOGGED_ITEMS)
+  const details = shown
+    .map(
+      (item) =>
+        `id=${item.id},systemReference=${item.systemReference},orgId=${item.orgId}`
+    )
+    .join('; ')
+  const remaining = unlinkedItems.length - shown.length
+  const suffix = remaining > 0 ? ` (${remaining} more not shown)` : ''
   logger.warn({
-    message: `${unlinkedItems.length} ${propertyName} not linked to an organisation`
+    message: `${unlinkedItems.length} ${propertyName} not linked to an organisation: ${details}${suffix}`
   })
-  for (const item of unlinkedItems) {
-    logger.warn({
-      message: `${propertyName} not linked: id=${item.id}, systemReference=${item.systemReference}, orgId=${item.orgId}`
-    })
-  }
 }
 
 /**
@@ -250,13 +255,17 @@ function logUnlinkedAccreditations(organisation) {
     return
   }
 
-  const unlinkedAccDetails = unlinkedAccreditations
-    .map((item) => formatAccreditationDetails(item))
-    .join(';')
+  const shownAcc = unlinkedAccreditations.slice(0, MAX_LOGGED_ITEMS)
+  const remainingAcc = unlinkedAccreditations.length - shownAcc.length
+  const unlinkedAccDetails =
+    shownAcc.map((item) => formatAccreditationDetails(item)).join(';') +
+    (remainingAcc > 0 ? `;...(${remainingAcc} more)` : '')
 
-  const unlinkedRegDetails = unlinkedRegistrations
-    .map((item) => formatRegistrationDetails(item))
-    .join(';')
+  const shownReg = unlinkedRegistrations.slice(0, MAX_LOGGED_ITEMS)
+  const remainingReg = unlinkedRegistrations.length - shownReg.length
+  const unlinkedRegDetails =
+    shownReg.map((item) => formatRegistrationDetails(item)).join(';') +
+    (remainingReg > 0 ? `;...(${remainingReg} more)` : '')
 
   const message =
     `Organisation has accreditations that cant be linked to registrations: ` +
