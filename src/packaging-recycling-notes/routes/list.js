@@ -1,6 +1,6 @@
-import Joi from 'joi'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
 
 import {
   LOGGING_EVENT_ACTIONS,
@@ -11,6 +11,7 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  */
 
 const ALLOWED_STATUSES = ['awaiting_acceptance', 'cancelled']
@@ -43,7 +44,7 @@ export const packagingRecyclingNotesList = {
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   query: {
-   *     statuses: string[],
+   *     statuses: PrnStatus[],
    *     dateFrom?: string,
    *     dateTo?: string,
    *     limit?: number,
