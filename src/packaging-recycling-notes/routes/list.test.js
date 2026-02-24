@@ -297,17 +297,13 @@ describe('GET /v1/packaging-recycling-notes', () => {
     })
 
     describe('test organisation filtering', () => {
-      it('excludes PRNs belonging to test organisations from results', async () => {
-        const testOrgPrn = createMockIssuedPrn({
-          id: 'test-org-prn-id',
-          organisation: { id: 'excluded-org-id', name: 'Test Org' }
-        })
+      it('passes excludeOrganisationIds from prnVisibilityFilter to repository', async () => {
         const realOrgPrn = createMockIssuedPrn({
           id: 'real-org-prn-id',
           organisation: { id: 'real-org-id', name: 'Real Org' }
         })
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [testOrgPrn, realOrgPrn],
+          items: [realOrgPrn],
           nextCursor: null,
           hasMore: false
         })
@@ -317,6 +313,10 @@ describe('GET /v1/packaging-recycling-notes', () => {
           url: `${listUrl}?statuses=awaiting_acceptance`,
           headers: authHeaders
         })
+
+        const callArgs =
+          packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
+        expect(callArgs.excludeOrganisationIds).toEqual(['excluded-org-id'])
 
         const payload = JSON.parse(response.payload)
         expect(payload.items).toHaveLength(1)
@@ -346,17 +346,13 @@ describe('GET /v1/packaging-recycling-notes', () => {
         server.app.prnVisibilityFilter = saved
       })
 
-      it('logs the filtered count, not the pre-filter count', async () => {
-        const testOrgPrn = createMockIssuedPrn({
-          id: 'test-org-prn-id',
-          organisation: { id: 'excluded-org-id', name: 'Test Org' }
-        })
+      it('logs the count of items returned by repository', async () => {
         const realOrgPrn = createMockIssuedPrn({
           id: 'real-org-prn-id',
           organisation: { id: 'real-org-id', name: 'Real Org' }
         })
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [testOrgPrn, realOrgPrn],
+          items: [realOrgPrn],
           nextCursor: null,
           hasMore: false
         })
@@ -374,7 +370,10 @@ describe('GET /v1/packaging-recycling-notes', () => {
         )
       })
 
-      it('does not pass exclusion params to repository', async () => {
+      it('passes empty excludeOrganisationIds when prnVisibilityFilter is absent', async () => {
+        const saved = server.app.prnVisibilityFilter
+        server.app.prnVisibilityFilter = undefined
+
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
           items: [],
           nextCursor: null,
@@ -389,8 +388,9 @@ describe('GET /v1/packaging-recycling-notes', () => {
 
         const callArgs =
           packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
-        expect(callArgs.excludeOrganisationIds).toBeUndefined()
-        expect(callArgs.excludePrnIds).toBeUndefined()
+        expect(callArgs.excludeOrganisationIds).toEqual([])
+
+        server.app.prnVisibilityFilter = saved
       })
     })
 

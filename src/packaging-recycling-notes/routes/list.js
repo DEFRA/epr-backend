@@ -55,28 +55,23 @@ export const packagingRecyclingNotesList = {
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
-    const { excludeOrganisationIds = [] } =
-      request.server.app.prnVisibilityFilter ?? {}
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
+      const { excludeOrganisationIds = [] } =
+        request.server.app.prnVisibilityFilter ?? {}
 
       const result = await packagingRecyclingNotesRepository.findByStatus({
-        statuses,
+        cursor,
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,
+        excludeOrganisationIds,
         limit: effectiveLimit,
-        cursor
+        statuses
       })
 
-      // Filter out test organisation PRNs from external API results
-      const excludeSet = new Set(excludeOrganisationIds)
-      const filteredItems = excludeSet.size
-        ? result.items.filter((prn) => !excludeSet.has(prn.organisation.id))
-        : result.items
-
       const response = {
-        items: filteredItems.map(mapToExternalPrn),
+        items: result.items.map(mapToExternalPrn),
         hasMore: result.hasMore
       }
 
