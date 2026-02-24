@@ -25,6 +25,7 @@ export class PrnNumberConflictError extends Error {
  * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus[]} statuses
  * @property {Date} [dateFrom]
  * @property {Date} [dateTo]
+ * @property {string[]} [excludeOrganisationIds]
  * @property {string} [cursor]
  * @property {number} limit
  */

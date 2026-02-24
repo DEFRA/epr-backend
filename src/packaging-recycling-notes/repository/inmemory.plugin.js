@@ -1,6 +1,6 @@
-import { ObjectId } from 'mongodb'
-import { registerRepository } from '#plugins/register-repository.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { registerRepository } from '#plugins/register-repository.js'
+import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert } from './validation.js'
 
@@ -56,7 +56,7 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 const matchesFindByStatusCriteria = (prn, params) => {
-  const { statuses, dateFrom, dateTo, cursor } = params
+  const { cursor, dateFrom, dateTo, excludeOrganisationIds, statuses } = params
 
   if (!statuses.includes(prn.status.currentStatus)) {
     return false
@@ -65,6 +65,12 @@ const matchesFindByStatusCriteria = (prn, params) => {
     return false
   }
   if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
+    return false
+  }
+  if (
+    excludeOrganisationIds?.length &&
+    excludeOrganisationIds.includes(prn.organisation.id)
+  ) {
     return false
   }
 

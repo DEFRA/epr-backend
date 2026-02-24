@@ -1,19 +1,19 @@
 import { StatusCodes } from 'http-status-codes'
 import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
   afterAll,
-  afterEach
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi
 } from 'vitest'
 
-import { createTestServer } from '#test/create-test-server.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createMockIssuedPrn } from './test-helpers.js'
 
 const { validToken } = entraIdMockAuthTokens
@@ -246,6 +246,51 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       expect(
         packagingRecyclingNotesRepository.findByStatus
       ).toHaveBeenCalledWith(expect.objectContaining({ limit: 500 }))
+    })
+
+    it('passes excludeOrganisationIds from prnVisibilityFilter to repository', async () => {
+      const excludeOrganisationIds = ['org-id-1', 'org-id-2']
+      server.app.prnVisibilityFilter = { excludeOrganisationIds }
+
+      packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+        items: [],
+        nextCursor: null,
+        hasMore: false
+      })
+
+      await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=awaiting_acceptance`
+      })
+
+      expect(
+        packagingRecyclingNotesRepository.findByStatus
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ excludeOrganisationIds })
+      )
+
+      server.app.prnVisibilityFilter = undefined
+    })
+
+    it('passes empty excludeOrganisationIds when prnVisibilityFilter is absent', async () => {
+      server.app.prnVisibilityFilter = undefined
+
+      packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
+        items: [],
+        nextCursor: null,
+        hasMore: false
+      })
+
+      await injectWithAuth(server, {
+        method: 'GET',
+        url: `${adminListUrl}?statuses=awaiting_acceptance`
+      })
+
+      expect(
+        packagingRecyclingNotesRepository.findByStatus
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ excludeOrganisationIds: [] })
+      )
     })
 
     it('returns nextCursor when hasMore is true', async () => {

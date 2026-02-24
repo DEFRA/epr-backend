@@ -179,7 +179,13 @@ const findByAccreditation = async (db, accreditationId) => {
  * @param {import('./port.js').FindByStatusParams} params
  * @returns {import('mongodb').Filter<import('mongodb').Document>}
  */
-function buildFindByStatusFilter({ statuses, dateFrom, dateTo, cursor }) {
+function buildFindByStatusFilter({
+  cursor,
+  dateFrom,
+  dateTo,
+  excludeOrganisationIds,
+  statuses
+}) {
   /** @type {import('mongodb').Filter<import('mongodb').Document>} */
   const filter = {}
 
@@ -199,6 +205,10 @@ function buildFindByStatusFilter({ statuses, dateFrom, dateTo, cursor }) {
       dateCondition.$lte = dateTo
     }
     filter['status.currentStatusAt'] = dateCondition
+  }
+
+  if (excludeOrganisationIds?.length) {
+    filter['organisation.id'] = { $nin: excludeOrganisationIds }
   }
 
   return filter
