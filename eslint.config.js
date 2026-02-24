@@ -1,3 +1,4 @@
+import vitest from '@vitest/eslint-plugin'
 import nodePlugin from 'eslint-plugin-n'
 import neostandard from 'neostandard'
 
@@ -23,6 +24,16 @@ export default [
     files: ['.vite/**/*.js', '**/*.contract.js', 'benchmarks/**/*.js'],
     rules: {
       'n/no-unpublished-import': 'off'
+    }
+  },
+  {
+    files: ['**/*.test.js', '**/*.contract.js'],
+    plugins: { vitest },
+    rules: vitest.configs.recommended.rules,
+    settings: {
+      vitest: {
+        vitestImports: [/#vite\/fixtures\//]
+      }
     }
   },
   {
