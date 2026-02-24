@@ -1,6 +1,9 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { failAction } from './fail-action.js'
+import { failAction as _failAction } from './fail-action.js'
+
+/** @type {any} */
+const failAction = _failAction
 
 vi.mock('#root/config.js', () => ({
   getConfig: vi.fn(() => ({
@@ -19,6 +22,7 @@ describe('#fail-action', () => {
   })
 
   const createJoiValidationError = () => {
+    /** @type {any} */
     const error = new Error('"redirectUrl" is required')
     error.isJoi = true
     error.details = [
@@ -41,7 +45,7 @@ describe('#fail-action', () => {
 
       try {
         failAction(mockRequest, {}, joiError)
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         expect(error.isBoom).toBe(true)
         expect(error.output.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         expect(error.message).toBe('"redirectUrl" is required')
@@ -55,7 +59,7 @@ describe('#fail-action', () => {
 
       try {
         failAction(mockRequest, {}, joiError)
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         expect(error.output.payload.validationErrors).toEqual([
           {
             path: 'redirectUrl',
@@ -125,7 +129,7 @@ describe('#fail-action', () => {
 
       try {
         failAction(mockRequest, {}, boomError)
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         expect(error.isBoom).toBe(true)
         expect(error.output.statusCode).toBe(StatusCodes.BAD_REQUEST)
         expect(error.message).toBe('Invalid payload')
@@ -205,11 +209,14 @@ describe('#fail-action (production)', () => {
   })
 
   test('does NOT include Joi details in message in production', async () => {
-    const { failAction: prodFailAction } = await import('./fail-action.js')
+    const { failAction: _prodFailAction } = await import('./fail-action.js')
+    /** @type {any} */
+    const prodFailAction = _prodFailAction
 
     const mockRequest = {
       logger: { warn: vi.fn() }
     }
+    /** @type {any} */
     const joiError = new Error('"redirectUrl" is required')
     joiError.isJoi = true
     joiError.details = [
