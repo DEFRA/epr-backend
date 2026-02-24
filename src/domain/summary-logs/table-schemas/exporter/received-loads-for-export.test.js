@@ -61,6 +61,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         schema.unfilledValues.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
       ).toContain('Choose option')
       expect(schema.unfilledValues.EXPORT_CONTROLS).toContain('Choose option')
+      expect(schema.unfilledValues.BASEL_EXPORT_CODE).toContain('Choose option')
     })
 
     it('has fatalFields array with waste balance fields (not supplementary)', () => {

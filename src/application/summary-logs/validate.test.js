@@ -260,6 +260,36 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
+  it('should throw PermanentError when summary log is already validated (SQS retry after success)', async () => {
+    // Simulate an SQS retry: the first validation attempt succeeded
+    // (VALIDATING → VALIDATED) but the process died before acknowledging
+    // the SQS message. On retry, the summary log is now VALIDATED.
+    summaryLog.status = SUMMARY_LOG_STATUS.VALIDATED
+    summaryLogsRepository.findById.mockResolvedValue({
+      version: 2,
+      summaryLog
+    })
+
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
+
+    expect(result).toBeInstanceOf(PermanentError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+  })
+
+  it('should throw PermanentError when summary log is already invalid (SQS retry after success)', async () => {
+    // Same scenario but the first attempt determined the log was invalid.
+    summaryLog.status = SUMMARY_LOG_STATUS.INVALID
+    summaryLogsRepository.findById.mockResolvedValue({
+      version: 2,
+      summaryLog
+    })
+
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
+
+    expect(result).toBeInstanceOf(PermanentError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+  })
+
   it('should log as expected when validation starts', async () => {
     await validateSummaryLog(summaryLogId)
 
