@@ -148,7 +148,7 @@ describe('linkItemsToOrganisations', () => {
     expect(logCall).toBeDefined()
     const [{ message }] = logCall
     expect(message).toMatch(/^12 organisations without registrations:/)
-    expect(message).toContain('(2 more not shown)')
+    expect(message).toContain('...and 2 more')
   })
 
   it('logs error when registrations cannot be linked to organisations', () => {
@@ -209,7 +209,7 @@ describe('linkItemsToOrganisations', () => {
     expect(logCall).toBeDefined()
     const [{ message }] = logCall
     expect(message).toMatch(/^11 registrations not linked to an organisation:/)
-    expect(message).toContain('(1 more not shown)')
+    expect(message).toContain('...and 1 more')
   })
 
   it('handles multiple registrations for the same organisation', () => {
@@ -488,7 +488,7 @@ describe('linkRegistrationToAccreditations', () => {
     expect(logCall).toBeDefined()
     const [{ message }] = logCall
     expect(message).toContain('unlinked accreditations count=12')
-    expect(message).toContain(';...(2 more)')
+    expect(message).toContain('; ...and 2 more')
   })
 
   it('link registrations from multiple org to accreditations', () => {

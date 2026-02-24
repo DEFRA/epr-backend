@@ -26,11 +26,6 @@ function isJoiValidationError(error) {
   )
 }
 
-/**
- * Checks if an error is a Boom error.
- * @param {unknown} error
- * @returns {error is import('@hapi/boom').Boom}
- */
 function formatValidationMessage(error) {
   const shown = error.details.slice(0, MAX_LOGGED_VALIDATION_ERRORS)
   const messages = shown.map((d) => d.message).join('; ')
@@ -39,6 +34,11 @@ function formatValidationMessage(error) {
   return `${error.message} | ${error.details.length} validation error(s): ${messages}${suffix}`
 }
 
+/**
+ * Checks if an error is a Boom error.
+ * @param {unknown} error
+ * @returns {error is import('@hapi/boom').Boom}
+ */
 function isBoomError(error) {
   return (
     error !== null &&

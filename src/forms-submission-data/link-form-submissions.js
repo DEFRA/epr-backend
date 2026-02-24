@@ -36,7 +36,7 @@ function logOrganisationsWithoutItems(organisations, propertyName) {
     const shown = orgsWithoutItems.slice(0, MAX_LOGGED_ITEMS)
     const ids = shown.map((org) => org.id).join(', ')
     const remaining = orgsWithoutItems.length - shown.length
-    const suffix = remaining > 0 ? ` (${remaining} more not shown)` : ''
+    const suffix = remaining > 0 ? ` ...and ${remaining} more` : ''
     logger.info({
       message: `${orgsWithoutItems.length} organisations without ${propertyName}: ${ids}${suffix}`
     })
@@ -94,7 +94,7 @@ function logUnlinkedItems(unlinkedItems, propertyName) {
     )
     .join('; ')
   const remaining = unlinkedItems.length - shown.length
-  const suffix = remaining > 0 ? ` (${remaining} more not shown)` : ''
+  const suffix = remaining > 0 ? ` ...and ${remaining} more` : ''
   logger.warn({
     message: `${unlinkedItems.length} ${propertyName} not linked to an organisation: ${details}${suffix}`
   })
@@ -259,13 +259,13 @@ function logUnlinkedAccreditations(organisation) {
   const remainingAcc = unlinkedAccreditations.length - shownAcc.length
   const unlinkedAccDetails =
     shownAcc.map((item) => formatAccreditationDetails(item)).join(';') +
-    (remainingAcc > 0 ? `;...(${remainingAcc} more)` : '')
+    (remainingAcc > 0 ? `; ...and ${remainingAcc} more` : '')
 
   const shownReg = unlinkedRegistrations.slice(0, MAX_LOGGED_ITEMS)
   const remainingReg = unlinkedRegistrations.length - shownReg.length
   const unlinkedRegDetails =
     shownReg.map((item) => formatRegistrationDetails(item)).join(';') +
-    (remainingReg > 0 ? `;...(${remainingReg} more)` : '')
+    (remainingReg > 0 ? `; ...and ${remainingReg} more` : '')
 
   const message =
     `Organisation has accreditations that cant be linked to registrations: ` +
