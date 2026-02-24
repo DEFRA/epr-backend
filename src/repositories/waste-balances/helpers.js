@@ -21,11 +21,7 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
-import {
-  add,
-  subtract,
-  toNumber
-} from '#domain/decimal-utils.js'
+import { add, subtract, toNumber } from '#domain/decimal-utils.js'
 
 const getTableName = (recordType, processingType) => {
   if (processingType === PROCESSING_TYPES.EXPORTER) {
