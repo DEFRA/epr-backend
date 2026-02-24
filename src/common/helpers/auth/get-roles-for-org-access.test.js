@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { userPresentInOrg1DefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
+import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
 describe('#getRolesForOrganisationAccess', () => {
   const mockOrganisationId = new ObjectId().toString()
@@ -403,10 +403,9 @@ describe('#getRolesForOrganisationAccess', () => {
         userPresentInOrg1DefraIdTokenPayload
       )
 
-      expect(mockOrganisationsRepository.findById).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
-        mockOrganisationId
-      )
+      expect(
+        mockOrganisationsRepository.findById
+      ).toHaveBeenCalledExactlyOnceWith(mockOrganisationId)
     })
 
     test('executes all checks in correct order for valid request', async () => {
