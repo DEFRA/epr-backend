@@ -62,7 +62,9 @@ export const testAppendVersionsBehaviour = (it) => {
       expect(result[0].data.GROSS_WEIGHT).toBe(sourcePrecisionWeight)
       expect(result[0].data.NOTE).toBe('unchanged')
       expect(result[0].versions).toHaveLength(1)
-      expect(result[0].versions[0].data.GROSS_WEIGHT).toBe(sourcePrecisionWeight)
+      expect(result[0].versions[0].data.GROSS_WEIGHT).toBe(
+        sourcePrecisionWeight
+      )
       expect(result[0].versions[0].data.NOTE).toBe('unchanged')
     })
 
@@ -154,9 +156,9 @@ export const testAppendVersionsBehaviour = (it) => {
       )
       expect(result[0].data.NOTE).toBe('updated')
       expect(result[0].versions).toHaveLength(2)
-      expect(result[0].versions[1].data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON).toBe(
-        sourcePrecisionTonnage
-      )
+      expect(
+        result[0].versions[1].data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+      ).toBe(sourcePrecisionTonnage)
       expect(result[0].versions[1].data.NOTE).toBe('updated')
     })
 
