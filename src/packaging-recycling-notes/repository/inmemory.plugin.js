@@ -93,7 +93,7 @@ const matchesFindByStatusCriteria = (prn, params) => {
   if (!statuses.includes(prn.status.currentStatus)) {
     return false
   }
-  if (cursor && prn.id <= cursor) {
+  if (cursor && prn.id.localeCompare(cursor) <= 0) {
     return false
   }
   if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
