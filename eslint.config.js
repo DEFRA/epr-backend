@@ -37,6 +37,15 @@ export default [
     }
   },
   {
+    files: ['**/*.contract.js'],
+    rules: {
+      'vitest/no-standalone-expect': [
+        'error',
+        { additionalTestBlockFunctions: ['it', 'test', 'it.for'] }
+      ]
+    }
+  },
+  {
     rules: {
       'no-unused-vars': [
         'error',
