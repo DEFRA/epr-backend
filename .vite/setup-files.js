@@ -15,6 +15,8 @@ process.env.ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL =
   'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration'
 process.env.DEFRA_ID_OIDC_WELL_KNOWN_URL =
   'https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0/.well-known/openid-configuration'
+process.env.PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL =
+  'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_test/.well-known/jwks.json'
 
 // Roles
 process.env.SERVICE_MAINTAINER_EMAILS = '["me@example.com", "you@example.com"]'

@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import {
+  DROPDOWN_PLACEHOLDER,
   createRowIdSchema,
   createDateFieldSchema,
   createWeightFieldSchema,
@@ -35,7 +36,9 @@ export const REPROCESSED_LOADS = {
   /**
    * Per-field values that indicate "unfilled"
    */
-  unfilledValues: {},
+  unfilledValues: {
+    [FIELDS.ADD_PRODUCT_WEIGHT]: DROPDOWN_PLACEHOLDER
+  },
 
   /**
    * Fields that produce FATAL errors when validation fails

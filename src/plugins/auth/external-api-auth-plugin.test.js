@@ -15,7 +15,7 @@ import { externalApiAuthPlugin } from './external-api-auth-plugin.js'
 const clientId = 'test-client-id'
 
 describe('external API auth plugin', () => {
-  setupAuthContext(true)
+  setupAuthContext()
 
   let server
 
