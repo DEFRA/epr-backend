@@ -35,6 +35,7 @@ import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runGlassMigration } from '#server/run-glass-migration.js'
+import { runWasteBalanceRoundingCorrection } from '#server/run-waste-balance-rounding-correction.js'
 
 function getServerConfig(config) {
   return {
@@ -195,6 +196,7 @@ async function createServer(options = {}) {
     logFilesUploadedFromForms(server, options)
     runFormsDataMigration(server)
     runGlassMigration(server)
+    runWasteBalanceRoundingCorrection(server)
   })
 
   return server

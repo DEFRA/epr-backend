@@ -1,6 +1,7 @@
 export const WASTE_BALANCE_TRANSACTION_TYPE = Object.freeze({
   CREDIT: 'credit',
-  DEBIT: 'debit'
+  DEBIT: 'debit',
+  ROUNDING_CORRECTION: 'rounding_correction'
 })
 
 /**
@@ -15,7 +16,8 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
   PRN_ISSUED: 'prn:issued',
   PRN_ACCEPTED: 'prn:accepted',
   PRN_CANCELLED: 'prn:cancelled',
-  PRN_CANCELLED_POST_ISSUE: 'prn:cancelled_post_issue'
+  PRN_CANCELLED_POST_ISSUE: 'prn:cancelled_post_issue',
+  ROUNDING_CORRECTION: 'rounding_correction'
 })
 
 /**

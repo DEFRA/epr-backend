@@ -24,7 +24,9 @@ import {
 import {
   add,
   subtract,
-  toNumber
+  toNumber,
+  toDecimal,
+  abs
 } from '#domain/waste-balances/decimal-utils.js'
 
 const getTableName = (recordType, processingType) => {
@@ -590,6 +592,97 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     prnId,
     tonnage,
     userId,
+    currentBalance: wasteBalance
+  })
+
+  const updatedBalance = {
+    ...wasteBalance,
+    amount: transaction.closingAmount,
+    availableAmount: transaction.closingAvailableAmount,
+    transactions: [...(wasteBalance.transactions || []), transaction],
+    version: (wasteBalance.version || 0) + 1
+  }
+
+  await saveBalance(updatedBalance, [transaction])
+}
+
+/**
+ * Build a rounding correction transaction that adjusts both amount and availableAmount
+ * by a small signed delta (positive = credit-like adjustment, negative = debit-like).
+ * The transaction type is always ROUNDING_CORRECTION regardless of the sign of the delta.
+ *
+ * @param {Object} params
+ * @param {number} params.amountDelta - Signed adjustment to apply to amount
+ * @param {number} params.availableAmountDelta - Signed adjustment to apply to availableAmount
+ * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
+ * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ */
+export const buildRoundingCorrectionTransaction = ({
+  amountDelta,
+  availableAmountDelta,
+  currentBalance
+}) => ({
+  id: randomUUID(),
+  type: WASTE_BALANCE_TRANSACTION_TYPE.ROUNDING_CORRECTION,
+  createdAt: new Date().toISOString(),
+  createdBy: undefined,
+  amount: toNumber(abs(toDecimal(amountDelta))),
+  openingAmount: currentBalance.amount,
+  closingAmount: toNumber(add(currentBalance.amount, amountDelta)),
+  openingAvailableAmount: currentBalance.availableAmount,
+  closingAvailableAmount: toNumber(
+    add(currentBalance.availableAmount, availableAmountDelta)
+  ),
+  entities: [
+    {
+      id: 'rounding_correction',
+      currentVersionId: 'rounding_correction',
+      previousVersionIds: [],
+      type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.ROUNDING_CORRECTION
+    }
+  ]
+})
+
+/**
+ * Apply a rounding correction to a waste balance, bringing its amount and
+ * availableAmount exactly in line with the supplied corrected values.
+ *
+ * @param {Object} params
+ * @param {import('./port.js').RoundingCorrectionParams} params.correctionParams
+ * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ */
+export const performApplyRoundingCorrectionToWasteBalance = async ({
+  correctionParams,
+  findBalance,
+  saveBalance
+}) => {
+  const { accreditationId, correctedAmount, correctedAvailableAmount } =
+    correctionParams
+  const validatedAccreditationId = validateAccreditationId(accreditationId)
+
+  const wasteBalance = await findBalance(validatedAccreditationId)
+
+  if (!wasteBalance) {
+    return
+  }
+
+  const amountDelta = toNumber(subtract(correctedAmount, wasteBalance.amount))
+  const availableAmountDelta = toNumber(
+    subtract(correctedAvailableAmount, wasteBalance.availableAmount)
+  )
+
+  // Nothing to do if both deltas are zero (no rounding error present)
+  if (
+    toDecimal(amountDelta).isZero() &&
+    toDecimal(availableAmountDelta).isZero()
+  ) {
+    return
+  }
+
+  const transaction = buildRoundingCorrectionTransaction({
+    amountDelta,
+    availableAmountDelta,
     currentBalance: wasteBalance
   })
 

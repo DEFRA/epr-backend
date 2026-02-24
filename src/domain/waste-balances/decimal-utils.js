@@ -1,4 +1,7 @@
-import Decimal from 'decimal.js'
+import DecimalBase from 'decimal.js'
+
+/** @type {any} */
+const Decimal = DecimalBase
 
 /**
  * Configure Decimal.js for financial calculations
@@ -31,14 +34,14 @@ export function toDecimal(value) {
  * Convert a Decimal instance back to a JavaScript number.
  * Used when saving values to the database.
  *
- * @param {Decimal|number|string|null|undefined} value - Value to convert
+ * @param {any} value - Value to convert
  * @returns {number} JavaScript number
  */
 export function toNumber(value) {
   if (value === null || value === undefined) {
     return 0
   }
-  if (value instanceof Decimal) {
+  if (value instanceof /** @type {any} */ (DecimalBase)) {
     return value.toNumber()
   }
   return Number(value)
@@ -118,4 +121,18 @@ export function greaterThan(a, b) {
  */
 export function isZero(value) {
   return toDecimal(value).isZero()
+}
+
+/**
+ * Round a value to 2 decimal places using ROUND_HALF_UP.
+ * Used to detect and correct IEEE 754 floating-point drift in waste balance
+ * totals – the data layer guarantees all inputs are at most 2 dp, so any value
+ * with more significant decimal places is the result of accumulated rounding
+ * errors and should be snapped back to 2 dp.
+ *
+ * @param {number|string|Decimal} value - Value to round
+ * @returns {number} Value rounded to 2 decimal places
+ */
+export function roundTo2dp(value) {
+  return toNumber(toDecimal(value).toDecimalPlaces(2))
 }
