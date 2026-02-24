@@ -49,6 +49,22 @@ describe('#fail-action', () => {
       }
     })
 
+    test('includes validationErrors array in payload', () => {
+      const mockRequest = createMockRequest()
+      const joiError = createJoiValidationError()
+
+      try {
+        failAction(mockRequest, {}, joiError)
+      } catch (error) {
+        expect(error.output.payload.validationErrors).toEqual([
+          {
+            path: 'redirectUrl',
+            message: '"redirectUrl" is required'
+          }
+        ])
+      }
+    })
+
     test('logs at warn level', () => {
       const mockRequest = createMockRequest()
       const joiError = createJoiValidationError()
@@ -196,7 +212,9 @@ describe('#fail-action (production)', () => {
     }
     const joiError = new Error('"redirectUrl" is required')
     joiError.isJoi = true
-    joiError.details = [{ message: '"redirectUrl" is required' }]
+    joiError.details = [
+      { message: '"redirectUrl" is required', path: ['redirectUrl'] }
+    ]
 
     expect(() => prodFailAction(mockRequest, {}, joiError)).toThrow()
 
