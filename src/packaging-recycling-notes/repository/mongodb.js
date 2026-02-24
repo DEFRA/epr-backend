@@ -110,7 +110,7 @@ async function ensureCollection(db) {
  * @param {string} id
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
  */
-const findById = async (db, id) => {
+const performFindById = async (db, id) => {
   const doc = await db
     .collection(COLLECTION_NAME)
     .findOne({ _id: ObjectId.createFromHexString(id) })
@@ -127,7 +127,7 @@ const findById = async (db, id) => {
  * @param {string} prnNumber
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
  */
-const findByPrnNumber = async (db, prnNumber) => {
+const performFindByPrnNumber = async (db, prnNumber) => {
   const doc = await db.collection(COLLECTION_NAME).findOne({ prnNumber })
 
   if (!doc) {
@@ -146,7 +146,7 @@ const findByPrnNumber = async (db, prnNumber) => {
  * @param {CreatePrnInput} prn
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
-const create = async (db, prn) => {
+const performCreate = async (db, prn) => {
   const validated = validatePrnInsert(prn)
   const result = await db.collection(COLLECTION_NAME).insertOne(validated)
 
@@ -161,7 +161,7 @@ const create = async (db, prn) => {
  * @param {string} accreditationId
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>}
  */
-const findByAccreditation = async (db, accreditationId) => {
+const performFindByAccreditation = async (db, accreditationId) => {
   const docs = await db
     .collection(COLLECTION_NAME)
     .find({
@@ -219,7 +219,7 @@ function buildFindByStatusFilter({
  * @param {import('./port.js').FindByStatusParams} params
  * @returns {Promise<import('./port.js').PaginatedResult>}
  */
-const findByStatus = async (db, params) => {
+const performFindByStatus = async (db, params) => {
   const filter = buildFindByStatusFilter(params)
 
   const docs = await db
@@ -250,7 +250,7 @@ const findByStatus = async (db, params) => {
  * @param {import('./port.js').UpdateStatusParams} params
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
  */
-const updateStatus = async (
+const performUpdateStatus = async (
   db,
   { id, status, updatedBy, updatedAt, prnNumber, operation }
 ) => {
@@ -308,12 +308,12 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
   await ensureCollection(db)
 
   return () => ({
-    create: (prn) => create(db, prn),
+    create: (prn) => performCreate(db, prn),
     findByAccreditation: (accreditationId) =>
-      findByAccreditation(db, accreditationId),
-    findById: (id) => findById(db, id),
-    findByPrnNumber: (prnNumber) => findByPrnNumber(db, prnNumber),
-    findByStatus: (params) => findByStatus(db, params),
-    updateStatus: (params) => updateStatus(db, params)
+      performFindByAccreditation(db, accreditationId),
+    findById: (id) => performFindById(db, id),
+    findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
+    findByStatus: (params) => performFindByStatus(db, params),
+    updateStatus: (params) => performUpdateStatus(db, params)
   })
 }
