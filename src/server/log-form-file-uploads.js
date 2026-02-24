@@ -11,6 +11,11 @@ const logFileDetails = async (server) => {
   logger.info({
     message: `Total files uploaded from registration and accreditation forms: ${uploadedFiles.length}`
   })
+  for (const file of uploadedFiles) {
+    logger.info({
+      message: `${file.formName},${file.id},${file.fileId},${file.orgId}`
+    })
+  }
 }
 
 export const logFilesUploadedFromForms = async (server, options = {}) => {

@@ -64,8 +64,12 @@ describe('logFilesUploadedFromForms', () => {
       message:
         'Total files uploaded from registration and accreditation forms: 2'
     })
-    // Only 2 log calls: feature flag status + total count (no per-file dumps)
-    expect(mockLoggerInfo).toHaveBeenCalledTimes(2)
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message: 'Form A,id-1,file-1,500000'
+    })
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message: 'Form B,id-2,file-2,500001'
+    })
   })
 
   it('should skip logging when feature flag is disabled', async () => {
