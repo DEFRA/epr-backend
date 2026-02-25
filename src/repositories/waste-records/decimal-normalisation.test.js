@@ -3,9 +3,9 @@ import { Decimal128 } from 'mongodb'
 import {
   mapMongoDocumentToDomain,
   mapVersionDataForMongoPersistence
-} from './tonnage-normalisation.js'
+} from './decimal-normalisation.js'
 
-describe('tonnage-normalisation', () => {
+describe('decimal-normalisation', () => {
   describe('mapVersionDataForMongoPersistence', () => {
     it('returns input when versionData is undefined', () => {
       expect(mapVersionDataForMongoPersistence(undefined)).toBeUndefined()

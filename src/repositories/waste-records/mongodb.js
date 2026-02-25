@@ -2,7 +2,7 @@ import { validateOrganisationId, validateRegistrationId } from './validation.js'
 import {
   mapMongoDocumentToDomain,
   mapVersionDataForMongoPersistence
-} from './tonnage-normalisation.js'
+} from './decimal-normalisation.js'
 
 const COLLECTION_NAME = 'waste-records'
 const SCHEMA_VERSION = 1
