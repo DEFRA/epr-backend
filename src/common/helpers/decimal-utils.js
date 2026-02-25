@@ -64,6 +64,16 @@ export function toDecimalString(value) {
 }
 
 /**
+ * Round a value to two decimal places using half-up rounding.
+ *
+ * @param {DecimalValue|null|undefined} value - Value to round
+ * @returns {number} JavaScript number rounded to 2 decimal places
+ */
+export function roundToTwoDecimalPlaces(value) {
+  return toDecimal(value).toDecimalPlaces(2).toNumber()
+}
+
+/**
  * Add two values using exact decimal arithmetic.
  *
  * @param {DecimalValue} a - First value

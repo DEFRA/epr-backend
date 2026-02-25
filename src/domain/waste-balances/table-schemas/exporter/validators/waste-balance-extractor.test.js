@@ -83,6 +83,31 @@ describe('extractWasteBalanceFields', () => {
     expect(result.transactionAmount).toBe(0)
   })
 
+  it('should round transactionAmount to two decimal places', () => {
+    const data = {
+      ...validData,
+      [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: 100.125
+    }
+    const record = { ...baseRecord, type: WASTE_RECORD_TYPE.RECEIVED, data }
+    const result = extractWasteBalanceFields(record)
+
+    expect(result.transactionAmount).toBe(100.13)
+  })
+
+  it('should round interim site tonnage to two decimal places', () => {
+    const data = {
+      ...validData,
+      [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]:
+        YES_NO_VALUES.YES,
+      [RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]: 150.105,
+      [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: null
+    }
+    const record = { ...baseRecord, type: WASTE_RECORD_TYPE.RECEIVED, data }
+    const result = extractWasteBalanceFields(record)
+
+    expect(result.transactionAmount).toBe(150.11)
+  })
+
   it('should handle prnIssued correctly', () => {
     const data = {
       ...validData,
