@@ -4,7 +4,10 @@ import {
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
-import { isEprMarker } from '#domain/summary-logs/markers.js'
+import {
+  isEprMarker,
+  SKIP_HEADER_ROW_TEXT
+} from '#domain/summary-logs/markers.js'
 import {
   classifyRow,
   ROW_OUTCOME
@@ -106,7 +109,11 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [MESSAGES.MUST_BE_AT_MOST_100_CHARS]:
     VALIDATION_CODE.MUST_BE_AT_MOST_100_CHARS,
   [MESSAGES.MUST_BE_YES_OR_NO]: VALIDATION_CODE.MUST_BE_YES_OR_NO,
-  [MESSAGES.MUST_BE_ALPHANUMERIC]: VALIDATION_CODE.MUST_BE_ALPHANUMERIC,
+  // Maps to the legacy MUST_BE_ALPHANUMERIC code for now (for backwards
+  // compatibility), as the frontend also needs updating to support correct
+  // mapping of this new code...
+  [MESSAGES.MUST_CONTAIN_ONLY_PERMITTED_CHARACTERS]:
+    VALIDATION_CODE.MUST_BE_ALPHANUMERIC,
   [MESSAGES.MUST_BE_3_DIGIT_NUMBER]: VALIDATION_CODE.MUST_BE_3_DIGIT_NUMBER,
   [MESSAGES.MUST_BE_VALID_EWC_CODE]: VALIDATION_CODE.MUST_BE_VALID_EWC_CODE,
   [MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD]:
@@ -308,6 +315,34 @@ const recordIssues = (rowIssues, issues) => {
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with outcome and issues attached
  */
+/**
+ * Checks whether a row should be filtered out before validation.
+ *
+ * Rows are filtered when the row ID field contains template artefacts
+ * rather than real data: user-facing header description rows or
+ * pre-populated empty template rows.
+ *
+ * @param {Record<string, *>} rowObject - Row data keyed by header name
+ * @param {string} rowIdField - Name of the row ID field
+ * @returns {boolean} True if the row should be excluded from validation
+ */
+const isTemplateRow = (rowObject, rowIdField) => {
+  const rowIdValue = rowObject[rowIdField]
+
+  if (
+    typeof rowIdValue === 'string' &&
+    rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
+  ) {
+    return true
+  }
+
+  if (rowIdValue === null || rowIdValue === undefined) {
+    return true
+  }
+
+  return false
+}
+
 const validateRows = ({
   tableName,
   headerToIndexMap,
@@ -318,10 +353,14 @@ const validateRows = ({
 }) => {
   const fatalFields = domainSchema.fatalFields || []
 
-  return rows.map(({ rowNumber, values }) => {
+  return rows.flatMap(({ rowNumber, values }) => {
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
       rowObject[headerName] = values[colIndex]
+    }
+
+    if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
+      return []
     }
 
     const classification = classifyRow(rowObject, domainSchema)
@@ -341,12 +380,14 @@ const validateRows = ({
 
     recordIssues(rowIssues, issues)
 
-    return {
-      data: rowObject,
-      rowId: String(rowObject[domainSchema.rowIdField]),
-      outcome: classification.outcome,
-      issues: rowIssues
-    }
+    return [
+      {
+        data: rowObject,
+        rowId: String(rowObject[domainSchema.rowIdField]),
+        outcome: classification.outcome,
+        issues: rowIssues
+      }
+    ]
   })
 }
 

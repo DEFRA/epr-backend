@@ -970,6 +970,79 @@ describe('createDataSyntaxValidator', () => {
     })
   })
 
+  describe('domain-layer row filtering', () => {
+    it('filters out rows where rowIdField starts with header description text', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 'Row ID', TEXT_FIELD: 'Date received', NUMBER_FIELD: 42 },
+          { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 }
+        ]
+      })
+
+      const rows = result.validatedData.data.TEST_TABLE.rows
+      expect(rows).toHaveLength(1)
+      expect(rows[0].rowId).toBe('1000')
+      expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('filters out rows where rowIdField starts with header text including description', () => {
+      const result = validate({
+        TEST_TABLE: [
+          {
+            ROW_ID: 'Row ID\n(Automatically generated)',
+            TEXT_FIELD: 'Date',
+            NUMBER_FIELD: 42
+          },
+          { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 }
+        ]
+      })
+
+      const rows = result.validatedData.data.TEST_TABLE.rows
+      expect(rows).toHaveLength(1)
+      expect(rows[0].rowId).toBe('1000')
+    })
+
+    it('filters out rows where rowIdField is null', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 },
+          { ROW_ID: null, TEXT_FIELD: 'placeholder', NUMBER_FIELD: 99 }
+        ]
+      })
+
+      const rows = result.validatedData.data.TEST_TABLE.rows
+      expect(rows).toHaveLength(1)
+      expect(rows[0].rowId).toBe('1000')
+      expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('filters out rows where rowIdField is undefined', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 },
+          { ROW_ID: undefined, TEXT_FIELD: 'placeholder', NUMBER_FIELD: 99 }
+        ]
+      })
+
+      const rows = result.validatedData.data.TEST_TABLE.rows
+      expect(rows).toHaveLength(1)
+      expect(rows[0].rowId).toBe('1000')
+    })
+
+    it('does not produce validation errors for filtered rows', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 'Row ID', TEXT_FIELD: 'not valid', NUMBER_FIELD: 42 },
+          { ROW_ID: null, TEXT_FIELD: 'also not valid', NUMBER_FIELD: 42 },
+          { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 }
+        ]
+      })
+
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.hasIssues()).toBe(false)
+    })
+  })
+
   describe('errorCode (specific validation codes)', () => {
     it('sets errorCode for string.base errors', () => {
       const result = validate({

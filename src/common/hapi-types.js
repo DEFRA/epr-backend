@@ -8,9 +8,34 @@
  */
 
 /**
+ * @typedef {{ id: string, isMachine: true, name: string }} MachineCredentials
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   email: string,
+ *   scope: string[],
+ *   issuer: string,
+ *   name?: string,
+ *   currentRelationshipId?: string,
+ *   linkedOrgId?: string
+ * }} HumanCredentials
+ */
+
+/**
+ * @typedef {{
+ *   isAuthenticated: boolean,
+ *   credentials: MachineCredentials | HumanCredentials,
+ *   strategy: string,
+ *   artifacts?: unknown
+ * }} RequestAuth
+ */
+
+/**
  * @template [T=unknown]
  * @typedef {import('@hapi/hapi').Request & {
- *  auth: *
+ *  auth: RequestAuth,
  *  db: Db,
  *  locker: LockManager,
  *  logger: TypedLogger,
@@ -52,14 +77,14 @@
  * @typedef {{
  *   abandon: symbol,
  *   close: symbol,
- *   context: *,
+ *   context: unknown,
  *   continue: symbol,
  *   realm: Object,
  *   request: Object,
  *   authenticated: (data: {credentials: Object, artifacts?: Object}) => Object,
  *   entity: (options?: {etag?: string, modified?: string, vary?: boolean}) => HapiResponseObject | undefined,
  *   redirect: (uri?: string) => HapiResponseObject,
- *   response: (value?: *) => HapiResponseObject,
+ *   response: (value?: unknown) => HapiResponseObject,
  *   state: (name: string, value: string | Object, options?: Object) => void,
  *   unauthenticated: (error: Error, data?: {credentials: Object, artifacts?: Object}) => Object,
  *   unstate: (name: string, options?: Object) => void
@@ -67,14 +92,18 @@
  */
 
 /**
+ * @typedef {{ [key: string]: unknown }} ServerApp
+ */
+
+/**
  * @typedef {Object} HapiServer
  * @property {TypedLogger} logger - CDP-compliant typed logger
  * @property {import('mongodb').Db} [db] - MongoDB database (added by mongoDb plugin)
  * @property {FeatureFlags} featureFlags - Feature flags from env vars
- * @property {*} [mongoClient] - MongoDB client (added by mongoDb plugin)
- * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
- * @property {*} events - Server events emitter
- * @property {Record<string, *>} app - Server application state
+ * @property {import('mongodb').MongoClient} [mongoClient] - MongoDB client (added by mongoDb plugin)
+ * @property {LockManager} [locker] - Mongo lock manager (added by mongoDb plugin)
+ * @property {{ on: (criteria: string, listener: Function) => void }} events - Server events emitter
+ * @property {ServerApp} app - Server application state
  * @property {Function} decorate - Decorate server/request with additional properties
  * @property {Function} dependency - Declare plugin dependencies
  * @property {Function} start - Start the server

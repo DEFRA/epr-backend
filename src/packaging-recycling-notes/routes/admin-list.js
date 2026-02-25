@@ -15,6 +15,7 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  */
 
 const DEFAULT_LIMIT = 500
@@ -61,7 +62,16 @@ export const adminPackagingRecyclingNotesList = {
       })
     }
   },
-  /** @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request */
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   query: {
+   *     statuses: PrnStatus[],
+   *     limit?: number,
+   *     cursor?: string
+   *   }
+   * }} request
+   */
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, limit, cursor } = request.query
@@ -70,9 +80,9 @@ export const adminPackagingRecyclingNotesList = {
       const effectiveLimit = limit ?? DEFAULT_LIMIT
 
       const result = await packagingRecyclingNotesRepository.findByStatus({
-        statuses,
+        cursor,
         limit: effectiveLimit,
-        cursor
+        statuses
       })
 
       const response = {

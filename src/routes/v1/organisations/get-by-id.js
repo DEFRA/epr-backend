@@ -16,7 +16,10 @@ export const organisationsGetById = {
     tags: ['api', 'admin']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   organisationsRepository: OrganisationsRepository,
+   *   params: { organisationId: string }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

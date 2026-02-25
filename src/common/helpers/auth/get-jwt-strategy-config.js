@@ -46,7 +46,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
-        const email = tokenPayload.email || tokenPayload.preferred_username
+        const email = tokenPayload.preferred_username
 
         const scope = await getEntraUserRoles(email)
 

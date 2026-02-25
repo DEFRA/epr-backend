@@ -1,6 +1,6 @@
+import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import {
   createInitialStatusHistory,
   getCurrentStatus,

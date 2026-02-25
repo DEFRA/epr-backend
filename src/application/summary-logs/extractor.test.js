@@ -82,7 +82,17 @@ describe('SummaryLogExtractor', () => {
       requiredWorksheet: 'Cover',
       maxWorksheets: 20,
       maxRowsPerSheet: 55_000,
-      maxColumnsPerSheet: 1_000
+      maxColumnsPerSheet: 1_000,
+      unfilledValues: expect.objectContaining({
+        EWC_CODE: ['Choose option'],
+        DESCRIPTION_WASTE: ['Choose option'],
+        WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: ['Choose option'],
+        BAILING_WIRE_PROTOCOL: ['Choose option'],
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: ['Choose option']
+      }),
+      metaPlaceholders: {
+        MATERIAL: 'Choose material'
+      }
     })
   })
 

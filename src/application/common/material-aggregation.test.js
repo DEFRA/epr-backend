@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { Decimal128 } from 'mongodb'
 import {
   buildEffectiveMaterialStages,
   formatMaterialResults
@@ -100,6 +101,25 @@ describe('material-aggregation', () => {
       const { total } = formatMaterialResults(results, 'totalTonnage')
 
       expect(total).toBe(40)
+    })
+
+    it('should convert Decimal128 values to numbers', () => {
+      const results = [
+        { _id: 'aluminium', totalTonnage: Decimal128.fromString('1.25') },
+        { _id: 'plastic', totalTonnage: Decimal128.fromString('2.75') }
+      ]
+
+      const { materials, total } = formatMaterialResults(
+        results,
+        'totalTonnage'
+      )
+
+      const aluminium = materials.find((m) => m.material === 'aluminium')
+      const plastic = materials.find((m) => m.material === 'plastic')
+
+      expect(aluminium.totalTonnage).toBe(1.25)
+      expect(plastic.totalTonnage).toBe(2.75)
+      expect(total).toBe(4)
     })
 
     it('should return zero total when no results', () => {

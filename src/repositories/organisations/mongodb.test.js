@@ -1,18 +1,18 @@
-import { beforeEach, describe, expect } from 'vitest'
+import {
+  ORGANISATION_STATUS,
+  REG_ACC_STATUS
+} from '#domain/organisations/model.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
-import { createOrganisationsRepository } from './mongodb.js'
-import { testOrganisationsRepositoryContract } from './port.contract.js'
 import crypto from 'node:crypto'
+import { beforeEach, describe, expect } from 'vitest'
 import {
   buildLinkedDefraOrg,
   buildOrganisation,
   prepareOrgUpdate
 } from './contract/test-data.js'
-import {
-  ORGANISATION_STATUS,
-  REG_ACC_STATUS
-} from '#domain/organisations/model.js'
+import { createOrganisationsRepository } from './mongodb.js'
+import { testOrganisationsRepositoryContract } from './port.contract.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const DATABASE_NAME = 'epr-backend'
@@ -106,7 +106,7 @@ describe('MongoDB organisations repository', () => {
   })
 
   describe('status field storage', () => {
-    it('does not persist status field to database ', async ({
+    it('does not persist status field to database', async ({
       organisationsRepository,
       mongoClient
     }) => {
