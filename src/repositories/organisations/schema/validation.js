@@ -11,10 +11,9 @@ import {
 import { accreditationSchema } from './accreditation.js'
 
 const formatValidationErrorDetails = (error) => {
-  return error.details.map((d) => ({
-    path: d.path.join('.'),
-    message: d.message
-  }))
+  return error.details
+    .map((d) => `${d.path.join('.')}: ${d.message}`)
+    .join('; ')
 }
 
 const validateWithSchema = (schema, data, errorPrefix, options = {}) => {
@@ -26,10 +25,7 @@ const validateWithSchema = (schema, data, errorPrefix, options = {}) => {
 
   if (error) {
     const details = formatValidationErrorDetails(error)
-    const summary = details.map((d) => `${d.path}: ${d.message}`).join('; ')
-    const boomError = Boom.badData(`${errorPrefix}: ${summary}`)
-    boomError.output.payload.validationErrors = details
-    throw boomError
+    throw Boom.badData(`${errorPrefix}: ${details}`)
   }
 
   return value
@@ -68,9 +64,8 @@ export const validateStatusHistory = (statusHistory) => {
 
   if (error) {
     const details = formatValidationErrorDetails(error)
-    const summary = details.map((d) => `${d.path}: ${d.message}`).join('; ')
     throw Boom.badImplementation(
-      `Invalid statusHistory: ${summary}. This is a system error.`
+      `Invalid statusHistory: ${details}. This is a system error.`
     )
   }
 

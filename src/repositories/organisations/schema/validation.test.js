@@ -62,28 +62,6 @@ describe('validateRegistration', () => {
     )
   })
 
-  it('includes validationErrors array in boom payload', () => {
-    const invalidRegistration = {
-      id: 'invalid-id',
-      orgName: 'Test Org'
-    }
-
-    try {
-      validateRegistration(invalidRegistration)
-    } catch (error) {
-      expect(error.isBoom).toBe(true)
-      expect(error.output.payload.validationErrors).toBeDefined()
-      expect(Array.isArray(error.output.payload.validationErrors)).toBe(true)
-      expect(error.output.payload.validationErrors.length).toBeGreaterThan(0)
-
-      const firstError = error.output.payload.validationErrors[0]
-      expect(firstError).toHaveProperty('path')
-      expect(firstError).toHaveProperty('message')
-      expect(typeof firstError.path).toBe('string')
-      expect(typeof firstError.message).toBe('string')
-    }
-  })
-
   describe('cbduNumber validation by regulator', () => {
     it('EA: rejects cbduNumber not starting with CBDU', () => {
       const registration = buildRegistration({

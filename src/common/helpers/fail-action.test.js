@@ -53,22 +53,6 @@ describe('#fail-action', () => {
       }
     })
 
-    test('includes validationErrors array in payload', () => {
-      const mockRequest = createMockRequest()
-      const joiError = createJoiValidationError()
-
-      try {
-        failAction(mockRequest, {}, joiError)
-      } catch (/** @type {any} */ error) {
-        expect(error.output.payload.validationErrors).toEqual([
-          {
-            path: 'redirectUrl',
-            message: '"redirectUrl" is required'
-          }
-        ])
-      }
-    })
-
     test('logs at warn level', () => {
       const mockRequest = createMockRequest()
       const joiError = createJoiValidationError()

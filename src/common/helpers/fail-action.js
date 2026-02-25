@@ -55,10 +55,6 @@ export function failAction(request, _h, error) {
   // Joi validation errors → 422 Unprocessable Entity
   if (isJoiValidationError(error)) {
     const boomError = Boom.badData(error.message, error.details)
-    boomError.output.payload.validationErrors = error.details.map((d) => ({
-      path: d.path.join('.'),
-      message: d.message
-    }))
 
     const message = isProductionEnvironment
       ? error.message
