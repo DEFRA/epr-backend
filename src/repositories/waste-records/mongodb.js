@@ -1,4 +1,8 @@
 import { validateOrganisationId, validateRegistrationId } from './validation.js'
+import {
+  mapMongoDocumentToDomain,
+  mapVersionDataForMongoPersistence
+} from './decimal-normalisation.js'
 
 const COLLECTION_NAME = 'waste-records'
 const SCHEMA_VERSION = 1
@@ -29,7 +33,7 @@ async function ensureCollection(db) {
  */
 const mapDocumentToDomain = (doc) => {
   const { _id, schemaVersion: _s, ...domainFields } = doc
-  return structuredClone(domainFields)
+  return structuredClone(mapMongoDocumentToDomain(domainFields))
 }
 
 const performFindByRegistration =
@@ -91,7 +95,7 @@ const buildAppendVersionOperation = (key, versionData) => {
               $cond: {
                 if: versionExists,
                 then: '$data',
-                else: structuredClone(versionData.data)
+                else: versionData.data
               }
             },
             // Versions array - conditionally append if summaryLog.id doesn't exist
@@ -102,7 +106,7 @@ const buildAppendVersionOperation = (key, versionData) => {
                 else: {
                   $concatArrays: [
                     { $ifNull: ['$versions', []] },
-                    [structuredClone(versionData.version)]
+                    [versionData.version]
                   ]
                 }
               }
@@ -129,6 +133,8 @@ const performAppendVersions =
 
     for (const [type, versionsByRowId] of wasteRecordVersions) {
       for (const [rowId, versionData] of versionsByRowId) {
+        const normalisedVersionData =
+          mapVersionDataForMongoPersistence(versionData)
         const key = {
           organisationId: validatedOrgId,
           registrationId: validatedRegId,
@@ -136,7 +142,7 @@ const performAppendVersions =
           rowId
         }
 
-        bulkOps.push(buildAppendVersionOperation(key, versionData))
+        bulkOps.push(buildAppendVersionOperation(key, normalisedVersionData))
       }
     }
 
