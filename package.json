@@ -37,7 +37,7 @@
     "git:pre-commit-hook": "npm run format:check && npm run lint",
     "knip": "knip",
     "knip:fix": "knip --fix",
-    "postinstall": "npm run setup:husky",
+    "postinstall": "npm run setup:husky && npm run setup:gitleaks",
     "lint": "eslint --cache --cache-strategy content \"**/*.js\"",
     "lint:fix": "npm run lint -- --fix",
     "postversion": "git add package.json package-lock.json && git commit -m $npm_package_version",
@@ -47,6 +47,7 @@
     "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch ./src",
     "server:debug": "nodemon --inspect-brk=0.0.0.0 --ext js,json --legacy-watch ./src",
     "start": "NODE_ENV=production node --use-strict .",
+    "setup:gitleaks": "node scripts/install-gitleaks.mjs",
     "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
     "schema:generate": "node scripts/generate-json-schemas/index.js",
     "schema:sync-local": "npm run schema:generate && cp .schemas/organisation.update.json ../epr-re-ex-admin-frontend/src/server/common/schemas/organisation.json && npm run schema:compile --prefix ../epr-re-ex-admin-frontend"
