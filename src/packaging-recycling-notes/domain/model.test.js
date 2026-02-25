@@ -119,29 +119,19 @@ describe('validateTransition', () => {
   })
 
   it('includes status details in StatusConflictError', () => {
-    try {
-      validateTransition(
-        PRN_STATUS.ACCEPTED,
-        PRN_STATUS.DRAFT,
-        PRN_ACTOR.PRODUCER
-      )
-    } catch (error) {
-      expect(error.currentStatus).toBe(PRN_STATUS.ACCEPTED)
-      expect(error.newStatus).toBe(PRN_STATUS.DRAFT)
-    }
+    let thrownError
+    try { validateTransition(PRN_STATUS.ACCEPTED, PRN_STATUS.DRAFT, PRN_ACTOR.PRODUCER) } catch (e) { thrownError = e }
+
+    expect(thrownError?.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+    expect(thrownError?.newStatus).toBe(PRN_STATUS.DRAFT)
   })
 
   it('includes actor details in UnauthorisedTransitionError', () => {
-    try {
-      validateTransition(
-        PRN_STATUS.AWAITING_ACCEPTANCE,
-        PRN_STATUS.ACCEPTED,
-        PRN_ACTOR.SIGNATORY
-      )
-    } catch (error) {
-      expect(error.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-      expect(error.newStatus).toBe(PRN_STATUS.ACCEPTED)
-      expect(error.actor).toBe(PRN_ACTOR.SIGNATORY)
-    }
+    let thrownError
+    try { validateTransition(PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED, PRN_ACTOR.SIGNATORY) } catch (e) { thrownError = e }
+
+    expect(thrownError?.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(thrownError?.newStatus).toBe(PRN_STATUS.ACCEPTED)
+    expect(thrownError?.actor).toBe(PRN_ACTOR.SIGNATORY)
   })
 })

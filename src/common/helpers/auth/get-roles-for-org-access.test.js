@@ -137,18 +137,15 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error with exact message format', async () => {
       const differentOrgId = new ObjectId().toString()
 
-      try {
-        await getRolesForOrganisationAccess(
-          mockRequest,
-          differentOrgId,
-          userPresentInOrg1DefraIdTokenPayload
-        )
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.isBoom).toBe(true)
-        expect(error.output.statusCode).toBe(403)
-        expect(error.message).toBe('Access denied: organisation mismatch')
-      }
+      await expect(getRolesForOrganisationAccess(
+        mockRequest,
+        differentOrgId,
+        userPresentInOrg1DefraIdTokenPayload
+      )).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 403 },
+        message: 'Access denied: organisation mismatch'
+      })
     })
 
     test('validates organisation match before fetching from repository', async () => {
@@ -212,20 +209,15 @@ describe('#getRolesForOrganisationAccess', () => {
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
-      try {
-        await getRolesForOrganisationAccess(
-          mockRequest,
-          mockLinkedEprOrg,
-          userPresentInOrg1DefraIdTokenPayload
-        )
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.isBoom).toBe(true)
-        expect(error.output.statusCode).toBe(403)
-        expect(error.message).toBe(
-          'Access denied: organisation status not accessible'
-        )
-      }
+      await expect(getRolesForOrganisationAccess(
+        mockRequest,
+        mockLinkedEprOrg,
+        userPresentInOrg1DefraIdTokenPayload
+      )).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 403 },
+        message: 'Access denied: organisation status not accessible'
+      })
     })
   })
 
@@ -263,11 +255,7 @@ describe('#getRolesForOrganisationAccess', () => {
         userPresentInOrg1DefraIdTokenPayload
       )
 
-      if (expectedError) {
-        await expect(promise).rejects.toThrow(expectedError)
-      } else {
-        await expect(promise).rejects.toThrow()
-      }
+      await expect(promise).rejects.toThrow(expectedError)
     })
   })
 

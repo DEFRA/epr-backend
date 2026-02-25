@@ -46,12 +46,10 @@ describe('#parseTestOrganisationIds', () => {
   test('includes original error as cause when JSON parsing fails', () => {
     config.get.mockReturnValue('not valid json')
 
-    try {
-      parseTestOrganisationIds()
-      expect.fail('Should have thrown an error')
-    } catch (error) {
-      expect(error.cause).toBeInstanceOf(SyntaxError)
-    }
+    let thrownError
+    try { parseTestOrganisationIds() } catch (e) { thrownError = e }
+
+    expect(thrownError?.cause).toBeInstanceOf(SyntaxError)
   })
 
   test('throws when value is not an array', () => {

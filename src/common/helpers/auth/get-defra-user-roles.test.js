@@ -295,14 +295,11 @@ describe('#getDefraUserRoles', () => {
         email: 'user@example.com'
       }
 
-      try {
-        await getDefraUserRoles(tokenPayload, mockRequest)
-        expect.fail('Expected error to be thrown')
-      } catch (error) {
-        expect(error.isBoom).toBe(true)
-        expect(error.output.statusCode).toBe(403)
-        expect(error.message).toBe('User is not linked to an organisation')
-      }
+      await expect(getDefraUserRoles(tokenPayload, mockRequest)).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 403 },
+        message: 'User is not linked to an organisation'
+      })
     })
 
     test('does not call getRolesForOrganisationAccess', async () => {

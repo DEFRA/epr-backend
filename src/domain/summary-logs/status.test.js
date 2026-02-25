@@ -212,16 +212,14 @@ describe('status', () => {
     it('throws error with properties for validating -> rejected transition', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATING }
 
-      try {
-        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.REJECTED)
-        expect.fail('Should have thrown')
-      } catch (error) {
-        expect(error.message).toBe(
-          'Cannot transition summary log from validating to rejected'
-        )
-        expect(error.fromStatus).toBe(SUMMARY_LOG_STATUS.VALIDATING)
-        expect(error.toStatus).toBe(SUMMARY_LOG_STATUS.REJECTED)
-      }
+      let thrownError
+      try { transitionStatus(summaryLog, SUMMARY_LOG_STATUS.REJECTED) } catch (e) { thrownError = e }
+
+      expect(thrownError?.message).toBe(
+        'Cannot transition summary log from validating to rejected'
+      )
+      expect(thrownError?.fromStatus).toBe(SUMMARY_LOG_STATUS.VALIDATING)
+      expect(thrownError?.toStatus).toBe(SUMMARY_LOG_STATUS.REJECTED)
     })
 
     it('throws error for rejected -> preprocessing transition', () => {
