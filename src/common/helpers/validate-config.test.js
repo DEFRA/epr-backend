@@ -78,16 +78,18 @@ describe('#validateConfig', () => {
         get: vi.fn().mockReturnValue('invalid json')
       }
 
+      let thrownError
       try {
         validateConfig(mockConfig)
-        expect.fail('Should have thrown an error')
-      } catch (error) {
-        expect(error.message).toBe(
-          'Invalid roles.serviceMaintainers configuration: malformed JSON'
-        )
-        expect(error.cause).toBeDefined()
-        expect(error.cause).toBeInstanceOf(SyntaxError)
+      } catch (e) {
+        thrownError = e
       }
+
+      expect(thrownError?.message).toBe(
+        'Invalid roles.serviceMaintainers configuration: malformed JSON'
+      )
+      expect(thrownError?.cause).toBeDefined()
+      expect(thrownError?.cause).toBeInstanceOf(SyntaxError)
     })
   })
 

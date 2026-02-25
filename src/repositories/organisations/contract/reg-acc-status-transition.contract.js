@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import {
   REG_ACC_STATUS,
   REPROCESSING_TYPE
@@ -126,10 +127,10 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           accreditation2 = afterApproval.accreditations[2]
 
           // Verify initial state - both registrations and accreditations are APPROVED
-          expect(registration1.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(registration2.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(accreditation1.status).toBe(REG_ACC_STATUS.APPROVED)
-          expect(accreditation2.status).toBe(REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(registration1.status, REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(registration2.status, REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(accreditation1.status, REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(accreditation2.status, REG_ACC_STATUS.APPROVED)
         })
 
         it('allows transition from APPROVED to SUSPENDED', async () => {
@@ -383,7 +384,7 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           accreditation = afterApproval.accreditations[0]
 
           // Verify initial state
-          expect(accreditation.status).toBe(REG_ACC_STATUS.APPROVED)
+          assert.strictEqual(accreditation.status, REG_ACC_STATUS.APPROVED)
         })
 
         it('allows transition from APPROVED to SUSPENDED', async () => {
