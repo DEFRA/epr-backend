@@ -24,7 +24,7 @@ export {
   createDateFieldSchema,
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
-  createAlphanumericFieldSchema,
+  createFreeTextFieldSchema,
   createEnumFieldSchema
 } from './field-schemas.js'
 

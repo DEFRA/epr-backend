@@ -1,15 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import Decimal from 'decimal.js'
+import { Decimal128 } from 'mongodb'
 import {
   toDecimal,
   toNumber,
+  roundToTwoDecimalPlaces,
   add,
   subtract,
   equals,
   abs,
   greaterThan,
   isZero
-} from './decimal-utils.js'
+} from '#common/helpers/decimal-utils.js'
 
 describe('decimal-utils', () => {
   describe('toDecimal', () => {
@@ -104,6 +106,11 @@ describe('decimal-utils', () => {
     it('should handle zero', () => {
       const result = toNumber(new Decimal(0))
       expect(result).toBe(0)
+    })
+
+    it('should convert Decimal128 to number', () => {
+      const result = toNumber(Decimal128.fromString('42.5'))
+      expect(result).toBe(42.5)
     })
   })
 
@@ -360,6 +367,40 @@ describe('decimal-utils', () => {
     it('should handle result of addition to zero', () => {
       const result = add(5, -5)
       expect(isZero(result)).toBe(true)
+    })
+  })
+
+  describe('roundToTwoDecimalPlaces', () => {
+    it('should round up at the half (half-up rounding)', () => {
+      expect(roundToTwoDecimalPlaces(10.105)).toBe(10.11)
+    })
+
+    it('should round down below the half', () => {
+      expect(roundToTwoDecimalPlaces(10.104)).toBe(10.1)
+    })
+
+    it('should round negative values away from zero at the half', () => {
+      expect(roundToTwoDecimalPlaces(-10.105)).toBe(-10.11)
+    })
+
+    it('should return 0 for zero', () => {
+      expect(roundToTwoDecimalPlaces(0)).toBe(0)
+    })
+
+    it('should return 0 for null', () => {
+      expect(roundToTwoDecimalPlaces(null)).toBe(0)
+    })
+
+    it('should return 0 for undefined', () => {
+      expect(roundToTwoDecimalPlaces(undefined)).toBe(0)
+    })
+
+    it('should handle string input', () => {
+      expect(roundToTwoDecimalPlaces('10.105')).toBe(10.11)
+    })
+
+    it('should pass through values already at two decimal places', () => {
+      expect(roundToTwoDecimalPlaces(10.12)).toBe(10.12)
     })
   })
 

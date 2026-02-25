@@ -433,7 +433,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
-    describe('CUSTOMS_CODES validation', () => {
+    describe('CUSTOMS_CODES validation (free text)', () => {
       it('accepts valid alphanumeric code', () => {
         const { error } = validationSchema.validate({
           CUSTOMS_CODES: 'ABCD012345679'
@@ -455,6 +455,34 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error).toBeUndefined()
       })
 
+      it('accepts code with spaces and hyphens', () => {
+        const { error } = validationSchema.validate({
+          CUSTOMS_CODES: 'ABC-123 DEF'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts code with common punctuation', () => {
+        const { error } = validationSchema.validate({
+          CUSTOMS_CODES: 'HS:8501.10/20'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts code with smart quotes and dashes', () => {
+        const { error } = validationSchema.validate({
+          CUSTOMS_CODES: '\u2018code\u2019 \u2013 ref'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts code with pound and euro signs', () => {
+        const { error } = validationSchema.validate({
+          CUSTOMS_CODES: '\u00A3100 \u20AC200'
+        })
+        expect(error).toBeUndefined()
+      })
+
       it('accepts code at maximum length (100 chars)', () => {
         const { error } = validationSchema.validate({
           CUSTOMS_CODES: 'A'.repeat(100)
@@ -470,27 +498,45 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error.details[0].message).toBe('must be at most 100 characters')
       })
 
-      it('rejects code with special characters', () => {
+      it('rejects code with accented characters', () => {
         const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'ABC-123'
+          CUSTOMS_CODES: 'caf\u00E9'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be alphanumeric')
+        expect(error.details[0].message).toBe(
+          'must contain only permitted characters'
+        )
       })
 
-      it('rejects code with spaces', () => {
+      it('rejects code with control characters', () => {
         const { error } = validationSchema.validate({
-          CUSTOMS_CODES: 'ABC 123'
+          CUSTOMS_CODES: 'code\x00ref'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be alphanumeric')
+        expect(error.details[0].message).toBe(
+          'must contain only permitted characters'
+        )
       })
     })
 
-    describe('CONTAINER_NUMBER validation', () => {
+    describe('CONTAINER_NUMBER validation (free text - PAE-1124)', () => {
       it('accepts valid alphanumeric container number', () => {
         const { error } = validationSchema.validate({
           CONTAINER_NUMBER: 'ABCD1234567'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts container number with hyphens and spaces', () => {
+        const { error } = validationSchema.validate({
+          CONTAINER_NUMBER: 'ABCD-1234567 / TRLR-001'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts container number with smart quotes and dashes', () => {
+        const { error } = validationSchema.validate({
+          CONTAINER_NUMBER: '\u2018CONT\u2019 \u2013 123'
         })
         expect(error).toBeUndefined()
       })
@@ -510,12 +556,24 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error.details[0].message).toBe('must be at most 100 characters')
       })
 
-      it('rejects container number with special characters', () => {
+      it('rejects container number with accented characters', () => {
         const { error } = validationSchema.validate({
-          CONTAINER_NUMBER: 'ABCD-1234567'
+          CONTAINER_NUMBER: 'caf\u00E9-container'
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be alphanumeric')
+        expect(error.details[0].message).toBe(
+          'must contain only permitted characters'
+        )
+      })
+
+      it('rejects container number with control characters', () => {
+        const { error } = validationSchema.validate({
+          CONTAINER_NUMBER: 'CONT\x00123'
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must contain only permitted characters'
+        )
       })
     })
 
