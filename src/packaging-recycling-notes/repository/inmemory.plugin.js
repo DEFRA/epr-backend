@@ -181,7 +181,8 @@ const performUpdateStatus =
   }
 
 export function createInMemoryPackagingRecyclingNotesRepository(
-  initialData = []
+  initialData = [],
+  { excludeOrganisationIds = [] } = {}
 ) {
   /** @type {Storage} */
   const storage = new Map()
@@ -196,7 +197,8 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByAccreditation: performFindByAccreditation(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
-    findByStatus: performFindByStatus(storage),
+    findByStatus: (/** @type {FindByStatusParams} */ params) =>
+      performFindByStatus(storage)({ ...params, excludeOrganisationIds }),
     updateStatus: performUpdateStatus(storage)
   })
 }

@@ -92,7 +92,7 @@
  */
 
 /**
- * @typedef {{ prnVisibilityFilter?: { excludeOrganisationIds: string[] }, [key: string]: unknown }} ServerApp
+ * @typedef {{ [key: string]: unknown }} ServerApp
  */
 
 /**

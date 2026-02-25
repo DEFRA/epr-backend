@@ -78,12 +78,9 @@ export const adminPackagingRecyclingNotesList = {
 
     try {
       const effectiveLimit = limit ?? DEFAULT_LIMIT
-      const { excludeOrganisationIds = [] } =
-        request.server.app.prnVisibilityFilter ?? {}
 
       const result = await packagingRecyclingNotesRepository.findByStatus({
         cursor,
-        excludeOrganisationIds,
         limit: effectiveLimit,
         statuses
       })

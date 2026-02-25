@@ -302,9 +302,13 @@ const performUpdateStatus = async (
 
 /**
  * @param {import('mongodb').Db} db
+ * @param {{ excludeOrganisationIds?: string[] }} [options]
  * @returns {Promise<import('./port.js').PackagingRecyclingNotesRepositoryFactory>}
  */
-export const createPackagingRecyclingNotesRepository = async (db) => {
+export const createPackagingRecyclingNotesRepository = async (
+  db,
+  { excludeOrganisationIds = [] } = {}
+) => {
   await ensureCollection(db)
 
   return () => ({
@@ -313,7 +317,8 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
       performFindByAccreditation(db, accreditationId),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
-    findByStatus: (params) => performFindByStatus(db, params),
+    findByStatus: (params) =>
+      performFindByStatus(db, { ...params, excludeOrganisationIds }),
     updateStatus: (params) => performUpdateStatus(db, params)
   })
 }

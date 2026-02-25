@@ -248,51 +248,6 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       ).toHaveBeenCalledWith(expect.objectContaining({ limit: 500 }))
     })
 
-    it('passes excludeOrganisationIds from prnVisibilityFilter to repository', async () => {
-      const excludeOrganisationIds = ['org-id-1', 'org-id-2']
-      server.app.prnVisibilityFilter = { excludeOrganisationIds }
-
-      packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false
-      })
-
-      await injectWithAuth(server, {
-        method: 'GET',
-        url: `${adminListUrl}?statuses=awaiting_acceptance`
-      })
-
-      expect(
-        packagingRecyclingNotesRepository.findByStatus
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({ excludeOrganisationIds })
-      )
-
-      server.app.prnVisibilityFilter = undefined
-    })
-
-    it('passes empty excludeOrganisationIds when prnVisibilityFilter is absent', async () => {
-      server.app.prnVisibilityFilter = undefined
-
-      packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false
-      })
-
-      await injectWithAuth(server, {
-        method: 'GET',
-        url: `${adminListUrl}?statuses=awaiting_acceptance`
-      })
-
-      expect(
-        packagingRecyclingNotesRepository.findByStatus
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({ excludeOrganisationIds: [] })
-      )
-    })
-
     it('returns nextCursor when hasMore is true', async () => {
       const nextCursor = '507f1f77bcf86cd799439099'
       packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
