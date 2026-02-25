@@ -137,11 +137,13 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error with exact message format', async () => {
       const differentOrgId = new ObjectId().toString()
 
-      await expect(getRolesForOrganisationAccess(
-        mockRequest,
-        differentOrgId,
-        userPresentInOrg1DefraIdTokenPayload
-      )).rejects.toMatchObject({
+      await expect(
+        getRolesForOrganisationAccess(
+          mockRequest,
+          differentOrgId,
+          userPresentInOrg1DefraIdTokenPayload
+        )
+      ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 403 },
         message: 'Access denied: organisation mismatch'
@@ -209,11 +211,13 @@ describe('#getRolesForOrganisationAccess', () => {
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
-      await expect(getRolesForOrganisationAccess(
-        mockRequest,
-        mockLinkedEprOrg,
-        userPresentInOrg1DefraIdTokenPayload
-      )).rejects.toMatchObject({
+      await expect(
+        getRolesForOrganisationAccess(
+          mockRequest,
+          mockLinkedEprOrg,
+          userPresentInOrg1DefraIdTokenPayload
+        )
+      ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 403 },
         message: 'Access denied: organisation status not accessible'

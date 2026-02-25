@@ -43,7 +43,11 @@ describe('validatePrnInsert', () => {
     delete data.organisation
 
     let thrownError
-    try { validatePrnInsert(data) } catch (e) { thrownError = e }
+    try {
+      validatePrnInsert(data)
+    } catch (e) {
+      thrownError = e
+    }
 
     expect(thrownError?.isBoom).toBe(true)
     expect(thrownError?.output.statusCode).toBe(422)
@@ -57,7 +61,11 @@ describe('validatePrnInsert', () => {
     delete data.tonnage
 
     let thrownError
-    try { validatePrnInsert(data) } catch (e) { thrownError = e }
+    try {
+      validatePrnInsert(data)
+    } catch (e) {
+      thrownError = e
+    }
 
     expect(thrownError?.message).toContain('organisation')
     expect(thrownError?.message).toContain('accreditation')
@@ -98,7 +106,11 @@ describe('validatePrnRead', () => {
     delete data.id
 
     let thrownError
-    try { validatePrnRead(data) } catch (e) { thrownError = e }
+    try {
+      validatePrnRead(data)
+    } catch (e) {
+      thrownError = e
+    }
 
     expect(thrownError?.isBoom).toBe(true)
     expect(thrownError?.output.statusCode).toBe(500)
@@ -110,7 +122,11 @@ describe('validatePrnRead', () => {
     delete data.organisation
 
     let thrownError
-    try { validatePrnRead(data) } catch (e) { thrownError = e }
+    try {
+      validatePrnRead(data)
+    } catch (e) {
+      thrownError = e
+    }
 
     expect(thrownError?.message).toContain('abc-123')
   })
@@ -122,7 +138,11 @@ describe('validatePrnRead', () => {
     delete data.tonnage
 
     let thrownError
-    try { validatePrnRead(data) } catch (e) { thrownError = e }
+    try {
+      validatePrnRead(data)
+    } catch (e) {
+      thrownError = e
+    }
 
     expect(thrownError?.message).toContain('id')
     expect(thrownError?.message).toContain('organisation')

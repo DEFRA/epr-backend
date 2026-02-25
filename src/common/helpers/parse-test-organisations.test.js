@@ -47,7 +47,11 @@ describe('#parseTestOrganisationIds', () => {
     config.get.mockReturnValue('not valid json')
 
     let thrownError
-    try { parseTestOrganisationIds() } catch (e) { thrownError = e }
+    try {
+      parseTestOrganisationIds()
+    } catch (e) {
+      thrownError = e
+    }
 
     expect(thrownError?.cause).toBeInstanceOf(SyntaxError)
   })

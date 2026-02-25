@@ -79,7 +79,11 @@ describe('#validateConfig', () => {
       }
 
       let thrownError
-      try { validateConfig(mockConfig) } catch (e) { thrownError = e }
+      try {
+        validateConfig(mockConfig)
+      } catch (e) {
+        thrownError = e
+      }
 
       expect(thrownError?.message).toBe(
         'Invalid roles.serviceMaintainers configuration: malformed JSON'

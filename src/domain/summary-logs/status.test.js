@@ -213,7 +213,11 @@ describe('status', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATING }
 
       let thrownError
-      try { transitionStatus(summaryLog, SUMMARY_LOG_STATUS.REJECTED) } catch (e) { thrownError = e }
+      try {
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.REJECTED)
+      } catch (e) {
+        thrownError = e
+      }
 
       expect(thrownError?.message).toBe(
         'Cannot transition summary log from validating to rejected'

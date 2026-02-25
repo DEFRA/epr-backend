@@ -295,7 +295,9 @@ describe('#getDefraUserRoles', () => {
         email: 'user@example.com'
       }
 
-      await expect(getDefraUserRoles(tokenPayload, mockRequest)).rejects.toMatchObject({
+      await expect(
+        getDefraUserRoles(tokenPayload, mockRequest)
+      ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 403 },
         message: 'User is not linked to an organisation'

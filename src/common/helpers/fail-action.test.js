@@ -38,10 +38,16 @@ describe('#fail-action', () => {
       const joiError = createJoiValidationError()
 
       let thrownError
-      try { failAction(mockRequest, {}, joiError) } catch (e) { thrownError = e }
+      try {
+        failAction(mockRequest, {}, joiError)
+      } catch (e) {
+        thrownError = e
+      }
 
       expect(thrownError?.isBoom).toBe(true)
-      expect(thrownError?.output.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(thrownError?.output.statusCode).toBe(
+        StatusCodes.UNPROCESSABLE_ENTITY
+      )
       expect(thrownError?.message).toBe('"redirectUrl" is required')
       expect(thrownError?.data).toEqual(joiError.details)
     })
@@ -103,7 +109,11 @@ describe('#fail-action', () => {
       const boomError = Boom.badRequest('Invalid payload')
 
       let thrownError
-      try { failAction(mockRequest, {}, boomError) } catch (e) { thrownError = e }
+      try {
+        failAction(mockRequest, {}, boomError)
+      } catch (e) {
+        thrownError = e
+      }
 
       expect(thrownError?.isBoom).toBe(true)
       expect(thrownError?.output.statusCode).toBe(StatusCodes.BAD_REQUEST)
