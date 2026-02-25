@@ -184,9 +184,13 @@ const performUpdateStatus =
     return structuredClone(updated)
   }
 
+/**
+ * @param {PackagingRecyclingNote[]} [initialData]
+ * @param {Organisation['id'][]} [excludeOrganisationIds]
+ */
 export function createInMemoryPackagingRecyclingNotesRepository(
   initialData = [],
-  { excludeOrganisationIds = [] } = {}
+  excludeOrganisationIds = []
 ) {
   /** @type {Storage} */
   const storage = new Map()
@@ -209,7 +213,10 @@ export function createInMemoryPackagingRecyclingNotesRepository(
 export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
   initialPrns
 ) {
-  const factory = createInMemoryPackagingRecyclingNotesRepository(initialPrns)
+  const factory = createInMemoryPackagingRecyclingNotesRepository(
+    initialPrns,
+    []
+  )
   const repository = factory()
 
   return {

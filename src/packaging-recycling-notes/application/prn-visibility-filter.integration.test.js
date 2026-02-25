@@ -69,7 +69,7 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
     })
     const repositoryFactory = await createPackagingRecyclingNotesRepository(
       db,
-      { excludeOrganisationIds }
+      excludeOrganisationIds
     )
     const repository = repositoryFactory()
 

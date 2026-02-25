@@ -24,9 +24,10 @@ describe('in-memory adapter organisation exclusion', () => {
       const testOrgId = `test-org-${Date.now()}-${Math.random()}`
       const realOrgId = `real-org-${Date.now()}-${Math.random()}`
 
-      const repository = createInMemoryPackagingRecyclingNotesRepository([], {
-        excludeOrganisationIds: [testOrgId]
-      })()
+      const repository = createInMemoryPackagingRecyclingNotesRepository(
+        [],
+        [testOrgId]
+      )()
 
       const testPrn = await repository.create(
         buildCancelledPrn({
@@ -57,9 +58,10 @@ describe('in-memory adapter organisation exclusion', () => {
     async () => {
       const orgId = `org-all-${Date.now()}-${Math.random()}`
 
-      const repository = createInMemoryPackagingRecyclingNotesRepository([], {
-        excludeOrganisationIds: []
-      })()
+      const repository = createInMemoryPackagingRecyclingNotesRepository(
+        [],
+        []
+      )()
 
       const prn = await repository.create(
         buildCancelledPrn({
@@ -82,9 +84,10 @@ describe('in-memory adapter organisation exclusion', () => {
     async () => {
       const testOrgId = `test-org-hm-${Date.now()}-${Math.random()}`
 
-      const repository = createInMemoryPackagingRecyclingNotesRepository([], {
-        excludeOrganisationIds: [testOrgId]
-      })()
+      const repository = createInMemoryPackagingRecyclingNotesRepository(
+        [],
+        [testOrgId]
+      )()
 
       const sentinel = await repository.create(
         buildCancelledPrn({

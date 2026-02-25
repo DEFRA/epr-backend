@@ -300,12 +300,12 @@ const performUpdateStatus = async (
 
 /**
  * @param {Db} db
- * @param {{ excludeOrganisationIds?: Organisation['id'][] }} [options]
+ * @param {Organisation['id'][]} [excludeOrganisationIds]
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
 export const createPackagingRecyclingNotesRepository = async (
   db,
-  { excludeOrganisationIds = [] } = {}
+  excludeOrganisationIds = []
 ) => {
   await ensureCollection(db)
 
