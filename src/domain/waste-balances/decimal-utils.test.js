@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import Decimal from 'decimal.js'
+import { Decimal128 } from 'mongodb'
 import {
   toDecimal,
   toNumber,
@@ -104,6 +105,11 @@ describe('decimal-utils', () => {
     it('should handle zero', () => {
       const result = toNumber(new Decimal(0))
       expect(result).toBe(0)
+    })
+
+    it('should convert Decimal128 to number', () => {
+      const result = toNumber(Decimal128.fromString('42.5'))
+      expect(result).toBe(42.5)
     })
   })
 

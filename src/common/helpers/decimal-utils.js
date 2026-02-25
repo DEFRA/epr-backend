@@ -44,6 +44,9 @@ export function toNumber(value) {
   if (value === null || value === undefined) {
     return 0
   }
+  if (typeof value === 'object' && value._bsontype === 'Decimal128') {
+    return Number(value.toString())
+  }
   if (value instanceof DecimalConstructor) {
     return value.toNumber()
   }
