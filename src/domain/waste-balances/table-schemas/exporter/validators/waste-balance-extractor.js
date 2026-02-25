@@ -7,7 +7,7 @@ import {
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
-import { roundToTwoDecimalPlaces } from '#domain/waste-balances/decimal-utils.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Extracted waste balance fields.

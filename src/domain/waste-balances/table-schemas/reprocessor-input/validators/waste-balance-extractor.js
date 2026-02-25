@@ -11,7 +11,7 @@ import {
   RECEIVED_LOADS_FIELDS as RECEIVED_LOADS_FOR_REPROCESSING_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
-import { roundToTwoDecimalPlaces } from '#domain/waste-balances/decimal-utils.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Extracted waste balance fields.
