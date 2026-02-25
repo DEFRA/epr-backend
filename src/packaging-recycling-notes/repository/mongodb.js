@@ -5,6 +5,7 @@ import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, UpdateStatusParams } from './port.js' */
 
@@ -177,7 +178,7 @@ const performFindByAccreditation = async (db, accreditationId) => {
 }
 
 /**
- * @param {string[]} excludeOrganisationIds
+ * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {(params: Omit<FindByStatusParams, 'limit'>) => Filter<Document>}
  */
 const buildFindByStatusFilter =
@@ -213,7 +214,7 @@ const buildFindByStatusFilter =
 
 /**
  * @param {Db} db
- * @param {string[]} excludeOrganisationIds
+ * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
  */
 const performFindByStatus = (db, excludeOrganisationIds) => {
@@ -299,7 +300,7 @@ const performUpdateStatus = async (
 
 /**
  * @param {Db} db
- * @param {{ excludeOrganisationIds?: string[] }} [options]
+ * @param {{ excludeOrganisationIds?: Organisation['id'][] }} [options]
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
 export const createPackagingRecyclingNotesRepository = async (

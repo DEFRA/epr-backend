@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert } from './validation.js'
 
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
 /** @import { FindByStatusParams, PaginatedResult, UpdateStatusParams } from './port.js' */
 
@@ -83,7 +84,7 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 /**
- * @param {string[]} excludeOrganisationIds
+ * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {(params: Omit<FindByStatusParams, 'limit'>) =>
  *   (prn: PackagingRecyclingNote) => boolean}
  */
@@ -112,7 +113,7 @@ const buildFindByStatusFilter =
 
 /**
  * @param {Storage} storage
- * @param {string[]} excludeOrganisationIds
+ * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
  */
 const performFindByStatus = (storage, excludeOrganisationIds) => {
