@@ -1,5 +1,5 @@
 import { Decimal128 } from 'mongodb'
-import { toDecimalString } from '#domain/decimal-utils.js'
+import { toDecimalString } from '#common/helpers/decimal-utils.js'
 
 const TONNAGE_FIELD_PATTERN = /(tonnage|weight)/i
 
