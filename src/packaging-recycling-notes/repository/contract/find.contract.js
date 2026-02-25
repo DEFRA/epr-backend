@@ -1,9 +1,9 @@
-import { describe, beforeEach, expect } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { beforeEach, describe, expect } from 'vitest'
 import {
-  buildDraftPrn,
+  buildAwaitingAcceptancePrn,
   buildDeletedPrn,
-  buildAwaitingAcceptancePrn
+  buildDraftPrn
 } from './test-data.js'
 
 export const testFindBehaviour = (it) => {
@@ -104,9 +104,7 @@ export const testFindBehaviour = (it) => {
 
         expect(found.tonnage).toBe(100)
       })
-    })
 
-    describe('findByPrnNumber', () => {
       it('does not leak _id in returned PRN', async () => {
         const prnNumber = `NOID-${Date.now()}`
         await repository.create(buildAwaitingAcceptancePrn({ prnNumber }))

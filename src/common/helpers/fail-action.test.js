@@ -37,16 +37,19 @@ describe('#fail-action', () => {
       const mockRequest = createMockRequest()
       const joiError = createJoiValidationError()
 
-      expect(() => failAction(mockRequest, {}, joiError)).toThrow()
-
+      let thrownError
       try {
         failAction(mockRequest, {}, joiError)
-      } catch (error) {
-        expect(error.isBoom).toBe(true)
-        expect(error.output.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-        expect(error.message).toBe('"redirectUrl" is required')
-        expect(error.data).toEqual(joiError.details)
+      } catch (e) {
+        thrownError = e
       }
+
+      expect(thrownError?.isBoom).toBe(true)
+      expect(thrownError?.output.statusCode).toBe(
+        StatusCodes.UNPROCESSABLE_ENTITY
+      )
+      expect(thrownError?.message).toBe('"redirectUrl" is required')
+      expect(thrownError?.data).toEqual(joiError.details)
     })
 
     test('logs at warn level', () => {
@@ -124,15 +127,16 @@ describe('#fail-action', () => {
       const mockRequest = createMockRequest()
       const boomError = Boom.badRequest('Invalid payload')
 
-      expect(() => failAction(mockRequest, {}, boomError)).toThrow()
-
+      let thrownError
       try {
         failAction(mockRequest, {}, boomError)
-      } catch (error) {
-        expect(error.isBoom).toBe(true)
-        expect(error.output.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(error.message).toBe('Invalid payload')
+      } catch (e) {
+        thrownError = e
       }
+
+      expect(thrownError?.isBoom).toBe(true)
+      expect(thrownError?.output.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(thrownError?.message).toBe('Invalid payload')
     })
 
     test('logs at warn level with original status code', () => {

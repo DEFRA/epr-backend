@@ -1,14 +1,14 @@
-import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { ObjectId } from 'mongodb'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
+import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
+import { StatusCodes } from 'http-status-codes'
+import { ObjectId } from 'mongodb'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -198,7 +198,7 @@ describe('PUT /v1/organisations/{id}', () => {
         })
       })
 
-      it('returns 404 ', async () => {
+      it('returns 404', async () => {
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
 
@@ -358,7 +358,7 @@ describe('PUT /v1/organisations/{id}', () => {
     expect(body.message).toMatch(/Version conflict/)
   })
 
-  it('it includes validation error information in the response', async () => {
+  it('includes validation error information in the response', async () => {
     const org = await createOrganisation()
 
     const response = await server.inject({
@@ -376,7 +376,7 @@ describe('PUT /v1/organisations/{id}', () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.message).toBe(
-      'Invalid organisation data: wasteProcessingTypes: array.min'
+      'Invalid organisation data: wasteProcessingTypes: At least one waste processing type is required'
     )
   })
 

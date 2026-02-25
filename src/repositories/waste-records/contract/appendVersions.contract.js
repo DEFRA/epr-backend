@@ -36,6 +36,38 @@ export const testAppendVersionsBehaviour = (it) => {
       expect(result[0].versions[0].summaryLog.id).toBe('log-1')
     })
 
+    it('preserves source precision for tonnage/weight when creating new waste records', async () => {
+      const sourcePrecisionWeight = 123.456789
+      const wasteRecordVersions = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.RECEIVED]: {
+          'row-precise-create': buildVersionData({
+            summaryLogId: 'log-weight-create',
+            summaryLogUri: 's3://bucket/weight-create',
+            versionData: {
+              GROSS_WEIGHT: sourcePrecisionWeight,
+              NOTE: 'unchanged'
+            },
+            currentData: {
+              GROSS_WEIGHT: sourcePrecisionWeight,
+              NOTE: 'unchanged'
+            }
+          })
+        }
+      })
+
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(1)
+      expect(result[0].data.GROSS_WEIGHT).toBe(sourcePrecisionWeight)
+      expect(result[0].data.NOTE).toBe('unchanged')
+      expect(result[0].versions).toHaveLength(1)
+      expect(result[0].versions[0].data.GROSS_WEIGHT).toBe(
+        sourcePrecisionWeight
+      )
+      expect(result[0].versions[0].data.NOTE).toBe('unchanged')
+    })
+
     it('appends version to existing waste record', async () => {
       // First, create initial record using appendVersions
       const initialVersion = toWasteRecordVersions({
@@ -73,6 +105,61 @@ export const testAppendVersionsBehaviour = (it) => {
       expect(result[0].versions).toHaveLength(2)
       expect(result[0].versions[0].summaryLog.id).toBe('log-1')
       expect(result[0].versions[1].summaryLog.id).toBe('log-2')
+    })
+
+    it('preserves source precision for tonnage/weight when appending updates to existing records', async () => {
+      const sourcePrecisionTonnage = 100.105
+      const initialVersion = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.SENT_ON]: {
+          'row-precise-update': buildVersionData({
+            summaryLogId: 'log-weight-initial',
+            summaryLogUri: 's3://bucket/weight-initial',
+            versionData: {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 10,
+              NOTE: 'initial'
+            },
+            currentData: {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 10,
+              NOTE: 'initial'
+            }
+          })
+        }
+      })
+
+      await repository.appendVersions('org-1', 'reg-1', initialVersion)
+
+      const updatedVersion = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.SENT_ON]: {
+          'row-precise-update': buildVersionData({
+            createdAt: '2025-01-20T10:00:00.000Z',
+            status: VERSION_STATUS.UPDATED,
+            summaryLogId: 'log-weight-update',
+            summaryLogUri: 's3://bucket/weight-update',
+            versionData: {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: sourcePrecisionTonnage,
+              NOTE: 'updated'
+            },
+            currentData: {
+              TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: sourcePrecisionTonnage,
+              NOTE: 'updated'
+            }
+          })
+        }
+      })
+
+      await repository.appendVersions('org-1', 'reg-1', updatedVersion)
+
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(1)
+      expect(result[0].data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON).toBe(
+        sourcePrecisionTonnage
+      )
+      expect(result[0].data.NOTE).toBe('updated')
+      expect(result[0].versions).toHaveLength(2)
+      expect(
+        result[0].versions[1].data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+      ).toBe(sourcePrecisionTonnage)
+      expect(result[0].versions[1].data.NOTE).toBe('updated')
     })
 
     it('is idempotent - resubmitting same summary log does not duplicate versions', async () => {

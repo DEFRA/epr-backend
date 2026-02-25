@@ -5,7 +5,7 @@ import {
   createDateFieldSchema,
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
-  createAlphanumericFieldSchema,
+  createFreeTextFieldSchema,
   createEnumFieldSchema
 } from './field-schemas.js'
 
@@ -214,46 +214,131 @@ describe('field-schemas', () => {
     })
   })
 
-  describe('createAlphanumericFieldSchema', () => {
-    it('accepts alphanumeric string', () => {
-      const schema = createAlphanumericFieldSchema()
+  describe('createFreeTextFieldSchema', () => {
+    it('accepts standard alphanumeric string', () => {
+      const schema = createFreeTextFieldSchema()
       expect(schema.validate('ABC123').error).toBeUndefined()
     })
 
-    it('accepts single letter', () => {
-      const schema = createAlphanumericFieldSchema()
-      expect(schema.validate('A').error).toBeUndefined()
+    it('accepts string with spaces', () => {
+      const schema = createFreeTextFieldSchema()
+      expect(schema.validate('ABC 123').error).toBeUndefined()
     })
 
-    it('rejects string with spaces', () => {
-      const schema = createAlphanumericFieldSchema()
-      const { error } = schema.validate('ABC 123')
+    it('accepts string with hyphens and common punctuation', () => {
+      const schema = createFreeTextFieldSchema()
+      expect(schema.validate('ABC-123/456').error).toBeUndefined()
+    })
+
+    it('accepts string with all printable ASCII characters', () => {
+      const schema = createFreeTextFieldSchema()
+      // Space (0x20) through tilde (0x7E) covers all printable ASCII
+      expect(
+        schema.validate('Hello, World! @#$%^&*()_+-=[]{}|;:\'",.<>?/~`').error
+      ).toBeUndefined()
+    })
+
+    it('accepts string with newline characters', () => {
+      const schema = createFreeTextFieldSchema()
+      expect(schema.validate('Line 1\nLine 2').error).toBeUndefined()
+      expect(schema.validate('Line 1\rLine 2').error).toBeUndefined()
+      expect(schema.validate('Line 1\r\nLine 2').error).toBeUndefined()
+    })
+
+    it('accepts string with smart single quotes', () => {
+      const schema = createFreeTextFieldSchema()
+      // \u2018 = left single quote, \u2019 = right single quote
+      expect(schema.validate('\u2018quoted\u2019').error).toBeUndefined()
+    })
+
+    it('accepts string with smart double quotes', () => {
+      const schema = createFreeTextFieldSchema()
+      // \u201C = left double quote, \u201D = right double quote
+      expect(schema.validate('\u201Cquoted\u201D').error).toBeUndefined()
+    })
+
+    it('accepts string with en-dash and em-dash', () => {
+      const schema = createFreeTextFieldSchema()
+      // \u2013 = en-dash, \u2014 = em-dash
+      expect(schema.validate('range\u2013value').error).toBeUndefined()
+      expect(schema.validate('pause\u2014here').error).toBeUndefined()
+    })
+
+    it('accepts string with ellipsis character', () => {
+      const schema = createFreeTextFieldSchema()
+      // \u2026 = ellipsis
+      expect(schema.validate('and so on\u2026').error).toBeUndefined()
+    })
+
+    it('accepts string with pound and euro signs', () => {
+      const schema = createFreeTextFieldSchema()
+      expect(schema.validate('\u00A3100').error).toBeUndefined()
+      expect(schema.validate('\u20AC200').error).toBeUndefined()
+    })
+
+    it('rejects string with accented characters', () => {
+      const schema = createFreeTextFieldSchema()
+      const { error } = schema.validate('caf\u00E9')
       expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be alphanumeric')
+      expect(error.details[0].message).toBe(
+        'must contain only permitted characters'
+      )
     })
 
-    it('rejects string with special characters', () => {
-      const schema = createAlphanumericFieldSchema()
-      const { error } = schema.validate('ABC-123')
+    it('rejects string with non-English characters', () => {
+      const schema = createFreeTextFieldSchema()
+      const { error } = schema.validate('ni\u00F1o')
       expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be alphanumeric')
+      expect(error.details[0].message).toBe(
+        'must contain only permitted characters'
+      )
     })
 
-    it('rejects string exceeding max length', () => {
-      const schema = createAlphanumericFieldSchema(10)
+    it('rejects string with control characters', () => {
+      const schema = createFreeTextFieldSchema()
+      // \x00 = null, \x07 = bell
+      const { error } = schema.validate('hello\x00world')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe(
+        'must contain only permitted characters'
+      )
+    })
+
+    it('rejects string with tab character', () => {
+      const schema = createFreeTextFieldSchema()
+      const { error } = schema.validate('hello\tworld')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe(
+        'must contain only permitted characters'
+      )
+    })
+
+    it('rejects string exceeding custom max length', () => {
+      const schema = createFreeTextFieldSchema(10)
       const { error } = schema.validate('ABCDEFGHIJK')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be at most 10 characters')
+    })
+
+    it('accepts string at default max length (100 chars)', () => {
+      const schema = createFreeTextFieldSchema()
+      expect(schema.validate('A'.repeat(100)).error).toBeUndefined()
+    })
+
+    it('rejects string exceeding default max length (101 chars)', () => {
+      const schema = createFreeTextFieldSchema()
+      const { error } = schema.validate('A'.repeat(101))
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be at most 100 characters')
     })
 
     it('is optional', () => {
-      const schema = createAlphanumericFieldSchema()
+      const schema = createFreeTextFieldSchema()
       expect(schema.validate(undefined).error).toBeUndefined()
     })
 
-    it('coerces numeric value to string (e.g. postal code from ExcelJS)', () => {
-      // ExcelJS may return a number if the cell looks numeric (e.g. postal code "12345")
-      const schema = createAlphanumericFieldSchema()
+    it('coerces numeric value to string (e.g. customs code from ExcelJS)', () => {
+      const schema = createFreeTextFieldSchema()
       const { error, value } = schema.validate(12345)
       expect(error).toBeUndefined()
       expect(value).toBe('12345')

@@ -13,7 +13,7 @@ import {
   createDateFieldSchema,
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
-  createAlphanumericFieldSchema,
+  createFreeTextFieldSchema,
   createEnumFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
@@ -154,8 +154,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       BASEL_CODES,
       MESSAGES.MUST_BE_VALID_BASEL_CODE
     ),
-    [FIELDS.CUSTOMS_CODES]: createAlphanumericFieldSchema(),
-    [FIELDS.CONTAINER_NUMBER]: createAlphanumericFieldSchema(),
+    [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
+    [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema(),
     [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: createYesNoFieldSchema(),
