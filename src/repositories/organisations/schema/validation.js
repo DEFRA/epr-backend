@@ -12,10 +12,23 @@ import { accreditationSchema } from './accreditation.js'
 
 const formatValidationErrorDetails = (error) => {
   return error.details
-    .map((d) => {
-      return `${d.path.join('.')}: ${d.type}`
-    })
+    .map((d) => `${d.path.join('.')}: ${d.message}`)
     .join('; ')
+}
+
+const validateWithSchema = (schema, data, errorPrefix, options = {}) => {
+  const { error, value } = schema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true,
+    ...options
+  })
+
+  if (error) {
+    const details = formatValidationErrorDetails(error)
+    throw Boom.badData(`${errorPrefix}: ${details}`)
+  }
+
+  return value
 }
 
 export const validateId = (id) => {
@@ -29,32 +42,20 @@ export const validateId = (id) => {
 }
 
 export const validateOrganisationInsert = (data) => {
-  const { error, value } = organisationInsertSchema.validate(data, {
-    abortEarly: false,
-    stripUnknown: true
-  })
-
-  if (error) {
-    const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid organisation data: ${details}`)
-  }
-
-  return value
+  return validateWithSchema(
+    organisationInsertSchema,
+    data,
+    'Invalid organisation data'
+  )
 }
 
 export const validateOrganisationUpdate = (data, existing = null) => {
-  const { error, value } = organisationReplaceSchema.validate(data, {
-    abortEarly: false,
-    stripUnknown: true,
-    context: { original: existing }
-  })
-
-  if (error) {
-    const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid organisation data: ${details}`)
-  }
-
-  return value
+  return validateWithSchema(
+    organisationReplaceSchema,
+    data,
+    'Invalid organisation data',
+    { context: { original: existing } }
+  )
 }
 
 export const validateStatusHistory = (statusHistory) => {
@@ -72,31 +73,19 @@ export const validateStatusHistory = (statusHistory) => {
 }
 
 export const validateRegistration = (data) => {
-  const { error, value } = registrationSchema.validate(data, {
-    abortEarly: false,
-    stripUnknown: true
-  })
-
-  if (error) {
-    const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid registration data: ${details}`)
-  }
-
-  return value
+  return validateWithSchema(
+    registrationSchema,
+    data,
+    'Invalid registration data'
+  )
 }
 
 export const validateAccreditation = (data) => {
-  const { error, value } = accreditationSchema.validate(data, {
-    abortEarly: false,
-    stripUnknown: true
-  })
-
-  if (error) {
-    const details = formatValidationErrorDetails(error)
-    throw Boom.badData(`Invalid accreditation data: ${details}`)
-  }
-
-  return value
+  return validateWithSchema(
+    accreditationSchema,
+    data,
+    'Invalid accreditation data'
+  )
 }
 
 /**
