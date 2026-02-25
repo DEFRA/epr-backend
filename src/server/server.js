@@ -34,6 +34,7 @@ import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runGlassMigration } from '#server/run-glass-migration.js'
+import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 
 function getServerConfig(config) {
   return {
@@ -189,6 +190,7 @@ async function createServer(options = {}) {
     logFilesUploadedFromForms(server, options)
     runFormsDataMigration(server)
     runGlassMigration(server)
+    copyFormFilesToS3(server)
   })
 
   return server

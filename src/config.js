@@ -228,6 +228,14 @@ const baseConfig = {
       env: 'CDP_UPLOADER_S3_BUCKET_SUMMARY_LOGS'
     }
   },
+  piscina: {
+    maxThreads: {
+      doc: 'Maximum worker threads for summary log validation. Recommend half of available vCPUs.',
+      format: 'nat',
+      default: 2,
+      env: 'PISCINA_MAX_THREADS'
+    }
+  },
   regulator: {
     EA: {
       email: {
@@ -353,6 +361,18 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES_EXTERNAL_API'
+    },
+    sqsCommands: {
+      doc: 'Feature Flag: Use SQS command executor instead of Piscina workers',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SQS_COMMANDS'
+    },
+    copyFormFilesToS3: {
+      doc: 'Feature Flag: Copy form files to S3 on startup',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
     }
   },
   formSubmissionOverrides: {
@@ -419,6 +439,50 @@ const baseConfig = {
       format: String,
       default: '3600',
       env: 'PUBLIC_REGISTER_URL_EXPIRY'
+    }
+  },
+  cdpEnvSuffix: {
+    doc: 'CDP environment suffix used in service URLs (e.g., 6bf3a)',
+    format: String,
+    default: '6bf3a',
+    env: 'CDP_ENV_SUFFIX'
+  },
+  formsSubmissionApi: {
+    serviceName: {
+      doc: 'Forms Submission API service name for Cognito',
+      format: String,
+      default: 'forms-submission-api',
+      env: 'FORMS_SUBMISSION_API_SERVICE_NAME'
+    },
+    url: {
+      doc: 'Forms Submission API base URL',
+      format: String,
+      default: 'https://example.com',
+      env: 'FORMS_SUBMISSION_API_URL'
+    },
+    s3Bucket: {
+      doc: 'S3 bucket for form file uploads',
+      format: String,
+      default: 'form-file-uploads',
+      env: 'FORM_FILE_UPLOADS_S3_BUCKET'
+    },
+    cognitoClientId: {
+      doc: 'Cognito client ID for Forms Submission API',
+      format: String,
+      default: 'client-id',
+      env: 'FORMS_SUBMISSION_API_COGNITO_CLIENT_ID'
+    },
+    cognitoClientSecret: {
+      doc: 'Cognito client secret for Forms Submission API',
+      format: String,
+      default: 'client-secret',
+      env: 'FORMS_SUBMISSION_API_COGNITO_CLIENT_SECRET'
+    },
+    copyFilesUploadedFromDate: {
+      doc: 'Only copy form files uploaded on or after this date (ISO 8601 format)',
+      format: String,
+      default: '2025-11-19T00:00:00.000Z',
+      env: 'COPY_FILES_UPLOADED_FROM_DATE'
     }
   },
   summaryLogReport: {

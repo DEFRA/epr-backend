@@ -83,4 +83,18 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.packagingRecyclingNotes'
     )
   })
+
+  it('returns true when copyFormFilesToS3 flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCopyFormFilesToS3Enabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
+  })
+
+  it('returns false when copyFormFilesToS3 flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCopyFormFilesToS3Enabled()).toBe(false)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
+  })
 })
