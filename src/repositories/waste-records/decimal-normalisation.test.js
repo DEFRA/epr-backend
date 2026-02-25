@@ -3,15 +3,15 @@ import { Decimal128 } from 'mongodb'
 import {
   mapMongoDocumentToDomain,
   mapVersionDataForMongoPersistence
-} from './tonnage-normalisation.js'
+} from './decimal-normalisation.js'
 
-describe('tonnage-normalisation', () => {
+describe('decimal-normalisation', () => {
   describe('mapVersionDataForMongoPersistence', () => {
     it('returns input when versionData is undefined', () => {
       expect(mapVersionDataForMongoPersistence(undefined)).toBeUndefined()
     })
 
-    it('converts tonnage/weight numeric fields to Decimal128 and preserves other values', () => {
+    it('converts all finite numeric fields to Decimal128 and preserves other values', () => {
       const versionData = {
         data: {
           GROSS_WEIGHT: 123.456789,
@@ -43,7 +43,7 @@ describe('tonnage-normalisation', () => {
 
       expect(result.data.GROSS_WEIGHT).toBeInstanceOf(Decimal128)
       expect(result.data.PRODUCT_TONNAGE).toBeInstanceOf(Decimal128)
-      expect(result.data.COUNT).toBe(3)
+      expect(result.data.COUNT).toBeInstanceOf(Decimal128)
       expect(result.data.TEXT).toBe('unchanged')
       expect(result.data.nested.NET_WEIGHT).toBeInstanceOf(Decimal128)
       expect(result.data.nested.label).toBe('nested')
@@ -51,12 +51,12 @@ describe('tonnage-normalisation', () => {
         result.data.mixedArray[0].TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
       ).toBeInstanceOf(Decimal128)
       expect(result.data.mixedArray[1]).toBe('string-item')
-      expect(result.data.mixedArray[2]).toBe(42)
+      expect(result.data.mixedArray[2]).toBeInstanceOf(Decimal128)
       expect(result.data.mixedArray[3]).toBeNull()
       expect(result.data.infiniteWeight).toBe(Number.POSITIVE_INFINITY)
 
       expect(result.version.data.PALLET_WEIGHT).toBeInstanceOf(Decimal128)
-      expect(result.version.data.OTHER_VALUE).toBe(2)
+      expect(result.version.data.OTHER_VALUE).toBeInstanceOf(Decimal128)
     })
 
     it('handles null/undefined nested data objects', () => {
