@@ -1,10 +1,10 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
 
-import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */

@@ -521,14 +521,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should use SPREADSHEET_MALFORMED_MARKERS error code', async () => {
-      try {
-        await parseWorkbook({
+      await expect(
+        parseWorkbook({
           Test: [['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']]
         })
-        expect.fail('Should have thrown')
-      } catch (error) {
-        expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
-      }
+      ).rejects.toMatchObject({
+        code: VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+      })
     })
   })
 
@@ -578,8 +577,8 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should use SPREADSHEET_MALFORMED_MARKERS error code', async () => {
-      try {
-        await parseWorkbook({
+      await expect(
+        parseWorkbook({
           Test: [
             ['__EPR_DATA_SECTION_ONE', 'HEADER_A'],
             [null, 'value_a'],
@@ -589,10 +588,9 @@ describe('ExcelJSSummaryLogsParser', () => {
             [null, 'value_b']
           ]
         })
-        expect.fail('Should have thrown')
-      } catch (error) {
-        expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
-      }
+      ).rejects.toMatchObject({
+        code: VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+      })
     })
   })
 
@@ -613,17 +611,16 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should use SPREADSHEET_MALFORMED_MARKERS error code', async () => {
-      try {
-        await parseWorkbook({
+      await expect(
+        parseWorkbook({
           Test: [
             ['__EPR_META_TYPE', 'value1'],
             ['__EPR_META_TYPE', 'value2']
           ]
         })
-        expect.fail('Should have thrown')
-      } catch (error) {
-        expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
-      }
+      ).rejects.toMatchObject({
+        code: VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+      })
     })
   })
 

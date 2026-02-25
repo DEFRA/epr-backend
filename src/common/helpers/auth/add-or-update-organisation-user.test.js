@@ -11,7 +11,7 @@ import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.j
  * @import {Organisation} from '#domain/organisations/model.js'
  */
 
-describe(addOrUpdateOrganisationUser, () => {
+describe('addOrUpdateOrganisationUser', () => {
   let mockRequest
   let mockOrganisationsRepository
   let mockTokenPayload
@@ -54,8 +54,9 @@ describe(addOrUpdateOrganisationUser, () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
+      expect(
+        mockOrganisationsRepository.replace
+      ).toHaveBeenCalledExactlyOnceWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {
@@ -231,8 +232,9 @@ describe(addOrUpdateOrganisationUser, () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
+      expect(
+        mockOrganisationsRepository.replace
+      ).toHaveBeenCalledExactlyOnceWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {
@@ -261,8 +263,9 @@ describe(addOrUpdateOrganisationUser, () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
+      expect(
+        mockOrganisationsRepository.replace
+      ).toHaveBeenCalledExactlyOnceWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {

@@ -404,6 +404,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       // (1000 gross - 100 tare - 50 pallet) = 850 net
       // 850 net * 0.9985 (bailing wire) = 848.725
+      // Rounded to 2dp (half-up) = 848.73
       const uploadData = createUploadData([
         {
           rowId: 1001,
@@ -429,7 +430,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      expect(balance.amount).toBe(848.725)
+      expect(balance.amount).toBe(848.73)
     })
   })
 })
