@@ -1,21 +1,27 @@
 import Decimal from 'decimal.js'
 
+/** @typedef {import('decimal.js').Decimal} DecimalInstance */
+/** @typedef {import('decimal.js').Decimal.Value} DecimalValue */
+
+const DecimalConstructor =
+  /** @type {import('decimal.js').Decimal.Constructor} */ (Decimal)
+
 /**
  * Configure Decimal.js for financial calculations
  * - Precision: 34 significant digits (matches MongoDB Decimal128 spec)
  * - Rounding: ROUND_HALF_UP (standard financial rounding)
  */
-const ConfiguredDecimal = Decimal.clone({
+const ConfiguredDecimal = DecimalConstructor.clone({
   precision: 34,
-  rounding: Decimal.ROUND_HALF_UP
+  rounding: DecimalConstructor.ROUND_HALF_UP
 })
 
 /**
  * Convert a value to a Decimal instance.
  * Handles numbers, strings, Decimal instances, null, and undefined.
  *
- * @param {number|string|Decimal|null|undefined} value - Value to convert
- * @returns {Decimal} Decimal instance (0 for null/undefined)
+ * @param {DecimalValue|null|undefined} value - Value to convert
+ * @returns {DecimalInstance} Decimal instance (0 for null/undefined)
  */
 export function toDecimal(value) {
   if (value === null || value === undefined) {
@@ -31,25 +37,38 @@ export function toDecimal(value) {
  * Convert a Decimal instance back to a JavaScript number.
  * Used when saving values to the database.
  *
- * @param {Decimal|number|string|null|undefined} value - Value to convert
+ * @param {DecimalValue|null|undefined} value - Value to convert
  * @returns {number} JavaScript number
  */
 export function toNumber(value) {
   if (value === null || value === undefined) {
     return 0
   }
-  if (value instanceof Decimal) {
+  if (typeof value === 'object' && value._bsontype === 'Decimal128') {
+    return Number(value.toString())
+  }
+  if (value instanceof DecimalConstructor) {
     return value.toNumber()
   }
   return Number(value)
 }
 
 /**
+ * Convert a numeric value to a canonical decimal string using Decimal.js.
+ *
+ * @param {DecimalValue} value
+ * @returns {string}
+ */
+export function toDecimalString(value) {
+  return toDecimal(value).toString()
+}
+
+/**
  * Add two values using exact decimal arithmetic.
  *
- * @param {number|string|Decimal} a - First value
- * @param {number|string|Decimal} b - Second value
- * @returns {Decimal} Sum as Decimal
+ * @param {DecimalValue} a - First value
+ * @param {DecimalValue} b - Second value
+ * @returns {DecimalInstance} Sum as Decimal
  */
 export function add(a, b) {
   return toDecimal(a).plus(toDecimal(b))
@@ -58,9 +77,9 @@ export function add(a, b) {
 /**
  * Subtract two values using exact decimal arithmetic.
  *
- * @param {number|string|Decimal} a - Value to subtract from
- * @param {number|string|Decimal} b - Value to subtract
- * @returns {Decimal} Difference as Decimal
+ * @param {DecimalValue} a - Value to subtract from
+ * @param {DecimalValue} b - Value to subtract
+ * @returns {DecimalInstance} Difference as Decimal
  */
 export function subtract(a, b) {
   return toDecimal(a).minus(toDecimal(b))
@@ -69,9 +88,9 @@ export function subtract(a, b) {
 /**
  * Multiply two values using exact decimal arithmetic.
  *
- * @param {number|string|Decimal} a - First value
- * @param {number|string|Decimal} b - Second value
- * @returns {Decimal} Product as Decimal
+ * @param {DecimalValue} a - First value
+ * @param {DecimalValue} b - Second value
+ * @returns {DecimalInstance} Product as Decimal
  */
 export function multiply(a, b) {
   return toDecimal(a).times(toDecimal(b))
@@ -81,8 +100,8 @@ export function multiply(a, b) {
  * Check if two values are exactly equal using decimal comparison.
  * Replaces floating point comparisons with tolerance thresholds.
  *
- * @param {number|string|Decimal} a - First value
- * @param {number|string|Decimal} b - Second value
+ * @param {DecimalValue} a - First value
+ * @param {DecimalValue} b - Second value
  * @returns {boolean} True if values are exactly equal
  */
 export function equals(a, b) {
@@ -92,8 +111,8 @@ export function equals(a, b) {
 /**
  * Get the absolute value of a number.
  *
- * @param {number|string|Decimal} value - Value to get absolute value of
- * @returns {Decimal} Absolute value as Decimal
+ * @param {DecimalValue} value - Value to get absolute value of
+ * @returns {DecimalInstance} Absolute value as Decimal
  */
 export function abs(value) {
   return toDecimal(value).abs()
@@ -102,8 +121,8 @@ export function abs(value) {
 /**
  * Check if a value is greater than another.
  *
- * @param {number|string|Decimal} a - First value
- * @param {number|string|Decimal} b - Second value
+ * @param {DecimalValue} a - First value
+ * @param {DecimalValue} b - Second value
  * @returns {boolean} True if a > b
  */
 export function greaterThan(a, b) {
@@ -113,7 +132,7 @@ export function greaterThan(a, b) {
 /**
  * Check if a value is zero.
  *
- * @param {number|string|Decimal} value - Value to check
+ * @param {DecimalValue} value - Value to check
  * @returns {boolean} True if value equals zero
  */
 export function isZero(value) {
