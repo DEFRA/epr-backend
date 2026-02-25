@@ -1,9 +1,3 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ObjectId } from 'mongodb'
-import {
-  linkItemsToOrganisations,
-  linkRegistrationToAccreditations
-} from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   MATERIAL,
@@ -11,6 +5,12 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
+import { ObjectId } from 'mongodb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  linkItemsToOrganisations,
+  linkRegistrationToAccreditations
+} from './link-form-submissions.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -638,7 +638,7 @@ describe('linkRegistrationToAccreditations', () => {
     })
   })
 
-  it('dont link when address line1 and postcode is missing on both registration and accreditation ', () => {
+  it('dont link when address line1 and postcode is missing on both registration and accreditation', () => {
     const org1Id = new ObjectId().toString()
     const acc1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()

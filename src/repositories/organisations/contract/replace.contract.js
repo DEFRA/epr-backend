@@ -473,7 +473,7 @@ export const testReplaceBehaviour = (it) => {
 
         await expect(
           repository.replace(organisation.id, 1, updatePayload)
-        ).rejects.toThrow('Invalid organisation data: status: any.only')
+        ).rejects.toThrow(/Invalid organisation data: status:.*must be one of/)
       })
     })
 
@@ -910,7 +910,7 @@ export const testReplaceBehaviour = (it) => {
 
         await expect(
           repository.replace(organisation.id, 1, updatePayload)
-        ).rejects.toThrow('Invalid organisation data: id: any.unknown')
+        ).rejects.toThrow(/Invalid organisation data: id:.*is not allowed/)
       })
 
       it('does not leak PII data in error messages', async () => {
@@ -929,7 +929,7 @@ export const testReplaceBehaviour = (it) => {
         await expect(
           repository.replace(organisation.id, 1, updatePayload)
         ).rejects.toThrow(
-          'Invalid organisation data: submitterContactDetails.email: string.email'
+          /Invalid organisation data: submitterContactDetails\.email:.*must be a valid email/
         )
       })
     })

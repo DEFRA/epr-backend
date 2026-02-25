@@ -15,14 +15,22 @@ export const wasteExemptionSchema = Joi.object({
     is: Joi.valid(REGULATOR.EA),
     then: Joi.string()
       .required()
-      .regex(/^[wW][eE][xX]\d{6}$/),
+      .regex(/^[wW][eE][xX]\d{6}$/)
+      .messages({
+        'string.pattern.base':
+          'WEX reference must be in format WEX followed by 6 digits (e.g. WEX123456)'
+      }),
     otherwise: Joi.string().required()
   }),
   exemptionCode: Joi.when(Joi.ref('submittedToRegulator', { ancestor: 5 }), {
     is: Joi.valid(REGULATOR.EA),
     then: Joi.string()
       .required()
-      .regex(/^[a-zA-Z]\d{1,2}$/),
+      .regex(/^[a-zA-Z]\d{1,2}$/)
+      .messages({
+        'string.pattern.base':
+          'Exemption code must be a letter followed by 1-2 digits (e.g. U9)'
+      }),
     otherwise: Joi.string().required()
   }),
   materials: Joi.array()

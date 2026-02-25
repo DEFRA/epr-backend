@@ -11,6 +11,7 @@ import {
   RECEIVED_LOADS_FIELDS as RECEIVED_LOADS_FOR_REPROCESSING_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Extracted waste balance fields.
@@ -82,10 +83,11 @@ export const extractWasteBalanceFields = (record) => {
           RECEIVED_LOADS_FOR_REPROCESSING_FIELDS
             .WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
         ] === YES_NO_VALUES.YES,
-      transactionAmount:
+      transactionAmount: roundToTwoDecimalPlaces(
         value[
           RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
-        ] || 0
+        ]
+      )
     }
   } else if (type === WASTE_RECORD_TYPE.SENT_ON) {
     const { error, value } = sentOnLoadsSchema.validate(data, {
@@ -101,8 +103,9 @@ export const extractWasteBalanceFields = (record) => {
       dispatchDate: new Date(value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
       prnIssued: false,
       transactionAmount:
-        (value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON] ||
-          0) * -1
+        roundToTwoDecimalPlaces(
+          value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]
+        ) * -1
     }
   } else {
     return null
