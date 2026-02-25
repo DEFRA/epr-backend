@@ -83,54 +83,57 @@ const matchesDateRange = (statusAt, dateFrom, dateTo) => {
 }
 
 /**
- * @param {PackagingRecyclingNote} prn
- * @param {FindByStatusParams} params
- * @returns {boolean}
+ * @param {string[]} excludeOrganisationIds
+ * @returns {(params: Omit<FindByStatusParams, 'limit'>) =>
+ *   (prn: PackagingRecyclingNote) => boolean}
  */
-const matchesFindByStatusCriteria = (prn, params) => {
-  const { cursor, dateFrom, dateTo, excludeOrganisationIds, statuses } = params
+const buildFindByStatusFilter =
+  (excludeOrganisationIds) =>
+  ({ cursor, dateFrom, dateTo, statuses }) =>
+  (prn) => {
+    if (!statuses.includes(prn.status.currentStatus)) {
+      return false
+    }
+    if (cursor && prn.id.localeCompare(cursor) <= 0) {
+      return false
+    }
+    if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
+      return false
+    }
+    if (
+      excludeOrganisationIds.length &&
+      excludeOrganisationIds.includes(prn.organisation.id)
+    ) {
+      return false
+    }
 
-  if (!statuses.includes(prn.status.currentStatus)) {
-    return false
+    return true
   }
-  if (cursor && prn.id.localeCompare(cursor) <= 0) {
-    return false
-  }
-  if (!matchesDateRange(prn.status.currentStatusAt, dateFrom, dateTo)) {
-    return false
-  }
-  if (
-    excludeOrganisationIds?.length &&
-    excludeOrganisationIds.includes(prn.organisation.id)
-  ) {
-    return false
-  }
-
-  return true
-}
 
 /**
  * @param {Storage} storage
+ * @param {string[]} excludeOrganisationIds
  * @returns {(params: FindByStatusParams) => Promise<PaginatedResult>}
  */
-const performFindByStatus = (storage) => async (params) => {
-  const { limit } = params
-  const matching = []
-  for (const prn of storage.values()) {
-    if (matchesFindByStatusCriteria(prn, params)) {
-      matching.push(structuredClone(prn))
+const performFindByStatus = (storage, excludeOrganisationIds) => {
+  const buildFilter = buildFindByStatusFilter(excludeOrganisationIds)
+
+  return async (params) => {
+    const { limit } = params
+
+    const matching = [...storage.values()]
+      .filter(buildFilter(params))
+      .map((prn) => structuredClone(prn))
+      .sort((a, b) => a.id.localeCompare(b.id))
+
+    const hasMore = matching.length > limit
+    const items = matching.slice(0, limit)
+
+    return {
+      items,
+      nextCursor: hasMore ? items.at(-1).id : null,
+      hasMore
     }
-  }
-
-  matching.sort((a, b) => a.id.localeCompare(b.id))
-
-  const hasMore = matching.length > limit
-  const items = matching.slice(0, limit)
-
-  return {
-    items,
-    nextCursor: hasMore ? items.at(-1).id : null,
-    hasMore
   }
 }
 
@@ -197,8 +200,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByAccreditation: performFindByAccreditation(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
-    findByStatus: (/** @type {FindByStatusParams} */ params) =>
-      performFindByStatus(storage)({ ...params, excludeOrganisationIds }),
+    findByStatus: performFindByStatus(storage, excludeOrganisationIds),
     updateStatus: performUpdateStatus(storage)
   })
 }
