@@ -11,7 +11,7 @@ const prnTonnageRowSchema = Joi.object({
   tonnageBand: Joi.string()
     .valid(...Object.values(TONNAGE_BAND))
     .allow(null)
-    .optional(),
+    .required(),
   awaitingAuthorisationTonnage: Joi.number().required(),
   awaitingAcceptanceTonnage: Joi.number().required(),
   awaitingCancellationTonnage: Joi.number().required(),
