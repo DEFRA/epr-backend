@@ -33,7 +33,6 @@
     "dev:debug": "NODE_ENV=development npm run server:debug",
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,json,md}\"",
-    "git:pre-commit-hook": "npm run format:check && npm run lint",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "postinstall": "npm run setup:husky",
