@@ -114,7 +114,6 @@
     "testcontainers": "11.12.0",
     "tinybench": "6.0.0",
     "vitest": "4.0.18",
-    "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.3"
   }
 }

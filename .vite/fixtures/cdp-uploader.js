@@ -65,12 +65,6 @@ const cdpUploaderStackFixture = {
   // Depends on callbackReceiver to ensure correct initialisation order
   cdpUploaderStack: [
     async ({ callbackReceiver: _ }, use) => {
-      // Disable vitest-fetch-mock so we can make real HTTP requests to containers
-      // The global fetch is mocked by default in .vite/setup-files.js
-      if (globalThis.fetchMock) {
-        globalThis.fetchMock.disableMocks()
-      }
-
       // Create shared network for containers to communicate
       const network = await new Network().start()
 
@@ -188,11 +182,6 @@ const cdpUploaderStackFixture = {
       await cdpUploaderContainer.stop()
       await Promise.all([localstackContainer.stop(), redisContainer.stop()])
       await network.stop()
-
-      // Re-enable fetch mock for other tests
-      if (globalThis.fetchMock) {
-        globalThis.fetchMock.enableMocks()
-      }
     },
     { scope: 'file' }
   ]

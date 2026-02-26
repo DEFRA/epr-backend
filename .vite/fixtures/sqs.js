@@ -24,11 +24,6 @@ const localstackFixture = {
   localstack: [
     // eslint-disable-next-line no-empty-pattern -- vitest fixtures require object destructuring
     async ({}, use) => {
-      // Disable vitest-fetch-mock so we can make real HTTP requests
-      if (globalThis.fetchMock) {
-        globalThis.fetchMock.disableMocks()
-      }
-
       const container = await new GenericContainer(LOCALSTACK_IMAGE)
         .withExposedPorts(LOCALSTACK_PORT)
         .withEnvironment({
@@ -54,10 +49,6 @@ const localstackFixture = {
       })
 
       await container.stop()
-
-      if (globalThis.fetchMock) {
-        globalThis.fetchMock.enableMocks()
-      }
     },
     { scope: 'file' }
   ]
