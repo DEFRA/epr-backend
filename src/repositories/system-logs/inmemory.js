@@ -17,7 +17,8 @@ export function createSystemLogsRepository() {
   return () => {
     return {
       async insert(systemLog) {
-        const id = nextId++
+        const id = nextId
+        nextId++
         storage.push({ ...systemLog, _internalId: id })
       },
 
