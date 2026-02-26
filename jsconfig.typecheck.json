@@ -29,8 +29,7 @@
       "#repositories/*": ["./src/repositories/*"],
       "#root/*": ["./src/*"],
       "#routes/*": ["./src/routes/*"],
-      "#server/*": ["./src/server/*"],
-      "#workers/*": ["./src/workers/*"]
+      "#server/*": ["./src/server/*"]
     }
   },
   "include": ["src/**/*.js"],
