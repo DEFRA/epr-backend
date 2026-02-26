@@ -62,7 +62,7 @@ describe('logFilesUploadedFromForms', () => {
     })
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message:
-        'Total files uploaded from registration and accreditation forms 2'
+        'Total files uploaded from registration and accreditation forms: 2'
     })
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: 'Form A,id-1,file-1,500000'
