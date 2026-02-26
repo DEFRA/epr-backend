@@ -12,8 +12,6 @@ export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
 
-  // Compound index covers filter (organisationId) and sort (_id desc)
-  // for paginated queries. Supersedes the previous single-field index.
   await collection.createIndex({ 'context.organisationId': 1, _id: -1 })
 
   return collection

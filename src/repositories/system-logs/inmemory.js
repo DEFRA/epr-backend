@@ -4,7 +4,7 @@
 const toHexCursor = (id) => id.toString(16).padStart(24, '0')
 
 /** Decode a 24-char hex cursor back to a numeric ID */
-const fromHexCursor = (cursor) => parseInt(cursor, 16)
+const fromHexCursor = (cursor) => Number.parseInt(cursor, 16)
 
 /**
  * @returns {import('./port.js').SystemLogsRepositoryFactory}
@@ -17,7 +17,8 @@ export function createSystemLogsRepository() {
   return () => {
     return {
       async insert(systemLog) {
-        storage.push({ ...systemLog, _internalId: nextId++ })
+        const id = nextId++
+        storage.push({ ...systemLog, _internalId: id })
       },
 
       async findByOrganisationId({ organisationId, limit, cursor }) {
