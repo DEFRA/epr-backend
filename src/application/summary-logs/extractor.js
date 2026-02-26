@@ -39,8 +39,7 @@ const logParsingSummary = (logger, parsedData) => {
 
   const dataEntries = Object.entries(parsedData.data).map(([key, value]) => ({
     tableName: key,
-    headers: value.headers,
-    exampleRow: value.rows[1] || null,
+    headerCount: value.headers.length,
     rowCount: value.rows.length,
     location: value.location
   }))
@@ -82,10 +81,9 @@ const logParsingSummary = (logger, parsedData) => {
           category: FILE_PROCESSING_CATEGORY
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       data.tableName,
-      JSON.stringify(data.headers),
-      JSON.stringify(data.exampleRow),
+      data.headerCount,
       data.rowCount,
       data.location.sheet,
       data.location.row,
