@@ -5,6 +5,10 @@ import { StatusCodes } from 'http-status-codes'
 import { createServer } from '#server/server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+vi.mock(
+  '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
+  async () => import('#adapters/validators/summary-logs/mock.plugin.js')
+)
 
 const { validToken } = entraIdMockAuthTokens
 

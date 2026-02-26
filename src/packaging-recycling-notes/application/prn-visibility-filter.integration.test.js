@@ -1,4 +1,4 @@
-import { describe, beforeEach, afterAll, expect } from 'vitest'
+import { describe, beforeEach, afterEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'node:crypto'
@@ -47,7 +47,6 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
     await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
     await db.collection(PRNS_COLLECTION).deleteMany({})
 
-    // Seed organisations with numeric orgIds (as they exist in real environments)
     const { insertedIds } = await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertMany([
@@ -57,10 +56,21 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
 
     testOrgHexId = insertedIds[0].toHexString()
     realOrgHexId = insertedIds[1].toHexString()
+  })
 
-    // Create PRNs via the real MongoDB repository
-    // organisation.id stores the Mongo _id hex string (set by POST route from URL param)
-    const repositoryFactory = await createPackagingRecyclingNotesRepository(db)
+  afterEach(async () => {
+    await server?.stop()
+    server = undefined
+  })
+
+  async function createServerWithExclusion(testOrganisationIds) {
+    const { excludeOrganisationIds } = await createPrnVisibilityFilter(db, {
+      testOrganisationIds
+    })
+    const repositoryFactory = await createPackagingRecyclingNotesRepository(
+      db,
+      excludeOrganisationIds
+    )
     const repository = repositoryFactory()
 
     await repository.create(
@@ -74,8 +84,7 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
       })
     )
 
-    // Create test server wired to the real MongoDB PRN repository
-    server = await createTestServer({
+    return createTestServer({
       config: {
         packagingRecyclingNotesExternalApi: {
           clientId: externalApiClientId,
@@ -89,19 +98,11 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
         packagingRecyclingNotesExternalApi: true
       })
     })
-
-    // Resolve numeric org IDs to hex strings via real DB lookup
-    // (mirrors what mongodb.plugin.js does at server startup)
-    server.app.prnVisibilityFilter = await createPrnVisibilityFilter(db, {
-      testOrganisationIds: [TEST_ORG_NUMERIC_ID]
-    })
-  })
-
-  afterAll(async () => {
-    await server?.stop()
-  })
+  }
 
   it('excludes test organisation PRNs from the external list API', async () => {
+    server = await createServerWithExclusion([TEST_ORG_NUMERIC_ID])
+
     const response = await server.inject({
       method: 'GET',
       url: '/v1/packaging-recycling-notes?statuses=awaiting_acceptance',
@@ -116,10 +117,7 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
   })
 
   it('returns both PRNs when visibility filter resolves no organisations', async () => {
-    // Reconfigure with an org ID that does not exist in the DB
-    server.app.prnVisibilityFilter = await createPrnVisibilityFilter(db, {
-      testOrganisationIds: [999999]
-    })
+    server = await createServerWithExclusion([999999])
 
     const response = await server.inject({
       method: 'GET',

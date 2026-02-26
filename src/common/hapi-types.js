@@ -92,6 +92,10 @@
  */
 
 /**
+ * @typedef {{ [key: string]: unknown }} ServerApp
+ */
+
+/**
  * @typedef {Object} HapiServer
  * @property {TypedLogger} logger - CDP-compliant typed logger
  * @property {import('mongodb').Db} [db] - MongoDB database (added by mongoDb plugin)
@@ -99,7 +103,7 @@
  * @property {import('mongodb').MongoClient} [mongoClient] - MongoDB client (added by mongoDb plugin)
  * @property {LockManager} [locker] - Mongo lock manager (added by mongoDb plugin)
  * @property {{ on: (criteria: string, listener: Function) => void }} events - Server events emitter
- * @property {Record<string, unknown>} app - Server application state
+ * @property {ServerApp} app - Server application state
  * @property {Function} decorate - Decorate server/request with additional properties
  * @property {Function} dependency - Declare plugin dependencies
  * @property {Function} start - Start the server
