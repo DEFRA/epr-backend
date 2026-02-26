@@ -4,7 +4,6 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const TEST_ROW_INDEX_5 = 5
-const TEST_ROW_INDEX_12 = 12
 const TEST_ROW_INDEX_42 = 42
 
 describe('transformReceivedLoadsRow', () => {
@@ -38,15 +37,22 @@ describe('transformReceivedLoadsRow', () => {
     )
   })
 
-  it('throws error when DATE_RECEIVED_FOR_REPROCESSING is missing', () => {
+  it('transforms row when DATE_RECEIVED_FOR_REPROCESSING is missing', () => {
     const rowData = {
       ROW_ID: 'row-123',
       GROSS_WEIGHT: 100.5
     }
 
-    expect(() => transformReceivedLoadsRow(rowData, TEST_ROW_INDEX_12)).toThrow(
-      `Missing DATE_RECEIVED_FOR_REPROCESSING at row ${TEST_ROW_INDEX_12}`
-    )
+    const result = transformReceivedLoadsRow(rowData, 0)
+
+    expect(result).toEqual({
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      rowId: 'row-123',
+      data: {
+        ...rowData,
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      }
+    })
   })
 
   it('includes row index in error messages', () => {
