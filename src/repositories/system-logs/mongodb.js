@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb'
+
 export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 
 /**
@@ -10,8 +12,9 @@ export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
 
-  // Optimises system log queries by organisation ID
-  await collection.createIndex({ 'context.organisationId': 1 })
+  // Compound index covers filter (organisationId) and sort (_id desc)
+  // for paginated queries. Supersedes the previous single-field index.
+  await collection.createIndex({ 'context.organisationId': 1, _id: -1 })
 
   return collection
 }
@@ -38,19 +41,33 @@ export const createSystemLogsRepository = async (db) => {
       }
     },
 
-    async findByOrganisationId(organisationId) {
+    async findByOrganisationId({ organisationId, limit, cursor }) {
+      const filter = { 'context.organisationId': organisationId }
+
+      if (cursor) {
+        filter._id = { $lt: ObjectId.createFromHexString(cursor) }
+      }
+
       const docs = await db
         .collection(SYSTEM_LOGS_COLLECTION_NAME)
-        .find({ 'context.organisationId': organisationId })
-        .sort({ createdAt: -1 }) // most recent first
+        .find(filter)
+        .sort({ _id: -1 })
+        .limit(limit + 1)
         .toArray()
 
-      return docs.map((doc) => ({
-        event: doc.event,
-        context: doc.context,
-        createdAt: doc.createdAt,
-        createdBy: doc.createdBy
-      }))
+      const hasMore = docs.length > limit
+      const items = hasMore ? docs.slice(0, limit) : docs
+
+      return {
+        systemLogs: items.map((doc) => ({
+          event: doc.event,
+          context: doc.context,
+          createdAt: doc.createdAt,
+          createdBy: doc.createdBy
+        })),
+        hasMore,
+        nextCursor: hasMore ? items.at(-1)._id.toHexString() : null
+      }
     }
   })
 }
