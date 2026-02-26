@@ -4,6 +4,10 @@ import { Db, MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 import { randomUUID } from 'node:crypto'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+vi.mock(
+  '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
+  async () => import('#adapters/validators/summary-logs/mock.plugin.js')
+)
 
 describe('MongoDB plugin', () => {
   let server

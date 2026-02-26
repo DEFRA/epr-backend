@@ -1,8 +1,3 @@
-import { afterAll, beforeAll } from 'vitest'
-import createFetchMock from 'vitest-fetch-mock'
-
-const fetchMock = createFetchMock(vi)
-
 // Explicitly set all test-required env vars before any modules are loaded
 // This prevents leakage from dev/CI environments and ensures consistent test behavior
 // These values match the defaults in src/config.js to avoid breaking tests
@@ -55,14 +50,3 @@ process.env.SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH =
 process.env.TEST_ORGANISATIONS = '[999999]'
 
 process.env.TEST_ORGANISATIONS_SKIP_TRANSFORM = '["697a3c0e0587e4d4d7f3d533"]'
-
-beforeAll(async () => {
-  // Setup fetch mock
-  fetchMock.enableMocks()
-  global.fetch = fetchMock
-  global.fetchMock = fetchMock
-})
-
-afterAll(async () => {
-  fetchMock.disableMocks()
-})
