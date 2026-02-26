@@ -24,8 +24,8 @@
     "#vite/*": "./.vite/*"
   },
   "engines": {
-    "node": ">=24.11.0",
-    "npm": ">=11.6.1"
+    "node": ">=24.14.0 <25",
+    "npm": ">=11.9.0"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
@@ -33,7 +33,6 @@
     "dev:debug": "NODE_ENV=development npm run server:debug",
     "format": "prettier --write \"**/*.{js,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,json,md}\"",
-    "git:pre-commit-hook": "npm run format:check && npm run lint",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "postinstall": "npm run setup:husky",
