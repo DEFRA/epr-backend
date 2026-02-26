@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes'
-import { getEntraUserRoles } from '#common/helpers/auth/get-entra-user-roles.js'
 
 export const rolesGetPath = '/v1/me/roles'
 
@@ -10,8 +9,8 @@ export const rolesGet = {
     tags: ['api']
   },
   handler: async (request, h) => {
-    const { email } = request.auth.credentials
-    const roles = await getEntraUserRoles(email)
-    return h.response({ roles }).code(StatusCodes.OK)
+    return h
+      .response({ roles: request.auth.credentials.scope })
+      .code(StatusCodes.OK)
   }
 }
