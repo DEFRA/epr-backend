@@ -30,10 +30,6 @@ const authHeaders = {
 
 const listUrl = '/v1/packaging-recycling-notes'
 
-const visibilityFilter = {
-  excludeOrganisationIds: ['excluded-org-id']
-}
-
 describe('GET /v1/packaging-recycling-notes', () => {
   setupAuthContext()
 
@@ -68,8 +64,6 @@ describe('GET /v1/packaging-recycling-notes', () => {
           packagingRecyclingNotesExternalApi: true
         })
       })
-
-      server.app.prnVisibilityFilter = visibilityFilter
     })
 
     afterEach(() => {
@@ -294,69 +288,10 @@ describe('GET /v1/packaging-recycling-notes', () => {
         expect(callArgs.dateFrom).toBeUndefined()
         expect(callArgs.dateTo).toBeUndefined()
       })
-    })
 
-    describe('test organisation filtering', () => {
-      it('excludes PRNs belonging to test organisations from results', async () => {
-        const testOrgPrn = createMockIssuedPrn({
-          id: 'test-org-prn-id',
-          organisation: { id: 'excluded-org-id', name: 'Test Org' }
-        })
-        const realOrgPrn = createMockIssuedPrn({
-          id: 'real-org-prn-id',
-          organisation: { id: 'real-org-id', name: 'Real Org' }
-        })
+      it('logs the count of items returned by repository', async () => {
         packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [testOrgPrn, realOrgPrn],
-          nextCursor: null,
-          hasMore: false
-        })
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`,
-          headers: authHeaders
-        })
-
-        const payload = JSON.parse(response.payload)
-        expect(payload.items).toHaveLength(1)
-        expect(payload.items[0].id).toBe('real-org-prn-id')
-      })
-
-      it('returns all PRNs when no visibility filter is configured', async () => {
-        const saved = server.app.prnVisibilityFilter
-        server.app.prnVisibilityFilter = undefined
-
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [mockPrn],
-          nextCursor: null,
-          hasMore: false
-        })
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`,
-          headers: authHeaders
-        })
-
-        const payload = JSON.parse(response.payload)
-        expect(payload.items).toHaveLength(1)
-
-        server.app.prnVisibilityFilter = saved
-      })
-
-      it('logs the filtered count, not the pre-filter count', async () => {
-        const testOrgPrn = createMockIssuedPrn({
-          id: 'test-org-prn-id',
-          organisation: { id: 'excluded-org-id', name: 'Test Org' }
-        })
-        const realOrgPrn = createMockIssuedPrn({
-          id: 'real-org-prn-id',
-          organisation: { id: 'real-org-id', name: 'Real Org' }
-        })
-        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [testOrgPrn, realOrgPrn],
+          items: [createMockIssuedPrn()],
           nextCursor: null,
           hasMore: false
         })
@@ -372,25 +307,6 @@ describe('GET /v1/packaging-recycling-notes', () => {
             message: 'Listed 1 PRNs'
           })
         )
-      })
-
-      it('does not pass exclusion params to repository', async () => {
-        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [],
-          nextCursor: null,
-          hasMore: false
-        })
-
-        await server.inject({
-          method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`,
-          headers: authHeaders
-        })
-
-        const callArgs =
-          packagingRecyclingNotesRepository.findByStatus.mock.calls[0][0]
-        expect(callArgs.excludeOrganisationIds).toBeUndefined()
-        expect(callArgs.excludePrnIds).toBeUndefined()
       })
     })
 

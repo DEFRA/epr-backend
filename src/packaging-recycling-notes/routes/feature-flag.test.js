@@ -25,6 +25,11 @@ import { packagingRecyclingNotesRejectPath } from '#packaging-recycling-notes/ro
  * isPackagingRecyclingNotesExternalApiEnabled
  */
 
+vi.mock(
+  '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
+  async () => import('#adapters/validators/summary-logs/mock.plugin.js')
+)
+
 vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
   mongoDbPlugin: {
     plugin: {

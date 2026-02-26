@@ -1,6 +1,6 @@
-import Joi from 'joi'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
 
 import {
   LOGGING_EVENT_ACTIONS,
@@ -11,6 +11,7 @@ import { createStatusesValidator } from '#packaging-recycling-notes/routes/valid
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  */
 
 const ALLOWED_STATUSES = ['awaiting_acceptance', 'cancelled']
@@ -43,7 +44,7 @@ export const packagingRecyclingNotesList = {
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   query: {
-   *     statuses: string[],
+   *     statuses: PrnStatus[],
    *     dateFrom?: string,
    *     dateTo?: string,
    *     limit?: number,
@@ -54,28 +55,20 @@ export const packagingRecyclingNotesList = {
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
-    const { excludeOrganisationIds = [] } =
-      request.server.app.prnVisibilityFilter ?? {}
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
       const result = await packagingRecyclingNotesRepository.findByStatus({
-        statuses,
+        cursor,
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,
         limit: effectiveLimit,
-        cursor
+        statuses
       })
 
-      // Filter out test organisation PRNs from external API results
-      const excludeSet = new Set(excludeOrganisationIds)
-      const filteredItems = excludeSet.size
-        ? result.items.filter((prn) => !excludeSet.has(prn.organisation.id))
-        : result.items
-
       const response = {
-        items: filteredItems.map(mapToExternalPrn),
+        items: result.items.map(mapToExternalPrn),
         hasMore: result.hasMore
       }
 

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { beforeEach, describe, expect } from 'vitest'
 import {
   buildAwaitingAcceptancePrn,
   buildCancelledPrn,
