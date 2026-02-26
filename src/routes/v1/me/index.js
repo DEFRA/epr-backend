@@ -1,2 +1,2 @@
 export * from './organisations/index.js'
-export * from './roles/index.js'
+export * from './scope/index.js'

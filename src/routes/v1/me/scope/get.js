@@ -1,16 +1,16 @@
 import { StatusCodes } from 'http-status-codes'
 
-export const rolesGetPath = '/v1/me/roles'
+export const scopeGetPath = '/v1/me/scope'
 
-export const rolesGet = {
+export const scopeGet = {
   method: 'GET',
-  path: rolesGetPath,
+  path: scopeGetPath,
   options: {
     tags: ['api']
   },
   handler: async (request, h) => {
     return h
-      .response({ roles: request.auth.credentials.scope })
+      .response({ scope: request.auth.credentials.scope })
       .code(StatusCodes.OK)
   }
 }

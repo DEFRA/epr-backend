@@ -8,7 +8,7 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 
 const { validToken, nonServiceMaintainerUserToken } = entraIdMockAuthTokens
 
-describe('GET /v1/me/roles', () => {
+describe('GET /v1/me/scope', () => {
   setupAuthContext()
   let server
 
@@ -17,10 +17,10 @@ describe('GET /v1/me/roles', () => {
     server = await createTestServer({ featureFlags })
   })
 
-  it('returns roles for a service maintainer', async () => {
+  it('returns scope for a service maintainer', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/v1/me/roles',
+      url: '/v1/me/scope',
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -28,13 +28,13 @@ describe('GET /v1/me/roles', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
-    expect(result).toEqual({ roles: ['service_maintainer'] })
+    expect(result).toEqual({ scope: ['service_maintainer'] })
   })
 
-  it('returns empty roles for a non-service-maintainer user', async () => {
+  it('returns empty scope for a non-service-maintainer user', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/v1/me/roles',
+      url: '/v1/me/scope',
       headers: {
         Authorization: `Bearer ${nonServiceMaintainerUserToken}`
       }
@@ -42,13 +42,13 @@ describe('GET /v1/me/roles', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
-    expect(result).toEqual({ roles: [] })
+    expect(result).toEqual({ scope: [] })
   })
 
   it('returns 401 for unauthenticated request', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/v1/me/roles'
+      url: '/v1/me/scope'
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -58,7 +58,7 @@ describe('GET /v1/me/roles', () => {
     server: () => server,
     makeRequest: async () => ({
       method: 'GET',
-      url: '/v1/me/roles'
+      url: '/v1/me/scope'
     })
   })
 })
