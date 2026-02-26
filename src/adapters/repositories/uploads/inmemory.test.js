@@ -6,10 +6,6 @@ import { createCallbackReceiver } from './test-helpers/callback-receiver.js'
 let callbackReceiver
 
 beforeEach(async () => {
-  // Disable fetch mock for this test suite - we need real HTTP calls
-  // eslint-disable-next-line no-undef
-  fetchMock.disableMocks()
-
   callbackReceiver = await createCallbackReceiver()
 })
 
@@ -17,10 +13,6 @@ afterEach(async () => {
   if (callbackReceiver) {
     await callbackReceiver.stop()
   }
-
-  // Re-enable fetch mock after tests
-  // eslint-disable-next-line no-undef
-  fetchMock.enableMocks()
 })
 
 const it = base.extend({

@@ -8,7 +8,6 @@ export function setupAuthContext() {
 
   // Set up in beforeAll so it's available for createServer calls in beforeAll hooks
   beforeAll(() => {
-    global.fetchMock?.disableMocks()
     mockOidcServer = createMockOidcServers()
     mockOidcServer.listen({ onUnhandledRequest: 'error' })
   })
@@ -19,7 +18,6 @@ export function setupAuthContext() {
 
   afterAll(() => {
     mockOidcServer?.close()
-    global.fetchMock?.enableMocks()
   })
 
   return {
