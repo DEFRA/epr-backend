@@ -24,8 +24,8 @@
     "#vite/*": "./.vite/*"
   },
   "engines": {
-    "node": ">=24.11.0",
-    "npm": ">=11.6.1"
+    "node": ">=24.14.0 <25",
+    "npm": ">=11.9.0"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
