@@ -203,18 +203,25 @@ const extractMetaValues = (parsedMeta) => {
 }
 
 const handleValidationFailure = (error, issues, loggingContext) => {
-  logger.error({
-    err: error,
-    message: `Failed to validate summary log file: ${loggingContext}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-    }
-  })
-
   if (error instanceof SpreadsheetValidationError) {
+    logger.warn({
+      err: error,
+      message: `Invalid summary log file: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
     issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
   } else {
+    logger.error({
+      err: error,
+      message: `Failed to validate summary log file: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
     issues.addFatal(
       VALIDATION_CATEGORY.TECHNICAL,
       error.message,
