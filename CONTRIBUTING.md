@@ -6,6 +6,7 @@
 - [Contributing](#contributing)
   - [Requirements](#requirements)
     - [Node.js](#nodejs)
+    - [Gitleaks](#gitleaks)
     - [Secrets](#secrets)
     - [ADR tools](#adr-tools)
   - [Documentation](#documentation)
@@ -75,6 +76,21 @@ To use the correct version of Node.js for this application, via nvm:
 cd epr-backend
 nvm use
 ```
+
+### Gitleaks
+
+[Gitleaks](https://github.com/gitleaks/gitleaks) is required for pre-commit secret scanning and must be available on your PATH.
+
+The simplest install on macOS/Linux is via [mise](https://mise.jdx.dev/) — a version manager that reads `mise.toml` in this repo to install the correct pinned version:
+
+```bash
+mise trust && mise install
+```
+
+Alternatively, install directly:
+
+- macOS: `brew install gitleaks`
+- Linux/Windows: see the [gitleaks releases page](https://github.com/gitleaks/gitleaks/releases)
 
 ### Secrets
 
