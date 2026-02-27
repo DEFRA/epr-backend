@@ -76,4 +76,15 @@
  * }} DefraIdRelationship
  */
 
+/**
+ * Authenticated user context passed through command messages (e.g. SQS)
+ * for audit logging and traceability
+ *
+ * @typedef {{
+ *   id: string
+ *   email: string
+ *   scope: string[]
+ * }} CommandUser
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

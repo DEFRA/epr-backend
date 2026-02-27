@@ -29,7 +29,7 @@ const COMMAND_TIMEOUT_MS = COMMAND_TIMEOUT_MINUTES * ONE_MINUTE
  * @typedef {object} CommandMessage
  * @property {string} command - 'validate' or 'submit'
  * @property {string} summaryLogId - The summary log ID to process
- * @property {object} [user] - Optional user context for audit trail
+ * @property {import('#common/helpers/auth/types.js').CommandUser} [user] - User context for audit trail (required for submit commands)
  */
 
 const userSchema = Joi.object({
@@ -244,6 +244,11 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
+        if (!command.user) {
+          throw new PermanentError(
+            `Submit command missing user context for summaryLogId=${summaryLogId}`
+          )
+        }
         await submitSummaryLog(summaryLogId, { ...deps, user: command.user })
         break
 

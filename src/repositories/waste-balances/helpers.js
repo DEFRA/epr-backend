@@ -192,10 +192,6 @@ const recordAuditLogs = async (
   newTransactions,
   user
 ) => {
-  if (!user?.id && !user?.email) {
-    return
-  }
-
   const payload = {
     event: {
       category: 'waste-reporting',
@@ -292,7 +288,7 @@ const calculateAndApplyUpdates = async (
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
- * @param {any} [params.user]
+ * @param {import('#common/helpers/auth/types.js').CommandUser} params.user - User context for audit logging
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
