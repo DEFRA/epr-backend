@@ -45,6 +45,13 @@ export const orsQueueConsumerPlugin = {
     let consumer = null
 
     server.events.on('start', async () => {
+      if (!server.featureFlags.isOverseasSitesEnabled()) {
+        server.logger.info({
+          message: 'ORS queue consumer disabled by feature flag'
+        })
+        return
+      }
+
       server.logger.info({
         message: `Starting ORS SQS queue consumer for queue: ${queueName}`,
         event: {
