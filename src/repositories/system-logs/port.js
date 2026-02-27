@@ -17,8 +17,24 @@
 
 /**
  * @typedef {{
+ *   organisationId: string
+ *   limit: number
+ *   cursor?: string
+ * }} FindByOrganisationIdParams
+ */
+
+/**
+ * @typedef {{
+ *   systemLogs: SystemLog[]
+ *   hasMore: boolean
+ *   nextCursor: string | null
+ * }} PaginatedSystemLogs
+ */
+
+/**
+ * @typedef {{
  *   insert: (systemLog: SystemLog) => Promise<void>
- *   findByOrganisationId: (id: string) => Promise<SystemLog[]>
+ *   findByOrganisationId: (params: FindByOrganisationIdParams) => Promise<PaginatedSystemLogs>
  * }} SystemLogsRepository
  */
 
