@@ -8,6 +8,8 @@ import {
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { FindAllParams, OverseasSite, OverseasSitesRepositoryFactory } from './port.js' */
 
+const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const COLLECTION_NAME = 'overseas-sites'
 
 /**
@@ -121,7 +123,7 @@ const performFindAll = async (db, params) => {
   }
 
   if (params?.name) {
-    filter.name = { $regex: params.name, $options: 'i' }
+    filter.name = { $regex: escapeRegex(params.name), $options: 'i' }
   }
 
   const docs = await db.collection(COLLECTION_NAME).find(filter).toArray()
