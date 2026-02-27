@@ -80,6 +80,20 @@ export const testFindBehaviour = (it) => {
       expect(result[0].name).toBe('Acme Reprocessing Pvt Ltd')
     })
 
+    it('treats regex-special characters in name as literal text', async () => {
+      await repository.create(
+        buildOverseasSite({ name: 'Acme (Holdings) Ltd.' })
+      )
+      await repository.create(
+        buildOverseasSite({ name: 'Acme Xholdings* Ltd' })
+      )
+
+      const result = await repository.findAll({ name: '(holdings)' })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Acme (Holdings) Ltd.')
+    })
+
     it('combines name and country filters', async () => {
       await repository.create(
         buildOverseasSite({
