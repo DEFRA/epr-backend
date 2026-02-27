@@ -279,6 +279,80 @@ describe('validateRegistration', () => {
     })
   })
 
+  describe('overseasSites validation', () => {
+    it('exporter: accepts valid overseasSites map with three-digit keys', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'exporter',
+        overseasSites: {
+          '001': { overseasSiteId: 'abc123' },
+          '003': { overseasSiteId: 'def456' }
+        }
+      })
+
+      expect(() => validateRegistration(registration)).not.toThrow()
+    })
+
+    it('exporter: accepts empty overseasSites map', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'exporter',
+        overseasSites: {}
+      })
+
+      expect(() => validateRegistration(registration)).not.toThrow()
+    })
+
+    it('exporter: defaults to empty map when overseasSites is omitted', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'exporter'
+      })
+
+      const result = validateRegistration(registration)
+      expect(result.overseasSites).toEqual({})
+    })
+
+    it('exporter: strips overseasSites entries with non-three-digit keys', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'exporter',
+        overseasSites: {
+          abc: { overseasSiteId: 'stripped1' },
+          1234: { overseasSiteId: 'stripped2' },
+          '001': { overseasSiteId: 'kept' }
+        }
+      })
+
+      const result = validateRegistration(registration)
+      expect(result.overseasSites).toEqual({
+        '001': { overseasSiteId: 'kept' }
+      })
+    })
+
+    it('exporter: rejects overseasSites entry without overseasSiteId', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'exporter',
+        overseasSites: {
+          '001': {}
+        }
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*overseasSiteId.*is required/
+      )
+    })
+
+    it('reprocessor: rejects when overseasSites is provided', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: 'reprocessor',
+        overseasSites: {
+          '001': { overseasSiteId: 'abc123' }
+        }
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*overseasSites.*is not allowed/
+      )
+    })
+  })
+
   describe('conditional field validation by wasteProcessingType', () => {
     it('reprocessor: rejects when missing required fields', () => {
       const requiredFields = [
