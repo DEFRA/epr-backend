@@ -8,7 +8,7 @@ import { parse } from './ors-spreadsheet-parser.js'
 
 const FIXTURES_DIR = join(
   import.meta.dirname,
-  '../../../data/fixtures/spreadsheet/templates/ors'
+  '../../data/fixtures/spreadsheet/templates/ors'
 )
 
 /**

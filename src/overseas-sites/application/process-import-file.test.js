@@ -3,10 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { processImportFile } from './process-import-file.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
-vi.mock('#adapters/parsers/overseas-sites/ors-spreadsheet-parser.js')
+vi.mock('../parsers/ors-spreadsheet-parser.js')
 
-const { parse } =
-  await import('#adapters/parsers/overseas-sites/ors-spreadsheet-parser.js')
+const { parse } = await import('../parsers/ors-spreadsheet-parser.js')
 
 describe('processImportFile', () => {
   let overseasSitesRepository

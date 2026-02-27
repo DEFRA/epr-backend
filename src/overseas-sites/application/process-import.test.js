@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { processOrsImport } from './process-import.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
-import { ORS_IMPORT_STATUS } from '#domain/overseas-sites/import-status.js'
+import { ORS_IMPORT_STATUS } from '../domain/import-status.js'
 
 vi.mock('./process-import-file.js')
 

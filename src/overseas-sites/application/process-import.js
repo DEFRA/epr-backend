@@ -2,7 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ORS_IMPORT_STATUS } from '#domain/overseas-sites/import-status.js'
+import { ORS_IMPORT_STATUS } from '../domain/import-status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { processImportFile } from './process-import-file.js'
 

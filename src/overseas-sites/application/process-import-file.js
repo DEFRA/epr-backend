@@ -1,4 +1,4 @@
-import { parse } from '#adapters/parsers/overseas-sites/ors-spreadsheet-parser.js'
+import { parse } from '../parsers/ors-spreadsheet-parser.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
 /**
