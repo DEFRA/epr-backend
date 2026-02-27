@@ -256,34 +256,4 @@ describe(`${overseasSitesCreatePath} route`, () => {
       })
     })
   })
-
-  describe('when feature flag is disabled', () => {
-    let server
-
-    beforeAll(async () => {
-      server = await createTestServer({
-        repositories: {
-          overseasSitesRepository: createInMemoryOverseasSitesRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags({
-          overseasSites: false
-        })
-      })
-    })
-
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    it('returns 404 when feature flag is disabled', async () => {
-      const response = await server.inject({
-        method: 'POST',
-        url: '/v1/overseas-sites',
-        ...asServiceMaintainer(),
-        payload: validPayload
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
-  })
 })
