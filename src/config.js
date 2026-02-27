@@ -452,13 +452,13 @@ const baseConfig = {
       doc: 'Forms Submission API service name for Cognito',
       format: String,
       default: 'forms-submission-api',
-      env: 'FORMS_SUBMISSION_API_SERVICE_NAME'
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_SERVICE_NAME'
     },
     url: {
       doc: 'Forms Submission API base URL',
       format: String,
       default: 'https://example.com',
-      env: 'FORMS_SUBMISSION_API_URL'
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_URL'
     },
     s3Bucket: {
       doc: 'S3 bucket for form file uploads',
@@ -470,13 +470,13 @@ const baseConfig = {
       doc: 'Cognito client ID for Forms Submission API',
       format: String,
       default: 'client-id',
-      env: 'FORMS_SUBMISSION_API_COGNITO_CLIENT_ID'
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_CLIENT_ID'
     },
     cognitoClientSecret: {
       doc: 'Cognito client secret for Forms Submission API',
       format: String,
       default: 'client-secret',
-      env: 'FORMS_SUBMISSION_API_COGNITO_CLIENT_SECRET'
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_CLIENT_SECRET'
     },
     copyFilesUploadedFromDate: {
       doc: 'Only copy form files uploaded on or after this date (ISO 8601 format)',
