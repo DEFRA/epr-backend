@@ -15,6 +15,7 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { orsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/mongodb.plugin.js'
 import { overseasSitesRepositoryPlugin } from '#overseas-sites/repository/mongodb.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
@@ -33,6 +34,7 @@ import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/m
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
+import { orsQueueConsumerPlugin } from '#server/ors-queue-consumer/ors-queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runGlassMigration } from '#server/run-glass-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
@@ -119,9 +121,14 @@ function getProductionPlugins(config) {
     s3PublicRegisterRepositoryPlugin,
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
+    orsImportsRepositoryPlugin,
     packagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
+      options: { config }
+    },
+    {
+      plugin: orsQueueConsumerPlugin,
       options: { config }
     }
   ]

@@ -413,6 +413,21 @@ const baseConfig = {
       env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
     }
   },
+  orsImportQueue: {
+    endpoint: {
+      doc: 'AWS SQS endpoint for ORS import queue (only set for local development)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'ORS_IMPORT_SQS_ENDPOINT'
+    },
+    queueName: {
+      doc: 'SQS queue name for ORS spreadsheet import processing',
+      format: String,
+      default: 'epr_ors_imports',
+      env: 'ORS_IMPORT_SQS_QUEUE_NAME'
+    }
+  },
   publicRegister: {
     batchSize: {
       doc: 'Public register generation batch size. This is used for yielding back to event loop',

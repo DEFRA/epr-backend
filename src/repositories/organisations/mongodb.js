@@ -294,6 +294,34 @@ const findAllIds = (db) => async () => {
   )
 }
 
+const performFindByOrgId = (db) => async (orgId) => {
+  const doc = await db.collection(COLLECTION_NAME).findOne({ orgId })
+
+  if (!doc) {
+    return null
+  }
+
+  return mapDocumentWithCurrentStatuses(doc)
+}
+
+const performMergeRegistrationOverseasSites =
+  (db) => async (id, version, registrationId, entries) => {
+    const setFields = {}
+    for (const [key, value] of Object.entries(entries)) {
+      setFields[`registrations.$[reg].overseasSites.${key}`] = value
+    }
+
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .updateOne(
+        { _id: ObjectId.createFromHexString(id), version },
+        { $set: setFields, $inc: { version: 1 } },
+        { arrayFilters: [{ 'reg.id': registrationId }] }
+      )
+
+    return result.matchedCount > 0
+  }
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
@@ -374,7 +402,10 @@ export const createOrganisationsRepository = async (
         }
 
         return accreditation
-      }
+      },
+
+      findByOrgId: performFindByOrgId(db),
+      mergeRegistrationOverseasSites: performMergeRegistrationOverseasSites(db)
     }
   }
 }
