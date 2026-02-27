@@ -162,6 +162,8 @@
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration|null>} findRegistrationById
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
+ * @property {(orgId: number) => Promise<Organisation|null>} findByOrgId - Find organisation by business orgId
+ * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} mergeRegistrationOverseasSites - Merge overseas site entries into a registration's overseasSites map
  */
 
 /**
