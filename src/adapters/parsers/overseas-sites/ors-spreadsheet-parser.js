@@ -33,6 +33,9 @@ const META_VALUE_COL = 4
 
 const DATA_START_ROW = 10
 
+// The number branch handles numeric values and coercible strings (e.g. '42' → 42).
+// The string branch catches strings that fail number coercion range checks
+// (e.g. '000' coerces to 0 which fails min(1), then falls through here).
 const orsIdSchema = Joi.alternatives().try(
   Joi.number().integer().min(1).max(999),
   Joi.string()
@@ -69,7 +72,8 @@ const cellToString = (cellValue) => {
   if (extracted === null || extracted === undefined || extracted === '') {
     return null
   }
-  return String(extracted)
+  const str = String(extracted).trim()
+  return str === '' ? null : str
 }
 
 /**
@@ -188,6 +192,7 @@ export const parse = async (buffer) => {
 
   const sites = []
   const errors = []
+  const seenOrsIds = new Set()
 
   for (let rowNum = DATA_START_ROW; rowNum <= worksheet.rowCount; rowNum++) {
     const row = worksheet.getRow(rowNum)
@@ -209,11 +214,22 @@ export const parse = async (buffer) => {
     if (error) {
       errors.push(...joiErrorsToRowErrors(error, rowNum))
     } else {
-      sites.push({
-        ...site,
-        rowNumber: rowNum,
-        orsId: zeroPadOrsId(site.orsId)
-      })
+      const paddedId = zeroPadOrsId(site.orsId)
+
+      if (seenOrsIds.has(paddedId)) {
+        errors.push({
+          rowNumber: rowNum,
+          field: 'orsId',
+          message: `Duplicate ORS ID: ${paddedId}`
+        })
+      } else {
+        seenOrsIds.add(paddedId)
+        sites.push({
+          ...site,
+          rowNumber: rowNum,
+          orsId: paddedId
+        })
+      }
     }
   }
 
