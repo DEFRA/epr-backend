@@ -16,7 +16,7 @@ import { StatusCodes } from 'http-status-codes'
  * @typedef {{
  *   id: string
  *   name: string
- *   orgId: string | number
+ *   orgId: number
  * }} EprOrganisationSummary
  */
 
@@ -112,7 +112,7 @@ export const organisationsLinkedGetAll = {
       ? {
           id: linkedOrg.id,
           name: linkedOrg.linkedDefraOrganisation.orgName,
-          orgId: linkedOrg.linkedDefraOrganisation.orgId,
+          orgId: linkedOrg.orgId,
           linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
           linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt
         }
