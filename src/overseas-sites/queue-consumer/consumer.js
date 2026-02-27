@@ -12,9 +12,9 @@ import {
 import {
   ORS_IMPORT_COMMAND,
   ORS_IMPORT_STATUS
-} from '#domain/overseas-sites/import-status.js'
+} from '../domain/import-status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
-import { processOrsImport } from '#application/overseas-sites/process-import.js'
+import { processOrsImport } from '../application/process-import.js'
 
 const ONE_MINUTE = 60_000
 const COMMAND_TIMEOUT_MINUTES = 5

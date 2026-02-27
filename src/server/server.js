@@ -33,7 +33,7 @@ import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
-import { orsQueueConsumerPlugin } from '#server/ors-queue-consumer/ors-queue-consumer.plugin.js'
+import { orsQueueConsumerPlugin } from '#overseas-sites/queue-consumer/ors-queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 

@@ -2,7 +2,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect } from 'vitest'
 import { createOrsImportsRepository } from './mongodb.js'
-import { ORS_IMPORT_STATUS } from '#domain/overseas-sites/import-status.js'
+import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'ors-imports'

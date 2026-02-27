@@ -4,7 +4,7 @@ import {
   createInMemoryOrsImportsRepository,
   createInMemoryOrsImportsRepositoryPlugin
 } from './inmemory.js'
-import { ORS_IMPORT_STATUS } from '#domain/overseas-sites/import-status.js'
+import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
 describe('In-memory ORS imports repository', () => {
   let repository

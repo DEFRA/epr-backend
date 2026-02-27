@@ -5,7 +5,7 @@ import {
 } from '@aws-sdk/client-sqs'
 
 import { createOrsQueueConsumer } from './consumer.js'
-import { ORS_IMPORT_STATUS } from '#domain/overseas-sites/import-status.js'
+import { ORS_IMPORT_STATUS } from '../domain/import-status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 vi.mock('sqs-consumer')
@@ -13,10 +13,9 @@ vi.mock('@aws-sdk/client-sqs', () => ({
   GetQueueUrlCommand: vi.fn(),
   GetQueueAttributesCommand: vi.fn()
 }))
-vi.mock('#application/overseas-sites/process-import.js')
+vi.mock('../application/process-import.js')
 
-const { processOrsImport } =
-  await import('#application/overseas-sites/process-import.js')
+const { processOrsImport } = await import('../application/process-import.js')
 
 describe('createOrsQueueConsumer', () => {
   let sqsClient
