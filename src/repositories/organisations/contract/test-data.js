@@ -58,6 +58,7 @@ export const buildRegistration = (overrides = {}) => {
   if (registration.wasteProcessingType === 'reprocessor') {
     delete registration.exportPorts
     delete registration.orsFileUploads
+    delete registration.overseasSites
   }
 
   return registration
