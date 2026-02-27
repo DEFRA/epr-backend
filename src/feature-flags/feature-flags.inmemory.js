@@ -13,5 +13,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isPackagingRecyclingNotesExternalApiEnabled() {
     return flags.packagingRecyclingNotesExternalApi ?? false
+  },
+  isOverseasSitesEnabled() {
+    return flags.overseasSites ?? false
   }
 })

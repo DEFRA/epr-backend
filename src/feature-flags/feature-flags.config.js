@@ -16,5 +16,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isCopyFormFilesToS3Enabled() {
     return config.get('featureFlags.copyFormFilesToS3')
+  },
+  isOverseasSitesEnabled() {
+    return config.get('featureFlags.overseasSites')
   }
 })
