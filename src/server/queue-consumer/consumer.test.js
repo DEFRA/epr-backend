@@ -688,6 +688,12 @@ describe('createCommandQueueConsumer', () => {
     })
 
     describe('submit command', () => {
+      const testUser = {
+        id: 'user-1',
+        email: 'test@example.com',
+        scope: ['submit']
+      }
+
       beforeEach(() => {
         summaryLogsRepository.findById.mockResolvedValue({
           version: 1,
@@ -702,7 +708,11 @@ describe('createCommandQueueConsumer', () => {
       it('processes submit command successfully', async () => {
         const message = {
           MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
+          Body: JSON.stringify({
+            command: 'submit',
+            summaryLogId: 'log-123',
+            user: testUser
+          })
         }
 
         await handleMessage(message)
@@ -730,7 +740,11 @@ describe('createCommandQueueConsumer', () => {
 
         const message = {
           MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
+          Body: JSON.stringify({
+            command: 'submit',
+            summaryLogId: 'log-123',
+            user: testUser
+          })
         }
 
         await handleMessage(message)
@@ -742,6 +756,25 @@ describe('createCommandQueueConsumer', () => {
       })
 
       describe('permanent errors', () => {
+        it('marks as failed when submit command has no user context', async () => {
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'submit',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message)
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message:
+                'Command failed (permanent): submit for summaryLogId=log-123 messageId=msg-123'
+            })
+          )
+        })
+
         it('marks as failed when summary log not found', async () => {
           summaryLogsRepository.findById.mockResolvedValueOnce(null)
           summaryLogsRepository.findById.mockResolvedValueOnce(null)
@@ -750,7 +783,8 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: testUser
             })
           }
 
@@ -778,7 +812,8 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: testUser
             })
           }
 
@@ -811,7 +846,8 @@ describe('createCommandQueueConsumer', () => {
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: testUser
             })
           }
 
@@ -834,7 +870,8 @@ describe('createCommandQueueConsumer', () => {
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: testUser
             })
           }
 
@@ -860,7 +897,8 @@ describe('createCommandQueueConsumer', () => {
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: testUser
             })
           }
 

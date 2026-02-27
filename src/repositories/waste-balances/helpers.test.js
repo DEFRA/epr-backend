@@ -463,7 +463,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       )
     })
 
-    it('should save balance but skip audit when user is not provided', async () => {
+    it('should save balance with version 0 and audit correctly', async () => {
       const wasteRecords = [
         {
           id: 'rec-1',
@@ -471,6 +471,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           data: {}
         }
       ]
+      const user = { id: 'user-1', email: 'user@test.com', scope: ['submit'] }
       const accreditation = { id: 'acc-1' }
       const wasteBalance = {
         id: 'bal-1',
@@ -502,12 +503,12 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
-        // user undefined
+        saveBalance,
+        user
       })
 
-      expect(audit).not.toHaveBeenCalled()
       expect(saveBalance).toHaveBeenCalled()
+      expect(audit).toHaveBeenCalledWith(expect.objectContaining({ user }))
     })
 
     it('should audit but skip system log when systemLogsRepository is missing', async () => {

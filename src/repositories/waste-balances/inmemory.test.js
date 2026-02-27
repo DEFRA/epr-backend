@@ -47,8 +47,9 @@ describe('waste-balances repository - in-memory implementation', () => {
   it('should throw error when organisationsRepository dependency is missing', async () => {
     const repository = createInMemoryWasteBalancesRepository([], {})()
     const record = { organisationId: 'org-1' }
+    const user = { id: 'user-1', email: 'test@example.com', scope: ['submit'] }
     await expect(
-      repository.updateWasteBalanceTransactions([record], 'acc-1')
+      repository.updateWasteBalanceTransactions([record], 'acc-1', user)
     ).rejects.toThrow('organisationsRepository dependency is required')
   })
 

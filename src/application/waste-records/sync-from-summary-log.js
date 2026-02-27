@@ -212,7 +212,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
-   * @param {Object} [user] - User context for the sync
+   * @param {import('#common/helpers/auth/types.js').CommandUser} user - User context for audit logging
    * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
   return async (summaryLog, user) => {

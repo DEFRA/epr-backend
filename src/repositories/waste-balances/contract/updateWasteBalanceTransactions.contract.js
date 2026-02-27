@@ -10,6 +10,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
     const accreditationId = 'acc-123'
+    const user = { id: 'user-1', email: 'test@example.com', scope: ['submit'] }
 
     it('Should throw if accreditation is not found', async ({
       wasteBalancesRepository,
@@ -26,7 +27,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         repository.updateWasteBalanceTransactions(
           [record],
           accreditationId,
-          undefined
+          user
         )
       ).rejects.toThrow(`Accreditation not found: ${accreditationId}`)
     })
@@ -84,11 +85,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [],
-        accreditationId,
-        undefined
-      )
+      await repository.updateWasteBalanceTransactions([], accreditationId, user)
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -171,7 +168,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await repository.updateWasteBalanceTransactions(
         [record],
         accreditationId,
-        undefined
+        user
       )
 
       // Assert
