@@ -341,11 +341,11 @@ describe('validateRegistration', () => {
 
     it('reprocessor: rejects when overseasSites is provided', () => {
       const registration = buildRegistration({
-        wasteProcessingType: 'reprocessor',
-        overseasSites: {
-          '001': { overseasSiteId: 'abc123' }
-        }
+        wasteProcessingType: 'reprocessor'
       })
+      registration.overseasSites = {
+        '001': { overseasSiteId: 'abc123' }
+      }
 
       expect(() => validateRegistration(registration)).toThrow(
         /Invalid registration data.*overseasSites.*is not allowed/
