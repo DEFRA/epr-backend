@@ -268,6 +268,50 @@ describe('ORS spreadsheet parser', () => {
       expect(result.sites[0].validFrom).toBeNull()
     })
 
+    it('should trim whitespace from string cell values', async () => {
+      const workbook = buildOrsWorkbook({
+        dataRows: [
+          {
+            orsId: 1,
+            country: '  India  ',
+            name: 'Site With Spaces  ',
+            line1: '  42 High Street',
+            townOrCity: '  LONDON  '
+          }
+        ]
+      })
+      const buffer = await writeBuffer(workbook)
+
+      const result = await parse(buffer)
+
+      expect(result.sites[0].country).toBe('India')
+      expect(result.sites[0].name).toBe('Site With Spaces')
+      expect(result.sites[0].address.line1).toBe('42 High Street')
+      expect(result.sites[0].address.townOrCity).toBe('LONDON')
+    })
+
+    it('should treat whitespace-only cell values as null', async () => {
+      const workbook = buildOrsWorkbook({
+        dataRows: [
+          {
+            orsId: 1,
+            country: 'India',
+            name: 'Site',
+            line1: 'Addr',
+            townOrCity: 'Town',
+            line2: '   ',
+            stateOrRegion: '  '
+          }
+        ]
+      })
+      const buffer = await writeBuffer(workbook)
+
+      const result = await parse(buffer)
+
+      expect(result.sites[0].address.line2).toBeNull()
+      expect(result.sites[0].address.stateOrRegion).toBeNull()
+    })
+
     it('should parse numeric postcode as string', async () => {
       const workbook = buildOrsWorkbook({
         dataRows: [
@@ -583,6 +627,64 @@ describe('ORS spreadsheet parser', () => {
 
       expect(result.sites).toHaveLength(0)
       expect(result.errors).toHaveLength(2)
+    })
+
+    it('should report error for row with data but no ORS ID', async () => {
+      const workbook = buildOrsWorkbook({
+        dataRows: [
+          {
+            country: 'India',
+            name: 'Site Without ID',
+            line1: 'Addr',
+            townOrCity: 'Town'
+          }
+        ]
+      })
+      const buffer = await writeBuffer(workbook)
+
+      const result = await parse(buffer)
+
+      expect(result.sites).toHaveLength(0)
+      expect(result.errors).toHaveLength(1)
+      expect(result.errors[0]).toEqual(
+        expect.objectContaining({
+          rowNumber: 10,
+          field: 'orsId'
+        })
+      )
+    })
+
+    it('should report duplicate ORS IDs', async () => {
+      const workbook = buildOrsWorkbook({
+        dataRows: [
+          {
+            orsId: 1,
+            country: 'India',
+            name: 'Site A',
+            line1: 'Addr 1',
+            townOrCity: 'Town A'
+          },
+          {
+            orsId: 1,
+            country: 'China',
+            name: 'Site B',
+            line1: 'Addr 2',
+            townOrCity: 'Town B'
+          }
+        ]
+      })
+      const buffer = await writeBuffer(workbook)
+
+      const result = await parse(buffer)
+
+      expect(result.errors).toHaveLength(1)
+      expect(result.errors[0]).toEqual(
+        expect.objectContaining({
+          rowNumber: 11,
+          field: 'orsId',
+          message: expect.stringContaining('001')
+        })
+      )
     })
 
     it('should report string ORS ID out of range', async () => {
