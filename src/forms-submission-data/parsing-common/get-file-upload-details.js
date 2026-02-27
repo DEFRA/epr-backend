@@ -1,5 +1,16 @@
+import { config } from '../../config.js'
+
+const copyFilesUploadedFromDate = new Date(
+  config.get('formsSubmissionApi.copyFilesUploadedFromDate')
+)
+
 function extractFilesFromSubmissions(submissions) {
   return submissions.flatMap((submission) => {
+    const submissionDate = new Date(submission.createdAt)
+    if (submissionDate < copyFilesUploadedFromDate) {
+      return []
+    }
+
     const filesByField = submission.rawSubmissionData.data.files
     const formName = submission.rawSubmissionData.meta.definition.name
     const id = submission.id
