@@ -353,6 +353,60 @@ describe('processImportFile', () => {
     expect(createArg.validFrom.toISOString()).toContain('2025-06-15')
   })
 
+  it('returns failure when mergeRegistrationOverseasSites has version conflict', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 500001,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Test Site',
+          address: {
+            line1: '1 Test St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue({
+      id: 'org-id',
+      orgId: 500001,
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-id',
+          registrationNumber: 'EPR/AB1234CD/R1',
+          wasteProcessingType: 'exporter'
+        }
+      ]
+    })
+
+    overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
+    organisationsRepository.mergeRegistrationOverseasSites.mockResolvedValue(
+      false
+    )
+
+    const result = await processImportFile(buffer, deps())
+
+    expect(result.status).toBe('failure')
+    expect(result.errors[0].message).toContain('version conflict')
+  })
+
   it('sets null validFrom when not provided', async () => {
     const buffer = Buffer.from('spreadsheet')
 

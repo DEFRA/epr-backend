@@ -231,6 +231,48 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
   )
 }
 
+const performFindByOrgId = (staleCache) => async (orgId) => {
+  const found = staleCache.find((o) => o.orgId === orgId)
+  if (!found) {
+    return null
+  }
+  return mapDocumentWithCurrentStatuses(structuredClone(found))
+}
+
+const performMergeRegistrationOverseasSites =
+  (storage, staleCache, pendingSyncRef) =>
+  async (id, version, registrationId, entries) => {
+    const existingIndex = storage.findIndex((o) => o._id === id)
+    if (existingIndex === -1) {
+      return false
+    }
+
+    const existing = storage[existingIndex]
+    if (existing.version !== version) {
+      return false
+    }
+
+    const registration = existing.registrations?.find(
+      (r) => r.id === registrationId
+    )
+    if (!registration) {
+      return false
+    }
+
+    if (!registration.overseasSites) {
+      registration.overseasSites = {}
+    }
+
+    for (const [key, value] of Object.entries(entries)) {
+      registration.overseasSites[key] = value
+    }
+
+    existing.version += 1
+
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+    return true
+  }
+
 const performFindAllIds = (staleCache) => async () => {
   const orgs = structuredClone(staleCache)
 
@@ -328,6 +370,12 @@ export const createInMemoryOrganisationsRepository = (
       findByIds: performFindByIds(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
+      findByOrgId: performFindByOrgId(staleCache),
+      mergeRegistrationOverseasSites: performMergeRegistrationOverseasSites(
+        storage,
+        staleCache,
+        pendingSyncRef
+      ),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
       // Test-only method to access internal storage (not part of the port interface)

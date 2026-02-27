@@ -10,7 +10,7 @@ import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/excel
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
  * @param {object} deps.logger
- * @returns {Promise<import('./process-import-file-result.js').FileResult>}
+ * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
  */
 export const processImportFile = async (
   buffer,
@@ -72,12 +72,21 @@ export const processImportFile = async (
     overseasSitesMap[site.orsId] = { overseasSiteId: created.id }
   }
 
-  await organisationsRepository.mergeRegistrationOverseasSites(
+  const merged = await organisationsRepository.mergeRegistrationOverseasSites(
     org.id,
     org.version,
     registration.id,
     overseasSitesMap
   )
+
+  if (!merged) {
+    return failureResult(metadata.registrationNumber, [
+      {
+        field: 'version',
+        message: `Failed to update registration ${metadata.registrationNumber} — version conflict`
+      }
+    ])
+  }
 
   logger.info({
     message: `Processed ORS file: ${sites.length} sites created for registration ${metadata.registrationNumber}`
