@@ -112,4 +112,25 @@ describe('createInMemoryFeatureFlags', () => {
       expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
     })
   })
+
+  describe('isOverseasSitesEnabled', () => {
+    it('returns true when overseasSites flag is enabled', () => {
+      const flags = createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+      expect(flags.isOverseasSitesEnabled()).toBe(true)
+    })
+
+    it('returns false when overseasSites flag is disabled', () => {
+      const flags = createInMemoryFeatureFlags({
+        overseasSites: false
+      })
+      expect(flags.isOverseasSitesEnabled()).toBe(false)
+    })
+
+    it('returns false when overseasSites flag is not provided', () => {
+      const flags = createInMemoryFeatureFlags({})
+      expect(flags.isOverseasSitesEnabled()).toBe(false)
+    })
+  })
 })
