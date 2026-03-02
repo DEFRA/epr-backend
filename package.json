@@ -52,10 +52,10 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.995.0",
-    "@aws-sdk/client-sqs": "3.995.0",
-    "@aws-sdk/credential-providers": "3.995.0",
-    "@aws-sdk/s3-request-presigner": "3.995.0",
+    "@aws-sdk/client-s3": "3.1000.0",
+    "@aws-sdk/client-sqs": "3.1000.0",
+    "@aws-sdk/credential-providers": "3.1000.0",
+    "@aws-sdk/s3-request-presigner": "3.1000.0",
     "@defra/cdp-auditing": "0.6.0",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.30.0",
@@ -96,6 +96,7 @@
   },
   "overrides": {
     "@isaacs/brace-expansion": "5.0.1",
+    "fast-xml-parser": "5.4.1",
     "glob": "11.1.0"
   },
   "devDependencies": {
