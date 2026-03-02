@@ -26,7 +26,10 @@ describe('#getRolesForOrganisationAccess', () => {
       params: {
         organisationId: mockOrganisationId
       },
-      organisationsRepository: mockOrganisationsRepository
+      organisationsRepository: mockOrganisationsRepository,
+      logger: {
+        warn: vi.fn()
+      }
     }
   })
 
@@ -545,6 +548,87 @@ describe('#getRolesForOrganisationAccess', () => {
 
       expect(result).toEqual([ROLES.standardUser])
       expect(result[0]).toBe('standard_user')
+    })
+  })
+
+  describe('addOrUpdateOrganisationUser error handling', () => {
+    test('still returns roles when user sync fails', async () => {
+      const mockOrganisation = {
+        id: mockOrganisationId,
+        status: ORGANISATION_STATUS.ACTIVE,
+        users: [],
+        version: 1
+      }
+
+      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+      mockOrganisationsRepository.replace.mockRejectedValue(
+        new Error(
+          'Version conflict: attempted to update with version 1 but current version is 2'
+        )
+      )
+
+      const result = await getRolesForOrganisationAccess(
+        mockRequest,
+        mockLinkedEprOrg,
+        userPresentInOrg1DefraIdTokenPayload
+      )
+
+      expect(result).toEqual([ROLES.standardUser])
+    })
+
+    test('logs a warning when user sync fails', async () => {
+      const syncError = new Error(
+        'Version conflict: attempted to update with version 1 but current version is 2'
+      )
+
+      const mockOrganisation = {
+        id: mockOrganisationId,
+        status: ORGANISATION_STATUS.ACTIVE,
+        users: [],
+        version: 1
+      }
+
+      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+      mockOrganisationsRepository.replace.mockRejectedValue(syncError)
+
+      await getRolesForOrganisationAccess(
+        mockRequest,
+        mockLinkedEprOrg,
+        userPresentInOrg1DefraIdTokenPayload
+      )
+
+      // Flush microtasks so the .catch() handler executes
+      await vi.waitFor(() => {
+        expect(mockRequest.logger.warn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Version conflict'),
+            err: syncError
+          })
+        )
+      })
+    })
+
+    test('does not log when user sync succeeds', async () => {
+      const mockOrganisation = {
+        id: mockOrganisationId,
+        status: ORGANISATION_STATUS.ACTIVE,
+        users: [],
+        version: 1
+      }
+
+      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+      mockOrganisationsRepository.replace.mockResolvedValue(undefined)
+
+      await getRolesForOrganisationAccess(
+        mockRequest,
+        mockLinkedEprOrg,
+        userPresentInOrg1DefraIdTokenPayload
+      )
+
+      // Flush microtasks
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(mockRequest.logger.warn).not.toHaveBeenCalled()
     })
   })
 })
