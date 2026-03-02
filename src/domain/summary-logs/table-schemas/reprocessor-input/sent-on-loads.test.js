@@ -165,14 +165,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
     })
 
     describe('DATE_LOAD_LEFT_SITE validation', () => {
-      it('accepts valid Date object', () => {
-        const { error } = validationSchema.validate({
-          DATE_LOAD_LEFT_SITE: new Date('2024-06-15')
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts date string that can be parsed', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
           DATE_LOAD_LEFT_SITE: '2024-06-15'
         })

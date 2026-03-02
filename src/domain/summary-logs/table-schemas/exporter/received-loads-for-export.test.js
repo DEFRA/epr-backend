@@ -235,14 +235,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('DATE_RECEIVED_FOR_EXPORT validation', () => {
-      it('accepts valid Date object', () => {
-        const { error } = validationSchema.validate({
-          DATE_RECEIVED_FOR_EXPORT: new Date('2024-01-15')
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts date string that can be parsed', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
           DATE_RECEIVED_FOR_EXPORT: '2024-01-15'
         })
@@ -259,9 +252,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('DATE_OF_EXPORT validation', () => {
-      it('accepts valid Date object', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
-          DATE_OF_EXPORT: new Date('2024-01-20')
+          DATE_OF_EXPORT: '2024-01-20'
         })
         expect(error).toBeUndefined()
       })
@@ -276,9 +269,9 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('DATE_RECEIVED_BY_OSR validation', () => {
-      it('accepts valid Date object', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
-          DATE_RECEIVED_BY_OSR: new Date('2024-01-25')
+          DATE_RECEIVED_BY_OSR: '2024-01-25'
         })
         expect(error).toBeUndefined()
       })

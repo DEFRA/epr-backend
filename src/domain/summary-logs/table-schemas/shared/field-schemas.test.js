@@ -92,19 +92,40 @@ describe('field-schemas', () => {
   })
 
   describe('createDateFieldSchema', () => {
-    it('accepts valid date', () => {
+    it('accepts valid date string', () => {
       const schema = createDateFieldSchema()
-      expect(schema.validate(new Date()).error).toBeUndefined()
+      expect(schema.validate('2024-01-01').error).toBeUndefined()
     })
 
     it('accepts date string', () => {
       const schema = createDateFieldSchema()
-      expect(schema.validate('2024-01-01').error).toBeUndefined()
+      expect(schema.validate('2026-09-26').error).toBeUndefined()
     })
 
     it('rejects invalid date', () => {
       const schema = createDateFieldSchema()
       const { error } = schema.validate('not-a-date')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects US date format (MM/DD/YYYY)', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate('09/26/2026')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects ISO datetime with time component', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate('2026-09-26T12:00:00.000Z')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects Date object', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate(new Date())
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be a valid date')
     })

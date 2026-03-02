@@ -140,8 +140,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
         {
           rowId: 1002,
           exportTonnage: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z'
+          dateReceived: '2025-01-16',
+          dateOfExport: '2025-01-21'
         }
       ])
 
@@ -194,8 +194,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
         {
           rowId: 1002,
           exportTonnage: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z'
+          dateReceived: '2025-01-16',
+          dateOfExport: '2025-01-21'
         }
       ])
 
@@ -219,8 +219,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
         {
           rowId: 1002,
           exportTonnage: 100,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z',
+          dateReceived: '2025-01-16',
+          dateOfExport: '2025-01-21',
           grossWeight: 1000,
           tareWeight: 100,
           palletWeight: 50,
@@ -286,8 +286,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
           rowId: 2002,
           prnIssued: 'No',
           exportTonnage: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z'
+          dateReceived: '2025-01-16',
+          dateOfExport: '2025-01-21'
         }
       ])
 
@@ -324,14 +324,14 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const uploadData = createUploadData([
         {
           rowId: 3001,
-          dateReceived: '2024-06-15T00:00:00.000Z',
-          exportDate: '2024-06-20T00:00:00.000Z',
+          dateReceived: '2024-06-15',
+          exportDate: '2024-06-20',
           exportTonnage: 100
         },
         {
           rowId: 3002,
-          dateReceived: '2025-06-15T00:00:00.000Z',
-          exportDate: '2025-06-21T00:00:00.000Z',
+          dateReceived: '2025-06-15',
+          exportDate: '2025-06-21',
           exportTonnage: 200
         }
       ])
@@ -410,8 +410,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const secondUploadData = createUploadData([
         {
           rowId: 5001,
-          dateReceived: '2024-06-15T00:00:00.000Z',
-          exportDate: '2024-06-20T00:00:00.000Z',
+          dateReceived: '2024-06-15',
+          exportDate: '2024-06-20',
           exportTonnage: 100
         }
       ])

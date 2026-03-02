@@ -79,9 +79,9 @@ describe('createSentOnLoadsSchema', () => {
     })
 
     describe('DATE_LOAD_LEFT_SITE validation', () => {
-      it('accepts valid Date object', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
-          DATE_LOAD_LEFT_SITE: new Date('2024-06-15')
+          DATE_LOAD_LEFT_SITE: '2024-06-15'
         })
         expect(error).toBeUndefined()
       })

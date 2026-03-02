@@ -119,14 +119,7 @@ describe('REPROCESSED_LOADS', () => {
     })
 
     describe('DATE_LOAD_LEFT_SITE validation', () => {
-      it('accepts valid Date object', () => {
-        const { error } = validationSchema.validate({
-          DATE_LOAD_LEFT_SITE: new Date('2024-06-15')
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts date string that can be parsed', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
           DATE_LOAD_LEFT_SITE: '2024-06-15'
         })
@@ -139,15 +132,6 @@ describe('REPROCESSED_LOADS', () => {
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe('must be a valid date')
-      })
-
-      it('accepts numeric timestamps (Joi interprets as epoch ms)', () => {
-        // Joi's date() validator accepts numbers as timestamps
-        // ExcelJS will provide Date objects for date cells, so this is acceptable
-        const { error } = validationSchema.validate({
-          DATE_LOAD_LEFT_SITE: 12345
-        })
-        expect(error).toBeUndefined()
       })
     })
 

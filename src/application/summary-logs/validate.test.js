@@ -56,7 +56,7 @@ const buildMeta = (overrides = {}) => ({
 const buildReceivedLoadRow = (overrides = {}) => ({
   // Waste balance fields (Section 1)
   ROW_ID: 10000,
-  DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
+  DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28',
   EWC_CODE: '03 03 08',
   DESCRIPTION_WASTE: 'Glass - pre-sorted',
   WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',

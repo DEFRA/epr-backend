@@ -105,7 +105,7 @@ export const EXPORTER_HEADERS = [
 ]
 
 const TARE_PLUS_PALLET_WEIGHT = 150
-const DEFAULT_DATE = '2025-01-15T00:00:00.000Z'
+const DEFAULT_DATE = '2025-01-15'
 const VALID_FROM = '2025-01-01'
 const VALID_TO = '2025-12-31'
 
@@ -171,7 +171,7 @@ export const createReprocessorReceivedRowValues = (overrides = {}) => {
 export const createReprocessorSentOnRowValues = (overrides = {}) => {
   const d = {
     rowId: 5001,
-    dateLeft: '2025-01-20T00:00:00.000Z',
+    dateLeft: '2025-01-20',
     tonnageSent: 100,
     destinationType: 'Reprocessor',
     destinationName: 'Dest A',
@@ -205,7 +205,7 @@ export const createReprocessorSentOnRowValues = (overrides = {}) => {
 export const createReprocessedRowValues = (overrides = {}) => {
   const defaults = {
     rowId: 3001,
-    dateLeft: '2025-01-15T00:00:00.000Z',
+    dateLeft: '2025-01-15',
     productTonnage: 100,
     ukPackagingWeightPercentage: 1,
     productUkPackagingWeightProportion: 100,
@@ -225,7 +225,7 @@ export const createReprocessedRowValues = (overrides = {}) => {
 export const createExporterRowValues = (overrides = {}) => {
   const defaults = {
     rowId: 1001,
-    dateReceived: '2025-01-15T00:00:00.000Z',
+    dateReceived: '2025-01-15',
     ewcCode: '03 03 08',
     wasteDescription: 'Glass - pre-sorted',
     prnIssued: 'No',
@@ -241,10 +241,10 @@ export const createExporterRowValues = (overrides = {}) => {
     interimSite: 'No',
     interimSiteId: 100,
     interimTonnage: 0,
-    dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+    dateReceivedByOsr: '2025-01-18',
     osrId: 100,
     exportTonnage: 100,
-    exportDate: '2025-01-20T00:00:00.000Z',
+    exportDate: '2025-01-20',
     exportControls: 'Article 18 (Green list)',
     baselCode: 'B3020',
     customsCode: '123456',

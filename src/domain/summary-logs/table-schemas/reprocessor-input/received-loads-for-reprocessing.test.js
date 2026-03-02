@@ -213,14 +213,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('DATE_RECEIVED_FOR_REPROCESSING validation', () => {
-      it('accepts valid Date object', () => {
-        const { error } = validationSchema.validate({
-          DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-01-15')
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts date string that can be parsed', () => {
+      it('accepts YYYY-MM-DD date string', () => {
         const { error } = validationSchema.validate({
           DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15'
         })

@@ -56,14 +56,24 @@ export const createYesNoFieldSchema = () =>
   })
 
 /**
- * Creates a date field schema
+ * Creates a date field schema that only accepts YYYY-MM-DD strings.
  *
- * @returns {Joi.DateSchema} Joi date schema
+ * The ExcelJS parser normalises valid Excel Date cells to YYYY-MM-DD strings
+ * via toISOString().slice(0, 10), so this is the only format legitimate dates
+ * arrive in. Using a strict pattern instead of Joi.date() prevents silent
+ * coercion of non-standard formats (e.g. US MM/DD/YYYY) that can bypass
+ * spreadsheet protection.
+ *
+ * @returns {Joi.StringSchema} Joi string schema
  */
 export const createDateFieldSchema = () =>
-  Joi.date().optional().messages({
-    'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-  })
+  Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .messages({
+      'string.base': MESSAGES.MUST_BE_A_VALID_DATE,
+      'string.pattern.base': MESSAGES.MUST_BE_A_VALID_DATE
+    })
 
 /**
  * Creates a 3-digit ID field schema (1-999)

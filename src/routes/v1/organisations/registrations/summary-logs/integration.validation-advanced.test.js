@@ -70,14 +70,7 @@ describe('Advanced validation scenarios', () => {
                     rows: [
                       {
                         rowNumber: 8,
-                        values: [
-                          3000,
-                          '2025-05-28T00:00:00.000Z',
-                          1001,
-                          0.5,
-                          500.5,
-                          'Yes'
-                        ]
+                        values: [3000, '2025-05-28', 1001, 0.5, 500.5, 'Yes']
                       }
                     ]
                   }
@@ -189,9 +182,7 @@ describe('Advanced validation scenarios', () => {
               RECEIVED_LOADS_FOR_REPROCESSING: {
                 location: { sheet: 'Received', row: 7, column: 'B' },
                 headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-                rows: [
-                  { rowNumber: 8, values: [1000, '2025-05-28T00:00:00.000Z'] }
-                ]
+                rows: [{ rowNumber: 8, values: [1000, '2025-05-28'] }]
               }
             }
           }

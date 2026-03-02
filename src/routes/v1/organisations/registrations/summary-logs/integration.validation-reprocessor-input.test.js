@@ -269,7 +269,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                       rowNumber: 8,
                       values: [
                         1000,
-                        '2025-05-28T00:00:00.000Z',
+                        '2025-05-28',
                         '03 03 08',
                         'Glass - pre-sorted',
                         'No',
@@ -300,7 +300,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                       rowNumber: 9,
                       values: [
                         1001,
-                        '2025-05-29T00:00:00.000Z',
+                        '2025-05-29',
                         'bad-code', // Invalid EWC code - now causes fatal error
                         'Glass - pre-sorted',
                         'No',
