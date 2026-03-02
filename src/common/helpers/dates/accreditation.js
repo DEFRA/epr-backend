@@ -1,7 +1,7 @@
 /**
  * Checks if a date is within the accreditation date range.
  *
- * @param {string} date - The date to check
+ * @param {string|Date} date - The date to check
  * @param {Object} accreditation - Accreditation object with validFrom and validTo
  * @returns {boolean} True if date is within range (inclusive)
  */
