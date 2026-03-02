@@ -233,7 +233,7 @@ const baseConfig = {
       email: {
         doc: 'EA regulator email address',
         format: String,
-        default: 'test@ea.gov.uk',
+        default: 'Test@ea.gov.uk',
         env: 'REGULATOR_EMAIL_EA'
       }
     },

@@ -11,8 +11,8 @@ import { logger } from '#common/helpers/logging/logger.js'
  * @property {S3Client} s3Client - AWS S3 client
  */
 
-const getRetrievalKeyForRegulator = (regulator) => {
-  return config.get(`regulator.${regulator.toUpperCase()}.email`)
+export const getRetrievalKeyForRegulator = (regulator) => {
+  return config.get(`regulator.${regulator.toUpperCase()}.email`).toLowerCase()
 }
 
 /**
