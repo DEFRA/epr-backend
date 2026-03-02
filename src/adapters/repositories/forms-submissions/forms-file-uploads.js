@@ -2,6 +2,7 @@ import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getCognitoToken } from '#common/helpers/cognito-token.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import { config } from '../../../config.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
@@ -51,10 +52,13 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
       )
     }
 
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
     const command = new PutObjectCommand({
       Bucket: s3Bucket,
       Key: s3Key,
-      Body: response.body
+      Body: buffer
     })
 
     await s3Client.send(command)
@@ -72,19 +76,21 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
     async copyFormFileToS3({ fileId, regulator }) {
       const clientId = config.get('formsSubmissionApi.cognitoClientId')
       const clientSecret = config.get('formsSubmissionApi.cognitoClientSecret')
-      const serviceName = config.get('formsSubmissionApi.serviceName')
+      const cognitoTokenUrl = config.get('formsSubmissionApi.cognitoTokenUrl')
 
       const retrievalKey = getRetrievalKeyForRegulator(regulator)
       const accessToken = await getCognitoToken(
         clientId,
         clientSecret,
-        serviceName
+        cognitoTokenUrl
       )
+      logger.info({ message: `getting presigned url for ${fileId}` })
       const presignedUrl = await getPresignedUrl(
         accessToken,
         fileId,
         retrievalKey
       )
+      logger.info({ message: `saving form file ${fileId} to s3` })
       await saveToS3(presignedUrl, fileId)
     },
 

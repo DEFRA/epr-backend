@@ -415,29 +415,17 @@ const baseConfig = {
       env: 'PUBLIC_REGISTER_URL_EXPIRY'
     }
   },
-  cdpEnvSuffix: {
-    doc: 'CDP environment suffix used in service URLs (e.g., 6bf3a)',
-    format: String,
-    default: '6bf3a',
-    env: 'CDP_ENV_SUFFIX'
-  },
   formsSubmissionApi: {
-    serviceName: {
-      doc: 'Forms Submission API service name for Cognito',
-      format: String,
-      default: 'forms-submission-api',
-      env: 'FORMS_SUBMISSION_EXTERNAL_API_SERVICE_NAME'
-    },
     url: {
       doc: 'Forms Submission API base URL',
       format: String,
-      default: 'https://example.com',
+      default: 'https://forms-submission-api.local.cdp-int.defra.cloud',
       env: 'FORMS_SUBMISSION_EXTERNAL_API_URL'
     },
     s3Bucket: {
       doc: 'S3 bucket for form file uploads',
       format: String,
-      default: 'form-file-uploads',
+      default: 're-ex-form-uploads',
       env: 'FORM_FILE_UPLOADS_S3_BUCKET'
     },
     cognitoClientId: {
@@ -451,6 +439,14 @@ const baseConfig = {
       format: String,
       default: 'client-secret',
       env: 'FORMS_SUBMISSION_EXTERNAL_API_CLIENT_SECRET'
+    },
+    cognitoTokenUrl: {
+      doc: 'Override Cognito token URL (for local testing with cognito-stub)',
+      format: String,
+      nullable: true,
+      default:
+        'https://forms-submission-api.auth.eu-west-2.amazoncognito.com/oauth2/token',
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_COGNITO_TOKEN_URL'
     },
     copyFilesUploadedFromDate: {
       doc: 'Only copy form files uploaded on or after this date (ISO 8601 format)',
