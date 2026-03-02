@@ -1637,6 +1637,325 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
       expect(summaryLogsRepository.update).toHaveBeenCalled()
     })
+
+    it('sets IGNORED outcome for Reprocessor Input loads when accreditation was suspended at row date', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
+          ]
+        }
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 10000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-03-15T00:00:00.000Z' // Approved period
+                }),
+                buildReceivedLoadRow({
+                  ROW_ID: 10001,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-07-15T00:00:00.000Z' // Suspended period
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Row 10000 should be INCLUDED (approved at that date)
+      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([10000])
+
+      // Row 10001 should be IGNORED (suspended at that date) - not in any count
+      expect(updateCall.loads.added.invalid.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
+    })
+
+    it('sets IGNORED outcome for Exporter loads when accreditation was suspended at row date', async () => {
+      const headers = [
+        'ROW_ID',
+        'DATE_RECEIVED_FOR_EXPORT',
+        'EWC_CODE',
+        'DESCRIPTION_WASTE',
+        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+        'GROSS_WEIGHT',
+        'TARE_WEIGHT',
+        'PALLET_WEIGHT',
+        'NET_WEIGHT',
+        'BAILING_WIRE_PROTOCOL',
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+        'WEIGHT_OF_NON_TARGET_MATERIALS',
+        'RECYCLABLE_PROPORTION_PERCENTAGE',
+        'TONNAGE_RECEIVED_FOR_EXPORT',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+        'DATE_OF_EXPORT',
+        'BASEL_EXPORT_CODE',
+        'CUSTOMS_CODES',
+        'CONTAINER_NUMBER',
+        'DATE_RECEIVED_BY_OSR',
+        'OSR_ID',
+        'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
+        'INTERIM_SITE_ID',
+        'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
+        'EXPORT_CONTROLS'
+      ]
+
+      const buildRow = (rowId, receivedDate) =>
+        headers.map((h) => {
+          if (h === 'ROW_ID') return rowId
+          if (h === 'DATE_RECEIVED_FOR_EXPORT') return receivedDate
+          if (h === 'DATE_OF_EXPORT') return receivedDate
+          if (h === 'EWC_CODE') return '03 03 08'
+          if (h === 'DESCRIPTION_WASTE') return 'Paper - other'
+          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') return 'No'
+          if (h === 'GROSS_WEIGHT') return 100
+          if (h === 'TARE_WEIGHT') return 0
+          if (h === 'PALLET_WEIGHT') return 0
+          if (h === 'NET_WEIGHT') return 100
+          if (h === 'BAILING_WIRE_PROTOCOL') return 'No'
+          if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
+            return 'Actual weight (100%)'
+          }
+          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') return 0
+          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') return 1
+          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') return 100
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') return 100
+          if (h === 'BASEL_EXPORT_CODE') return 'B3020'
+          if (h === 'CUSTOMS_CODES') return '123456'
+          if (h === 'CONTAINER_NUMBER') return 'CONT123'
+          if (h === 'DATE_RECEIVED_BY_OSR') return '2025-01-15'
+          if (h === 'OSR_ID') return 100
+          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') return 'No'
+          if (h === 'INTERIM_SITE_ID') return 100
+          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') return 0
+          if (h === 'EXPORT_CONTROLS') return 'Article 18 (Green list)'
+          return ''
+        })
+
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'exporter',
+        material: 'paper',
+        accreditation: {
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
+          ]
+        }
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({
+            PROCESSING_TYPE: { value: 'EXPORTER' },
+            MATERIAL: { value: 'Paper_and_board' }
+          }),
+          data: {
+            RECEIVED_LOADS_FOR_EXPORT: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers,
+              rows: [
+                { rowNumber: 8, values: buildRow(1000, '2025-03-15') },
+                { rowNumber: 9, values: buildRow(3000, '2025-07-15') }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Row 1000 should be INCLUDED (approved at that date)
+      expect(updateCall.loads.added.included.rowIds).toEqual([1000])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+
+      // Row 3000 should be IGNORED (suspended at that date) - not in any count
+      expect(updateCall.loads.added.invalid.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
+    })
+
+    it('sets IGNORED outcome for Reprocessor Output loads when accreditation was suspended at row date', async () => {
+      const REPROCESSOR_OUTPUT_REPROCESSED_LOADS_HEADERS = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'PRODUCT_TONNAGE',
+        'UK_PACKAGING_WEIGHT_PERCENTAGE',
+        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
+        'ADD_PRODUCT_WEIGHT'
+      ]
+
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
+          ]
+        }
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({
+            PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' }
+          }),
+          data: {
+            REPROCESSED_LOADS: {
+              location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+              headers: REPROCESSOR_OUTPUT_REPROCESSED_LOADS_HEADERS,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    3000,
+                    '2025-03-15T00:00:00.000Z', // DATE_LOAD_LEFT_SITE - approved period
+                    100,
+                    0.5,
+                    50,
+                    'Yes'
+                  ]
+                },
+                {
+                  rowNumber: 9,
+                  values: [
+                    3001,
+                    '2025-07-15T00:00:00.000Z', // DATE_LOAD_LEFT_SITE - suspended period
+                    100,
+                    0.5,
+                    50,
+                    'Yes'
+                  ]
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Row 3000 should be INCLUDED (approved at that date)
+      expect(updateCall.loads.added.included.rowIds).toEqual([3000])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+
+      // Row 3001 should be IGNORED (suspended at that date) - not in any count
+      expect(updateCall.loads.added.invalid.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
+    })
+
+    it('does not set IGNORED when accreditation was re-approved before the row date', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2025-03-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-05-01T00:00:00.000Z' }
+          ]
+        }
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 10000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-15T00:00:00.000Z' // After re-approval
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Row should be INCLUDED (re-approved before row date)
+      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+    })
+
+    it('does not set IGNORED for status when accreditation has no statusHistory', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 10000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-15T00:00:00.000Z'
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Row should be INCLUDED (no statusHistory means no suspension check)
+      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+    })
   })
 
   describe('metrics', () => {

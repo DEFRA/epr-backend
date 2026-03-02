@@ -24,7 +24,10 @@ import {
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import {
+  isWithinAccreditationDateRange,
+  isAccreditationSuspendedAtDate
+} from '#common/helpers/dates/accreditation.js'
 import {
   RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS as EXPORTER_SENT_ON_LOADS_FIELDS
@@ -293,6 +296,53 @@ const validateReprocessorOutputDates = (wasteRecords, registration) => {
   }
 }
 
+const validateExporterStatus = (wasteRecords, statusHistory) => {
+  for (const wasteRecord of wasteRecords) {
+    const data = wasteRecord.record.data
+    const dateToCheck =
+      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT]
+
+    if (
+      dateToCheck &&
+      isAccreditationSuspendedAtDate(dateToCheck, statusHistory)
+    ) {
+      wasteRecord.outcome = ROW_OUTCOME.IGNORED
+    }
+  }
+}
+
+const validateReprocessorInputStatus = (wasteRecords, statusHistory) => {
+  for (const wasteRecord of wasteRecords) {
+    const data = wasteRecord.record.data
+    const dateToCheck =
+      data[
+        REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
+      ]
+
+    if (
+      dateToCheck &&
+      isAccreditationSuspendedAtDate(dateToCheck, statusHistory)
+    ) {
+      wasteRecord.outcome = ROW_OUTCOME.IGNORED
+    }
+  }
+}
+
+const validateReprocessorOutputStatus = (wasteRecords, statusHistory) => {
+  for (const wasteRecord of wasteRecords) {
+    const data = wasteRecord.record.data
+    const dateToCheck =
+      data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+
+    if (
+      dateToCheck &&
+      isAccreditationSuspendedAtDate(dateToCheck, statusHistory)
+    ) {
+      wasteRecord.outcome = ROW_OUTCOME.IGNORED
+    }
+  }
+}
+
 const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
@@ -363,6 +413,21 @@ const performValidationChecks = async ({
 
     if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
       validateReprocessorOutputDates(wasteRecords, registration)
+    }
+
+    // Validate that accreditation was not suspended at the row date
+    const statusHistory = registration.accreditation?.statusHistory
+
+    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
+      validateExporterStatus(wasteRecords, statusHistory)
+    }
+
+    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
+      validateReprocessorInputStatus(wasteRecords, statusHistory)
+    }
+
+    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
+      validateReprocessorOutputStatus(wasteRecords, statusHistory)
     }
 
     issues.merge(dataResult.issues)
