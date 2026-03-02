@@ -296,11 +296,13 @@ const validateReprocessorOutputDates = (wasteRecords, registration) => {
   }
 }
 
-const validateExporterStatus = (wasteRecords, statusHistory) => {
+const validateAccreditationStatus = (
+  wasteRecords,
+  statusHistory,
+  dateField
+) => {
   for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    const dateToCheck =
-      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT]
+    const dateToCheck = wasteRecord.record.data[dateField]
 
     if (
       dateToCheck &&
@@ -311,36 +313,13 @@ const validateExporterStatus = (wasteRecords, statusHistory) => {
   }
 }
 
-const validateReprocessorInputStatus = (wasteRecords, statusHistory) => {
-  for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    const dateToCheck =
-      data[
-        REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ]
-
-    if (
-      dateToCheck &&
-      isAccreditationSuspendedAtDate(dateToCheck, statusHistory)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
-    }
-  }
-}
-
-const validateReprocessorOutputStatus = (wasteRecords, statusHistory) => {
-  for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    const dateToCheck =
-      data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-
-    if (
-      dateToCheck &&
-      isAccreditationSuspendedAtDate(dateToCheck, statusHistory)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
-    }
-  }
+const STATUS_DATE_FIELD = {
+  [PROCESSING_TYPES.EXPORTER]:
+    EXPORTER_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT,
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]:
+    REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]:
+    REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE
 }
 
 const performValidationChecks = async ({
@@ -417,17 +396,9 @@ const performValidationChecks = async ({
 
     // Validate that accreditation was not suspended at the row date
     const statusHistory = registration.accreditation?.statusHistory
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
-      validateExporterStatus(wasteRecords, statusHistory)
-    }
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
-      validateReprocessorInputStatus(wasteRecords, statusHistory)
-    }
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
-      validateReprocessorOutputStatus(wasteRecords, statusHistory)
+    const dateField = STATUS_DATE_FIELD[meta.PROCESSING_TYPE]
+    if (dateField) {
+      validateAccreditationStatus(wasteRecords, statusHistory, dateField)
     }
 
     issues.merge(dataResult.issues)
