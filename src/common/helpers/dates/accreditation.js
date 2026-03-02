@@ -30,7 +30,7 @@ export const isAccreditationSuspendedAtDate = (date, statusHistory) => {
   const compareDate = new Date(date)
 
   // Find the most recent status change on or before the given date
-  // status history will almost certainly be in cronological order but
+  // status history will almost certainly be in chronological order but
   // there is no harm in being defensive and allowing it to cope with out of order entries
   let effectiveStatus = null
   let latestDate = null
