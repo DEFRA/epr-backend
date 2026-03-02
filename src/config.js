@@ -233,7 +233,7 @@ const baseConfig = {
       email: {
         doc: 'EA regulator email address',
         format: String,
-        default: 'Test@ea.gov.uk',
+        default: 'test@ea.gov.uk',
         env: 'REGULATOR_EMAIL_EA'
       }
     },
@@ -243,6 +243,12 @@ const baseConfig = {
         format: String,
         default: 'test@niea.gov.uk',
         env: 'REGULATOR_EMAIL_NIEA'
+      },
+      defraFormsSubmissionEmail: {
+        doc: 'NIEA regulator email address configured in external DEFRA form definition',
+        format: String,
+        default: 'test.defra.forms@niea.gov.uk',
+        env: 'REGULATOR_DEFRA_FORMS_EMAIL_NIEA'
       }
     },
     NRW: {

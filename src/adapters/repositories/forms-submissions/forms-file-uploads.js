@@ -1,8 +1,8 @@
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getCognitoToken } from '#common/helpers/cognito-token.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import { config } from '../../../config.js'
-import { logger } from '#common/helpers/logging/logger.js'
+import { getRetrievalKeyForRegulator } from '#adapters/repositories/forms-submissions/get-retrieval-key.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
@@ -10,10 +10,6 @@ import { logger } from '#common/helpers/logging/logger.js'
  * @typedef {Object} FormsFileUploadsRepositoryConfig
  * @property {S3Client} s3Client - AWS S3 client
  */
-
-export const getRetrievalKeyForRegulator = (regulator) => {
-  return config.get(`regulator.${regulator.toUpperCase()}.email`).toLowerCase()
-}
 
 /**
  * Creates a Forms File Uploads Repository
@@ -77,20 +73,18 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
       const clientId = config.get('formsSubmissionApi.cognitoClientId')
       const clientSecret = config.get('formsSubmissionApi.cognitoClientSecret')
       const cognitoTokenUrl = config.get('formsSubmissionApi.cognitoTokenUrl')
+      const retrievalKeyForRegulator = getRetrievalKeyForRegulator(regulator)
 
-      const retrievalKey = getRetrievalKeyForRegulator(regulator)
       const accessToken = await getCognitoToken(
         clientId,
         clientSecret,
         cognitoTokenUrl
       )
-      logger.info({ message: `getting presigned url for ${fileId}` })
       const presignedUrl = await getPresignedUrl(
         accessToken,
         fileId,
-        retrievalKey
+        retrievalKeyForRegulator
       )
-      logger.info({ message: `saving form file ${fileId} to s3` })
       await saveToS3(presignedUrl, fileId)
     },
 

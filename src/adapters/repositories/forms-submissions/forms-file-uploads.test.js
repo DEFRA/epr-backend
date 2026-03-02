@@ -1,8 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  createFormsFileUploadsRepository,
-  getRetrievalKeyForRegulator
-} from './forms-file-uploads.js'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createFormsFileUploadsRepository } from './forms-file-uploads.js'
 
 const mockGetCognitoToken = vi.fn()
 const mockFetchJson = vi.fn()
@@ -192,19 +189,5 @@ describe('createFormsFileUploadsRepository', () => {
 
       await expect(repository.getFileById(fileId)).rejects.toThrow(s3Error)
     })
-  })
-})
-
-describe('getRetrievalKeyForRegulator', () => {
-  it('should return the lowercase email when a valid regulator (EA) is provided', () => {
-    expect(getRetrievalKeyForRegulator('ea')).toBe('test@ea.gov.uk')
-  })
-
-  it('should return null when incorrect regulator is provided', () => {
-    expect(() =>
-      getRetrievalKeyForRegulator('incorrect-regulator')
-    ).toThrowError(
-      "cannot find configuration param 'regulator.INCORRECT-REGULATOR.email'"
-    )
   })
 })
