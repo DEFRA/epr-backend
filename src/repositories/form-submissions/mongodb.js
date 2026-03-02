@@ -185,6 +185,22 @@ const findAllFormSubmissionIds = (db) => async () => {
   return { organisations, registrations, accreditations }
 }
 
+const performFindRegistrationsCreatedAfter = (db) => async (date) => {
+  const docs = await db
+    .collection(REGISTRATIONS_COLLECTION)
+    .find({ createdAt: { $gt: new Date(date) } })
+    .toArray()
+  return docs.map(mapDocument)
+}
+
+const performFindAccreditationsCreatedAfter = (db) => async (date) => {
+  const docs = await db
+    .collection(ACCREDITATIONS_COLLECTION)
+    .find({ createdAt: { $gt: new Date(date) } })
+    .toArray()
+  return docs.map(mapDocument)
+}
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {Promise<import('./port.js').FormSubmissionsRepositoryFactory>}
@@ -204,7 +220,9 @@ export const createFormSubmissionsRepository = async (db, logger) => {
       findRegistrationById: performFindRegistrationById(db),
       findAllOrganisations: performFindAllOrganisations(db),
       findOrganisationById: performFindOrganisationById(db),
-      findAllFormSubmissionIds: findAllFormSubmissionIds(db)
+      findAllFormSubmissionIds: findAllFormSubmissionIds(db),
+      findRegistrationsCreatedAfter: performFindRegistrationsCreatedAfter(db),
+      findAccreditationsCreatedAfter: performFindAccreditationsCreatedAfter(db)
     }
   }
 }
