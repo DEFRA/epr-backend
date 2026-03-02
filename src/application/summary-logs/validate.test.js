@@ -15,36 +15,6 @@ import {
 // Test Builders
 // ============================================================================
 
-const RECEIVED_LOADS_HEADERS = [
-  // Waste balance fields (Section 1)
-  'ROW_ID',
-  'DATE_RECEIVED_FOR_REPROCESSING',
-  'EWC_CODE',
-  'DESCRIPTION_WASTE',
-  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-  'GROSS_WEIGHT',
-  'TARE_WEIGHT',
-  'PALLET_WEIGHT',
-  'NET_WEIGHT',
-  'BAILING_WIRE_PROTOCOL',
-  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-  'WEIGHT_OF_NON_TARGET_MATERIALS',
-  'RECYCLABLE_PROPORTION_PERCENTAGE',
-  'TONNAGE_RECEIVED_FOR_RECYCLING',
-  // Supplementary fields (Sections 2 & 3)
-  'SUPPLIER_NAME',
-  'SUPPLIER_ADDRESS',
-  'SUPPLIER_POSTCODE',
-  'SUPPLIER_EMAIL',
-  'SUPPLIER_PHONE_NUMBER',
-  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
-  'YOUR_REFERENCE',
-  'WEIGHBRIDGE_TICKET',
-  'CARRIER_NAME',
-  'CBD_REG_NUMBER',
-  'CARRIER_VEHICLE_REGISTRATION_NUMBER'
-]
-
 const buildMeta = (overrides = {}) => ({
   REGISTRATION_NUMBER: { value: 'REG12345' },
   PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
@@ -84,20 +54,55 @@ const buildReceivedLoadRow = (overrides = {}) => ({
   ...overrides
 })
 
-const rowToArray = (rowObject) =>
-  RECEIVED_LOADS_HEADERS.map((header) => rowObject[header])
-
-const buildReceivedLoadsTable = ({
-  rows = [],
-  headers = RECEIVED_LOADS_HEADERS
-} = {}) => ({
-  location: { sheet: 'Received', row: 7, column: 'B' },
-  headers,
-  // Row 7 is the header row, so data rows start at row 8
+const buildTable = ({ sheet, rows = [] }) => ({
+  location: { sheet, row: 7, column: 'B' },
+  headers: Object.keys(rows[0] ?? {}),
   rows: rows.map((row, index) => ({
     rowNumber: 8 + index,
-    values: Array.isArray(row) ? row : rowToArray(row)
+    values: Object.values(row)
   }))
+})
+
+const buildReceivedLoadsTable = ({ rows = [] } = {}) =>
+  buildTable({ sheet: 'Received', rows })
+
+const buildExporterReceivedLoadRow = (overrides = {}) => ({
+  ROW_ID: 1000,
+  DATE_RECEIVED_FOR_EXPORT: '2025-05-28T00:00:00.000Z',
+  EWC_CODE: '03 03 08',
+  DESCRIPTION_WASTE: 'Paper - other',
+  WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+  GROSS_WEIGHT: 100,
+  TARE_WEIGHT: 0,
+  PALLET_WEIGHT: 0,
+  NET_WEIGHT: 100,
+  BAILING_WIRE_PROTOCOL: 'No',
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
+  WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+  RECYCLABLE_PROPORTION_PERCENTAGE: 1,
+  TONNAGE_RECEIVED_FOR_EXPORT: 100,
+  TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 100,
+  DATE_OF_EXPORT: '2025-05-28T00:00:00.000Z',
+  BASEL_EXPORT_CODE: 'B3020',
+  CUSTOMS_CODES: '123456',
+  CONTAINER_NUMBER: 'CONT123',
+  DATE_RECEIVED_BY_OSR: '2025-01-15',
+  OSR_ID: 100,
+  DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No',
+  INTERIM_SITE_ID: 100,
+  TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: 0,
+  EXPORT_CONTROLS: 'Article 18 (Green list)',
+  ...overrides
+})
+
+const buildReprocessorOutputRow = (overrides = {}) => ({
+  ROW_ID: 3000,
+  DATE_LOAD_LEFT_SITE: '2025-05-28T00:00:00.000Z',
+  PRODUCT_TONNAGE: 100,
+  UK_PACKAGING_WEIGHT_PERCENTAGE: 0.5,
+  PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 50,
+  ADD_PRODUCT_WEIGHT: 'Yes',
+  ...overrides
 })
 
 const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
@@ -1691,66 +1696,6 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for Exporter loads when accreditation was suspended at row date', async () => {
-      const headers = [
-        'ROW_ID',
-        'DATE_RECEIVED_FOR_EXPORT',
-        'EWC_CODE',
-        'DESCRIPTION_WASTE',
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-        'GROSS_WEIGHT',
-        'TARE_WEIGHT',
-        'PALLET_WEIGHT',
-        'NET_WEIGHT',
-        'BAILING_WIRE_PROTOCOL',
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-        'WEIGHT_OF_NON_TARGET_MATERIALS',
-        'RECYCLABLE_PROPORTION_PERCENTAGE',
-        'TONNAGE_RECEIVED_FOR_EXPORT',
-        'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-        'DATE_OF_EXPORT',
-        'BASEL_EXPORT_CODE',
-        'CUSTOMS_CODES',
-        'CONTAINER_NUMBER',
-        'DATE_RECEIVED_BY_OSR',
-        'OSR_ID',
-        'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
-        'INTERIM_SITE_ID',
-        'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-        'EXPORT_CONTROLS'
-      ]
-
-      const buildRow = (rowId, receivedDate) =>
-        headers.map((h) => {
-          if (h === 'ROW_ID') return rowId
-          if (h === 'DATE_RECEIVED_FOR_EXPORT') return receivedDate
-          if (h === 'DATE_OF_EXPORT') return receivedDate
-          if (h === 'EWC_CODE') return '03 03 08'
-          if (h === 'DESCRIPTION_WASTE') return 'Paper - other'
-          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') return 'No'
-          if (h === 'GROSS_WEIGHT') return 100
-          if (h === 'TARE_WEIGHT') return 0
-          if (h === 'PALLET_WEIGHT') return 0
-          if (h === 'NET_WEIGHT') return 100
-          if (h === 'BAILING_WIRE_PROTOCOL') return 'No'
-          if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
-            return 'Actual weight (100%)'
-          }
-          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') return 0
-          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') return 1
-          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') return 100
-          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') return 100
-          if (h === 'BASEL_EXPORT_CODE') return 'B3020'
-          if (h === 'CUSTOMS_CODES') return '123456'
-          if (h === 'CONTAINER_NUMBER') return 'CONT123'
-          if (h === 'DATE_RECEIVED_BY_OSR') return '2025-01-15'
-          if (h === 'OSR_ID') return 100
-          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') return 'No'
-          if (h === 'INTERIM_SITE_ID') return 100
-          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') return 0
-          if (h === 'EXPORT_CONTROLS') return 'Article 18 (Green list)'
-          return ''
-        })
-
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1774,14 +1719,18 @@ describe('SummaryLogsValidator', () => {
             MATERIAL: { value: 'Paper_and_board' }
           }),
           data: {
-            RECEIVED_LOADS_FOR_EXPORT: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers,
+            RECEIVED_LOADS_FOR_EXPORT: buildReceivedLoadsTable({
               rows: [
-                { rowNumber: 8, values: buildRow(1000, '2025-03-15') },
-                { rowNumber: 9, values: buildRow(3000, '2025-07-15') }
+                buildExporterReceivedLoadRow({
+                  ROW_ID: 1000,
+                  DATE_RECEIVED_FOR_EXPORT: '2025-03-15'
+                }),
+                buildExporterReceivedLoadRow({
+                  ROW_ID: 3000,
+                  DATE_RECEIVED_FOR_EXPORT: '2025-07-15'
+                })
               ]
-            }
+            })
           }
         })
       )
@@ -1800,15 +1749,6 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for Reprocessor Output loads when accreditation was suspended at row date', async () => {
-      const REPROCESSOR_OUTPUT_REPROCESSED_LOADS_HEADERS = [
-        'ROW_ID',
-        'DATE_LOAD_LEFT_SITE',
-        'PRODUCT_TONNAGE',
-        'UK_PACKAGING_WEIGHT_PERCENTAGE',
-        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-        'ADD_PRODUCT_WEIGHT'
-      ]
-
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1832,34 +1772,19 @@ describe('SummaryLogsValidator', () => {
             PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' }
           }),
           data: {
-            REPROCESSED_LOADS: {
-              location: { sheet: 'Reprocessed', row: 7, column: 'B' },
-              headers: REPROCESSOR_OUTPUT_REPROCESSED_LOADS_HEADERS,
+            REPROCESSED_LOADS: buildTable({
+              sheet: 'Reprocessed',
               rows: [
-                {
-                  rowNumber: 8,
-                  values: [
-                    3000,
-                    '2025-03-15T00:00:00.000Z', // DATE_LOAD_LEFT_SITE - approved period
-                    100,
-                    0.5,
-                    50,
-                    'Yes'
-                  ]
-                },
-                {
-                  rowNumber: 9,
-                  values: [
-                    3001,
-                    '2025-07-15T00:00:00.000Z', // DATE_LOAD_LEFT_SITE - suspended period
-                    100,
-                    0.5,
-                    50,
-                    'Yes'
-                  ]
-                }
+                buildReprocessorOutputRow({
+                  ROW_ID: 3000,
+                  DATE_LOAD_LEFT_SITE: '2025-03-15T00:00:00.000Z'
+                }),
+                buildReprocessorOutputRow({
+                  ROW_ID: 3001,
+                  DATE_LOAD_LEFT_SITE: '2025-07-15T00:00:00.000Z'
+                })
               ]
-            }
+            })
           }
         })
       )
