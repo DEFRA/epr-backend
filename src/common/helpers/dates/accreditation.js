@@ -31,9 +31,14 @@ export const isAccreditationSuspendedAtDate = (date, statusHistory) => {
 
   // Find the most recent status change on or before the given date
   let effectiveStatus = null
+  let latestDate = null
   for (const entry of statusHistory) {
     const entryDate = new Date(entry.updatedAt)
-    if (entryDate <= compareDate) {
+    if (
+      entryDate <= compareDate &&
+      (latestDate === null || entryDate > latestDate)
+    ) {
+      latestDate = entryDate
       effectiveStatus = entry.status
     }
   }

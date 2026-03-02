@@ -151,6 +151,31 @@ describe('accreditation date helpers', () => {
       ).toBe(true)
     })
 
+    it('should handle out-of-order statusHistory entries', () => {
+      const statusHistory = [
+        { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' },
+        { status: 'created', updatedAt: '2025-01-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-07-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-03-01T00:00:00.000Z' }
+      ]
+
+      // During suspension window
+      expect(
+        isAccreditationSuspendedAtDate(
+          '2025-06-15T00:00:00.000Z',
+          statusHistory
+        )
+      ).toBe(true)
+
+      // After re-approval
+      expect(
+        isAccreditationSuspendedAtDate(
+          '2025-08-01T00:00:00.000Z',
+          statusHistory
+        )
+      ).toBe(false)
+    })
+
     it('should handle date on exact approval boundary', () => {
       const statusHistory = [
         { status: 'created', updatedAt: '2025-01-01T00:00:00.000Z' },
