@@ -31,12 +31,14 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('generates empty report when no SL uploads exist', async () => {
-    const reportRows = await generateSummaryLogUploadsReport(
+    const result = await generateSummaryLogUploadsReport(
       organisationRepo,
       summaryLogsRepo
     )
 
-    expect(reportRows).toEqual([])
+    expect(result.summaryLogUploads).toEqual([])
+    expect(result.generatedAt).toBeDefined()
+    expect(new Date(result.generatedAt)).toBeInstanceOf(Date)
   })
 
   it('generates report with registration info only', async () => {
@@ -51,12 +53,12 @@ describe('generateSummaryLogUploadsReport', () => {
       })
     )
 
-    const reportRows = await generateSummaryLogUploadsReport(
+    const result = await generateSummaryLogUploadsReport(
       organisationRepo,
       summaryLogsRepo
     )
 
-    expect(reportRows).toEqual([
+    expect(result.summaryLogUploads).toEqual([
       expect.objectContaining({
         appropriateAgency: registration.submittedToRegulator.toUpperCase(),
         type: 'Reprocessor',
@@ -71,6 +73,7 @@ describe('generateSummaryLogUploadsReport', () => {
         failedUploads: 0
       })
     ])
+    expect(result.generatedAt).toBeDefined()
   })
 
   it('generates report with registration and accreditation details', async () => {
@@ -85,12 +88,12 @@ describe('generateSummaryLogUploadsReport', () => {
       })
     )
 
-    const reportRows = await generateSummaryLogUploadsReport(
+    const result = await generateSummaryLogUploadsReport(
       organisationRepo,
       summaryLogsRepo
     )
 
-    expect(reportRows).toEqual([
+    expect(result.summaryLogUploads).toEqual([
       expect.objectContaining({
         registrationNumber: registration.registrationNumber,
         accreditationNumber: accreditation.accreditationNumber,
@@ -135,7 +138,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org.id,
         registrationId: registration.id,
-        submittedAt: firstFailedAt
+        createdAt: firstFailedAt
       })
     )
 
@@ -144,7 +147,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org.id,
         registrationId: registration.id,
-        submittedAt: latestFailedAt
+        createdAt: latestFailedAt
       })
     )
 
@@ -172,7 +175,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org2.id,
         registrationId: registration2.id,
-        submittedAt: firstFailedAt
+        createdAt: firstFailedAt
       })
     )
 
@@ -181,16 +184,16 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submissionFailed({
         organisationId: org2.id,
         registrationId: registration2.id,
-        submittedAt: latestFailedAt
+        createdAt: latestFailedAt
       })
     )
 
-    const reportRows = await generateSummaryLogUploadsReport(
+    const result = await generateSummaryLogUploadsReport(
       organisationRepo,
       summaryLogsRepo
     )
 
-    expect(reportRows).toEqual(
+    expect(result.summaryLogUploads).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           orgId: org.orgId,
@@ -214,7 +217,7 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('excludes summary logs without matching organisation/registration', async () => {
-    const submittedAt = '2026-01-15T10:30:00.000Z'
+    const createdAt = '2026-01-15T10:30:00.000Z'
 
     // Insert summary log for org that exists
     await summaryLogsRepo.insert(
@@ -222,7 +225,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: org.id,
         registrationId: registration.id,
-        submittedAt
+        createdAt
       })
     )
 
@@ -232,16 +235,16 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: new ObjectId().toString(),
         registrationId: new ObjectId().toString(),
-        submittedAt
+        createdAt
       })
     )
 
-    const reportRows = await generateSummaryLogUploadsReport(
+    const result = await generateSummaryLogUploadsReport(
       organisationRepo,
       summaryLogsRepo
     )
 
-    expect(reportRows).toEqual([
+    expect(result.summaryLogUploads).toEqual([
       expect.objectContaining({
         orgId: org.orgId,
         registrationNumber: registration.registrationNumber
@@ -250,7 +253,7 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('returns empty string for registrationNumber when null', async () => {
-    const submittedAt = '2026-01-15T10:30:00.000Z'
+    const createdAt = '2026-01-15T10:30:00.000Z'
 
     const orgId = generateOrgId()
     const orgBeforeUpdate = await buildApprovedOrg(organisationRepo, {
@@ -262,7 +265,7 @@ describe('generateSummaryLogUploadsReport', () => {
       summaryLogFactory.submitted({
         organisationId: orgBeforeUpdate.id,
         registrationId: orgBeforeUpdate.registrations[0].id,
-        submittedAt
+        createdAt
       })
     )
 
@@ -292,12 +295,14 @@ describe('generateSummaryLogUploadsReport', () => {
       orgBeforeUpdate.version + 1
     )
 
-    const reportRows = await generateSummaryLogUploadsReport(
+    const result = await generateSummaryLogUploadsReport(
       organisationRepo,
       summaryLogsRepo
     )
 
-    const row = reportRows.find((r) => r.orgId === orgBeforeUpdate.orgId)
+    const row = result.summaryLogUploads.find(
+      (r) => r.orgId === orgBeforeUpdate.orgId
+    )
 
     expect(row).toBeDefined()
     expect(row.registrationNumber).toBe('')

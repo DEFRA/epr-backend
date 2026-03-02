@@ -260,6 +260,36 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
+  it('should throw PermanentError when summary log is already validated (SQS retry after success)', async () => {
+    // Simulate an SQS retry: the first validation attempt succeeded
+    // (VALIDATING → VALIDATED) but the process died before acknowledging
+    // the SQS message. On retry, the summary log is now VALIDATED.
+    summaryLog.status = SUMMARY_LOG_STATUS.VALIDATED
+    summaryLogsRepository.findById.mockResolvedValue({
+      version: 2,
+      summaryLog
+    })
+
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
+
+    expect(result).toBeInstanceOf(PermanentError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+  })
+
+  it('should throw PermanentError when summary log is already invalid (SQS retry after success)', async () => {
+    // Same scenario but the first attempt determined the log was invalid.
+    summaryLog.status = SUMMARY_LOG_STATUS.INVALID
+    summaryLogsRepository.findById.mockResolvedValue({
+      version: 2,
+      summaryLog
+    })
+
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
+
+    expect(result).toBeInstanceOf(PermanentError)
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+  })
+
   it('should log as expected when validation starts', async () => {
     await validateSummaryLog(summaryLogId)
 
@@ -552,7 +582,7 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it('should log as expected when validation fails', async () => {
+  it('should log at error level when validation fails with a system error', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
@@ -567,6 +597,28 @@ describe('SummaryLogsValidator', () => {
         })
       })
     )
+  })
+
+  it('should log at warn level when validation fails with a spreadsheet error', async () => {
+    const { SpreadsheetValidationError } =
+      await import('#adapters/parsers/summary-logs/exceljs-parser.js')
+    summaryLogExtractor.extract.mockRejectedValue(
+      new SpreadsheetValidationError("Missing required 'Cover' worksheet")
+    )
+
+    await validateSummaryLog(summaryLogId)
+
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Invalid summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
+        event: expect.objectContaining({
+          category: 'server',
+          action: 'process_failure'
+        })
+      })
+    )
+    expect(mockLoggerError).not.toHaveBeenCalled()
   })
 
   it('should log as expected once status updated', async () => {

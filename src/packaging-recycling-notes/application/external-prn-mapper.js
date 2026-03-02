@@ -42,12 +42,15 @@ const mapStatus = (status) => {
 }
 
 /**
- * @param {{ id: string; name: string; tradingName?: string }} org
+ * @param {{ id: string; name: string; tradingName?: string; registrationType?: string }} org
  */
 const mapOrganisation = (org) => {
   const mapped = { id: org.id, name: org.name }
   if (org.tradingName) {
     mapped.tradingName = org.tradingName
+  }
+  if (org.registrationType) {
+    mapped.registrationType = org.registrationType
   }
   return mapped
 }

@@ -4,12 +4,12 @@ import { getUploadedFileInfo } from '#formsubmission/parsing-common/get-file-upl
 
 const logFileDetails = async (server) => {
   const formSubmissionsRepository = (
-    await createFormSubmissionsRepository(server.db)
+    await createFormSubmissionsRepository(server.db, logger)
   )()
 
   const uploadedFiles = await getUploadedFileInfo(formSubmissionsRepository)
   logger.info({
-    message: `Total files uploaded from registration and accreditation forms ${uploadedFiles.length}`
+    message: `Total files uploaded from registration and accreditation forms: ${uploadedFiles.length}`
   })
   for (const file of uploadedFiles) {
     logger.info({

@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
@@ -35,7 +36,10 @@ export const SENT_ON_LOADS = {
   /**
    * Per-field values that indicate "unfilled"
    */
-  unfilledValues: {},
+  unfilledValues: {
+    [FIELDS.FINAL_DESTINATION_FACILITY_TYPE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER
+  },
 
   /**
    * Fields that produce FATAL errors when validation fails

@@ -208,6 +208,39 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     expect(result).toEqual([])
   })
 
+  it('excludes test organisations from results', async () => {
+    const testOrgId = 999999
+    const testOrg = buildOrganisation({
+      orgId: testOrgId,
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Test Org'
+      )
+    })
+    const realOrg = buildOrganisation({
+      linkedDefraOrganisation: buildLinkedDefraOrg(
+        crypto.randomUUID(),
+        'Real Org'
+      )
+    })
+
+    await organisationsRepository.insert(testOrg)
+    await organisationsRepository.insert(realOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: linkedOrganisationsGetAllPath,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(realOrg.id)
+  })
+
   it('name filter is case-insensitive', async () => {
     const org = buildOrganisation({
       companyDetails: { name: 'Acme Ltd', registrationNumber: 'REG001' },

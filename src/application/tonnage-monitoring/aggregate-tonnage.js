@@ -1,10 +1,9 @@
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
-  MATERIAL,
-  TONNAGE_MONITORING_MATERIALS
-} from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+  buildEffectiveMaterialStages,
+  formatMaterialResults
+} from '#application/common/material-aggregation.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_RECORDS_COLLECTION = 'waste-records'
@@ -145,28 +144,7 @@ const buildAggregationPipeline = () => [
     }
   },
   buildMaterialLookupStage(),
-  {
-    $addFields: {
-      orgId: { $arrayElemAt: ['$orgData.orgId', 0] },
-      material: { $arrayElemAt: ['$orgData.material', 0] },
-      glassRecyclingProcess: {
-        $arrayElemAt: ['$orgData.glassRecyclingProcess', 0]
-      }
-    }
-  },
-  { $match: { orgId: { $nin: TEST_ORGANISATION_IDS } } },
-  { $match: { material: { $ne: null } } },
-  {
-    $addFields: {
-      effectiveMaterial: {
-        $cond: {
-          if: { $eq: ['$material', MATERIAL.GLASS] },
-          then: { $arrayElemAt: ['$glassRecyclingProcess', 0] },
-          else: '$material'
-        }
-      }
-    }
-  },
+  ...buildEffectiveMaterialStages(),
   {
     $group: {
       _id: '$effectiveMaterial',
@@ -176,22 +154,6 @@ const buildAggregationPipeline = () => [
   { $sort: { _id: 1 } }
 ]
 
-const formatTonnageResults = (results) => {
-  const allMaterials = TONNAGE_MONITORING_MATERIALS
-  const materialTonnageMap = new Map(
-    results.map((r) => [r._id, r.totalTonnage])
-  )
-
-  const materials = allMaterials.map((material) => ({
-    material,
-    totalTonnage: materialTonnageMap.get(material) || 0
-  }))
-
-  const total = materials.reduce((sum, item) => sum + item.totalTonnage, 0)
-
-  return { materials, total }
-}
-
 export const aggregateTonnageByMaterial = async (db) => {
   const pipeline = buildAggregationPipeline()
 
@@ -200,7 +162,7 @@ export const aggregateTonnageByMaterial = async (db) => {
     .aggregate(pipeline)
     .toArray()
 
-  const { materials, total } = formatTonnageResults(results)
+  const { materials, total } = formatMaterialResults(results, 'totalTonnage')
 
   return {
     generatedAt: new Date().toISOString(),

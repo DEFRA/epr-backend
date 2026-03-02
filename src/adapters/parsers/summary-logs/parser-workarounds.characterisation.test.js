@@ -1,20 +1,20 @@
 /**
  * Characterisation Tests for Parser Workarounds
  *
- * These are INTEGRATION tests that document the end-to-end behaviour of domain-
- * specific workarounds that have leaked into the generic marker-based parser.
+ * These are INTEGRATION tests that document the end-to-end behaviour of
+ * domain-specific normalisation in the parser, now driven by config.
  *
  * The tests go through the full pipeline: Excel buffer → parse → validate
  * This ensures we can safely refactor by moving code between layers while
  * preserving observable behaviour.
  *
- * WORKAROUNDS DOCUMENTED:
- * 1. Global "Choose option" → null normalisation (should be per-column in domain)
- * 2. "Row ID" header row skipping (should be fixed in templates)
- * 3. Empty ROW_ID row skipping (should be fixed in templates)
- * 4. "Choose material" → null for MATERIAL meta field (domain-specific)
- * 5. Empty row detection relies on placeholder normalisation
- * 6. Redundant unfilledValues in domain schemas (parser already normalised)
+ * RESOLVED WORKAROUNDS:
+ * 1. Per-column "Choose option" → null normalisation via unfilledValues config
+ * 2. "Row ID" header row filtering (moved to domain layer)
+ * 3. Empty ROW_ID row filtering (moved to domain layer)
+ * 4. "Choose material" → null for MATERIAL metadata via metaPlaceholders config
+ * 5. Empty row detection works correctly with per-column normalisation
+ * 6. unfilledValues in domain schemas drives normalisation (no longer redundant)
  *
  * See: /docs/guides/spreadsheet-template-marker-guide.md for marker spec
  */
@@ -72,16 +72,13 @@ const createTestSchemaRegistry = (tables = {}) => ({
 })
 
 describe('Parser Workarounds - Integration Characterisation Tests', () => {
-  describe('WORKAROUND 1: Global "Choose option" → null normalisation', () => {
+  describe('RESOLVED WORKAROUND 1: Per-column "Choose option" normalisation via config', () => {
     /**
-     * The parser globally normalises "Choose option" to null in ALL data cells.
-     * This is domain-specific knowledge - not all columns use this placeholder.
-     *
-     * PROBLEM: This is a global workaround, not per-column configuration.
-     * IDEAL: Domain layer should specify per-column placeholder values.
+     * The parser normalises placeholder values to null per-column, driven by
+     * the unfilledValues config. Only columns listed in the config are normalised.
      */
 
-    it('normalises "Choose option" to null in ANY column at parse time', async () => {
+    it('normalises only configured columns, preserves free-text columns', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
@@ -90,13 +87,14 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { DROPDOWN: ['Choose option'] }
+      })
 
-      // Parser normalises to null BEFORE domain validation sees it
       expect(parsed.data.TEST_TABLE.rows[0].values).toEqual([
         1001,
-        null, // Free text column - normalised (incorrect!)
-        null // Dropdown column - normalised (correct)
+        'Choose option', // Free text column - preserved
+        null // Dropdown column - normalised via config
       ])
     })
 
@@ -109,7 +107,9 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { COL_A: ['Choose option'], COL_B: ['Choose option'] }
+      })
 
       // Only exact match is normalised
       expect(parsed.data.TEST.rows[0].values).toEqual([
@@ -124,28 +124,28 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         Cover: [['__EPR_META_SOME_FIELD', 'Choose option']]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { SOME_FIELD: ['Choose option'] }
+      })
 
-      // Metadata is NOT normalised (only MATERIAL has special handling)
+      // Metadata is NOT affected by unfilledValues
       expect(parsed.meta.SOME_FIELD.value).toBe('Choose option')
     })
   })
 
-  describe('WORKAROUND 2: "Row ID" header row skipping', () => {
+  describe('RESOLVED WORKAROUND 2: "Row ID" header row filtering (moved to domain layer)', () => {
     /**
-     * The parser skips rows where the ROW_ID column contains text starting
-     * with "Row ID". This handles user-facing header rows in templates.
-     *
-     * PROBLEM: The parser knows about "ROW_ID" column and "Row ID" text.
-     * IDEAL: Templates should place markers BELOW user-facing headers.
+     * Previously the parser skipped rows where ROW_ID starts with "Row ID".
+     * Now the parser returns these rows and data-syntax.js filters them
+     * using the schema's rowIdField.
      */
 
-    it('skips rows where ROW_ID column starts with "Row ID"', async () => {
+    it('parser returns header rows; domain layer filters them', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
           ['__EPR_DATA_TEST', 'ROW_ID', 'DATE', 'WEIGHT'],
-          [null, 'Row ID', 'Date received', 'Weight (kg)'], // User-facing header
+          [null, 'Row ID', 'Date received', 'Weight (kg)'],
           [null, 1001, '2025-01-15', 100],
           [null, 1002, '2025-01-16', 200]
         ]
@@ -153,21 +153,24 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       const parsed = await parse(buffer)
 
-      // User-facing header row is skipped at parse time
+      // Parser now returns the header row
       expect(parsed.data.TEST.rows).toEqual([
+        {
+          rowNumber: 2,
+          values: ['Row ID', 'Date received', 'Weight (kg)']
+        },
         { rowNumber: 3, values: [1001, '2025-01-15', 100] },
         { rowNumber: 4, values: [1002, '2025-01-16', 200] }
       ])
     })
 
-    it('skips rows with richText "Row ID" (actual template format)', async () => {
+    it('parser returns richText header rows; domain layer filters them', async () => {
       const workbook = new ExcelJS.Workbook()
       workbook.addWorksheet('Cover')
       const worksheet = workbook.addWorksheet('Test')
 
       worksheet.getRow(1).values = ['__EPR_DATA_TEST', 'ROW_ID', 'DATE']
 
-      // Real templates use richText with bold "Row ID" and description
       worksheet.getCell('B2').value = {
         richText: [
           { font: { bold: true }, text: 'Row ID' },
@@ -181,24 +184,28 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       const buffer = await workbook.xlsx.writeBuffer()
       const parsed = await parse(buffer)
 
+      // Parser returns the richText header row
       expect(parsed.data.TEST.rows).toEqual([
+        {
+          rowNumber: 2,
+          values: ['Row ID\n(Automatically generated)', 'Date received']
+        },
         { rowNumber: 3, values: [1001, '2025-01-15'] }
       ])
     })
 
-    it('only applies to tables with a ROW_ID column', async () => {
+    it('tables without ROW_ID column are unaffected', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
-          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'], // No ROW_ID column
-          [null, 'Row ID', '2025-01-15'], // NOT skipped - no ROW_ID column
+          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'],
+          [null, 'Row ID', '2025-01-15'],
           [null, 'REF001', '2025-01-16']
         ]
       })
 
       const parsed = await parse(buffer)
 
-      // "Row ID" text is NOT skipped because there's no ROW_ID column
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: ['Row ID', '2025-01-15'] },
         { rowNumber: 3, values: ['REF001', '2025-01-16'] }
@@ -206,49 +213,46 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
     })
   })
 
-  describe('WORKAROUND 3: Empty ROW_ID row skipping', () => {
+  describe('RESOLVED WORKAROUND 3: Empty ROW_ID row filtering (moved to domain layer)', () => {
     /**
-     * The parser skips rows where the ROW_ID column is null/undefined.
-     * This handles pre-populated template rows with dropdown defaults but no data.
-     *
-     * PROBLEM: The parser knows about "ROW_ID" column and skips based on it.
-     * IDEAL: Empty row detection should be based on all-null values,
-     *        or templates should not have pre-populated empty rows.
+     * Previously the parser skipped rows where ROW_ID is null/undefined.
+     * Now the parser returns these rows and data-syntax.js filters them
+     * using the schema's rowIdField.
      */
 
-    it('skips rows where ROW_ID is null (template placeholder rows)', async () => {
+    it('parser returns null ROW_ID rows; domain layer filters them', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
           ['__EPR_DATA_TEST', 'ROW_ID', 'DATE', 'DROPDOWN'],
           [null, 1001, '2025-01-15', 'Yes'],
-          [null, null, null, 'No'], // Pre-populated template row
+          [null, null, null, 'No'],
           [null, 1002, '2025-01-16', 'Yes']
         ]
       })
 
       const parsed = await parse(buffer)
 
-      // Row with null ROW_ID is skipped at parse time
+      // Parser now returns the null ROW_ID row
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: [1001, '2025-01-15', 'Yes'] },
+        { rowNumber: 3, values: [null, null, 'No'] },
         { rowNumber: 4, values: [1002, '2025-01-16', 'Yes'] }
       ])
     })
 
-    it('only applies to tables with a ROW_ID column', async () => {
+    it('tables without ROW_ID column are unaffected', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
-          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'], // No ROW_ID column
-          [null, null, '2025-01-15'], // NOT skipped - no ROW_ID column
+          ['__EPR_DATA_TEST', 'REFERENCE', 'DATE'],
+          [null, null, '2025-01-15'],
           [null, 'REF001', '2025-01-16']
         ]
       })
 
       const parsed = await parse(buffer)
 
-      // Row with null is NOT skipped because there's no ROW_ID column
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: [null, '2025-01-15'] },
         { rowNumber: 3, values: ['REF001', '2025-01-16'] }
@@ -256,31 +260,33 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
     })
   })
 
-  describe('WORKAROUND 4: "Choose material" → null for MATERIAL metadata', () => {
+  describe('RESOLVED WORKAROUND 4: Metadata normalisation via metaPlaceholders config', () => {
     /**
-     * The parser normalises "Choose material" to null ONLY for the MATERIAL
-     * metadata field. This is the dropdown placeholder for material selection.
-     *
-     * PROBLEM: The parser knows about a specific domain field and its placeholder.
-     * IDEAL: Domain layer should handle metadata placeholder normalisation.
+     * The parser normalises metadata placeholder values to null per-field,
+     * driven by the metaPlaceholders config. Only fields listed in the config
+     * are normalised.
      */
 
-    it('normalises "Choose material" to null for MATERIAL field only', async () => {
+    it('normalises "Choose material" to null for MATERIAL field via config', async () => {
       const buffer = await createWorkbook({
         Cover: [['__EPR_META_MATERIAL', 'Choose material']]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        metaPlaceholders: { MATERIAL: 'Choose material' }
+      })
 
       expect(parsed.meta.MATERIAL.value).toBeNull()
     })
 
-    it('does NOT normalise "Choose material" for other meta fields', async () => {
+    it('does NOT normalise "Choose material" for fields not in config', async () => {
       const buffer = await createWorkbook({
         Cover: [['__EPR_META_OTHER_FIELD', 'Choose material']]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        metaPlaceholders: { MATERIAL: 'Choose material' }
+      })
 
       expect(parsed.meta.OTHER_FIELD.value).toBe('Choose material')
     })
@@ -294,24 +300,23 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        metaPlaceholders: { MATERIAL: 'Choose material' }
+      })
 
       // "Choose material" is NOT normalised in data rows
       expect(parsed.data.TEST.rows[0].values).toEqual([1001, 'Choose material'])
     })
   })
 
-  describe('WORKAROUND 5: Empty row detection relies on placeholder normalisation', () => {
+  describe('RESOLVED WORKAROUND 5: Empty row detection with per-column normalisation', () => {
     /**
-     * Empty row detection (table termination) depends on "Choose option"
-     * being normalised to null. A row with all "Choose option" values is
-     * treated as empty and terminates the table.
-     *
-     * PROBLEM: This creates a dependency between WORKAROUND 1 and table termination.
-     * IDEAL: Table termination could be configured separately from normalisation.
+     * Empty row detection (table termination) works correctly with per-column
+     * normalisation. When configured columns' placeholder values are normalised
+     * to null, all-null rows still terminate the table.
      */
 
-    it('treats row with all "Choose option" as empty (terminates table)', async () => {
+    it('treats row with all configured placeholders as empty (terminates table)', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
@@ -322,15 +327,19 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: {
+          DROPDOWN_A: ['Choose option'],
+          DROPDOWN_B: ['Choose option']
+        }
+      })
 
       // Table terminates at the all-placeholder row
-      // Note: Row 3 is also skipped by WORKAROUND 3 (null ROW_ID)
       expect(parsed.data.TEST.rows).toHaveLength(1)
       expect(parsed.data.TEST.rows[0].values).toEqual([1001, 'Yes', 'Active'])
     })
 
-    it('treats row with mix of null and "Choose option" as empty', async () => {
+    it('treats row with mix of null and configured placeholders as empty', async () => {
       const buffer = await createWorkbook({
         Cover: [],
         Test: [
@@ -341,11 +350,11 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { DROPDOWN: ['Choose option'] }
+      })
 
-      // Row 3 skipped by both WORKAROUND 3 (null ROW_ID) and considered empty
-      // Row 4 is after a "gap" so might or might not be included
-      // The key point is row 2 is skipped
+      // Row 3 becomes all-null after normalisation → terminates table
       expect(parsed.data.TEST.rows[0].values).toEqual([
         1001,
         '2025-01-15',
@@ -365,29 +374,28 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { DROPDOWN: ['Choose option'] }
+      })
 
       // Row 3 is NOT treated as empty because 'partial data' is real
       expect(parsed.data.TEST.rows).toEqual([
         { rowNumber: 2, values: [1001, 'data1', 'Yes'] },
-        { rowNumber: 3, values: [1002, 'partial data', null] }, // Choose option normalised
+        { rowNumber: 3, values: [1002, 'partial data', null] }, // Dropdown normalised
         { rowNumber: 4, values: [1003, 'data2', 'No'] }
       ])
     })
   })
 
-  describe('WORKAROUND 6: Redundant unfilledValues in domain schemas', () => {
+  describe('RESOLVED WORKAROUND 6: unfilledValues drives normalisation', () => {
     /**
-     * Domain schemas define unfilledValues with 'Choose option' placeholders,
-     * but the parser ALREADY normalised these to null. The domain layer
-     * never sees 'Choose option' because the parser removed it.
-     *
-     * PROBLEM: Redundant configuration - domain can't distinguish between
-     *          "user left blank" and "user didn't change dropdown default".
-     * IDEAL: Either parser normalises OR domain filters, not both.
+     * Domain schemas define unfilledValues with 'Choose option' placeholders.
+     * These are now aggregated and passed to the parser as unfilledValues,
+     * driving per-column normalisation. The domain layer's isFilled check
+     * still works as a secondary gate for any values the parser didn't normalise.
      */
 
-    it('domain layer receives null, not "Choose option" (unfilledValues is redundant)', async () => {
+    it('parser normalises configured columns; domain layer sees null', async () => {
       const buffer = await createWorkbook({
         Cover: [['__EPR_META_PROCESSING_TYPE', 'TEST_TYPE']],
         Test: [
@@ -396,16 +404,18 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] }
+      })
 
-      // Parser already normalised to null
+      // Parser normalised to null via config
       expect(parsed.data.TEST_TABLE.rows[0].values[1]).toBeNull()
 
       // Domain schema with unfilledValues
       const schema = createTestSchema({
         requiredHeaders: ['ROW_ID', 'DROPDOWN_FIELD'],
         unfilledValues: {
-          DROPDOWN_FIELD: ['Choose option'] // This is DEAD CODE
+          DROPDOWN_FIELD: ['Choose option'] // Drives parser normalisation
         }
       })
 
@@ -415,25 +425,22 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         DROPDOWN_FIELD: parsed.data.TEST_TABLE.rows[0].values[1]
       }
 
-      // Domain layer sees null, not 'Choose option'
+      // Domain layer sees null
       expect(rowObject.DROPDOWN_FIELD).toBeNull()
 
-      // The unfilledValues check never matches because value is already null
+      // isFilled correctly identifies the field as unfilled
       const fieldUnfilledValues = schema.unfilledValues.DROPDOWN_FIELD || []
       const isUnfilled = !isFilled(
         rowObject.DROPDOWN_FIELD,
         fieldUnfilledValues
       )
 
-      // It's unfilled because null (not because of unfilledValues match)
       expect(isUnfilled).toBe(true)
-
-      // The unfilledValues array is never checked against 'Choose option'
-      // because the parser already converted it to null
     })
 
-    it('proves unfilledValues would be needed if parser did NOT normalise', () => {
-      // Simulate what would happen if parser didn't normalise
+    it('domain layer catches unfilled values even without parser normalisation', () => {
+      // If a value isn't normalised by the parser (e.g. not in unfilledValues),
+      // the domain layer's unfilledValues check still catches it
       const rowObjectWithoutNormalisation = {
         ROW_ID: 1001,
         DROPDOWN_FIELD: 'Choose option' // Parser didn't normalise
@@ -445,21 +452,20 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         }
       })
 
-      // Without parser normalisation, unfilledValues IS needed
       const fieldUnfilledValues = schema.unfilledValues.DROPDOWN_FIELD || []
       const isUnfilled = !isFilled(
         rowObjectWithoutNormalisation.DROPDOWN_FIELD,
         fieldUnfilledValues
       )
 
-      expect(isUnfilled).toBe(true) // Would correctly identify as unfilled
+      expect(isUnfilled).toBe(true) // Correctly identified as unfilled
     })
   })
 
-  describe('COMBINED: Real template structure with all workarounds active', () => {
+  describe('COMBINED: Real template structure with all resolved workarounds', () => {
     /**
-     * This test simulates a real template structure showing how all workarounds
-     * interact in the full pipeline from parse to validate.
+     * This test simulates a real template structure showing how all the
+     * config-driven normalisation works together in the full pipeline.
      */
 
     it('processes realistic template through full pipeline', async () => {
@@ -471,7 +477,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         '__EPR_META_PROCESSING_TYPE',
         'REPROCESSOR_INPUT'
       ]
-      cover.getRow(2).values = ['__EPR_META_MATERIAL', 'Choose material'] // WORKAROUND 4
+      cover.getRow(2).values = ['__EPR_META_MATERIAL', 'Choose material']
 
       // Data sheet with realistic structure
       const dataSheet = workbook.addWorksheet('Data')
@@ -485,7 +491,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         'DROPDOWN_FIELD'
       ]
 
-      // Row 2: User-facing headers (WORKAROUND 2 skips this)
+      // Row 2: User-facing headers (domain layer filters)
       dataSheet.getCell('B2').value = {
         richText: [
           { font: { bold: true }, text: 'Row ID' },
@@ -508,25 +514,23 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       // Row 4: Real data
       dataSheet.getRow(4).values = [null, 1001, null, '2025-05-15', 'Option A']
 
-      // Row 5: Real data with placeholder (WORKAROUND 1 normalises)
+      // Row 5: Real data with placeholder (normalised via config)
       dataSheet.getRow(5).values = [
         null,
         1002,
         null,
         '2025-05-16',
-        'Choose option' // Will be normalised to null
+        'Choose option' // Normalised to null via unfilledValues
       ]
 
-      // Row 6: Pre-populated empty row (WORKAROUND 3 + WORKAROUND 5 interaction)
-      // This row has null ROW_ID AND all other values are null/placeholder
-      // After WORKAROUND 1 normalises 'Choose option' → null, this becomes an all-null row
-      // which TERMINATES the table (WORKAROUND 5 - empty row detection)
+      // Row 6: Pre-populated empty row
+      // After per-column normalisation, this becomes all-null → terminates table
       dataSheet.getRow(6).values = [
         null,
-        null, // WORKAROUND 3: null ROW_ID
         null,
         null,
-        'Choose option' // WORKAROUND 1: normalised to null → row becomes all-null
+        null,
+        'Choose option' // Normalised to null → row becomes all-null
       ]
 
       // Row 7: More data after the all-null row
@@ -534,9 +538,12 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       dataSheet.getRow(7).values = [null, 1003, null, '2025-05-17', 'Option B']
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] },
+        metaPlaceholders: { MATERIAL: 'Choose material' }
+      })
 
-      // Verify WORKAROUND 4: MATERIAL normalised
+      // Verify MATERIAL normalised via metaPlaceholders
       expect(parsed.meta.MATERIAL.value).toBeNull()
 
       // Verify parsing results
@@ -547,16 +554,25 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         'DROPDOWN_FIELD'
       ])
 
-      // Verify row skipping:
-      // - Row 2 (user headers): SKIPPED by WORKAROUND 2
-      // - Row 3 (example): SKIPPED by "Example" feature
+      // Row skipping:
+      // - Row 2 (user headers): RETURNED by parser (domain layer filters later)
+      // - Row 3 (example): SKIPPED by "Example" feature (stays in parser)
       // - Row 4: INCLUDED
       // - Row 5: INCLUDED with normalised dropdown
-      // - Row 6: All-null after normalisation → TERMINATES TABLE (WORKAROUND 5)
+      // - Row 6: All-null after normalisation → TERMINATES TABLE
       // - Row 7: NOT PARSED (table already terminated)
       expect(parsed.data.RECEIVED_LOADS.rows).toEqual([
+        {
+          rowNumber: 2,
+          values: [
+            'Row ID\n(Auto generated)',
+            null,
+            'Date received',
+            'Select option'
+          ]
+        },
         { rowNumber: 4, values: [1001, null, '2025-05-15', 'Option A'] },
-        { rowNumber: 5, values: [1002, null, '2025-05-16', null] } // WORKAROUND 1: normalised
+        { rowNumber: 5, values: [1002, null, '2025-05-16', null] }
         // Row 7 is NOT here - table terminated at Row 6
       ])
     })
@@ -565,22 +581,22 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
   describe('VALIDATION: Domain layer behaviour post-parsing', () => {
     /**
      * These tests verify how the domain validation layer behaves
-     * with data that has already been processed by the parser workarounds.
+     * with data that has been processed by config-driven normalisation.
      */
 
-    it('classifies row correctly when parser has already normalised placeholders', async () => {
+    it('classifies row correctly when parser has normalised placeholders', async () => {
       const schema = createTestSchema({
         requiredHeaders: ['ROW_ID', 'VALUE'],
         unfilledValues: {
-          VALUE: ['Choose option'] // Redundant but present in real schemas
+          VALUE: ['Choose option']
         },
         fieldsRequiredForInclusionInWasteBalance: ['VALUE']
       })
 
-      // Row where parser already normalised 'Choose option' to null
+      // Row where parser normalised 'Choose option' to null via config
       const parsedRow = {
         ROW_ID: 1001,
-        VALUE: null // Parser normalised from 'Choose option'
+        VALUE: null // Normalised from 'Choose option'
       }
 
       const result = classifyRow(parsedRow, schema)
@@ -601,11 +617,13 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         Test: [
           ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'VALUE'],
           [null, 1001, 'actual data'],
-          [null, 1002, 'Choose option'] // Will be normalised then filtered
+          [null, 1002, 'Choose option'] // Normalised then classified
         ]
       })
 
-      const parsed = await parse(buffer)
+      const parsed = await parse(buffer, {
+        unfilledValues: { VALUE: ['Choose option'] }
+      })
 
       // Verify parser normalisation happened
       expect(parsed.data.TEST_TABLE.rows[1].values[1]).toBeNull()
@@ -615,7 +633,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         TEST_TABLE: createTestSchema({
           requiredHeaders: ['ROW_ID', 'VALUE'],
           unfilledValues: {
-            VALUE: ['Choose option'] // Redundant
+            VALUE: ['Choose option']
           },
           fieldsRequiredForInclusionInWasteBalance: ['VALUE']
         })

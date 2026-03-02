@@ -23,10 +23,6 @@ export const transformReceivedLoadsRow = (rowData, rowIndex) => {
     throw new Error(`Missing ${rowIdField} at row ${rowIndex}`)
   }
 
-  if (!rowData.DATE_RECEIVED_FOR_REPROCESSING) {
-    throw new Error(`Missing DATE_RECEIVED_FOR_REPROCESSING at row ${rowIndex}`)
-  }
-
   return {
     wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
     rowId: rowData[rowIdField],

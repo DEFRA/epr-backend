@@ -82,7 +82,17 @@ describe('SummaryLogExtractor', () => {
       requiredWorksheet: 'Cover',
       maxWorksheets: 20,
       maxRowsPerSheet: 55_000,
-      maxColumnsPerSheet: 1_000
+      maxColumnsPerSheet: 1_000,
+      unfilledValues: expect.objectContaining({
+        EWC_CODE: ['Choose option'],
+        DESCRIPTION_WASTE: ['Choose option'],
+        WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: ['Choose option'],
+        BAILING_WIRE_PROTOCOL: ['Choose option'],
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: ['Choose option']
+      }),
+      metaPlaceholders: {
+        MATERIAL: 'Choose material'
+      }
     })
   })
 
@@ -185,10 +195,9 @@ describe('SummaryLogExtractor', () => {
           category: 'file-processing'
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       'OrganisationDetails',
-      JSON.stringify(['Name', 'Type']),
-      JSON.stringify(['Widget Ltd', 'Retailer']),
+      2,
       2,
       'Sheet1',
       5,
@@ -240,10 +249,9 @@ describe('SummaryLogExtractor', () => {
           category: 'file-processing'
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       'EmptyTable',
-      JSON.stringify(['Column1', 'Column2']),
-      'null',
+      2,
       0,
       'Sheet1',
       1,
@@ -251,7 +259,7 @@ describe('SummaryLogExtractor', () => {
     )
   })
 
-  it('should handle data table with only one row (example row)', async () => {
+  it('should handle data table with only one row', async () => {
     const parsedData = {
       meta: {},
       data: {
@@ -273,10 +281,9 @@ describe('SummaryLogExtractor', () => {
           category: 'file-processing'
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       'SingleRowTable',
-      JSON.stringify(['Column1', 'Column2']),
-      'null',
+      2,
       1,
       'Sheet1',
       1,

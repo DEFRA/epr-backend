@@ -8,19 +8,20 @@ Backend APIs for: Packaging Extended Producer Responsibilities
 
 <!-- prettier-ignore-start -->
 <!-- TOC -->
-* [pEPR Backend](#pepr-backend)
-  * [API endpoints](#api-endpoints)
-  * [Docker](#docker)
-    * [Running with Docker Compose](#running-with-docker-compose)
-  * [Contributing](#contributing)
-  * [Architecture](#architecture)
-  * [Runbooks](#runbooks)
-  * [Known issues](#known-issues)
-  * [Workarounds](#workarounds)
-  * [Licence](#licence)
-    * [About the licence](#about-the-licence)
-<!-- TOC -->
 
+- [pEPR Backend](#pepr-backend)
+  - [API endpoints](#api-endpoints)
+  - [Docker](#docker)
+    - [Running with Docker Compose](#running-with-docker-compose)
+  - [Contributing](#contributing)
+  - [Architecture](#architecture)
+  - [Runbooks](#runbooks)
+  - [Known issues](#known-issues)
+  - [Workarounds](#workarounds)
+  - [Licence](#licence)
+    - [About the licence](#about-the-licence)
+
+<!-- TOC -->
 <!-- prettier-ignore-end -->
 
 ## API endpoints

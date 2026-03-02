@@ -122,7 +122,7 @@ const findLatestSubmittedForOrgReg =
 const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
   const statsMap = Array.from(staleCache.values()).reduce(
     (acc, { summaryLog: doc }) => {
-      const { organisationId, registrationId, status, submittedAt } = doc
+      const { organisationId, registrationId, status } = doc
       const key = `${organisationId}:${registrationId}`
 
       const group = acc.get(key) || {
@@ -134,15 +134,12 @@ const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
         failedCount: 0
       }
 
-      // 1. Determine the category
       const prefix = FAILURE_STATUS.has(status) ? 'failed' : 'successful'
       const dateKey = prefix === 'failed' ? 'lastFailed' : 'lastSuccessful'
-
-      // 2. Update count and date logic once
       group[`${prefix}Count`]++
-
-      if (!group[dateKey] || submittedAt > group[dateKey]) {
-        group[dateKey] = submittedAt
+      const dateField = prefix === 'successful' ? 'submittedAt' : 'createdAt'
+      if (!group[dateKey] || doc[dateField] > group[dateKey]) {
+        group[dateKey] = doc[dateField]
       }
 
       return acc.set(key, group)

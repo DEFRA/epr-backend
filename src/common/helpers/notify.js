@@ -1,7 +1,7 @@
 import obfuscateEmail from 'obfuscate-mail'
 
 import { NotifyClient } from 'notifications-node-client'
-import { audit } from '@defra/cdp-auditing'
+import { safeAudit } from '#root/auditing/helpers.js'
 import { logger } from './logging/logger.js'
 import { getLocalSecret } from './get-local-secret.js'
 import { config } from '#root/config.js'
@@ -36,7 +36,7 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
     await notifyClient.sendEmail?.(templateId, emailAddress, {
       personalisation
     })
-    audit({
+    safeAudit({
       event: {
         category: AUDIT_EVENT_CATEGORIES.EMAIL,
         action: AUDIT_EVENT_ACTIONS.EMAIL_SENT

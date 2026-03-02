@@ -26,5 +26,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isPackagingRecyclingNotesExternalApiEnabled() {
     return config.get('featureFlags.packagingRecyclingNotesExternalApi')
+  },
+  isCopyFormFilesToS3Enabled() {
+    return config.get('featureFlags.copyFormFilesToS3')
   }
 })

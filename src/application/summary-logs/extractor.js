@@ -2,6 +2,11 @@ import {
   parse,
   PARSE_DEFAULTS
 } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import {
+  PROCESSING_TYPE_TABLES,
+  aggregateUnfilledValues
+} from '#domain/summary-logs/table-schemas/index.js'
+import { META_PLACEHOLDERS } from '#domain/summary-logs/meta-fields.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
@@ -11,12 +16,16 @@ import {
 const FILE_PROCESSING_CATEGORY = 'file-processing'
 
 /**
- * Summary log spreadsheet validation options.
- * Uses parser defaults with summary-log-specific worksheet requirement.
+ * Summary log spreadsheet parse options.
+ * Uses parser defaults with summary-log-specific worksheet requirement,
+ * per-column placeholder normalisation from domain schemas, and
+ * metadata placeholder normalisation.
  */
 const SUMMARY_LOG_PARSE_OPTIONS = {
   requiredWorksheet: 'Cover',
-  ...PARSE_DEFAULTS
+  ...PARSE_DEFAULTS,
+  unfilledValues: aggregateUnfilledValues(PROCESSING_TYPE_TABLES),
+  metaPlaceholders: META_PLACEHOLDERS
 }
 
 const logParsingSummary = (logger, parsedData) => {
@@ -30,8 +39,7 @@ const logParsingSummary = (logger, parsedData) => {
 
   const dataEntries = Object.entries(parsedData.data).map(([key, value]) => ({
     tableName: key,
-    headers: value.headers,
-    exampleRow: value.rows[1] || null,
+    headerCount: value.headers.length,
     rowCount: value.rows.length,
     location: value.location
   }))
@@ -73,10 +81,9 @@ const logParsingSummary = (logger, parsedData) => {
           category: FILE_PROCESSING_CATEGORY
         }
       },
-      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
       data.tableName,
-      JSON.stringify(data.headers),
-      JSON.stringify(data.exampleRow),
+      data.headerCount,
       data.rowCount,
       data.location.sheet,
       data.location.row,

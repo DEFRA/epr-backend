@@ -520,6 +520,82 @@ describe('syncFromSummaryLog', () => {
     expect(updatedVersion.data).not.toHaveProperty('ROW_ID')
   })
 
+  it('filters template rows with null or header-text ROW_ID during transformation', async () => {
+    const fileId = 'test-file-template-rows'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key-template'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            // Template row: header description text in ROW_ID
+            {
+              rowNumber: 2,
+              values: [
+                'Row ID (auto-generated)',
+                'Date description',
+                'Weight description'
+              ]
+            },
+            // Real data row
+            {
+              rowNumber: 3,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            },
+            // Template row: null ROW_ID (empty pre-populated row)
+            {
+              rowNumber: 4,
+              values: [null, null, null]
+            },
+            // Another real data row
+            {
+              rowNumber: 5,
+              values: ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository
+    })
+
+    await sync(summaryLog)
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    // Only the two real data rows should be saved
+    expect(savedRecords).toHaveLength(2)
+    expect(savedRecords[0].rowId).toBe('row-123')
+    expect(savedRecords[1].rowId).toBe('row-456')
+  })
+
   it('handles headers with null values and EPR markers', async () => {
     const fileId = 'test-file-markers'
     const summaryLog = {

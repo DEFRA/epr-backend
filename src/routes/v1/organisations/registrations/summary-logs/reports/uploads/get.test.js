@@ -64,22 +64,25 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
 
       const payload = JSON.parse(response.payload)
-      expect(payload).toEqual([
-        {
-          appropriateAgency: 'EA',
-          type: 'Reprocessor',
-          businessName: 'ACME ltd',
-          orgId,
-          registrationNumber: 'REG1',
-          accreditationNumber: 'ACC1',
-          reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
-          packagingWasteCategory: 'Glass-remelt',
-          lastSuccessfulUpload: submittedAt,
-          lastFailedUpload: '',
-          successfulUploads: 1,
-          failedUploads: 0
-        }
-      ])
+      expect(payload).toEqual({
+        summaryLogUploads: [
+          {
+            appropriateAgency: 'EA',
+            type: 'Reprocessor',
+            businessName: 'ACME ltd',
+            orgId,
+            registrationNumber: 'REG1',
+            accreditationNumber: 'ACC1',
+            reprocessingSite: '7 Glass processing site, London, SW2A 0AA',
+            packagingWasteCategory: 'Glass-remelt',
+            lastSuccessfulUpload: submittedAt,
+            lastFailedUpload: '',
+            successfulUploads: 1,
+            failedUploads: 0
+          }
+        ],
+        generatedAt: expect.any(String)
+      })
     })
   })
 

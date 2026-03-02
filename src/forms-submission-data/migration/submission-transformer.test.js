@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ObjectId } from 'mongodb'
-import { transformAll } from './submission-transformer.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
-import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
+import { ObjectId } from 'mongodb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { transformAll } from './submission-transformer.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -62,7 +62,7 @@ describe('transformAll', () => {
     vi.clearAllMocks()
   })
 
-  it('should transform all submission types ', async () => {
+  it('should transform all submission types', async () => {
     const accrId1 = new ObjectId()
     const submissionsToMigrate = {
       organisations: new Set([org1Id.toString()]),

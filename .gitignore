@@ -2,6 +2,7 @@
 .npm/
 .vscode
 .idea
+.mcp.json
 .server
 .schemas
 node_modules

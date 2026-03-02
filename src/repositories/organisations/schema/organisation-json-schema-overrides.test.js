@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import Joi from 'joi'
+import { describe, expect, it } from 'vitest'
 import { makeEditable } from './organisation-json-schema-overrides.js'
 
 describe('makeEditable', () => {
@@ -92,7 +92,7 @@ describe('makeEditable', () => {
     const itemDescription = editable.$_terms.items[0].describe()
     // Item should be optional now (permissive)
     // Joi optional() usually removes presence flag or sets it to optional
-    // describe() output: flags: { presence: 'required' } vs undefined/optional
+    // describe output: flags: { presence: 'required' } vs undefined/optional
     expect(itemDescription.flags?.presence).not.toBe('required')
   })
 

@@ -4,6 +4,7 @@ import {
   createDateFieldSchema,
   createWeightFieldSchema
 } from './field-schemas.js'
+import { DROPDOWN_PLACEHOLDER } from './joi-messages.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
@@ -52,7 +53,11 @@ export const createSentOnLoadsSchema = (rowIdMinimum) => ({
   /**
    * Per-field values that indicate "unfilled"
    */
-  unfilledValues: {},
+  unfilledValues: {
+    [FIELDS.FINAL_DESTINATION_FACILITY_TYPE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.EWC_CODE]: DROPDOWN_PLACEHOLDER
+  },
 
   /**
    * Fields that produce FATAL errors when validation fails.

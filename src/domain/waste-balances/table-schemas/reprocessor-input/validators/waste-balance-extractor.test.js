@@ -68,6 +68,20 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
       expect(result.prnIssued).toBe(true)
     })
 
+    it('rounds transactionAmount to two decimal places', () => {
+      const record = {
+        ...baseRecord,
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          ...validReceivedData,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 100.555
+        }
+      }
+
+      const result = extractWasteBalanceFields(record)
+      expect(result.transactionAmount).toBe(100.56)
+    })
+
     it('defaults transactionAmount to 0 if missing', () => {
       const record = {
         ...baseRecord,
@@ -124,6 +138,20 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
         prnIssued: false,
         transactionAmount: -50.25 // Should be negative
       })
+    })
+
+    it('rounds transactionAmount to two decimal places before negation', () => {
+      const record = {
+        ...baseRecord,
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          ...validSentOnData,
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50.125
+        }
+      }
+
+      const result = extractWasteBalanceFields(record)
+      expect(result.transactionAmount).toBe(-50.13)
     })
 
     it('defaults transactionAmount to 0 if missing', () => {

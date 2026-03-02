@@ -21,11 +21,19 @@ export const wasteBalanceGet = {
         organisationId: Joi.string()
           .pattern(/^[a-f0-9]{24}$/)
           .required()
+          .messages({
+            'string.pattern.base':
+              'organisationId must be a valid 24-character hex string'
+          })
       }),
       query: Joi.object({
         accreditationIds: Joi.string()
           .required()
           .pattern(/^[a-f0-9]{24}(,[a-f0-9]{24})*$/)
+          .messages({
+            'string.pattern.base':
+              'accreditationIds must be comma-separated 24-character hex strings'
+          })
       })
     },
     response: {

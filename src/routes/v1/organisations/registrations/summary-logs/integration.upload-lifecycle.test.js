@@ -213,7 +213,7 @@ describe('Summary logs upload lifecycle', () => {
           expect.objectContaining({
             status: UPLOAD_STATUS.REJECTED,
             validation: {
-              failures: [{ code: 'FILE_REJECTED' }],
+              failures: [{ code: 'FILE_REJECTED', errorCode: 'FILE_REJECTED' }],
               concerns: {}
             }
           })

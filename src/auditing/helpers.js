@@ -1,3 +1,5 @@
+import { audit } from '@defra/cdp-auditing'
+import { logger } from '#common/helpers/logging/logger.js'
 import { config } from '#root/config.js'
 
 /**
@@ -8,11 +10,16 @@ import { config } from '#root/config.js'
  * @param {import('#common/hapi-types.js').HapiRequest} request
  */
 function extractUserDetails(request) {
-  return {
-    id: request.auth?.credentials?.id,
-    email: request.auth?.credentials?.email,
-    scope: request.auth?.credentials?.scope
-  }
+  return request.auth?.credentials?.isMachine
+    ? {
+        id: request.auth.credentials.id,
+        name: request.auth.credentials.name
+      }
+    : {
+        id: request.auth?.credentials?.id,
+        email: request.auth?.credentials?.email,
+        scope: request.auth?.credentials?.scope
+      }
 }
 
 /**
@@ -38,4 +45,33 @@ function isPayloadSmallEnoughToAudit(payload) {
   return payloadSize < config.get('audit.maxPayloadSizeBytes')
 }
 
-export { extractUserDetails, recordSystemLog, isPayloadSmallEnoughToAudit }
+/**
+ * Safety-net wrapper around CDP audit. Passes small payloads through unchanged.
+ * For oversized payloads, logs a warning and sends a stripped payload (event + user only)
+ * so the audit event is still recorded without risking log pipeline fragmentation.
+ * @param {object} payload
+ */
+function safeAudit(payload) {
+  if (isPayloadSmallEnoughToAudit(payload)) {
+    audit(payload)
+    return
+  }
+
+  const { category, subCategory, action } = payload.event
+  logger.warn({
+    message: `Audit payload too large, stripping context for ${category}/${subCategory}/${action}`
+  })
+
+  const reducedPayload = { event: payload.event }
+  if (payload.user) {
+    reducedPayload.user = payload.user
+  }
+  audit(reducedPayload)
+}
+
+export {
+  extractUserDetails,
+  isPayloadSmallEnoughToAudit,
+  recordSystemLog,
+  safeAudit
+}

@@ -1,5 +1,4 @@
-import { audit } from '@defra/cdp-auditing'
-import { extractUserDetails, recordSystemLog } from './helpers.js'
+import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -24,7 +23,7 @@ async function auditOrganisationLinking(request, organisationId, { id, name }) {
     user: extractUserDetails(request)
   }
 
-  audit(payload)
+  safeAudit(payload)
   await recordSystemLog(request, payload)
 }
 

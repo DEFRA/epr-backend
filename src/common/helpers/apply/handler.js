@@ -1,4 +1,4 @@
-import { audit } from '@defra/cdp-auditing'
+import { safeAudit } from '#root/auditing/helpers.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import {
@@ -29,7 +29,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
         })
       )
 
-      audit({
+      safeAudit({
         event: {
           category: AUDIT_EVENT_CATEGORIES.DB,
           action: AUDIT_EVENT_ACTIONS.DB_INSERT

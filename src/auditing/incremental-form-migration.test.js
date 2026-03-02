@@ -9,6 +9,12 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    warn: vi.fn()
+  }
+}))
+
 vi.mock('#root/config.js', () => ({
   config: {
     get: vi.fn((key) => {

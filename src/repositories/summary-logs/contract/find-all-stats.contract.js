@@ -40,7 +40,100 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
       const { organisationId, registrationId } = generateOrgReg()
 
       const firstSubmittedAt = '2024-01-10T10:00:00.000Z'
+      const latestSubmittedCreatedAt = '2024-01-20T15:30:00.000Z'
+
+      await repo.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          submittedAt: firstSubmittedAt
+        })
+      )
+
+      await repo.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          submittedAt: latestSubmittedCreatedAt
+        })
+      )
+
+      const stats = await repo.findAllSummaryLogStatsByRegistrationId()
+
+      const expectedStats = getMatchingStats(
+        stats,
+        organisationId,
+        registrationId
+      )
+
+      expect(expectedStats).toBeDefined()
+      expect(expectedStats).toMatchObject([
+        {
+          organisationId,
+          registrationId,
+          lastSuccessful: new Date(latestSubmittedCreatedAt),
+          lastFailed: null,
+          successfulCount: 2,
+          failedCount: 0
+        }
+      ])
+    })
+
+    it('returns aggregated statistics with latest timestamp and correct count for registration with two failed uploads', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+
+      const firstFailedCreatedAt = '2024-02-01T09:00:00.000Z'
+      const latestFailedCreatedAt = '2024-02-05T14:30:00.000Z'
+
+      await repo.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submissionFailed({
+          organisationId,
+          registrationId,
+          createdAt: firstFailedCreatedAt
+        })
+      )
+
+      await repo.insert(
+        new ObjectId().toString(),
+        summaryLogFactory.submissionFailed({
+          organisationId,
+          registrationId,
+          createdAt: latestFailedCreatedAt
+        })
+      )
+
+      const stats = await repo.findAllSummaryLogStatsByRegistrationId()
+
+      const expectedStats = getMatchingStats(
+        stats,
+        organisationId,
+        registrationId
+      )
+
+      expect(expectedStats).toBeDefined()
+      expect(expectedStats).toMatchObject([
+        {
+          organisationId,
+          registrationId,
+          lastSuccessful: null,
+          lastFailed: new Date(latestFailedCreatedAt),
+          successfulCount: 0,
+          failedCount: 2
+        }
+      ])
+    })
+
+    it('returns aggregated statistics with both successful and failed counts and their respective latest timestamps for a single registration', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+
+      const firstSubmittedAt = '2024-01-10T10:00:00.000Z'
       const latestSubmittedAt = '2024-01-20T15:30:00.000Z'
+
+      const firstFailedCreatedAt = '2024-02-01T09:00:00.000Z'
+      const latestFailedCreatedAt = '2024-02-10T16:45:00.000Z'
 
       await repo.insert(
         new ObjectId().toString(),
@@ -60,39 +153,13 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         })
       )
 
-      const stats = await repo.findAllSummaryLogStatsByRegistrationId()
-
-      const expectedStats = getMatchingStats(
-        stats,
-        organisationId,
-        registrationId
-      )
-
-      expect(expectedStats).toBeDefined()
-      expect(expectedStats).toMatchObject([
-        {
-          organisationId,
-          registrationId,
-          lastSuccessful: new Date(latestSubmittedAt),
-          lastFailed: null,
-          successfulCount: 2,
-          failedCount: 0
-        }
-      ])
-    })
-
-    it('returns aggregated statistics with latest timestamp and correct count for registration with two failed uploads', async () => {
-      const { organisationId, registrationId } = generateOrgReg()
-
-      const firstFailedAt = '2024-02-01T09:00:00.000Z'
-      const latestFailedAt = '2024-02-05T14:30:00.000Z'
-
       await repo.insert(
         new ObjectId().toString(),
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
-          submittedAt: firstFailedAt
+          createdAt: firstFailedCreatedAt,
+          submittedAt: firstFailedCreatedAt
         })
       )
 
@@ -101,7 +168,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submissionFailed({
           organisationId,
           registrationId,
-          submittedAt: latestFailedAt
+          createdAt: latestFailedCreatedAt,
+          submittedAt: latestFailedCreatedAt
         })
       )
 
@@ -118,74 +186,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         {
           organisationId,
           registrationId,
-          lastSuccessful: null,
-          lastFailed: new Date(latestFailedAt),
-          successfulCount: 0,
-          failedCount: 2
-        }
-      ])
-    })
-
-    it('returns aggregated statistics with both successful and failed counts and their respective latest timestamps for a single registration', async () => {
-      const { organisationId, registrationId } = generateOrgReg()
-
-      const firstSuccessfulAt = '2024-01-10T10:00:00.000Z'
-      const latestSuccessfulAt = '2024-01-20T15:30:00.000Z'
-
-      const firstFailedAt = '2024-02-01T09:00:00.000Z'
-      const latestFailedAt = '2024-02-10T16:45:00.000Z'
-
-      await repo.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          submittedAt: firstSuccessfulAt
-        })
-      )
-
-      await repo.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.submitted({
-          organisationId,
-          registrationId,
-          submittedAt: latestSuccessfulAt
-        })
-      )
-
-      await repo.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.submissionFailed({
-          organisationId,
-          registrationId,
-          submittedAt: firstFailedAt
-        })
-      )
-
-      await repo.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.submissionFailed({
-          organisationId,
-          registrationId,
-          submittedAt: latestFailedAt
-        })
-      )
-
-      const stats = await repo.findAllSummaryLogStatsByRegistrationId()
-
-      const expectedStats = getMatchingStats(
-        stats,
-        organisationId,
-        registrationId
-      )
-
-      expect(expectedStats).toBeDefined()
-      expect(expectedStats).toMatchObject([
-        {
-          organisationId,
-          registrationId,
-          lastSuccessful: new Date(latestSuccessfulAt),
-          lastFailed: new Date(latestFailedAt),
+          lastSuccessful: new Date(latestSubmittedAt),
+          lastFailed: new Date(latestFailedCreatedAt),
           successfulCount: 2,
           failedCount: 2
         }
@@ -199,8 +201,8 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
       const org1FirstSubmittedAt = '2024-01-10T10:00:00.000Z'
       const org1LatestSubmittedAt = '2024-01-20T15:30:00.000Z'
 
-      const org2FirstFailedAt = '2024-02-01T09:00:00.000Z'
-      const org2LatestFailedAt = '2024-02-05T14:30:00.000Z'
+      const org2FirstFailedCreatedAt = '2024-02-01T09:00:00.000Z'
+      const org2LatestFailedCreatedAt = '2024-02-05T14:30:00.000Z'
 
       await repo.insert(
         new ObjectId().toString(),
@@ -225,7 +227,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submissionFailed({
           organisationId: org2.organisationId,
           registrationId: org2.registrationId,
-          submittedAt: org2FirstFailedAt
+          createdAt: org2FirstFailedCreatedAt
         })
       )
 
@@ -234,7 +236,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submissionFailed({
           organisationId: org2.organisationId,
           registrationId: org2.registrationId,
-          submittedAt: org2LatestFailedAt
+          createdAt: org2LatestFailedCreatedAt
         })
       )
 
@@ -269,7 +271,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
           organisationId: org2.organisationId,
           registrationId: org2.registrationId,
           lastSuccessful: null,
-          lastFailed: new Date(org2LatestFailedAt), // Validates against inserted data
+          lastFailed: new Date(org2LatestFailedCreatedAt), // Validates against inserted data
           successfulCount: 0,
           failedCount: 2
         }
@@ -279,15 +281,15 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
     it('return latest successful timestamp even when its out of order', async () => {
       const { organisationId, registrationId } = generateOrgReg()
 
-      const latestDate = '2024-05-20T10:00:00.000Z'
-      const olderDate = '2024-01-10T10:00:00.000Z'
+      const latestSubmittedAt = '2024-05-20T10:00:00.000Z'
+      const olderSubmittedAt = '2024-01-10T10:00:00.000Z'
 
       await repo.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          submittedAt: latestDate
+          submittedAt: latestSubmittedAt
         })
       )
 
@@ -296,7 +298,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
         summaryLogFactory.submitted({
           organisationId,
           registrationId,
-          submittedAt: olderDate
+          submittedAt: olderSubmittedAt
         })
       )
 
@@ -309,7 +311,7 @@ export const testFindAllSummaryLogStatsByRegistrationId = (it) => {
 
       expect(matchingStats[0]).toMatchObject({
         successfulCount: 2,
-        lastSuccessful: new Date(latestDate) // Should still be the latestDate, not olderDate
+        lastSuccessful: new Date(latestSubmittedAt) // Should still be the latestCreatedAt, not olderCreatedAt
       })
     })
   })

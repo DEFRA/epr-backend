@@ -102,8 +102,18 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
       })
     })
 
-    it('has unfilledValues object', () => {
-      expect(typeof schema.unfilledValues).toBe('object')
+    it('has unfilledValues with dropdown placeholders matching template', () => {
+      expect(schema.unfilledValues.EWC_CODE).toContain('Choose option')
+      expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
+      expect(
+        schema.unfilledValues.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
+      ).toContain('Choose option')
+      expect(schema.unfilledValues.BAILING_WIRE_PROTOCOL).toContain(
+        'Choose option'
+      )
+      expect(
+        schema.unfilledValues.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+      ).toContain('Choose option')
     })
 
     it('has validationSchema (Joi schema for VAL010)', () => {

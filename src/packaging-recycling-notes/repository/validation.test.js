@@ -42,15 +42,16 @@ describe('validatePrnInsert', () => {
     const data = buildValidPrnInsert()
     delete data.organisation
 
-    expect(() => validatePrnInsert(data)).toThrow()
-
+    let thrownError
     try {
       validatePrnInsert(data)
-    } catch (error) {
-      expect(error.isBoom).toBe(true)
-      expect(error.output.statusCode).toBe(422)
-      expect(error.message).toContain('Invalid PRN data')
+    } catch (e) {
+      thrownError = e
     }
+
+    expect(thrownError?.isBoom).toBe(true)
+    expect(thrownError?.output.statusCode).toBe(422)
+    expect(thrownError?.message).toContain('Invalid PRN data')
   })
 
   it('reports all validation errors, not just the first', () => {
@@ -59,13 +60,16 @@ describe('validatePrnInsert', () => {
     delete data.accreditation
     delete data.tonnage
 
+    let thrownError
     try {
       validatePrnInsert(data)
-    } catch (error) {
-      expect(error.message).toContain('organisation')
-      expect(error.message).toContain('accreditation')
-      expect(error.message).toContain('tonnage')
+    } catch (e) {
+      thrownError = e
     }
+
+    expect(thrownError?.message).toContain('organisation')
+    expect(thrownError?.message).toContain('accreditation')
+    expect(thrownError?.message).toContain('tonnage')
   })
 })
 
@@ -101,26 +105,30 @@ describe('validatePrnRead', () => {
     const data = buildReadDocument()
     delete data.id
 
-    expect(() => validatePrnRead(data)).toThrow()
-
+    let thrownError
     try {
       validatePrnRead(data)
-    } catch (error) {
-      expect(error.isBoom).toBe(true)
-      expect(error.output.statusCode).toBe(500)
-      expect(error.message).toContain('Invalid PRN document')
+    } catch (e) {
+      thrownError = e
     }
+
+    expect(thrownError?.isBoom).toBe(true)
+    expect(thrownError?.output.statusCode).toBe(500)
+    expect(thrownError?.message).toContain('Invalid PRN document')
   })
 
   it('includes the document id in the error message', () => {
     const data = buildReadDocument({ id: 'abc-123' })
     delete data.organisation
 
+    let thrownError
     try {
       validatePrnRead(data)
-    } catch (error) {
-      expect(error.message).toContain('abc-123')
+    } catch (e) {
+      thrownError = e
     }
+
+    expect(thrownError?.message).toContain('abc-123')
   })
 
   it('reports all validation errors, not just the first', () => {
@@ -129,12 +137,15 @@ describe('validatePrnRead', () => {
     delete data.organisation
     delete data.tonnage
 
+    let thrownError
     try {
       validatePrnRead(data)
-    } catch (error) {
-      expect(error.message).toContain('id')
-      expect(error.message).toContain('organisation')
-      expect(error.message).toContain('tonnage')
+    } catch (e) {
+      thrownError = e
     }
+
+    expect(thrownError?.message).toContain('id')
+    expect(thrownError?.message).toContain('organisation')
+    expect(thrownError?.message).toContain('tonnage')
   })
 })

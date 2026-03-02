@@ -228,14 +228,6 @@ const baseConfig = {
       env: 'CDP_UPLOADER_S3_BUCKET_SUMMARY_LOGS'
     }
   },
-  piscina: {
-    maxThreads: {
-      doc: 'Maximum worker threads for summary log validation. Recommend half of available vCPUs.',
-      format: 'nat',
-      default: 2,
-      env: 'PISCINA_MAX_THREADS'
-    }
-  },
   regulator: {
     EA: {
       email: {
@@ -310,6 +302,21 @@ const baseConfig = {
       default: '["me@example.com", "you@example.com"]'
     }
   },
+  packagingRecyclingNotesExternalApi: {
+    clientId: {
+      doc: 'Client id for external API access',
+      format: String,
+      default: 'stub-client-id',
+      env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_CLIENT_ID'
+    },
+    jwksUrl: {
+      doc: 'Derived JWKS URL for JWT verification',
+      format: String,
+      default:
+        'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_ZJcyFKABL/.well-known/jwks.json', // dev
+      env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL'
+    }
+  },
   featureFlags: {
     formsDataMigration: {
       doc: 'Feature Flag: Runs forms data migration on startup',
@@ -347,11 +354,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES_EXTERNAL_API'
     },
-    sqsCommands: {
-      doc: 'Feature Flag: Use SQS command executor instead of Piscina workers',
+    copyFormFilesToS3: {
+      doc: 'Feature Flag: Copy form files to S3 on startup',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_SQS_COMMANDS'
+      env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
     }
   },
   formSubmissionOverrides: {
@@ -420,6 +427,50 @@ const baseConfig = {
       env: 'PUBLIC_REGISTER_URL_EXPIRY'
     }
   },
+  cdpEnvSuffix: {
+    doc: 'CDP environment suffix used in service URLs (e.g., 6bf3a)',
+    format: String,
+    default: '6bf3a',
+    env: 'CDP_ENV_SUFFIX'
+  },
+  formsSubmissionApi: {
+    serviceName: {
+      doc: 'Forms Submission API service name for Cognito',
+      format: String,
+      default: 'forms-submission-api',
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_SERVICE_NAME'
+    },
+    url: {
+      doc: 'Forms Submission API base URL',
+      format: String,
+      default: 'https://example.com',
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_URL'
+    },
+    s3Bucket: {
+      doc: 'S3 bucket for form file uploads',
+      format: String,
+      default: 'form-file-uploads',
+      env: 'FORM_FILE_UPLOADS_S3_BUCKET'
+    },
+    cognitoClientId: {
+      doc: 'Cognito client ID for Forms Submission API',
+      format: String,
+      default: 'client-id',
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_CLIENT_ID'
+    },
+    cognitoClientSecret: {
+      doc: 'Cognito client secret for Forms Submission API',
+      format: String,
+      default: 'client-secret',
+      env: 'FORMS_SUBMISSION_EXTERNAL_API_CLIENT_SECRET'
+    },
+    copyFilesUploadedFromDate: {
+      doc: 'Only copy form files uploaded on or after this date (ISO 8601 format)',
+      format: String,
+      default: '2025-11-19T00:00:00.000Z',
+      env: 'COPY_FILES_UPLOADED_FROM_DATE'
+    }
+  },
   summaryLogReport: {
     batchSize: {
       doc: 'Summary log upload generation batch size. This is used for yielding back to event loop',
@@ -434,8 +485,10 @@ const config = convict(baseConfig)
 
 config.validate({ allowed: 'strict' })
 
-function getConfig(overrides) {
-  return convict(baseConfig, overrides)
+function getConfig(overrides = {}) {
+  const cfg = convict(baseConfig)
+  cfg.load(overrides)
+  return cfg
 }
 
 export { config, getConfig }

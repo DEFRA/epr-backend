@@ -203,18 +203,25 @@ const extractMetaValues = (parsedMeta) => {
 }
 
 const handleValidationFailure = (error, issues, loggingContext) => {
-  logger.error({
-    err: error,
-    message: `Failed to validate summary log file: ${loggingContext}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-    }
-  })
-
   if (error instanceof SpreadsheetValidationError) {
+    logger.warn({
+      err: error,
+      message: `Invalid summary log file: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
     issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
   } else {
+    logger.error({
+      err: error,
+      message: `Failed to validate summary log file: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
     issues.addFatal(
       VALIDATION_CATEGORY.TECHNICAL,
       error.message,
@@ -461,6 +468,20 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
  * @param {SummaryLogExtractor} params.summaryLogExtractor
  * @returns {Function} Function that validates a summary log by ID
  */
+const assertValidatingStatus = (result, summaryLogId) => {
+  if (!result) {
+    throw new PermanentError(
+      `Summary log not found: summaryLogId=${summaryLogId}`
+    )
+  }
+
+  if (result.summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
+    throw new PermanentError(
+      `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
+    )
+  }
+}
+
 export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
@@ -471,12 +492,7 @@ export const createSummaryLogsValidator = ({
 
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
-
-    if (!result) {
-      throw new PermanentError(
-        `Summary log not found: summaryLogId=${summaryLogId}`
-      )
-    }
+    assertValidatingStatus(result, summaryLogId)
 
     const { version, summaryLog } = result
     const {

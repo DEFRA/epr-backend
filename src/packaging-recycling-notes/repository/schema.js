@@ -14,7 +14,8 @@ const statusValues = Object.values(PRN_STATUS)
 const organisationNameAndIdSchema = Joi.object({
   id: Joi.string().required(),
   name: Joi.string().required(),
-  tradingName: Joi.string().optional()
+  tradingName: Joi.string().optional(),
+  registrationType: Joi.string().optional()
 })
 
 const siteAddressSchema = Joi.object({

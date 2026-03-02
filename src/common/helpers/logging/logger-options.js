@@ -56,7 +56,11 @@ export const loggerOptions = {
         errorObj.payload = boomErr.output.payload
 
         if (boomErr.data) {
-          errorObj.message = `${err.message} | data: ${JSON.stringify(boomErr.data)}`
+          try {
+            errorObj.message = `${err.message} | data: ${JSON.stringify(boomErr.data)}`
+          } catch {
+            errorObj.message = `${err.message} | data: [unserializable]`
+          }
         }
       }
 

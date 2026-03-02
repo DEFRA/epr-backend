@@ -13,7 +13,7 @@ import {
   createDateFieldSchema,
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
-  createAlphanumericFieldSchema,
+  createFreeTextFieldSchema,
   createEnumFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
@@ -97,10 +97,14 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
    * typically dropdown placeholder values from the Excel template.
    */
   unfilledValues: {
-    [FIELDS.BAILING_WIRE_PROTOCOL]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.EWC_CODE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER,
     [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.BAILING_WIRE_PROTOCOL]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: DROPDOWN_PLACEHOLDER,
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER
+    [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER
   },
 
   /**
@@ -150,8 +154,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       BASEL_CODES,
       MESSAGES.MUST_BE_VALID_BASEL_CODE
     ),
-    [FIELDS.CUSTOMS_CODES]: createAlphanumericFieldSchema(),
-    [FIELDS.CONTAINER_NUMBER]: createAlphanumericFieldSchema(),
+    [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
+    [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema(),
     [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: createYesNoFieldSchema(),

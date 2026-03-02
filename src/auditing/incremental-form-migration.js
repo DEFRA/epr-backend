@@ -1,5 +1,4 @@
-import { audit } from '@defra/cdp-auditing'
-import { isPayloadSmallEnoughToAudit } from './helpers.js'
+import { isPayloadSmallEnoughToAudit, safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -45,7 +44,7 @@ async function auditIncrementalFormMigration(
         context: { organisationId }
       }
 
-  audit(safeAuditingPayload)
+  safeAudit(safeAuditingPayload)
 
   // System logs have no size limit - always store full state
   await systemLogsRepository.insert({

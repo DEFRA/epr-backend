@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
@@ -49,7 +50,13 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   /**
    * Per-field values that indicate "unfilled"
    */
-  unfilledValues: {},
+  unfilledValues: {
+    [FIELDS.EWC_CODE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.BAILING_WIRE_PROTOCOL]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: DROPDOWN_PLACEHOLDER
+  },
 
   /**
    * Fields that produce FATAL errors when validation fails

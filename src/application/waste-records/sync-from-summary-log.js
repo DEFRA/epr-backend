@@ -3,7 +3,10 @@ import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
-import { isEprMarker } from '#domain/summary-logs/markers.js'
+import {
+  isEprMarker,
+  SKIP_HEADER_ROW_TEXT
+} from '#domain/summary-logs/markers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
@@ -17,7 +20,20 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
  * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
  * @returns {TransformableRow[]} Array of rows with data objects built
  */
-const prepareRows = (headers, rows) => {
+const isTemplateRow = (rowIdValue) => {
+  if (rowIdValue === null || rowIdValue === undefined) {
+    return true
+  }
+  if (
+    typeof rowIdValue === 'string' &&
+    rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
+  ) {
+    return true
+  }
+  return false
+}
+
+const prepareRows = (headers, rows, rowIdField) => {
   // Build header to index map, excluding EPR markers and nulls
   const headerToIndexMap = new Map()
   for (const [index, header] of headers.entries()) {
@@ -26,17 +42,21 @@ const prepareRows = (headers, rows) => {
     }
   }
 
-  return rows.map((row) => {
-    // Extract values from row object (rows now store { rowNumber, values })
+  const rowIdIndex = headerToIndexMap.get(rowIdField)
+
+  return rows.flatMap((row) => {
     const { values } = row
 
-    // Build row data object from values
+    if (rowIdIndex !== undefined && isTemplateRow(values[rowIdIndex])) {
+      return []
+    }
+
     const data = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
       data[headerName] = values[colIndex]
     }
 
-    return { data }
+    return [{ data }]
   })
 }
 
@@ -64,7 +84,11 @@ const prepareRowsForTransformation = (parsedData) => {
     }
     transformedData[tableName] = {
       ...tableData,
-      rows: prepareRows(tableData.headers, tableData.rows)
+      rows: prepareRows(
+        tableData.headers,
+        tableData.rows,
+        tableSchema.rowIdField
+      )
     }
   }
 

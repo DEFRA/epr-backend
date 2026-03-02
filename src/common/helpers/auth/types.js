@@ -41,6 +41,26 @@
  */
 
 /**
+ * AWS Cognito access token payload
+ *
+ * Standard claims: iss, sub, exp, iat, jti, scope, auth_time
+ * Cognito-specific: client_id, token_use, version,
+ *
+ * @typedef {{
+ *   iss: string
+ *   sub: string
+ *   exp: number
+ *   iat: number
+ *   jti: string
+ *   scope: string
+ *   auth_time: number
+ *   client_id: string
+ *   token_use: 'access'
+ *   version: number
+ * }} CognitoAccessTokenPayload
+ */
+
+/**
  * Union type representing any valid token payload from either identity provider
  *
  * @typedef {EntraIdTokenPayload | DefraIdTokenPayload} TokenPayload

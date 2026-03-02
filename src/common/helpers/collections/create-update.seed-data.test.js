@@ -82,7 +82,7 @@ describe('createSeedData', () => {
     }
   )
 
-  it('does not create epr-organisation seed data when the fixtures are already present in the collection ', async () => {
+  it('does not create epr-organisation seed data when the fixtures are already present in the collection', async () => {
     const { mockDb } = createMockDb({
       countDocuments: async () => 1,
       find: (_query) => ({

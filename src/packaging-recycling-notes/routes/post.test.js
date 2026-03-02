@@ -313,6 +313,29 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
 
+      it('accepts registrationType on issuedToOrganisation', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            ...validPayload,
+            issuedToOrganisation: {
+              ...validPayload.issuedToOrganisation,
+              registrationType: 'LARGE_PRODUCER'
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+
+        const createArg =
+          packagingRecyclingNotesRepository.create.mock.calls[0][0]
+        expect(createArg.issuedToOrganisation.registrationType).toBe(
+          'LARGE_PRODUCER'
+        )
+      })
+
       it('succeeds when issuedToOrganisation has null tradingName', async () => {
         const response = await server.inject({
           method: 'POST',

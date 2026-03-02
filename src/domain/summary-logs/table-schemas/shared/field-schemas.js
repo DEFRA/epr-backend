@@ -17,13 +17,13 @@ const DEFAULT_MAX_WEIGHT = 1000
 /**
  * 3-digit ID constraints
  *
- * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 100-999.
+ * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 1-999.
  */
-const THREE_DIGIT_ID_MIN = 100
+const THREE_DIGIT_ID_MIN = 1
 const THREE_DIGIT_ID_MAX = 999
 
 /**
- * Default maximum length for alphanumeric string fields
+ * Default maximum length for free text string fields
  */
 const DEFAULT_MAX_STRING_LENGTH = 100
 
@@ -66,7 +66,7 @@ export const createDateFieldSchema = () =>
   })
 
 /**
- * Creates a 3-digit ID field schema (100-999)
+ * Creates a 3-digit ID field schema (1-999)
  *
  * @returns {Joi.NumberSchema} Joi number schema
  */
@@ -96,25 +96,26 @@ export const createPercentageFieldSchema = () =>
   })
 
 /**
- * Creates an alphanumeric string field schema that coerces numbers to strings.
+ * Creates a free text field schema that coerces numbers to strings.
+ * Allows printable ASCII, newlines, smart punctuation, and £/€ signs.
  * ExcelJS may return numeric values for cells that look like numbers
- * (e.g. postal codes like "12345").
+ * (e.g. customs codes like "12345").
  *
  * @param {number} [maxLength=100] - Maximum string length
  * @returns {Joi.StringSchema} Joi string schema
  */
-export const createAlphanumericFieldSchema = (
+export const createFreeTextFieldSchema = (
   maxLength = DEFAULT_MAX_STRING_LENGTH
 ) =>
   customJoi
     .coercedString()
-    .pattern(/^[a-zA-Z0-9]+$/)
+    .pattern(/^[\x20-\x7E\n\r\u2018\u2019\u201C\u201D\u2013\u2014\u2026£€]*$/)
     .max(maxLength)
     .optional()
     .messages({
       'string.base': MESSAGES.MUST_BE_A_STRING,
-      'string.pattern.base': MESSAGES.MUST_BE_ALPHANUMERIC,
-      'string.max': MESSAGES.MUST_BE_AT_MOST_100_CHARS
+      'string.pattern.base': MESSAGES.MUST_CONTAIN_ONLY_PERMITTED_CHARACTERS,
+      'string.max': 'must be at most {#limit} characters'
     })
 
 /**

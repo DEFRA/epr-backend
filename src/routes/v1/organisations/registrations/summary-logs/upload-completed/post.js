@@ -51,6 +51,7 @@ const buildSummaryLogData = (
   const data = {
     status,
     expiresAt: calculateExpiresAt(status),
+    createdAt: new Date().toISOString(),
     file: buildFileData(upload, existingFile),
     organisationId,
     registrationId

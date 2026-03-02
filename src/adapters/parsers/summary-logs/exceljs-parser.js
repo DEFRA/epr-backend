@@ -4,15 +4,10 @@ import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
   DATA_PREFIX,
-  MATERIAL_PLACEHOLDER_TEXT,
   META_PREFIX,
-  PLACEHOLDER_TEXT,
-  ROW_ID_HEADER,
   SKIP_COLUMN,
-  SKIP_EXAMPLE_ROW_TEXT,
-  SKIP_HEADER_ROW_TEXT
+  SKIP_EXAMPLE_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
@@ -224,13 +219,10 @@ const processCellForMetadata = (
       )
     }
 
-    // Normalize MATERIAL placeholder to null
     const metadataName = draftState.metadataContext.metadataName
+    const placeholder = draftState.metaPlaceholders[metadataName]
     const normalisedValue =
-      metadataName === SUMMARY_LOG_META_FIELDS.MATERIAL &&
-      cellValue === MATERIAL_PLACEHOLDER_TEXT
-        ? null
-        : cellValue
+      placeholder && cellValue === placeholder ? null : cellValue
 
     draftState.result.meta[metadataName] = {
       value: normalisedValue,
@@ -283,12 +275,19 @@ const processHeaderCell = (draftCollection, cellValueStr) => {
   }
 }
 
-const processRowCell = (draftCollection, cellValue) => {
+const processRowCell = (
+  draftCollection,
+  cellValue,
+  columnIndex,
+  unfilledValues
+) => {
+  const headerName = draftCollection.headers[columnIndex]
+  const columnUnfilledValues = unfilledValues[headerName] || []
   const normalisedValue =
     cellValue === null ||
     cellValue === undefined ||
     cellValue === '' ||
-    cellValue === PLACEHOLDER_TEXT
+    columnUnfilledValues.includes(cellValue)
       ? null
       : cellValue
   draftCollection.currentRow.push(normalisedValue)
@@ -298,7 +297,8 @@ const updateCollectionWithCell = (
   draftCollection,
   cellValue,
   cellValueStr,
-  colNumber
+  colNumber,
+  unfilledValues
 ) => {
   const columnIndex = colNumber - draftCollection.startColumn
 
@@ -309,35 +309,16 @@ const updateCollectionWithCell = (
     columnIndex < draftCollection.headers.length &&
     draftCollection.state === CollectionState.ROWS
   ) {
-    processRowCell(draftCollection, cellValue)
+    processRowCell(draftCollection, cellValue, columnIndex, unfilledValues)
   } else {
     // Cell is outside collection boundaries
   }
 }
 
 const shouldSkipRow = (draftCollection) => {
-  // Skip "example" rows
   for (const skipIndex of draftCollection.skipColumnIndices) {
     const cellValue = draftCollection.currentRow[skipIndex]
     if (cellValue === SKIP_EXAMPLE_ROW_TEXT) {
-      return true
-    }
-  }
-
-  const rowIdIndex = draftCollection.headers.indexOf(ROW_ID_HEADER)
-  if (rowIdIndex !== -1) {
-    const cellValue = draftCollection.currentRow[rowIdIndex]
-
-    // Skip textual (user-facing) header rows
-    if (
-      typeof cellValue === 'string' &&
-      cellValue.startsWith(SKIP_HEADER_ROW_TEXT)
-    ) {
-      return true
-    }
-
-    // Skip rows where ROW_ID is empty (null/undefined)
-    if (cellValue === null || cellValue === undefined) {
       return true
     }
   }
@@ -472,7 +453,13 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
     )
 
     for (const collection of draftState.activeCollections) {
-      updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber)
+      updateCollectionWithCell(
+        collection,
+        cellValue,
+        cellValueStr,
+        colNumber,
+        draftState.unfilledValues
+      )
     }
   }
 
@@ -552,6 +539,8 @@ export { extractCellValue }
  * @property {number} [maxWorksheets] - Maximum allowed worksheets
  * @property {number} [maxRowsPerSheet] - Maximum allowed rows per worksheet
  * @property {number} [maxColumnsPerSheet] - Maximum allowed columns per worksheet
+ * @property {Record<string, string[]>} [unfilledValues] - Per-column values to normalise to null
+ * @property {Record<string, string>} [metaPlaceholders] - Per-field metadata placeholders to normalise to null
  */
 
 /**
@@ -567,7 +556,9 @@ export const parse = async (buffer, options = {}) => {
     requiredWorksheet = null,
     maxWorksheets = PARSE_DEFAULTS.maxWorksheets,
     maxRowsPerSheet = PARSE_DEFAULTS.maxRowsPerSheet,
-    maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet
+    maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet,
+    unfilledValues = {},
+    metaPlaceholders = {}
   } = options
 
   const workbook = new ExcelJS.Workbook()
@@ -585,7 +576,9 @@ export const parse = async (buffer, options = {}) => {
   const initialState = {
     result: { meta: {}, data: {} },
     activeCollections: [],
-    metadataContext: null
+    metadataContext: null,
+    unfilledValues,
+    metaPlaceholders
   }
 
   return produce(initialState, (draft) => {

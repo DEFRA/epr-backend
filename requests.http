@@ -1,0 +1,51 @@
+###########################################################################
+# AWS Cognito auth
+#
+# reqs:
+#   - dev environment
+#   - developer api key
+###########################################################################
+
+### Get Cognito Token
+# @prompt clientSecret
+# @name awsAuth
+POST {{tokenUrl}}/oauth2/token HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{clientId}}:{{clientSecret}}
+
+grant_type=client_credentials&client_id={{clientId}}&client_secret={{clientSecret}}
+
+### List Packaging Recycling Notes
+#
+# see: https://portal.cdp-int.defra.cloud/user-profile
+# @prompt developerApiKey
+GET {{baseUrl}}/v1/packaging-recycling-notes?statuses=awaiting_acceptance HTTP/1.1
+Authorization: Bearer {{awsAuth.response.body.access_token}}
+x-api-key: {{developerApiKey}}
+
+
+###########################################################################
+# Local Cognito auth - get token via USER_PASSWORD_AUTH flow
+# reqs:
+#   - local environment
+#   - cognito-local running on port 9229
+###########################################################################
+
+### Get Cognito Token
+# @name localAuth
+POST {{tokenUrl}}/ HTTP/1.1
+Content-Type: application/x-amz-json-1.1
+X-Amz-Target: AWSCognitoIdentityProviderService.InitiateAuth
+
+{
+  "AuthFlow": "USER_PASSWORD_AUTH",
+  "ClientId": "{{clientId}}",
+  "AuthParameters": {
+    "USERNAME": "hello@example.com",
+    "PASSWORD": "testPassword"
+  }
+}
+
+### List Packaging Recycling Notes
+GET {{baseUrl}}/v1/packaging-recycling-notes?statuses=awaiting_acceptance HTTP/1.1
+Authorization: Bearer {{localAuth.response.body.AuthenticationResult.AccessToken}}

@@ -3,10 +3,8 @@ import {
   META_PREFIX,
   DATA_PREFIX,
   SKIP_COLUMN,
-  ROW_ID_HEADER,
   SKIP_EXAMPLE_ROW_TEXT,
   SKIP_HEADER_ROW_TEXT,
-  PLACEHOLDER_TEXT,
   isEprMarker
 } from './markers.js'
 
@@ -28,20 +26,12 @@ describe('Summary Log Markers', () => {
       expect(SKIP_COLUMN).toBe('__EPR_SKIP_COLUMN')
     })
 
-    it('should have correct ROW_ID_HEADER', () => {
-      expect(ROW_ID_HEADER).toBe('ROW_ID')
-    })
-
     it('should have correct SKIP_EXAMPLE_ROW_TEXT', () => {
       expect(SKIP_EXAMPLE_ROW_TEXT).toBe('Example')
     })
 
     it('should have correct SKIP_HEADER_ROW_TEXT', () => {
       expect(SKIP_HEADER_ROW_TEXT).toBe('Row ID')
-    })
-
-    it('should have correct PLACEHOLDER_TEXT', () => {
-      expect(PLACEHOLDER_TEXT).toBe('Choose option')
     })
 
     it('should ensure all prefixes start with EPR_PREFIX', () => {

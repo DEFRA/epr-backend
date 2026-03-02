@@ -37,6 +37,30 @@ describe('PRN insert schema', () => {
       expect(error).toBeUndefined()
     })
 
+    it('accepts optional registrationType on issuedToOrganisation', () => {
+      const data = buildValidPrnInsert({
+        issuedToOrganisation: {
+          id: 'recipient-1',
+          name: 'Recipient',
+          registrationType: 'LARGE_PRODUCER'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('accepts optional registrationType on organisation', () => {
+      const data = buildValidPrnInsert({
+        organisation: {
+          id: 'org-1',
+          name: 'Org',
+          registrationType: 'COMPLIANCE_SCHEME'
+        }
+      })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
     it('accepts without optional notes', () => {
       const data = buildValidPrnInsert()
       delete data.notes

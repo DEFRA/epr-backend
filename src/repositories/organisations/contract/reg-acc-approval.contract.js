@@ -787,7 +787,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.reprocessingType: any.only; registrations.0.reprocessingType: any.invalid; registrations.0.reprocessingType: string.base'
+            /Invalid organisation data: registrations\.0\.reprocessingType:.*must be one of/
           )
         })
 
@@ -813,7 +813,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.reprocessingType: any.only; accreditations.0.reprocessingType: any.invalid; accreditations.0.reprocessingType: string.base'
+            /Invalid organisation data: accreditations\.0\.reprocessingType:.*must be one of/
           )
         })
       })
@@ -841,7 +841,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.registrationNumber: any.invalid'
+            /Invalid organisation data: registrations\.0\.registrationNumber:.*contains an invalid value/
           )
         })
 
@@ -900,7 +900,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.registrationNumber: any.invalid'
+            /Invalid organisation data: registrations\.0\.registrationNumber:.*contains an invalid value/
           )
         })
       })
@@ -928,7 +928,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.accreditationNumber: any.invalid'
+            /Invalid organisation data: accreditations\.0\.accreditationNumber:.*contains an invalid value/
           )
         })
 
@@ -999,7 +999,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.accreditationNumber: any.invalid'
+            /Invalid organisation data: accreditations\.0\.accreditationNumber:.*contains an invalid value/
           )
         })
 
@@ -1057,7 +1057,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validFrom: any.invalid'
+            /Invalid organisation data: registrations\.0\.validFrom:.*contains an invalid value/
           )
         })
 
@@ -1084,7 +1084,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validTo: any.invalid'
+            /Invalid organisation data: registrations\.0\.validTo:.*contains an invalid value/
           )
         })
 
@@ -1148,7 +1148,223 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validFrom: string.pattern.base'
+            /Invalid organisation data: registrations\.0\.validFrom:.*Date must be in YYYY-MM-DD format/
+          )
+        })
+
+        it('rejects update when registration has invalid validTo date format', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: VALID_FROM,
+            validTo: '01/01/2025',
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validTo:.*Date must be in YYYY-MM-DD format/
+          )
+        })
+
+        it('rejects update when registration validFrom is a non-date string', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: 'not-a-date',
+            validTo: VALID_TO,
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validFrom:.*Date must be in YYYY-MM-DD format/
+          )
+        })
+
+        it('rejects update when registration validTo is a non-date string', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: VALID_FROM,
+            validTo: 'abc',
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validTo:.*Date must be in YYYY-MM-DD format/
+          )
+        })
+
+        it('rejects update when registration validFrom is an empty string', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: '',
+            validTo: VALID_TO,
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validFrom:/
+          )
+        })
+
+        it('rejects update when registration validTo is an empty string', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: VALID_FROM,
+            validTo: '',
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validTo:/
+          )
+        })
+
+        it('rejects update when registration validFrom is a number', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: 20250101,
+            validTo: VALID_TO,
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validFrom:.*must be a string/
+          )
+        })
+
+        it('rejects update when registration validTo is a number', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: VALID_FROM,
+            validTo: 20251231,
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validTo:.*must be a string/
+          )
+        })
+
+        it('rejects update when registration validFrom is a partial date', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: REG_ACC_STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: '2025-01',
+            validTo: VALID_TO,
+            reprocessingType: REPROCESSING_TYPE.INPUT
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            /Invalid organisation data: registrations\.0\.validFrom:.*Date must be in YYYY-MM-DD format/
           )
         })
 
@@ -1175,7 +1391,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validFrom: any.invalid'
+            /Invalid organisation data: registrations\.0\.validFrom:.*contains an invalid value/
           )
         })
 
@@ -1202,7 +1418,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validTo: any.invalid'
+            /Invalid organisation data: registrations\.0\.validTo:.*contains an invalid value/
           )
         })
 
@@ -1261,7 +1477,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validFrom: any.invalid'
+            /Invalid organisation data: accreditations\.0\.validFrom:.*contains an invalid value/
           )
         })
 
@@ -1287,7 +1503,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validTo: any.invalid'
+            /Invalid organisation data: accreditations\.0\.validTo:.*contains an invalid value/
           )
         })
 
@@ -1373,7 +1589,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validFrom: string.pattern.base'
+            /Invalid organisation data: accreditations\.0\.validFrom:.*Date must be in YYYY-MM-DD format/
           )
         })
 
@@ -1399,7 +1615,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validFrom: any.invalid'
+            /Invalid organisation data: accreditations\.0\.validFrom:.*contains an invalid value/
           )
         })
 
@@ -1425,7 +1641,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validTo: any.invalid'
+            /Invalid organisation data: accreditations\.0\.validTo:.*contains an invalid value/
           )
         })
 

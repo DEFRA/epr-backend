@@ -1,15 +1,17 @@
-import Joi from 'joi'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
 
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { mapToExternalPrn } from '#packaging-recycling-notes/application/external-prn-mapper.js'
+import { createStatusesValidator } from '#packaging-recycling-notes/routes/validation.js'
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {PrnStatus} from '#packaging-recycling-notes/domain/model.js'
  */
 
 const ALLOWED_STATUSES = ['awaiting_acceptance', 'cancelled']
@@ -26,21 +28,7 @@ export const packagingRecyclingNotesList = {
     tags: ['api'],
     validate: {
       query: Joi.object({
-        statuses: Joi.string()
-          .custom((value, helpers) => {
-            const statuses = value.split(',')
-            const invalid = statuses.filter(
-              (s) => !ALLOWED_STATUSES.includes(s)
-            )
-            if (invalid.length > 0) {
-              return helpers.error('any.invalid')
-            }
-            return statuses
-          })
-          .required()
-          .messages({
-            'any.invalid': `statuses must be one or more of: ${ALLOWED_STATUSES.join(', ')}`
-          }),
+        statuses: createStatusesValidator(ALLOWED_STATUSES),
         dateFrom: Joi.string().isoDate().optional().messages({
           'string.isoDate': 'dateFrom must be a valid ISO 8601 date-time'
         }),
@@ -52,7 +40,18 @@ export const packagingRecyclingNotesList = {
       })
     }
   },
-  /** @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request */
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   query: {
+   *     statuses: PrnStatus[],
+   *     dateFrom?: string,
+   *     dateTo?: string,
+   *     limit?: number,
+   *     cursor?: string
+   *   }
+   * }} request
+   */
   handler: async (request, h) => {
     const { packagingRecyclingNotesRepository, logger } = request
     const { statuses, dateFrom, dateTo, limit, cursor } = request.query
@@ -61,11 +60,11 @@ export const packagingRecyclingNotesList = {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
       const result = await packagingRecyclingNotesRepository.findByStatus({
-        statuses,
+        cursor,
         dateFrom: dateFrom ? new Date(dateFrom) : undefined,
         dateTo: dateTo ? new Date(dateTo) : undefined,
         limit: effectiveLimit,
-        cursor
+        statuses
       })
 
       const response = {
@@ -78,7 +77,7 @@ export const packagingRecyclingNotesList = {
       }
 
       logger.info({
-        message: `Listed ${result.items.length} PRNs`,
+        message: `Listed ${response.items.length} PRNs`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS

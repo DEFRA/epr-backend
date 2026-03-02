@@ -222,7 +222,9 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
 
   const command = parseCommandMessage(message, logger)
   if (!command) {
-    return message
+    throw new Error(
+      `Unparseable command message, messageId=${message.MessageId}`
+    )
   }
 
   const { command: commandType, summaryLogId } = command

@@ -7,7 +7,10 @@ export const mongoFormSubmissionsRepositoryPlugin = {
   dependencies: ['mongodb'],
 
   register: async (server) => {
-    const factory = await createFormSubmissionsRepository(server.db)
+    const factory = await createFormSubmissionsRepository(
+      server.db,
+      server.logger
+    )
     const repository = factory()
 
     registerRepository(server, 'formSubmissionsRepository', () => repository)

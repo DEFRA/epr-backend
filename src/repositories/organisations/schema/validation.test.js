@@ -31,7 +31,7 @@ describe('validateStatusHistory', () => {
     const statusHistory = [{ status: REG_ACC_STATUS.CREATED }]
 
     expect(() => validateStatusHistory(statusHistory)).toThrow(
-      /Invalid statusHistory.*updatedAt.*required.*This is a system error/
+      /Invalid statusHistory.*updatedAt.*is required.*This is a system error/
     )
   })
 
@@ -70,7 +70,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*cbduNumber.*string.pattern.base/
+        /Invalid registration data.*cbduNumber.*CBDU number must start with CBDU/
       )
     })
 
@@ -81,7 +81,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*cbduNumber.*string.min/
+        /Invalid registration data.*cbduNumber.*at least 8 characters/
       )
     })
 
@@ -92,7 +92,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*cbduNumber.*string.max/
+        /Invalid registration data.*cbduNumber.*at most 10 characters/
       )
     })
 
@@ -113,7 +113,7 @@ describe('validateRegistration', () => {
         })
 
         expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*cbduNumber.*any.required/
+          /Invalid registration data.*cbduNumber.*is required/
         )
       })
     })
@@ -209,7 +209,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*reference.*string.pattern.base/
+        /Invalid registration data.*reference.*WEX reference must be in format WEX followed by 6 digits/
       )
     })
 
@@ -231,7 +231,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*exemptionCode.*string.pattern.base/
+        /Invalid registration data.*exemptionCode.*Exemption code must be a letter followed by 1-2 digits/
       )
     })
 
@@ -250,7 +250,7 @@ describe('validateRegistration', () => {
         })
 
         expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*reference.*any.required/
+          /Invalid registration data.*reference.*is required/
         )
       })
     })
@@ -273,7 +273,7 @@ describe('validateRegistration', () => {
         })
 
         expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*exemptionCode.*any.required/
+          /Invalid registration data.*exemptionCode.*is required/
         )
       })
     })
@@ -284,16 +284,15 @@ describe('validateRegistration', () => {
       const requiredFields = [
         {
           field: 'site',
-          error: /Invalid registration data.*site.*any.required/
+          error: /Invalid registration data.*site.*is required/
         },
         {
           field: 'yearlyMetrics',
-          error: /Invalid registration data.*yearlyMetrics.*any.required/
+          error: /Invalid registration data.*yearlyMetrics.*is required/
         },
         {
           field: 'plantEquipmentDetails',
-          error:
-            /Invalid registration data.*plantEquipmentDetails.*any.required/
+          error: /Invalid registration data.*plantEquipmentDetails.*is required/
         }
       ]
 
@@ -314,7 +313,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*exportPorts.*any.required/
+        /Invalid registration data.*exportPorts.*is required/
       )
     })
 
@@ -325,7 +324,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*noticeAddress.*any.required/
+        /Invalid registration data.*noticeAddress.*is required/
       )
     })
 
@@ -356,11 +355,11 @@ describe('validateRegistration', () => {
             type: 'environmental_permit',
             permitNumber: 'EPR/AB1234CD/A001'
           },
-          error: /Invalid registration data.*authorisedMaterials.*any.required/
+          error: /Invalid registration data.*authorisedMaterials.*is required/
         },
         {
           permit: { type: 'waste_exemption' },
-          error: /Invalid registration data.*exemptions.*any.required/
+          error: /Invalid registration data.*exemptions.*is required/
         }
       ]
 
@@ -383,7 +382,7 @@ describe('validateRegistration', () => {
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*glassRecyclingProcess.*any.required/
+        /Invalid registration data.*glassRecyclingProcess.*is required/
       )
     })
 
@@ -416,7 +415,7 @@ describe('validateAccreditation', () => {
       })
 
       expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*site.*any.required/
+        /Invalid accreditation data.*site.*is required/
       )
     })
 
@@ -442,7 +441,7 @@ describe('validateAccreditation', () => {
       })
 
       expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*orsFileUploads.*any.required/
+        /Invalid accreditation data.*orsFileUploads.*is required/
       )
     })
 
@@ -480,7 +479,7 @@ describe('validateAccreditation', () => {
       })
 
       expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*glassRecyclingProcess.*any.required/
+        /Invalid accreditation data.*glassRecyclingProcess.*is required/
       )
     })
 
@@ -527,7 +526,7 @@ describe('validateAccreditation', () => {
       })
 
       expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*incomeBusinessPlan.*array.length/
+        /Invalid accreditation data.*incomeBusinessPlan.*must contain 7 items/
       )
     })
   })

@@ -85,14 +85,14 @@ export const testInsertBehaviour = (it) => {
         it('rejects insert with missing id', async () => {
           const orgWithoutId = buildOrganisation({ id: undefined })
           await expect(repository.insert(orgWithoutId)).rejects.toThrow(
-            'Invalid organisation data: id: any.required'
+            'Invalid organisation data: id: id is required'
           )
         })
 
         it('rejects insert with missing orgId', async () => {
           const orgWithoutOrgId = buildOrganisation({ orgId: undefined })
           await expect(repository.insert(orgWithoutOrgId)).rejects.toThrow(
-            'Invalid organisation data: orgId: any.required'
+            'Invalid organisation data: orgId: "orgId" is required'
           )
         })
 
@@ -101,7 +101,7 @@ export const testInsertBehaviour = (it) => {
             wasteProcessingTypes: undefined
           })
           await expect(repository.insert(orgWithoutWaste)).rejects.toThrow(
-            'Invalid organisation data: wasteProcessingTypes: any.required'
+            'Invalid organisation data: wasteProcessingTypes: "wasteProcessingTypes" is required'
           )
         })
 
@@ -110,7 +110,7 @@ export const testInsertBehaviour = (it) => {
             submitterContactDetails: undefined
           })
           await expect(repository.insert(orgWithoutContact)).rejects.toThrow(
-            'Invalid organisation data: submitterContactDetails: any.required'
+            'Invalid organisation data: submitterContactDetails: "submitterContactDetails" is required'
           )
         })
 
@@ -119,7 +119,7 @@ export const testInsertBehaviour = (it) => {
             formSubmissionTime: undefined
           })
           await expect(repository.insert(orgWithoutTime)).rejects.toThrow(
-            'Invalid organisation data: formSubmissionTime: any.required'
+            'Invalid organisation data: formSubmissionTime: "formSubmissionTime" is required'
           )
         })
 
@@ -128,7 +128,7 @@ export const testInsertBehaviour = (it) => {
             submittedToRegulator: undefined
           })
           await expect(repository.insert(orgWithoutRegulator)).rejects.toThrow(
-            'Invalid organisation data: submittedToRegulator: any.required'
+            'Invalid organisation data: submittedToRegulator: "submittedToRegulator" is required'
           )
         })
       })
@@ -137,7 +137,7 @@ export const testInsertBehaviour = (it) => {
         it('rejects insert with invalid ObjectId', async () => {
           const orgWithInvalidId = buildOrganisation({ id: 'not-an-objectid' })
           await expect(repository.insert(orgWithInvalidId)).rejects.toThrow(
-            'Invalid organisation data: id: any.invalid'
+            'Invalid organisation data: id: id must be a valid MongoDB ObjectId'
           )
         })
 
@@ -146,7 +146,7 @@ export const testInsertBehaviour = (it) => {
             wasteProcessingTypes: []
           })
           await expect(repository.insert(orgWithEmptyArray)).rejects.toThrow(
-            'Invalid organisation data: wasteProcessingTypes: array.min'
+            'Invalid organisation data: wasteProcessingTypes: At least one waste processing type is required'
           )
         })
 
@@ -162,7 +162,7 @@ export const testInsertBehaviour = (it) => {
 
           // Verify error message contains only field path and error type, not actual PII values
           await expect(repository.insert(orgWithInvalidData)).rejects.toThrow(
-            'Invalid organisation data: submitterContactDetails.email: string.email'
+            /Invalid organisation data: submitterContactDetails\.email:.*must be a valid email/
           )
         })
       })

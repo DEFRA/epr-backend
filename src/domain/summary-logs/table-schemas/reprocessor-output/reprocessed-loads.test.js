@@ -14,8 +14,10 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.requiredHeaders).toContain('PRODUCT_TONNAGE')
     })
 
-    it('has unfilledValues object', () => {
-      expect(typeof schema.unfilledValues).toBe('object')
+    it('has unfilledValues with dropdown placeholders matching template', () => {
+      expect(schema.unfilledValues.ADD_PRODUCT_WEIGHT).toContain(
+        'Choose option'
+      )
     })
 
     it('has fatalFields array with ROW_ID and PRODUCT_TONNAGE', () => {
