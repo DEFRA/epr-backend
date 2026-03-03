@@ -8,10 +8,14 @@ const userSchema = Joi.object({
   scope: Joi.array().items(Joi.string()).required()
 })
 
-const summaryLogCommandSchema = Joi.object({
-  command: Joi.string()
-    .valid(COMMAND_TYPE.VALIDATE, COMMAND_TYPE.SUBMIT)
-    .required(),
+const validateCommandSchema = Joi.object({
+  command: Joi.string().valid(COMMAND_TYPE.VALIDATE).required(),
+  summaryLogId: Joi.string().required(),
+  user: userSchema.optional()
+})
+
+const submitCommandSchema = Joi.object({
+  command: Joi.string().valid(COMMAND_TYPE.SUBMIT).required(),
   summaryLogId: Joi.string().required(),
   user: userSchema.optional()
 })
@@ -22,8 +26,8 @@ const summaryLogCommandSchema = Joi.object({
  * @type {Record<string, Joi.ObjectSchema>}
  */
 const COMMAND_SCHEMAS = {
-  [COMMAND_TYPE.VALIDATE]: summaryLogCommandSchema,
-  [COMMAND_TYPE.SUBMIT]: summaryLogCommandSchema
+  [COMMAND_TYPE.VALIDATE]: validateCommandSchema,
+  [COMMAND_TYPE.SUBMIT]: submitCommandSchema
 }
 
 const commandEnvelope = Joi.object({
