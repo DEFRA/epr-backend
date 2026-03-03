@@ -1,5 +1,9 @@
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import {
+  buildOrganisation,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -413,5 +417,191 @@ describe('PUT /v1/organisations/{id}', () => {
         }
       }
     }
+  })
+})
+
+describe('PUT /v1/organisations/{id} overseas sites validation', () => {
+  setupAuthContext()
+  let server
+  let organisationsRepository
+
+  const knownSiteId = new ObjectId().toString()
+
+  const createOrgWithExporter = async () => {
+    const fixture = buildOrganisation()
+    await organisationsRepository.insert(fixture)
+
+    const fetchResponse = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${fixture.id}`,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(fetchResponse.statusCode).toBe(StatusCodes.OK)
+    return JSON.parse(fetchResponse.payload)
+  }
+
+  beforeEach(async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    organisationsRepository = organisationsRepositoryFactory()
+
+    const overseasSitesRepoFactory = createInMemoryOverseasSitesRepository([
+      {
+        id: knownSiteId,
+        name: 'Test Reprocessing Site',
+        address: {
+          line1: '123 Rue de Test',
+          townOrCity: 'Paris'
+        },
+        country: 'France',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ])
+
+    server = await createTestServer({
+      repositories: {
+        organisationsRepository: organisationsRepositoryFactory,
+        systemLogsRepository: createSystemLogsRepository(),
+        overseasSitesRepository: overseasSitesRepoFactory
+      },
+      featureFlags: createInMemoryFeatureFlags({ organisations: true })
+    })
+  })
+
+  afterAll(() => {
+    vi.resetAllMocks()
+  })
+
+  it('rejects overseasSiteId references that do not exist', async () => {
+    const org = await createOrgWithExporter()
+    const exporterReg = org.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+
+    const updateFragment = prepareOrgUpdate(org, {
+      registrations: [
+        {
+          ...exporterReg,
+          overseasSites: {
+            '001': { overseasSiteId: 'non-existent-site-id' }
+          }
+        }
+      ]
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toContain('non-existent-site-id')
+  })
+
+  it('accepts valid overseasSiteId references', async () => {
+    const org = await createOrgWithExporter()
+    const exporterReg = org.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+
+    const updateFragment = prepareOrgUpdate(org, {
+      registrations: [
+        {
+          ...exporterReg,
+          overseasSites: {
+            '001': { overseasSiteId: knownSiteId }
+          }
+        }
+      ]
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const body = JSON.parse(response.payload)
+    const updatedExporter = body.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+    expect(updatedExporter.overseasSites).toEqual({
+      '001': { overseasSiteId: knownSiteId }
+    })
+  })
+
+  it('rejects when any overseasSiteId in a batch is invalid', async () => {
+    const org = await createOrgWithExporter()
+    const exporterReg = org.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+
+    const updateFragment = prepareOrgUpdate(org, {
+      registrations: [
+        {
+          ...exporterReg,
+          overseasSites: {
+            '001': { overseasSiteId: knownSiteId },
+            '002': { overseasSiteId: 'bogus-id' }
+          }
+        }
+      ]
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toContain('bogus-id')
+    expect(body.message).not.toContain(knownSiteId)
+  })
+
+  it('allows empty overseasSites map', async () => {
+    const org = await createOrgWithExporter()
+    const exporterReg = org.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+
+    const updateFragment = prepareOrgUpdate(org, {
+      registrations: [
+        {
+          ...exporterReg,
+          overseasSites: {}
+        }
+      ]
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 })
