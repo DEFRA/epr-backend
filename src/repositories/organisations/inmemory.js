@@ -278,6 +278,38 @@ const performFindRegistrationById =
     return structuredClone(registration)
   }
 
+const performReplaceAccreditationStatusHistory =
+  (storage, staleCache, pendingSyncRef) =>
+  async (orgId, accreditationId, version, statusHistory) => {
+    const validatedId = validateId(orgId)
+
+    const existingIndex = storage.findIndex((o) => o._id === validatedId)
+    const existing = storage[existingIndex]
+
+    if (existingIndex === -1) {
+      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    }
+
+    if (existing.version !== version) {
+      throw Boom.conflict(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
+    }
+
+    const accreditation = existing.accreditations?.find(
+      (a) => a.id === accreditationId
+    )
+
+    if (!accreditation) {
+      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
+    }
+
+    accreditation.statusHistory = statusHistory
+    existing.version += 1
+
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+  }
+
 const performFindAccreditationById =
   (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -317,10 +349,17 @@ export const createInMemoryOrganisationsRepository = (
     const findById = performFindByIdWithRetry(findByIdFromCache)
     const insertFn = performInsert(storage, staleCache)
     const replaceFn = performReplace(storage, staleCache, pendingSyncRef)
+    const replaceAccreditationStatusHistoryFn =
+      performReplaceAccreditationStatusHistory(
+        storage,
+        staleCache,
+        pendingSyncRef
+      )
 
     return {
       insert: insertFn,
       replace: replaceFn,
+      replaceAccreditationStatusHistory: replaceAccreditationStatusHistoryFn,
       findAll: performFindAll(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),

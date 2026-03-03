@@ -161,6 +161,29 @@ const performFindById =
     throw Boom.internal('Consistency timeout waiting for minimum version')
   }
 
+const performReplaceAccreditationStatusHistory =
+  (db) => async (orgId, accreditationId, version, statusHistory) => {
+    const validatedId = validateId(orgId)
+
+    const result = await db.collection(COLLECTION_NAME).updateOne(
+      {
+        _id: ObjectId.createFromHexString(validatedId),
+        'accreditations.id': accreditationId,
+        version
+      },
+      {
+        $set: { 'accreditations.$.statusHistory': statusHistory },
+        $inc: { version: 1 }
+      }
+    )
+
+    if (result.matchedCount === 0) {
+      throw Boom.notFound(
+        `Organisation ${validatedId} with accreditation ${accreditationId} at version ${version} not found`
+      )
+    }
+  }
+
 const performFindAll = (db) => async () => {
   const docs = await db.collection(COLLECTION_NAME).find().toArray()
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
@@ -317,6 +340,8 @@ export const createOrganisationsRepository = async (
     return {
       insert: performInsert(db),
       replace: performReplace(db),
+      replaceAccreditationStatusHistory:
+        performReplaceAccreditationStatusHistory(db),
       findById,
       findAll: performFindAll(db),
       findAllLinked: performFindAllLinked(db),

@@ -162,6 +162,7 @@
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration|null>} findRegistrationById
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
+ * @property {(orgId: string, accreditationId: string, version: number, statusHistory: Array) => Promise<void>} replaceAccreditationStatusHistory - Dev-only: overwrite an accreditation's statusHistory
  */
 
 /**
