@@ -116,6 +116,40 @@ describe(`${orsImportStatusPath} route`, () => {
         expect(body.files[0].result).toEqual(fileResult)
       })
 
+      it('returns failed status with per-file errors', async () => {
+        await orsImportsRepository.create({
+          _id: 'import-failed',
+          status: ORS_IMPORT_STATUS.FAILED,
+          files: [
+            {
+              fileId: 'file-err',
+              fileName: 'bad-data.xlsx',
+              s3Uri: 's3://bucket/file-err',
+              result: {
+                status: 'failure',
+                sitesCreated: 0,
+                mappingsUpdated: 0,
+                registrationNumber: null,
+                errors: [
+                  { field: 'file', message: 'Missing registration number' }
+                ]
+              }
+            }
+          ]
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/ors-imports/import-failed',
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+        expect(body.status).toBe(ORS_IMPORT_STATUS.FAILED)
+        expect(body.files[0].result.errors).toHaveLength(1)
+      })
+
       it('returns files with null result when not yet processed', async () => {
         await orsImportsRepository.create({
           _id: 'import-3',
