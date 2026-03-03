@@ -33,6 +33,34 @@ describe('accreditation date helpers', () => {
       ).toBe(false)
     })
 
+    it('should return true when date is exactly on validFrom boundary', () => {
+      const accreditation = {
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z'
+      }
+
+      expect(
+        isWithinAccreditationDateRange(
+          '2025-01-01T00:00:00.000Z',
+          accreditation
+        )
+      ).toBe(true)
+    })
+
+    it('should return true when date is exactly on validTo boundary', () => {
+      const accreditation = {
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z'
+      }
+
+      expect(
+        isWithinAccreditationDateRange(
+          '2025-12-31T23:59:59.999Z',
+          accreditation
+        )
+      ).toBe(true)
+    })
+
     it('should return false when date is after range', () => {
       const accreditation = {
         validFrom: '2025-01-01T00:00:00.000Z',
@@ -174,6 +202,40 @@ describe('accreditation date helpers', () => {
           statusHistory
         )
       ).toBe(false)
+    })
+
+    it('should return false when statusHistory is null', () => {
+      expect(
+        isAccreditationSuspendedAtDate('2025-06-15T00:00:00.000Z', null)
+      ).toBe(false)
+    })
+
+    it('should return true with a single suspended entry', () => {
+      const statusHistory = [
+        { status: 'suspended', updatedAt: '2025-01-01T00:00:00.000Z' }
+      ]
+
+      expect(
+        isAccreditationSuspendedAtDate(
+          '2025-06-15T00:00:00.000Z',
+          statusHistory
+        )
+      ).toBe(true)
+    })
+
+    it('should use the first entry when multiple share the same timestamp', () => {
+      const statusHistory = [
+        { status: 'created', updatedAt: '2025-01-01T00:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-06-01T00:00:00.000Z' }
+      ]
+
+      expect(
+        isAccreditationSuspendedAtDate(
+          '2025-06-15T00:00:00.000Z',
+          statusHistory
+        )
+      ).toBe(true)
     })
 
     it('should handle date on exact approval boundary', () => {

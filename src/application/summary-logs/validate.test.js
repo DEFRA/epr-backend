@@ -1643,164 +1643,106 @@ describe('SummaryLogsValidator', () => {
       expect(summaryLogsRepository.update).toHaveBeenCalled()
     })
 
-    it('sets IGNORED outcome for Reprocessor Input loads when accreditation was suspended at row date', async () => {
-      organisationsRepository.findRegistrationById.mockResolvedValue({
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
-        validTo: '2025-12-31',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        material: 'aluminium',
-        accreditation: {
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
-          ]
-        }
-      })
-
-      summaryLogExtractor.extract.mockResolvedValue(
-        buildExtractedData({
-          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
-              rows: [
-                buildReceivedLoadRow({
-                  ROW_ID: 10000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-03-15T00:00:00.000Z' // Approved period
-                }),
-                buildReceivedLoadRow({
-                  ROW_ID: 10001,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-07-15T00:00:00.000Z' // Suspended period
-                })
-              ]
-            })
+    it.each([
+      {
+        processingType: 'REPROCESSOR_INPUT',
+        tableName: 'RECEIVED_LOADS_FOR_REPROCESSING',
+        buildRow: buildReceivedLoadRow,
+        dateField: 'DATE_RECEIVED_FOR_REPROCESSING',
+        registration: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'input',
+          material: 'aluminium'
+        },
+        includedRowId: 10000,
+        ignoredRowId: 10001
+      },
+      {
+        processingType: 'EXPORTER',
+        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+        buildRow: buildExporterReceivedLoadRow,
+        dateField: 'DATE_RECEIVED_FOR_EXPORT',
+        registration: { wasteProcessingType: 'exporter', material: 'paper' },
+        meta: { MATERIAL: { value: 'Paper_and_board' } },
+        includedRowId: 1000,
+        ignoredRowId: 3000
+      },
+      {
+        processingType: 'REPROCESSOR_OUTPUT',
+        tableName: 'REPROCESSED_LOADS',
+        buildRow: buildReprocessorOutputRow,
+        dateField: 'DATE_LOAD_LEFT_SITE',
+        registration: {
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'output',
+          material: 'aluminium'
+        },
+        sheet: 'Reprocessed',
+        includedRowId: 3000,
+        ignoredRowId: 3001
+      }
+    ])(
+      'sets IGNORED outcome for $processingType loads when accreditation was suspended at row date',
+      async ({
+        processingType,
+        tableName,
+        buildRow,
+        dateField,
+        registration,
+        meta = {},
+        sheet = 'Received',
+        includedRowId,
+        ignoredRowId
+      }) => {
+        organisationsRepository.findRegistrationById.mockResolvedValue({
+          id: 'reg-123',
+          registrationNumber: 'REG12345',
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          ...registration,
+          accreditation: {
+            statusHistory: [
+              { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
+              { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
+            ]
           }
         })
-      )
 
-      await validateSummaryLog(summaryLogId)
+        summaryLogExtractor.extract.mockResolvedValue(
+          buildExtractedData({
+            meta: buildMeta({
+              PROCESSING_TYPE: { value: processingType },
+              ...meta
+            }),
+            data: {
+              [tableName]: buildTable({
+                sheet,
+                rows: [
+                  buildRow({
+                    ROW_ID: includedRowId,
+                    [dateField]: '2025-03-15T00:00:00.000Z'
+                  }),
+                  buildRow({
+                    ROW_ID: ignoredRowId,
+                    [dateField]: '2025-07-15T00:00:00.000Z'
+                  })
+                ]
+              })
+            }
+          })
+        )
 
-      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+        await validateSummaryLog(summaryLogId)
 
-      // Row 10000 should be INCLUDED (approved at that date)
-      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
-      expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([10000])
+        const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Row 10001 should be IGNORED (suspended at that date) - not in any count
-      expect(updateCall.loads.added.invalid.count).toBe(0)
-      expect(updateCall.loads.added.excluded.count).toBe(0)
-    })
-
-    it('sets IGNORED outcome for Exporter loads when accreditation was suspended at row date', async () => {
-      organisationsRepository.findRegistrationById.mockResolvedValue({
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
-        validTo: '2025-12-31',
-        wasteProcessingType: 'exporter',
-        material: 'paper',
-        accreditation: {
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
-          ]
-        }
-      })
-
-      summaryLogExtractor.extract.mockResolvedValue(
-        buildExtractedData({
-          meta: buildMeta({
-            PROCESSING_TYPE: { value: 'EXPORTER' },
-            MATERIAL: { value: 'Paper_and_board' }
-          }),
-          data: {
-            RECEIVED_LOADS_FOR_EXPORT: buildReceivedLoadsTable({
-              rows: [
-                buildExporterReceivedLoadRow({
-                  ROW_ID: 1000,
-                  DATE_RECEIVED_FOR_EXPORT: '2025-03-15'
-                }),
-                buildExporterReceivedLoadRow({
-                  ROW_ID: 3000,
-                  DATE_RECEIVED_FOR_EXPORT: '2025-07-15'
-                })
-              ]
-            })
-          }
-        })
-      )
-
-      await validateSummaryLog(summaryLogId)
-
-      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-
-      // Row 1000 should be INCLUDED (approved at that date)
-      expect(updateCall.loads.added.included.rowIds).toEqual([1000])
-      expect(updateCall.loads.added.valid.count).toBe(1)
-
-      // Row 3000 should be IGNORED (suspended at that date) - not in any count
-      expect(updateCall.loads.added.invalid.count).toBe(0)
-      expect(updateCall.loads.added.excluded.count).toBe(0)
-    })
-
-    it('sets IGNORED outcome for Reprocessor Output loads when accreditation was suspended at row date', async () => {
-      organisationsRepository.findRegistrationById.mockResolvedValue({
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
-        validTo: '2025-12-31',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'output',
-        material: 'aluminium',
-        accreditation: {
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' }
-          ]
-        }
-      })
-
-      summaryLogExtractor.extract.mockResolvedValue(
-        buildExtractedData({
-          meta: buildMeta({
-            PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' }
-          }),
-          data: {
-            REPROCESSED_LOADS: buildTable({
-              sheet: 'Reprocessed',
-              rows: [
-                buildReprocessorOutputRow({
-                  ROW_ID: 3000,
-                  DATE_LOAD_LEFT_SITE: '2025-03-15T00:00:00.000Z'
-                }),
-                buildReprocessorOutputRow({
-                  ROW_ID: 3001,
-                  DATE_LOAD_LEFT_SITE: '2025-07-15T00:00:00.000Z'
-                })
-              ]
-            })
-          }
-        })
-      )
-
-      await validateSummaryLog(summaryLogId)
-
-      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-
-      // Row 3000 should be INCLUDED (approved at that date)
-      expect(updateCall.loads.added.included.rowIds).toEqual([3000])
-      expect(updateCall.loads.added.valid.count).toBe(1)
-
-      // Row 3001 should be IGNORED (suspended at that date) - not in any count
-      expect(updateCall.loads.added.invalid.count).toBe(0)
-      expect(updateCall.loads.added.excluded.count).toBe(0)
-    })
+        expect(updateCall.loads.added.included.rowIds).toEqual([includedRowId])
+        expect(updateCall.loads.added.valid.count).toBe(1)
+        expect(updateCall.loads.added.invalid.count).toBe(0)
+        expect(updateCall.loads.added.excluded.count).toBe(0)
+      }
+    )
 
     it('does not set IGNORED when accreditation was re-approved before the row date', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({

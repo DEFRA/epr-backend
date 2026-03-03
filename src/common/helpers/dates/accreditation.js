@@ -6,9 +6,9 @@
  * @returns {boolean} True if date is within range (inclusive)
  */
 export const isWithinAccreditationDateRange = (date, accreditation) => {
-  const compareDate = new Date(date)
-  const validFrom = new Date(accreditation.validFrom)
-  const validTo = new Date(accreditation.validTo)
+  const compareDate = new Date(date).getTime()
+  const validFrom = new Date(accreditation.validFrom).getTime()
+  const validTo = new Date(accreditation.validTo).getTime()
 
   return compareDate >= validFrom && compareDate <= validTo
 }
@@ -23,27 +23,19 @@ export const isWithinAccreditationDateRange = (date, accreditation) => {
  * @returns {boolean} True if the accreditation was suspended at the given date
  */
 export const isAccreditationSuspendedAtDate = (date, statusHistory) => {
-  if (!statusHistory || statusHistory.length === 0) {
+  if (!statusHistory) {
     return false
   }
 
-  const compareDate = new Date(date)
+  const compareDate = new Date(date).getTime()
 
-  // Find the most recent status change on or before the given date
-  // status history will almost certainly be in chronological order but
-  // there is no harm in being defensive and allowing it to cope with out of order entries
-  let effectiveStatus = null
-  let latestDate = null
-  for (const entry of statusHistory) {
-    const entryDate = new Date(entry.updatedAt)
-    if (
-      entryDate <= compareDate &&
-      (latestDate === null || entryDate > latestDate)
-    ) {
-      latestDate = entryDate
-      effectiveStatus = entry.status
-    }
-  }
+  const sorted = [...statusHistory].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  )
 
-  return effectiveStatus === 'suspended'
+  const effective = sorted.find(
+    (entry) => new Date(entry.updatedAt).getTime() <= compareDate
+  )
+
+  return effective?.status === 'suspended'
 }
