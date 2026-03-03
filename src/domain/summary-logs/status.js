@@ -78,14 +78,6 @@ export const calculateExpiresAt = (status) => {
 export const NO_PRIOR_SUBMISSION = 'NO_PRIOR_SUBMISSION'
 
 /**
- * Commands that can be sent to the summary log worker thread.
- */
-export const SUMMARY_LOG_COMMAND = Object.freeze({
-  VALIDATE: 'validate',
-  SUBMIT: 'submit'
-})
-
-/**
  * Statuses that indicate a summary log is still being validated.
  * Used by the timeout tracker to determine if a failed/timed-out task
  * should be marked as validation_failed.
