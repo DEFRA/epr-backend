@@ -26,7 +26,7 @@ import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
   isWithinAccreditationDateRange,
-  isAccreditationSuspendedAtDate
+  isAccreditationApprovedAtDate
 } from '#common/helpers/dates/accreditation.js'
 import {
   RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_LOADS_FIELDS,
@@ -306,7 +306,7 @@ const validateAccreditationStatus = (
 
     if (
       dateToCheck &&
-      isAccreditationSuspendedAtDate(dateToCheck, statusHistory)
+      !isAccreditationApprovedAtDate(dateToCheck, statusHistory)
     ) {
       wasteRecord.outcome = ROW_OUTCOME.IGNORED
     }

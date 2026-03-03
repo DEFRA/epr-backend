@@ -15,6 +15,15 @@ import {
 // Test Builders
 // ============================================================================
 
+const buildApprovedAccreditation = (
+  approvedAt = '2025-01-01T00:00:00.000Z'
+) => ({
+  statusHistory: [
+    { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+    { status: 'approved', updatedAt: approvedAt }
+  ]
+})
+
 const buildMeta = (overrides = {}) => ({
   REGISTRATION_NUMBER: { value: 'REG12345' },
   PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
@@ -203,7 +212,8 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         validFrom: '2025-01-01T00:00:00.000Z',
-        validTo: '2025-12-31T23:59:59.999Z'
+        validTo: '2025-12-31T23:59:59.999Z',
+        accreditation: buildApprovedAccreditation()
       })
     }
 
@@ -918,7 +928,8 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: buildApprovedAccreditation()
       })
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -1101,7 +1112,8 @@ describe('SummaryLogsValidator', () => {
         validFrom: '2025-01-01',
         validTo: '2025-12-31',
         wasteProcessingType: 'exporter',
-        material: 'paper'
+        material: 'paper',
+        accreditation: buildApprovedAccreditation()
       })
 
       const headers = [
@@ -1268,7 +1280,8 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: buildApprovedAccreditation()
       })
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -1307,7 +1320,8 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: buildApprovedAccreditation()
       })
 
       const reprocessedHeaders = [
@@ -1357,7 +1371,8 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: buildApprovedAccreditation()
       })
 
       const sentOnHeaders = [
@@ -1682,7 +1697,7 @@ describe('SummaryLogsValidator', () => {
         ignoredRowId: 3001
       }
     ])(
-      'sets IGNORED outcome for $processingType loads when accreditation was suspended at row date',
+      'sets IGNORED outcome for $processingType loads when accreditation is not approved at row date',
       async ({
         processingType,
         tableName,
@@ -1788,7 +1803,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.count).toBe(1)
     })
 
-    it('does not set IGNORED for status when accreditation has no statusHistory', async () => {
+    it('sets IGNORED when accreditation has no statusHistory', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1819,9 +1834,9 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Row should be INCLUDED (no statusHistory means no suspension check)
-      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
-      expect(updateCall.loads.added.valid.count).toBe(1)
+      // Row should be IGNORED (no statusHistory means not approved)
+      expect(updateCall.loads.added.included.rowIds).toEqual([])
+      expect(updateCall.loads.added.valid.count).toBe(0)
     })
   })
 
