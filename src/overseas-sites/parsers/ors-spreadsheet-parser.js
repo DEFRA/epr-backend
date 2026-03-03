@@ -32,17 +32,19 @@ const META_ROW = Object.freeze({
 const META_VALUE_COL = 4
 
 const DATA_START_ROW = 10
+const MAX_ORS_ID = 999
+const ORS_ID_DIGITS = 3
 
 // The number branch handles numeric values and coercible strings (e.g. '42' → 42).
 // The string branch catches strings that fail number coercion range checks
 // (e.g. '000' coerces to 0 which fails min(1), then falls through here).
 const orsIdSchema = Joi.alternatives().try(
-  Joi.number().integer().min(1).max(999),
+  Joi.number().integer().min(1).max(MAX_ORS_ID),
   Joi.string()
     .pattern(/^\d{1,3}$/)
     .custom((value) => {
-      const num = parseInt(value, 10)
-      if (num < 1 || num > 999) {
+      const num = Number.parseInt(value, 10)
+      if (num < 1 || num > MAX_ORS_ID) {
         throw new Error('ORS ID must be between 1 and 999')
       }
       return value
@@ -91,8 +93,8 @@ const cellToValue = (cellValue) => {
  * Zero-pads an ORS ID to three digits.
  */
 const zeroPadOrsId = (orsId) => {
-  const num = typeof orsId === 'string' ? parseInt(orsId, 10) : orsId
-  return String(num).padStart(3, '0')
+  const num = typeof orsId === 'string' ? Number.parseInt(orsId, 10) : orsId
+  return String(num).padStart(ORS_ID_DIGITS, '0')
 }
 
 /**
@@ -145,7 +147,7 @@ const extractSiteFromRow = (row) => {
       line2: cellToString(row.getCell(COL.LINE2).value),
       townOrCity: cellToString(row.getCell(COL.TOWN_OR_CITY).value),
       stateOrRegion: cellToString(row.getCell(COL.STATE_OR_REGION).value),
-      postcode: postcode !== null ? String(postcode) : null
+      postcode: postcode === null ? null : String(postcode)
     },
     coordinates: cellToString(row.getCell(COL.COORDINATES).value),
     validFrom: validFromRaw
@@ -196,14 +198,8 @@ export const parse = async (buffer) => {
 
   for (let rowNum = DATA_START_ROW; rowNum <= worksheet.rowCount; rowNum++) {
     const row = worksheet.getRow(rowNum)
-    const orsIdRaw = cellToValue(row.getCell(COL.ORS_ID).value)
 
-    // Skip completely empty rows
-    if (orsIdRaw === null && isPlaceholderRow(row)) {
-      continue
-    }
-
-    // Skip placeholder rows (ORS ID only)
+    // Skip empty and placeholder rows (rows with no data beyond the ORS ID column)
     if (isPlaceholderRow(row)) {
       continue
     }

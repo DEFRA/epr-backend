@@ -55,22 +55,10 @@ export const processImportFile = async (
     ])
   }
 
-  const overseasSitesMap = {}
-
-  for (const site of sites) {
-    const now = new Date()
-    const created = await overseasSitesRepository.create({
-      name: site.name,
-      address: site.address,
-      country: site.country,
-      coordinates: site.coordinates ?? undefined,
-      validFrom: site.validFrom ? new Date(site.validFrom) : null,
-      createdAt: now,
-      updatedAt: now
-    })
-
-    overseasSitesMap[site.orsId] = { overseasSiteId: created.id }
-  }
+  const overseasSitesMap = await createOverseasSites(
+    sites,
+    overseasSitesRepository
+  )
 
   const merged = await organisationsRepository.mergeRegistrationOverseasSites(
     org.id,
@@ -99,6 +87,27 @@ export const processImportFile = async (
     registrationNumber: metadata.registrationNumber,
     errors: []
   }
+}
+
+const createOverseasSites = async (sites, overseasSitesRepository) => {
+  const overseasSitesMap = {}
+
+  for (const site of sites) {
+    const now = new Date()
+    const created = await overseasSitesRepository.create({
+      name: site.name,
+      address: site.address,
+      country: site.country,
+      coordinates: site.coordinates ?? undefined,
+      validFrom: site.validFrom ? new Date(site.validFrom) : null,
+      createdAt: now,
+      updatedAt: now
+    })
+
+    overseasSitesMap[site.orsId] = { overseasSiteId: created.id }
+  }
+
+  return overseasSitesMap
 }
 
 const failureResult = (registrationNumber, errors) => ({
