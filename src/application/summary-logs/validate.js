@@ -394,7 +394,7 @@ const performValidationChecks = async ({
       validateReprocessorOutputDates(wasteRecords, registration)
     }
 
-    // Validate that accreditation was not suspended at the row date
+    // Validate that accreditation was approved at the row date
     const statusHistory = registration.accreditation?.statusHistory
     const dateField = STATUS_DATE_FIELD[meta.PROCESSING_TYPE]
     if (dateField) {
