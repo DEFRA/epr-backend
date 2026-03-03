@@ -16,8 +16,7 @@ const userSchema = Joi.object({
 
 const validateCommandSchema = Joi.object({
   command: Joi.string().valid(COMMAND_TYPE.VALIDATE).required(),
-  summaryLogId: Joi.string().required(),
-  user: userSchema.optional()
+  summaryLogId: Joi.string().required()
 })
 
 const submitCommandSchema = Joi.object({
