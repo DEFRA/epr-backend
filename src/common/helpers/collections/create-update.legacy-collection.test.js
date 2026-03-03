@@ -53,7 +53,7 @@ describe('dropLegacyPackagingRecyclingNotesCollection', () => {
     ).resolves.toBeUndefined()
   })
 
-  it('rethrows non-NamespaceNotFound errors from dropCollection', async () => {
+  it('continues when non-NamespaceNotFound errors happen during dropCollection', async () => {
     const error = new Error('connection dropped')
     error.codeName = 'NetworkError'
 
@@ -68,6 +68,6 @@ describe('dropLegacyPackagingRecyclingNotesCollection', () => {
 
     await expect(
       dropLegacyPackagingRecyclingNotesCollection(db)
-    ).rejects.toThrow('connection dropped')
+    ).resolves.toBeUndefined()
   })
 })

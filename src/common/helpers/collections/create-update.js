@@ -91,9 +91,10 @@ export async function dropLegacyPackagingRecyclingNotesCollection(db) {
       message: `Dropped legacy collection: ${COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES}`
     })
   } catch (error) {
-    if (error.codeName !== 'NamespaceNotFound') {
-      throw error
-    }
+    logger.error({
+      err: error,
+      message: `Failed to drop legacy collection: ${COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES}. Continuing startup.`
+    })
   }
 }
 
