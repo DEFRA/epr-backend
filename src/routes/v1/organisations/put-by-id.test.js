@@ -18,12 +18,18 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockCdpAuditing(...args)
 }))
 
+vi.mock('#application/waste-balances/detect-accreditation-changes.js')
+const { detectAccreditationStatusChanges } =
+  await import('#application/waste-balances/detect-accreditation-changes.js')
+
 describe('PUT /v1/organisations/{id}', () => {
   setupAuthContext()
   let server
   let organisationsRepository
 
   beforeEach(async () => {
+    vi.mocked(detectAccreditationStatusChanges).mockReturnValue([])
+
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
@@ -175,6 +181,91 @@ describe('PUT /v1/organisations/{id}', () => {
       verifyCreatedBy(auditPayload.user)
       verifyEvent(auditPayload)
       verifyContext(auditPayload)
+    })
+
+    it('enqueues recalculate_balance when accreditation status changes and worker is available', async () => {
+      const mockRecalculate = vi.fn().mockResolvedValue()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const workerOrgRepo = organisationsRepositoryFactory()
+
+      const serverWithWorker = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: createSystemLogsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ organisations: true }),
+        workers: {
+          summaryLogsWorker: {
+            validate: vi.fn(),
+            submit: vi.fn(),
+            recalculateBalance: mockRecalculate
+          }
+        }
+      })
+
+      const fixture = buildOrganisation()
+      await workerOrgRepo.insert(fixture)
+
+      const fetchResponse = await serverWithWorker.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(fetchResponse.payload)
+
+      vi.mocked(detectAccreditationStatusChanges).mockReturnValue([
+        {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          previousStatus: 'created',
+          newStatus: 'approved'
+        }
+      ])
+
+      const response = await serverWithWorker.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: { Authorization: `Bearer ${validToken}` },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(mockRecalculate).toHaveBeenCalledWith({
+        organisationId: org.id,
+        accreditationId: 'acc-1',
+        registrationId: 'reg-1',
+        trigger: 'status changed from created to approved'
+      })
+    })
+
+    it('does not enqueue when accreditation status changes but worker is unavailable', async () => {
+      const org = await createOrganisation()
+
+      vi.mocked(detectAccreditationStatusChanges).mockReturnValue([
+        {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          previousStatus: 'created',
+          newStatus: 'approved'
+        }
+      ])
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: { Authorization: `Bearer ${validToken}` },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      // Should still succeed even without the worker
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
 

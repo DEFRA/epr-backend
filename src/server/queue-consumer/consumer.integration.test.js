@@ -419,7 +419,7 @@ describe('SQS command queue consumer integration', () => {
             expect(logger.error).toHaveBeenCalledWith(
               expect.objectContaining({
                 message: expect.stringContaining(
-                  'must be one of [validate, submit]'
+                  'must be one of [validate, submit, recalculate_balance]'
                 )
               })
             )

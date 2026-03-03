@@ -2,6 +2,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
+import { detectAccreditationStatusChanges } from '#application/waste-balances/detect-accreditation-changes.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
@@ -70,6 +71,28 @@ export const organisationsPutById = {
       await organisationsRepository.replace(id, version, updates)
       const updated = await organisationsRepository.findById(id, version + 1)
       await auditOrganisationUpdate(request, id, initial, updated)
+
+      const accreditationChanges = detectAccreditationStatusChanges(
+        initial,
+        updated
+      )
+
+      if (
+        accreditationChanges.length > 0 &&
+        request.summaryLogsWorker?.recalculateBalance
+      ) {
+        await Promise.all(
+          accreditationChanges.map((change) =>
+            request.summaryLogsWorker.recalculateBalance({
+              organisationId: id,
+              accreditationId: change.accreditationId,
+              registrationId: change.registrationId,
+              trigger: `status changed from ${change.previousStatus} to ${change.newStatus}`
+            })
+          )
+        )
+      }
+
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)

@@ -19,12 +19,15 @@ vi.mock('@aws-sdk/client-sqs', () => ({
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
+vi.mock('#application/waste-balances/recalculate-for-accreditation.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
 
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
 const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
+const { recalculateWasteBalancesForAccreditation } =
+  await import('#application/waste-balances/recalculate-for-accreditation.js')
 const { summaryLogMetrics } =
   await import('#common/helpers/metrics/summary-logs.js')
 
@@ -86,6 +89,7 @@ describe('createCommandQueueConsumer', () => {
       this.QueueName = params.QueueName
     })
     vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
+    vi.mocked(recalculateWasteBalancesForAccreditation).mockResolvedValue()
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
@@ -322,6 +326,31 @@ describe('createCommandQueueConsumer', () => {
       )
     })
 
+    it('skips onFailure for commands without an onFailure handler on timeout', async () => {
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-789',
+        Body: JSON.stringify({
+          command: 'recalculate_balance',
+          organisationId: 'org-1',
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          trigger: 'status changed'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message:
+            'Command timed out: recalculate_balance for accreditationId=acc-1 messageId=msg-789'
+        })
+      )
+      expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+    })
+
     it('logs timeout with messageId when message body is invalid', async () => {
       await createConsumer()
       const error = new Error('Timeout')
@@ -448,7 +477,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit, recalculate_balance]'
           })
         )
       })
@@ -874,6 +903,79 @@ describe('createCommandQueueConsumer', () => {
             })
           )
         })
+      })
+    })
+
+    describe('recalculate_balance command', () => {
+      const recalculateMessage = {
+        MessageId: 'msg-456',
+        Body: JSON.stringify({
+          command: 'recalculate_balance',
+          organisationId: 'org-1',
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          trigger: 'status changed from approved to suspended'
+        })
+      }
+
+      it('processes recalculate_balance command successfully', async () => {
+        await handleMessage(recalculateMessage)
+
+        expect(recalculateWasteBalancesForAccreditation).toHaveBeenCalledWith({
+          organisationId: 'org-1',
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          logger
+        })
+      })
+
+      it('logs processing and completion', async () => {
+        await handleMessage(recalculateMessage)
+
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining(
+              'Processing command: recalculate_balance for accreditationId=acc-1'
+            )
+          })
+        )
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining(
+              'Command completed: recalculate_balance for accreditationId=acc-1'
+            )
+          })
+        )
+      })
+
+      it('does not call onFailure on permanent error (no onFailure handler)', async () => {
+        vi.mocked(recalculateWasteBalancesForAccreditation).mockRejectedValue(
+          new PermanentError('Recalc failed')
+        )
+
+        const result = await handleMessage(recalculateMessage)
+
+        // Permanent errors are acknowledged (returned) so SQS does not retry
+        expect(result).toBe(recalculateMessage)
+        // No summary log to mark as failed
+        expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+      })
+
+      it('rethrows transient errors for SQS retry', async () => {
+        vi.mocked(recalculateWasteBalancesForAccreditation).mockRejectedValue(
+          new Error('Transient failure')
+        )
+
+        const message = {
+          ...recalculateMessage,
+          Attributes: { ApproximateReceiveCount: '1' }
+        }
+
+        await expect(handleMessage(message)).rejects.toThrow(
+          'Transient failure'
+        )
       })
     })
   })

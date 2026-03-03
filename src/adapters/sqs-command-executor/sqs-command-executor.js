@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
-import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
+import { COMMAND_TYPE } from '#domain/commands/types.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
@@ -76,14 +76,45 @@ const sendCommandMessage = async (
 }
 
 /**
- * Creates an SQS-based summary logs command executor.
+ * Sends an arbitrary message body to the SQS queue.
+ * @param {string} queueUrl
+ * @param {SQSClient} sqsClient
+ * @param {object} logger
+ * @param {object} messageBody
+ * @param {string} logDescription
+ */
+const sendRawMessage = async (
+  queueUrl,
+  sqsClient,
+  logger,
+  messageBody,
+  logDescription
+) => {
+  await sqsClient.send(
+    new SendMessageCommand({
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(messageBody)
+    })
+  )
+
+  logger.info({
+    message: `Sent ${logDescription}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+}
+
+/**
+ * Creates an SQS-based command executor.
  *
  * This executor sends command messages to an SQS queue, which are then
  * processed by the queue consumer. This enables async processing and
- * decouples the HTTP request from the long-running validation/submission.
+ * decouples the HTTP request from the long-running operations.
  *
  * @param {ExecutorDependencies} deps
- * @returns {Promise<SummaryLogsCommandExecutor>}
+ * @returns {Promise<SummaryLogsCommandExecutor & { recalculateBalance: Function }>}
  */
 export const createSqsCommandExecutor = async (deps) => {
   const { sqsClient, queueName, logger } = deps
@@ -101,7 +132,7 @@ export const createSqsCommandExecutor = async (deps) => {
         queueUrl,
         sqsClient,
         logger,
-        SUMMARY_LOG_COMMAND.VALIDATE,
+        COMMAND_TYPE.VALIDATE,
         summaryLogId
       )
     },
@@ -112,9 +143,38 @@ export const createSqsCommandExecutor = async (deps) => {
         queueUrl,
         sqsClient,
         logger,
-        SUMMARY_LOG_COMMAND.SUBMIT,
+        COMMAND_TYPE.SUBMIT,
         summaryLogId,
         user
+      )
+    },
+
+    /**
+     * Enqueues a recalculate_balance command for a single accreditation.
+     * @param {object} params
+     * @param {string} params.organisationId
+     * @param {string} params.accreditationId
+     * @param {string} params.registrationId
+     * @param {string} params.trigger - Description of what caused the recalculation
+     */
+    recalculateBalance: async ({
+      organisationId,
+      accreditationId,
+      registrationId,
+      trigger
+    }) => {
+      await sendRawMessage(
+        queueUrl,
+        sqsClient,
+        logger,
+        {
+          command: COMMAND_TYPE.RECALCULATE_BALANCE,
+          organisationId,
+          accreditationId,
+          registrationId,
+          trigger
+        },
+        `${COMMAND_TYPE.RECALCULATE_BALANCE} command for accreditationId=${accreditationId}`
       )
     }
   }
