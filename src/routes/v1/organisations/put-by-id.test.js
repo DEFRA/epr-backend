@@ -13,9 +13,20 @@ import { ObjectId } from 'mongodb'
 const { validToken } = entraIdMockAuthTokens
 
 const mockCdpAuditing = vi.fn()
+const mockDetectChanges = vi.fn().mockReturnValue([])
+const mockRecalculate = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockCdpAuditing(...args)
+}))
+
+vi.mock('#application/waste-balances/detect-accreditation-changes.js', () => ({
+  detectAccreditationStatusChanges: (...args) => mockDetectChanges(...args)
+}))
+
+vi.mock('#application/waste-balances/recalculate-for-accreditation.js', () => ({
+  recalculateWasteBalancesForAccreditation: (...args) =>
+    mockRecalculate(...args)
 }))
 
 describe('PUT /v1/organisations/{id}', () => {
@@ -413,5 +424,193 @@ describe('PUT /v1/organisations/{id}', () => {
         }
       }
     }
+  })
+
+  describe('waste balance recalculation', () => {
+    beforeEach(() => {
+      mockDetectChanges.mockReset().mockReturnValue([])
+      mockRecalculate.mockReset().mockResolvedValue(undefined)
+    })
+
+    it('calls detectAccreditationStatusChanges with initial and updated snapshots', async () => {
+      const org = await createOrganisation()
+
+      await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(mockDetectChanges).toHaveBeenCalledTimes(1)
+      const [initial, updated] = mockDetectChanges.mock.calls[0]
+      expect(initial.id).toBe(org.id)
+      expect(updated.id).toBe(org.id)
+      expect(updated.version).toBe(org.version + 1)
+    })
+
+    it('triggers recalculation for each detected status change', async () => {
+      const org = await createOrganisation()
+      const accreditationId = org.accreditations[0].id
+
+      mockDetectChanges.mockReturnValue([
+        {
+          accreditationId,
+          previousStatus: 'created',
+          currentStatus: 'approved'
+        }
+      ])
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(mockRecalculate).toHaveBeenCalledTimes(1)
+      expect(mockRecalculate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organisationId: org.id,
+          accreditationId,
+          dependencies: expect.objectContaining({
+            organisationsRepository: expect.any(Object),
+            wasteRecordsRepository: expect.any(Object),
+            wasteBalancesRepository: expect.any(Object)
+          })
+        })
+      )
+    })
+
+    it('does not call recalculate when no status changes are detected', async () => {
+      const org = await createOrganisation()
+
+      mockDetectChanges.mockReturnValue([])
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(mockRecalculate).not.toHaveBeenCalled()
+    })
+
+    it('returns an error when recalculation fails', async () => {
+      const org = await createOrganisation()
+      const accreditationId = org.accreditations[0].id
+
+      mockDetectChanges.mockReturnValue([
+        {
+          accreditationId,
+          previousStatus: 'created',
+          currentStatus: 'approved'
+        }
+      ])
+      mockRecalculate.mockRejectedValue(new Error('Recalculation failed'))
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
+
+    it('logs error context before re-throwing recalculation failure', async () => {
+      const org = await createOrganisation()
+      const accreditationId = org.accreditations[0].id
+
+      mockDetectChanges.mockReturnValue([
+        {
+          accreditationId,
+          previousStatus: 'created',
+          currentStatus: 'approved'
+        }
+      ])
+      mockRecalculate.mockRejectedValue(new Error('Recalculation failed'))
+
+      await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(server.loggerMocks.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organisationId: org.id,
+          accreditationId,
+          previousStatus: 'created',
+          currentStatus: 'approved',
+          error: expect.any(Error)
+        }),
+        'Failed to recalculate waste balances after accreditation status change'
+      )
+    })
+
+    it('recalculates for multiple accreditation changes', async () => {
+      const org = await createOrganisation()
+
+      mockDetectChanges.mockReturnValue([
+        {
+          accreditationId: 'acc-1',
+          previousStatus: 'created',
+          currentStatus: 'approved'
+        },
+        {
+          accreditationId: 'acc-2',
+          previousStatus: 'approved',
+          currentStatus: 'suspended'
+        }
+      ])
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(mockRecalculate).toHaveBeenCalledTimes(2)
+      expect(mockRecalculate.mock.calls[0][0].accreditationId).toBe('acc-1')
+      expect(mockRecalculate.mock.calls[1][0].accreditationId).toBe('acc-2')
+    })
   })
 })
