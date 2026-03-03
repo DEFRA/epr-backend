@@ -149,7 +149,7 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * and rethrows transient errors so SQS can retry.
  * @param {object} params
  * @param {Error} params.err
- * @param {object} params.command
+ * @param {object} params.parsedCommand
  * @param {CommandHandler} params.handler
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
@@ -157,7 +157,7 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  */
 const handleCommandError = async ({
   err,
-  command,
+  parsedCommand,
   handler,
   message,
   maxReceiveCount,
@@ -172,7 +172,7 @@ const handleCommandError = async ({
 
   logger.error({
     err,
-    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${describeCommand(command)} messageId=${message.MessageId}`,
+    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${describeCommand(parsedCommand)} messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -180,7 +180,7 @@ const handleCommandError = async ({
   })
 
   if (isTerminal) {
-    await handler.onFailure(command, deps)
+    await handler.onFailure(parsedCommand, deps)
   }
 
   if (isPermanent) {
@@ -198,17 +198,17 @@ const handleCommandError = async ({
 const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   const { logger } = deps
 
-  const command = parseCommandMessage(message, logger)
-  if (!command) {
+  const parsedCommand = parseCommandMessage(message, logger)
+  if (!parsedCommand) {
     throw new Error(
       `Unparseable command message, messageId=${message.MessageId}`
     )
   }
 
-  const handler = commandHandlers[command.command]
+  const handler = commandHandlers[parsedCommand.command]
 
   logger.info({
-    message: `Processing command: ${describeCommand(command)} messageId=${message.MessageId}`,
+    message: `Processing command: ${describeCommand(parsedCommand)} messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -216,10 +216,10 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   })
 
   try {
-    await handler.execute(command, deps)
+    await handler.execute(parsedCommand, deps)
 
     logger.info({
-      message: `Command completed: ${describeCommand(command)} messageId=${message.MessageId}`,
+      message: `Command completed: ${describeCommand(parsedCommand)} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -230,7 +230,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   } catch (err) {
     await handleCommandError({
       err,
-      command,
+      parsedCommand,
       handler,
       message,
       maxReceiveCount,
@@ -302,12 +302,12 @@ export const createCommandQueueConsumer = async (deps) => {
   })
 
   consumer.on('timeout_error', async (err, message) => {
-    const command = parseCommandMessage(message, logger)
+    const parsedCommand = parseCommandMessage(message, logger)
 
     logger.error({
       err,
-      message: command
-        ? `Command timed out: ${describeCommand(command)} messageId=${message.MessageId}`
+      message: parsedCommand
+        ? `Command timed out: ${describeCommand(parsedCommand)} messageId=${message.MessageId}`
         : `Command timed out for messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -315,9 +315,9 @@ export const createCommandQueueConsumer = async (deps) => {
       }
     })
 
-    if (command) {
-      const handler = commandHandlers[command.command]
-      await handler.onFailure(command, deps)
+    if (parsedCommand) {
+      const handler = commandHandlers[parsedCommand.command]
+      await handler.onFailure(parsedCommand, deps)
     }
   })
 
