@@ -466,7 +466,10 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
         systemLogsRepository: createSystemLogsRepository(),
         overseasSitesRepository: overseasSitesRepoFactory
       },
-      featureFlags: createInMemoryFeatureFlags({ organisations: true })
+      featureFlags: createInMemoryFeatureFlags({
+        organisations: true,
+        overseasSites: true
+      })
     })
   })
 
@@ -603,5 +606,78 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('removing an overseasSites mapping does not delete the site record', async () => {
+    const org = await createOrgWithExporter()
+    const exporterReg = org.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+
+    // First, add a mapping
+    const addFragment = prepareOrgUpdate(org, {
+      registrations: [
+        {
+          ...exporterReg,
+          overseasSites: {
+            '001': { overseasSiteId: knownSiteId }
+          }
+        }
+      ]
+    })
+
+    const addResponse = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment: addFragment
+      }
+    })
+
+    expect(addResponse.statusCode).toBe(StatusCodes.OK)
+    const updatedOrg = JSON.parse(addResponse.payload)
+
+    // Now remove the mapping by sending empty overseasSites
+    const updatedExporter = updatedOrg.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+    const removeFragment = prepareOrgUpdate(updatedOrg, {
+      registrations: [
+        {
+          ...updatedExporter,
+          overseasSites: {}
+        }
+      ]
+    })
+
+    const removeResponse = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${updatedOrg.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: updatedOrg.version,
+        updateFragment: removeFragment
+      }
+    })
+
+    expect(removeResponse.statusCode).toBe(StatusCodes.OK)
+    const finalOrg = JSON.parse(removeResponse.payload)
+    const finalExporter = finalOrg.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+    expect(finalExporter.overseasSites).toEqual({})
+
+    // The overseas site record itself must still exist
+    const siteResponse = await server.inject({
+      method: 'GET',
+      url: `/v1/overseas-sites/${knownSiteId}`,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(siteResponse.statusCode).toBe(StatusCodes.OK)
+    const site = JSON.parse(siteResponse.payload)
+    expect(site.id).toBe(knownSiteId)
   })
 })

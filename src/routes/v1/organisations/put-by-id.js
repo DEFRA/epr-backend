@@ -78,6 +78,7 @@ export const organisationsPutById = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
    *    organisationsRepository: OrganisationsRepository,
+   *    overseasSitesRepository: OverseasSitesRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { id: string }
    * }} request
