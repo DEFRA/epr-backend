@@ -1,22 +1,15 @@
-/** @import { Collection, Db } from 'mongodb' */
+/** @import { Db } from 'mongodb' */
 /** @import { OrsImport, OrsImportsRepositoryFactory } from './port.js' */
 
 const COLLECTION_NAME = 'ors-imports'
 
 /**
  * @param {Db} db
- * @returns {Promise<Collection>}
- */
-async function ensureCollection(db) {
-  return db.collection(COLLECTION_NAME)
-}
-
-/**
- * @param {Db} db
  * @returns {Promise<OrsImportsRepositoryFactory>}
  */
 export const createOrsImportsRepository = async (db) => {
-  await ensureCollection(db)
+  /** @type {import('mongodb').Collection<OrsImport>} */
+  const collection = db.collection(COLLECTION_NAME)
 
   return () => ({
     async create(importDoc) {
@@ -26,25 +19,23 @@ export const createOrsImportsRepository = async (db) => {
         createdAt: now,
         updatedAt: now
       }
-      await db.collection(COLLECTION_NAME).insertOne(doc)
+      await collection.insertOne(doc)
       return doc
     },
 
     async findById(id) {
-      return db.collection(COLLECTION_NAME).findOne({ _id: id })
+      return collection.findOne({ _id: id })
     },
 
     async updateStatus(id, status) {
-      await db
-        .collection(COLLECTION_NAME)
-        .updateOne(
-          { _id: id },
-          { $set: { status, updatedAt: new Date().toISOString() } }
-        )
+      await collection.updateOne(
+        { _id: id },
+        { $set: { status, updatedAt: new Date().toISOString() } }
+      )
     },
 
     async recordFileResult(id, fileIndex, result) {
-      await db.collection(COLLECTION_NAME).updateOne(
+      await collection.updateOne(
         { _id: id },
         {
           $set: {

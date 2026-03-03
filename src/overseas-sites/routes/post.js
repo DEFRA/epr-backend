@@ -9,7 +9,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteCreatePayloadSchema } from './post.schema.js'
 
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 export const overseasSitesCreatePath = '/v1/overseas-sites'
 
@@ -24,7 +24,7 @@ export const overseasSitesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>> & {overseasSitesRepository: OverseasSitesRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -33,8 +33,10 @@ export const overseasSitesCreate = {
     try {
       const now = new Date()
 
+      /** @type {Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>} */
+      const siteData = payload
       const site = await overseasSitesRepository.create({
-        ...payload,
+        ...siteData,
         createdAt: now,
         updatedAt: now
       })
