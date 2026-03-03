@@ -16,7 +16,7 @@ export const organisationsPutByIdPath = '/v1/organisations/{id}'
 
 /**
  * @param {OverseasSitesRepository} overseasSitesRepository
- * @param {Array<{overseasSites?: Record<string, {overseasSiteId: string}>}>} registrations
+ * @param {Array<{overseasSites?: Record<string, {overseasSiteId: string}>}> | undefined} registrations
  */
 async function validateOverseasSiteReferences(
   overseasSitesRepository,

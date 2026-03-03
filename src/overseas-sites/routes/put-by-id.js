@@ -9,7 +9,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteUpdatePayloadSchema } from './put-by-id.schema.js'
 
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 export const overseasSiteUpdatePath = '/v1/overseas-sites/{id}'
 
@@ -24,7 +24,7 @@ export const overseasSiteUpdate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {overseasSitesRepository: OverseasSitesRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -32,8 +32,10 @@ export const overseasSiteUpdate = {
     const { id } = params
 
     try {
+      /** @type {Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>} */
+      const updates = payload
       const site = await overseasSitesRepository.update(id, {
-        ...payload,
+        ...updates,
         updatedAt: new Date()
       })
 

@@ -72,7 +72,7 @@ const performFindAll = (storage) => async (params) => {
 }
 
 /**
- * @param {OverseasSite[]} [initialData]
+ * @param {Array<OverseasSite & {_id?: import('mongodb').ObjectId}>} [initialData]
  */
 export function createInMemoryOverseasSitesRepository(initialData = []) {
   /** @type {Storage} */

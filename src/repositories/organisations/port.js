@@ -110,6 +110,7 @@
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
  *  wasteProcessingType: string;
+ *  overseasSites?: Record<string, {overseasSiteId: string}>;
  * }} RegistrationBase
  */
 
