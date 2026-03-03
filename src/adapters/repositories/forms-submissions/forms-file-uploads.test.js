@@ -3,6 +3,7 @@ import { createFormsFileUploadsRepository } from './forms-file-uploads.js'
 
 const mockGetCognitoToken = vi.fn()
 const mockFetchJson = vi.fn()
+const mockUploadDone = vi.fn()
 
 vi.mock('#common/helpers/cognito-token.js', () => ({
   getCognitoToken: (...args) => mockGetCognitoToken(...args)
@@ -10,6 +11,12 @@ vi.mock('#common/helpers/cognito-token.js', () => ({
 
 vi.mock('#common/helpers/fetch-json.js', () => ({
   fetchJson: (...args) => mockFetchJson(...args)
+}))
+
+vi.mock('@aws-sdk/lib-storage', () => ({
+  Upload: vi.fn(function () {
+    this.done = mockUploadDone
+  })
 }))
 
 describe('createFormsFileUploadsRepository', () => {
@@ -35,23 +42,21 @@ describe('createFormsFileUploadsRepository', () => {
 
   describe('copyFormFileToS3', () => {
     it('should successfully copy file from Forms API to S3', async () => {
+      const { Upload } = await import('@aws-sdk/lib-storage')
       const fileId = 'test-file-123'
       const regulator = 'ea'
       const accessToken = 'test-access-token'
       const presignedUrl = 'https://presigned.example.com/file'
-      const fileContent = 'file content'
-      const mockArrayBuffer = new TextEncoder().encode(fileContent).buffer
+      const mockBody = { type: 'ReadableStream' }
+
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        arrayBuffer: vi.fn().mockResolvedValue(mockArrayBuffer),
-        headers: {
-          get: vi.fn().mockReturnValue('text/plain')
-        }
+        body: mockBody
       })
 
       mockGetCognitoToken.mockResolvedValue(accessToken)
       mockFetchJson.mockResolvedValue({ url: presignedUrl })
-      mockS3Client.send.mockResolvedValue({})
+      mockUploadDone.mockResolvedValue({})
 
       await repository.copyFormFileToS3({ fileId, regulator })
 
@@ -76,11 +81,15 @@ describe('createFormsFileUploadsRepository', () => {
         }
       )
       expect(global.fetch).toHaveBeenCalledWith(presignedUrl)
-      const s3Command = mockS3Client.send.mock.calls[0][0]
-      expect(s3Command.input.Bucket).toBe('re-ex-form-uploads')
-      expect(s3Command.input.Key).toBe(fileId)
-      expect(s3Command.input.Body).toBeInstanceOf(Buffer)
-      expect(s3Command.input.Body.toString()).toBe(fileContent)
+      expect(Upload).toHaveBeenCalledWith({
+        client: mockS3Client,
+        params: {
+          Bucket: 're-ex-form-uploads',
+          Key: fileId,
+          Body: mockBody
+        }
+      })
+      expect(mockUploadDone).toHaveBeenCalled()
     })
 
     it('should throw error when file download fails', async () => {
@@ -102,7 +111,7 @@ describe('createFormsFileUploadsRepository', () => {
         repository.copyFormFileToS3({ fileId, regulator })
       ).rejects.toThrow('Failed to download file: 404 Not Found')
 
-      expect(mockS3Client.send).not.toHaveBeenCalled()
+      expect(mockUploadDone).not.toHaveBeenCalled()
     })
 
     it('should throw error when S3 upload fails', async () => {
@@ -110,19 +119,17 @@ describe('createFormsFileUploadsRepository', () => {
       const regulator = 'sepa'
       const accessToken = 'test-access-token'
       const presignedUrl = 'https://presigned.example.com/file'
-      const fileContent = 'file content'
-      const mockArrayBuffer = new TextEncoder().encode(fileContent).buffer
+      const mockBody = { type: 'ReadableStream' }
       const s3Error = new Error('S3 upload failed')
 
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        arrayBuffer: vi.fn().mockResolvedValue(mockArrayBuffer),
-        headers: { get: vi.fn() }
+        body: mockBody
       })
 
       mockGetCognitoToken.mockResolvedValue(accessToken)
       mockFetchJson.mockResolvedValue({ url: presignedUrl })
-      mockS3Client.send.mockRejectedValue(s3Error)
+      mockUploadDone.mockRejectedValue(s3Error)
 
       await expect(
         repository.copyFormFileToS3({ fileId, regulator })
@@ -142,7 +149,7 @@ describe('createFormsFileUploadsRepository', () => {
         repository.copyFormFileToS3({ fileId, regulator })
       ).rejects.toThrow(apiError)
 
-      expect(mockS3Client.send).not.toHaveBeenCalled()
+      expect(mockUploadDone).not.toHaveBeenCalled()
     })
 
     it('should throw error when getting Cognito token fails', async () => {
@@ -157,7 +164,7 @@ describe('createFormsFileUploadsRepository', () => {
       ).rejects.toThrow(cognitoError)
 
       expect(mockFetchJson).not.toHaveBeenCalled()
-      expect(mockS3Client.send).not.toHaveBeenCalled()
+      expect(mockUploadDone).not.toHaveBeenCalled()
     })
   })
 

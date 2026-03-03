@@ -1,4 +1,5 @@
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 import { getCognitoToken } from '#common/helpers/cognito-token.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import { config } from '../../../config.js'
@@ -48,16 +49,16 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
       )
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
-    const command = new PutObjectCommand({
-      Bucket: s3Bucket,
-      Key: s3Key,
-      Body: buffer
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: s3Bucket,
+        Key: s3Key,
+        Body: response.body
+      }
     })
 
-    await s3Client.send(command)
+    await upload.done()
   }
 
   return {
