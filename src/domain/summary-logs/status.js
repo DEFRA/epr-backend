@@ -79,11 +79,9 @@ export const NO_PRIOR_SUBMISSION = 'NO_PRIOR_SUBMISSION'
 
 /**
  * Commands that can be sent to the summary log worker thread.
+ * @deprecated Use COMMAND_TYPE from '#domain/commands/types.js' instead.
  */
-export const SUMMARY_LOG_COMMAND = Object.freeze({
-  VALIDATE: 'validate',
-  SUBMIT: 'submit'
-})
+export { COMMAND_TYPE as SUMMARY_LOG_COMMAND } from '#domain/commands/types.js'
 
 /**
  * Statuses that indicate a summary log is still being validated.

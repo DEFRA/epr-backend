@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
-import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
+import { COMMAND_TYPE } from '#domain/commands/types.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
@@ -101,7 +101,7 @@ export const createSqsCommandExecutor = async (deps) => {
         queueUrl,
         sqsClient,
         logger,
-        SUMMARY_LOG_COMMAND.VALIDATE,
+        COMMAND_TYPE.VALIDATE,
         summaryLogId
       )
     },
@@ -112,7 +112,7 @@ export const createSqsCommandExecutor = async (deps) => {
         queueUrl,
         sqsClient,
         logger,
-        SUMMARY_LOG_COMMAND.SUBMIT,
+        COMMAND_TYPE.SUBMIT,
         summaryLogId,
         user
       )
