@@ -330,23 +330,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_FORMS_DATA_MIGRATION'
     },
-    logFileUploadsFromForms: {
-      doc: 'Feature Flag: To enable logging of file ids uploaded from defra-forms on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS'
-    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
-    },
-    glassMigration: {
-      doc: 'Feature Flag: Run glass acc/reg number migration on startup (PAE-839/840). Values: false (disabled), true (enabled), dry-run (enabled with dry-run mode)',
-      format: ['false', 'true', 'dry-run'],
-      default: 'false',
-      env: 'FEATURE_FLAG_GLASS_MIGRATION'
     },
     packagingRecyclingNotes: {
       doc: 'Feature Flag: Enable Packaging Recycling Note creation',
