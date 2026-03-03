@@ -18,6 +18,8 @@ const LOCALSTACK_READY_HOOKS_DIR = path.resolve(
   'cdp-uploader/localstack'
 )
 
+const SOCAT_MAX_ATTEMPTS = 3
+
 const LOCALSTACK_IMAGE = 'localstack/localstack:3.0.2'
 const REDIS_IMAGE = 'redis:7.2.11-alpine3.21'
 const CDP_UPLOADER_IMAGE = 'defradigital/cdp-uploader:latest'
@@ -147,15 +149,26 @@ const cdpUploaderStackFixture = {
       const redisPort = redisContainer.getMappedPort(REDIS_PORT)
       const redisHost = '127.0.0.1'
 
-      // Use SocatContainer as a TCP proxy to CDP Uploader (see ARM note above)
-      const socatContainer = await new SocatContainer()
-        .withStartupTimeout(30000)
-        .withNetwork(network)
-        .withTarget(CDP_UPLOADER_PORT, 'cdp-uploader', CDP_UPLOADER_PORT)
-        .withWaitStrategy(
-          Wait.forHttp('/health', CDP_UPLOADER_PORT).withStartupTimeout(30000)
-        )
-        .start()
+      // Use SocatContainer as a TCP proxy to CDP Uploader (see ARM note above).
+      // The port binding check in testcontainers has a hardcoded 10s timeout
+      // that cannot be configured via the API, so retry on failure.
+      let socatContainer
+      for (let attempt = 1; attempt <= SOCAT_MAX_ATTEMPTS; attempt++) {
+        try {
+          socatContainer = await new SocatContainer()
+            .withNetwork(network)
+            .withTarget(CDP_UPLOADER_PORT, 'cdp-uploader', CDP_UPLOADER_PORT)
+            .withWaitStrategy(
+              Wait.forHttp('/health', CDP_UPLOADER_PORT).withStartupTimeout(
+                60000
+              )
+            )
+            .start()
+          break
+        } catch (err) {
+          if (attempt === SOCAT_MAX_ATTEMPTS) throw err
+        }
+      }
 
       const cdpUploaderPort = socatContainer.getMappedPort(CDP_UPLOADER_PORT)
       const cdpUploaderUrl = `http://${socatContainer.getHost()}:${cdpUploaderPort}`
