@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { getUploadedFileInfo } from './get-file-upload-details.js'
 import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
@@ -141,5 +141,77 @@ describe('getFormFileUploads', () => {
     const result = await getUploadedFileInfo(mockRepository)
 
     expect(result).toEqual([])
+  })
+
+  it('should filter submissions created before cutoff date', async () => {
+    const mockRepository = {
+      findAllRegistrations: async () => [
+        {
+          id: 'before-cutoff',
+          orgId: 100001,
+          createdAt: new Date('2025-11-18T23:59:59.999Z'), // Before cutoff
+          referenceNumber: 'REF-BEFORE',
+          rawSubmissionData: {
+            meta: {
+              definition: {
+                name: 'Form Before Cutoff'
+              }
+            },
+            data: {
+              files: {
+                field1: [{ fileId: 'file-before' }]
+              }
+            }
+          }
+        },
+        {
+          id: 'on-cutoff',
+          orgId: 100002,
+          createdAt: new Date('2025-11-19T00:00:00.000Z'), // Exactly on cutoff
+          referenceNumber: 'REF-ON',
+          rawSubmissionData: {
+            meta: {
+              definition: {
+                name: 'Form On Cutoff'
+              }
+            },
+            data: {
+              files: {
+                field1: [{ fileId: 'file-on-cutoff' }]
+              }
+            }
+          }
+        },
+        {
+          id: 'after-cutoff',
+          orgId: 100003,
+          createdAt: new Date('2025-11-20T00:00:00.000Z'), // After cutoff
+          referenceNumber: 'REF-AFTER',
+          rawSubmissionData: {
+            meta: {
+              definition: {
+                name: 'Form After Cutoff'
+              }
+            },
+            data: {
+              files: {
+                field1: [{ fileId: 'file-after' }]
+              }
+            }
+          }
+        }
+      ],
+      findAllAccreditations: async () => []
+    }
+
+    const result = await getUploadedFileInfo(mockRepository)
+
+    // Should only include files from submissions on or after cutoff date
+    expect(result).toHaveLength(2)
+    expect(result.map((f) => f.fileId)).toEqual([
+      'file-on-cutoff',
+      'file-after'
+    ])
+    expect(result.map((f) => f.id)).toEqual(['on-cutoff', 'after-cutoff'])
   })
 })

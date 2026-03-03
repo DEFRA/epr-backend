@@ -1,4 +1,5 @@
 import {
+  extractAgencyCodeFromName,
   extractAgencyFromDefinitionName,
   extractAnswers,
   extractRepeaters,
@@ -683,6 +684,20 @@ describe('extractTimestamp', () => {
     expect(result.getFullYear()).toBe(2025)
     expect(result.getMonth()).toBe(9) // October (0-indexed)
     expect(result.getDate()).toBe(8)
+  })
+})
+
+describe('extractAgencyCodeFromName', () => {
+  it('should return undefined when definition name is null', () => {
+    expect(extractAgencyCodeFromName(null)).toBeUndefined()
+  })
+
+  it('should extract EA from definition name', () => {
+    expect(
+      extractAgencyCodeFromName(
+        'Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste exporter (EA)'
+      )
+    ).toBe('EA')
   })
 })
 

@@ -200,17 +200,23 @@ export function extractTimestamp(rawSubmissionData) {
   return resultDate
 }
 
-export function extractAgencyFromDefinitionName(rawSubmissionData) {
-  const definitionName = rawSubmissionData?.meta?.definition?.name
-
+/**
+ * Extract agency code from a definition name string
+ * @param {string} definitionName - The definition name to parse
+ * @returns {string|undefined} The agency code if found (e.g., "EA", "SEPA"), or undefined
+ */
+export function extractAgencyCodeFromName(definitionName) {
   if (!definitionName) {
     return undefined
   }
+  const match = /\(([A-Z]+)\)\s*$/.exec(definitionName)
+  return match ? match[1] : undefined
+}
 
-  // Match pattern like "(EA)" or "(SEPA)" at the end of the name
-  const match = definitionName.match(/\(([A-Z]+)\)\s*$/)
-
-  return match ? mapRegulator(match[1]) : undefined
+export function extractAgencyFromDefinitionName(rawSubmissionData) {
+  const definitionName = rawSubmissionData?.meta?.definition?.name
+  const agencyCode = extractAgencyCodeFromName(definitionName)
+  return agencyCode ? mapRegulator(agencyCode) : undefined
 }
 
 /**
