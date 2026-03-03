@@ -1,6 +1,12 @@
 import Joi from 'joi'
 
-import { COMMAND_TYPE } from './types.js'
+/**
+ * Commands that can be sent to the SQS command queue.
+ */
+export const COMMAND_TYPE = Object.freeze({
+  VALIDATE: 'validate',
+  SUBMIT: 'submit'
+})
 
 const userSchema = Joi.object({
   id: Joi.string().required(),

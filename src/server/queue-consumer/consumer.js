@@ -8,8 +8,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { COMMAND_TYPE } from '#domain/commands/types.js'
-import { validateCommandMessage } from '#domain/commands/schemas.js'
+import {
+  COMMAND_TYPE,
+  validateCommandMessage
+} from '#domain/commands/schemas.js'
 import {
   markAsSubmissionFailed,
   markAsValidationFailed

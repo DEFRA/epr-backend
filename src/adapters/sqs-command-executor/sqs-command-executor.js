@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
-import { COMMAND_TYPE } from '#domain/commands/types.js'
+import { COMMAND_TYPE } from '#domain/commands/schemas.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
