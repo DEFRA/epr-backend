@@ -8,7 +8,8 @@ import {
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { FindAllParams, OverseasSite, OverseasSitesRepositoryFactory } from './port.js' */
 
-const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const escapeRegex = (string) =>
+  string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const COLLECTION_NAME = 'overseas-sites'
 

@@ -38,7 +38,7 @@ export function createInMemoryOrsImportsRepository() {
 
     async recordFileResult(id, fileIndex, result) {
       const doc = storage.get(id)
-      if (doc && doc.files[fileIndex]) {
+      if (doc?.files[fileIndex]) {
         doc.files[fileIndex].result = structuredClone(result)
         doc.updatedAt = new Date().toISOString()
       }
