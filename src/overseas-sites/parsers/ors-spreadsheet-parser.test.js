@@ -716,7 +716,7 @@ describe('ORS spreadsheet parser', () => {
 
   describe('real spreadsheet integration', () => {
     it('should parse the example ORS spreadsheet correctly', async () => {
-      const buffer = readFileSync(join(FIXTURES_DIR, 'ors-id-log-example.xlsm'))
+      const buffer = readFileSync(join(FIXTURES_DIR, 'ors-id-log-example.xlsx'))
 
       const result = await parse(buffer)
 
@@ -755,7 +755,7 @@ describe('ORS spreadsheet parser', () => {
     })
 
     it('should skip the 990 placeholder rows in the real spreadsheet', async () => {
-      const buffer = readFileSync(join(FIXTURES_DIR, 'ors-id-log-example.xlsm'))
+      const buffer = readFileSync(join(FIXTURES_DIR, 'ors-id-log-example.xlsx'))
 
       const result = await parse(buffer)
 
