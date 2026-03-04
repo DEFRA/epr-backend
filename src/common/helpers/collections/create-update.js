@@ -38,6 +38,8 @@ const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 const COLLECTION_WASTE_RECORDS = 'waste-records'
+const COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES =
+  'l-packaging-recycling-notes'
 
 /**
  * @import {Db} from 'mongodb'
@@ -63,6 +65,37 @@ export async function createFormCollections(db) {
  */
 export async function createLockManagerIndex(db) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
+}
+
+/**
+ * @async
+ * @param {Db} db
+ * @returns {Promise<void>}
+ */
+export async function dropLegacyPackagingRecyclingNotesCollection(db) {
+  const existingLegacyCollection = await db
+    .listCollections(
+      { name: COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES },
+      { nameOnly: true }
+    )
+    .toArray()
+
+  if (existingLegacyCollection.length === 0) {
+    return
+  }
+
+  try {
+    await db.dropCollection(COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES)
+
+    logger.info({
+      message: `Dropped legacy collection: ${COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES}`
+    })
+  } catch (error) {
+    logger.error({
+      err: error,
+      message: `Failed to drop legacy collection: ${COLLECTION_LEGACY_PACKAGING_RECYCLING_NOTES}. Continuing startup.`
+    })
+  }
 }
 
 /**
