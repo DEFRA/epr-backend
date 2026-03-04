@@ -5,6 +5,7 @@ import {
 } from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
+import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
@@ -101,16 +102,19 @@ describe('createCommandQueueConsumer', () => {
   })
 
   const createConsumer = () =>
-    createCommandQueueConsumer({
-      sqsClient,
-      queueName: 'test-queue',
-      logger,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository,
-      summaryLogExtractor
-    })
+    createCommandQueueConsumer(
+      {
+        sqsClient,
+        queueName: 'test-queue',
+        logger,
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        wasteBalancesRepository,
+        summaryLogExtractor
+      },
+      summaryLogCommandHandlers
+    )
 
   describe('queue URL resolution', () => {
     it('looks up queue URL by name', async () => {

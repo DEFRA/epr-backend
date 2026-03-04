@@ -9,85 +9,57 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
-import {
-  markAsSubmissionFailed,
-  markAsValidationFailed
-} from '#domain/summary-logs/mark-as-failed.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
+/** @typedef {import('./summary-log-commands.js').CommandHandler} CommandHandler */
 
 const ONE_MINUTE = 60_000
 const COMMAND_TIMEOUT_MINUTES = 5
 const COMMAND_TIMEOUT_MS = COMMAND_TIMEOUT_MINUTES * ONE_MINUTE
 
 /**
- * @typedef {object} CommandMessage
- * @property {string} command - 'validate' or 'submit'
- * @property {string} summaryLogId - The summary log ID to process
- * @property {object} [user] - Optional user context for audit trail
- */
-
-const userSchema = Joi.object({
-  id: Joi.string().required(),
-  email: Joi.string().required(),
-  scope: Joi.array().items(Joi.string()).required()
-})
-
-const commandMessageSchema = Joi.object({
-  command: Joi.string()
-    .valid(SUMMARY_LOG_COMMAND.VALIDATE, SUMMARY_LOG_COMMAND.SUBMIT)
-    .required(),
-  summaryLogId: Joi.string().required(),
-  user: userSchema.optional()
-})
-
-/**
  * @typedef {object} ConsumerDependencies
  * @property {SQSClient} sqsClient
  * @property {string} queueName
  * @property {TypedLogger} logger
- * @property {object} summaryLogsRepository
- * @property {object} organisationsRepository
- * @property {object} wasteRecordsRepository
- * @property {object} wasteBalancesRepository
- * @property {object} summaryLogExtractor
  */
 
 /**
- * Handles a validate command.
- * @param {string} summaryLogId
- * @param {ConsumerDependencies} deps
+ * Builds the envelope Joi schema dynamically from registered handlers.
+ * Validates the `command` field against known handler commands, then
+ * defers payload validation to the matched handler's payloadSchema.
+ * @param {CommandHandler[]} handlers
+ * @returns {{ envelopeSchema: import('joi').ObjectSchema, handlerMap: Map<string, CommandHandler> }}
  */
-const handleValidateCommand = async (summaryLogId, deps) => {
-  const {
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    summaryLogExtractor
-  } = deps
+const buildSchemas = (handlers) => {
+  const handlerMap = new Map(handlers.map((h) => [h.command, h]))
+  const validCommands = handlers.map((h) => h.command)
 
-  const validateSummaryLog = createSummaryLogsValidator({
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    summaryLogExtractor
-  })
+  const envelopeSchema = Joi.object({
+    command: Joi.string()
+      .valid(...validCommands)
+      .required()
+  }).options({ allowUnknown: true })
 
-  await validateSummaryLog(summaryLogId)
+  return { envelopeSchema, handlerMap }
 }
 
 /**
  * Parses and validates a command message from SQS.
+ *
+ * Two-pass validation:
+ * 1. Envelope: validates the `command` field is a known command
+ * 2. Payload: validates remaining fields against the handler's payloadSchema
+ *
  * @param {import('@aws-sdk/client-sqs').Message} message
  * @param {TypedLogger} logger
- * @returns {CommandMessage | null} The parsed command, or null if invalid
+ * @param {import('joi').ObjectSchema} envelopeSchema
+ * @param {Map<string, CommandHandler>} handlerMap
+ * @returns {{ handler: CommandHandler, payload: object } | null}
  */
-const parseCommandMessage = (message, logger) => {
+const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
   let parsed
 
   const messageId = message.MessageId ?? 'unknown'
@@ -105,11 +77,12 @@ const parseCommandMessage = (message, logger) => {
     return null
   }
 
-  const { error, value } = commandMessageSchema.validate(parsed)
+  // Pass 1: validate envelope (command field)
+  const { error: envelopeError } = envelopeSchema.validate(parsed)
 
-  if (error) {
+  if (envelopeError) {
     logger.error({
-      message: `Invalid command message for messageId=${messageId}: ${error.message}`,
+      message: `Invalid command message for messageId=${messageId}: ${envelopeError.message}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -118,30 +91,25 @@ const parseCommandMessage = (message, logger) => {
     return null
   }
 
-  return value
-}
+  const { command, ...rest } = parsed
+  const handler = handlerMap.get(command)
 
-/**
- * Marks a summary log as failed based on the command type.
- * @param {string} commandType
- * @param {string} summaryLogId
- * @param {object} summaryLogsRepository
- * @param {TypedLogger} logger
- */
-const markCommandAsFailed = async (
-  commandType,
-  summaryLogId,
-  summaryLogsRepository,
-  logger
-) => {
-  if (commandType === SUMMARY_LOG_COMMAND.VALIDATE) {
-    await markAsValidationFailed(summaryLogId, summaryLogsRepository, logger)
+  // Pass 2: validate payload against handler's schema
+  const { error: payloadError, value: payload } =
+    handler.payloadSchema.validate(rest)
+
+  if (payloadError) {
+    logger.error({
+      message: `Invalid command message for messageId=${messageId}: ${payloadError.message}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+    return null
   }
-  // Separate if rather than else-if: createMessageHandler validates command
-  // type before calling this function, so both conditions are independent
-  if (commandType === SUMMARY_LOG_COMMAND.SUBMIT) {
-    await markAsSubmissionFailed(summaryLogId, summaryLogsRepository, logger)
-  }
+
+  return { handler, payload }
 }
 
 /**
@@ -165,20 +133,20 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * and rethrows transient errors so SQS can retry.
  * @param {object} params
  * @param {Error} params.err
- * @param {string} params.commandType
- * @param {string} params.summaryLogId
+ * @param {CommandHandler} params.handler
+ * @param {object} params.payload
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
- * @param {object} params.summaryLogsRepository
+ * @param {object} params.deps
  * @param {TypedLogger} params.logger
  */
 const handleCommandError = async ({
   err,
-  commandType,
-  summaryLogId,
+  handler,
+  payload,
   message,
   maxReceiveCount,
-  summaryLogsRepository,
+  deps,
   logger
 }) => {
   const isPermanent = err instanceof PermanentError
@@ -189,7 +157,7 @@ const handleCommandError = async ({
 
   logger.error({
     err,
-    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -197,12 +165,7 @@ const handleCommandError = async ({
   })
 
   if (isTerminal) {
-    await markCommandAsFailed(
-      commandType,
-      summaryLogId,
-      summaryLogsRepository,
-      logger
-    )
+    await handler.onFailure(payload, deps)
   }
 
   if (isPermanent) {
@@ -213,77 +176,74 @@ const handleCommandError = async ({
 
 /**
  * Creates the message handler for the SQS consumer.
- * @param {ConsumerDependencies} deps
+ * @param {object} deps
  * @param {number|null} maxReceiveCount
+ * @param {import('joi').ObjectSchema} envelopeSchema
+ * @param {Map<string, CommandHandler>} handlerMap
  * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<import('@aws-sdk/client-sqs').Message | void>}
  */
-const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
-  const { logger, summaryLogsRepository } = deps
+const createMessageHandler =
+  (deps, maxReceiveCount, envelopeSchema, handlerMap) => async (message) => {
+    const { logger } = deps
 
-  const command = parseCommandMessage(message, logger)
-  if (!command) {
-    throw new Error(
-      `Unparseable command message, messageId=${message.MessageId}`
+    const result = parseCommandMessage(
+      message,
+      logger,
+      envelopeSchema,
+      handlerMap
     )
-  }
-
-  const { command: commandType, summaryLogId } = command
-
-  logger.info({
-    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+    if (!result) {
+      throw new Error(
+        `Unparseable command message, messageId=${message.MessageId}`
+      )
     }
-  })
 
-  try {
-    switch (commandType) {
-      case SUMMARY_LOG_COMMAND.VALIDATE:
-        await handleValidateCommand(summaryLogId, deps)
-        break
-
-      case SUMMARY_LOG_COMMAND.SUBMIT:
-        await submitSummaryLog(summaryLogId, { ...deps, user: command.user })
-        break
-
-      /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
-      default:
-        return message
-    }
+    const { handler, payload } = result
 
     logger.info({
-      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+      message: `Processing command: ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+        action: LOGGING_EVENT_ACTIONS.START_SUCCESS
       }
     })
 
-    return message
-  } catch (err) {
-    await handleCommandError({
-      err,
-      commandType,
-      summaryLogId,
-      message,
-      maxReceiveCount,
-      summaryLogsRepository,
-      logger
-    })
+    try {
+      await handler.execute(payload, deps)
 
-    // handleCommandError returns (rather than throwing) for permanent errors,
-    // so acknowledge the message to prevent SQS retrying it
-    return message
+      logger.info({
+        message: `Command completed: ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+        }
+      })
+
+      return message
+    } catch (err) {
+      await handleCommandError({
+        err,
+        handler,
+        payload,
+        message,
+        maxReceiveCount,
+        deps,
+        logger
+      })
+
+      // handleCommandError returns (rather than throwing) for permanent errors,
+      // so acknowledge the message to prevent SQS retrying it
+      return message
+    }
   }
-}
 
 /**
  * Creates the SQS command queue consumer.
- * @param {ConsumerDependencies} deps
+ * @param {ConsumerDependencies & Record<string, *>} deps
+ * @param {CommandHandler[]} handlers - Registered command handlers
  * @returns {Promise<Consumer>}
  */
-export const createCommandQueueConsumer = async (deps) => {
+export const createCommandQueueConsumer = async (deps, handlers) => {
   const { sqsClient, queueName, logger } = deps
 
   const queueUrl = await resolveQueueUrl(sqsClient, queueName)
@@ -304,11 +264,13 @@ export const createCommandQueueConsumer = async (deps) => {
     })
   }
 
+  const { envelopeSchema, handlerMap } = buildSchemas(handlers)
+
   const consumer = Consumer.create({
     queueUrl,
     sqs: sqsClient,
     handleMessage: /** @type {*} */ (
-      createMessageHandler(deps, maxReceiveCount)
+      createMessageHandler(deps, maxReceiveCount, envelopeSchema, handlerMap)
     ),
     handleMessageTimeout: COMMAND_TIMEOUT_MS,
     attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
@@ -337,12 +299,17 @@ export const createCommandQueueConsumer = async (deps) => {
   })
 
   consumer.on('timeout_error', async (err, message) => {
-    const command = parseCommandMessage(message, logger)
+    const result = parseCommandMessage(
+      message,
+      logger,
+      envelopeSchema,
+      handlerMap
+    )
 
     logger.error({
       err,
-      message: command
-        ? `Command timed out: ${command.command} for summaryLogId=${command.summaryLogId} messageId=${message.MessageId}`
+      message: result
+        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
         : `Command timed out for messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -350,13 +317,8 @@ export const createCommandQueueConsumer = async (deps) => {
       }
     })
 
-    if (command) {
-      await markCommandAsFailed(
-        command.command,
-        command.summaryLogId,
-        deps.summaryLogsRepository,
-        logger
-      )
+    if (result) {
+      await result.handler.onFailure(result.payload, deps)
     }
   })
 
