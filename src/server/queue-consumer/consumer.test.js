@@ -345,7 +345,7 @@ describe('createCommandQueueConsumer', () => {
       const message = {
         MessageId: 'msg-123',
         Body: JSON.stringify({
-          command: 'process',
+          command: 'import-overseas-sites',
           importId: 'import-abc'
         })
       }
@@ -484,7 +484,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit, process]'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit, import-overseas-sites]'
           })
         )
       })
@@ -917,7 +917,10 @@ describe('createCommandQueueConsumer', () => {
       it('processes ORS import successfully', async () => {
         const message = {
           MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'process', importId: 'import-abc' })
+          Body: JSON.stringify({
+            command: 'import-overseas-sites',
+            importId: 'import-abc'
+          })
         }
 
         await handleMessage(message)
@@ -932,7 +935,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Command completed: process for importId=import-abc messageId=msg-123'
+              'Command completed: import-overseas-sites for importId=import-abc messageId=msg-123'
           })
         )
       })
@@ -946,7 +949,7 @@ describe('createCommandQueueConsumer', () => {
           const message = {
             MessageId: 'msg-123',
             Body: JSON.stringify({
-              command: 'process',
+              command: 'import-overseas-sites',
               importId: 'import-abc'
             })
           }
@@ -971,7 +974,7 @@ describe('createCommandQueueConsumer', () => {
           const message = {
             MessageId: 'msg-123',
             Body: JSON.stringify({
-              command: 'process',
+              command: 'import-overseas-sites',
               importId: 'import-abc'
             })
           }
@@ -1000,7 +1003,7 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
-              command: 'process',
+              command: 'import-overseas-sites',
               importId: 'import-abc'
             })
           }
@@ -1019,7 +1022,7 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
-              command: 'process',
+              command: 'import-overseas-sites',
               importId: 'import-abc'
             })
           }
@@ -1038,7 +1041,7 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
-              command: 'process',
+              command: 'import-overseas-sites',
               importId: 'import-abc'
             })
           }

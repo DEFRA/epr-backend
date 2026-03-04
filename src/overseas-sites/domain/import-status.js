@@ -6,5 +6,5 @@ export const ORS_IMPORT_STATUS = Object.freeze({
 })
 
 export const ORS_IMPORT_COMMAND = Object.freeze({
-  PROCESS: 'process'
+  IMPORT_OVERSEAS_SITES: 'import-overseas-sites'
 })

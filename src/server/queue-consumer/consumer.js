@@ -48,7 +48,7 @@ const commandMessageSchema = Joi.object({
     .valid(
       SUMMARY_LOG_COMMAND.VALIDATE,
       SUMMARY_LOG_COMMAND.SUBMIT,
-      ORS_IMPORT_COMMAND.PROCESS
+      ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES
     )
     .required(),
   summaryLogId: Joi.string().when('command', {
@@ -57,7 +57,7 @@ const commandMessageSchema = Joi.object({
     otherwise: Joi.forbidden()
   }),
   importId: Joi.string().when('command', {
-    is: ORS_IMPORT_COMMAND.PROCESS,
+    is: ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES,
     then: Joi.required(),
     otherwise: Joi.forbidden()
   }),
@@ -185,7 +185,7 @@ const markCommandAsFailed = async (commandType, command, deps, logger) => {
       logger
     )
   }
-  if (commandType === ORS_IMPORT_COMMAND.PROCESS) {
+  if (commandType === ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES) {
     await markOrsImportAsFailed(
       command.importId,
       deps.orsImportsRepository,
@@ -295,7 +295,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
         })
         break
 
-      case ORS_IMPORT_COMMAND.PROCESS:
+      case ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES:
         await processOrsImport(command.importId, {
           orsImportsRepository: deps.orsImportsRepository,
           uploadsRepository: deps.uploadsRepository,
