@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { summaryLogCommandHandlers } from './summary-log-commands.js'
+import { createSummaryLogCommandHandlers } from './summary-log-commands.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
@@ -12,10 +12,13 @@ const { submitSummaryLog } = await import('#application/summary-logs/submit.js')
 const { markAsValidationFailed, markAsSubmissionFailed } =
   await import('#domain/summary-logs/mark-as-failed.js')
 
-describe('summaryLogCommandHandlers', () => {
+describe('createSummaryLogCommandHandlers', () => {
   let deps
+  let handlers
 
   beforeEach(() => {
+    vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
+
     deps = {
       logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
       summaryLogsRepository: { findById: vi.fn(), update: vi.fn() },
@@ -24,20 +27,24 @@ describe('summaryLogCommandHandlers', () => {
       wasteBalancesRepository: {},
       summaryLogExtractor: {}
     }
+
+    handlers = createSummaryLogCommandHandlers()
   })
 
   afterEach(() => {
     vi.resetAllMocks()
   })
 
-  it('exports two handlers', () => {
-    expect(summaryLogCommandHandlers).toHaveLength(2)
+  it('returns two handlers', () => {
+    expect(handlers).toHaveLength(2)
   })
 
   describe('validate handler', () => {
-    const handler = summaryLogCommandHandlers.find(
-      (h) => h.command === 'validate'
-    )
+    let handler
+
+    beforeEach(() => {
+      handler = handlers.find((h) => h.command === 'validate')
+    })
 
     it('has command "validate"', () => {
       expect(handler.command).toBe('validate')
@@ -107,9 +114,11 @@ describe('summaryLogCommandHandlers', () => {
   })
 
   describe('submit handler', () => {
-    const handler = summaryLogCommandHandlers.find(
-      (h) => h.command === 'submit'
-    )
+    let handler
+
+    beforeEach(() => {
+      handler = handlers.find((h) => h.command === 'submit')
+    })
 
     it('has command "submit"', () => {
       expect(handler.command).toBe('submit')
@@ -213,7 +222,7 @@ describe('summaryLogCommandHandlers', () => {
   })
 
   it('all handlers have valid Joi payload schemas', () => {
-    for (const handler of summaryLogCommandHandlers) {
+    for (const handler of handlers) {
       expect(Joi.isSchema(handler.payloadSchema)).toBe(true)
     }
   })

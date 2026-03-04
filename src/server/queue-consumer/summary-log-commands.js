@@ -44,8 +44,15 @@ const userSchema = Joi.object({
  * @property {(payload: object) => string} describe - Returns logging context
  */
 
-/** @type {CommandHandler[]} */
-export const summaryLogCommandHandlers = [
+/**
+ * Creates summary log command handlers.
+ *
+ * Wrapped in a factory so the plugin can construct handlers at
+ * initialisation time rather than importing a static array.
+ *
+ * @returns {CommandHandler[]}
+ */
+export const createSummaryLogCommandHandlers = () => [
   {
     command: SUMMARY_LOG_COMMAND.VALIDATE,
     payloadSchema: Joi.object({

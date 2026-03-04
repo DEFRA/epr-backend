@@ -5,7 +5,7 @@ import {
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createCommandQueueConsumer } from './consumer.js'
-import { summaryLogCommandHandlers } from './summary-log-commands.js'
+import { createSummaryLogCommandHandlers } from './summary-log-commands.js'
 
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
@@ -52,6 +52,8 @@ export const commandQueueConsumerPlugin = {
       logger: server.logger
     })
 
+    const handlers = createSummaryLogCommandHandlers()
+
     // Consumer created lazily on server start to avoid SQS connection during tests
     let consumer = null
 
@@ -76,7 +78,7 @@ export const commandQueueConsumerPlugin = {
           wasteBalancesRepository,
           summaryLogExtractor
         },
-        summaryLogCommandHandlers
+        handlers
       )
 
       consumer.start()

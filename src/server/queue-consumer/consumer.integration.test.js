@@ -6,7 +6,7 @@ import {
 } from '@aws-sdk/client-sqs'
 import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
-import { summaryLogCommandHandlers } from './summary-log-commands.js'
+import { createSummaryLogCommandHandlers } from './summary-log-commands.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
@@ -93,7 +93,7 @@ describe('SQS command queue consumer integration', () => {
         wasteBalancesRepository,
         summaryLogExtractor
       },
-      summaryLogCommandHandlers
+      createSummaryLogCommandHandlers()
     )
 
   describe('queue connection', () => {
@@ -128,7 +128,7 @@ describe('SQS command queue consumer integration', () => {
               wasteBalancesRepository,
               summaryLogExtractor
             },
-            summaryLogCommandHandlers
+            createSummaryLogCommandHandlers()
           )
         ).rejects.toThrow()
       }

@@ -13,7 +13,8 @@ const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createSummaryLogExtractor } =
   await import('#application/summary-logs/extractor.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
-const { summaryLogCommandHandlers } = await import('./summary-log-commands.js')
+const { createSummaryLogCommandHandlers } =
+  await import('./summary-log-commands.js')
 
 describe('commandQueueConsumerPlugin', () => {
   let server
@@ -55,6 +56,7 @@ describe('commandQueueConsumerPlugin', () => {
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
     vi.mocked(createSummaryLogExtractor).mockReturnValue({})
+    vi.mocked(createSummaryLogCommandHandlers).mockReturnValue([])
     vi.mocked(createCommandQueueConsumer).mockResolvedValue(mockConsumer)
   })
 
@@ -131,7 +133,7 @@ describe('commandQueueConsumerPlugin', () => {
           wasteBalancesRepository: server.app.wasteBalancesRepository,
           summaryLogExtractor: expect.any(Object)
         },
-        summaryLogCommandHandlers
+        []
       )
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer for queue: test-queue',
