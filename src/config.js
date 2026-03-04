@@ -455,7 +455,7 @@ const baseConfig = {
       env: 'FORMS_SUBMISSION_EXTERNAL_API_COGNITO_TOKEN_URL'
     },
     copyFilesUploadedFromDate: {
-      doc: 'Only copy form files uploaded on or after this date (ISO 8601 format)',
+      doc: 'Only copy form files uploaded after this date (ISO 8601 format)',
       format: String,
       default: '2025-11-19T00:00:00.000Z',
       env: 'COPY_FILES_UPLOADED_FROM_DATE'
