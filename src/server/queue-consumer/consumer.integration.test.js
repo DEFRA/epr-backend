@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-sqs'
 import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
+import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
@@ -80,21 +81,27 @@ describe('SQS command queue consumer integration', () => {
     vi.mocked(submitSummaryLog).mockResolvedValue(undefined)
   })
 
+  const createConsumer = (sqsClient) =>
+    createCommandQueueConsumer(
+      {
+        sqsClient,
+        queueName: sqsClient.queueName,
+        logger,
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        wasteBalancesRepository,
+        summaryLogExtractor
+      },
+      summaryLogCommandHandlers
+    )
+
   describe('queue connection', () => {
     it(
       'connects to queue and resolves URL by name',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         expect(consumer).toBeDefined()
         expect(logger.info).toHaveBeenCalledWith(
@@ -110,16 +117,19 @@ describe('SQS command queue consumer integration', () => {
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         await expect(
-          createCommandQueueConsumer({
-            sqsClient,
-            queueName: 'nonexistent-queue',
-            logger,
-            summaryLogsRepository,
-            organisationsRepository,
-            wasteRecordsRepository,
-            wasteBalancesRepository,
-            summaryLogExtractor
-          })
+          createCommandQueueConsumer(
+            {
+              sqsClient,
+              queueName: 'nonexistent-queue',
+              logger,
+              summaryLogsRepository,
+              organisationsRepository,
+              wasteRecordsRepository,
+              wasteBalancesRepository,
+              summaryLogExtractor
+            },
+            summaryLogCommandHandlers
+          )
         ).rejects.toThrow()
       }
     )
@@ -149,16 +159,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -200,16 +201,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -261,16 +253,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -332,16 +315,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -401,16 +375,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -477,16 +442,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -556,16 +512,7 @@ describe('SQS command queue consumer integration', () => {
           })
         )
 
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
 
@@ -616,16 +563,7 @@ describe('SQS command queue consumer integration', () => {
       'stops polling when stop is called',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
-        const consumer = await createCommandQueueConsumer({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        })
+        const consumer = await createConsumer(sqsClient)
 
         consumer.start()
         expect(consumer.status.isRunning).toBe(true)
