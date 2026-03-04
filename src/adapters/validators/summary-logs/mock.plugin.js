@@ -6,7 +6,8 @@
 /** @returns {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} */
 const createNoOpExecutor = () => ({
   validate: async () => {},
-  submit: async () => {}
+  submit: async () => {},
+  recalculateBalance: async () => {}
 })
 
 // No SQS - runs synchronously for predictable test behaviour.

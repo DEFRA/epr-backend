@@ -18,6 +18,7 @@ import {
 } from '#domain/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { recalculateBalance } from '#application/waste-balances/recalculate-balance.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
@@ -79,7 +80,25 @@ const commandHandlers = {
         deps.logger
       )
     }
+  },
+  [COMMAND_TYPE.RECALCULATE_BALANCE]: {
+    execute: async (command, deps) => {
+      await recalculateBalance(command.accreditationId, deps)
+    }
   }
+}
+
+/**
+ * Per-command description formatters for log messages.
+ * @type {Record<string, (command: object) => string>}
+ */
+const commandDescribers = {
+  [COMMAND_TYPE.VALIDATE]: (cmd) =>
+    `${cmd.command} for summaryLogId=${cmd.summaryLogId}`,
+  [COMMAND_TYPE.SUBMIT]: (cmd) =>
+    `${cmd.command} for summaryLogId=${cmd.summaryLogId}`,
+  [COMMAND_TYPE.RECALCULATE_BALANCE]: (cmd) =>
+    `${cmd.command} for accreditationId=${cmd.accreditationId}`
 }
 
 /**
@@ -87,8 +106,10 @@ const commandHandlers = {
  * @param {object} command
  * @returns {string}
  */
-const describeCommand = (command) =>
-  `${command.command} for summaryLogId=${command.summaryLogId}`
+const describeCommand = (command) => {
+  const describer = commandDescribers[command.command]
+  return describer(command)
+}
 
 /**
  * Parses and validates a command message from SQS.
@@ -181,7 +202,7 @@ const handleCommandError = async ({
     }
   })
 
-  if (isTerminal) {
+  if (isTerminal && handler.onFailure) {
     await handler.onFailure(parsedCommand, deps)
   }
 
@@ -319,7 +340,9 @@ export const createCommandQueueConsumer = async (deps) => {
 
     if (parsedCommand) {
       const handler = commandHandlers[parsedCommand.command]
-      await handler.onFailure(parsedCommand, deps)
+      if (handler.onFailure) {
+        await handler.onFailure(parsedCommand, deps)
+      }
     }
   })
 

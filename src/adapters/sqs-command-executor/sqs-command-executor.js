@@ -40,24 +40,16 @@ const extractUser = (request) => {
  * @param {string} queueUrl
  * @param {SQSClient} sqsClient
  * @param {object} logger
- * @param {string} command
- * @param {string} summaryLogId
- * @param {object} [user]
+ * @param {object} messageBody - The full command message body
+ * @param {string} logDescription - Human-readable description for logging
  */
 const sendCommandMessage = async (
   queueUrl,
   sqsClient,
   logger,
-  command,
-  summaryLogId,
-  user
+  messageBody,
+  logDescription
 ) => {
-  const messageBody = { command, summaryLogId }
-
-  if (user) {
-    messageBody.user = user
-  }
-
   await sqsClient.send(
     new SendMessageCommand({
       QueueUrl: queueUrl,
@@ -66,8 +58,7 @@ const sendCommandMessage = async (
   )
 
   logger.info({
-    message: `Sent ${command} command for summaryLogId=${summaryLogId}`,
-    summaryLogId,
+    message: `Sent ${logDescription}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -101,20 +92,33 @@ export const createSqsCommandExecutor = async (deps) => {
         queueUrl,
         sqsClient,
         logger,
-        COMMAND_TYPE.VALIDATE,
-        summaryLogId
+        { command: COMMAND_TYPE.VALIDATE, summaryLogId },
+        `${COMMAND_TYPE.VALIDATE} command for summaryLogId=${summaryLogId}`
       )
     },
     submit: async (summaryLogId, request) => {
       const user = extractUser(request)
+      const messageBody = { command: COMMAND_TYPE.SUBMIT, summaryLogId }
+
+      if (user) {
+        messageBody.user = user
+      }
 
       await sendCommandMessage(
         queueUrl,
         sqsClient,
         logger,
-        COMMAND_TYPE.SUBMIT,
-        summaryLogId,
-        user
+        messageBody,
+        `${COMMAND_TYPE.SUBMIT} command for summaryLogId=${summaryLogId}`
+      )
+    },
+    recalculateBalance: async (accreditationId) => {
+      await sendCommandMessage(
+        queueUrl,
+        sqsClient,
+        logger,
+        { command: COMMAND_TYPE.RECALCULATE_BALANCE, accreditationId },
+        `${COMMAND_TYPE.RECALCULATE_BALANCE} command for accreditationId=${accreditationId}`
       )
     }
   }

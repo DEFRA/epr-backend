@@ -19,12 +19,15 @@ vi.mock('@aws-sdk/client-sqs', () => ({
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
+vi.mock('#application/waste-balances/recalculate-balance.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
 
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
 const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
+const { recalculateBalance } =
+  await import('#application/waste-balances/recalculate-balance.js')
 const { summaryLogMetrics } =
   await import('#common/helpers/metrics/summary-logs.js')
 
@@ -448,7 +451,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit, recalculate_balance]'
           })
         )
       })
@@ -682,6 +685,116 @@ describe('createCommandQueueConsumer', () => {
             expect.objectContaining({
               status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
             })
+          )
+        })
+      })
+    })
+
+    describe('recalculate_balance command', () => {
+      it('calls recalculateBalance with the accreditationId and deps', async () => {
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'recalculate_balance',
+            accreditationId: 'acc-123'
+          })
+        }
+
+        await handleMessage(message)
+
+        expect(recalculateBalance).toHaveBeenCalledWith(
+          'acc-123',
+          expect.objectContaining({
+            organisationsRepository,
+            wasteRecordsRepository,
+            wasteBalancesRepository
+          })
+        )
+      })
+
+      it('logs start and completion messages', async () => {
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'recalculate_balance',
+            accreditationId: 'acc-123'
+          })
+        }
+
+        await handleMessage(message)
+
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Processing command: recalculate_balance for accreditationId=acc-123 messageId=msg-123'
+          })
+        )
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Command completed: recalculate_balance for accreditationId=acc-123 messageId=msg-123'
+          })
+        )
+      })
+
+      it('does not call onFailure on timeout (no status to mark)', async () => {
+        const error = new Error('Timeout')
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'recalculate_balance',
+            accreditationId: 'acc-123'
+          })
+        }
+
+        await eventHandlers.timeout_error(error, message)
+
+        expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+      })
+
+      describe('permanent errors', () => {
+        it('acknowledges message without marking as failed', async () => {
+          vi.mocked(recalculateBalance).mockRejectedValue(
+            new PermanentError('Accreditation not found')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'recalculate_balance',
+              accreditationId: 'acc-999'
+            })
+          }
+
+          const result = await handleMessage(message)
+
+          expect(result).toBe(message)
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              message:
+                'Command failed (permanent): recalculate_balance for accreditationId=acc-999 messageId=msg-123'
+            })
+          )
+        })
+      })
+
+      describe('transient errors', () => {
+        it('rethrows transient errors for SQS retry', async () => {
+          vi.mocked(recalculateBalance).mockRejectedValue(
+            new Error('Database unavailable')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'recalculate_balance',
+              accreditationId: 'acc-123'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow(
+            'Database unavailable'
           )
         })
       })

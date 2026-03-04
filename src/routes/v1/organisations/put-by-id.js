@@ -2,10 +2,12 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
+import { detectAccreditationStatusChanges } from './detect-accreditation-status-changes.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 
 /**
  * @typedef {{version: number, updateFragment: object}} PutByIdPayload
@@ -45,12 +47,13 @@ export const organisationsPutById = {
    * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
    *    organisationsRepository: OrganisationsRepository,
    *    systemLogsRepository: SystemLogsRepository,
+   *    summaryLogsWorker: SummaryLogsCommandExecutor,
    *    params: { id: string }
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationsRepository, summaryLogsWorker } = request
 
     const id = request.params.id.trim()
 
@@ -70,6 +73,16 @@ export const organisationsPutById = {
       await organisationsRepository.replace(id, version, updates)
       const updated = await organisationsRepository.findById(id, version + 1)
       await auditOrganisationUpdate(request, id, initial, updated)
+
+      const changedAccreditationIds = detectAccreditationStatusChanges(
+        initial,
+        updated
+      )
+
+      for (const accreditationId of changedAccreditationIds) {
+        await summaryLogsWorker.recalculateBalance(accreditationId)
+      }
+
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)

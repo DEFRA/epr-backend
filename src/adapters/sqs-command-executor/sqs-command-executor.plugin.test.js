@@ -45,7 +45,8 @@ describe('sqsCommandExecutorPlugin', () => {
 
     mockExecutor = {
       validate: vi.fn(),
-      submit: vi.fn()
+      submit: vi.fn(),
+      recalculateBalance: vi.fn()
     }
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
@@ -112,7 +113,9 @@ describe('sqsCommandExecutorPlugin', () => {
         return {
           hasWorker: !!request.summaryLogsWorker,
           hasValidate: typeof request.summaryLogsWorker.validate === 'function',
-          hasSubmit: typeof request.summaryLogsWorker.submit === 'function'
+          hasSubmit: typeof request.summaryLogsWorker.submit === 'function',
+          hasRecalculateBalance:
+            typeof request.summaryLogsWorker.recalculateBalance === 'function'
         }
       }
     })
@@ -126,7 +129,8 @@ describe('sqsCommandExecutorPlugin', () => {
     expect(response.result).toEqual({
       hasWorker: true,
       hasValidate: true,
-      hasSubmit: true
+      hasSubmit: true,
+      hasRecalculateBalance: true
     })
   })
 

@@ -5,7 +5,8 @@ import Joi from 'joi'
  */
 export const COMMAND_TYPE = Object.freeze({
   VALIDATE: 'validate',
-  SUBMIT: 'submit'
+  SUBMIT: 'submit',
+  RECALCULATE_BALANCE: 'recalculate_balance'
 })
 
 const userSchema = Joi.object({
@@ -25,6 +26,11 @@ const submitCommandSchema = Joi.object({
   user: userSchema.optional()
 })
 
+const recalculateBalanceCommandSchema = Joi.object({
+  command: Joi.string().valid(COMMAND_TYPE.RECALCULATE_BALANCE).required(),
+  accreditationId: Joi.string().required()
+})
+
 /**
  * Per-command schema registry. Each command type maps to a Joi schema
  * that validates the full message shape for that command.
@@ -32,7 +38,8 @@ const submitCommandSchema = Joi.object({
  */
 const COMMAND_SCHEMAS = {
   [COMMAND_TYPE.VALIDATE]: validateCommandSchema,
-  [COMMAND_TYPE.SUBMIT]: submitCommandSchema
+  [COMMAND_TYPE.SUBMIT]: submitCommandSchema,
+  [COMMAND_TYPE.RECALCULATE_BALANCE]: recalculateBalanceCommandSchema
 }
 
 const commandEnvelope = Joi.object({

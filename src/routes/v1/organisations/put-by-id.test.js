@@ -1,5 +1,8 @@
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -413,5 +416,118 @@ describe('PUT /v1/organisations/{id}', () => {
         }
       }
     }
+  })
+
+  describe('waste balance recalculation', () => {
+    let recalcServer
+    let recalcOrgsRepository
+    let mockWorker
+
+    beforeEach(async () => {
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      recalcOrgsRepository = organisationsRepositoryFactory()
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+
+      mockWorker = {
+        validate: vi.fn(),
+        submit: vi.fn(),
+        recalculateBalance: vi.fn()
+      }
+
+      recalcServer = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: createSystemLogsRepository()
+        },
+        featureFlags,
+        workers: { summaryLogsWorker: mockWorker }
+      })
+    })
+
+    const createAndFetchOrg = async () => {
+      const fixture = buildOrganisation()
+      await recalcOrgsRepository.insert(fixture)
+
+      const fetchResponse = await recalcServer.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      return JSON.parse(fetchResponse.payload)
+    }
+
+    it('enqueues recalculate_balance when an accreditation status changes', async () => {
+      const org = await createAndFetchOrg()
+      const accreditationId = org.accreditations[0].id
+
+      // Find the registration linked to this accreditation
+      const linkedRegistration = org.registrations.find(
+        (reg) => reg.accreditationId === accreditationId
+      )
+
+      // Approve both the registration and accreditation in a single PUT
+      const updatedRegistrations = org.registrations.map((reg) =>
+        reg.id === linkedRegistration.id
+          ? {
+              ...reg,
+              status: 'approved',
+              validFrom: '2025-01-01',
+              validTo: '2026-01-01',
+              registrationNumber: 'REG-001',
+              reprocessingType: 'input'
+            }
+          : reg
+      )
+
+      const updatedAccreditations = org.accreditations.map((acc) =>
+        acc.id === accreditationId
+          ? {
+              ...acc,
+              status: 'approved',
+              validFrom: '2025-01-01',
+              validTo: '2026-01-01',
+              accreditationNumber: 'ACC-001',
+              reprocessingType: 'input'
+            }
+          : acc
+      )
+
+      const updateFragment = prepareOrgUpdate(org, {
+        registrations: updatedRegistrations,
+        accreditations: updatedAccreditations
+      })
+
+      const response = await recalcServer.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: { Authorization: `Bearer ${validToken}` },
+        payload: { version: org.version, updateFragment }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(mockWorker.recalculateBalance).toHaveBeenCalledWith(
+        accreditationId
+      )
+    })
+
+    it('does not enqueue when no accreditation status changes', async () => {
+      const org = await createAndFetchOrg()
+
+      // Update without changing any accreditation status
+      const response = await recalcServer.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: { Authorization: `Bearer ${validToken}` },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(mockWorker.recalculateBalance).not.toHaveBeenCalled()
+    })
   })
 })

@@ -197,6 +197,65 @@ describe('SQS command executor integration', () => {
     )
   })
 
+  describe('recalculateBalance', () => {
+    it(
+      'sends recalculate_balance command message to queue',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const accreditationId = `acc-test-${Date.now()}`
+        await executor.recalculateBalance(accreditationId)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        const response = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 5
+          })
+        )
+
+        expect(response.Messages).toHaveLength(1)
+
+        const message = JSON.parse(response.Messages[0].Body)
+        expect(message).toEqual({
+          command: 'recalculate_balance',
+          accreditationId
+        })
+      }
+    )
+
+    it(
+      'logs message send success',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const accreditationId = 'acc-log-789'
+        await executor.recalculateBalance(accreditationId)
+
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining(
+              `Sent recalculate_balance command for accreditationId=${accreditationId}`
+            )
+          })
+        )
+      }
+    )
+  })
+
   describe('queue connection', () => {
     it(
       'resolves queue URL and logs it',

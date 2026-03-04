@@ -107,4 +107,28 @@ describe('validateCommandMessage', () => {
       expect(error.message).toContain('email')
     })
   })
+
+  describe('recalculate_balance command', () => {
+    it('accepts a valid recalculate_balance command', () => {
+      const { error, value } = validateCommandMessage({
+        command: 'recalculate_balance',
+        accreditationId: 'acc-123'
+      })
+
+      expect(error).toBeUndefined()
+      expect(value).toEqual({
+        command: 'recalculate_balance',
+        accreditationId: 'acc-123'
+      })
+    })
+
+    it('rejects a recalculate_balance command missing accreditationId', () => {
+      const { error } = validateCommandMessage({
+        command: 'recalculate_balance'
+      })
+
+      expect(error).toBeDefined()
+      expect(error.message).toContain('accreditationId')
+    })
+  })
 })
