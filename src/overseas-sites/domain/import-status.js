@@ -1,5 +1,5 @@
 export const ORS_IMPORT_STATUS = Object.freeze({
-  PENDING: 'pending',
+  PREPROCESSING: 'preprocessing',
   PROCESSING: 'processing',
   COMPLETED: 'completed',
   FAILED: 'failed'

@@ -26,7 +26,7 @@ describe('MongoDB ORS imports repository', () => {
   it('creates and retrieves an import document', async ({ repository }) => {
     const created = await repository.create({
       _id: 'import-test-1',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [{ fileId: 'f1', fileName: 'a.xlsx', s3Uri: 's3://bucket/f1' }]
     })
 
@@ -36,7 +36,7 @@ describe('MongoDB ORS imports repository', () => {
 
     const found = await repository.findById('import-test-1')
     expect(found._id).toBe('import-test-1')
-    expect(found.status).toBe(ORS_IMPORT_STATUS.PENDING)
+    expect(found.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
     expect(found.files).toHaveLength(1)
   })
 
@@ -48,7 +48,7 @@ describe('MongoDB ORS imports repository', () => {
   it('updates the status', async ({ repository }) => {
     await repository.create({
       _id: 'import-test-2',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: []
     })
 

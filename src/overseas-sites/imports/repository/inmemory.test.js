@@ -18,12 +18,12 @@ describe('In-memory ORS imports repository', () => {
     it('stores and returns the import with timestamps', async () => {
       const result = await repository.create({
         _id: 'import-1',
-        status: ORS_IMPORT_STATUS.PENDING,
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
         files: [{ fileId: 'f1', fileName: 'a.xlsx', s3Uri: 's3://bucket/f1' }]
       })
 
       expect(result._id).toBe('import-1')
-      expect(result.status).toBe(ORS_IMPORT_STATUS.PENDING)
+      expect(result.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
       expect(result.files).toHaveLength(1)
       expect(result.createdAt).toBeDefined()
       expect(result.updatedAt).toBeDefined()
@@ -34,7 +34,7 @@ describe('In-memory ORS imports repository', () => {
     it('returns the import document', async () => {
       await repository.create({
         _id: 'import-1',
-        status: ORS_IMPORT_STATUS.PENDING,
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
         files: []
       })
 
@@ -59,7 +59,7 @@ describe('In-memory ORS imports repository', () => {
     it('updates the status', async () => {
       await repository.create({
         _id: 'import-1',
-        status: ORS_IMPORT_STATUS.PENDING,
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
         files: []
       })
 

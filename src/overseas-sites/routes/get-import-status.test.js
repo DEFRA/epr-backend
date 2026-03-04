@@ -51,13 +51,13 @@ describe(`${orsImportStatusPath} route`, () => {
       it('returns OK with default pending status', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/non-existent-id',
+          url: '/v1/overseas-sites/imports/non-existent-id',
           ...asServiceMaintainer()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         const body = JSON.parse(response.payload)
-        expect(body.status).toBe(ORS_IMPORT_STATUS.PENDING)
+        expect(body.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
       })
     })
 
@@ -71,7 +71,7 @@ describe(`${orsImportStatusPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/import-1',
+          url: '/v1/overseas-sites/imports/import-1',
           ...asServiceMaintainer()
         })
 
@@ -104,7 +104,7 @@ describe(`${orsImportStatusPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/import-2',
+          url: '/v1/overseas-sites/imports/import-2',
           ...asServiceMaintainer()
         })
 
@@ -140,7 +140,7 @@ describe(`${orsImportStatusPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/import-failed',
+          url: '/v1/overseas-sites/imports/import-failed',
           ...asServiceMaintainer()
         })
 
@@ -153,7 +153,7 @@ describe(`${orsImportStatusPath} route`, () => {
       it('returns files with null result when not yet processed', async () => {
         await orsImportsRepository.create({
           _id: 'import-3',
-          status: ORS_IMPORT_STATUS.PENDING,
+          status: ORS_IMPORT_STATUS.PREPROCESSING,
           files: [
             {
               fileId: 'file-2',
@@ -166,7 +166,7 @@ describe(`${orsImportStatusPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/import-3',
+          url: '/v1/overseas-sites/imports/import-3',
           ...asServiceMaintainer()
         })
 
@@ -180,7 +180,7 @@ describe(`${orsImportStatusPath} route`, () => {
       it('returns 401 when not authenticated', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/any-id'
+          url: '/v1/overseas-sites/imports/any-id'
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -189,7 +189,7 @@ describe(`${orsImportStatusPath} route`, () => {
       it('returns 403 when authenticated as standard user', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/any-id',
+          url: '/v1/overseas-sites/imports/any-id',
           ...asStandardUser({ linkedOrgId: 'org-123' })
         })
 
@@ -206,7 +206,7 @@ describe(`${orsImportStatusPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/any-id',
+          url: '/v1/overseas-sites/imports/any-id',
           ...asServiceMaintainer()
         })
 
@@ -220,7 +220,7 @@ describe(`${orsImportStatusPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/ors-imports/any-id',
+          url: '/v1/overseas-sites/imports/any-id',
           ...asServiceMaintainer()
         })
 

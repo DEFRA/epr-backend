@@ -11,7 +11,7 @@ import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 
-export const orsImportStatusPath = '/v1/ors-imports/{importId}'
+export const orsImportStatusPath = '/v1/overseas-sites/imports/{id}'
 
 export const orsImportStatus = {
   method: 'GET',
@@ -26,14 +26,14 @@ export const orsImportStatus = {
    */
   handler: async (request, h) => {
     const { orsImportsRepository, params, logger } = request
-    const { importId } = params
+    const { id: importId } = params
 
     try {
       const result = await orsImportsRepository.findById(importId)
 
       if (!result) {
         return h
-          .response({ status: ORS_IMPORT_STATUS.PENDING })
+          .response({ status: ORS_IMPORT_STATUS.PREPROCESSING })
           .code(StatusCodes.OK)
       }
 

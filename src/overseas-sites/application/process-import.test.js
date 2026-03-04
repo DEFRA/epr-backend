@@ -49,7 +49,7 @@ describe('processOrsImport', () => {
   it('processes all files in the import batch', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [
         { fileId: 'f1', fileName: 'sites1.xlsx', s3Uri: 's3://bucket/f1' },
         { fileId: 'f2', fileName: 'sites2.xlsx', s3Uri: 's3://bucket/f2' }
@@ -117,7 +117,7 @@ describe('processOrsImport', () => {
   it('isolates file failures — one failure does not block others', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [
         { fileId: 'f1', fileName: 'bad.xlsx', s3Uri: 's3://bucket/f1' },
         { fileId: 'f2', fileName: 'good.xlsx', s3Uri: 's3://bucket/f2' }
@@ -171,7 +171,7 @@ describe('processOrsImport', () => {
   it('records failure when file cannot be fetched from S3', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [
         { fileId: 'f1', fileName: 'missing.xlsx', s3Uri: 's3://bucket/f1' }
       ]
@@ -207,7 +207,7 @@ describe('processOrsImport', () => {
   it('catches unexpected errors from file processing and records them', async () => {
     const importDoc = {
       _id: 'import-123',
-      status: ORS_IMPORT_STATUS.PENDING,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: [{ fileId: 'f1', fileName: 'crash.xlsx', s3Uri: 's3://bucket/f1' }]
     }
     orsImportsRepository.findById.mockResolvedValue(importDoc)
