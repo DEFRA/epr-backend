@@ -78,8 +78,7 @@ describe('copyAllFormFilesToS3', () => {
     })
 
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Found 3 files to copy',
-      totalFiles: 3
+      message: 'Found 3 files to copy'
     })
 
     expect(

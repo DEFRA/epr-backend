@@ -1,5 +1,5 @@
 import { fetchJson } from './fetch-json.js'
-import { config } from '../../config.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 const tokenCache = new Map()
 
@@ -7,13 +7,6 @@ const REFRESH_BUFFER_MS = 2 * 60 * 1000
 const calculateExpiryTimestamp = (expiresInSeconds) => {
   const expiresInMs = expiresInSeconds * 1000
   return Date.now() + expiresInMs - REFRESH_BUFFER_MS
-}
-
-const buildCognitoTokenUrl = (serviceName) => {
-  const cdpEnvSuffix = config.get('cdpEnvSuffix')
-  const awsRegion = config.get('awsRegion')
-
-  return `https://${serviceName}-${cdpEnvSuffix}.auth.${awsRegion}.amazoncognito.com/oauth2/token`
 }
 
 const getCacheKey = (clientId, serviceName) => {
@@ -27,8 +20,8 @@ const isCachedTokenValid = (cachedEntry) => {
   return Date.now() < cachedEntry.expiresAt
 }
 
-const fetchNewToken = async (clientId, clientSecret, serviceName) => {
-  const tokenUrl = buildCognitoTokenUrl(serviceName)
+const fetchNewToken = async (clientId, clientSecret, cognitoUrl) => {
+  logger.info({ message: `Fetching token from ${cognitoUrl}` })
   const clientCredentials = `${clientId}:${clientSecret}`
   const encodedCredentials = Buffer.from(clientCredentials).toString('base64')
 
@@ -36,7 +29,7 @@ const fetchNewToken = async (clientId, clientSecret, serviceName) => {
     grant_type: 'client_credentials'
   })
 
-  return fetchJson(tokenUrl, {
+  const response = await fetchJson(cognitoUrl, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${encodedCredentials}`,
@@ -44,24 +37,27 @@ const fetchNewToken = async (clientId, clientSecret, serviceName) => {
     },
     body
   })
+  logger.info({ message: `Fetched token from ${cognitoUrl}` })
+  return response
 }
 
 /**
  * Get Cognito access token using client credentials with caching
  * @param {string} clientId - Cognito client ID
  * @param {string} clientSecret - Cognito client secret
- * @param {string} serviceName - Service name (e.g., 'forms-submission-api')
+ * @param {string} cognitoUrl - congnito token url
  * @returns {Promise<string>} The access token
  */
-export const getCognitoToken = async (clientId, clientSecret, serviceName) => {
-  const cacheKey = getCacheKey(clientId, serviceName)
+export const getCognitoToken = async (clientId, clientSecret, cognitoUrl) => {
+  const cacheKey = getCacheKey(clientId, cognitoUrl)
   const cachedEntry = tokenCache.get(cacheKey)
 
   if (isCachedTokenValid(cachedEntry)) {
+    logger.info({ message: `returning cached token for ${cognitoUrl}` })
     return cachedEntry.token
   }
 
-  const tokenResponse = await fetchNewToken(clientId, clientSecret, serviceName)
+  const tokenResponse = await fetchNewToken(clientId, clientSecret, cognitoUrl)
 
   tokenCache.set(cacheKey, {
     token: tokenResponse.access_token,

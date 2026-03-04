@@ -34,8 +34,7 @@ export async function copyAllFormFilesToS3(
   const uploadedFiles = await getUploadedFileInfo(formSubmissionsRepository)
 
   logger.info({
-    message: `Found ${uploadedFiles.length} files to copy`,
-    totalFiles: uploadedFiles.length
+    message: `Found ${uploadedFiles.length} files to copy`
   })
 
   let failedCount = 0
