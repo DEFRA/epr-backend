@@ -1834,9 +1834,11 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Row should be IGNORED (no statusHistory means not approved)
-      expect(updateCall.loads.added.included.rowIds).toEqual([])
+      // Row outcome is IGNORED (no statusHistory means not approved),
+      // so it is excluded from all load counts
       expect(updateCall.loads.added.valid.count).toBe(0)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([])
+      expect(updateCall.loads.added.included.rowIds).toEqual([])
     })
   })
 
