@@ -20,7 +20,9 @@ export const commandQueueConsumerPlugin = {
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
-    'uploadsRepository'
+    'uploadsRepository',
+    'orsImportsRepository',
+    'overseasSitesRepository'
   ],
 
   register: async (
@@ -44,7 +46,9 @@ export const commandQueueConsumerPlugin = {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      wasteBalancesRepository
+      wasteBalancesRepository,
+      orsImportsRepository,
+      overseasSitesRepository
     } = server.app
 
     const summaryLogExtractor = createSummaryLogExtractor({
@@ -74,7 +78,10 @@ export const commandQueueConsumerPlugin = {
           organisationsRepository,
           wasteRecordsRepository,
           wasteBalancesRepository,
-          summaryLogExtractor
+          summaryLogExtractor,
+          orsImportsRepository,
+          uploadsRepository,
+          overseasSitesRepository
         },
         summaryLogCommandHandlers
       )

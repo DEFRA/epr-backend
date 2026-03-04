@@ -35,7 +35,9 @@ describe('commandQueueConsumerPlugin', () => {
         organisationsRepository: {},
         wasteRecordsRepository: {},
         wasteBalancesRepository: {},
-        uploadsRepository: {}
+        uploadsRepository: {},
+        orsImportsRepository: {},
+        overseasSitesRepository: {}
       }
     }
 
@@ -70,6 +72,12 @@ describe('commandQueueConsumerPlugin', () => {
     )
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'uploadsRepository'
+    )
+    expect(commandQueueConsumerPlugin.dependencies).toContain(
+      'orsImportsRepository'
+    )
+    expect(commandQueueConsumerPlugin.dependencies).toContain(
+      'overseasSitesRepository'
     )
   })
 
@@ -129,7 +137,10 @@ describe('commandQueueConsumerPlugin', () => {
           organisationsRepository: server.app.organisationsRepository,
           wasteRecordsRepository: server.app.wasteRecordsRepository,
           wasteBalancesRepository: server.app.wasteBalancesRepository,
-          summaryLogExtractor: expect.any(Object)
+          summaryLogExtractor: expect.any(Object),
+          orsImportsRepository: server.app.orsImportsRepository,
+          uploadsRepository: server.app.uploadsRepository,
+          overseasSitesRepository: server.app.overseasSitesRepository
         },
         summaryLogCommandHandlers
       )
