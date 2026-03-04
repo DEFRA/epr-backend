@@ -58,11 +58,22 @@ describe('MongoDB plugin', () => {
   })
 
   it('should handle re-initialization against existing database', async () => {
+    await server.db.createCollection('l-packaging-recycling-notes')
+
     const { createServer } = await import('#server/server.js')
     const server2 = await createServer()
     await server2.initialize()
+
+    const legacyCollection = await server2.db
+      .listCollections(
+        { name: 'l-packaging-recycling-notes' },
+        { nameOnly: true }
+      )
+      .toArray()
+
     await server2.stop()
 
     expect(server2.db).toBeInstanceOf(Db)
+    expect(legacyCollection).toHaveLength(0)
   })
 })

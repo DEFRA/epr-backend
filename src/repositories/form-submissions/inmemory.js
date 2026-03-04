@@ -59,6 +59,16 @@ export const createFormSubmissionsRepository = (
         registrations: new Set(registrations.map((reg) => reg.id)),
         accreditations: new Set(accreditations.map((acc) => acc.id))
       }
+    },
+    async findRegistrationsCreatedAfter(date) {
+      return structuredClone(registrations).filter(
+        (reg) => new Date(reg.createdAt) > new Date(date)
+      )
+    },
+    async findAccreditationsCreatedAfter(date) {
+      return structuredClone(accreditations).filter(
+        (acc) => new Date(acc.createdAt) > new Date(date)
+      )
     }
   })
 }
