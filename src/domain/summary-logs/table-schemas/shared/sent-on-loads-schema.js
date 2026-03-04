@@ -9,7 +9,6 @@ import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
  * Fields required for waste balance calculation.
- * Used for fatalFields and fieldsRequiredForInclusionInWasteBalance.
  */
 const WASTE_BALANCE_FIELDS = [
   FIELDS.ROW_ID,
@@ -58,12 +57,6 @@ export const createSentOnLoadsSchema = (rowIdMinimum) => ({
     [FIELDS.DESCRIPTION_WASTE]: DROPDOWN_PLACEHOLDER,
     [FIELDS.EWC_CODE]: DROPDOWN_PLACEHOLDER
   },
-
-  /**
-   * Fields that produce FATAL errors when validation fails.
-   * Only waste balance fields cause fatal errors.
-   */
-  fatalFields: WASTE_BALANCE_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields

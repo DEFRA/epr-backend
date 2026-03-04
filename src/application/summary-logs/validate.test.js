@@ -753,14 +753,14 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('Level 1 and Level 2 pass, Level 3 (data syntax) runs and finds fatal errors', async () => {
-      // Valid meta, but invalid data (row-level errors, fatal since EWC_CODE is in fatalFields)
+      // Valid meta, but invalid data (row-level errors, fatal for REJECTED rows)
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
                 buildReceivedLoadRow({
-                  EWC_CODE: 'bad-code' // Fatal row error (EWC_CODE is in fatalFields)
+                  EWC_CODE: 'bad-code' // Fatal row error (REJECTED rows produce fatal severity)
                 })
               ]
             })

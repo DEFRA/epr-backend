@@ -91,14 +91,6 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   },
 
   /**
-   * Fields that produce FATAL errors when validation fails
-   *
-   * ROW_ID is always fatal as it indicates tampering or corruption.
-   * Only waste balance fields cause fatal errors.
-   */
-  fatalFields: WASTE_BALANCE_FIELDS,
-
-  /**
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
