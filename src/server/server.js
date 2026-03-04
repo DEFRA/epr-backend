@@ -17,8 +17,7 @@ import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import {
   overseasSitesRepositoryPlugin,
-  orsImportsRepositoryPlugin,
-  orsQueueConsumerPlugin
+  orsImportsRepositoryPlugin
 } from '#overseas-sites/index.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
@@ -127,10 +126,6 @@ function getProductionPlugins(config) {
     packagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
-      options: { config }
-    },
-    {
-      plugin: orsQueueConsumerPlugin,
       options: { config }
     }
   ]
