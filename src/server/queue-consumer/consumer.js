@@ -32,8 +32,9 @@ const COMMAND_TIMEOUT_MS = COMMAND_TIMEOUT_MINUTES * ONE_MINUTE
 
 /**
  * @typedef {object} CommandMessage
- * @property {string} command - 'validate' or 'submit'
- * @property {string} summaryLogId - The summary log ID to process
+ * @property {string} command - 'validate', 'submit', or 'import-overseas-sites'
+ * @property {string} [summaryLogId] - The summary log ID (validate/submit)
+ * @property {string} [importId] - The ORS import ID (import-overseas-sites)
  * @property {object} [user] - Optional user context for audit trail
  */
 
@@ -74,6 +75,9 @@ const commandMessageSchema = Joi.object({
  * @property {object} wasteRecordsRepository
  * @property {object} wasteBalancesRepository
  * @property {object} summaryLogExtractor
+ * @property {object} orsImportsRepository
+ * @property {object} uploadsRepository
+ * @property {object} overseasSitesRepository
  */
 
 const describeCommandTarget = (command) =>

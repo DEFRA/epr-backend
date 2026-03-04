@@ -913,7 +913,7 @@ describe('createCommandQueueConsumer', () => {
       })
     })
 
-    describe('process command (ORS import)', () => {
+    describe('import-overseas-sites command', () => {
       it('processes ORS import successfully', async () => {
         const message = {
           MessageId: 'msg-123',
