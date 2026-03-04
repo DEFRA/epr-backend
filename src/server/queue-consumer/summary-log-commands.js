@@ -34,7 +34,7 @@ const userSchema = Joi.object({
 /**
  * Generic command handler interface. The consumer passes its full deps bag
  * through to execute/onFailure — each handler narrows to its own deps type
- * via inline @type annotations.
+ * via inline type annotations on the deps parameter.
  *
  * @typedef {object} CommandHandler
  * @property {string} command - The command string (e.g. 'validate', 'submit')

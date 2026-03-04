@@ -137,7 +137,7 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * @param {object} params.payload
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
- * @param {object} params.deps
+ * @param {ConsumerDependencies} params.deps
  * @param {TypedLogger} params.logger
  */
 const handleCommandError = async ({
@@ -176,7 +176,7 @@ const handleCommandError = async ({
 
 /**
  * Creates the message handler for the SQS consumer.
- * @param {object} deps
+ * @param {ConsumerDependencies} deps
  * @param {number|null} maxReceiveCount
  * @param {import('joi').ObjectSchema} envelopeSchema
  * @param {Map<string, CommandHandler>} handlerMap
