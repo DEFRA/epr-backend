@@ -3,7 +3,7 @@ import { vi, describe, test, expect, beforeEach } from 'vitest'
 describe('#getCognitoToken', () => {
   const clientId = 'test-client-id'
   const clientSecret = 'test-client-secret'
-  const serviceName = 'forms-submission-api'
+  const cognitoUrl = 'http://service/oauth2/token'
 
   let mockFetchJson
   let getCognitoToken
@@ -31,17 +31,15 @@ describe('#getCognitoToken', () => {
 
       mockFetchJson.mockResolvedValue(mockTokenResponse)
 
-      const token = await getCognitoToken(clientId, clientSecret, serviceName)
+      const token = await getCognitoToken(clientId, clientSecret, cognitoUrl)
 
       expect(token).toBe('mock-access-token-123')
 
-      const expectedUrl =
-        'https://forms-submission-api-6bf3a.auth.eu-west-2.amazoncognito.com/oauth2/token'
       const expectedAuth = Buffer.from(`${clientId}:${clientSecret}`).toString(
         'base64'
       )
 
-      expect(mockFetchJson).toHaveBeenCalledWith(expectedUrl, {
+      expect(mockFetchJson).toHaveBeenCalledWith(cognitoUrl, {
         method: 'POST',
         headers: {
           Authorization: `Basic ${expectedAuth}`,
@@ -67,12 +65,12 @@ describe('#getCognitoToken', () => {
       mockFetchJson.mockResolvedValue(mockTokenResponse)
 
       // First call - should fetch from API
-      const token1 = await getCognitoToken(clientId, clientSecret, serviceName)
+      const token1 = await getCognitoToken(clientId, clientSecret, cognitoUrl)
       expect(token1).toBe('mock-access-token-123')
       expect(mockFetchJson).toHaveBeenCalledTimes(1)
 
       // Second call - should use cache
-      const token2 = await getCognitoToken(clientId, clientSecret, serviceName)
+      const token2 = await getCognitoToken(clientId, clientSecret, cognitoUrl)
       expect(token2).toBe('mock-access-token-123')
       expect(mockFetchJson).toHaveBeenCalledTimes(1) // Still only called once
     })
@@ -95,12 +93,12 @@ describe('#getCognitoToken', () => {
         .mockResolvedValueOnce(mockTokenResponse2)
 
       // First call
-      const token1 = await getCognitoToken(clientId, clientSecret, serviceName)
+      const token1 = await getCognitoToken(clientId, clientSecret, cognitoUrl)
       expect(token1).toBe('mock-token-1')
       expect(mockFetchJson).toHaveBeenCalledTimes(1)
 
       // Second call - token expiring soon, should fetch new one
-      const token2 = await getCognitoToken(clientId, clientSecret, serviceName)
+      const token2 = await getCognitoToken(clientId, clientSecret, cognitoUrl)
       expect(token2).toBe('mock-token-2')
       expect(mockFetchJson).toHaveBeenCalledTimes(2)
     })
@@ -123,21 +121,17 @@ describe('#getCognitoToken', () => {
         .mockResolvedValueOnce(mockTokenResponse2)
 
       // Get token for service 1
-      const token1 = await getCognitoToken(clientId, clientSecret, 'service1')
+      const token1 = await getCognitoToken(clientId, clientSecret, 'url1')
       expect(token1).toBe('service1-token')
 
       // Get token for service 2
-      const token2 = await getCognitoToken(clientId, clientSecret, 'service2')
+      const token2 = await getCognitoToken(clientId, clientSecret, 'url2')
       expect(token2).toBe('service2-token')
 
       expect(mockFetchJson).toHaveBeenCalledTimes(2)
 
       // Get cached token for service 1
-      const token1Again = await getCognitoToken(
-        clientId,
-        clientSecret,
-        'service1'
-      )
+      const token1Again = await getCognitoToken(clientId, clientSecret, 'url1')
       expect(token1Again).toBe('service1-token')
       expect(mockFetchJson).toHaveBeenCalledTimes(2) // No new call
     })
@@ -152,7 +146,7 @@ describe('#getCognitoToken', () => {
       mockFetchJson.mockRejectedValue(error)
 
       await expect(
-        getCognitoToken(clientId, clientSecret, serviceName)
+        getCognitoToken(clientId, clientSecret, cognitoUrl)
       ).rejects.toThrow('Failed to fetch')
     })
   })

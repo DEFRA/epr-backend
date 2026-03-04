@@ -69,6 +69,37 @@ describe('#fetchJson', () => {
       })
     })
 
+    it('should override default JSON header with form-urlencoded header', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'mock-token' }),
+        headers: new Headers({ 'content-type': 'application/json' })
+      })
+
+      const body = new URLSearchParams({
+        grant_type: 'client_credentials'
+      })
+
+      const options = {
+        method: 'POST',
+        headers: {
+          Authorization: 'Basic test',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body
+      }
+
+      await fetchJson(URL, options)
+
+      const [_, calledOptions] = global.fetch.mock.calls[0]
+      expect(calledOptions.method).toBe('POST')
+      expect(calledOptions.headers).toMatchObject({
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic test'
+      })
+    })
+
     test('passes through fetch options like method and body', async () => {
       const mockData = { created: true }
       const requestBody = { name: 'New Item' }
