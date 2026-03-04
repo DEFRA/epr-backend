@@ -1840,6 +1840,52 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([])
       expect(updateCall.loads.added.included.rowIds).toEqual([])
     })
+
+    it('does not set IGNORED for reprocessor output received rows that lack the date field', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2025-03-01T00:00:00.000Z' }
+          ]
+        }
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 20000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-15T00:00:00.000Z'
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Received row lacks DATE_LOAD_LEFT_SITE (the accreditation date field
+      // for REPROCESSOR_OUTPUT), so validateAccreditationStatus skips it.
+      // It is EXCLUDED by VAL011 (fieldsRequiredForInclusionInWasteBalance is
+      // empty for received loads in reprocessor output), not IGNORED.
+      expect(updateCall.loads.added.excluded.rowIds).toContain(20000)
+      expect(updateCall.loads.added.included.rowIds).not.toContain(20000)
+    })
   })
 
   describe('metrics', () => {

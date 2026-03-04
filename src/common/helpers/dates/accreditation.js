@@ -28,14 +28,14 @@ export const isAccreditationApprovedAtDate = (date, statusHistory) => {
   }
 
   const compareDate = new Date(date).getTime()
+  const times = statusHistory.map((s) => ({
+    updatedAt: new Date(s.updatedAt).getTime(),
+    status: s.status
+  }))
 
-  const sorted = [...statusHistory].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  )
+  const sorted = times.sort((a, b) => b.updatedAt - a.updatedAt)
 
-  const effective = sorted.find(
-    (entry) => new Date(entry.updatedAt).getTime() <= compareDate
-  )
+  const effective = sorted.find((entry) => entry.updatedAt <= compareDate)
 
   return effective?.status === 'approved'
 }

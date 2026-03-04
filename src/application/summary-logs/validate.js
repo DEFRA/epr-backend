@@ -304,6 +304,9 @@ const validateAccreditationStatus = (
   for (const wasteRecord of wasteRecords) {
     const dateToCheck = wasteRecord.record.data[dateField]
 
+    // Rows from tables that don't have the date field (e.g. received rows in
+    // reprocessor output don't have DATE_LOAD_LEFT_SITE) are skipped — they're
+    // already EXCLUDED by VAL011 (missing required waste balance fields).
     if (
       dateToCheck &&
       !isAccreditationApprovedAtDate(dateToCheck, statusHistory)
@@ -397,9 +400,7 @@ const performValidationChecks = async ({
     // Validate that accreditation was approved at the row date
     const statusHistory = registration.accreditation?.statusHistory
     const dateField = STATUS_DATE_FIELD[meta.PROCESSING_TYPE]
-    if (dateField) {
-      validateAccreditationStatus(wasteRecords, statusHistory, dateField)
-    }
+    validateAccreditationStatus(wasteRecords, statusHistory, dateField)
 
     issues.merge(dataResult.issues)
   } catch (error) {
