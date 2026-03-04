@@ -41,33 +41,30 @@ const it = base.extend({
   },
 
   seedAccreditations: async ({ accreditations }, use) => {
-    await use(async () => {
-      const acc1 = buildAccreditation()
-      const acc2 = buildAccreditation()
-      const acc3 = buildAccreditation()
-      const testData = [acc1, acc2, acc3]
+    await use(async (overrides) => {
+      const testData = overrides
+        ? overrides.map((override) => buildAccreditation(override))
+        : [buildAccreditation(), buildAccreditation(), buildAccreditation()]
       accreditations.push(...testData)
       return testData
     })
   },
 
   seedRegistrations: async ({ registrations }, use) => {
-    await use(async () => {
-      const reg1 = buildRegistration()
-      const reg2 = buildRegistration()
-      const reg3 = buildRegistration()
-      const testData = [reg1, reg2, reg3]
+    await use(async (overrides) => {
+      const testData = overrides
+        ? overrides.map((override) => buildRegistration(override))
+        : [buildRegistration(), buildRegistration(), buildRegistration()]
       registrations.push(...testData)
       return testData
     })
   },
 
   seedOrganisations: async ({ organisations }, use) => {
-    await use(async () => {
-      const org1 = buildOrganisation()
-      const org2 = buildOrganisation()
-      const org3 = buildOrganisation()
-      const testData = [org1, org2, org3]
+    await use(async (overrides) => {
+      const testData = overrides
+        ? overrides.map((override) => buildOrganisation(override))
+        : [buildOrganisation(), buildOrganisation(), buildOrganisation()]
       organisations.push(...testData)
       return testData
     })
