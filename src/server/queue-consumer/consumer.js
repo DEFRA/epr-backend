@@ -92,7 +92,7 @@ const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
   }
 
   const { command, ...rest } = parsed
-  const handler = handlerMap.get(command)
+  const handler = /** @type {CommandHandler} */ (handlerMap.get(command))
 
   // Pass 2: validate payload against handler's schema
   const { error: payloadError, value: payload } =
@@ -239,11 +239,21 @@ const createMessageHandler =
 
 /**
  * Creates the SQS command queue consumer.
- * @param {ConsumerDependencies & Record<string, *>} deps
+ *
+ * `deps` must include the consumer's own dependencies (sqsClient, queueName,
+ * logger) **plus** whatever the registered handlers require. The consumer
+ * passes the entire bag through to handler.execute() and handler.onFailure().
+ *
+ * @template {ConsumerDependencies} D
+ * @param {D} deps
  * @param {CommandHandler[]} handlers - Registered command handlers
  * @returns {Promise<Consumer>}
  */
 export const createCommandQueueConsumer = async (deps, handlers) => {
+  if (!handlers.length) {
+    throw new Error('At least one command handler must be registered')
+  }
+
   const { sqsClient, queueName, logger } = deps
 
   const queueUrl = await resolveQueueUrl(sqsClient, queueName)

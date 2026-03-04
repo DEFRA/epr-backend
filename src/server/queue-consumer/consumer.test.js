@@ -116,6 +116,26 @@ describe('createCommandQueueConsumer', () => {
       summaryLogCommandHandlers
     )
 
+  describe('handler registration', () => {
+    it('throws when no handlers are registered', async () => {
+      await expect(
+        createCommandQueueConsumer(
+          {
+            sqsClient,
+            queueName: 'test-queue',
+            logger,
+            summaryLogsRepository,
+            organisationsRepository,
+            wasteRecordsRepository,
+            wasteBalancesRepository,
+            summaryLogExtractor
+          },
+          []
+        )
+      ).rejects.toThrow('At least one command handler must be registered')
+    })
+  })
+
   describe('queue URL resolution', () => {
     it('looks up queue URL by name', async () => {
       await createConsumer()

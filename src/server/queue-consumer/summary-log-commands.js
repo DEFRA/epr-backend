@@ -8,6 +8,23 @@ import {
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
+/** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
+/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
+/** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
+
+/**
+ * @typedef {object} SummaryLogHandlerDeps
+ * @property {TypedLogger} logger
+ * @property {SummaryLogsRepository} summaryLogsRepository
+ * @property {OrganisationsRepository} organisationsRepository
+ * @property {WasteRecordsRepository} wasteRecordsRepository
+ * @property {WasteBalancesRepository} wasteBalancesRepository
+ * @property {SummaryLogExtractor} summaryLogExtractor
+ */
+
 const userSchema = Joi.object({
   id: Joi.string().required(),
   email: Joi.string().required(),
@@ -15,6 +32,10 @@ const userSchema = Joi.object({
 })
 
 /**
+ * Generic command handler interface. The consumer passes its full deps bag
+ * through to execute/onFailure — each handler narrows to its own deps type
+ * via inline @type annotations.
+ *
  * @typedef {object} CommandHandler
  * @property {string} command - The command string (e.g. 'validate', 'submit')
  * @property {import('joi').ObjectSchema} payloadSchema - Validates everything except 'command'
@@ -30,17 +51,24 @@ export const summaryLogCommandHandlers = [
     payloadSchema: Joi.object({
       summaryLogId: Joi.string().required()
     }),
-    execute: async (payload, deps) => {
+    execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
+      const {
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor
+      } = deps
+
       const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: deps.summaryLogsRepository,
-        organisationsRepository: deps.organisationsRepository,
-        wasteRecordsRepository: deps.wasteRecordsRepository,
-        summaryLogExtractor: deps.summaryLogExtractor
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor
       })
 
       await validateSummaryLog(payload.summaryLogId)
     },
-    onFailure: async (payload, deps) => {
+    onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await markAsValidationFailed(
         payload.summaryLogId,
         deps.summaryLogsRepository,
@@ -55,13 +83,13 @@ export const summaryLogCommandHandlers = [
       summaryLogId: Joi.string().required(),
       user: userSchema.optional()
     }),
-    execute: async (payload, deps) => {
+    execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await submitSummaryLog(payload.summaryLogId, {
         ...deps,
         user: payload.user
       })
     },
-    onFailure: async (payload, deps) => {
+    onFailure: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await markAsSubmissionFailed(
         payload.summaryLogId,
         deps.summaryLogsRepository,
