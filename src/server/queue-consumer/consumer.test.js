@@ -6,6 +6,7 @@ import {
 
 import { createCommandQueueConsumer } from './consumer.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -20,6 +21,7 @@ vi.mock('@aws-sdk/client-sqs', () => ({
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
+vi.mock('#overseas-sites/application/process-import.js')
 
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
@@ -27,6 +29,8 @@ const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
 const { summaryLogMetrics } =
   await import('#common/helpers/metrics/summary-logs.js')
+const { processOrsImport } =
+  await import('#overseas-sites/application/process-import.js')
 
 describe('createCommandQueueConsumer', () => {
   let sqsClient
@@ -36,6 +40,9 @@ describe('createCommandQueueConsumer', () => {
   let wasteRecordsRepository
   let wasteBalancesRepository
   let summaryLogExtractor
+  let orsImportsRepository
+  let uploadsRepository
+  let overseasSitesRepository
   let mockConsumer
   let eventHandlers
 
@@ -73,6 +80,12 @@ describe('createCommandQueueConsumer', () => {
     wasteBalancesRepository = {}
     summaryLogExtractor = {}
 
+    orsImportsRepository = {
+      updateStatus: vi.fn()
+    }
+    uploadsRepository = {}
+    overseasSitesRepository = {}
+
     mockConsumer = {
       on: vi.fn((event, handler) => {
         eventHandlers[event] = handler
@@ -86,6 +99,7 @@ describe('createCommandQueueConsumer', () => {
       this.QueueName = params.QueueName
     })
     vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
+    vi.mocked(processOrsImport).mockResolvedValue(undefined)
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
@@ -109,7 +123,10 @@ describe('createCommandQueueConsumer', () => {
       organisationsRepository,
       wasteRecordsRepository,
       wasteBalancesRepository,
-      summaryLogExtractor
+      summaryLogExtractor,
+      orsImportsRepository,
+      uploadsRepository,
+      overseasSitesRepository
     })
 
   describe('queue URL resolution', () => {
@@ -322,6 +339,25 @@ describe('createCommandQueueConsumer', () => {
       )
     })
 
+    it('marks ORS import as failed on process command timeout', async () => {
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'process',
+          importId: 'import-abc'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
+        'import-abc',
+        ORS_IMPORT_STATUS.FAILED
+      )
+    })
+
     it('logs timeout with messageId when message body is invalid', async () => {
       await createConsumer()
       const error = new Error('Timeout')
@@ -448,7 +484,7 @@ describe('createCommandQueueConsumer', () => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
-              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
+              'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit, process]'
           })
         )
       })
@@ -872,6 +908,147 @@ describe('createCommandQueueConsumer', () => {
             expect.objectContaining({
               status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
             })
+          )
+        })
+      })
+    })
+
+    describe('process command (ORS import)', () => {
+      it('processes ORS import successfully', async () => {
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({ command: 'process', importId: 'import-abc' })
+        }
+
+        await handleMessage(message)
+
+        expect(processOrsImport).toHaveBeenCalledWith('import-abc', {
+          orsImportsRepository,
+          uploadsRepository,
+          overseasSitesRepository,
+          organisationsRepository,
+          logger
+        })
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Command completed: process for importId=import-abc messageId=msg-123'
+          })
+        )
+      })
+
+      describe('permanent errors', () => {
+        it('marks import as failed on PermanentError', async () => {
+          vi.mocked(processOrsImport).mockRejectedValue(
+            new PermanentError('Import not found')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'process',
+              importId: 'import-abc'
+            })
+          }
+
+          const result = await handleMessage(message)
+
+          expect(result).toBe(message)
+          expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
+            'import-abc',
+            ORS_IMPORT_STATUS.FAILED
+          )
+        })
+
+        it('logs but does not rethrow when marking import as failed throws', async () => {
+          vi.mocked(processOrsImport).mockRejectedValue(
+            new PermanentError('Import not found')
+          )
+          orsImportsRepository.updateStatus.mockRejectedValue(
+            new Error('DB write error')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Body: JSON.stringify({
+              command: 'process',
+              importId: 'import-abc'
+            })
+          }
+
+          const result = await handleMessage(message)
+
+          expect(result).toBe(message)
+          expect(logger.error).toHaveBeenCalledWith({
+            err: expect.any(Error),
+            message: 'Failed to mark ORS import import-abc as failed',
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.SERVER,
+              action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+            }
+          })
+        })
+      })
+
+      describe('transient errors', () => {
+        it('rethrows transient errors for SQS retry', async () => {
+          vi.mocked(processOrsImport).mockRejectedValue(
+            new Error('DB connection lost')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'process',
+              importId: 'import-abc'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow(
+            'DB connection lost'
+          )
+        })
+
+        it('does not mark as failed on non-final transient attempt', async () => {
+          vi.mocked(processOrsImport).mockRejectedValue(
+            new Error('DB connection lost')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'process',
+              importId: 'import-abc'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(orsImportsRepository.updateStatus).not.toHaveBeenCalled()
+        })
+
+        it('marks import as failed on final transient attempt', async () => {
+          vi.mocked(processOrsImport).mockRejectedValue(
+            new Error('DB connection lost')
+          )
+
+          const message = {
+            MessageId: 'msg-123',
+            Attributes: { ApproximateReceiveCount: '2' },
+            Body: JSON.stringify({
+              command: 'process',
+              importId: 'import-abc'
+            })
+          }
+
+          await expect(handleMessage(message)).rejects.toThrow(
+            'DB connection lost'
+          )
+          expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
+            'import-abc',
+            ORS_IMPORT_STATUS.FAILED
           )
         })
       })

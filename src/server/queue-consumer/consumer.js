@@ -17,6 +17,11 @@ import {
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
+import {
+  ORS_IMPORT_COMMAND,
+  ORS_IMPORT_STATUS
+} from '#overseas-sites/domain/import-status.js'
+import { processOrsImport } from '#overseas-sites/application/process-import.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
@@ -40,9 +45,22 @@ const userSchema = Joi.object({
 
 const commandMessageSchema = Joi.object({
   command: Joi.string()
-    .valid(SUMMARY_LOG_COMMAND.VALIDATE, SUMMARY_LOG_COMMAND.SUBMIT)
+    .valid(
+      SUMMARY_LOG_COMMAND.VALIDATE,
+      SUMMARY_LOG_COMMAND.SUBMIT,
+      ORS_IMPORT_COMMAND.PROCESS
+    )
     .required(),
-  summaryLogId: Joi.string().required(),
+  summaryLogId: Joi.string().when('command', {
+    is: Joi.valid(SUMMARY_LOG_COMMAND.VALIDATE, SUMMARY_LOG_COMMAND.SUBMIT),
+    then: Joi.required(),
+    otherwise: Joi.forbidden()
+  }),
+  importId: Joi.string().when('command', {
+    is: ORS_IMPORT_COMMAND.PROCESS,
+    then: Joi.required(),
+    otherwise: Joi.forbidden()
+  }),
   user: userSchema.optional()
 })
 
@@ -57,6 +75,11 @@ const commandMessageSchema = Joi.object({
  * @property {object} wasteBalancesRepository
  * @property {object} summaryLogExtractor
  */
+
+const describeCommandTarget = (command) =>
+  command.importId
+    ? `importId=${command.importId}`
+    : `summaryLogId=${command.summaryLogId}`
 
 /**
  * Handles a validate command.
@@ -121,26 +144,53 @@ const parseCommandMessage = (message, logger) => {
   return value
 }
 
-/**
- * Marks a summary log as failed based on the command type.
- * @param {string} commandType
- * @param {string} summaryLogId
- * @param {object} summaryLogsRepository
- * @param {TypedLogger} logger
- */
-const markCommandAsFailed = async (
-  commandType,
-  summaryLogId,
-  summaryLogsRepository,
+const markOrsImportAsFailed = async (
+  importId,
+  orsImportsRepository,
   logger
 ) => {
-  if (commandType === SUMMARY_LOG_COMMAND.VALIDATE) {
-    await markAsValidationFailed(summaryLogId, summaryLogsRepository, logger)
+  try {
+    await orsImportsRepository.updateStatus(importId, ORS_IMPORT_STATUS.FAILED)
+  } catch (err) {
+    logger.error({
+      err,
+      message: `Failed to mark ORS import ${importId} as failed`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
   }
-  // Separate if rather than else-if: createMessageHandler validates command
-  // type before calling this function, so both conditions are independent
+}
+
+/**
+ * Marks a command as failed based on the command type.
+ * @param {string} commandType
+ * @param {object} command - The parsed command message
+ * @param {object} deps
+ * @param {TypedLogger} logger
+ */
+const markCommandAsFailed = async (commandType, command, deps, logger) => {
+  if (commandType === SUMMARY_LOG_COMMAND.VALIDATE) {
+    await markAsValidationFailed(
+      command.summaryLogId,
+      deps.summaryLogsRepository,
+      logger
+    )
+  }
   if (commandType === SUMMARY_LOG_COMMAND.SUBMIT) {
-    await markAsSubmissionFailed(summaryLogId, summaryLogsRepository, logger)
+    await markAsSubmissionFailed(
+      command.summaryLogId,
+      deps.summaryLogsRepository,
+      logger
+    )
+  }
+  if (commandType === ORS_IMPORT_COMMAND.PROCESS) {
+    await markOrsImportAsFailed(
+      command.importId,
+      deps.orsImportsRepository,
+      logger
+    )
   }
 }
 
@@ -165,22 +215,21 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * and rethrows transient errors so SQS can retry.
  * @param {object} params
  * @param {Error} params.err
- * @param {string} params.commandType
- * @param {string} params.summaryLogId
+ * @param {object} params.command - The parsed command message
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
- * @param {object} params.summaryLogsRepository
+ * @param {object} params.deps
  * @param {TypedLogger} params.logger
  */
 const handleCommandError = async ({
   err,
-  commandType,
-  summaryLogId,
+  command: parsedCommand,
   message,
   maxReceiveCount,
-  summaryLogsRepository,
+  deps,
   logger
 }) => {
+  const commandType = parsedCommand.command
   const isPermanent = err instanceof PermanentError
   const receiveCount = Number(message.Attributes?.ApproximateReceiveCount ?? 0)
   const isFinalTransientAttempt =
@@ -189,7 +238,7 @@ const handleCommandError = async ({
 
   logger.error({
     err,
-    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+    message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${commandType} for ${describeCommandTarget(parsedCommand)} messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -197,12 +246,7 @@ const handleCommandError = async ({
   })
 
   if (isTerminal) {
-    await markCommandAsFailed(
-      commandType,
-      summaryLogId,
-      summaryLogsRepository,
-      logger
-    )
+    await markCommandAsFailed(commandType, parsedCommand, deps, logger)
   }
 
   if (isPermanent) {
@@ -218,7 +262,7 @@ const handleCommandError = async ({
  * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<import('@aws-sdk/client-sqs').Message | void>}
  */
 const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
-  const { logger, summaryLogsRepository } = deps
+  const { logger } = deps
 
   const command = parseCommandMessage(message, logger)
   if (!command) {
@@ -227,10 +271,11 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
     )
   }
 
-  const { command: commandType, summaryLogId } = command
+  const { command: commandType } = command
+  const target = describeCommandTarget(command)
 
   logger.info({
-    message: `Processing command: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+    message: `Processing command: ${commandType} for ${target} messageId=${message.MessageId}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -240,11 +285,24 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   try {
     switch (commandType) {
       case SUMMARY_LOG_COMMAND.VALIDATE:
-        await handleValidateCommand(summaryLogId, deps)
+        await handleValidateCommand(command.summaryLogId, deps)
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await submitSummaryLog(summaryLogId, { ...deps, user: command.user })
+        await submitSummaryLog(command.summaryLogId, {
+          ...deps,
+          user: command.user
+        })
+        break
+
+      case ORS_IMPORT_COMMAND.PROCESS:
+        await processOrsImport(command.importId, {
+          orsImportsRepository: deps.orsImportsRepository,
+          uploadsRepository: deps.uploadsRepository,
+          overseasSitesRepository: deps.overseasSitesRepository,
+          organisationsRepository: deps.organisationsRepository,
+          logger
+        })
         break
 
       /* c8 ignore next 2 - unreachable: Joi validation ensures only valid commands reach here */
@@ -253,7 +311,7 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
     }
 
     logger.info({
-      message: `Command completed: ${commandType} for summaryLogId=${summaryLogId} messageId=${message.MessageId}`,
+      message: `Command completed: ${commandType} for ${target} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -264,11 +322,10 @@ const createMessageHandler = (deps, maxReceiveCount) => async (message) => {
   } catch (err) {
     await handleCommandError({
       err,
-      commandType,
-      summaryLogId,
+      command,
       message,
       maxReceiveCount,
-      summaryLogsRepository,
+      deps,
       logger
     })
 
@@ -342,7 +399,7 @@ export const createCommandQueueConsumer = async (deps) => {
     logger.error({
       err,
       message: command
-        ? `Command timed out: ${command.command} for summaryLogId=${command.summaryLogId} messageId=${message.MessageId}`
+        ? `Command timed out: ${command.command} for ${describeCommandTarget(command)} messageId=${message.MessageId}`
         : `Command timed out for messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -351,12 +408,7 @@ export const createCommandQueueConsumer = async (deps) => {
     })
 
     if (command) {
-      await markCommandAsFailed(
-        command.command,
-        command.summaryLogId,
-        deps.summaryLogsRepository,
-        logger
-      )
+      await markCommandAsFailed(command.command, command, deps, logger)
     }
   })
 
