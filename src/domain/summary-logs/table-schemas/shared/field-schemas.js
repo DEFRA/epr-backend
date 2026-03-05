@@ -97,7 +97,8 @@ export const createPercentageFieldSchema = () =>
 
 /**
  * Creates a free text field schema that coerces numbers to strings.
- * Allows printable ASCII, newlines, smart punctuation, and £/€ signs.
+ * Allows printable ASCII, newlines, non-breaking spaces, soft hyphens,
+ * smart punctuation, and £/€ signs.
  * ExcelJS may return numeric values for cells that look like numbers
  * (e.g. customs codes like "12345").
  *
@@ -109,7 +110,9 @@ export const createFreeTextFieldSchema = (
 ) =>
   customJoi
     .coercedString()
-    .pattern(/^[\x20-\x7E\n\r\u2018\u2019\u201C\u201D\u2013\u2014\u2026£€]*$/)
+    .pattern(
+      /^[\x20-\x7E\n\r\u00A0\u00AD\u2018\u2019\u201C\u201D\u2013\u2014\u2026£€]*$/
+    )
     .max(maxLength)
     .optional()
     .messages({

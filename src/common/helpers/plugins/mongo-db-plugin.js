@@ -10,8 +10,7 @@ import {
 import {
   createFormCollections,
   createLockManagerIndex,
-  createSeedData,
-  dropLegacyPackagingRecyclingNotesCollection
+  createSeedData
 } from '../collections/create-update.js'
 
 export const mongoDbPlugin = {
@@ -43,7 +42,6 @@ export const mongoDbPlugin = {
 
       await createFormCollections(db)
       await createLockManagerIndex(db)
-      await dropLegacyPackagingRecyclingNotesCollection(db)
 
       const organisationsRepositoryFactory =
         await createOrganisationsRepository(db)
