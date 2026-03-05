@@ -116,9 +116,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
             packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: true
-        })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()
@@ -235,44 +233,6 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
-    })
-  })
-
-  describe('when feature flag is disabled', () => {
-    let server
-
-    beforeAll(async () => {
-      server = await createTestServer({
-        repositories: {
-          packagingRecyclingNotesRepository:
-            createInMemoryPackagingRecyclingNotesRepository(),
-          organisationsRepository: () => ({
-            findAccreditationById: vi.fn(async () => ({
-              wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-              submittedToRegulator: 'ea'
-            }))
-          })
-        },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: false
-        })
-      })
-
-      await server.initialize()
-    })
-
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    it('returns 404 when feature flag is disabled', async () => {
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-        ...asStandardUser({ linkedOrgId: organisationId })
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 })

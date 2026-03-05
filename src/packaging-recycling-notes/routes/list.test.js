@@ -60,9 +60,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
           wasteBalancesRepository: () => ({}),
           organisationsRepository: () => ({})
         },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotesExternalApi: true
-        })
+        featureFlags: createInMemoryFeatureFlags()
       })
     })
 
