@@ -10,6 +10,9 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: publish
+
 env:
   AWS_REGION: eu-west-2
   AWS_ACCOUNT_ID: "094954420758"
