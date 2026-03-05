@@ -51,7 +51,6 @@ const createTestSchema = (options = {}) => ({
   rowIdField: 'ROW_ID',
   requiredHeaders: options.requiredHeaders || ['ROW_ID', 'VALUE'],
   unfilledValues: options.unfilledValues || {},
-  fatalFields: options.fatalFields || ['ROW_ID'],
   validationSchema:
     options.validationSchema ||
     Joi.object({

@@ -224,7 +224,6 @@ const buildCellLocation = ({
 const toApplicationIssue = ({
   issue,
   classification,
-  fatalFields,
   headerToIndexMap,
   rowObject,
   tableName,
@@ -247,9 +246,7 @@ const toApplicationIssue = ({
     ? mapMessageToErrorCode(issue.message)
     : undefined
 
-  const isFatalField =
-    classification.outcome === ROW_OUTCOME.REJECTED &&
-    fatalFields.includes(fieldName)
+  const isFatal = classification.outcome === ROW_OUTCOME.REJECTED
 
   const context = {
     location: buildCellLocation({
@@ -268,7 +265,7 @@ const toApplicationIssue = ({
 
   return {
     category: VALIDATION_CATEGORY.TECHNICAL,
-    severity: isFatalField ? 'fatal' : 'error',
+    severity: isFatal ? 'fatal' : 'error',
     message,
     code,
     context
@@ -348,8 +345,6 @@ const validateRows = ({
   location,
   issues
 }) => {
-  const fatalFields = domainSchema.fatalFields || []
-
   return rows.flatMap(({ rowNumber, values }) => {
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
@@ -366,7 +361,6 @@ const validateRows = ({
       toApplicationIssue({
         issue,
         classification,
-        fatalFields,
         headerToIndexMap,
         rowObject,
         tableName,
@@ -446,7 +440,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  *
  * Validates each table in parsed.data that has a defined schema for the processing type:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
- * - Validates each row as a complete object using pre-compiled Joi schemas (ERROR severity)
+ * - Validates each row as a complete object using pre-compiled Joi schemas
  * - Reports precise error locations for all validation failures
  *
  * Row-level validation is more efficient than cell-by-cell validation and enables
@@ -454,8 +448,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  *
  * Severity levels:
  * - FATAL: Missing required headers prevent processing the entire table
- * - ERROR: Invalid row values mark specific rows as invalid but don't block
- *          submission of the entire spreadsheet - other valid rows can still be processed
+ * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
  * @param {Object} schemaRegistry - Schema registry mapping processing types to table schemas
  * @returns {function(Object): DataSyntaxValidationResult} Validator function that takes parsed summary log
