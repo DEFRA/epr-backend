@@ -24,20 +24,9 @@ import {
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
-import {
-  RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_LOADS_FIELDS,
-  SENT_ON_LOADS_FIELDS as EXPORTER_SENT_ON_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/exporter/fields.js'
-import {
-  RECEIVED_LOADS_FIELDS as REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS,
-  REPROCESSED_LOADS_FIELDS as REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
-import {
-  RECEIVED_LOADS_FIELDS as REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS,
-  REPROCESSED_LOADS_FIELDS as REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS,
-  SENT_ON_LOADS_FIELDS as REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
+import { getRowDateStatus as getExporterDateStatus } from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+import { getRowDateStatus as getReprocessorInputDateStatus } from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
+import { getRowDateStatus as getReprocessorOutputDateStatus } from '#domain/waste-balances/table-schemas/reprocessor-output/validators/waste-balance-extractor.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
 
@@ -230,65 +219,18 @@ const handleValidationFailure = (error, issues, loggingContext) => {
   }
 }
 
-const validateExporterDates = (wasteRecords, registration) => {
-  for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    // Check all possible date fields for Exporter tables:
-    // 1. DATE_OF_EXPORT (Received loads)
-    // 2. DATE_RECEIVED_FOR_EXPORT (Received loads fallback)
-    // 3. DATE_LOAD_LEFT_SITE (Sent on loads)
-    const dateToCheck =
-      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT] ||
-      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT] ||
-      data[EXPORTER_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-
-    if (
-      dateToCheck &&
-      !isWithinAccreditationDateRange(dateToCheck, registration)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
-    }
-  }
+const DATE_STATUS_BY_PROCESSING_TYPE = {
+  [PROCESSING_TYPES.EXPORTER]: getExporterDateStatus,
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: getReprocessorInputDateStatus,
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: getReprocessorOutputDateStatus
 }
 
-const validateReprocessorInputDates = (wasteRecords, registration) => {
+const validateDates = (wasteRecords, registration, processingType) => {
+  const getDateStatus = DATE_STATUS_BY_PROCESSING_TYPE[processingType]
   for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    // Check both possible date fields for Reprocessor Input:
-    // 1. DATE_RECEIVED_FOR_REPROCESSING (Received loads)
-    // 2. DATE_LOAD_LEFT_SITE (Reprocessed and Sent on loads)
-    const dateToCheck =
-      data[
-        REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] || data[REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-
-    if (
-      dateToCheck &&
-      !isWithinAccreditationDateRange(dateToCheck, registration)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
-    }
-  }
-}
-
-const validateReprocessorOutputDates = (wasteRecords, registration) => {
-  for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    // Check both possible date fields for Reprocessor Output:
-    // 1. DATE_RECEIVED_FOR_REPROCESSING (Received loads)
-    // 2. DATE_LOAD_LEFT_SITE (Reprocessed and Sent on loads)
-    const dateToCheck =
-      data[
-        REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] ||
-      data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
-      data[REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-
-    if (
-      dateToCheck &&
-      !isWithinAccreditationDateRange(dateToCheck, registration)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
+    const status = getDateStatus(wasteRecord.record.data, registration)
+    if (status) {
+      wasteRecord.outcome = status
     }
   }
 }
@@ -353,17 +295,7 @@ const performValidationChecks = async ({
     wasteRecords = dataResult.wasteRecords
 
     // Validate that load dates are within accreditation period
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
-      validateExporterDates(wasteRecords, registration)
-    }
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
-      validateReprocessorInputDates(wasteRecords, registration)
-    }
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
-      validateReprocessorOutputDates(wasteRecords, registration)
-    }
+    validateDates(wasteRecords, registration, meta.PROCESSING_TYPE)
 
     issues.merge(dataResult.issues)
   } catch (error) {

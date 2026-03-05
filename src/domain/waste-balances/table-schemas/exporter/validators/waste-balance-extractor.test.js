@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
+import {
+  RECEIVED_LOADS_FIELDS,
+  SENT_ON_LOADS_FIELDS
+} from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { YES_NO_VALUES } from '#domain/summary-logs/table-schemas/shared/index.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { extractWasteBalanceFields } from './waste-balance-extractor.js'
+import {
+  extractWasteBalanceFields,
+  getRowDateStatus
+} from './waste-balance-extractor.js'
 import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
 
 describe('extractWasteBalanceFields', () => {
@@ -118,6 +125,77 @@ describe('extractWasteBalanceFields', () => {
     const result = extractWasteBalanceFields(record)
 
     expect(result.prnIssued).toBe(true)
+  })
+})
+
+describe('getRowDateStatus', () => {
+  const accreditation = {
+    validFrom: '2025-01-01',
+    validTo: '2025-12-31'
+  }
+
+  it('should return null when DATE_OF_EXPORT is within range', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2025-06-15',
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT]: '2025-05-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should return IGNORED when DATE_OF_EXPORT is outside range', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2024-06-15'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
+  })
+
+  it('should fall back to DATE_RECEIVED_FOR_EXPORT when DATE_OF_EXPORT is absent', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT]: '2025-03-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should return IGNORED when DATE_RECEIVED_FOR_EXPORT fallback is outside range', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT]: '2024-03-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
+  })
+
+  it('should fall back to DATE_LOAD_LEFT_SITE when other date fields are absent', () => {
+    const data = {
+      [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2025-07-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should return IGNORED when DATE_LOAD_LEFT_SITE fallback is outside range', () => {
+    const data = {
+      [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2026-07-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
+  })
+
+  it('should return null when no date fields are present', () => {
+    const data = {}
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should use DATE_OF_EXPORT over DATE_RECEIVED_FOR_EXPORT when both present', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2024-06-15',
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT]: '2025-06-15'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
   })
 })
 

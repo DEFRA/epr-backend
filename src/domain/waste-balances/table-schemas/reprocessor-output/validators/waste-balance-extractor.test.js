@@ -1,9 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { extractWasteBalanceFields } from './waste-balance-extractor.js'
+import {
+  extractWasteBalanceFields,
+  getRowDateStatus
+} from './waste-balance-extractor.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { YES_NO_VALUES } from '#domain/summary-logs/table-schemas/shared/index.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
+  RECEIVED_LOADS_FIELDS,
   REPROCESSED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
@@ -201,5 +206,59 @@ describe('extractWasteBalanceFields (REPROCESSOR_OUTPUT)', () => {
       }
     }
     expect(extractWasteBalanceFields(record)).toBeNull()
+  })
+})
+
+describe('getRowDateStatus (REPROCESSOR_OUTPUT)', () => {
+  const accreditation = {
+    validFrom: '2025-01-01',
+    validTo: '2025-12-31'
+  }
+
+  it('should return null when DATE_RECEIVED_FOR_REPROCESSING is within range', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING]: '2025-06-15'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should return IGNORED when DATE_RECEIVED_FOR_REPROCESSING is outside range', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING]: '2024-06-15'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
+  })
+
+  it('should fall back to DATE_LOAD_LEFT_SITE when DATE_RECEIVED_FOR_REPROCESSING is absent', () => {
+    const data = {
+      [REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2025-07-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should return IGNORED when DATE_LOAD_LEFT_SITE fallback is outside range', () => {
+    const data = {
+      [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2026-07-01'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
+  })
+
+  it('should return null when no date fields are present', () => {
+    const data = {}
+
+    expect(getRowDateStatus(data, accreditation)).toBeNull()
+  })
+
+  it('should use DATE_RECEIVED_FOR_REPROCESSING over DATE_LOAD_LEFT_SITE when both present', () => {
+    const data = {
+      [RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING]: '2024-06-15',
+      [REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2025-06-15'
+    }
+
+    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
   })
 })

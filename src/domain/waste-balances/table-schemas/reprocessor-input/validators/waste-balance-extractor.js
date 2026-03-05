@@ -12,6 +12,7 @@ import {
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { getDateRangeStatus } from '#common/helpers/dates/accreditation.js'
 
 /**
  * Extracted waste balance fields.
@@ -42,6 +43,22 @@ const sentOnLoadsSchema = Joi.object({
   [SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
     createWeightFieldSchema().allow(null)
 })
+
+/**
+ * Determines whether a row should be ignored based on its date fields.
+ *
+ * @param {Object} data - Row data
+ * @param {Object} accreditation - Accreditation with validFrom and validTo
+ * @returns {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome|null}
+ */
+export const getRowDateStatus = (data, accreditation) => {
+  const dateToCheck =
+    data[
+      RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
+    ] || data[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+
+  return getDateRangeStatus([dateToCheck], accreditation)
+}
 
 /**
  * Extracts and validates waste balance fields from a record.
