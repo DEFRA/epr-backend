@@ -276,6 +276,19 @@ describe('field-schemas', () => {
       expect(schema.validate('\u20AC200').error).toBeUndefined()
     })
 
+    it('accepts string with non-breaking spaces', () => {
+      const schema = createFreeTextFieldSchema()
+      // \u00A0 = non-breaking space, commonly inserted by Excel/Word
+      expect(schema.validate('ABC123\u00A0/ DEF456').error).toBeUndefined()
+      expect(schema.validate('AB\u00A0 \u00A0/CD123').error).toBeUndefined()
+    })
+
+    it('accepts string with soft hyphens', () => {
+      const schema = createFreeTextFieldSchema()
+      // \u00AD = soft hyphen, invisible word-break hint from Word copy-paste
+      expect(schema.validate('ABC\u00AD123').error).toBeUndefined()
+    })
+
     it('rejects string with accented characters', () => {
       const schema = createFreeTextFieldSchema()
       const { error } = schema.validate('caf\u00E9')
