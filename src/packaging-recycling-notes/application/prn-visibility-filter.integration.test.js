@@ -94,9 +94,7 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
       repositories: {
         packagingRecyclingNotesRepository: () => repository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        packagingRecyclingNotesExternalApi: true
-      })
+      featureFlags: createInMemoryFeatureFlags()
     })
   }
 
