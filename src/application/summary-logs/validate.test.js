@@ -1189,7 +1189,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for EXPORTER Sent on loads using DATE_LOAD_LEFT_SITE', async () => {
+    it('does not set IGNORED for EXPORTER Sent on loads as DATE_LOAD_LEFT_SITE is not checked', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1252,10 +1252,10 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-      expect(updateCall.loads.added.valid.count).toBe(0)
+      expect(updateCall.loads.added.valid.count).toBe(1)
     })
 
-    it('sets IGNORED outcome for Reprocessor Output loads with dates outside accreditation range', async () => {
+    it('does not set IGNORED for Reprocessor Output received loads as DATE_RECEIVED_FOR_REPROCESSING is not checked', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1274,11 +1274,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow({
                   ROW_ID: 20000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01'
                 }),
                 buildReceivedLoadRow({
                   ROW_ID: 20001,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31'
                 })
               ]
             })
@@ -1290,8 +1290,8 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([20000])
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([20000, 20001])
     })
 
     it('sets IGNORED outcome for REPROCESSED_LOADS in Reprocessor Output with dates outside accreditation range', async () => {

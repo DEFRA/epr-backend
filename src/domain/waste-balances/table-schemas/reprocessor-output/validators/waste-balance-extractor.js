@@ -8,7 +8,6 @@ import {
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
 import {
-  RECEIVED_LOADS_FIELDS,
   REPROCESSED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
@@ -32,7 +31,6 @@ import { getDateRangeStatus } from '#common/helpers/dates/accreditation.js'
  */
 export const getRowDateStatus = (data, accreditation) => {
   const dateToCheck =
-    data[RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING] ||
     data[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
     data[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
 
