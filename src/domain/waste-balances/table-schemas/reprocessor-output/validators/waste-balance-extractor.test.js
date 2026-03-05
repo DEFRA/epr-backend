@@ -214,7 +214,7 @@ describe('getRowDateStatus (REPROCESSOR_OUTPUT)', () => {
     validTo: '2025-12-31'
   }
 
-  it('should return null when REPROCESSED DATE_LOAD_LEFT_SITE is within range', () => {
+  it('should return null when DATE_LOAD_LEFT_SITE is within range', () => {
     const data = {
       [REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2025-06-15'
     }
@@ -222,7 +222,7 @@ describe('getRowDateStatus (REPROCESSOR_OUTPUT)', () => {
     expect(getRowDateStatus(data, accreditation)).toBeNull()
   })
 
-  it('should return IGNORED when REPROCESSED DATE_LOAD_LEFT_SITE is outside range', () => {
+  it('should return IGNORED when DATE_LOAD_LEFT_SITE is outside range', () => {
     const data = {
       [REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2024-06-15'
     }
@@ -230,32 +230,8 @@ describe('getRowDateStatus (REPROCESSOR_OUTPUT)', () => {
     expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
   })
 
-  it('should fall back to SENT_ON DATE_LOAD_LEFT_SITE when reprocessed date is absent', () => {
-    const data = {
-      [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2025-07-01'
-    }
-
-    expect(getRowDateStatus(data, accreditation)).toBeNull()
-  })
-
-  it('should return IGNORED when SENT_ON DATE_LOAD_LEFT_SITE is outside range', () => {
-    const data = {
-      [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2026-07-01'
-    }
-
-    expect(getRowDateStatus(data, accreditation)).toBe(ROW_OUTCOME.IGNORED)
-  })
-
   it('should return null when no date fields are present', () => {
     const data = {}
-
-    expect(getRowDateStatus(data, accreditation)).toBeNull()
-  })
-
-  it('should check DATE_LOAD_LEFT_SITE within range', () => {
-    const data = {
-      [REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]: '2025-06-15'
-    }
 
     expect(getRowDateStatus(data, accreditation)).toBeNull()
   })

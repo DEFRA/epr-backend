@@ -984,11 +984,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', ''] // In range
+                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', '']
                 },
                 {
                   rowNumber: 9,
-                  values: [4001, '2024-12-31', '', '', 20, '', '', '', '', ''] // Out of range
+                  values: [4001, '2024-12-31', '', '', 20, '', '', '', '', '']
                 }
               ]
             }
@@ -1055,7 +1055,7 @@ describe('SummaryLogsValidator', () => {
                     '',
                     '03 03 08',
                     ''
-                  ] // In range
+                  ]
                 },
                 {
                   rowNumber: 9,
@@ -1073,7 +1073,7 @@ describe('SummaryLogsValidator', () => {
                     '',
                     '03 03 08',
                     ''
-                  ] // Out of range
+                  ]
                 }
               ]
             }
@@ -1324,11 +1324,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [3000, '2025-06-01', 10, 0.5, 5, 'No'] // In range
+                  values: [3000, '2025-06-01', 10, 0.5, 5, 'No']
                 },
                 {
                   rowNumber: 9,
-                  values: [3001, '2024-12-31', 20, 0.5, 10, 'No'] // Out of range
+                  values: [3001, '2024-12-31', 20, 0.5, 10, 'No']
                 }
               ]
             }
@@ -1391,7 +1391,7 @@ describe('SummaryLogsValidator', () => {
                     '01234567890',
                     'REF',
                     'Desc'
-                  ] // In range
+                  ]
                 },
                 {
                   rowNumber: 9,
@@ -1407,7 +1407,7 @@ describe('SummaryLogsValidator', () => {
                     '01234567890',
                     'REF',
                     'Desc'
-                  ] // Out of range
+                  ]
                 }
               ]
             }

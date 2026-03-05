@@ -398,7 +398,6 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {WasteRecordsRepository} params.wasteRecordsRepository
  * @param {SummaryLogExtractor} params.summaryLogExtractor
- * @returns {Function} Function that validates a summary log by ID
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
