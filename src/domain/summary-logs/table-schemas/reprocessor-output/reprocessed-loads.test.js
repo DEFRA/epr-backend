@@ -20,12 +20,6 @@ describe('REPROCESSED_LOADS', () => {
       )
     })
 
-    it('has fatalFields array with ROW_ID and PRODUCT_TONNAGE', () => {
-      expect(Array.isArray(schema.fatalFields)).toBe(true)
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('PRODUCT_TONNAGE')
-    })
-
     it('has fieldsRequiredForInclusionInWasteBalance array with PRODUCT_TONNAGE', () => {
       expect(
         Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
@@ -399,17 +393,6 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.requiredHeaders).toContain('UK_PACKAGING_WEIGHT_PERCENTAGE')
       expect(schema.requiredHeaders).toContain('DATE_LOAD_LEFT_SITE')
       expect(schema.requiredHeaders).toContain(
-        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
-      )
-    })
-
-    it('has fatalFields array with all expected fields', () => {
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('PRODUCT_TONNAGE')
-      expect(schema.fatalFields).toContain('ADD_PRODUCT_WEIGHT')
-      expect(schema.fatalFields).toContain('UK_PACKAGING_WEIGHT_PERCENTAGE')
-      expect(schema.fatalFields).toContain('DATE_LOAD_LEFT_SITE')
-      expect(schema.fatalFields).toContain(
         'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
       )
     })

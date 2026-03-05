@@ -41,13 +41,6 @@ export const REPROCESSED_LOADS = {
   },
 
   /**
-   * Fields that produce FATAL errors when validation fails
-   *
-   * Only ROW_ID is fatal as it indicates tampering or corruption.
-   */
-  fatalFields: [FIELDS.ROW_ID],
-
-  /**
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.

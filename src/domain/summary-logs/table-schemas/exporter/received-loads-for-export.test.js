@@ -64,46 +64,6 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.unfilledValues.BASEL_EXPORT_CODE).toContain('Choose option')
     })
 
-    it('has fatalFields array with waste balance fields (not supplementary)', () => {
-      expect(Array.isArray(schema.fatalFields)).toBe(true)
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_EXPORT')
-      expect(schema.fatalFields).toContain('EWC_CODE')
-      expect(schema.fatalFields).toContain('DESCRIPTION_WASTE')
-      expect(schema.fatalFields).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
-      expect(schema.fatalFields).toContain('GROSS_WEIGHT')
-      expect(schema.fatalFields).toContain('TARE_WEIGHT')
-      expect(schema.fatalFields).toContain('PALLET_WEIGHT')
-      expect(schema.fatalFields).toContain('NET_WEIGHT')
-      expect(schema.fatalFields).toContain('BAILING_WIRE_PROTOCOL')
-      expect(schema.fatalFields).toContain(
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      )
-      expect(schema.fatalFields).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
-      expect(schema.fatalFields).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-      expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_EXPORT')
-      expect(schema.fatalFields).toContain(
-        'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
-      )
-      expect(schema.fatalFields).toContain('DATE_OF_EXPORT')
-      expect(schema.fatalFields).toContain('BASEL_EXPORT_CODE')
-      expect(schema.fatalFields).toContain('CUSTOMS_CODES')
-      expect(schema.fatalFields).toContain('CONTAINER_NUMBER')
-      expect(schema.fatalFields).toContain('DATE_RECEIVED_BY_OSR')
-      expect(schema.fatalFields).toContain('OSR_ID')
-      expect(schema.fatalFields).toContain(
-        'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
-      )
-      // Supplementary fields are NOT fatal
-      expect(schema.fatalFields).not.toContain('INTERIM_SITE_ID')
-      expect(schema.fatalFields).not.toContain(
-        'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR'
-      )
-      expect(schema.fatalFields).not.toContain('EXPORT_CONTROLS')
-    })
-
     describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       // Per PAE-984: Only business-mandated fields are required for waste balance.
       // Supplementary fields (EXPORT_CONTROLS, INTERIM_SITE_ID,
