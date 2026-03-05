@@ -1,8 +1,17 @@
 import { randomUUID } from 'node:crypto'
-import { extractWasteBalanceFields as extractExporterFields } from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
-import { extractWasteBalanceFields as extractReprocessorInputFields } from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
-import { extractWasteBalanceFields as extractReprocessorOutputFields } from '#domain/waste-balances/table-schemas/reprocessor-output/validators/waste-balance-extractor.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import {
+  extractWasteBalanceFields as extractExporterFields,
+  getRowDateStatus as getExporterDateStatus
+} from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+import {
+  extractWasteBalanceFields as extractReprocessorInputFields,
+  getRowDateStatus as getReprocessorInputDateStatus
+} from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
+import {
+  extractWasteBalanceFields as extractReprocessorOutputFields,
+  getRowDateStatus as getReprocessorOutputDateStatus
+} from '#domain/waste-balances/table-schemas/reprocessor-output/validators/waste-balance-extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -93,6 +102,12 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
   }
 }
 
+const DATE_STATUS_BY_PROCESSING_TYPE = {
+  [PROCESSING_TYPES.EXPORTER]: getExporterDateStatus,
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: getReprocessorInputDateStatus,
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: getReprocessorOutputDateStatus
+}
+
 /**
  * Calculates the target amount for a waste record based on accreditation.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
@@ -112,12 +127,13 @@ const getTargetAmount = (record, accreditation) => {
     return 0
   }
 
-  const isWithinRange = isWithinAccreditationDateRange(
-    fields.dispatchDate,
-    accreditation
-  )
+  const getDateStatus =
+    DATE_STATUS_BY_PROCESSING_TYPE[record.data.processingType]
+  if (getDateStatus(record.data, accreditation)) {
+    return 0
+  }
 
-  return isWithinRange && !fields.prnIssued ? fields.transactionAmount : 0
+  return !fields.prnIssued ? fields.transactionAmount : 0
 }
 
 /**
