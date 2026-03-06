@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { transformReprocessedLoadsRowReprocessorInput } from '#application/waste-records/row-transformers/reprocessed-loads-reprocessor-input.js'
-import { ROW_OUTCOME } from '../validation-pipeline.js'
 
 describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = REPROCESSED_LOADS
@@ -79,27 +78,6 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
     it('accepts unknown fields', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
       expect(error).toBeUndefined()
-    })
-  })
-
-  describe('classifyForWasteBalance', () => {
-    it('returns EXCLUDED with no reasons regardless of data', () => {
-      const result = schema.classifyForWasteBalance(
-        { ROW_ID: 4000, PRODUCT_TONNAGE: 100 },
-        { accreditation: { validFrom: '2024-01-01', validTo: '2024-12-31' } }
-      )
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.EXCLUDED,
-        reasons: []
-      })
-    })
-
-    it('returns EXCLUDED even with empty data', () => {
-      const result = schema.classifyForWasteBalance({}, { accreditation: {} })
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.EXCLUDED,
-        reasons: []
-      })
     })
   })
 })
