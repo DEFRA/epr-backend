@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { extractWasteBalanceFields as extractExporterFields } from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
-import { extractWasteBalanceFields as extractReprocessorInputFields } from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
-import { extractWasteBalanceFields as extractReprocessorOutputFields } from '#domain/waste-balances/table-schemas/reprocessor-output/validators/waste-balance-extractor.js'
+import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -104,20 +102,17 @@ const getTargetAmount = (record, accreditation) => {
     return 0
   }
 
-  const fields =
-    extractExporterFields(record) ||
-    extractReprocessorInputFields(record) ||
-    extractReprocessorOutputFields(record)
-  if (!fields) {
+  const schema = findSchemaByWasteRecordType(
+    record.data?.processingType,
+    record.type
+  )
+
+  if (!schema?.classifyForWasteBalance) {
     return 0
   }
 
-  const isWithinRange = isWithinAccreditationDateRange(
-    fields.dispatchDate,
-    accreditation
-  )
-
-  return isWithinRange && !fields.prnIssued ? fields.transactionAmount : 0
+  const result = schema.classifyForWasteBalance(record.data, { accreditation })
+  return result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
 }
 
 /**

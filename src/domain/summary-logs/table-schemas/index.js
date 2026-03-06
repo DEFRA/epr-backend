@@ -33,6 +33,28 @@ export const PROCESSING_TYPE_TABLES = {
 }
 
 /**
+ * Finds a table schema by processing type and waste record type.
+ *
+ * @param {string} processingType - e.g. PROCESSING_TYPES.EXPORTER
+ * @param {string} wasteRecordType - e.g. WASTE_RECORD_TYPE.EXPORTED
+ * @returns {Object|null} The matching table schema, or null
+ */
+export const findSchemaByWasteRecordType = (
+  processingType,
+  wasteRecordType
+) => {
+  const tables = PROCESSING_TYPE_TABLES[processingType]
+  if (!tables) {
+    return null
+  }
+  return (
+    Object.values(tables).find(
+      (schema) => schema.wasteRecordType === wasteRecordType
+    ) || null
+  )
+}
+
+/**
  * Creates a table schema getter bound to a specific processing type
  *
  * @param {string} processingType - The processing type from meta.PROCESSING_TYPE

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { PROCESSING_TYPE_TABLES, aggregateUnfilledValues } from './index.js'
+import {
+  PROCESSING_TYPE_TABLES,
+  aggregateUnfilledValues,
+  findSchemaByWasteRecordType
+} from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('table-schemas', () => {
   describe('PROCESSING_TYPE_TABLES', () => {
@@ -92,6 +97,76 @@ describe('table-schemas', () => {
       it('has SENT_ON_LOADS table', () => {
         expect(tables).toHaveProperty('SENT_ON_LOADS')
       })
+    })
+  })
+
+  describe('findSchemaByWasteRecordType', () => {
+    it('returns exporter received-loads-for-export schema for EXPORTED type', () => {
+      const schema = findSchemaByWasteRecordType(
+        PROCESSING_TYPES.EXPORTER,
+        WASTE_RECORD_TYPE.EXPORTED
+      )
+      expect(schema).toBeDefined()
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
+      expect(schema.sheetName).toBe('Exported')
+    })
+
+    it('returns reprocessor-input received-loads schema for RECEIVED type', () => {
+      const schema = findSchemaByWasteRecordType(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        WASTE_RECORD_TYPE.RECEIVED
+      )
+      expect(schema).toBeDefined()
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+      expect(schema.sheetName).toBe('Received')
+    })
+
+    it('returns reprocessor-output reprocessed-loads schema for PROCESSED type', () => {
+      const schema = findSchemaByWasteRecordType(
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        WASTE_RECORD_TYPE.PROCESSED
+      )
+      expect(schema).toBeDefined()
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.PROCESSED)
+    })
+
+    it('returns sent-on-loads schema for SENT_ON type across processing types', () => {
+      for (const processingType of [
+        PROCESSING_TYPES.EXPORTER,
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      ]) {
+        const schema = findSchemaByWasteRecordType(
+          processingType,
+          WASTE_RECORD_TYPE.SENT_ON
+        )
+        expect(schema).toBeDefined()
+        expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+      }
+    })
+
+    it('returns null for unknown processing type', () => {
+      const schema = findSchemaByWasteRecordType(
+        'unknown',
+        WASTE_RECORD_TYPE.EXPORTED
+      )
+      expect(schema).toBeNull()
+    })
+
+    it('returns null for unknown waste record type', () => {
+      const schema = findSchemaByWasteRecordType(
+        PROCESSING_TYPES.EXPORTER,
+        'unknown'
+      )
+      expect(schema).toBeNull()
+    })
+
+    it('returns null when processingType is undefined', () => {
+      const schema = findSchemaByWasteRecordType(
+        undefined,
+        WASTE_RECORD_TYPE.EXPORTED
+      )
+      expect(schema).toBeNull()
     })
   })
 

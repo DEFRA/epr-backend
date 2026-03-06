@@ -164,7 +164,7 @@ describe('buildWasteRecord', () => {
     expect(record.registrationId).toBe('reg-1')
     expect(record.accreditationId).toBe('acc-1')
     expect(record.rowId).toBeDefined()
-    expect(record.type).toBe('received')
+    expect(record.type).toBe('exported')
     expect(record.data).toBeDefined()
     expect(record.versions).toHaveLength(1)
   })
@@ -188,13 +188,13 @@ describe('buildWasteRecord', () => {
     const record = buildWasteRecord({ data: customData })
 
     expect(record.data['Custom Field']).toBe('Value')
-    expect(record.data['Date Received']).toBe('2025-01-20')
+    expect(record.data.DATE_OF_EXPORT).toBe('2023-06-01')
   })
 
   it('overrides default data fields', () => {
-    const customData = { 'Date Received': '2025-02-01' }
+    const customData = { DATE_OF_EXPORT: '2025-02-01' }
     const record = buildWasteRecord({ data: customData })
 
-    expect(record.data['Date Received']).toBe('2025-02-01')
+    expect(record.data.DATE_OF_EXPORT).toBe('2025-02-01')
   })
 })
