@@ -223,6 +223,10 @@ const classifyLoadDates = (wasteRecords, registration, processingType) => {
       wasteRecord.record.type
     )
 
+    if (!schema?.classifyForWasteBalance) {
+      continue
+    }
+
     const result = schema.classifyForWasteBalance(wasteRecord.record.data, {
       accreditation: registration
     })
