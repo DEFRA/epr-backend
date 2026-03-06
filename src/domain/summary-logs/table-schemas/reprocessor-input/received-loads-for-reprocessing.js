@@ -13,6 +13,7 @@ import {
   createEnumFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
@@ -69,6 +70,8 @@ const SUPPLEMENTARY_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received',
 
   /**
    * VAL008: All columns that must be present in the uploaded file

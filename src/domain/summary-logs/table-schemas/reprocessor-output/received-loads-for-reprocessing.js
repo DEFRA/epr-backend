@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * All fields - all optional for REPROCESSOR_OUTPUT
@@ -41,6 +42,8 @@ const ALL_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received',
 
   /**
    * VAL008: All columns that must be present in the uploaded file
