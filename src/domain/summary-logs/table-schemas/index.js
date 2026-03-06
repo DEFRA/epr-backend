@@ -33,6 +33,29 @@ export const PROCESSING_TYPE_TABLES = {
 }
 
 /**
+ * Finds a table schema by processing type and waste record type
+ *
+ * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
+ * @param {string} wasteRecordType - The waste record type (e.g. 'received', 'sentOn')
+ * @returns {Object|null} The matching table schema, or null if not found
+ */
+export const findSchemaForProcessingType = (
+  processingType,
+  wasteRecordType
+) => {
+  const tables = PROCESSING_TYPE_TABLES[processingType]
+  if (!tables) {
+    return null
+  }
+
+  return (
+    Object.values(tables).find(
+      (schema) => schema.wasteRecordType === wasteRecordType
+    ) ?? null
+  )
+}
+
+/**
  * Creates a table schema getter bound to a specific processing type
  *
  * @param {string} processingType - The processing type from meta.PROCESSING_TYPE

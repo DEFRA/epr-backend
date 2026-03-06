@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { transformReprocessedLoadsRowReprocessorInput } from '#application/waste-records/row-transformers/reprocessed-loads-reprocessor-input.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
 describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = REPROCESSED_LOADS
@@ -64,6 +66,43 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
     it('has validationSchema (Joi schema for VAL010)', () => {
       expect(schema.validationSchema).toBeDefined()
       expect(typeof schema.validationSchema.validate).toBe('function')
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    const accreditation = { validFrom: '2025-01-01', validTo: '2025-12-31' }
+
+    it('returns IGNORED when date is outside accreditation period', () => {
+      const result = schema.classifyForWasteBalance(
+        { DATE_LOAD_LEFT_SITE: '2024-12-31' },
+        { accreditation }
+      )
+      expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      expect(result.reasons).toContainEqual({
+        code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+      })
+    })
+
+    it('returns INCLUDED when date is within accreditation period', () => {
+      const result = schema.classifyForWasteBalance(
+        { DATE_LOAD_LEFT_SITE: '2025-06-15' },
+        { accreditation }
+      )
+      expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      expect(result.reasons).toEqual([])
+    })
+
+    it('returns INCLUDED when date field is empty', () => {
+      const result = schema.classifyForWasteBalance(
+        { DATE_LOAD_LEFT_SITE: '' },
+        { accreditation }
+      )
+      expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+    })
+
+    it('returns INCLUDED when date field is absent', () => {
+      const result = schema.classifyForWasteBalance({}, { accreditation })
+      expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
     })
   })
 

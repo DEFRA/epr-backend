@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   PROCESSING_TYPE_TABLES,
   aggregateUnfilledValues,
-  findSchemaByWasteRecordType
+  findSchemaByWasteRecordType,
+  findSchemaForProcessingType
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -168,6 +169,57 @@ describe('table-schemas', () => {
         tableName: 'TABLE_1',
         schema: { wasteRecordType: 'foo', sheetName: 'Foo' }
       })
+    })
+  })
+
+  describe('findSchemaForProcessingType', () => {
+    it('finds REPROCESSOR_INPUT received loads schema by waste record type', () => {
+      const schema = findSchemaForProcessingType(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        WASTE_RECORD_TYPE.RECEIVED
+      )
+
+      expect(schema).toBeDefined()
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+      expect(schema.sheetName).toBe('Received')
+    })
+
+    it('finds EXPORTER exported loads schema by waste record type', () => {
+      const schema = findSchemaForProcessingType(
+        PROCESSING_TYPES.EXPORTER,
+        WASTE_RECORD_TYPE.EXPORTED
+      )
+
+      expect(schema).toBeDefined()
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
+    })
+
+    it('finds sent-on loads schema by waste record type', () => {
+      const schema = findSchemaForProcessingType(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        WASTE_RECORD_TYPE.SENT_ON
+      )
+
+      expect(schema).toBeDefined()
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+    })
+
+    it('returns null for unknown processing type', () => {
+      const schema = findSchemaForProcessingType(
+        'UNKNOWN',
+        WASTE_RECORD_TYPE.RECEIVED
+      )
+
+      expect(schema).toBeNull()
+    })
+
+    it('returns null for unknown waste record type', () => {
+      const schema = findSchemaForProcessingType(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        'unknown'
+      )
+
+      expect(schema).toBeNull()
     })
   })
 

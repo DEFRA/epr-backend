@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { transformReceivedLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/received-loads-reprocessing-output.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING
@@ -107,6 +109,43 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
     it('has validationSchema (Joi schema for VAL010)', () => {
       expect(schema.validationSchema).toBeDefined()
       expect(typeof schema.validationSchema.validate).toBe('function')
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    const accreditation = { validFrom: '2025-01-01', validTo: '2025-12-31' }
+
+    it('returns IGNORED when date is outside accreditation period', () => {
+      const result = schema.classifyForWasteBalance(
+        { DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' },
+        { accreditation }
+      )
+      expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      expect(result.reasons).toContainEqual({
+        code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+      })
+    })
+
+    it('returns INCLUDED when date is within accreditation period', () => {
+      const result = schema.classifyForWasteBalance(
+        { DATE_RECEIVED_FOR_REPROCESSING: '2025-06-15' },
+        { accreditation }
+      )
+      expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      expect(result.reasons).toEqual([])
+    })
+
+    it('returns INCLUDED when date field is empty', () => {
+      const result = schema.classifyForWasteBalance(
+        { DATE_RECEIVED_FOR_REPROCESSING: '' },
+        { accreditation }
+      )
+      expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+    })
+
+    it('returns INCLUDED when date field is absent', () => {
+      const result = schema.classifyForWasteBalance({}, { accreditation })
+      expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
     })
   })
 
