@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformSentOnLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/sent-on-loads-reprocessor-output.js'
 
 /**
  * All fields - all optional for REPROCESSOR_OUTPUT
@@ -30,6 +31,7 @@ export const SENT_ON_LOADS = {
   rowIdField: FIELDS.ROW_ID,
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   sheetName: 'Sent on',
+  rowTransformer: transformSentOnLoadsRowReprocessorOutput,
 
   /**
    * VAL008: All columns that must be present in the uploaded file

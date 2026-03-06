@@ -40,12 +40,14 @@ const SUPPLEMENTARY_FIELDS = [
  * and the same waste balance calculation requirements. Only the ROW_ID minimum differs.
  *
  * @param {number} rowIdMinimum - Minimum ROW_ID value for this variant
+ * @param {Function} rowTransformer - Function to transform a row into waste record metadata
  * @returns {object} Table schema for SENT_ON_LOADS
  */
-export const createSentOnLoadsSchema = (rowIdMinimum) => ({
+export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
   rowIdField: FIELDS.ROW_ID,
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   sheetName: 'Sent on',
+  rowTransformer,
 
   /**
    * VAL008: All columns that must be present in the uploaded file

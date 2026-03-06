@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRow } from '#application/waste-records/row-transformers/received-loads-reprocessing.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING
@@ -16,6 +17,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
     it('has sheetName set to Received', () => {
       expect(schema.sheetName).toBe('Received')
+    })
+
+    it('has rowTransformer set to transformReceivedLoadsRow', () => {
+      expect(schema.rowTransformer).toBe(transformReceivedLoadsRow)
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
