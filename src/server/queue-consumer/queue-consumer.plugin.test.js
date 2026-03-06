@@ -8,12 +8,14 @@ vi.mock('#common/helpers/sqs/sqs-client.js')
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('./consumer.js')
 vi.mock('./summary-log-commands.js')
+vi.mock('./ors-import-commands.js')
 
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createSummaryLogExtractor } =
   await import('#application/summary-logs/extractor.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
 const { summaryLogCommandHandlers } = await import('./summary-log-commands.js')
+const { orsImportCommandHandlers } = await import('./ors-import-commands.js')
 
 describe('commandQueueConsumerPlugin', () => {
   let server
@@ -142,7 +144,7 @@ describe('commandQueueConsumerPlugin', () => {
           uploadsRepository: server.app.uploadsRepository,
           overseasSitesRepository: server.app.overseasSitesRepository
         },
-        summaryLogCommandHandlers
+        [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
       )
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer for queue: test-queue',
