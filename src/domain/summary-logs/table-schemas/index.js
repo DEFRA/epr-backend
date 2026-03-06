@@ -18,6 +18,8 @@ export const TABLE_NAMES = {
  *
  * Each table schema defines:
  * - rowIdField: Field name containing the row identifier
+ * - wasteRecordType: The waste record type this table maps to (e.g. 'received', 'exported')
+ * - sheetName: The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
  * - requiredHeaders: Headers that must be present in the table
  * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)

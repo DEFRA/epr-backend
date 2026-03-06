@@ -11,6 +11,7 @@ import {
   REPROCESSED_LOADS_FIELDS as FIELDS,
   ROW_ID_MINIMUMS
 } from './fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   validateUkPackagingWeightProportion,
   UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES
@@ -23,6 +24,8 @@ import {
  */
 export const REPROCESSED_LOADS = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
+  sheetName: 'Processed',
 
   requiredHeaders: [
     FIELDS.ROW_ID,

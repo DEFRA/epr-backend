@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_EXPORT } from './received-loads-for-export.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   const schema = RECEIVED_LOADS_FOR_EXPORT
@@ -7,6 +8,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to EXPORTED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
+    })
+
+    it('has sheetName set to Exported', () => {
+      expect(schema.sheetName).toBe('Exported')
     })
 
     it('has requiredHeaders array with expected fields', () => {
