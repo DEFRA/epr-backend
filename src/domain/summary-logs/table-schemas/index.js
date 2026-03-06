@@ -24,6 +24,7 @@ export const TABLE_NAMES = {
  * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
  * - fieldsRequiredForInclusionInWasteBalance: Fields required for VAL011 (mandatory for Waste Balance)
+ * - rowTransformer: Function to transform a parsed row into waste record metadata
  */
 export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT,

@@ -4,7 +4,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('createSentOnLoadsSchema', () => {
   const ROW_ID_MINIMUM = 4000
-  const schema = createSentOnLoadsSchema(ROW_ID_MINIMUM)
+  const stubTransformer = () => {}
+  const schema = createSentOnLoadsSchema(ROW_ID_MINIMUM, stubTransformer)
 
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
@@ -17,6 +18,10 @@ describe('createSentOnLoadsSchema', () => {
 
     it('has sheetName set to Sent on', () => {
       expect(schema.sheetName).toBe('Sent on')
+    })
+
+    it('passes through the rowTransformer argument', () => {
+      expect(schema.rowTransformer).toBe(stubTransformer)
     })
 
     it('has requiredHeaders with all 13 fields', () => {
