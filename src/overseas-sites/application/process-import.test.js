@@ -25,7 +25,8 @@ describe('processOrsImport', () => {
     }
 
     uploadsRepository = {
-      findByLocation: vi.fn()
+      findByLocation: vi.fn(),
+      deleteByLocation: vi.fn()
     }
 
     overseasSitesRepository = {}
@@ -100,6 +101,86 @@ describe('processOrsImport', () => {
     expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
       'import-123',
       ORS_IMPORT_STATUS.COMPLETED
+    )
+  })
+
+  it('deletes files from S3 after successful processing', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PENDING,
+      files: [
+        { fileId: 'f1', fileName: 'sites1.xlsx', s3Uri: 's3://bucket/f1' },
+        { fileId: 'f2', fileName: 'sites2.xlsx', s3Uri: 's3://bucket/f2' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
+    processImportFile.mockResolvedValue({
+      status: 'success',
+      sitesCreated: 1,
+      mappingsUpdated: 1,
+      registrationNumber: 'EPR/AB1234CD/R1',
+      errors: []
+    })
+
+    await processOrsImport('import-123', deps())
+
+    expect(uploadsRepository.deleteByLocation).toHaveBeenCalledWith(
+      's3://bucket/f1'
+    )
+    expect(uploadsRepository.deleteByLocation).toHaveBeenCalledWith(
+      's3://bucket/f2'
+    )
+  })
+
+  it('does not delete file from S3 when file could not be retrieved', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PENDING,
+      files: [
+        { fileId: 'f1', fileName: 'missing.xlsx', s3Uri: 's3://bucket/f1' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(null)
+
+    await processOrsImport('import-123', deps())
+
+    expect(uploadsRepository.deleteByLocation).not.toHaveBeenCalled()
+  })
+
+  it('still records result when S3 deletion fails', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PENDING,
+      files: [{ fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' }]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
+    uploadsRepository.deleteByLocation.mockRejectedValue(
+      new Error('S3 access denied')
+    )
+    processImportFile.mockResolvedValue({
+      status: 'success',
+      sitesCreated: 1,
+      mappingsUpdated: 1,
+      registrationNumber: 'EPR/AB1234CD/R1',
+      errors: []
+    })
+
+    await processOrsImport('import-123', deps())
+
+    expect(orsImportsRepository.recordFileResult).toHaveBeenCalledWith(
+      'import-123',
+      0,
+      expect.objectContaining({ status: 'success' })
+    )
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'Failed to delete file sites.xlsx from S3'
+        )
+      })
     )
   })
 

@@ -38,6 +38,10 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       return storage.get(uri) ?? null
     },
 
+    async deleteByLocation(uri) {
+      storage.delete(uri)
+    },
+
     async initiateSummaryLogUpload(options) {
       initiateCalls.push(options)
 

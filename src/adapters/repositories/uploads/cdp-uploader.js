@@ -1,4 +1,4 @@
-import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { StatusCodes } from 'http-status-codes'
 import { parseS3Uri } from './s3-uri.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
@@ -50,6 +50,11 @@ export const createUploadsRepository = ({
 
       throw error
     }
+  },
+
+  async deleteByLocation(uri) {
+    const s3Location = parseS3Uri(uri)
+    await s3Client.send(new DeleteObjectCommand(s3Location))
   },
 
   async initiateSummaryLogUpload({

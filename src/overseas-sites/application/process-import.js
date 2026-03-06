@@ -84,11 +84,25 @@ const processFile = async (file, deps) => {
       }
     }
 
-    return await processImportFile(buffer, {
+    const result = await processImportFile(buffer, {
       overseasSitesRepository,
       organisationsRepository,
       logger
     })
+
+    try {
+      await uploadsRepository.deleteByLocation(file.s3Uri)
+    } catch (deleteErr) {
+      logger.warn({
+        message: `Failed to delete file ${file.fileName} from S3 after processing: ${deleteErr.message}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+        }
+      })
+    }
+
+    return result
   } catch (err) {
     logger.error({
       err,
