@@ -196,7 +196,9 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       WASTE_BALANCE_FIELDS,
       RECEIVED_LOADS_FOR_EXPORT.unfilledValues
     )
-    if (missingResult) return missingResult
+    if (missingResult) {
+      return missingResult
+    }
 
     if (
       !isWithinAccreditationDateRange(

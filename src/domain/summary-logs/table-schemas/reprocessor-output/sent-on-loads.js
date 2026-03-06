@@ -78,7 +78,9 @@ export const SENT_ON_LOADS = {
       requiredFields,
       SENT_ON_LOADS.unfilledValues
     )
-    if (missingResult) return missingResult
+    if (missingResult) {
+      return missingResult
+    }
 
     if (
       !isWithinAccreditationDateRange(

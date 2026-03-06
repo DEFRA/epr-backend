@@ -100,7 +100,9 @@ export const REPROCESSED_LOADS = {
       requiredFields,
       REPROCESSED_LOADS.unfilledValues
     )
-    if (missingResult) return missingResult
+    if (missingResult) {
+      return missingResult
+    }
 
     if (
       !isWithinAccreditationDateRange(

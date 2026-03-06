@@ -32,7 +32,9 @@ export const SENT_ON_LOADS = {
       WASTE_BALANCE_FIELDS,
       SENT_ON_LOADS.unfilledValues
     )
-    if (missingResult) return missingResult
+    if (missingResult) {
+      return missingResult
+    }
 
     if (
       !isWithinAccreditationDateRange(
