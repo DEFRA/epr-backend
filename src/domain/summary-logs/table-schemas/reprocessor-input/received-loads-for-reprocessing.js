@@ -10,7 +10,8 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema,
   createPercentageFieldSchema,
-  createEnumFieldSchema, YES_NO_VALUES 
+  createEnumFieldSchema,
+  YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'

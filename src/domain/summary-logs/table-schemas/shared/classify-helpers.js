@@ -1,4 +1,4 @@
-import { isFilled, ROW_OUTCOME  } from '../validation-pipeline.js'
+import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
 
 export const CLASSIFICATION_REASON = Object.freeze({
   MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',

@@ -5,7 +5,8 @@ import {
   createDateFieldSchema,
   createWeightFieldSchema,
   createPercentageFieldSchema,
-  createYesNoFieldSchema, YES_NO_VALUES 
+  createYesNoFieldSchema,
+  YES_NO_VALUES
 } from '../shared/index.js'
 import {
   REPROCESSED_LOADS_FIELDS as FIELDS,

@@ -63,7 +63,7 @@ export const SENT_ON_LOADS = {
   /**
    * VAL011: Fields required for Waste Balance calculation
    *
-   * Empty - this table does not contribute to waste balance for REPROCESSOR_OUTPUT.
+   * Sent-on loads contribute to waste balance via classifyForWasteBalance below.
    */
   fieldsRequiredForInclusionInWasteBalance: [],
 
