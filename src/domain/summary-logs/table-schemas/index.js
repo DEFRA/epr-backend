@@ -45,6 +45,24 @@ export const createTableSchemaGetter = (processingType, registry) => {
 }
 
 /**
+ * Finds a table schema by waste record type, scanning across all processing types.
+ *
+ * @param {string} wasteRecordType - The waste record type to find (e.g. 'received', 'exported')
+ * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
+ * @returns {{ tableName: string, schema: Object } | null} The table name and schema, or null if not found
+ */
+export const findSchemaByWasteRecordType = (wasteRecordType, registry) => {
+  for (const tables of Object.values(registry)) {
+    for (const [tableName, schema] of Object.entries(tables)) {
+      if (schema.wasteRecordType === wasteRecordType) {
+        return { tableName, schema }
+      }
+    }
+  }
+  return null
+}
+
+/**
  * Aggregates unfilledValues from all table schemas across all processing types
  * into a single per-column map for the parser's unfilledValues option.
  *
