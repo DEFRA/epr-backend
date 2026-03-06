@@ -5,7 +5,7 @@ import {
   createDateFieldSchema,
   createWeightFieldSchema,
   createPercentageFieldSchema,
-  createYesNoFieldSchema
+  createYesNoFieldSchema, YES_NO_VALUES 
 } from '../shared/index.js'
 import {
   REPROCESSED_LOADS_FIELDS as FIELDS,
@@ -17,6 +17,13 @@ import {
   validateUkPackagingWeightProportion,
   UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES
 } from './validators/uk-packaging-weight-proportion-validator.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import {
+  CLASSIFICATION_REASON,
+  checkRequiredFields
+} from '../shared/classify-helpers.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Table schema for REPROCESSED_LOADS (REPROCESSOR_OUTPUT)
@@ -77,5 +84,48 @@ export const REPROCESSED_LOADS = {
     FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
     FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
     FIELDS.ADD_PRODUCT_WEIGHT
-  ]
+  ],
+
+  classifyForWasteBalance: (data, { accreditation }) => {
+    const requiredFields = [
+      FIELDS.PRODUCT_TONNAGE,
+      FIELDS.DATE_LOAD_LEFT_SITE,
+      FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
+      FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
+      FIELDS.ADD_PRODUCT_WEIGHT
+    ]
+    const missingResult = checkRequiredFields(
+      data,
+      requiredFields,
+      REPROCESSED_LOADS.unfilledValues
+    )
+    if (missingResult) return missingResult
+
+    if (
+      !isWithinAccreditationDateRange(
+        data[FIELDS.DATE_LOAD_LEFT_SITE],
+        accreditation
+      )
+    ) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    if (data[FIELDS.ADD_PRODUCT_WEIGHT] !== YES_NO_VALUES.YES) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.PRODUCT_WEIGHT_NOT_ADDED }]
+      }
+    }
+
+    return {
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: roundToTwoDecimalPlaces(
+        data[FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]
+      )
+    }
+  }
 }

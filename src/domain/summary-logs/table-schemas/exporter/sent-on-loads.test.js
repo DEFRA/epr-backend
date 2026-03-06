@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { transformSentOnLoadsRowExporter } from '#application/waste-records/row-transformers/sent-on-loads-exporter.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
 
 describe('SENT_ON_LOADS (EXPORTER)', () => {
   const schema = SENT_ON_LOADS
@@ -124,6 +125,31 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
     it('accepts unknown fields', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
       expect(error).toBeUndefined()
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    it('returns EXCLUDED with no reasons regardless of data', () => {
+      const result = schema.classifyForWasteBalance(
+        {
+          ROW_ID: 4000,
+          DATE_LOAD_LEFT_SITE: new Date('2024-06-15'),
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50
+        },
+        { accreditation: { validFrom: '2024-01-01', validTo: '2024-12-31' } }
+      )
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: []
+      })
+    })
+
+    it('returns EXCLUDED even with empty data', () => {
+      const result = schema.classifyForWasteBalance({}, { accreditation: {} })
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: []
+      })
     })
   })
 })
