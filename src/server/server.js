@@ -34,10 +34,8 @@ import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongo
 import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
-import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { runGlassMigration } from '#server/run-glass-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 
 function getServerConfig(config) {
@@ -193,9 +191,7 @@ async function createServer(options = {}) {
   await server.register(plugins)
 
   server.ext('onPostStart', () => {
-    logFilesUploadedFromForms(server, options)
     runFormsDataMigration(server)
-    runGlassMigration(server)
     copyFormFilesToS3(server)
   })
 

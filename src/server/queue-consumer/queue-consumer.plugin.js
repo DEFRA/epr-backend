@@ -5,6 +5,7 @@ import {
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createCommandQueueConsumer } from './consumer.js'
+import { summaryLogCommandHandlers } from './summary-log-commands.js'
 
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
@@ -19,9 +20,7 @@ export const commandQueueConsumerPlugin = {
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
-    'uploadsRepository',
-    'orsImportsRepository',
-    'overseasSitesRepository'
+    'uploadsRepository'
   ],
 
   register: async (
@@ -45,9 +44,7 @@ export const commandQueueConsumerPlugin = {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      wasteBalancesRepository,
-      orsImportsRepository,
-      overseasSitesRepository
+      wasteBalancesRepository
     } = server.app
 
     const summaryLogExtractor = createSummaryLogExtractor({
@@ -68,19 +65,19 @@ export const commandQueueConsumerPlugin = {
         }
       })
 
-      consumer = await createCommandQueueConsumer({
-        sqsClient,
-        queueName,
-        logger: server.logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        wasteBalancesRepository,
-        summaryLogExtractor,
-        orsImportsRepository,
-        uploadsRepository,
-        overseasSitesRepository
-      })
+      consumer = await createCommandQueueConsumer(
+        {
+          sqsClient,
+          queueName,
+          logger: server.logger,
+          summaryLogsRepository,
+          organisationsRepository,
+          wasteRecordsRepository,
+          wasteBalancesRepository,
+          summaryLogExtractor
+        },
+        summaryLogCommandHandlers
+      )
 
       consumer.start()
     })

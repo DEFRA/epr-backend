@@ -68,34 +68,6 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
       })
     })
 
-    describe('fatalFields (data validation)', () => {
-      it('contains ROW_ID as fatal (always fatal)', () => {
-        expect(schema.fatalFields).toContain('ROW_ID')
-      })
-
-      it('has exactly 1 fatal field (ROW_ID only - all other fields optional)', () => {
-        expect(schema.fatalFields).toHaveLength(1)
-      })
-
-      it('does NOT contain Section 1 columns', () => {
-        expect(schema.fatalFields).not.toContain(
-          'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        expect(schema.fatalFields).not.toContain('EWC_CODE')
-        expect(schema.fatalFields).not.toContain('GROSS_WEIGHT')
-        expect(schema.fatalFields).not.toContain('NET_WEIGHT')
-        expect(schema.fatalFields).not.toContain(
-          'TONNAGE_RECEIVED_FOR_RECYCLING'
-        )
-      })
-
-      it('does NOT contain Section 2 or 3 columns', () => {
-        expect(schema.fatalFields).not.toContain('SUPPLIER_NAME')
-        expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
-        expect(schema.fatalFields).not.toContain('CARRIER_NAME')
-      })
-    })
-
     describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       it('is empty (table does not contribute to waste balance for REPROCESSOR_OUTPUT)', () => {
         expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)

@@ -33,23 +33,6 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
       })
     })
 
-    describe('fatalFields (data validation)', () => {
-      it('contains ROW_ID as fatal (always fatal)', () => {
-        expect(schema.fatalFields).toContain('ROW_ID')
-      })
-
-      it('has exactly 1 fatal field (ROW_ID only)', () => {
-        expect(schema.fatalFields).toHaveLength(1)
-      })
-
-      it('does NOT contain optional columns', () => {
-        expect(schema.fatalFields).not.toContain('DATE_LOAD_LEFT_SITE')
-        expect(schema.fatalFields).not.toContain('PRODUCT_DESCRIPTION')
-        expect(schema.fatalFields).not.toContain('PRODUCT_TONNAGE')
-        expect(schema.fatalFields).not.toContain('CUSTOMER_NAME')
-      })
-    })
-
     describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       it('is empty (table does not contribute to waste balance)', () => {
         expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)

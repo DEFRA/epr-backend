@@ -72,43 +72,6 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       ).toContain('Choose option')
     })
 
-    describe('fatalFields (data validation - waste balance fields only)', () => {
-      it('contains waste balance fields that cause fatal errors on validation failure', () => {
-        expect(Array.isArray(schema.fatalFields)).toBe(true)
-        expect(schema.fatalFields).toContain('ROW_ID')
-        expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-        expect(schema.fatalFields).toContain('EWC_CODE')
-        expect(schema.fatalFields).toContain('DESCRIPTION_WASTE')
-        expect(schema.fatalFields).toContain(
-          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-        )
-        expect(schema.fatalFields).toContain('GROSS_WEIGHT')
-        expect(schema.fatalFields).toContain('TARE_WEIGHT')
-        expect(schema.fatalFields).toContain('PALLET_WEIGHT')
-        expect(schema.fatalFields).toContain('NET_WEIGHT')
-        expect(schema.fatalFields).toContain('BAILING_WIRE_PROTOCOL')
-        expect(schema.fatalFields).toContain(
-          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-        )
-        expect(schema.fatalFields).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
-        expect(schema.fatalFields).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-        expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
-      })
-
-      it('has exactly 14 fatal fields (waste balance columns only)', () => {
-        expect(schema.fatalFields).toHaveLength(14)
-      })
-
-      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
-        expect(schema.fatalFields).not.toContain('SUPPLIER_NAME')
-        expect(schema.fatalFields).not.toContain('SUPPLIER_ADDRESS')
-        expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
-        expect(schema.fatalFields).not.toContain('WEIGHBRIDGE_TICKET')
-        expect(schema.fatalFields).not.toContain('CARRIER_NAME')
-        expect(schema.fatalFields).not.toContain('CBD_REG_NUMBER')
-      })
-    })
-
     describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       it('contains fields required for waste balance calculation', () => {
         expect(

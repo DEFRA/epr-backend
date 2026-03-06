@@ -1,7 +1,9 @@
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
 import { getCognitoToken } from '#common/helpers/cognito-token.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import { config } from '../../../config.js'
+import { getRetrievalKeyForRegulator } from '#adapters/repositories/forms-submissions/get-retrieval-key.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
@@ -9,10 +11,6 @@ import { config } from '../../../config.js'
  * @typedef {Object} FormsFileUploadsRepositoryConfig
  * @property {S3Client} s3Client - AWS S3 client
  */
-
-const getRetrievalKeyForRegulator = (regulator) => {
-  return config.get(`regulator.${regulator.toUpperCase()}.email`)
-}
 
 /**
  * Creates a Forms File Uploads Repository
@@ -51,13 +49,16 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
       )
     }
 
-    const command = new PutObjectCommand({
-      Bucket: s3Bucket,
-      Key: s3Key,
-      Body: response.body
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: s3Bucket,
+        Key: s3Key,
+        Body: response.body
+      }
     })
 
-    await s3Client.send(command)
+    await upload.done()
   }
 
   return {
@@ -72,18 +73,18 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
     async copyFormFileToS3({ fileId, regulator }) {
       const clientId = config.get('formsSubmissionApi.cognitoClientId')
       const clientSecret = config.get('formsSubmissionApi.cognitoClientSecret')
-      const serviceName = config.get('formsSubmissionApi.serviceName')
+      const cognitoTokenUrl = config.get('formsSubmissionApi.cognitoTokenUrl')
+      const retrievalKeyForRegulator = getRetrievalKeyForRegulator(regulator)
 
-      const retrievalKey = getRetrievalKeyForRegulator(regulator)
       const accessToken = await getCognitoToken(
         clientId,
         clientSecret,
-        serviceName
+        cognitoTokenUrl
       )
       const presignedUrl = await getPresignedUrl(
         accessToken,
         fileId,
-        retrievalKey
+        retrievalKeyForRegulator
       )
       await saveToS3(presignedUrl, fileId)
     },

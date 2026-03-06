@@ -33,9 +33,11 @@
  * @property {() => Promise<AccreditationFormSubmission[]>} findAllAccreditations
  * @property {(id: string) => Promise<AccreditationFormSubmission | null>} findAccreditationById
  * @property {(id: string) => Promise<AccreditationFormSubmission[]>} findAccreditationsBySystemReference
+ * @property {(date: Date) => Promise<AccreditationFormSubmission[]>} findAccreditationsCreatedAfter - Find accreditations created after specified date
  * @property {() => Promise<RegistrationFormSubmission[]>} findAllRegistrations
  * @property {(id: string) => Promise<RegistrationFormSubmission | null>} findRegistrationById
  * @property {(id: string) => Promise<RegistrationFormSubmission[]>} findRegistrationsBySystemReference
+ * @property {(date: Date) => Promise<RegistrationFormSubmission[]>} findRegistrationsCreatedAfter - Find registrations created after specified date
  * @property {() => Promise<OrganisationFormSubmission[]>} findAllOrganisations - Find all organisations
  * @property {(id: string) => Promise<OrganisationFormSubmission | null>} findOrganisationById
  * @property {() => Promise<FormSubmissionIds>} findAllFormSubmissionIds - Find all form submission IDs

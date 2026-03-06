@@ -12,8 +12,8 @@ export const fetchJson = async (url, options) => {
   const completeOptions = {
     ...options,
     headers: withTraceId(getTracingHeaderName(), {
-      ...options?.headers,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...options?.headers
     })
   }
 

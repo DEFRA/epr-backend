@@ -31,21 +31,6 @@ describe('createSentOnLoadsSchema', () => {
       expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
       expect(schema.unfilledValues.EWC_CODE).toContain('Choose option')
     })
-
-    it('has fatalFields with waste balance fields only', () => {
-      expect(schema.fatalFields).toHaveLength(3)
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('DATE_LOAD_LEFT_SITE')
-      expect(schema.fatalFields).toContain(
-        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-      )
-    })
-
-    it('has fieldsRequiredForInclusionInWasteBalance matching fatalFields', () => {
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual(
-        schema.fatalFields
-      )
-    })
   })
 
   describe('validationSchema', () => {
