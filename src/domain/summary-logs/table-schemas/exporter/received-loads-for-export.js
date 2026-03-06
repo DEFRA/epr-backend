@@ -14,7 +14,8 @@ import {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
-  createEnumFieldSchema
+  createEnumFieldSchema,
+  YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -27,6 +28,13 @@ import {
   TONNAGE_EXPORT_MESSAGES,
   validateTonnageExport
 } from './validators/tonnage-export-validator.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import {
+  CLASSIFICATION_REASON,
+  checkRequiredFields
+} from '../shared/classify-helpers.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -180,5 +188,50 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
    * TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR) are not required for
    * waste balance inclusion.
    */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
+  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS,
+
+  classifyForWasteBalance: (data, { accreditation }) => {
+    const missingResult = checkRequiredFields(
+      data,
+      WASTE_BALANCE_FIELDS,
+      RECEIVED_LOADS_FOR_EXPORT.unfilledValues
+    )
+    if (missingResult) {
+      return missingResult
+    }
+
+    if (
+      !isWithinAccreditationDateRange(
+        data[FIELDS.DATE_OF_EXPORT],
+        accreditation
+      )
+    ) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    if (
+      data[FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE] === YES_NO_VALUES.YES
+    ) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+      }
+    }
+
+    const interimSite =
+      data[FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE] === YES_NO_VALUES.YES
+
+    return {
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: roundToTwoDecimalPlaces(
+        interimSite
+          ? data[FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]
+          : data[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]
+      )
+    }
+  }
 }

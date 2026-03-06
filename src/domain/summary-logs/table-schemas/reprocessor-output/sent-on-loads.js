@@ -3,6 +3,13 @@ import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { transformSentOnLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/sent-on-loads-reprocessor-output.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import {
+  CLASSIFICATION_REASON,
+  checkRequiredFields
+} from '../shared/classify-helpers.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * All fields - all optional for REPROCESSOR_OUTPUT
@@ -56,7 +63,43 @@ export const SENT_ON_LOADS = {
   /**
    * VAL011: Fields required for Waste Balance calculation
    *
-   * Empty - this table does not contribute to waste balance for REPROCESSOR_OUTPUT.
+   * Sent-on loads contribute to waste balance via classifyForWasteBalance below.
    */
-  fieldsRequiredForInclusionInWasteBalance: []
+  fieldsRequiredForInclusionInWasteBalance: [],
+
+  classifyForWasteBalance: (data, { accreditation }) => {
+    const requiredFields = [
+      FIELDS.ROW_ID,
+      FIELDS.DATE_LOAD_LEFT_SITE,
+      FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+    ]
+    const missingResult = checkRequiredFields(
+      data,
+      requiredFields,
+      SENT_ON_LOADS.unfilledValues
+    )
+    if (missingResult) {
+      return missingResult
+    }
+
+    if (
+      !isWithinAccreditationDateRange(
+        data[FIELDS.DATE_LOAD_LEFT_SITE],
+        accreditation
+      )
+    ) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    return {
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: -roundToTwoDecimalPlaces(
+        data[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]
+      )
+    }
+  }
 }

@@ -10,7 +10,8 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema,
   createPercentageFieldSchema,
-  createEnumFieldSchema
+  createEnumFieldSchema,
+  YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -23,6 +24,13 @@ import {
   TONNAGE_RECEIVED_MESSAGES,
   validateTonnageReceived
 } from './validators/tonnage-received-validator.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import {
+  CLASSIFICATION_REASON,
+  checkRequiredFields
+} from '../shared/classify-helpers.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Fields required for waste balance calculation (Section 1)
@@ -143,5 +151,45 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
    */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
+  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS,
+
+  classifyForWasteBalance: (data, { accreditation }) => {
+    const missingResult = checkRequiredFields(
+      data,
+      WASTE_BALANCE_FIELDS,
+      RECEIVED_LOADS_FOR_REPROCESSING.unfilledValues
+    )
+    if (missingResult) {
+      return missingResult
+    }
+
+    if (
+      !isWithinAccreditationDateRange(
+        data[FIELDS.DATE_RECEIVED_FOR_REPROCESSING],
+        accreditation
+      )
+    ) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    if (
+      data[FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE] === YES_NO_VALUES.YES
+    ) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+      }
+    }
+
+    return {
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: roundToTwoDecimalPlaces(
+        data[FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]
+      )
+    }
+  }
 }
