@@ -1545,7 +1545,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.invalid.rowIds).toEqual([5000])
     })
 
-    it('sets IGNORED outcome for REPROCESSOR_OUTPUT when no date fields are present (branch coverage)', async () => {
+    it('completes validation for REPROCESSOR_OUTPUT when date field is empty', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1576,7 +1576,7 @@ describe('SummaryLogsValidator', () => {
       expect(summaryLogsRepository.update).toHaveBeenCalled()
     })
 
-    it('sets IGNORED outcome for EXPORTER when no date fields are present (branch coverage)', async () => {
+    it('completes validation for EXPORTER sent-on loads when date field is empty', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
