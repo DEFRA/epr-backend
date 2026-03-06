@@ -1189,7 +1189,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for EXPORTER Sent on loads using DATE_LOAD_LEFT_SITE', async () => {
+    it('includes EXPORTER sent-on loads regardless of date range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1252,7 +1252,7 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-      expect(updateCall.loads.added.valid.count).toBe(0)
+      expect(updateCall.loads.added.valid.count).toBe(1)
     })
 
     it('includes all REPROCESSOR_OUTPUT received loads regardless of date range (non-contributing table)', async () => {

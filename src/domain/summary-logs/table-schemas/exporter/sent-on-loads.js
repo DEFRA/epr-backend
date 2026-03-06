@@ -1,24 +1,13 @@
 import { createSentOnLoadsSchema } from '../shared/index.js'
-import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import { ROW_ID_MINIMUMS } from './fields.js'
 import { transformSentOnLoadsRowExporter } from '#application/waste-records/row-transformers/sent-on-loads-exporter.js'
-import { ROW_OUTCOME } from '../validation-pipeline.js'
-import {
-  CLASSIFICATION_REASON,
-  checkRequiredFields
-} from '../shared/classify-helpers.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
-import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-
-const WASTE_BALANCE_FIELDS = [
-  FIELDS.ROW_ID,
-  FIELDS.DATE_LOAD_LEFT_SITE,
-  FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
-]
 
 /**
  * Table schema for SENT_ON_LOADS (EXPORTER)
  *
  * Tracks waste sent on from exporters to other facilities.
+ * Does not contribute to waste balance — no exporter accreditation date
+ * (DATE_OF_EXPORT or DATE_RECEIVED_BY_OSR) exists on this table.
  */
 export const SENT_ON_LOADS = {
   ...createSentOnLoadsSchema(
@@ -26,34 +15,8 @@ export const SENT_ON_LOADS = {
     transformSentOnLoadsRowExporter
   ),
 
-  classifyForWasteBalance: (data, { accreditation }) => {
-    const missingResult = checkRequiredFields(
-      data,
-      WASTE_BALANCE_FIELDS,
-      SENT_ON_LOADS.unfilledValues
-    )
-    if (missingResult) {
-      return missingResult
-    }
-
-    if (
-      !isWithinAccreditationDateRange(
-        data[FIELDS.DATE_LOAD_LEFT_SITE],
-        accreditation
-      )
-    ) {
-      return {
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
-      }
-    }
-
-    return {
-      outcome: ROW_OUTCOME.INCLUDED,
-      reasons: [],
-      transactionAmount: -roundToTwoDecimalPlaces(
-        data[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]
-      )
-    }
-  }
+  /**
+   * This table does not contribute to waste balance — classification is not applicable.
+   */
+  classifyForWasteBalance: null
 }
