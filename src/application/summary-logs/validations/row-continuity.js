@@ -3,43 +3,15 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
+import {
+  findSchemaByWasteRecordType,
+  PROCESSING_TYPE_TABLES
+} from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
  * @typedef {import('../validate.js').ValidatedWasteRecord} ValidatedWasteRecord
  */
-
-/**
- * Maps waste record type to the corresponding sheet name in the spreadsheet
- *
- * @param {string} type - The waste record type (e.g., 'received', 'processed')
- * @returns {string} The sheet name
- */
-const getSheetForType = (type) => {
-  const sheetMapping = {
-    received: 'Received',
-    processed: 'Processed',
-    sentOn: 'Sent on',
-    exported: 'Exported'
-  }
-  return sheetMapping[type] || 'Unknown'
-}
-
-/**
- * Maps waste record type to the corresponding table name
- *
- * @param {string} type - The waste record type
- * @returns {string} The table name
- */
-const getTableForType = (type) => {
-  const tableMapping = {
-    received: 'RECEIVED_LOADS_FOR_REPROCESSING',
-    processed: 'PROCESSED_LOADS',
-    sentOn: 'SENT_ON_LOADS',
-    exported: 'EXPORTED_LOADS'
-  }
-  return tableMapping[type] || 'UNKNOWN_TABLE'
-}
 
 /**
  * Validates that no rows from previous uploads have been removed
@@ -99,14 +71,16 @@ export const validateRowContinuity = ({
       const lastVersion =
         originalRecord.versions[originalRecord.versions.length - 1]
 
+      const match = findSchemaByWasteRecordType(type, PROCESSING_TYPE_TABLES)
+
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
         VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
         {
           location: {
-            sheet: getSheetForType(type),
-            table: getTableForType(type),
+            sheet: match?.schema.sheetName ?? 'Unknown',
+            table: match?.tableName ?? 'Unknown',
             rowId
           },
           previousSummaryLog: {
