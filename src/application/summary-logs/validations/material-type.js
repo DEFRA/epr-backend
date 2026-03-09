@@ -65,6 +65,19 @@ export const validateMaterialType = ({
     SUMMARY_LOG_META_FIELDS.MATERIAL
   )
 
+  if (!spreadsheetMaterial || !MATERIAL_MAP[spreadsheetMaterial]) {
+    issues.addFatal(
+      VALIDATION_CATEGORY.BUSINESS,
+      'Material is required and must be a recognised material type',
+      VALIDATION_CODE.MATERIAL_REQUIRED,
+      {
+        location,
+        actual: spreadsheetMaterial
+      }
+    )
+    return issues
+  }
+
   if (!VALID_REGISTRATION_MATERIALS.includes(material)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
