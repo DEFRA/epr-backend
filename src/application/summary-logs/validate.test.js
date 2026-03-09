@@ -950,7 +950,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
-    it('includes all REPROCESSED_LOADS regardless of date range (non-contributing table)', async () => {
+    it('sets IGNORED outcome for REPROCESSED_LOADS with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1000,8 +1000,8 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(2)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([4000, 4001])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([4000])
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS with dates outside accreditation range', async () => {
@@ -1189,7 +1189,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('includes EXPORTER sent-on loads regardless of date range (non-contributing table)', async () => {
+    it('sets IGNORED outcome for EXPORTER sent-on loads with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1252,10 +1252,10 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.count).toBe(0)
     })
 
-    it('includes all REPROCESSOR_OUTPUT received loads regardless of date range (non-contributing table)', async () => {
+    it('sets IGNORED outcome for REPROCESSOR_OUTPUT received loads with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1290,8 +1290,8 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(2)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([20000, 20001])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([20000])
     })
 
     it('sets IGNORED outcome for REPROCESSED_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
@@ -1344,7 +1344,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('does not classify SENT_ON_LOADS in Reprocessor Output for waste balance', async () => {
+    it('sets IGNORED outcome for REPROCESSOR_OUTPUT sent-on loads with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1407,7 +1407,7 @@ describe('SummaryLogsValidator', () => {
                     '01234567890',
                     'REF',
                     'Desc'
-                  ] // Out of range - but no classification for reprocessor-output
+                  ] // Out of range
                 }
               ]
             }
@@ -1419,8 +1419,8 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(2)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([5000, 5001])
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Input', async () => {

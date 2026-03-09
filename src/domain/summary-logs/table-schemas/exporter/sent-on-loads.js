@@ -1,6 +1,7 @@
 import { createSentOnLoadsSchema } from '../shared/index.js'
-import { ROW_ID_MINIMUMS } from './fields.js'
+import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { transformSentOnLoadsRowExporter } from '#application/waste-records/row-transformers/sent-on-loads-exporter.js'
+import { createDateOnlyClassifier } from '../shared/classify-helpers.js'
 
 /**
  * Table schema for SENT_ON_LOADS (EXPORTER)
@@ -16,7 +17,8 @@ export const SENT_ON_LOADS = {
   ),
 
   /**
-   * This table does not contribute to waste balance — classification is not applicable.
+   * This table does not contribute to waste balance but still needs date-range
+   * checking to mark rows outside the accreditation period as IGNORED.
    */
-  classifyForWasteBalance: null
+  classifyForWasteBalance: createDateOnlyClassifier(FIELDS.DATE_LOAD_LEFT_SITE)
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { transformReceivedLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/received-loads-reprocessing-output.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
@@ -110,8 +112,38 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
     })
   })
 
-  it('does not classify for waste balance', () => {
-    expect(schema.classifyForWasteBalance).toBeNull()
+  describe('classifyForWasteBalance', () => {
+    const accreditation = {
+      validFrom: new Date('2024-01-01'),
+      validTo: new Date('2024-12-31')
+    }
+
+    it('returns IGNORED when DATE_RECEIVED_FOR_REPROCESSING is outside accreditation period', () => {
+      const data = { DATE_RECEIVED_FOR_REPROCESSING: new Date('2023-06-15') }
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      })
+    })
+
+    it('returns null when DATE_RECEIVED_FOR_REPROCESSING is within accreditation period', () => {
+      const data = { DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-06-15') }
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when DATE_RECEIVED_FOR_REPROCESSING is not present', () => {
+      const data = {}
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
   })
 
   describe('validationSchema (VAL010)', () => {
