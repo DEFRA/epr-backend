@@ -164,7 +164,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(transaction1.amount).toBe(100)
     })
 
-    it('should update waste balance with debits from sent on loads', async () => {
+    it('should not create transactions from sent on loads', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         reprocessingType: 'input'
@@ -172,7 +172,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData(
-        [{ rowId: 1001, tonnageReceived: 500 }], // Initial credit to allow debits
+        [{ rowId: 1001, tonnageReceived: 500 }],
         [
           {
             rowId: 5001,
@@ -188,18 +188,11 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
+      expect(balance.transactions).toHaveLength(1)
 
-      // 500 (credit) - 100 (debit) = 400
-      expect(balance.amount).toBe(400)
-      expect(balance.availableAmount).toBe(400)
-
-      const debitTx = balance.transactions.find(
-        (t) => t.entities[0].id === '5001'
-      )
-      expect(debitTx).toBeDefined()
-      expect(debitTx.type).toBe('debit')
-      expect(debitTx.amount).toBe(100)
+      // Only the received load credit — sent-on loads do not contribute
+      expect(balance.amount).toBe(500)
+      expect(balance.availableAmount).toBe(500)
     })
 
     it('should not create credit transaction if PRN was issued on received load', async () => {
@@ -266,7 +259,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
-    it('should not create transaction for sent on load outside accreditation period', async () => {
+    it('should not create transactions from sent on loads regardless of date', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         reprocessingType: 'input'
@@ -274,17 +267,17 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const { wasteBalancesRepository, accreditationId } = env
 
       const uploadData = createUploadData(
-        [{ rowId: 1001, tonnageReceived: 500 }], // Initial credit
+        [{ rowId: 1001, tonnageReceived: 500 }],
         [
           {
             rowId: 5001,
             tonnageSent: 100,
-            dateLeft: '2024-12-31T00:00:00.000Z' // Before period
+            dateLeft: '2024-12-31T00:00:00.000Z'
           },
           {
             rowId: 5002,
             tonnageSent: 50,
-            dateLeft: '2025-01-01T00:00:00.000Z' // In period
+            dateLeft: '2025-01-01T00:00:00.000Z'
           }
         ]
       )
@@ -300,14 +293,9 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      // 500 (credit) - 50 (debit) = 450
-      // Row 5001 should be ignored
-      expect(balance.amount).toBe(450)
-
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.entities[0].id).toBe('5002')
-      expect(debitTx.amount).toBe(50)
+      // Only the received load credit — all sent-on loads are ignored
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBe(500)
     })
 
     it('should handle revisions correctly (credit -> debit)', async () => {

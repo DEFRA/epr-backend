@@ -12,12 +12,6 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
     TONNAGE_RECEIVED_FOR_RECYCLING: 100.5
   }
 
-  const validSentOnData = {
-    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    DATE_LOAD_LEFT_SITE: '2025-01-20',
-    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50.25
-  }
-
   const baseRecord = {
     organisationId: 'org-id',
     registrationId: 'reg-id',
@@ -123,76 +117,17 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
     })
   })
 
-  describe('SENT_ON records', () => {
-    it('extracts fields correctly for valid sent on record', () => {
-      const record = {
-        ...baseRecord,
-        type: WASTE_RECORD_TYPE.SENT_ON,
-        data: validSentOnData
+  it('returns null for SENT_ON records (sent-on loads do not contribute to waste balance)', () => {
+    const record = {
+      ...baseRecord,
+      type: WASTE_RECORD_TYPE.SENT_ON,
+      data: {
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+        DATE_LOAD_LEFT_SITE: '2025-01-20',
+        TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50.25
       }
-
-      const result = extractWasteBalanceFields(record)
-
-      expect(result).toEqual({
-        dispatchDate: new Date('2025-01-20'),
-        prnIssued: false,
-        transactionAmount: -50.25 // Should be negative
-      })
-    })
-
-    it('rounds transactionAmount to two decimal places before negation', () => {
-      const record = {
-        ...baseRecord,
-        type: WASTE_RECORD_TYPE.SENT_ON,
-        data: {
-          ...validSentOnData,
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50.125
-        }
-      }
-
-      const result = extractWasteBalanceFields(record)
-      expect(result.transactionAmount).toBe(-50.13)
-    })
-
-    it('defaults transactionAmount to 0 if missing', () => {
-      const record = {
-        ...baseRecord,
-        type: WASTE_RECORD_TYPE.SENT_ON,
-        data: {
-          ...validSentOnData,
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: undefined
-        }
-      }
-
-      const result = extractWasteBalanceFields(record)
-      expect(result.transactionAmount).toBe(-0)
-    })
-
-    it('returns null if DATE_LOAD_LEFT_SITE is missing', () => {
-      const record = {
-        ...baseRecord,
-        type: WASTE_RECORD_TYPE.SENT_ON,
-        data: {
-          ...validSentOnData,
-          DATE_LOAD_LEFT_SITE: undefined
-        }
-      }
-
-      expect(extractWasteBalanceFields(record)).toBeNull()
-    })
-
-    it('returns null if validation fails', () => {
-      const record = {
-        ...baseRecord,
-        type: WASTE_RECORD_TYPE.SENT_ON,
-        data: {
-          ...validSentOnData,
-          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 'not-a-number'
-        }
-      }
-
-      expect(extractWasteBalanceFields(record)).toBeNull()
-    })
+    }
+    expect(extractWasteBalanceFields(record)).toBeNull()
   })
 
   it('returns null for unknown record type', () => {
