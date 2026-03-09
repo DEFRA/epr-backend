@@ -6,7 +6,7 @@ import {
 import { capitalize } from '#common/helpers/formatters.js'
 
 const WASTE_PROCESSING_TYPES = Object.values(WASTE_PROCESSING_TYPE).map(
-  capitalize
+  (type) => capitalize(type)
 )
 
 const monthTonnageSchema = Joi.object({
@@ -29,11 +29,14 @@ const monthTonnageSchema = Joi.object({
   tonnage: Joi.number().required()
 })
 
+const START_YEAR = 2026
+const MAX_YEAR = 2100
 const materialTonnageSchema = Joi.object({
   material: Joi.string()
     .valid(...TONNAGE_MONITORING_MATERIALS)
     .required(),
-  year: Joi.number().integer().min(2000).max(2100).required(),
+  year: Joi.number().integer().min(START_YEAR).max(MAX_YEAR).required(),
+
   type: Joi.string()
     .valid(...WASTE_PROCESSING_TYPES)
     .required(),

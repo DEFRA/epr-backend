@@ -63,13 +63,15 @@ export function toISOString(date) {
   return date instanceof Date ? date.toISOString() : date
 }
 
+const REFERENCE_YEAR = 2026
+const MONTHS_IN_YEAR = 12
 /**
  * Generates an array of short month names using British English locale.
  * @returns {string[]} Array of 12 month abbreviations (e.g., ['Jan', 'Feb', ..., 'Sept', ..., 'Dec'])
  */
 export const getMonthNames = () =>
-  Array.from({ length: 12 }, (_, i) =>
-    new Date(Date.UTC(2000, i, 1)).toLocaleString('en-GB', {
+  Array.from({ length: MONTHS_IN_YEAR }, (_, i) =>
+    new Date(Date.UTC(REFERENCE_YEAR, i, 1)).toLocaleString('en-GB', {
       month: 'short',
       timeZone: 'UTC'
     })
@@ -84,11 +86,11 @@ export const getMonthNames = () =>
  *   - month: Short month name  (e.g., 'Jan', 'Feb', 'Sept')
  *   - year: The four-digit year
  */
-export const getMonthRange = (startYear = 2026) => {
+export const getMonthRange = (startYear = REFERENCE_YEAR) => {
   const now = new Date()
 
   const totalMonths =
-    (now.getUTCFullYear() - startYear) * 12 + now.getUTCMonth() + 1
+    (now.getUTCFullYear() - startYear) * MONTHS_IN_YEAR + now.getUTCMonth() + 1
 
   return Array.from({ length: totalMonths }, (_, i) => {
     const d = new Date(Date.UTC(startYear, i, 1))

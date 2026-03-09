@@ -10,6 +10,7 @@ import { getMonthNames } from '#common/helpers/date-formatter.js'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_RECORDS_COLLECTION = 'waste-records'
 const DATA_PROCESSING_TYPE = '$data.processingType'
+const DISPATCH_DATE_FIELD = '$dispatchDate'
 
 const buildTonnageExpression = () => ({
   $switch: {
@@ -123,11 +124,11 @@ const buildTypeExpression = () => ({
 const monthNames = getMonthNames()
 
 const buildYearExpression = () => ({
-  $year: { $dateFromString: { dateString: '$dispatchDate' } }
+  $year: { $dateFromString: { dateString: DISPATCH_DATE_FIELD } }
 })
 
 const buildMonthNumberExpression = () => ({
-  $month: { $dateFromString: { dateString: '$dispatchDate' } }
+  $month: { $dateFromString: { dateString: DISPATCH_DATE_FIELD } }
 })
 
 const buildMonthExpression = () => ({
@@ -135,7 +136,7 @@ const buildMonthExpression = () => ({
     vars: {
       monthIndex: {
         $subtract: [
-          { $month: { $dateFromString: { dateString: '$dispatchDate' } } },
+          { $month: { $dateFromString: { dateString: DISPATCH_DATE_FIELD } } },
           1
         ]
       }

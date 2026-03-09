@@ -53,7 +53,7 @@ const getMaterialMonthlyCombinations = () => {
 
   return TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
     Object.values(WASTE_PROCESSING_TYPE)
-      .map(capitalize)
+      .map((type) => capitalize(type))
       .flatMap((type) =>
         Object.entries(monthsByYear).map(([year, months]) => ({
           material,
