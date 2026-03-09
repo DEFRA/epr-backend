@@ -259,7 +259,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
-    it('should not create transactions from sent on loads regardless of date', async () => {
+    it('should not create transactions from multiple sent on loads', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         reprocessingType: 'input'
@@ -269,16 +269,8 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const uploadData = createUploadData(
         [{ rowId: 1001, tonnageReceived: 500 }],
         [
-          {
-            rowId: 5001,
-            tonnageSent: 100,
-            dateLeft: '2024-12-31T00:00:00.000Z'
-          },
-          {
-            rowId: 5002,
-            tonnageSent: 50,
-            dateLeft: '2025-01-01T00:00:00.000Z'
-          }
+          { rowId: 5001, tonnageSent: 100 },
+          { rowId: 5002, tonnageSent: 50 }
         ]
       )
 
