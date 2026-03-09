@@ -16,7 +16,9 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   createWasteBalanceMeta,
   createReprocessedRowValues,
-  REPROCESSED_LOADS_HEADERS
+  createReprocessorSentOnRowValues,
+  REPROCESSED_LOADS_HEADERS,
+  REPROCESSOR_SENT_ON_HEADERS
 } from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests (Reprocessor Output)', () => {
@@ -38,13 +40,21 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
 
     const sharedMeta = createWasteBalanceMeta('REPROCESSOR_OUTPUT')
 
-    const createUploadData = (reprocessedRows = []) => ({
+    const createUploadData = (reprocessedRows = [], sentOnRows = []) => ({
       REPROCESSED_LOADS: {
         location: { sheet: 'Reprocessed', row: 7, column: 'A' },
         headers: REPROCESSED_LOADS_HEADERS,
         rows: reprocessedRows.map((row, index) => ({
           rowNumber: 8 + index,
           values: createReprocessedRowValues(row)
+        }))
+      },
+      SENT_ON_LOADS: {
+        location: { sheet: 'Sent', row: 7, column: 'A' },
+        headers: REPROCESSOR_SENT_ON_HEADERS,
+        rows: sentOnRows.map((row, index) => ({
+          rowNumber: 8 + index,
+          values: createReprocessorSentOnRowValues(row)
         }))
       }
     })
@@ -161,6 +171,43 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       expect(transaction1).toBeDefined()
       expect(transaction1.type).toBe('credit')
       expect(transaction1.entities[0].id).toBe('3001')
+    })
+
+    it('should not create transactions from sent on loads', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'output'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData(
+        [{ rowId: 3001, productUkPackagingWeightProportion: 100 }],
+        [
+          {
+            rowId: 5001,
+            tonnageSent: 50,
+            dateLeft: '2025-01-20T00:00:00.000Z'
+          }
+        ]
+      )
+
+      await performSubmission(
+        env,
+        'summary-sent-on-check',
+        'file-sent-on-check',
+        'waste-data-sent-on.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      expect(balance).toBeDefined()
+      expect(balance.transactions).toHaveLength(1)
+
+      // Only the reprocessed load credit — sent-on loads do not contribute
+      expect(balance.amount).toBe(100)
+      expect(balance.availableAmount).toBe(100)
     })
 
     it('should not create transaction if ADD_PRODUCT_WEIGHT is No', async () => {
