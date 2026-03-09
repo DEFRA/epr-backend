@@ -1,14 +1,8 @@
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import {
-  PROCESSING_TYPE_TABLES,
-  TABLE_NAMES
-} from '#domain/summary-logs/table-schemas/index.js'
+import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
-const { rowIdField } =
-  PROCESSING_TYPE_TABLES[PROCESSING_TYPES.REPROCESSOR_INPUT][
-    TABLE_NAMES.RECEIVED_LOADS_FOR_REPROCESSING
-  ]
+const rowIdField = RECEIVED_LOADS_FIELDS.ROW_ID
 
 /**
  * Transforms a row from RECEIVED_LOADS_FOR_REPROCESSING table into waste record metadata

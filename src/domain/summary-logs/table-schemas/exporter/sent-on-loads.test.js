@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformSentOnLoadsRowExporter } from '#application/waste-records/row-transformers/sent-on-loads-exporter.js'
 
 describe('SENT_ON_LOADS (EXPORTER)', () => {
   const schema = SENT_ON_LOADS
@@ -7,6 +9,18 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to SENT_ON', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+    })
+
+    it('has sheetName set to Sent on', () => {
+      expect(schema.sheetName).toBe('Sent on')
+    })
+
+    it('has rowTransformer set to transformSentOnLoadsRowExporter', () => {
+      expect(schema.rowTransformer).toBe(transformSentOnLoadsRowExporter)
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {

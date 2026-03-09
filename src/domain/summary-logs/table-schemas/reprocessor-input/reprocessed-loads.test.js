@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReprocessedLoadsRowReprocessorInput } from '#application/waste-records/row-transformers/reprocessed-loads-reprocessor-input.js'
 
 describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = REPROCESSED_LOADS
@@ -7,6 +9,20 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to PROCESSED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.PROCESSED)
+    })
+
+    it('has sheetName set to Processed', () => {
+      expect(schema.sheetName).toBe('Processed')
+    })
+
+    it('has rowTransformer set to transformReprocessedLoadsRowReprocessorInput', () => {
+      expect(schema.rowTransformer).toBe(
+        transformReprocessedLoadsRowReprocessorInput
+      )
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
