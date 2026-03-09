@@ -33,4 +33,19 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isDevEndpointsEnabled()).toBe(false)
   })
+
+  it('returns true when reports flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ reports: true })
+    expect(flags.isReportsEnabled()).toBe(true)
+  })
+
+  it('returns false when reports flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ reports: false })
+    expect(flags.isReportsEnabled()).toBe(false)
+  })
+
+  it('returns false when reports flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isReportsEnabled()).toBe(false)
+  })
 })
