@@ -1344,7 +1344,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
+    it('does not classify SENT_ON_LOADS in Reprocessor Output for waste balance', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1407,7 +1407,7 @@ describe('SummaryLogsValidator', () => {
                     '01234567890',
                     'REF',
                     'Desc'
-                  ] // Out of range
+                  ] // Out of range - but no classification for reprocessor-output
                 }
               ]
             }
@@ -1419,8 +1419,8 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([5000, 5001])
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Input', async () => {
