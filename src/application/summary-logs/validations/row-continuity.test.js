@@ -384,15 +384,31 @@ describe('validateRowContinuity', () => {
       expect(fatals[0].context.location.sheet).toBe('Received')
     })
 
-    it('correctly maps different waste record types to sheets', () => {
+    it('correctly maps different waste record types to sheets and tables from schema registry', () => {
       const testCases = [
-        { type: WASTE_RECORD_TYPE.RECEIVED, expectedSheet: 'Received' },
-        { type: WASTE_RECORD_TYPE.PROCESSED, expectedSheet: 'Processed' },
-        { type: WASTE_RECORD_TYPE.SENT_ON, expectedSheet: 'Sent on' },
-        { type: WASTE_RECORD_TYPE.EXPORTED, expectedSheet: 'Exported' }
+        {
+          type: WASTE_RECORD_TYPE.RECEIVED,
+          expectedSheet: 'Received',
+          expectedTable: 'RECEIVED_LOADS_FOR_REPROCESSING'
+        },
+        {
+          type: WASTE_RECORD_TYPE.PROCESSED,
+          expectedSheet: 'Processed',
+          expectedTable: 'REPROCESSED_LOADS'
+        },
+        {
+          type: WASTE_RECORD_TYPE.SENT_ON,
+          expectedSheet: 'Sent on',
+          expectedTable: 'SENT_ON_LOADS'
+        },
+        {
+          type: WASTE_RECORD_TYPE.EXPORTED,
+          expectedSheet: 'Exported',
+          expectedTable: 'RECEIVED_LOADS_FOR_EXPORT'
+        }
       ]
 
-      for (const { type, expectedSheet } of testCases) {
+      for (const { type, expectedSheet, expectedTable } of testCases) {
         const wasteRecords = []
         const existingWasteRecords = [createWasteRecord('row-1', type)]
 
@@ -403,6 +419,7 @@ describe('validateRowContinuity', () => {
 
         const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
         expect(fatals[0].context.location.sheet).toBe(expectedSheet)
+        expect(fatals[0].context.location.table).toBe(expectedTable)
       }
     })
   })
@@ -445,7 +462,7 @@ describe('validateRowContinuity', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].context.location.sheet).toBe('Unknown')
-      expect(fatals[0].context.location.table).toBe('UNKNOWN_TABLE')
+      expect(fatals[0].context.location.table).toBe('Unknown')
     })
   })
 })

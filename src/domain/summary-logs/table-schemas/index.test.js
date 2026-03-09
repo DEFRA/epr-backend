@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { PROCESSING_TYPE_TABLES, aggregateUnfilledValues } from './index.js'
+import {
+  PROCESSING_TYPE_TABLES,
+  aggregateUnfilledValues,
+  findSchemaByWasteRecordType
+} from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('table-schemas', () => {
   describe('PROCESSING_TYPE_TABLES', () => {
@@ -91,6 +96,77 @@ describe('table-schemas', () => {
 
       it('has SENT_ON_LOADS table', () => {
         expect(tables).toHaveProperty('SENT_ON_LOADS')
+      })
+    })
+  })
+
+  describe('findSchemaByWasteRecordType', () => {
+    it('returns tableName and schema for a known waste record type', () => {
+      const result = findSchemaByWasteRecordType(
+        WASTE_RECORD_TYPE.RECEIVED,
+        PROCESSING_TYPE_TABLES
+      )
+
+      expect(result).not.toBeNull()
+      expect(result.tableName).toBe('RECEIVED_LOADS_FOR_REPROCESSING')
+      expect(result.schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+      expect(result.schema.sheetName).toBe('Received')
+    })
+
+    it('returns the correct table for exported waste record type', () => {
+      const result = findSchemaByWasteRecordType(
+        WASTE_RECORD_TYPE.EXPORTED,
+        PROCESSING_TYPE_TABLES
+      )
+
+      expect(result).not.toBeNull()
+      expect(result.tableName).toBe('RECEIVED_LOADS_FOR_EXPORT')
+      expect(result.schema.sheetName).toBe('Exported')
+    })
+
+    it('returns the correct table for processed waste record type', () => {
+      const result = findSchemaByWasteRecordType(
+        WASTE_RECORD_TYPE.PROCESSED,
+        PROCESSING_TYPE_TABLES
+      )
+
+      expect(result).not.toBeNull()
+      expect(result.tableName).toBe('REPROCESSED_LOADS')
+      expect(result.schema.sheetName).toBe('Processed')
+    })
+
+    it('returns the correct table for sent on waste record type', () => {
+      const result = findSchemaByWasteRecordType(
+        WASTE_RECORD_TYPE.SENT_ON,
+        PROCESSING_TYPE_TABLES
+      )
+
+      expect(result).not.toBeNull()
+      expect(result.tableName).toBe('SENT_ON_LOADS')
+      expect(result.schema.sheetName).toBe('Sent on')
+    })
+
+    it('returns null for an unknown waste record type', () => {
+      const result = findSchemaByWasteRecordType(
+        'unknownType',
+        PROCESSING_TYPE_TABLES
+      )
+
+      expect(result).toBeNull()
+    })
+
+    it('works with a minimal registry', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: { wasteRecordType: 'foo', sheetName: 'Foo' }
+        }
+      }
+
+      const result = findSchemaByWasteRecordType('foo', registry)
+
+      expect(result).toEqual({
+        tableName: 'TABLE_1',
+        schema: { wasteRecordType: 'foo', sheetName: 'Foo' }
       })
     })
   })

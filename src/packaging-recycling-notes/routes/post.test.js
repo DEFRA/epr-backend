@@ -70,9 +70,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             packagingRecyclingNotesRepository,
           organisationsRepository: () => organisationsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: true
-        })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()
@@ -503,55 +501,6 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       })
-    })
-  })
-
-  describe('when feature flag is disabled', () => {
-    let server
-
-    beforeAll(async () => {
-      server = await createTestServer({
-        repositories: {
-          packagingRecyclingNotesRepository:
-            createInMemoryPackagingRecyclingNotesRepository(),
-          organisationsRepository: () => ({
-            findById: vi.fn(async () => ({
-              companyDetails: {
-                name: 'Test Org',
-                tradingName: 'Test Trading'
-              }
-            })),
-            findAccreditationById: vi.fn(async () => ({
-              id: accreditationId,
-              accreditationNumber: 'ACC-001',
-              material: MATERIAL.PLASTIC,
-              validFrom: '2026-01-01',
-              wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-              submittedToRegulator: 'ea'
-            }))
-          })
-        },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: false
-        })
-      })
-
-      await server.initialize()
-    })
-
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    it('returns 404 when feature flag is disabled', async () => {
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
-        payload: validPayload
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 })
