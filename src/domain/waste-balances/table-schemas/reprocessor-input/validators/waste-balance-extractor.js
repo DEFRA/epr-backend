@@ -7,7 +7,10 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
-import { RECEIVED_LOADS_FIELDS as RECEIVED_LOADS_FOR_REPROCESSING_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
+import {
+  RECEIVED_LOADS_FIELDS as RECEIVED_LOADS_FOR_REPROCESSING_FIELDS,
+  SENT_ON_LOADS_FIELDS
+} from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -31,6 +34,16 @@ const receivedLoadsSchema = Joi.object({
 })
 
 /**
+ * Joi schema for extracting and validating sent on loads fields.
+ */
+const sentOnLoadsSchema = Joi.object({
+  [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]:
+    createDateFieldSchema().allow(null),
+  [SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
+    createWeightFieldSchema().allow(null)
+})
+
+/**
  * Extracts and validates waste balance fields from a record.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record - Record to extract from
@@ -44,39 +57,57 @@ export const extractWasteBalanceFields = (record) => {
     return null
   }
 
-  if (type !== WASTE_RECORD_TYPE.RECEIVED) {
-    return null
-  }
+  if (type === WASTE_RECORD_TYPE.RECEIVED) {
+    const { error, value } = receivedLoadsSchema.validate(data, {
+      stripUnknown: true,
+      abortEarly: false
+    })
 
-  const { error, value } = receivedLoadsSchema.validate(data, {
-    stripUnknown: true,
-    abortEarly: false
-  })
-
-  if (
-    error ||
-    !value[
-      RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-    ]
-  ) {
-    return null
-  }
-
-  return {
-    dispatchDate: new Date(
-      value[
+    if (
+      error ||
+      !value[
         RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
       ]
-    ),
-    prnIssued:
-      value[
-        RECEIVED_LOADS_FOR_REPROCESSING_FIELDS
-          .WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-      ] === YES_NO_VALUES.YES,
-    transactionAmount: roundToTwoDecimalPlaces(
-      value[
-        RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
-      ]
-    )
+    ) {
+      return null
+    }
+
+    return {
+      dispatchDate: new Date(
+        value[
+          RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
+        ]
+      ),
+      prnIssued:
+        value[
+          RECEIVED_LOADS_FOR_REPROCESSING_FIELDS
+            .WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
+        ] === YES_NO_VALUES.YES,
+      transactionAmount: roundToTwoDecimalPlaces(
+        value[
+          RECEIVED_LOADS_FOR_REPROCESSING_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
+        ]
+      )
+    }
+  } else if (type === WASTE_RECORD_TYPE.SENT_ON) {
+    const { error, value } = sentOnLoadsSchema.validate(data, {
+      stripUnknown: true,
+      abortEarly: false
+    })
+
+    if (error || !value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]) {
+      return null
+    }
+
+    return {
+      dispatchDate: new Date(value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
+      prnIssued: false,
+      transactionAmount:
+        roundToTwoDecimalPlaces(
+          value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]
+        ) * -1
+    }
+  } else {
+    return null
   }
 }
