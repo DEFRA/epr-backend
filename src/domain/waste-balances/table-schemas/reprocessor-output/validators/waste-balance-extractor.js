@@ -7,10 +7,7 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
-import {
-  REPROCESSED_LOADS_FIELDS,
-  SENT_ON_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
+import { REPROCESSED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -27,13 +24,6 @@ const reprocessedLoadsSchema = Joi.object({
   [REPROCESSED_LOADS_FIELDS.ADD_PRODUCT_WEIGHT]:
     createYesNoFieldSchema().allow(null),
   [REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]:
-    createWeightFieldSchema().allow(null)
-})
-
-const sentOnLoadsSchema = Joi.object({
-  [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]:
-    createDateFieldSchema().allow(null),
-  [SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
     createWeightFieldSchema().allow(null)
 })
 
@@ -69,31 +59,6 @@ const extractProcessedFields = (data) => {
 }
 
 /**
- * Extracts fields for sent on records.
- *
- * @param {Object} data - Record data
- * @returns {WasteBalanceFields | null}
- */
-const extractSentOnFields = (data) => {
-  const { error, value } = sentOnLoadsSchema.validate(data, {
-    stripUnknown: true,
-    abortEarly: false
-  })
-
-  if (error || !value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]) {
-    return null
-  }
-
-  return {
-    dispatchDate: new Date(value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
-    prnIssued: false,
-    transactionAmount: -roundToTwoDecimalPlaces(
-      value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]
-    )
-  }
-}
-
-/**
  * Extracts and validates waste balance fields from a record.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record - Record to extract from
@@ -109,10 +74,6 @@ export const extractWasteBalanceFields = (record) => {
 
   if (type === WASTE_RECORD_TYPE.PROCESSED) {
     return extractProcessedFields(data)
-  }
-
-  if (type === WASTE_RECORD_TYPE.SENT_ON) {
-    return extractSentOnFields(data)
   }
 
   return null
