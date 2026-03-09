@@ -65,13 +65,6 @@ const createMockPrn = (overrides = {}) => ({
   ...overrides
 })
 
-const defaultOrganisationsRepository = {
-  findAccreditationById: vi.fn(async () => ({
-    wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-    submittedToRegulator: REGULATOR.EA
-  }))
-}
-
 describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
   setupAuthContext()
 
@@ -123,9 +116,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => organisationsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: true
-        })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()
@@ -828,9 +819,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => organisationsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: true
-        })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       await server.initialize()
@@ -942,43 +931,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-    })
-  })
-
-  describe('when feature flag is disabled', () => {
-    let server
-
-    beforeAll(async () => {
-      server = await createTestServer({
-        repositories: {
-          packagingRecyclingNotesRepository: () => ({
-            findById: vi.fn(),
-            create: vi.fn(),
-            updateStatus: vi.fn()
-          }),
-          organisationsRepository: () => defaultOrganisationsRepository
-        },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotes: false
-        })
-      })
-
-      await server.initialize()
-    })
-
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    it('returns 404', async () => {
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
-        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
   })
 })
