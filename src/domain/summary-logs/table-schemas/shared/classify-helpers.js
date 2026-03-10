@@ -1,4 +1,5 @@
 import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
 
 export const CLASSIFICATION_REASON = Object.freeze({
   MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
@@ -33,3 +34,26 @@ export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
 
   return null
 }
+
+/**
+ * Creates a classifyForWasteBalance function for tables that do not contribute
+ * to waste balance but still need date-range checking to preserve IGNORED
+ * marking for rows with dates outside the accreditation period.
+ *
+ * @param {string} dateField - The field name containing the date to check
+ * @returns {(data: Record<string, any>, context: { accreditation: object }) => object|null}
+ */
+export const createDateOnlyClassifier =
+  (dateField) =>
+  (data, { accreditation }) => {
+    const date = data[dateField]
+
+    if (date && !isWithinAccreditationDateRange(date, accreditation)) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    return null
+  }

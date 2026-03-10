@@ -3,6 +3,7 @@ import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { REPROCESSED_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { transformReprocessedLoadsRowReprocessorInput } from '#application/waste-records/row-transformers/reprocessed-loads-reprocessor-input.js'
+import { createDateOnlyClassifier } from '../shared/classify-helpers.js'
 /**
  * All fields - all optional for REPROCESSOR_INPUT
  */
@@ -56,5 +57,11 @@ export const REPROCESSED_LOADS = {
    *
    * Empty - this table does not contribute to waste balance for REPROCESSOR_INPUT.
    */
-  fieldsRequiredForInclusionInWasteBalance: []
+  fieldsRequiredForInclusionInWasteBalance: [],
+
+  /**
+   * This table does not contribute to waste balance but still needs date-range
+   * checking to mark rows outside the accreditation period as IGNORED.
+   */
+  classifyForWasteBalance: createDateOnlyClassifier(FIELDS.DATE_LOAD_LEFT_SITE)
 }
