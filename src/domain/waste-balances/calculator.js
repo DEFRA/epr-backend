@@ -111,6 +111,7 @@ const getTargetAmount = (record, accreditation) => {
     return 0
   }
 
+  /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} */
   const result = schema.classifyForWasteBalance(record.data, { accreditation })
   return result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
 }

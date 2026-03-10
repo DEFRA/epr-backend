@@ -86,20 +86,20 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
       })
     })
 
-    it('returns null when DATE_LOAD_LEFT_SITE is within accreditation period', () => {
+    it('returns EXCLUDED when DATE_LOAD_LEFT_SITE is within accreditation period', () => {
       const data = { DATE_LOAD_LEFT_SITE: new Date('2024-06-15') }
 
       const result = schema.classifyForWasteBalance(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns null when DATE_LOAD_LEFT_SITE is not present', () => {
+    it('returns EXCLUDED when DATE_LOAD_LEFT_SITE is not present', () => {
       const data = {}
 
       const result = schema.classifyForWasteBalance(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
   })
 

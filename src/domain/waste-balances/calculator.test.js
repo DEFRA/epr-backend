@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { calculateWasteBalanceUpdates } from './calculator.js'
-import { RECEIVED_LOADS_FIELDS as FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
+import {
+  RECEIVED_LOADS_FIELDS as FIELDS,
+  SENT_ON_LOADS_FIELDS as SENT_ON_FIELDS
+} from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -608,6 +611,27 @@ describe('Waste Balance Calculator', () => {
     expect(result.newTransactions).toHaveLength(0)
     expect(result.newAmount).toBe(0)
     expect(result.newAvailableAmount).toBe(0)
+  })
+
+  it('Should return 0 for exporter sentOn records within accreditation range', () => {
+    const record = buildWasteRecord({
+      type: WASTE_RECORD_TYPE.SENT_ON,
+      data: {
+        processingType: PROCESSING_TYPES.EXPORTER,
+        [SENT_ON_FIELDS.ROW_ID]: 4000,
+        [SENT_ON_FIELDS.DATE_LOAD_LEFT_SITE]: '2023-06-01',
+        [SENT_ON_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: '5.0'
+      }
+    })
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance: emptyBalance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    expect(result.newTransactions).toHaveLength(0)
+    expect(result.newAmount).toBe(0)
   })
 
   it('Should return 0 for unknown processing type with no schema', () => {
