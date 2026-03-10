@@ -466,19 +466,26 @@ export const createSummaryLogsValidator = ({
     // Record validation issue metrics (if any issues exist)
     await recordValidationIssueMetrics(issues, processingType)
 
+    // Filter to only waste-balance table rows — rows from tables without
+    // classifyForWasteBalance have no meaningful inclusion/exclusion status
+    const wasteBalanceRecords = wasteRecords?.filter((wr) => {
+      const schema = findSchemaForProcessingType(processingType, wr.record.type)
+      return schema?.classifyForWasteBalance != null
+    })
+
     // Classify loads only for validated summary logs
     // wasteRecords is guaranteed to be non-null when status is VALIDATED
     // because we only reach VALIDATED if we passed all short-circuits
     const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
         ? classifyLoads({
-            wasteRecords,
+            wasteRecords: wasteBalanceRecords,
             summaryLogId
           })
         : null
 
-    // Record row outcome metrics (if we have waste records)
-    await recordRowOutcomeMetrics(wasteRecords, processingType)
+    // Record row outcome metrics only for waste-balance table rows
+    await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
