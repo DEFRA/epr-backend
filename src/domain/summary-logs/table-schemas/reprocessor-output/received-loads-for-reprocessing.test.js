@@ -129,20 +129,20 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
       })
     })
 
-    it('returns null when DATE_RECEIVED_FOR_REPROCESSING is within accreditation period', () => {
+    it('returns EXCLUDED when DATE_RECEIVED_FOR_REPROCESSING is within accreditation period', () => {
       const data = { DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-06-15') }
 
       const result = schema.classifyForWasteBalance(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns null when DATE_RECEIVED_FOR_REPROCESSING is not present', () => {
+    it('returns EXCLUDED when DATE_RECEIVED_FOR_REPROCESSING is not present', () => {
       const data = {}
 
       const result = schema.classifyForWasteBalance(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
   })
 
