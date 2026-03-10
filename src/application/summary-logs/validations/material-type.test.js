@@ -347,4 +347,100 @@ describe('validateMaterialType', () => {
       field: 'MATERIAL' // Only field is set when location is missing
     })
   })
+
+  describe('unrecognised material validation', () => {
+    it('returns fatal business error when material is "Choose material" placeholder', () => {
+      const parsed = {
+        meta: {
+          MATERIAL: {
+            value: 'Choose material',
+            location: { sheet: 'Cover', row: 8, column: 'B' }
+          }
+        }
+      }
+      const registration = { material: 'aluminium' }
+
+      const result = validateMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
+      expect(fatals[0].context.actual).toBe('Choose material')
+      expect(fatals[0].context.location).toEqual({
+        sheet: 'Cover',
+        row: 8,
+        column: 'B',
+        field: 'MATERIAL'
+      })
+    })
+
+    it('returns fatal business error when material is null', () => {
+      const parsed = {
+        meta: {
+          MATERIAL: { value: null }
+        }
+      }
+      const registration = { material: 'aluminium' }
+
+      const result = validateMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+    })
+
+    it('returns fatal business error when material field is missing from meta', () => {
+      const parsed = {
+        meta: {}
+      }
+      const registration = { material: 'aluminium' }
+
+      const result = validateMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+    })
+
+    it('returns fatal business error for any unrecognised material string', () => {
+      const parsed = {
+        meta: {
+          MATERIAL: { value: 'NotARealMaterial' }
+        }
+      }
+      const registration = { material: 'aluminium' }
+
+      const result = validateMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+      expect(fatals[0].context.actual).toBe('NotARealMaterial')
+    })
+  })
 })

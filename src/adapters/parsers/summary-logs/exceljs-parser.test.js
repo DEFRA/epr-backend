@@ -669,62 +669,6 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' }
       })
     })
-
-    it('should not normalise metadata placeholders without metaPlaceholders config', async () => {
-      const result = await parseWorkbook({
-        Test: [['__EPR_META_MATERIAL', 'Choose material']]
-      })
-
-      expect(result.meta.MATERIAL).toEqual({
-        value: 'Choose material',
-        location: { sheet: 'Test', row: 1, column: 'B' }
-      })
-    })
-  })
-
-  describe('metadata normalisation via metaPlaceholders config', () => {
-    it('should normalise metadata value when field matches metaPlaceholders', async () => {
-      const result = await parseWorkbook(
-        {
-          Test: [['__EPR_META_MATERIAL', 'Choose material']]
-        },
-        {
-          metaPlaceholders: {
-            MATERIAL: 'Choose material'
-          }
-        }
-      )
-
-      expect(result.meta.MATERIAL.value).toBeNull()
-    })
-
-    it('should not normalise metadata for fields not in metaPlaceholders', async () => {
-      const result = await parseWorkbook(
-        {
-          Test: [['__EPR_META_OTHER_FIELD', 'Choose material']]
-        },
-        {
-          metaPlaceholders: {
-            MATERIAL: 'Choose material'
-          }
-        }
-      )
-
-      expect(result.meta.OTHER_FIELD.value).toBe('Choose material')
-    })
-
-    it('should not normalise metadata when metaPlaceholders is empty', async () => {
-      const result = await parseWorkbook(
-        {
-          Test: [['__EPR_META_MATERIAL', 'Choose material']]
-        },
-        {
-          metaPlaceholders: {}
-        }
-      )
-
-      expect(result.meta.MATERIAL.value).toBe('Choose material')
-    })
   })
 
   describe('markers not in column A', () => {

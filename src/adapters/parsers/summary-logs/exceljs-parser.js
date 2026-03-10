@@ -220,12 +220,9 @@ const processCellForMetadata = (
     }
 
     const metadataName = draftState.metadataContext.metadataName
-    const placeholder = draftState.metaPlaceholders[metadataName]
-    const normalisedValue =
-      placeholder && cellValue === placeholder ? null : cellValue
 
     draftState.result.meta[metadataName] = {
-      value: normalisedValue,
+      value: cellValue,
       location: {
         sheet: worksheet.name,
         row: rowNumber,
@@ -540,7 +537,6 @@ export { extractCellValue }
  * @property {number} [maxRowsPerSheet] - Maximum allowed rows per worksheet
  * @property {number} [maxColumnsPerSheet] - Maximum allowed columns per worksheet
  * @property {Record<string, string[]>} [unfilledValues] - Per-column values to normalise to null
- * @property {Record<string, string>} [metaPlaceholders] - Per-field metadata placeholders to normalise to null
  */
 
 /**
@@ -557,8 +553,7 @@ export const parse = async (buffer, options = {}) => {
     maxWorksheets = PARSE_DEFAULTS.maxWorksheets,
     maxRowsPerSheet = PARSE_DEFAULTS.maxRowsPerSheet,
     maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet,
-    unfilledValues = {},
-    metaPlaceholders = {}
+    unfilledValues = {}
   } = options
 
   const workbook = new ExcelJS.Workbook()
@@ -577,8 +572,7 @@ export const parse = async (buffer, options = {}) => {
     result: { meta: {}, data: {} },
     activeCollections: [],
     metadataContext: null,
-    unfilledValues,
-    metaPlaceholders
+    unfilledValues
   }
 
   return produce(initialState, (draft) => {
