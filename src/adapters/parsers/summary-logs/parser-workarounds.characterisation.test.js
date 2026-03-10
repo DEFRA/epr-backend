@@ -12,7 +12,7 @@
  * 1. Per-column "Choose option" → null normalisation via unfilledValues config
  * 2. "Row ID" header row filtering (moved to domain layer)
  * 3. Empty ROW_ID row filtering (moved to domain layer)
- * 4. "Choose material" → null for MATERIAL metadata via metaPlaceholders config
+ * 4. (Removed) "Choose material" metadata normalisation — now validated in meta-business
  * 5. Empty row detection works correctly with per-column normalisation
  * 6. unfilledValues in domain schemas drives normalisation (no longer redundant)
  *
@@ -259,55 +259,6 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
     })
   })
 
-  describe('RESOLVED WORKAROUND 4: Metadata normalisation via metaPlaceholders config', () => {
-    /**
-     * The parser normalises metadata placeholder values to null per-field,
-     * driven by the metaPlaceholders config. Only fields listed in the config
-     * are normalised.
-     */
-
-    it('normalises "Choose material" to null for MATERIAL field via config', async () => {
-      const buffer = await createWorkbook({
-        Cover: [['__EPR_META_MATERIAL', 'Choose material']]
-      })
-
-      const parsed = await parse(buffer, {
-        metaPlaceholders: { MATERIAL: 'Choose material' }
-      })
-
-      expect(parsed.meta.MATERIAL.value).toBeNull()
-    })
-
-    it('does NOT normalise "Choose material" for fields not in config', async () => {
-      const buffer = await createWorkbook({
-        Cover: [['__EPR_META_OTHER_FIELD', 'Choose material']]
-      })
-
-      const parsed = await parse(buffer, {
-        metaPlaceholders: { MATERIAL: 'Choose material' }
-      })
-
-      expect(parsed.meta.OTHER_FIELD.value).toBe('Choose material')
-    })
-
-    it('does NOT normalise "Choose material" in data rows', async () => {
-      const buffer = await createWorkbook({
-        Cover: [],
-        Test: [
-          ['__EPR_DATA_TEST', 'ROW_ID', 'MATERIAL_COLUMN'],
-          [null, 1001, 'Choose material']
-        ]
-      })
-
-      const parsed = await parse(buffer, {
-        metaPlaceholders: { MATERIAL: 'Choose material' }
-      })
-
-      // "Choose material" is NOT normalised in data rows
-      expect(parsed.data.TEST.rows[0].values).toEqual([1001, 'Choose material'])
-    })
-  })
-
   describe('RESOLVED WORKAROUND 5: Empty row detection with per-column normalisation', () => {
     /**
      * Empty row detection (table termination) works correctly with per-column
@@ -538,12 +489,11 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       const buffer = await workbook.xlsx.writeBuffer()
       const parsed = await parse(buffer, {
-        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] },
-        metaPlaceholders: { MATERIAL: 'Choose material' }
+        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] }
       })
 
-      // Verify MATERIAL normalised via metaPlaceholders
-      expect(parsed.meta.MATERIAL.value).toBeNull()
+      // MATERIAL passes through as-is (validated in meta-business, not parser)
+      expect(parsed.meta.MATERIAL.value).toBe('Choose material')
 
       // Verify parsing results
       expect(parsed.data.RECEIVED_LOADS.headers).toEqual([

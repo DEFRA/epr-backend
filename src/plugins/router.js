@@ -31,23 +31,9 @@ const router = {
           ? Object.values(devRoutes)
           : []
 
-        const packagingRecyclingNotesRoutesBehindFeatureFlag =
-          featureFlags.isCreatePackagingRecyclingNotesEnabled()
-            ? Object.values(packagingRecyclingNotesRoutes)
-            : []
-
         const overseasSitesRoutesBehindFeatureFlag =
           featureFlags.isOverseasSitesEnabled()
             ? Object.values(overseasSitesRoutes)
-            : []
-
-        const packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag =
-          featureFlags.isPackagingRecyclingNotesExternalApiEnabled()
-            ? [
-                packagingRecyclingNotesAccept,
-                packagingRecyclingNotesList,
-                packagingRecyclingNotesReject
-              ]
             : []
 
         server.route([
@@ -65,8 +51,10 @@ const router = {
           ...Object.values(prnTonnageRoutes),
           ...Object.values(wasteBalanceAvailabilityRoutes),
           ...Object.values(linkedOrganisationsRoutes),
-          ...packagingRecyclingNotesRoutesBehindFeatureFlag,
-          ...packagingRecyclingNotesExternalApiRoutesBehindFeatureFlag,
+          ...Object.values(packagingRecyclingNotesRoutes),
+          packagingRecyclingNotesAccept,
+          packagingRecyclingNotesList,
+          packagingRecyclingNotesReject,
           ...summaryLogUploadsReportRoutes,
           adminPackagingRecyclingNotesList,
           ...overseasSitesRoutesBehindFeatureFlag

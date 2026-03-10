@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRow } from '#application/waste-records/row-transformers/received-loads-reprocessing.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING
@@ -7,6 +11,18 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to RECEIVED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+    })
+
+    it('has sheetName set to Received', () => {
+      expect(schema.sheetName).toBe('Received')
+    })
+
+    it('has rowTransformer set to transformReceivedLoadsRow', () => {
+      expect(schema.rowTransformer).toBe(transformReceivedLoadsRow)
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -819,6 +835,161 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         })
         expect(error).toBeDefined()
         expect(error.details.length).toBe(2)
+      })
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    const accreditation = { validFrom: '2024-01-01', validTo: '2024-12-31' }
+
+    const completeRow = {
+      ROW_ID: 1000,
+      DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-06-15'),
+      EWC_CODE: '03 03 08',
+      DESCRIPTION_WASTE: 'Paper - other',
+      WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+      GROSS_WEIGHT: 100,
+      TARE_WEIGHT: 5,
+      PALLET_WEIGHT: 5,
+      NET_WEIGHT: 90,
+      BAILING_WIRE_PROTOCOL: 'No',
+      HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage',
+      WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+      RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+      TONNAGE_RECEIVED_FOR_RECYCLING: 50.5
+    }
+
+    describe('INCLUDED outcome', () => {
+      it('returns INCLUDED with transaction amount when all fields filled, date in range, and no PRN', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.reasons).toEqual([])
+        expect(result.transactionAmount).toBe(50.5)
+      })
+
+      it('rounds transaction amount to two decimal places', () => {
+        const row = { ...completeRow, TONNAGE_RECEIVED_FOR_RECYCLING: 50.555 }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.transactionAmount).toBe(50.56)
+      })
+    })
+
+    describe('EXCLUDED outcome - missing required fields', () => {
+      it('returns EXCLUDED when a required field is missing', () => {
+        const row = { ...completeRow }
+        delete row.TONNAGE_RECEIVED_FOR_RECYCLING
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+          field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+        })
+      })
+
+      it('returns EXCLUDED with all missing fields listed', () => {
+        const row = { ...completeRow }
+        delete row.ROW_ID
+        delete row.TONNAGE_RECEIVED_FOR_RECYCLING
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toHaveLength(2)
+      })
+
+      it('returns EXCLUDED when required field is null', () => {
+        const row = { ...completeRow, TONNAGE_RECEIVED_FOR_RECYCLING: null }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+
+      it('returns EXCLUDED when required field is empty string', () => {
+        const row = { ...completeRow, EWC_CODE: '' }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+
+      it('returns EXCLUDED when dropdown field has placeholder value', () => {
+        const row = { ...completeRow, BAILING_WIRE_PROTOCOL: 'Choose option' }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+    })
+
+    describe('IGNORED outcome - date outside accreditation', () => {
+      it('returns IGNORED when date is before accreditation period', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2023-12-31')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+        })
+      })
+
+      it('returns IGNORED when date is after accreditation period', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2025-01-01')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+
+      it('returns INCLUDED when date is on accreditation start boundary', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-01-01')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+
+      it('returns INCLUDED when date is on accreditation end boundary', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-12-31')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+    })
+
+    describe('EXCLUDED outcome - PRN issued', () => {
+      it('returns EXCLUDED when PRN was issued', () => {
+        const row = {
+          ...completeRow,
+          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.PRN_ISSUED
+        })
+      })
+    })
+
+    describe('classification priority', () => {
+      it('checks required fields before date range', () => {
+        const row = {}
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons[0].code).toBe(
+          CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD
+        )
+      })
+
+      it('checks date range before PRN', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2023-01-01'),
+          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
       })
     })
   })

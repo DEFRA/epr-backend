@@ -16,42 +16,6 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.devEndpoints')
   })
 
-  it('returns true when packagingRecyclingNotesExternalApi flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.packagingRecyclingNotesExternalApi'
-    )
-  })
-
-  it('returns false when packagingRecyclingNotesExternalApi flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.packagingRecyclingNotesExternalApi'
-    )
-  })
-
-  it('returns true when packagingRecyclingNotes flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.packagingRecyclingNotes'
-    )
-  })
-
-  it('returns false when packagingRecyclingNotes flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.packagingRecyclingNotes'
-    )
-  })
-
   it('returns true when copyFormFilesToS3 flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)

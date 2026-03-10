@@ -2,8 +2,6 @@
  * @typedef {Object} FeatureFlags
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
- * @property {() => boolean} isCreatePackagingRecyclingNotesEnabled
- * @property {() => boolean} isPackagingRecyclingNotesExternalApiEnabled
  * @property {() => boolean} isOverseasSitesEnabled
  */
 

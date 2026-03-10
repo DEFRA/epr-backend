@@ -18,15 +18,42 @@ export const TABLE_NAMES = {
  *
  * Each table schema defines:
  * - rowIdField: Field name containing the row identifier
+ * - wasteRecordType: The waste record type this table maps to (e.g. 'received', 'exported')
+ * - sheetName: The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
  * - requiredHeaders: Headers that must be present in the table
  * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
  * - fieldsRequiredForInclusionInWasteBalance: Fields required for VAL011 (mandatory for Waste Balance)
+ * - classifyForWasteBalance: Function|null — classifies a row for waste balance (null if table does not contribute)
+ * - rowTransformer: Function to transform a parsed row into waste record metadata
  */
 export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT,
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT,
   [PROCESSING_TYPES.EXPORTER]: EXPORTER
+}
+
+/**
+ * Finds a table schema by processing type and waste record type
+ *
+ * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
+ * @param {string} wasteRecordType - The waste record type (e.g. 'received', 'sentOn')
+ * @returns {Object|null} The matching table schema, or null if not found
+ */
+export const findSchemaForProcessingType = (
+  processingType,
+  wasteRecordType
+) => {
+  const tables = PROCESSING_TYPE_TABLES[processingType]
+  if (!tables) {
+    return null
+  }
+
+  return (
+    Object.values(tables).find(
+      (schema) => schema.wasteRecordType === wasteRecordType
+    ) ?? null
+  )
 }
 
 /**
@@ -39,6 +66,24 @@ export const PROCESSING_TYPE_TABLES = {
 export const createTableSchemaGetter = (processingType, registry) => {
   const tables = registry[processingType]
   return (tableName) => tables?.[tableName] || null
+}
+
+/**
+ * Finds a table schema by waste record type, scanning across all processing types.
+ *
+ * @param {string} wasteRecordType - The waste record type to find (e.g. 'received', 'exported')
+ * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
+ * @returns {{ tableName: string, schema: Object } | null} The table name and schema, or null if not found
+ */
+export const findSchemaByWasteRecordType = (wasteRecordType, registry) => {
+  for (const tables of Object.values(registry)) {
+    for (const [tableName, schema] of Object.entries(tables)) {
+      if (schema.wasteRecordType === wasteRecordType) {
+        return { tableName, schema }
+      }
+    }
+  }
+  return null
 }
 
 /**

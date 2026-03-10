@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
+import { transformReprocessedLoadsRowReprocessorInput } from '#application/waste-records/row-transformers/reprocessed-loads-reprocessor-input.js'
 
 describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = REPROCESSED_LOADS
@@ -7,6 +11,20 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to PROCESSED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.PROCESSED)
+    })
+
+    it('has sheetName set to Processed', () => {
+      expect(schema.sheetName).toBe('Processed')
+    })
+
+    it('has rowTransformer set to transformReprocessedLoadsRowReprocessorInput', () => {
+      expect(schema.rowTransformer).toBe(
+        transformReprocessedLoadsRowReprocessorInput
+      )
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -48,6 +66,40 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
     it('has validationSchema (Joi schema for VAL010)', () => {
       expect(schema.validationSchema).toBeDefined()
       expect(typeof schema.validationSchema.validate).toBe('function')
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    const accreditation = {
+      validFrom: new Date('2024-01-01'),
+      validTo: new Date('2024-12-31')
+    }
+
+    it('returns IGNORED when DATE_LOAD_LEFT_SITE is outside accreditation period', () => {
+      const data = { DATE_LOAD_LEFT_SITE: new Date('2023-06-15') }
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      })
+    })
+
+    it('returns null when DATE_LOAD_LEFT_SITE is within accreditation period', () => {
+      const data = { DATE_LOAD_LEFT_SITE: new Date('2024-06-15') }
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when DATE_LOAD_LEFT_SITE is not present', () => {
+      const data = {}
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toBeNull()
     })
   })
 

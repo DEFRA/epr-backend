@@ -1,14 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
-import { transformExportLoadsRow } from './row-transformers/received-loads-export.js'
-import { transformSentOnLoadsRow } from './row-transformers/sent-on-loads.js'
-import { transformReprocessedLoadsRow } from './row-transformers/reprocessed-loads.js'
-import { transformReprocessedLoadsRowReprocessorInput } from './row-transformers/reprocessed-loads-reprocessor-input.js'
-import { transformSentOnLoadsRowReprocessorOutput } from './row-transformers/sent-on-loads-reprocessor-output.js'
-import { transformReceivedLoadsRowReprocessorOutput } from './row-transformers/received-loads-reprocessing-output.js'
-import { transformSentOnLoadsRowExporter } from './row-transformers/sent-on-loads-exporter.js'
+import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -59,28 +51,7 @@ import { transformSentOnLoadsRowExporter } from './row-transformers/sent-on-load
  * @property {WasteRecordChange} change - What happened to this record: created, updated, or unchanged
  */
 
-/**
- * Dispatch map: processing type → table name → row transformer function
- * Maps each combination of processing type and table to its specific row transformer
- */
-const TABLE_TRANSFORMERS = {
-  [PROCESSING_TYPES.REPROCESSOR_INPUT]: {
-    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow,
-    REPROCESSED_LOADS: transformReprocessedLoadsRowReprocessorInput,
-    SENT_ON_LOADS: transformSentOnLoadsRow
-  },
-  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
-    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRowReprocessorOutput,
-    REPROCESSED_LOADS: transformReprocessedLoadsRow,
-    SENT_ON_LOADS: transformSentOnLoadsRowReprocessorOutput
-  },
-  [PROCESSING_TYPES.EXPORTER]: {
-    RECEIVED_LOADS_FOR_EXPORT: transformExportLoadsRow,
-    SENT_ON_LOADS: transformSentOnLoadsRowExporter
-  }
-}
-
-const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
+const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
 
 /**
  * Generic table transformation function
@@ -219,27 +190,25 @@ export const transformFromSummaryLog = (
     throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
   }
 
-  // Look up table transformers for this processing type
-  const tableTransformers = TABLE_TRANSFORMERS[processingType] || {}
+  // Look up table schemas for this processing type
+  const tableSchemas = PROCESSING_TYPE_TABLES[processingType] || {}
 
   // Transform each table that exists in the parsed data
-  const results = Object.entries(tableTransformers).map(
-    ([tableName, rowTransformer]) => {
-      const tableData = parsedData.data[tableName]
+  const results = Object.entries(tableSchemas).map(([tableName, schema]) => {
+    const tableData = parsedData.data[tableName]
 
-      // Skip tables that don't exist in this summary log
-      if (!tableData) {
-        return []
-      }
-
-      return transformTable(
-        tableData,
-        rowTransformer,
-        summaryLogContext,
-        existingRecords
-      )
+    // Skip tables that don't exist in this summary log
+    if (!tableData) {
+      return []
     }
-  )
+
+    return transformTable(
+      tableData,
+      schema.rowTransformer,
+      summaryLogContext,
+      existingRecords
+    )
+  })
 
   return results.flat()
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
+import { transformSentOnLoadsRowExporter } from '#application/waste-records/row-transformers/sent-on-loads-exporter.js'
 
 describe('SENT_ON_LOADS (EXPORTER)', () => {
   const schema = SENT_ON_LOADS
@@ -7,6 +11,18 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to SENT_ON', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+    })
+
+    it('has sheetName set to Sent on', () => {
+      expect(schema.sheetName).toBe('Sent on')
+    })
+
+    it('has rowTransformer set to transformSentOnLoadsRowExporter', () => {
+      expect(schema.rowTransformer).toBe(transformSentOnLoadsRowExporter)
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -96,6 +112,40 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
     it('has validationSchema (Joi schema for VAL010)', () => {
       expect(schema.validationSchema).toBeDefined()
       expect(typeof schema.validationSchema.validate).toBe('function')
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    const accreditation = {
+      validFrom: new Date('2024-01-01'),
+      validTo: new Date('2024-12-31')
+    }
+
+    it('returns IGNORED when DATE_LOAD_LEFT_SITE is outside accreditation period', () => {
+      const data = { DATE_LOAD_LEFT_SITE: new Date('2023-06-15') }
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      })
+    })
+
+    it('returns null when DATE_LOAD_LEFT_SITE is within accreditation period', () => {
+      const data = { DATE_LOAD_LEFT_SITE: new Date('2024-06-15') }
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when DATE_LOAD_LEFT_SITE is not present', () => {
+      const data = {}
+
+      const result = schema.classifyForWasteBalance(data, { accreditation })
+
+      expect(result).toBeNull()
     })
   })
 
