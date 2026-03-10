@@ -45,6 +45,8 @@
  * @returns {WasteBalanceClassificationResult}
  */
 
+import { CLASSIFICATION_REASON } from './shared/classify-helpers.js'
+
 /**
  * Row classification outcomes
  *
@@ -123,14 +125,14 @@ export const filterToFilled = (row, unfilledValues) => {
  */
 const mapWasteBalanceResult = (wasteBalanceResult) => {
   const missingFieldReasons = wasteBalanceResult.reasons.filter(
-    (reason) => reason.code === 'MISSING_REQUIRED_FIELD'
+    (reason) => reason.code === CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD
   )
 
   if (missingFieldReasons.length > 0) {
     return {
       outcome: ROW_OUTCOME.EXCLUDED,
       issues: missingFieldReasons.map((reason) => ({
-        code: 'MISSING_REQUIRED_FIELD',
+        code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
         field: /** @type {string} */ (reason.field)
       }))
     }
