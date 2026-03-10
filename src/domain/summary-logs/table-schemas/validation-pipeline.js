@@ -131,7 +131,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
       outcome: ROW_OUTCOME.EXCLUDED,
       issues: missingFieldReasons.map((reason) => ({
         code: 'MISSING_REQUIRED_FIELD',
-        field: reason.field
+        field: /** @type {string} */ (reason.field)
       }))
     }
   }
@@ -169,7 +169,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance} [tableSchema.classifyForWasteBalance] - Waste balance classifier
- * @param {string[]} [tableSchema.fieldsRequiredForInclusionInWasteBalance] - Legacy: fields required for VAL011
+ * @param {string[]} tableSchema.fieldsRequiredForInclusionInWasteBalance - Legacy: fields required for VAL011
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
  */
 export const classifyRow = (row, tableSchema) => {
