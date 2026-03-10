@@ -169,45 +169,6 @@ describe('validateMetaSyntax', () => {
     expect(fatals[0].message).toContain('at least 5')
   })
 
-  it('returns fatal technical error when MATERIAL is missing', () => {
-    const parsed = {
-      meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-        TEMPLATE_VERSION: { value: 5 },
-        REGISTRATION_NUMBER: { value: 'REG12345' }
-      }
-    }
-
-    const result = validateMetaSyntax({ parsed })
-
-    expect(result.isValid()).toBe(false)
-    expect(result.isFatal()).toBe(true)
-
-    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals).toHaveLength(1)
-    expect(fatals[0].message).toContain('MATERIAL')
-    expect(fatals[0].message).toContain('is required')
-  })
-
-  it('returns fatal technical error when MATERIAL exceeds max length', () => {
-    const parsed = {
-      meta: {
-        ...createValidMeta(),
-        MATERIAL: { value: 'A'.repeat(51) }
-      }
-    }
-
-    const result = validateMetaSyntax({ parsed })
-
-    expect(result.isValid()).toBe(false)
-    expect(result.isFatal()).toBe(true)
-
-    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals).toHaveLength(1)
-    expect(fatals[0].message).toContain('MATERIAL')
-    expect(fatals[0].message).toContain('at most 50 characters')
-  })
-
   it('returns fatal technical error when REGISTRATION is missing', () => {
     const parsed = {
       meta: {
@@ -231,8 +192,7 @@ describe('validateMetaSyntax', () => {
   it('returns multiple fatal technical errors when multiple fields are invalid', () => {
     const parsed = {
       meta: {
-        TEMPLATE_VERSION: { value: 0 },
-        MATERIAL: { value: 'A'.repeat(51) }
+        TEMPLATE_VERSION: { value: 0 }
       }
     }
 
@@ -241,11 +201,12 @@ describe('validateMetaSyntax', () => {
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
 
+    // Missing PROCESSING_TYPE, invalid TEMPLATE_VERSION, missing REGISTRATION_NUMBER
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals.length).toBeGreaterThanOrEqual(3) // Missing required fields + validation errors
+    expect(fatals).toHaveLength(3)
 
     const issues = result.getIssuesByCategory(VALIDATION_CATEGORY.TECHNICAL)
-    expect(issues.length).toBeGreaterThanOrEqual(3)
+    expect(issues).toHaveLength(3)
   })
 
   it('includes actual value in context for debugging', () => {
@@ -271,7 +232,7 @@ describe('validateMetaSyntax', () => {
     expect(result.isFatal()).toBe(true)
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals.length).toBeGreaterThanOrEqual(3) // Missing all required fields
+    expect(fatals).toHaveLength(3) // Missing PROCESSING_TYPE, TEMPLATE_VERSION, REGISTRATION_NUMBER
   })
 
   it('handles fields without location data', () => {
@@ -343,10 +304,9 @@ describe('validateMetaSyntax', () => {
   it('returns fallback error code for unmapped validation errors', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+        // Boolean triggers string.base for PROCESSING_TYPE, which is not mapped
+        PROCESSING_TYPE: { value: true },
         TEMPLATE_VERSION: { value: 5 },
-        // MATERIAL exceeds max length - triggers string.max which is not mapped
-        MATERIAL: { value: 'A'.repeat(51) },
         REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
@@ -355,8 +315,8 @@ describe('validateMetaSyntax', () => {
 
     expect(result.isValid()).toBe(false)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals).toHaveLength(1)
-    expect(fatals[0].code).toBe('VALIDATION_FALLBACK_ERROR')
+    const fallback = fatals.find((f) => f.code === 'VALIDATION_FALLBACK_ERROR')
+    expect(fallback).toBeDefined()
   })
 
   describe('type coercion for ExcelJS values', () => {
@@ -368,23 +328,6 @@ describe('validateMetaSyntax', () => {
           TEMPLATE_VERSION: { value: 5 },
           MATERIAL: { value: 'Aluminium' },
           REGISTRATION_NUMBER: { value: 12345 } // number instead of string
-        }
-      }
-
-      const result = validateMetaSyntax({ parsed })
-
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
-    })
-
-    it('coerces numeric MATERIAL to string', () => {
-      // ExcelJS may return a number if the cell looks numeric
-      const parsed = {
-        meta: {
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 5 },
-          MATERIAL: { value: 12345 }, // number instead of string
-          REGISTRATION_NUMBER: { value: 'REG12345' }
         }
       }
 
