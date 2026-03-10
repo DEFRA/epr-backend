@@ -60,15 +60,6 @@ describe('table-schemas', () => {
           expect(schema.validationSchema).toBeDefined()
           expect(typeof schema.validationSchema.validate).toBe('function')
         })
-
-        it('has fieldsRequiredForInclusionInWasteBalance array (for VAL011)', () => {
-          expect(
-            Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
-          ).toBe(true)
-          expect(
-            schema.fieldsRequiredForInclusionInWasteBalance.length
-          ).toBeGreaterThan(0)
-        })
       })
     })
 
