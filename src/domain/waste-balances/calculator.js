@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
+import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
@@ -102,7 +102,7 @@ const getTargetAmount = (record, accreditation) => {
     return 0
   }
 
-  const schema = findSchemaByWasteRecordType(
+  const schema = findSchemaForProcessingType(
     record.data?.processingType,
     record.type
   )

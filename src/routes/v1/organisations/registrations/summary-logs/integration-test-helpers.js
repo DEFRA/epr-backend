@@ -544,8 +544,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   })
 
   const featureFlags = createInMemoryFeatureFlags({
-    summaryLogs: true,
-    packagingRecyclingNotes: true
+    summaryLogs: true
   })
 
   const syncWasteRecords = syncFromSummaryLog({

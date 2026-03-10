@@ -10,7 +10,7 @@ import {
   classifyRow,
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
+import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -24,7 +24,7 @@ import { add, subtract, toNumber } from '#common/helpers/decimal-utils.js'
  * @returns {boolean} Whether the record passes validation
  */
 const isRecordValid = (record) => {
-  const schema = findSchemaByWasteRecordType(
+  const schema = findSchemaForProcessingType(
     record.data?.processingType,
     record.type
   )

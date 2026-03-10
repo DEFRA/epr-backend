@@ -950,7 +950,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
-    it('sets IGNORED outcome for REPROCESSED_LOADS with dates outside accreditation range', async () => {
+    it('sets IGNORED outcome for REPROCESSED_LOADS with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1189,7 +1189,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for EXPORTER Sent on loads using DATE_LOAD_LEFT_SITE', async () => {
+    it('sets IGNORED outcome for EXPORTER sent-on loads with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1255,7 +1255,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.count).toBe(0)
     })
 
-    it('sets IGNORED outcome for Reprocessor Output loads with dates outside accreditation range', async () => {
+    it('sets IGNORED outcome for REPROCESSOR_OUTPUT received loads with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1344,7 +1344,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
+    it('sets IGNORED outcome for REPROCESSOR_OUTPUT sent-on loads with dates outside accreditation range (non-contributing table)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1545,7 +1545,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.invalid.rowIds).toEqual([5000])
     })
 
-    it('sets IGNORED outcome for REPROCESSOR_OUTPUT when no date fields are present (branch coverage)', async () => {
+    it('completes validation for REPROCESSOR_OUTPUT when date field is empty', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1576,7 +1576,7 @@ describe('SummaryLogsValidator', () => {
       expect(summaryLogsRepository.update).toHaveBeenCalled()
     })
 
-    it('sets IGNORED outcome for EXPORTER when no date fields are present (branch coverage)', async () => {
+    it('completes validation for EXPORTER sent-on loads when date field is empty', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
