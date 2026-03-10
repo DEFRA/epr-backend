@@ -7,5 +7,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
+  },
+  isReportsEnabled() {
+    return flags.reports ?? false
   }
 })
