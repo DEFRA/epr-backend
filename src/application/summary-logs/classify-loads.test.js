@@ -371,9 +371,9 @@ describe('classifyLoads', () => {
           outcome: 'INCLUDED'
         })
       ]
-      // First record type is 'received' — not in wasteBalanceTypes, so it's skipped
+      // 'sentOn' is not in wasteBalanceTypes, so it's skipped
       wasteRecords[0].record.type = 'sentOn'
-      // Second record type is 'received' — in wasteBalanceTypes, so it's counted
+      // 'received' is in wasteBalanceTypes, so it's counted
       wasteRecords[1].record.type = 'received'
 
       const result = classifyLoads({
