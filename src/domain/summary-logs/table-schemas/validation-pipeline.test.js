@@ -242,40 +242,8 @@ describe('validation-pipeline', () => {
       })
     })
 
-    describe('schema without classifyForWasteBalance (backward compatibility)', () => {
-      const createLegacySchema = () => ({
-        unfilledValues: {
-          DROPDOWN: ['Please select...']
-        },
-        validationSchema: Joi.object({
-          ROW_ID: Joi.number().min(10000).optional(),
-          TEXT_FIELD: Joi.string().max(100).optional()
-        })
-          .unknown(true)
-          .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'TEXT_FIELD']
-      })
-
-      it('returns EXCLUDED when required field is missing', () => {
-        const schema = createLegacySchema()
-        const row = { ROW_ID: 10000 }
-
-        const result = classifyRow(row, schema)
-
-        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
-        expect(result.issues[0].code).toBe('MISSING_REQUIRED_FIELD')
-      })
-
-      it('returns INCLUDED when all required fields present', () => {
-        const schema = createLegacySchema()
-        const row = { ROW_ID: 10000, TEXT_FIELD: 'value' }
-
-        const result = classifyRow(row, schema)
-
-        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
-      })
-
-      it('returns EXCLUDED when fieldsRequiredForInclusionInWasteBalance is empty', () => {
+    describe('schema without classifyForWasteBalance (no waste balance)', () => {
+      it('returns EXCLUDED when schema has no classifyForWasteBalance', () => {
         const schema = {
           unfilledValues: {},
           validationSchema: Joi.object({
@@ -283,8 +251,7 @@ describe('validation-pipeline', () => {
             SOME_FIELD: Joi.string().optional()
           })
             .unknown(true)
-            .prefs({ abortEarly: false }),
-          fieldsRequiredForInclusionInWasteBalance: []
+            .prefs({ abortEarly: false })
         }
 
         const row = { ROW_ID: 10001, SOME_FIELD: 'valid value' }
@@ -295,15 +262,14 @@ describe('validation-pipeline', () => {
         expect(result.issues).toEqual([])
       })
 
-      it('returns REJECTED when validation fails even if fieldsRequiredForInclusionInWasteBalance is empty', () => {
+      it('returns REJECTED when validation fails even without classifyForWasteBalance', () => {
         const schema = {
           unfilledValues: {},
           validationSchema: Joi.object({
             ROW_ID: Joi.number().min(10000).optional()
           })
             .unknown(true)
-            .prefs({ abortEarly: false }),
-          fieldsRequiredForInclusionInWasteBalance: []
+            .prefs({ abortEarly: false })
         }
 
         const row = { ROW_ID: 9999 }

@@ -169,7 +169,6 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance} [tableSchema.classifyForWasteBalance] - Waste balance classifier
- * @param {string[]} tableSchema.fieldsRequiredForInclusionInWasteBalance - Legacy: fields required for VAL011
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
  */
 export const classifyRow = (row, tableSchema) => {
@@ -196,47 +195,21 @@ export const classifyRow = (row, tableSchema) => {
   }
 
   // Step 3: VAL011 - Check required fields are present
-  // The validation pipeline only needs the required-fields check from
-  // classifyForWasteBalance. Accreditation is null because the pipeline
-  // doesn't have that context — isWithinAccreditationDateRange treats
-  // null accreditation as "within range", so subsequent checks are skipped.
-  if (tableSchema.classifyForWasteBalance) {
-    const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
-      accreditation: null
-    })
-    return mapWasteBalanceResult(wasteBalanceResult)
-  }
-
-  // Legacy path: direct field checking for schemas without classifyForWasteBalance
-  const { fieldsRequiredForInclusionInWasteBalance } = tableSchema
-
-  if (fieldsRequiredForInclusionInWasteBalance.length === 0) {
+  // Schemas without classifyForWasteBalance have no waste balance, so all
+  // rows are EXCLUDED — there's nothing to include them in.
+  if (!tableSchema.classifyForWasteBalance) {
     return {
       outcome: ROW_OUTCOME.EXCLUDED,
       issues: []
     }
   }
 
-  const missingRequired = fieldsRequiredForInclusionInWasteBalance.filter(
-    (field) => {
-      const fieldUnfilledValues = unfilledValues[field] || []
-      return !isFilled(row[field], fieldUnfilledValues)
-    }
-  )
-
-  if (missingRequired.length > 0) {
-    return {
-      outcome: ROW_OUTCOME.EXCLUDED,
-      issues: missingRequired.map((field) => ({
-        code: 'MISSING_REQUIRED_FIELD',
-        field
-      }))
-    }
-  }
-
-  // Step 4: All pass - INCLUDED
-  return {
-    outcome: ROW_OUTCOME.INCLUDED,
-    issues: []
-  }
+  // The validation pipeline only needs the required-fields check from
+  // classifyForWasteBalance. Accreditation is null because the pipeline
+  // doesn't have that context — isWithinAccreditationDateRange treats
+  // null accreditation as "within range", so subsequent checks are skipped.
+  const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
+    accreditation: null
+  })
+  return mapWasteBalanceResult(wasteBalanceResult)
 }
