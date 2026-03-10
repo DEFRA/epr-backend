@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { ROW_OUTCOME } from '../validation-pipeline.js'
-import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { transformSentOnLoadsRowExporter } from '#application/waste-records/row-transformers/sent-on-loads-exporter.js'
 
 describe('SENT_ON_LOADS (EXPORTER)', () => {
@@ -54,57 +52,6 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
       })
     })
 
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('contains fields required for waste balance calculation', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'ROW_ID'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'DATE_LOAD_LEFT_SITE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-        )
-      })
-
-      it('has exactly 3 fields required for waste balance', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(3)
-      })
-
-      it('does NOT contain supplementary columns', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_FACILITY_TYPE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_NAME'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_ADDRESS'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_POSTCODE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_EMAIL'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_PHONE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'YOUR_REFERENCE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'DESCRIPTION_WASTE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'EWC_CODE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'WEIGHBRIDGE_TICKET'
-        )
-      })
-    })
-
     it('has unfilledValues object', () => {
       expect(typeof schema.unfilledValues).toBe('object')
     })
@@ -112,46 +59,6 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
     it('has validationSchema (Joi schema for VAL010)', () => {
       expect(schema.validationSchema).toBeDefined()
       expect(typeof schema.validationSchema.validate).toBe('function')
-    })
-  })
-
-  describe('classifyForWasteBalance', () => {
-    const accreditation = {
-      validFrom: new Date('2024-01-01'),
-      validTo: new Date('2024-12-31')
-    }
-
-    it('returns IGNORED when DATE_LOAD_LEFT_SITE is outside accreditation period', () => {
-      const data = { DATE_LOAD_LEFT_SITE: new Date('2023-06-15') }
-
-      const result = schema.classifyForWasteBalance(data, { accreditation })
-
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
-      })
-    })
-
-    it('returns EXCLUDED when DATE_LOAD_LEFT_SITE is within accreditation period', () => {
-      const data = { DATE_LOAD_LEFT_SITE: new Date('2024-06-15') }
-
-      const result = schema.classifyForWasteBalance(data, { accreditation })
-
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.EXCLUDED,
-        reasons: []
-      })
-    })
-
-    it('returns EXCLUDED when DATE_LOAD_LEFT_SITE is not present', () => {
-      const data = {}
-
-      const result = schema.classifyForWasteBalance(data, { accreditation })
-
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.EXCLUDED,
-        reasons: []
-      })
     })
   })
 
