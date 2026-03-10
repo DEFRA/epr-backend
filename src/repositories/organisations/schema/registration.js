@@ -57,6 +57,15 @@ export const registrationSiteSchema = Joi.object({
 
 export const exportPortsSchema = Joi.array().items(Joi.string())
 
+const overseasSiteEntrySchema = Joi.object({
+  overseasSiteId: Joi.string().required()
+})
+
+const overseasSitesMapSchema = Joi.object().pattern(
+  Joi.string().pattern(/^\d{3}$/),
+  overseasSiteEntrySchema
+)
+
 export const registrationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
@@ -144,7 +153,12 @@ export const registrationSchema = Joi.object({
     .required(),
   orsFileUploads: whenExporter(
     Joi.array().items(formFileUploadSchema).required().min(1)
-  )
+  ),
+  overseasSites: Joi.when('wasteProcessingType', {
+    is: WASTE_PROCESSING_TYPE.EXPORTER,
+    then: overseasSitesMapSchema.optional().default({}),
+    otherwise: Joi.forbidden()
+  })
 })
 
 export const registrationUpdateSchema = registrationSchema.fork(

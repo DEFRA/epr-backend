@@ -17,6 +17,7 @@
 /**
  * @typedef {Object} UploadsRepository
  * @property {(location: string) => Promise<Buffer|null>} findByLocation
+ * @property {(location: string) => Promise<void>} deleteByLocation
  * @property {(options: InitiateSummaryLogUploadOptions) => Promise<InitiateUploadResponse>} initiateSummaryLogUpload
  */
 

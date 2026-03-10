@@ -11,6 +11,7 @@ import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
 import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
+import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
 import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
 import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
@@ -29,6 +30,11 @@ const router = {
         const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
           ? Object.values(devRoutes)
           : []
+
+        const overseasSitesRoutesBehindFeatureFlag =
+          featureFlags.isOverseasSitesEnabled()
+            ? Object.values(overseasSitesRoutes)
+            : []
 
         server.route([
           health,
@@ -50,7 +56,8 @@ const router = {
           packagingRecyclingNotesList,
           packagingRecyclingNotesReject,
           ...summaryLogUploadsReportRoutes,
-          adminPackagingRecyclingNotesList
+          adminPackagingRecyclingNotesList,
+          ...overseasSitesRoutesBehindFeatureFlag
         ])
       })
     }

@@ -6,6 +6,7 @@ import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
+import { orsImportCommandHandlers } from './ors-import-commands.js'
 
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
@@ -76,7 +77,7 @@ export const commandQueueConsumerPlugin = {
           wasteBalancesRepository,
           summaryLogExtractor
         },
-        summaryLogCommandHandlers
+        [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
       )
 
       consumer.start()

@@ -15,6 +15,10 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import {
+  overseasSitesRepositoryPlugin,
+  orsImportsRepositoryPlugin
+} from '#overseas-sites/index.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
@@ -115,6 +119,8 @@ function getProductionPlugins(config) {
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
     { plugin: sqsCommandExecutorPlugin, options: { config } },
+    overseasSitesRepositoryPlugin,
+    orsImportsRepositoryPlugin,
     packagingRecyclingNotesRepositoryPlugin,
     {
       plugin: commandQueueConsumerPlugin,
