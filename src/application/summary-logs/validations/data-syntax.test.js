@@ -13,6 +13,22 @@ import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/v
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
 import { TONNAGE_RECEIVED_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-input/validators/tonnage-received-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
+import { checkRequiredFields } from '#domain/summary-logs/table-schemas/shared/classify-helpers.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+
+const buildClassifyForWasteBalance = (requiredFields, unfilledValues) => {
+  return (data, _context) => {
+    const missingResult = checkRequiredFields(
+      data,
+      requiredFields,
+      unfilledValues
+    )
+    if (missingResult) {
+      return missingResult
+    }
+    return { outcome: ROW_OUTCOME.INCLUDED, reasons: [], transactionAmount: 0 }
+  }
+}
 
 describe('createDataSyntaxValidator', () => {
   // Minimal test schemas using domain schema structure
@@ -42,7 +58,11 @@ describe('createDataSyntaxValidator', () => {
           'ROW_ID',
           'TEXT_FIELD',
           'NUMBER_FIELD'
-        ]
+        ],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+          {}
+        )
       },
       DATE_TABLE: {
         requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
@@ -57,7 +77,11 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'DATE_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'DATE_FIELD'],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'DATE_FIELD'],
+          {}
+        )
       },
       PATTERN_TABLE: {
         requiredHeaders: ['ROW_ID', 'CODE_FIELD'],
@@ -75,7 +99,11 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'CODE_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'CODE_FIELD'],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'CODE_FIELD'],
+          {}
+        )
       },
       // Schema with unmapped Joi error type to test error handling
       UNMAPPED_TABLE: {
@@ -89,7 +117,11 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'EMAIL_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'EMAIL_FIELD'],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'EMAIL_FIELD'],
+          {}
+        )
       },
       SIMPLE_TABLE: {
         requiredHeaders: ['ROW_ID', 'VALUE_FIELD'],
@@ -106,7 +138,11 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'VALUE_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'VALUE_FIELD'],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'VALUE_FIELD'],
+          {}
+        )
       },
       // Schema with string.valid() to test any.only mapping
       VALID_VALUES_TABLE: {
@@ -124,7 +160,11 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'YES_NO_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'YES_NO_FIELD'],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'YES_NO_FIELD'],
+          {}
+        )
       },
       // Schema with custom calculation validator to test calculation mismatch mapping
       CALCULATED_TABLE: {
@@ -167,7 +207,11 @@ describe('createDataSyntaxValidator', () => {
           'VALUE_A',
           'VALUE_B',
           'CALCULATED_RESULT'
-        ]
+        ],
+        classifyForWasteBalance: buildClassifyForWasteBalance(
+          ['ROW_ID', 'VALUE_A', 'VALUE_B', 'CALCULATED_RESULT'],
+          {}
+        )
       }
     }
   }

@@ -47,21 +47,42 @@ const createWorkbook = async (worksheets) => {
 /**
  * Minimal schema for testing - matches structure of real domain schemas
  */
-const createTestSchema = (options = {}) => ({
-  rowIdField: 'ROW_ID',
-  requiredHeaders: options.requiredHeaders || ['ROW_ID', 'VALUE'],
-  unfilledValues: options.unfilledValues || {},
-  validationSchema:
-    options.validationSchema ||
-    Joi.object({
-      ROW_ID: Joi.number().integer().optional(),
-      VALUE: Joi.any().optional()
+const createTestSchema = (options = {}) => {
+  const unfilledValues = options.unfilledValues || {}
+  const requiredFields = options.fieldsRequiredForInclusionInWasteBalance || []
+
+  return {
+    rowIdField: 'ROW_ID',
+    requiredHeaders: options.requiredHeaders || ['ROW_ID', 'VALUE'],
+    unfilledValues,
+    validationSchema:
+      options.validationSchema ||
+      Joi.object({
+        ROW_ID: Joi.number().integer().optional(),
+        VALUE: Joi.any().optional()
+      })
+        .unknown(true)
+        .prefs({ abortEarly: false }),
+    fieldsRequiredForInclusionInWasteBalance: requiredFields,
+    ...(requiredFields.length > 0 && {
+      classifyForWasteBalance: (data, _context) => {
+        const missing = requiredFields.filter(
+          (field) => !isFilled(data[field], unfilledValues[field] || [])
+        )
+        if (missing.length > 0) {
+          return {
+            outcome: 'EXCLUDED',
+            reasons: missing.map((field) => ({
+              code: 'MISSING_REQUIRED_FIELD',
+              field
+            }))
+          }
+        }
+        return { outcome: 'INCLUDED', reasons: [], transactionAmount: 0 }
+      }
     })
-      .unknown(true)
-      .prefs({ abortEarly: false }),
-  fieldsRequiredForInclusionInWasteBalance:
-    options.fieldsRequiredForInclusionInWasteBalance || []
-})
+  }
+}
 
 /**
  * Test schema registry matching real structure
