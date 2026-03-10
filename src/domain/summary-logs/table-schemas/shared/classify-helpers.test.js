@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   CLASSIFICATION_REASON,
-  checkRequiredFields
+  checkRequiredFields,
+  createDateOnlyClassifier
 } from './classify-helpers.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 
@@ -111,6 +112,61 @@ describe('classify-helpers', () => {
     it('returns null for empty required fields list', () => {
       const data = {}
       const result = checkRequiredFields(data, [], {})
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('createDateOnlyClassifier', () => {
+    const accreditation = {
+      validFrom: new Date('2024-01-01'),
+      validTo: new Date('2024-12-31')
+    }
+
+    it('returns IGNORED when date is outside accreditation period', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: new Date('2023-06-15') }
+
+      const result = classify(data, { accreditation })
+
+      expect(result).toEqual({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      })
+    })
+
+    it('returns null when date is within accreditation period', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: new Date('2024-06-15') }
+
+      const result = classify(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when date field is not present', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = {}
+
+      const result = classify(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when date field is null', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: null }
+
+      const result = classify(data, { accreditation })
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when date field is empty string', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: '' }
+
+      const result = classify(data, { accreditation })
+
       expect(result).toBeNull()
     })
   })
