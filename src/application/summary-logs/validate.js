@@ -20,7 +20,8 @@ import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   PROCESSING_TYPE_TABLES,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  getWasteBalanceTypes
 } from '#domain/summary-logs/table-schemas/index.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -469,11 +470,16 @@ export const createSummaryLogsValidator = ({
     // Classify loads only for validated summary logs
     // wasteRecords is guaranteed to be non-null when status is VALIDATED
     // because we only reach VALIDATED if we passed all short-circuits
+    const wasteBalanceTypes = getWasteBalanceTypes(
+      processingType,
+      PROCESSING_TYPE_TABLES
+    )
     const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
         ? classifyLoads({
             wasteRecords,
-            summaryLogId
+            summaryLogId,
+            wasteBalanceTypes
           })
         : null
 

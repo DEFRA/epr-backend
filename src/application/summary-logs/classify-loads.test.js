@@ -355,6 +355,58 @@ describe('classifyLoads', () => {
     })
   })
 
+  describe('waste balance table filtering', () => {
+    it('skips rows from tables without classifyForWasteBalance', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [],
+          outcome: 'EXCLUDED'
+        }),
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [],
+          outcome: 'INCLUDED'
+        })
+      ]
+      // First record type is 'received' — not in wasteBalanceTypes, so it's skipped
+      wasteRecords[0].record.type = 'sentOn'
+      // Second record type is 'received' — in wasteBalanceTypes, so it's counted
+      wasteRecords[1].record.type = 'received'
+
+      const result = classifyLoads({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID,
+        wasteBalanceTypes: new Set(['received'])
+      })
+
+      // Only the 'received' record should be counted
+      expect(result.added.valid.count).toBe(1)
+      expect(result.added.included.count).toBe(1)
+      expect(result.added.excluded.count).toBe(0)
+    })
+
+    it('counts all rows when wasteBalanceTypes is not provided', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [],
+          outcome: 'INCLUDED'
+        })
+      ]
+
+      const result = classifyLoads({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.added.valid.count).toBe(1)
+    })
+  })
+
   describe('edge cases', () => {
     it('handles record with missing summaryLog gracefully (classifies as unchanged)', () => {
       const wasteRecords = [

@@ -104,13 +104,22 @@ const classifyRecord = (record, summaryLogId) => {
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues and outcome
  * @param {string} params.summaryLogId - The current summary log ID
+ * @param {Set<string>} [params.wasteBalanceTypes] - Waste record types that contribute to waste balance. When provided, rows from other types are skipped entirely.
  * @returns {Loads} Row IDs grouped by classification and validity
  */
-export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
+export const classifyLoads = ({
+  wasteRecords,
+  summaryLogId,
+  wasteBalanceTypes
+}) => {
   const loads = createEmptyLoads()
 
   for (const { record, issues, outcome } of wasteRecords) {
     if (outcome === ROW_OUTCOME.IGNORED) {
+      continue
+    }
+
+    if (wasteBalanceTypes && !wasteBalanceTypes.has(record.type)) {
       continue
     }
 

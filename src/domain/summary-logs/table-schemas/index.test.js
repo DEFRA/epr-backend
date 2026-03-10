@@ -3,7 +3,8 @@ import {
   PROCESSING_TYPE_TABLES,
   aggregateUnfilledValues,
   findSchemaByWasteRecordType,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  getWasteBalanceTypes
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -220,6 +221,49 @@ describe('table-schemas', () => {
       )
 
       expect(schema).toBeNull()
+    })
+  })
+
+  describe('getWasteBalanceTypes', () => {
+    it('returns wasteRecordTypes for schemas with classifyForWasteBalance', () => {
+      const registry = {
+        TYPE_A: {
+          TABLE_1: {
+            wasteRecordType: 'received',
+            classifyForWasteBalance: () => ({})
+          },
+          TABLE_2: {
+            wasteRecordType: 'sentOn',
+            classifyForWasteBalance: null
+          },
+          TABLE_3: {
+            wasteRecordType: 'processed'
+            // no classifyForWasteBalance property
+          }
+        }
+      }
+
+      const result = getWasteBalanceTypes('TYPE_A', registry)
+
+      expect(result).toEqual(new Set(['received']))
+    })
+
+    it('returns undefined for unknown processing type', () => {
+      const result = getWasteBalanceTypes('UNKNOWN', PROCESSING_TYPE_TABLES)
+
+      expect(result).toBeUndefined()
+    })
+
+    it('returns all types for real registry where all schemas have classifyForWasteBalance', () => {
+      const result = getWasteBalanceTypes(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        PROCESSING_TYPE_TABLES
+      )
+
+      expect(result).toBeDefined()
+      expect(result.has(WASTE_RECORD_TYPE.RECEIVED)).toBe(true)
+      expect(result.has(WASTE_RECORD_TYPE.PROCESSED)).toBe(true)
+      expect(result.has(WASTE_RECORD_TYPE.SENT_ON)).toBe(true)
     })
   })
 

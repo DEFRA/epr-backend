@@ -87,6 +87,29 @@ export const findSchemaByWasteRecordType = (wasteRecordType, registry) => {
 }
 
 /**
+ * Returns the set of wasteRecordType values whose schemas have a truthy
+ * classifyForWasteBalance, for a given processing type.
+ *
+ * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
+ * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
+ * @returns {Set<string>|undefined} Set of wasteRecordType strings, or undefined if processing type not found
+ */
+export const getWasteBalanceTypes = (processingType, registry) => {
+  const tables = registry[processingType]
+  if (!tables) {
+    return undefined
+  }
+
+  const types = new Set()
+  for (const schema of Object.values(tables)) {
+    if (schema.classifyForWasteBalance) {
+      types.add(schema.wasteRecordType)
+    }
+  }
+  return types
+}
+
+/**
  * Aggregates unfilledValues from all table schemas across all processing types
  * into a single per-column map for the parser's unfilledValues option.
  *
