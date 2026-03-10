@@ -14,6 +14,38 @@
  */
 
 /**
+ * Result of classifying a row for waste balance calculation.
+ *
+ * - INCLUDED: row contributes to waste balance with a transaction amount
+ * - EXCLUDED/IGNORED: row does not contribute (missing fields, PRN issued, outside date range, etc.)
+ *
+ * @typedef {Object} WasteBalanceClassificationReason
+ * @property {string} code - The reason code (e.g. MISSING_REQUIRED_FIELD, PRN_ISSUED)
+ * @property {string} [field] - The field name, when the reason is field-specific
+ */
+
+/**
+ * @typedef {{ outcome: 'INCLUDED', reasons: WasteBalanceClassificationReason[], transactionAmount: number }} WasteBalanceIncludedResult
+ */
+
+/**
+ * @typedef {{ outcome: 'EXCLUDED' | 'IGNORED', reasons: WasteBalanceClassificationReason[] }} WasteBalanceExcludedResult
+ */
+
+/**
+ * @typedef {WasteBalanceIncludedResult | WasteBalanceExcludedResult} WasteBalanceClassificationResult
+ */
+
+/**
+ * Classifies a row for waste balance calculation.
+ *
+ * @callback ClassifyForWasteBalance
+ * @param {Record<string, any>} data - The row data
+ * @param {{ accreditation: object }} context - Classification context
+ * @returns {WasteBalanceClassificationResult}
+ */
+
+/**
  * Row classification outcomes
  *
  * @type {Readonly<{REJECTED: 'REJECTED', EXCLUDED: 'EXCLUDED', INCLUDED: 'INCLUDED', IGNORED: 'IGNORED'}>}

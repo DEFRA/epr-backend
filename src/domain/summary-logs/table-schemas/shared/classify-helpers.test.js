@@ -134,40 +134,40 @@ describe('classify-helpers', () => {
       })
     })
 
-    it('returns null when date is within accreditation period', () => {
+    it('returns EXCLUDED when date is within accreditation period', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: new Date('2024-06-15') }
 
       const result = classify(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns null when date field is not present', () => {
+    it('returns EXCLUDED when date field is not present', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = {}
 
       const result = classify(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns null when date field is null', () => {
+    it('returns EXCLUDED when date field is null', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: null }
 
       const result = classify(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns null when date field is empty string', () => {
+    it('returns EXCLUDED when date field is empty string', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: '' }
 
       const result = classify(data, { accreditation })
 
-      expect(result).toBeNull()
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
   })
 })
