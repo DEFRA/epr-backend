@@ -41,7 +41,7 @@
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: object }} context - Classification context
+ * @param {{ accreditation: object | null }} context - Classification context; accreditation may be null when called from the validation pipeline
  * @returns {WasteBalanceClassificationResult}
  */
 
@@ -196,6 +196,10 @@ export const classifyRow = (row, tableSchema) => {
   }
 
   // Step 3: VAL011 - Check required fields are present
+  // The validation pipeline only needs the required-fields check from
+  // classifyForWasteBalance. Accreditation is null because the pipeline
+  // doesn't have that context — isWithinAccreditationDateRange treats
+  // null accreditation as "within range", so subsequent checks are skipped.
   if (tableSchema.classifyForWasteBalance) {
     const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
       accreditation: null
