@@ -26,8 +26,8 @@ import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import {
-  classifyLoads,
-  countValidationResults,
+  countByWasteBalanceInclusion,
+  countByValidity,
   mergeLoads
 } from './classify-loads.js'
 
@@ -220,7 +220,7 @@ const handleValidationFailure = (error, issues, loggingContext) => {
   }
 }
 
-const classifyLoadDates = (wasteRecords, registration, processingType) => {
+const markIgnoredByDateRange = (wasteRecords, registration, processingType) => {
   for (const wasteRecord of wasteRecords) {
     const schema = findSchemaForProcessingType(
       processingType,
@@ -296,7 +296,7 @@ const performValidationChecks = async ({
 
     wasteRecords = dataResult.wasteRecords
 
-    classifyLoadDates(wasteRecords, registration, meta.PROCESSING_TYPE)
+    markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
     issues.merge(dataResult.issues)
   } catch (error) {
@@ -481,8 +481,8 @@ export const createSummaryLogsValidator = ({
     const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
         ? mergeLoads(
-            countValidationResults({ wasteRecords, summaryLogId }),
-            classifyLoads({
+            countByValidity({ wasteRecords, summaryLogId }),
+            countByWasteBalanceInclusion({
               wasteRecords: wasteBalanceRecords,
               summaryLogId
             })

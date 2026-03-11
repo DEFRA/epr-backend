@@ -1,6 +1,6 @@
 import {
-  classifyLoads,
-  countValidationResults,
+  countByWasteBalanceInclusion,
+  countByValidity,
   mergeLoads
 } from './classify-loads.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
@@ -44,10 +44,10 @@ const createValidatedWasteRecord = ({
   outcome
 })
 
-describe('classifyLoads', () => {
+describe('countByWasteBalanceInclusion', () => {
   describe('with empty data', () => {
     it('returns empty structure when wasteRecords is empty', () => {
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords: [],
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -78,7 +78,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -107,7 +107,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -125,7 +125,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -147,7 +147,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -166,7 +166,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -185,7 +185,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -245,7 +245,7 @@ describe('classifyLoads', () => {
         })
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -283,7 +283,7 @@ describe('classifyLoads', () => {
         }
       ]
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -313,7 +313,7 @@ describe('classifyLoads', () => {
       // This would throw due to accessing versions[-1]
       // But this is an invalid state that shouldn't occur in practice
       expect(() =>
-        classifyLoads({
+        countByWasteBalanceInclusion({
           wasteRecords,
           summaryLogId: CURRENT_SUMMARY_LOG_ID
         })
@@ -347,7 +347,7 @@ describe('classifyLoads', () => {
         outcome: 'INCLUDED'
       }))
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -410,7 +410,7 @@ describe('classifyLoads', () => {
         outcome: 'EXCLUDED'
       }))
 
-      const result = classifyLoads({
+      const result = countByWasteBalanceInclusion({
         wasteRecords: [...includedRecords, ...excludedRecords],
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -425,10 +425,10 @@ describe('classifyLoads', () => {
   })
 })
 
-describe('countValidationResults', () => {
+describe('countByValidity', () => {
   describe('with empty data', () => {
     it('returns empty structure when wasteRecords is empty', () => {
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords: [],
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -459,7 +459,7 @@ describe('countValidationResults', () => {
         })
       ]
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -488,7 +488,7 @@ describe('countValidationResults', () => {
         })
       ]
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -506,7 +506,7 @@ describe('countValidationResults', () => {
         })
       ]
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -527,7 +527,7 @@ describe('countValidationResults', () => {
         })
       ]
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -553,7 +553,7 @@ describe('countValidationResults', () => {
         })
       ]
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -578,7 +578,7 @@ describe('countValidationResults', () => {
         })
       ]
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
@@ -612,7 +612,7 @@ describe('countValidationResults', () => {
         outcome: 'INCLUDED'
       }))
 
-      const result = countValidationResults({
+      const result = countByValidity({
         wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })

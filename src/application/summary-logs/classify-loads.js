@@ -21,13 +21,13 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  */
 
 /**
- * @typedef {Object} ValidationResultClassification
+ * @typedef {Object} ValidityCounts
  * @property {LoadCategory} valid - Valid loads (no issues)
  * @property {LoadCategory} invalid - Invalid loads (has issues)
  */
 
 /**
- * @typedef {Object} ClassificationResultClassification
+ * @typedef {Object} InclusionCounts
  * @property {LoadCategory} included - Loads included in Waste Balance calculation
  * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
  */
@@ -113,7 +113,7 @@ const createEmptyClassificationResults = () => ({
  * @param {string} summaryLogId - The current summary log ID
  * @returns {'added'|'unchanged'|'adjusted'} The classification
  */
-const classifyRecord = (record, summaryLogId) => {
+const determineRecordStatus = (record, summaryLogId) => {
   const lastVersion = record.versions[record.versions.length - 1]
 
   // Check if the last version was created in this upload
@@ -145,9 +145,9 @@ const incrementCategory = (category, rowId) => {
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records (all tables)
  * @param {string} params.summaryLogId - The current summary log ID
- * @returns {{ added: ValidationResultClassification, unchanged: ValidationResultClassification, adjusted: ValidationResultClassification }}
+ * @returns {{ added: ValidityCounts, unchanged: ValidityCounts, adjusted: ValidityCounts }}
  */
-export const countValidationResults = ({ wasteRecords, summaryLogId }) => {
+export const countByValidity = ({ wasteRecords, summaryLogId }) => {
   const results = createEmptyValidationResults()
 
   for (const { record, issues, outcome } of wasteRecords) {
@@ -155,7 +155,7 @@ export const countValidationResults = ({ wasteRecords, summaryLogId }) => {
       continue
     }
 
-    const classification = classifyRecord(record, summaryLogId)
+    const classification = determineRecordStatus(record, summaryLogId)
     const validityKey =
       /** @type {ValidationIssue[]} */ (issues).length > 0 ? 'invalid' : 'valid'
 
@@ -172,9 +172,12 @@ export const countValidationResults = ({ wasteRecords, summaryLogId }) => {
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste-balance table records only
  * @param {string} params.summaryLogId - The current summary log ID
- * @returns {{ added: ClassificationResultClassification, unchanged: ClassificationResultClassification, adjusted: ClassificationResultClassification }}
+ * @returns {{ added: InclusionCounts, unchanged: InclusionCounts, adjusted: InclusionCounts }}
  */
-export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
+export const countByWasteBalanceInclusion = ({
+  wasteRecords,
+  summaryLogId
+}) => {
   const results = createEmptyClassificationResults()
 
   for (const { record, outcome } of wasteRecords) {
@@ -182,7 +185,7 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
       continue
     }
 
-    const classification = classifyRecord(record, summaryLogId)
+    const classification = determineRecordStatus(record, summaryLogId)
     const inclusionKey =
       outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
 
@@ -196,8 +199,8 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
  * Merges validation results (valid/invalid) and classification results (included/excluded)
  * into the full Loads structure.
  *
- * @param {{ added: ValidationResultClassification, unchanged: ValidationResultClassification, adjusted: ValidationResultClassification }} validationResults
- * @param {{ added: ClassificationResultClassification, unchanged: ClassificationResultClassification, adjusted: ClassificationResultClassification }} classificationResults
+ * @param {{ added: ValidityCounts, unchanged: ValidityCounts, adjusted: ValidityCounts }} validationResults
+ * @param {{ added: InclusionCounts, unchanged: InclusionCounts, adjusted: InclusionCounts }} classificationResults
  * @returns {Loads}
  */
 export const mergeLoads = (validationResults, classificationResults) => ({
