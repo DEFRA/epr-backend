@@ -4,7 +4,8 @@ import Joi from 'joi'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { MONTHLY, QUARTERLY } from '#domain/reports/cadence.js'
-import { getCurrentPeriod } from '#domain/reports/current-period.js'
+import { discoverPeriods } from '#domain/reports/discover-periods.js'
+import { getOperatorCategory } from '#domain/reports/operator-category.js'
 
 export const reportsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports'
@@ -23,7 +24,7 @@ export const reportsGet = {
     }
   },
   handler: async (request, h) => {
-    const { organisationsRepository, params } = request
+    const { organisationsRepository, wasteRecordsRepository, params } = request
     const { organisationId, registrationId } = params
 
     const registration = await organisationsRepository.findRegistrationById(
@@ -31,11 +32,20 @@ export const reportsGet = {
       registrationId
     )
 
-    const cadence = registration.accreditationId ? MONTHLY : QUARTERLY
-    const period = getCurrentPeriod(cadence)
+    const isAccredited = Boolean(registration.accreditationId)
+    const cadence = isAccredited ? MONTHLY : QUARTERLY
+    const operatorCategory = getOperatorCategory(registration)
 
-    return h
-      .response({ cadence: cadence.id, periods: [period] })
-      .code(StatusCodes.OK)
+    const wasteRecords = await wasteRecordsRepository.findByRegistration(
+      organisationId,
+      registrationId
+    )
+
+    const year = isAccredited ? new Date().getUTCFullYear() : undefined
+    const periods = discoverPeriods(wasteRecords, operatorCategory, cadence, {
+      year
+    })
+
+    return h.response({ cadence: cadence.id, periods }).code(StatusCodes.OK)
   }
 }
