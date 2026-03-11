@@ -29,7 +29,7 @@ import {
   countByWasteBalanceInclusion,
   countByValidity,
   mergeLoads
-} from './classify-loads.js'
+} from './load-counts.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */

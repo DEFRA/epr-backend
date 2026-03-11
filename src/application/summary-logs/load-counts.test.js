@@ -2,7 +2,7 @@ import {
   countByWasteBalanceInclusion,
   countByValidity,
   mergeLoads
-} from './classify-loads.js'
+} from './load-counts.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 const CURRENT_SUMMARY_LOG_ID = 'current-summary-log'

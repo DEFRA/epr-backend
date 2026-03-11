@@ -9,7 +9,7 @@ import { createSummaryLogsValidator } from './validate.js'
 import {
   createEmptyLoadCategory,
   createEmptyLoadValidity
-} from './classify-loads.js'
+} from './load-counts.js'
 
 // ============================================================================
 // Test Builders
