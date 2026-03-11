@@ -21,6 +21,18 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  */
 
 /**
+ * @typedef {Object} ValidationResultClassification
+ * @property {LoadCategory} valid - Valid loads (no issues)
+ * @property {LoadCategory} invalid - Invalid loads (has issues)
+ */
+
+/**
+ * @typedef {Object} ClassificationResultClassification
+ * @property {LoadCategory} included - Loads included in Waste Balance calculation
+ * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
+ */
+
+/**
  * @typedef {Object} Loads
  * @property {LoadValidity} added - Loads added in this upload
  * @property {LoadValidity} unchanged - Loads unchanged from previous uploads
@@ -59,6 +71,36 @@ export const createEmptyLoads = () => ({
   adjusted: createEmptyLoadValidity()
 })
 
+const createEmptyValidationResults = () => ({
+  added: {
+    valid: createEmptyLoadCategory(),
+    invalid: createEmptyLoadCategory()
+  },
+  unchanged: {
+    valid: createEmptyLoadCategory(),
+    invalid: createEmptyLoadCategory()
+  },
+  adjusted: {
+    valid: createEmptyLoadCategory(),
+    invalid: createEmptyLoadCategory()
+  }
+})
+
+const createEmptyClassificationResults = () => ({
+  added: {
+    included: createEmptyLoadCategory(),
+    excluded: createEmptyLoadCategory()
+  },
+  unchanged: {
+    included: createEmptyLoadCategory(),
+    excluded: createEmptyLoadCategory()
+  },
+  adjusted: {
+    included: createEmptyLoadCategory(),
+    excluded: createEmptyLoadCategory()
+  }
+})
+
 /**
  * Determines the classification for a transformed record
  *
@@ -84,30 +126,29 @@ const classifyRecord = (record, summaryLogId) => {
 }
 
 /**
- * Classifies loads from transformed records and returns row IDs grouped by classification
+ * Increments a load category's count and appends the rowId (up to MAX_ROW_IDS)
  *
- * Classification dimensions:
- * - added: Load was created in this upload
- * - unchanged: Load existed before and wasn't modified in this upload
- * - adjusted: Load existed before and was modified in this upload
- *
- * Validity:
- * - valid: Load passes all validation rules (issues.length === 0)
- * - invalid: Load has validation errors (issues.length > 0)
- *
- * Inclusion:
- * - included: Load has outcome 'INCLUDED' from validation pipeline
- * - excluded: Load has outcome 'EXCLUDED' or 'REJECTED' from validation pipeline
- *
- * Row ID arrays are truncated to 100 entries; totals always reflect the full count.
+ * @param {LoadCategory} category - The category to increment
+ * @param {string} rowId - The row ID to append
+ */
+const incrementCategory = (category, rowId) => {
+  category.count++
+  if (category.rowIds.length < MAX_ROW_IDS) {
+    category.rowIds.push(rowId)
+  }
+}
+
+/**
+ * Counts validation results (valid/invalid) for ALL rows, grouped by record status.
+ * Skips IGNORED rows.
  *
  * @param {Object} params
- * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues and outcome
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records (all tables)
  * @param {string} params.summaryLogId - The current summary log ID
- * @returns {Loads} Row IDs grouped by classification and validity
+ * @returns {{ added: ValidationResultClassification, unchanged: ValidationResultClassification, adjusted: ValidationResultClassification }}
  */
-export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
-  const loads = createEmptyLoads()
+export const countValidationResults = ({ wasteRecords, summaryLogId }) => {
+  const results = createEmptyValidationResults()
 
   for (const { record, issues, outcome } of wasteRecords) {
     if (outcome === ROW_OUTCOME.IGNORED) {
@@ -115,26 +156,55 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
     }
 
     const classification = classifyRecord(record, summaryLogId)
-    // Issues always present after validation pipeline (data-syntax.js sets it)
     const validityKey =
       /** @type {ValidationIssue[]} */ (issues).length > 0 ? 'invalid' : 'valid'
-    const validityCategory = loads[classification][validityKey]
 
-    validityCategory.count++
-    if (validityCategory.rowIds.length < MAX_ROW_IDS) {
-      validityCategory.rowIds.push(record.rowId)
-    }
-
-    // Included/excluded classification based on outcome from validation pipeline
-    const inclusionKey =
-      outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
-    const inclusionCategory = loads[classification][inclusionKey]
-
-    inclusionCategory.count++
-    if (inclusionCategory.rowIds.length < MAX_ROW_IDS) {
-      inclusionCategory.rowIds.push(record.rowId)
-    }
+    incrementCategory(results[classification][validityKey], record.rowId)
   }
 
-  return loads
+  return results
 }
+
+/**
+ * Classifies loads by included/excluded for waste-balance table rows only.
+ * Skips IGNORED rows.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste-balance table records only
+ * @param {string} params.summaryLogId - The current summary log ID
+ * @returns {{ added: ClassificationResultClassification, unchanged: ClassificationResultClassification, adjusted: ClassificationResultClassification }}
+ */
+export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
+  const results = createEmptyClassificationResults()
+
+  for (const { record, outcome } of wasteRecords) {
+    if (outcome === ROW_OUTCOME.IGNORED) {
+      continue
+    }
+
+    const classification = classifyRecord(record, summaryLogId)
+    const inclusionKey =
+      outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
+
+    incrementCategory(results[classification][inclusionKey], record.rowId)
+  }
+
+  return results
+}
+
+/**
+ * Merges validation results (valid/invalid) and classification results (included/excluded)
+ * into the full Loads structure.
+ *
+ * @param {{ added: ValidationResultClassification, unchanged: ValidationResultClassification, adjusted: ValidationResultClassification }} validationResults
+ * @param {{ added: ClassificationResultClassification, unchanged: ClassificationResultClassification, adjusted: ClassificationResultClassification }} classificationResults
+ * @returns {Loads}
+ */
+export const mergeLoads = (validationResults, classificationResults) => ({
+  added: { ...validationResults.added, ...classificationResults.added },
+  unchanged: {
+    ...validationResults.unchanged,
+    ...classificationResults.unchanged
+  },
+  adjusted: { ...validationResults.adjusted, ...classificationResults.adjusted }
+})

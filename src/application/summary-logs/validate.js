@@ -25,7 +25,11 @@ import {
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
-import { classifyLoads } from './classify-loads.js'
+import {
+  classifyLoads,
+  countValidationResults,
+  mergeLoads
+} from './classify-loads.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -466,22 +470,23 @@ export const createSummaryLogsValidator = ({
     // Record validation issue metrics (if any issues exist)
     await recordValidationIssueMetrics(issues, processingType)
 
-    // Filter to only waste-balance table rows — rows from tables without
-    // classifyForWasteBalance have no meaningful inclusion/exclusion status
+    // Filter to only waste-balance table rows for inclusion/exclusion classification
     const wasteBalanceRecords = wasteRecords?.filter((wr) => {
       const schema = findSchemaForProcessingType(processingType, wr.record.type)
       return schema?.classifyForWasteBalance != null
     })
 
     // Classify loads only for validated summary logs
-    // wasteRecords is guaranteed to be non-null when status is VALIDATED
-    // because we only reach VALIDATED if we passed all short-circuits
+    // Valid/invalid counts ALL rows; included/excluded counts only WB rows
     const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
-        ? classifyLoads({
-            wasteRecords: wasteBalanceRecords,
-            summaryLogId
-          })
+        ? mergeLoads(
+            countValidationResults({ wasteRecords, summaryLogId }),
+            classifyLoads({
+              wasteRecords: wasteBalanceRecords,
+              summaryLogId
+            })
+          )
         : null
 
     // Record row outcome metrics only for waste-balance table rows

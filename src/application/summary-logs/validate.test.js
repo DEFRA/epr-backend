@@ -950,7 +950,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
-    it('excludes non-waste-balance table rows from loads counts (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1000,8 +1000,10 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Non-waste-balance table rows should not appear in loads at all
-      expect(updateCall.loads.added.valid.count).toBe(0)
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
@@ -1190,7 +1192,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('excludes non-waste-balance table rows from loads counts (SENT_ON_LOADS in EXPORTER)', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in EXPORTER)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1254,12 +1256,14 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Non-waste-balance table rows should not appear in loads at all
-      expect(updateCall.loads.added.valid.count).toBe(0)
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
-    it('excludes non-waste-balance table rows from loads counts (RECEIVED_LOADS_FOR_REPROCESSING in REPROCESSOR_OUTPUT)', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (RECEIVED_LOADS_FOR_REPROCESSING in REPROCESSOR_OUTPUT)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1294,8 +1298,10 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Non-waste-balance table rows should not appear in loads at all
-      expect(updateCall.loads.added.valid.count).toBe(0)
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
@@ -1349,7 +1355,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('excludes non-waste-balance table rows from loads counts (SENT_ON_LOADS in REPROCESSOR_OUTPUT)', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in REPROCESSOR_OUTPUT)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1424,8 +1430,10 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Non-waste-balance table rows should not appear in loads at all
-      expect(updateCall.loads.added.valid.count).toBe(0)
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
