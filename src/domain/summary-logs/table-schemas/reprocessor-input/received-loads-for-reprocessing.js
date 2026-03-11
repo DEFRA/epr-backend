@@ -75,7 +75,7 @@ const SUPPLEMENTARY_FIELDS = [
  * Tracks waste received for reprocessing. This schema defines:
  * - What counts as "unfilled" per field (unfilledValues)
  * - How to validate filled fields (validationSchema for VAL010)
- * - Which fields must be present for Waste Balance (fieldsRequiredForInclusionInWasteBalance for VAL011)
+ * - classifyForWasteBalance: classifies a row for waste balance inclusion (VAL011)
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
@@ -144,14 +144,6 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
       ...TONNAGE_RECEIVED_MESSAGES
     })
     .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   *
-   * If any of these fields are missing (unfilled), the row is EXCLUDED
-   * from the Waste Balance but still included in the submission.
-   */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS,
 
   classifyForWasteBalance: (data, { accreditation }) => {
     const missingResult = checkRequiredFields(
