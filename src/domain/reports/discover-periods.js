@@ -35,38 +35,15 @@ export function discoverPeriods(
     }
 
     for (const dateField of dateFields) {
-      const dateValue = wasteRecord.data[dateField]
+      const periodEntry = toPeriodEntry(
+        wasteRecord.data[dateField],
+        cadence,
+        options?.year
+      )
 
-      if (!dateValue) {
-        continue
-      }
-
-      const parsed = parseDate(dateValue)
-
-      if (!parsed) {
-        continue
-      }
-
-      const { year, month } = parsed
-
-      if (options?.year !== undefined && year !== options.year) {
-        continue
-      }
-
-      const period = Math.floor(month / cadence.monthsPerPeriod) + 1
-      const periodKey = `${year}-${period}`
-
-      if (!periodSet.has(periodKey)) {
-        periodSet.add(periodKey)
-
-        const startMonth = (period - 1) * cadence.monthsPerPeriod
-
-        periods.push({
-          year,
-          period,
-          startDate: formatDateISO(year, startMonth, 1),
-          endDate: formatDateISO(year, startMonth + cadence.monthsPerPeriod, 0)
-        })
+      if (periodEntry && !periodSet.has(periodEntry.key)) {
+        periodSet.add(periodEntry.key)
+        periods.push(periodEntry.period)
       }
     }
   }
@@ -74,6 +51,41 @@ export function discoverPeriods(
   periods.sort((a, b) => a.year - b.year || a.period - b.period)
 
   return periods
+}
+
+/**
+ * Converts a date value to a period entry, or returns null if the
+ * value is missing, unparseable, or outside the year filter.
+ * @param {*} dateValue
+ * @param {import('./cadence.js').MONTHLY | import('./cadence.js').QUARTERLY} cadence
+ * @param {number} [yearFilter]
+ * @returns {{ key: string, period: { year: number, period: number, startDate: string, endDate: string } } | null}
+ */
+function toPeriodEntry(dateValue, cadence, yearFilter) {
+  const parsed = parseDate(dateValue)
+
+  if (!parsed) {
+    return null
+  }
+
+  const { year, month } = parsed
+
+  if (yearFilter !== undefined && year !== yearFilter) {
+    return null
+  }
+
+  const period = Math.floor(month / cadence.monthsPerPeriod) + 1
+  const startMonth = (period - 1) * cadence.monthsPerPeriod
+
+  return {
+    key: `${year}-${period}`,
+    period: {
+      year,
+      period,
+      startDate: formatDateISO(year, startMonth, 1),
+      endDate: formatDateISO(year, startMonth + cadence.monthsPerPeriod, 0)
+    }
+  }
 }
 
 /**
@@ -89,7 +101,7 @@ function parseDate(value) {
 
   const date = new Date(value)
 
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return null
   }
 
