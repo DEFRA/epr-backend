@@ -225,6 +225,10 @@ describe('discoverPeriods', () => {
       { scenario: 'empty string', data: { MONTH_RECEIVED_FOR_EXPORT: '' } },
       { scenario: 'null value', data: { MONTH_RECEIVED_FOR_EXPORT: null } },
       {
+        scenario: 'non-string value',
+        data: { MONTH_RECEIVED_FOR_EXPORT: new Date('2026-01-01') }
+      },
+      {
         scenario: 'invalid date string',
         data: { MONTH_RECEIVED_FOR_EXPORT: 'not-a-date' }
       }
