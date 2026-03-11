@@ -9,7 +9,7 @@ import { createSummaryLogsValidator } from './validate.js'
 import {
   createEmptyLoadCategory,
   createEmptyLoadValidity
-} from './classify-loads.js'
+} from './load-counts.js'
 
 // ============================================================================
 // Test Builders
@@ -753,14 +753,14 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('Level 1 and Level 2 pass, Level 3 (data syntax) runs and finds fatal errors', async () => {
-      // Valid meta, but invalid data (row-level errors, fatal since EWC_CODE is in fatalFields)
+      // Valid meta, but invalid data (row-level errors, fatal for REJECTED rows)
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
                 buildReceivedLoadRow({
-                  EWC_CODE: 'bad-code' // Fatal row error (EWC_CODE is in fatalFields)
+                  EWC_CODE: 'bad-code' // Fatal row error (REJECTED rows produce fatal severity)
                 })
               ]
             })
@@ -950,7 +950,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
-    it('sets IGNORED outcome for REPROCESSED_LOADS with dates outside accreditation range', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1000,8 +1000,11 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([4000])
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS with dates outside accreditation range', async () => {
@@ -1189,7 +1192,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for EXPORTER Sent on loads using DATE_LOAD_LEFT_SITE', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in EXPORTER)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1252,10 +1255,15 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-      expect(updateCall.loads.added.valid.count).toBe(0)
+
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
-    it('sets IGNORED outcome for Reprocessor Output loads with dates outside accreditation range', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (RECEIVED_LOADS_FOR_REPROCESSING in REPROCESSOR_OUTPUT)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1290,8 +1298,11 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([20000])
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
     it('sets IGNORED outcome for REPROCESSED_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
@@ -1344,7 +1355,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
-    it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
+    it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in REPROCESSOR_OUTPUT)', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1419,8 +1430,11 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loads.added.valid.count).toBe(1)
-      expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
+      // Non-WB rows count in valid/invalid (syntax validation applies to all tables)
+      expect(updateCall.loads.added.valid.count).toBe(2)
+      // Non-WB rows do NOT count in included/excluded
+      expect(updateCall.loads.added.included.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Input', async () => {
@@ -1545,7 +1559,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.invalid.rowIds).toEqual([5000])
     })
 
-    it('sets IGNORED outcome for REPROCESSOR_OUTPUT when no date fields are present (branch coverage)', async () => {
+    it('completes validation for REPROCESSOR_OUTPUT when date field is empty', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1576,7 +1590,7 @@ describe('SummaryLogsValidator', () => {
       expect(summaryLogsRepository.update).toHaveBeenCalled()
     })
 
-    it('sets IGNORED outcome for EXPORTER when no date fields are present (branch coverage)', async () => {
+    it('completes validation for EXPORTER sent-on loads when date field is empty', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
@@ -1671,6 +1685,54 @@ describe('SummaryLogsValidator', () => {
         { processingType: 'REPROCESSOR_INPUT' },
         expect.any(Number)
       )
+    })
+
+    it('should not record row outcome metrics for non-waste-balance table rows', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      const reprocessedHeaders = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'PRODUCT_DESCRIPTION',
+        'END_OF_WASTE_STANDARDS',
+        'PRODUCT_TONNAGE',
+        'WEIGHBRIDGE_TICKET_NUMBER',
+        'HAULIER_NAME',
+        'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+        'CUSTOMER_NAME',
+        'CUSTOMER_INVOICE_REFERENCE'
+      ]
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            REPROCESSED_LOADS: {
+              location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+              headers: reprocessedHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', '']
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      // Non-waste-balance table rows should not generate row outcome metrics
+      expect(mockRecordRowOutcome).not.toHaveBeenCalled()
     })
   })
 })

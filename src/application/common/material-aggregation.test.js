@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Decimal128 } from 'mongodb'
 import {
   buildEffectiveMaterialStages,
-  formatMaterialResults
+  formatMaterialResults,
+  formatTonnageMonitoringResults
 } from './material-aggregation.js'
+import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 
 describe('material-aggregation', () => {
   describe('buildEffectiveMaterialStages', () => {
@@ -126,6 +128,175 @@ describe('material-aggregation', () => {
       const { total } = formatMaterialResults([], 'availableAmount')
 
       expect(total).toBe(0)
+    })
+  })
+
+  describe('formatTonnageMonitoringResults', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should return all materials and types with zero tonnage when no results', () => {
+      vi.setSystemTime(new Date('2026-01-15T10:00:00.000Z'))
+
+      const result = formatTonnageMonitoringResults([])
+
+      // 8 materials × 2 types = 16 entries
+      expect(result.materials).toHaveLength(16)
+      expect(result.total).toBe(0)
+
+      result.materials.forEach((entry) => {
+        expect(entry).toMatchObject({
+          year: 2026,
+          months: [{ month: 'Jan', tonnage: 0 }]
+        })
+        expect(TONNAGE_MONITORING_MATERIALS).toContain(entry.material)
+        expect(['Exporter', 'Reprocessor']).toContain(entry.type)
+      })
+
+      const materials = [...new Set(result.materials.map((m) => m.material))]
+      expect(materials.sort()).toEqual([
+        'aluminium',
+        'fibre',
+        'glass_other',
+        'glass_re_melt',
+        'paper',
+        'plastic',
+        'steel',
+        'wood'
+      ])
+    })
+
+    it('should fill missing materials and types with zero tonnage for single month', () => {
+      vi.setSystemTime(new Date('2026-01-15T10:00:00.000Z'))
+
+      const results = [
+        {
+          material: 'plastic',
+          year: 2026,
+          monthNumber: 1,
+          month: 'Jan',
+          type: 'Exporter',
+          totalTonnage: 100
+        }
+      ]
+
+      const result = formatTonnageMonitoringResults(results)
+
+      // 8 materials × 2 types = 16 entries
+      expect(result.materials).toHaveLength(16)
+      expect(result.total).toBe(100)
+
+      const plasticExporter = result.materials.find(
+        (m) => m.material === 'plastic' && m.type === 'Exporter'
+      )
+      expect(plasticExporter).toBeDefined()
+      expect(plasticExporter.year).toBe(2026)
+      expect(plasticExporter.months).toHaveLength(1)
+
+      expect(plasticExporter.months[0].month).toBe('Jan')
+      expect(plasticExporter.months[0].tonnage).toBe(100)
+
+      const aluminiumExporter = result.materials.find(
+        (m) => m.material === 'aluminium' && m.type === 'Exporter'
+      )
+      aluminiumExporter.months.forEach((m) => {
+        expect(m.tonnage).toBe(0)
+      })
+    })
+
+    it('should calculate total and fill missing data for multiple months', () => {
+      vi.setSystemTime(new Date('2026-02-15T10:00:00.000Z'))
+
+      const results = [
+        {
+          material: 'plastic',
+          year: 2026,
+          monthNumber: 1,
+          month: 'Jan',
+          type: 'Exporter',
+          totalTonnage: 100
+        },
+        {
+          material: 'aluminium',
+          year: 2026,
+          monthNumber: 2,
+          month: 'Feb',
+          type: 'Reprocessor',
+          totalTonnage: 50
+        }
+      ]
+
+      const result = formatTonnageMonitoringResults(results)
+
+      // 8 materials × 2 types = 16 entries (each with 2 months)
+      expect(result.materials).toHaveLength(16)
+      expect(result.total).toBe(150)
+
+      result.materials.forEach((entry) => {
+        expect(entry.months).toHaveLength(2)
+        expect(entry.months.map((m) => m.month)).toEqual(['Jan', 'Feb'])
+      })
+
+      const plasticExporter = result.materials.find(
+        (m) => m.material === 'plastic' && m.type === 'Exporter'
+      )
+      expect(plasticExporter.months).toEqual([
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 }
+      ])
+
+      const aluminiumReprocessor = result.materials.find(
+        (m) => m.material === 'aluminium' && m.type === 'Reprocessor'
+      )
+      expect(aluminiumReprocessor.months).toEqual([
+        { month: 'Jan', tonnage: 0 },
+        { month: 'Feb', tonnage: 50 }
+      ])
+    })
+  })
+
+  it('should sort results by year (DESC), type (DESC), and material (ASC)', () => {
+    vi.setSystemTime(new Date('2027-02-15T10:00:00.000Z'))
+
+    const results = [
+      {
+        material: 'aluminium',
+        year: 2027,
+        month: 'Jan',
+        type: 'Exporter',
+        totalTonnage: 150
+      },
+      {
+        material: 'wood',
+        year: 2027,
+        month: 'Feb',
+        type: 'Reprocessor',
+        totalTonnage: 200
+      }
+    ]
+
+    const { materials } = formatTonnageMonitoringResults(results)
+
+    expect(materials[0]).toMatchObject({
+      year: 2027,
+      type: 'Reprocessor',
+      material: 'aluminium'
+    })
+
+    expect(materials[7]).toMatchObject({
+      year: 2027,
+      type: 'Reprocessor',
+      material: 'wood'
+    })
+    expect(materials[8]).toMatchObject({
+      year: 2027,
+      type: 'Exporter',
+      material: 'aluminium'
     })
   })
 })

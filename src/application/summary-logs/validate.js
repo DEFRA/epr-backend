@@ -17,29 +17,19 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
-  PROCESSING_TYPES,
-  SUMMARY_LOG_META_FIELDS
-} from '#domain/summary-logs/meta-fields.js'
-import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+  PROCESSING_TYPE_TABLES,
+  findSchemaForProcessingType
+} from '#domain/summary-logs/table-schemas/index.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
-import {
-  RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_LOADS_FIELDS,
-  SENT_ON_LOADS_FIELDS as EXPORTER_SENT_ON_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/exporter/fields.js'
-import {
-  RECEIVED_LOADS_FIELDS as REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS,
-  REPROCESSED_LOADS_FIELDS as REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
-import {
-  RECEIVED_LOADS_FIELDS as REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS,
-  REPROCESSED_LOADS_FIELDS as REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS,
-  SENT_ON_LOADS_FIELDS as REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS
-} from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
-import { classifyLoads } from './classify-loads.js'
+import {
+  countByWasteBalanceInclusion,
+  countByValidity,
+  mergeLoads
+} from './load-counts.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -230,64 +220,18 @@ const handleValidationFailure = (error, issues, loggingContext) => {
   }
 }
 
-const validateExporterDates = (wasteRecords, registration) => {
+const markIgnoredByDateRange = (wasteRecords, registration, processingType) => {
   for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    // Check all possible date fields for Exporter tables:
-    // 1. DATE_OF_EXPORT (Received loads)
-    // 2. DATE_RECEIVED_FOR_EXPORT (Received loads fallback)
-    // 3. DATE_LOAD_LEFT_SITE (Sent on loads)
-    const dateToCheck =
-      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT] ||
-      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT] ||
-      data[EXPORTER_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+    const schema = findSchemaForProcessingType(
+      processingType,
+      wasteRecord.record.type
+    )
 
-    if (
-      dateToCheck &&
-      !isWithinAccreditationDateRange(dateToCheck, registration)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
-    }
-  }
-}
+    const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
+      accreditation: registration
+    })
 
-const validateReprocessorInputDates = (wasteRecords, registration) => {
-  for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    // Check both possible date fields for Reprocessor Input:
-    // 1. DATE_RECEIVED_FOR_REPROCESSING (Received loads)
-    // 2. DATE_LOAD_LEFT_SITE (Reprocessed and Sent on loads)
-    const dateToCheck =
-      data[
-        REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] || data[REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-
-    if (
-      dateToCheck &&
-      !isWithinAccreditationDateRange(dateToCheck, registration)
-    ) {
-      wasteRecord.outcome = ROW_OUTCOME.IGNORED
-    }
-  }
-}
-
-const validateReprocessorOutputDates = (wasteRecords, registration) => {
-  for (const wasteRecord of wasteRecords) {
-    const data = wasteRecord.record.data
-    // Check both possible date fields for Reprocessor Output:
-    // 1. DATE_RECEIVED_FOR_REPROCESSING (Received loads)
-    // 2. DATE_LOAD_LEFT_SITE (Reprocessed and Sent on loads)
-    const dateToCheck =
-      data[
-        REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] ||
-      data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
-      data[REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-
-    if (
-      dateToCheck &&
-      !isWithinAccreditationDateRange(dateToCheck, registration)
-    ) {
+    if (result?.outcome === ROW_OUTCOME.IGNORED) {
       wasteRecord.outcome = ROW_OUTCOME.IGNORED
     }
   }
@@ -352,18 +296,7 @@ const performValidationChecks = async ({
 
     wasteRecords = dataResult.wasteRecords
 
-    // Validate that load dates are within accreditation period
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
-      validateExporterDates(wasteRecords, registration)
-    }
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
-      validateReprocessorInputDates(wasteRecords, registration)
-    }
-
-    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
-      validateReprocessorOutputDates(wasteRecords, registration)
-    }
+    markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
     issues.merge(dataResult.issues)
   } catch (error) {
@@ -537,19 +470,27 @@ export const createSummaryLogsValidator = ({
     // Record validation issue metrics (if any issues exist)
     await recordValidationIssueMetrics(issues, processingType)
 
+    // Filter to only waste-balance table rows for inclusion/exclusion classification
+    const wasteBalanceRecords = wasteRecords?.filter((wr) => {
+      const schema = findSchemaForProcessingType(processingType, wr.record.type)
+      return schema?.classifyForWasteBalance != null
+    })
+
     // Classify loads only for validated summary logs
-    // wasteRecords is guaranteed to be non-null when status is VALIDATED
-    // because we only reach VALIDATED if we passed all short-circuits
+    // Valid/invalid counts ALL rows; included/excluded counts only WB rows
     const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
-        ? classifyLoads({
-            wasteRecords,
-            summaryLogId
-          })
+        ? mergeLoads(
+            countByValidity({ wasteRecords, summaryLogId }),
+            countByWasteBalanceInclusion({
+              wasteRecords: wasteBalanceRecords,
+              summaryLogId
+            })
+          )
         : null
 
-    // Record row outcome metrics (if we have waste records)
-    await recordRowOutcomeMetrics(wasteRecords, processingType)
+    // Record row outcome metrics only for waste-balance table rows
+    await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),

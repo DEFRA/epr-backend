@@ -34,45 +34,18 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isDevEndpointsEnabled()).toBe(false)
   })
 
-  describe('isPackagingRecyclingNotesExternalApiEnabled', () => {
-    it('returns true when packagingRecyclingNotesExternalApi flag is enabled', () => {
-      const flags = createInMemoryFeatureFlags({
-        packagingRecyclingNotesExternalApi: true
-      })
-      expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(true)
-    })
-
-    it('returns false when packagingRecyclingNotesExternalApi flag is disabled', () => {
-      const flags = createInMemoryFeatureFlags({
-        packagingRecyclingNotesExternalApi: false
-      })
-      expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(false)
-    })
-
-    it('returns false when packagingRecyclingNotesExternalApi flag is not provided', () => {
-      const flags = createInMemoryFeatureFlags({})
-      expect(flags.isPackagingRecyclingNotesExternalApiEnabled()).toBe(false)
-    })
+  it('returns true when reports flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ reports: true })
+    expect(flags.isReportsEnabled()).toBe(true)
   })
 
-  describe('isCreatePackagingRecyclingNotesEnabled', () => {
-    it('returns true when packagingRecyclingNotes flag is enabled', () => {
-      const flags = createInMemoryFeatureFlags({
-        packagingRecyclingNotes: true
-      })
-      expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(true)
-    })
+  it('returns false when reports flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ reports: false })
+    expect(flags.isReportsEnabled()).toBe(false)
+  })
 
-    it('returns false when packagingRecyclingNotes flag is disabled', () => {
-      const flags = createInMemoryFeatureFlags({
-        packagingRecyclingNotes: false
-      })
-      expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
-    })
-
-    it('returns false when packagingRecyclingNotes flag is not provided', () => {
-      const flags = createInMemoryFeatureFlags({})
-      expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
-    })
+  it('returns false when reports flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isReportsEnabled()).toBe(false)
   })
 })

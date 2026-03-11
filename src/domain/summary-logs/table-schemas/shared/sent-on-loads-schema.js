@@ -6,10 +6,10 @@ import {
 } from './field-schemas.js'
 import { DROPDOWN_PLACEHOLDER } from './joi-messages.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Fields required for waste balance calculation.
- * Used for fatalFields and fieldsRequiredForInclusionInWasteBalance.
  */
 const WASTE_BALANCE_FIELDS = [
   FIELDS.ROW_ID,
@@ -40,10 +40,14 @@ const SUPPLEMENTARY_FIELDS = [
  * and the same waste balance calculation requirements. Only the ROW_ID minimum differs.
  *
  * @param {number} rowIdMinimum - Minimum ROW_ID value for this variant
+ * @param {Function} rowTransformer - Function to transform a row into waste record metadata
  * @returns {object} Table schema for SENT_ON_LOADS
  */
-export const createSentOnLoadsSchema = (rowIdMinimum) => ({
+export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+  sheetName: 'Sent on',
+  rowTransformer,
 
   /**
    * VAL008: All columns that must be present in the uploaded file
@@ -60,12 +64,6 @@ export const createSentOnLoadsSchema = (rowIdMinimum) => ({
   },
 
   /**
-   * Fields that produce FATAL errors when validation fails.
-   * Only waste balance fields cause fatal errors.
-   */
-  fatalFields: WASTE_BALANCE_FIELDS,
-
-  /**
    * VAL010: Validation schema for filled fields
    */
   validationSchema: Joi.object({
@@ -74,10 +72,5 @@ export const createSentOnLoadsSchema = (rowIdMinimum) => ({
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: createWeightFieldSchema()
   })
     .unknown(true)
-    .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
+    .prefs({ abortEarly: false })
 })

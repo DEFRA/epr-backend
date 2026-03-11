@@ -12,7 +12,7 @@
  * 1. Per-column "Choose option" → null normalisation via unfilledValues config
  * 2. "Row ID" header row filtering (moved to domain layer)
  * 3. Empty ROW_ID row filtering (moved to domain layer)
- * 4. "Choose material" → null for MATERIAL metadata via metaPlaceholders config
+ * 4. (Removed) "Choose material" metadata normalisation — now validated in meta-business
  * 5. Empty row detection works correctly with per-column normalisation
  * 6. unfilledValues in domain schemas drives normalisation (no longer redundant)
  *
@@ -47,22 +47,42 @@ const createWorkbook = async (worksheets) => {
 /**
  * Minimal schema for testing - matches structure of real domain schemas
  */
-const createTestSchema = (options = {}) => ({
-  rowIdField: 'ROW_ID',
-  requiredHeaders: options.requiredHeaders || ['ROW_ID', 'VALUE'],
-  unfilledValues: options.unfilledValues || {},
-  fatalFields: options.fatalFields || ['ROW_ID'],
-  validationSchema:
-    options.validationSchema ||
-    Joi.object({
-      ROW_ID: Joi.number().integer().optional(),
-      VALUE: Joi.any().optional()
+const createTestSchema = (options = {}) => {
+  const unfilledValues = options.unfilledValues || {}
+  const requiredFields = options.fieldsRequiredForInclusionInWasteBalance || []
+
+  return {
+    rowIdField: 'ROW_ID',
+    requiredHeaders: options.requiredHeaders || ['ROW_ID', 'VALUE'],
+    unfilledValues,
+    validationSchema:
+      options.validationSchema ||
+      Joi.object({
+        ROW_ID: Joi.number().integer().optional(),
+        VALUE: Joi.any().optional()
+      })
+        .unknown(true)
+        .prefs({ abortEarly: false }),
+    fieldsRequiredForInclusionInWasteBalance: requiredFields,
+    ...(requiredFields.length > 0 && {
+      classifyForWasteBalance: (data, _context) => {
+        const missing = requiredFields.filter(
+          (field) => !isFilled(data[field], unfilledValues[field] || [])
+        )
+        if (missing.length > 0) {
+          return {
+            outcome: 'EXCLUDED',
+            reasons: missing.map((field) => ({
+              code: 'MISSING_REQUIRED_FIELD',
+              field
+            }))
+          }
+        }
+        return { outcome: 'INCLUDED', reasons: [], transactionAmount: 0 }
+      }
     })
-      .unknown(true)
-      .prefs({ abortEarly: false }),
-  fieldsRequiredForInclusionInWasteBalance:
-    options.fieldsRequiredForInclusionInWasteBalance || []
-})
+  }
+}
 
 /**
  * Test schema registry matching real structure
@@ -257,55 +277,6 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         { rowNumber: 2, values: [null, '2025-01-15'] },
         { rowNumber: 3, values: ['REF001', '2025-01-16'] }
       ])
-    })
-  })
-
-  describe('RESOLVED WORKAROUND 4: Metadata normalisation via metaPlaceholders config', () => {
-    /**
-     * The parser normalises metadata placeholder values to null per-field,
-     * driven by the metaPlaceholders config. Only fields listed in the config
-     * are normalised.
-     */
-
-    it('normalises "Choose material" to null for MATERIAL field via config', async () => {
-      const buffer = await createWorkbook({
-        Cover: [['__EPR_META_MATERIAL', 'Choose material']]
-      })
-
-      const parsed = await parse(buffer, {
-        metaPlaceholders: { MATERIAL: 'Choose material' }
-      })
-
-      expect(parsed.meta.MATERIAL.value).toBeNull()
-    })
-
-    it('does NOT normalise "Choose material" for fields not in config', async () => {
-      const buffer = await createWorkbook({
-        Cover: [['__EPR_META_OTHER_FIELD', 'Choose material']]
-      })
-
-      const parsed = await parse(buffer, {
-        metaPlaceholders: { MATERIAL: 'Choose material' }
-      })
-
-      expect(parsed.meta.OTHER_FIELD.value).toBe('Choose material')
-    })
-
-    it('does NOT normalise "Choose material" in data rows', async () => {
-      const buffer = await createWorkbook({
-        Cover: [],
-        Test: [
-          ['__EPR_DATA_TEST', 'ROW_ID', 'MATERIAL_COLUMN'],
-          [null, 1001, 'Choose material']
-        ]
-      })
-
-      const parsed = await parse(buffer, {
-        metaPlaceholders: { MATERIAL: 'Choose material' }
-      })
-
-      // "Choose material" is NOT normalised in data rows
-      expect(parsed.data.TEST.rows[0].values).toEqual([1001, 'Choose material'])
     })
   })
 
@@ -539,12 +510,11 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       const buffer = await workbook.xlsx.writeBuffer()
       const parsed = await parse(buffer, {
-        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] },
-        metaPlaceholders: { MATERIAL: 'Choose material' }
+        unfilledValues: { DROPDOWN_FIELD: ['Choose option'] }
       })
 
-      // Verify MATERIAL normalised via metaPlaceholders
-      expect(parsed.meta.MATERIAL.value).toBeNull()
+      // MATERIAL passes through as-is (validated in meta-business, not parser)
+      expect(parsed.meta.MATERIAL.value).toBe('Choose material')
 
       // Verify parsing results
       expect(parsed.data.RECEIVED_LOADS.headers).toEqual([

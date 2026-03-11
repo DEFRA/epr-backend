@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformSentOnLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/sent-on-loads-reprocessor-output.js'
 
 describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
   const schema = SENT_ON_LOADS
@@ -7,6 +9,20 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to SENT_ON', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+    })
+
+    it('has sheetName set to Sent on', () => {
+      expect(schema.sheetName).toBe('Sent on')
+    })
+
+    it('has rowTransformer set to transformSentOnLoadsRowReprocessorOutput', () => {
+      expect(schema.rowTransformer).toBe(
+        transformSentOnLoadsRowReprocessorOutput
+      )
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -39,33 +55,6 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
 
       it('has exactly 11 required headers (all optional for REPROCESSOR_OUTPUT)', () => {
         expect(schema.requiredHeaders).toHaveLength(11)
-      })
-    })
-
-    describe('fatalFields (data validation)', () => {
-      it('contains ROW_ID as fatal (always fatal)', () => {
-        expect(schema.fatalFields).toContain('ROW_ID')
-      })
-
-      it('has exactly 1 fatal field (ROW_ID only - all other fields optional)', () => {
-        expect(schema.fatalFields).toHaveLength(1)
-      })
-
-      it('does NOT contain other columns', () => {
-        expect(schema.fatalFields).not.toContain('DATE_LOAD_LEFT_SITE')
-        expect(schema.fatalFields).not.toContain(
-          'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-        )
-        expect(schema.fatalFields).not.toContain(
-          'FINAL_DESTINATION_FACILITY_TYPE'
-        )
-        expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
-      })
-    })
-
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('is empty (table does not contribute to waste balance for REPROCESSOR_OUTPUT)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)
       })
     })
 

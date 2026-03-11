@@ -66,9 +66,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
           wasteBalancesRepository: () => ({}),
           organisationsRepository: () => ({})
         },
-        featureFlags: createInMemoryFeatureFlags({
-          packagingRecyclingNotesExternalApi: true
-        })
+        featureFlags: createInMemoryFeatureFlags()
       })
     })
 

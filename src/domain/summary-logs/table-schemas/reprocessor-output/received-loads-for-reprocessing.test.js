@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/received-loads-reprocessing-output.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING
@@ -7,6 +9,20 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to RECEIVED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+    })
+
+    it('has sheetName set to Received', () => {
+      expect(schema.sheetName).toBe('Received')
+    })
+
+    it('has rowTransformer set to transformReceivedLoadsRowReprocessorOutput', () => {
+      expect(schema.rowTransformer).toBe(
+        transformReceivedLoadsRowReprocessorOutput
+      )
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -65,40 +81,6 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
 
       it('has exactly 25 required headers (all optional for REPROCESSOR_OUTPUT)', () => {
         expect(schema.requiredHeaders).toHaveLength(25)
-      })
-    })
-
-    describe('fatalFields (data validation)', () => {
-      it('contains ROW_ID as fatal (always fatal)', () => {
-        expect(schema.fatalFields).toContain('ROW_ID')
-      })
-
-      it('has exactly 1 fatal field (ROW_ID only - all other fields optional)', () => {
-        expect(schema.fatalFields).toHaveLength(1)
-      })
-
-      it('does NOT contain Section 1 columns', () => {
-        expect(schema.fatalFields).not.toContain(
-          'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        expect(schema.fatalFields).not.toContain('EWC_CODE')
-        expect(schema.fatalFields).not.toContain('GROSS_WEIGHT')
-        expect(schema.fatalFields).not.toContain('NET_WEIGHT')
-        expect(schema.fatalFields).not.toContain(
-          'TONNAGE_RECEIVED_FOR_RECYCLING'
-        )
-      })
-
-      it('does NOT contain Section 2 or 3 columns', () => {
-        expect(schema.fatalFields).not.toContain('SUPPLIER_NAME')
-        expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
-        expect(schema.fatalFields).not.toContain('CARRIER_NAME')
-      })
-    })
-
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('is empty (table does not contribute to waste balance for REPROCESSOR_OUTPUT)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)
       })
     })
 

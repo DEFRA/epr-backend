@@ -14,9 +14,12 @@ import {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
-  createEnumFieldSchema
+  createEnumFieldSchema,
+  YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformExportLoadsRow } from '#application/waste-records/row-transformers/received-loads-export.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
@@ -25,6 +28,13 @@ import {
   TONNAGE_EXPORT_MESSAGES,
   validateTonnageExport
 } from './validators/tonnage-export-validator.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import {
+  CLASSIFICATION_REASON,
+  checkRequiredFields
+} from '../shared/classify-helpers.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -82,10 +92,13 @@ const SUPPLEMENTARY_FIELDS = [
  * Tracks waste received for export. This schema defines:
  * - What counts as "unfilled" per field (unfilledValues)
  * - How to validate filled fields (validationSchema for VAL010)
- * - Which fields must be present for inclusion in Waste Balance (fieldsRequiredForInclusionInWasteBalance for VAL011)
+ * - classifyForWasteBalance: classifies a row for waste balance inclusion (VAL011)
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+  sheetName: 'Exported',
+  rowTransformer: transformExportLoadsRow,
 
   requiredHeaders: [...WASTE_BALANCE_FIELDS, ...SUPPLEMENTARY_FIELDS],
 
@@ -106,15 +119,6 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.EXPORT_CONTROLS]: DROPDOWN_PLACEHOLDER,
     [FIELDS.BASEL_EXPORT_CODE]: DROPDOWN_PLACEHOLDER
   },
-
-  /**
-   * Fields that produce FATAL errors when validation fails
-   *
-   * ROW_ID is always fatal as it indicates tampering or corruption.
-   * Only waste balance fields cause fatal errors; supplementary fields
-   * are optional and don't block submission.
-   */
-  fatalFields: WASTE_BALANCE_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields
@@ -176,13 +180,48 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     })
     .prefs({ abortEarly: false }),
 
-  /**
-   * VAL011: Fields required for inclusion in Waste Balance
-   *
-   * Per PAE-984: Only the 22 business-mandated fields are required.
-   * Supplementary fields (EXPORT_CONTROLS, INTERIM_SITE_ID,
-   * TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR) are not required for
-   * waste balance inclusion.
-   */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
+  classifyForWasteBalance: (data, { accreditation }) => {
+    const missingResult = checkRequiredFields(
+      data,
+      WASTE_BALANCE_FIELDS,
+      RECEIVED_LOADS_FOR_EXPORT.unfilledValues
+    )
+    if (missingResult) {
+      return missingResult
+    }
+
+    if (
+      !isWithinAccreditationDateRange(
+        data[FIELDS.DATE_OF_EXPORT],
+        accreditation
+      )
+    ) {
+      return {
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    if (
+      data[FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE] === YES_NO_VALUES.YES
+    ) {
+      return {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+      }
+    }
+
+    const interimSite =
+      data[FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE] === YES_NO_VALUES.YES
+
+    return {
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: roundToTwoDecimalPlaces(
+        interimSite
+          ? data[FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]
+          : data[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]
+      )
+    }
+  }
 }

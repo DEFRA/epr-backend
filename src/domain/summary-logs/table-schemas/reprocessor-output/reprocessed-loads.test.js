@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReprocessedLoadsRow } from '#application/waste-records/row-transformers/reprocessed-loads.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
 describe('REPROCESSED_LOADS', () => {
   const schema = REPROCESSED_LOADS
@@ -7,6 +11,18 @@ describe('REPROCESSED_LOADS', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to PROCESSED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.PROCESSED)
+    })
+
+    it('has sheetName set to Processed', () => {
+      expect(schema.sheetName).toBe('Processed')
+    })
+
+    it('has rowTransformer set to transformReprocessedLoadsRow', () => {
+      expect(schema.rowTransformer).toBe(transformReprocessedLoadsRow)
     })
 
     it('has requiredHeaders array with expected fields', () => {
@@ -17,21 +33,6 @@ describe('REPROCESSED_LOADS', () => {
     it('has unfilledValues with dropdown placeholders matching template', () => {
       expect(schema.unfilledValues.ADD_PRODUCT_WEIGHT).toContain(
         'Choose option'
-      )
-    })
-
-    it('has fatalFields array with ROW_ID and PRODUCT_TONNAGE', () => {
-      expect(Array.isArray(schema.fatalFields)).toBe(true)
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('PRODUCT_TONNAGE')
-    })
-
-    it('has fieldsRequiredForInclusionInWasteBalance array with PRODUCT_TONNAGE', () => {
-      expect(
-        Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
-      ).toBe(true)
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'PRODUCT_TONNAGE'
       )
     })
   })
@@ -391,6 +392,117 @@ describe('REPROCESSED_LOADS', () => {
     })
   })
 
+  describe('classifyForWasteBalance', () => {
+    const accreditation = { validFrom: '2024-01-01', validTo: '2024-12-31' }
+
+    const completeRow = {
+      PRODUCT_TONNAGE: 500,
+      DATE_LOAD_LEFT_SITE: new Date('2024-06-15'),
+      UK_PACKAGING_WEIGHT_PERCENTAGE: 0.75,
+      PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375,
+      ADD_PRODUCT_WEIGHT: 'Yes'
+    }
+
+    describe('INCLUDED outcome', () => {
+      it('returns INCLUDED with transaction amount from PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.reasons).toEqual([])
+        expect(result.transactionAmount).toBe(375)
+      })
+
+      it('rounds transaction amount to two decimal places', () => {
+        const row = {
+          ...completeRow,
+          PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375.555
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.transactionAmount).toBe(375.56)
+      })
+    })
+
+    describe('EXCLUDED outcome - missing required fields', () => {
+      it('returns EXCLUDED when a required field is missing', () => {
+        const row = { ...completeRow }
+        delete row.PRODUCT_TONNAGE
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+          field: 'PRODUCT_TONNAGE'
+        })
+      })
+
+      it('returns EXCLUDED with all missing fields listed', () => {
+        const result = schema.classifyForWasteBalance({}, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toHaveLength(5)
+      })
+
+      it('returns EXCLUDED when ADD_PRODUCT_WEIGHT has placeholder value', () => {
+        const row = { ...completeRow, ADD_PRODUCT_WEIGHT: 'Choose option' }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+    })
+
+    describe('IGNORED outcome - date outside accreditation', () => {
+      it('returns IGNORED when date is before accreditation period', () => {
+        const row = {
+          ...completeRow,
+          DATE_LOAD_LEFT_SITE: new Date('2023-12-31')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+        })
+      })
+
+      it('returns IGNORED when date is after accreditation period', () => {
+        const row = {
+          ...completeRow,
+          DATE_LOAD_LEFT_SITE: new Date('2025-01-01')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+    })
+
+    describe('EXCLUDED outcome - ADD_PRODUCT_WEIGHT not Yes', () => {
+      it('returns EXCLUDED when ADD_PRODUCT_WEIGHT is No', () => {
+        const row = { ...completeRow, ADD_PRODUCT_WEIGHT: 'No' }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.PRODUCT_WEIGHT_NOT_ADDED
+        })
+      })
+    })
+
+    describe('classification priority', () => {
+      it('checks required fields before date range', () => {
+        const result = schema.classifyForWasteBalance({}, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons[0].code).toBe(
+          CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD
+        )
+      })
+
+      it('checks date range before ADD_PRODUCT_WEIGHT', () => {
+        const row = {
+          ...completeRow,
+          DATE_LOAD_LEFT_SITE: new Date('2023-01-01'),
+          ADD_PRODUCT_WEIGHT: 'No'
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+    })
+  })
+
   describe('structure with new fields', () => {
     it('has requiredHeaders array with all expected fields', () => {
       expect(schema.requiredHeaders).toContain('ROW_ID')
@@ -399,35 +511,6 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.requiredHeaders).toContain('UK_PACKAGING_WEIGHT_PERCENTAGE')
       expect(schema.requiredHeaders).toContain('DATE_LOAD_LEFT_SITE')
       expect(schema.requiredHeaders).toContain(
-        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
-      )
-    })
-
-    it('has fatalFields array with all expected fields', () => {
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('PRODUCT_TONNAGE')
-      expect(schema.fatalFields).toContain('ADD_PRODUCT_WEIGHT')
-      expect(schema.fatalFields).toContain('UK_PACKAGING_WEIGHT_PERCENTAGE')
-      expect(schema.fatalFields).toContain('DATE_LOAD_LEFT_SITE')
-      expect(schema.fatalFields).toContain(
-        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
-      )
-    })
-
-    it('has fieldsRequiredForInclusionInWasteBalance array with all expected fields', () => {
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'PRODUCT_TONNAGE'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'ADD_PRODUCT_WEIGHT'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'UK_PACKAGING_WEIGHT_PERCENTAGE'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'DATE_LOAD_LEFT_SITE'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
         'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
       )
     })

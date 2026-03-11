@@ -166,7 +166,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           )
         })
 
-        it('should persist all issues as fatal severity (all fields now in fatalFields)', async () => {
+        it('should persist all issues as fatal severity (all REJECTED row errors are fatal)', async () => {
           const { summaryLog } =
             await summaryLogsRepository.findById(summaryLogId)
 
@@ -188,7 +188,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
           )
 
-          // No non-fatal errors since all fields are in fatalFields
+          // No non-fatal errors since all REJECTED row errors are fatal
           const errors = summaryLog.validation.issues.filter(
             (i) => i.severity === 'error'
           )
@@ -404,7 +404,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           )
           expect(errorFields).toContain('EWC_CODE')
 
-          // EWC_CODE is now in fatalFields so severity is 'fatal'
+          // All REJECTED row errors produce fatal severity
           expect(
             summaryLog.validation.issues.every((i) => i.severity === 'fatal')
           ).toBe(true)

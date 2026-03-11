@@ -23,7 +23,6 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import * as validationPipeline from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import * as tableSchemas from '#domain/summary-logs/table-schemas/index.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -86,12 +85,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
       const result = markExcludedRecords([sentOnRecord])
@@ -100,7 +93,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
 
     it('should mark record as not excluded when exporter has unknown record type (no matching schema)', () => {
@@ -143,12 +135,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
       const result = markExcludedRecords([processedRecord])
@@ -157,7 +143,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
 
     it('should mark INCLUDED SENT_ON record as not excluded for reprocessor output', () => {
@@ -170,12 +155,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
       const result = markExcludedRecords([sentOnRecord])
@@ -184,7 +163,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
 
     it('should mark INCLUDED RECEIVED record as not excluded for reprocessor input', () => {
@@ -197,12 +175,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
       const result = markExcludedRecords([receivedRecord])
@@ -211,7 +183,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
 
     it('should mark INCLUDED EXPORTED record as not excluded for exporters', () => {
@@ -224,12 +195,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
       const result = markExcludedRecords([exportedRecord])
@@ -238,7 +203,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
 
     it('should mark record as not excluded when processingType is completely unknown', () => {
@@ -266,12 +230,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
 
       const result = markExcludedRecords([sentOnRecord])
@@ -280,7 +238,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(false)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
 
     it('should mark record as not excluded for unknown record type in reprocessor output', () => {
@@ -308,12 +265,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
       classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.EXCLUDED })
 
       const result = markExcludedRecords([excludedRecord])
@@ -322,7 +273,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result[0].excludedFromWasteBalance).toBe(true)
 
       classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
   })
 

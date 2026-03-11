@@ -336,23 +336,17 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     },
-    packagingRecyclingNotes: {
-      doc: 'Feature Flag: Enable Packaging Recycling Note creation',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES'
-    },
-    packagingRecyclingNotesExternalApi: {
-      doc: 'Feature Flag: Enable external PRN acceptance API endpoint',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_PACKAGING_RECYCLING_NOTES_EXTERNAL_API'
-    },
     copyFormFilesToS3: {
       doc: 'Feature Flag: Copy form files to S3 on startup',
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
+    },
+    reports: {
+      doc: 'Feature Flag: Enable reports',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REPORTS'
     }
   },
   formSubmissionOverrides: {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRow } from '#application/waste-records/row-transformers/received-loads-reprocessing.js'
+import { ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING
@@ -7,6 +11,18 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to RECEIVED', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
+    })
+
+    it('has sheetName set to Received', () => {
+      expect(schema.sheetName).toBe('Received')
+    })
+
+    it('has rowTransformer set to transformReceivedLoadsRow', () => {
+      expect(schema.rowTransformer).toBe(transformReceivedLoadsRow)
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -70,109 +86,6 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(
         schema.unfilledValues.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
       ).toContain('Choose option')
-    })
-
-    describe('fatalFields (data validation - waste balance fields only)', () => {
-      it('contains waste balance fields that cause fatal errors on validation failure', () => {
-        expect(Array.isArray(schema.fatalFields)).toBe(true)
-        expect(schema.fatalFields).toContain('ROW_ID')
-        expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-        expect(schema.fatalFields).toContain('EWC_CODE')
-        expect(schema.fatalFields).toContain('DESCRIPTION_WASTE')
-        expect(schema.fatalFields).toContain(
-          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-        )
-        expect(schema.fatalFields).toContain('GROSS_WEIGHT')
-        expect(schema.fatalFields).toContain('TARE_WEIGHT')
-        expect(schema.fatalFields).toContain('PALLET_WEIGHT')
-        expect(schema.fatalFields).toContain('NET_WEIGHT')
-        expect(schema.fatalFields).toContain('BAILING_WIRE_PROTOCOL')
-        expect(schema.fatalFields).toContain(
-          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-        )
-        expect(schema.fatalFields).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
-        expect(schema.fatalFields).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-        expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
-      })
-
-      it('has exactly 14 fatal fields (waste balance columns only)', () => {
-        expect(schema.fatalFields).toHaveLength(14)
-      })
-
-      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
-        expect(schema.fatalFields).not.toContain('SUPPLIER_NAME')
-        expect(schema.fatalFields).not.toContain('SUPPLIER_ADDRESS')
-        expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
-        expect(schema.fatalFields).not.toContain('WEIGHBRIDGE_TICKET')
-        expect(schema.fatalFields).not.toContain('CARRIER_NAME')
-        expect(schema.fatalFields).not.toContain('CBD_REG_NUMBER')
-      })
-    })
-
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('contains fields required for waste balance calculation', () => {
-        expect(
-          Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
-        ).toBe(true)
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'ROW_ID'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'EWC_CODE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'DESCRIPTION_WASTE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'GROSS_WEIGHT'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'TARE_WEIGHT'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'PALLET_WEIGHT'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'NET_WEIGHT'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'BAILING_WIRE_PROTOCOL'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'WEIGHT_OF_NON_TARGET_MATERIALS'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'RECYCLABLE_PROPORTION_PERCENTAGE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'TONNAGE_RECEIVED_FOR_RECYCLING'
-        )
-      })
-
-      it('has exactly 14 fields required for waste balance', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(14)
-      })
-
-      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'SUPPLIER_NAME'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'YOUR_REFERENCE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'CARRIER_NAME'
-        )
-      })
     })
   })
 
@@ -856,6 +769,161 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         })
         expect(error).toBeDefined()
         expect(error.details.length).toBe(2)
+      })
+    })
+  })
+
+  describe('classifyForWasteBalance', () => {
+    const accreditation = { validFrom: '2024-01-01', validTo: '2024-12-31' }
+
+    const completeRow = {
+      ROW_ID: 1000,
+      DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-06-15'),
+      EWC_CODE: '03 03 08',
+      DESCRIPTION_WASTE: 'Paper - other',
+      WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+      GROSS_WEIGHT: 100,
+      TARE_WEIGHT: 5,
+      PALLET_WEIGHT: 5,
+      NET_WEIGHT: 90,
+      BAILING_WIRE_PROTOCOL: 'No',
+      HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage',
+      WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+      RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+      TONNAGE_RECEIVED_FOR_RECYCLING: 50.5
+    }
+
+    describe('INCLUDED outcome', () => {
+      it('returns INCLUDED with transaction amount when all fields filled, date in range, and no PRN', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.reasons).toEqual([])
+        expect(result.transactionAmount).toBe(50.5)
+      })
+
+      it('rounds transaction amount to two decimal places', () => {
+        const row = { ...completeRow, TONNAGE_RECEIVED_FOR_RECYCLING: 50.555 }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.transactionAmount).toBe(50.56)
+      })
+    })
+
+    describe('EXCLUDED outcome - missing required fields', () => {
+      it('returns EXCLUDED when a required field is missing', () => {
+        const row = { ...completeRow }
+        delete row.TONNAGE_RECEIVED_FOR_RECYCLING
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+          field: 'TONNAGE_RECEIVED_FOR_RECYCLING'
+        })
+      })
+
+      it('returns EXCLUDED with all missing fields listed', () => {
+        const row = { ...completeRow }
+        delete row.ROW_ID
+        delete row.TONNAGE_RECEIVED_FOR_RECYCLING
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toHaveLength(2)
+      })
+
+      it('returns EXCLUDED when required field is null', () => {
+        const row = { ...completeRow, TONNAGE_RECEIVED_FOR_RECYCLING: null }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+
+      it('returns EXCLUDED when required field is empty string', () => {
+        const row = { ...completeRow, EWC_CODE: '' }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+
+      it('returns EXCLUDED when dropdown field has placeholder value', () => {
+        const row = { ...completeRow, BAILING_WIRE_PROTOCOL: 'Choose option' }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+      })
+    })
+
+    describe('IGNORED outcome - date outside accreditation', () => {
+      it('returns IGNORED when date is before accreditation period', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2023-12-31')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+        })
+      })
+
+      it('returns IGNORED when date is after accreditation period', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2025-01-01')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+
+      it('returns INCLUDED when date is on accreditation start boundary', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-01-01')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+
+      it('returns INCLUDED when date is on accreditation end boundary', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2024-12-31')
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+    })
+
+    describe('EXCLUDED outcome - PRN issued', () => {
+      it('returns EXCLUDED when PRN was issued', () => {
+        const row = {
+          ...completeRow,
+          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.PRN_ISSUED
+        })
+      })
+    })
+
+    describe('classification priority', () => {
+      it('checks required fields before date range', () => {
+        const row = {}
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons[0].code).toBe(
+          CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD
+        )
+      })
+
+      it('checks date range before PRN', () => {
+        const row = {
+          ...completeRow,
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2023-01-01'),
+          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
+        }
+        const result = schema.classifyForWasteBalance(row, { accreditation })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
       })
     })
   })

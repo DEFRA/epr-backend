@@ -49,8 +49,24 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
       const mockTonnageData = {
         generatedAt: '2026-01-29T12:00:00.000Z',
         materials: [
-          { material: 'glass_re_melt', totalTonnage: 100 },
-          { material: 'plastic', totalTonnage: 200 }
+          {
+            material: 'glass_re_melt',
+            year: 2026,
+            type: 'Exporter',
+            months: [
+              { month: 'Jan', tonnage: 100 },
+              { month: 'Feb', tonnage: 0 }
+            ]
+          },
+          {
+            material: 'plastic',
+            year: 2026,
+            type: 'Reprocessor',
+            months: [
+              { month: 'Jan', tonnage: 0 },
+              { month: 'Feb', tonnage: 200 }
+            ]
+          }
         ],
         total: 300
       }

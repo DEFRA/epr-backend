@@ -1,7 +1,8 @@
 import Joi from 'joi'
 import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
-
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/received-loads-reprocessing-output.js'
 /**
  * All fields - all optional for REPROCESSOR_OUTPUT
  */
@@ -41,6 +42,9 @@ const ALL_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received',
+  rowTransformer: transformReceivedLoadsRowReprocessorOutput,
 
   /**
    * VAL008: All columns that must be present in the uploaded file
@@ -59,23 +63,9 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   },
 
   /**
-   * Fields that produce FATAL errors when validation fails
-   *
-   * Only ROW_ID is fatal as it indicates tampering or corruption.
-   */
-  fatalFields: [FIELDS.ROW_ID],
-
-  /**
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
    */
-  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   *
-   * Empty - this table does not contribute to waste balance for REPROCESSOR_OUTPUT.
-   */
-  fieldsRequiredForInclusionInWasteBalance: []
+  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
 }

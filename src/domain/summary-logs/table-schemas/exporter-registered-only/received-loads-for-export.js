@@ -24,11 +24,6 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   unfilledValues: {},
 
   /**
-   * Fields that produce FATAL errors when validation fails
-   */
-  fatalFields: [FIELDS.ROW_ID],
-
-  /**
    * VAL010: Validation schema for filled fields
    *
    * Placeholder — accepts anything for now. Field-level validation

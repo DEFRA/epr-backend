@@ -89,10 +89,7 @@ describe('SummaryLogExtractor', () => {
         WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: ['Choose option'],
         BAILING_WIRE_PROTOCOL: ['Choose option'],
         HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: ['Choose option']
-      }),
-      metaPlaceholders: {
-        MATERIAL: 'Choose material'
-      }
+      })
     })
   })
 

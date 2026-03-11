@@ -1,13 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import { createSentOnLoadsSchema } from './sent-on-loads-schema.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('createSentOnLoadsSchema', () => {
   const ROW_ID_MINIMUM = 4000
-  const schema = createSentOnLoadsSchema(ROW_ID_MINIMUM)
+  const stubTransformer = () => {}
+  const schema = createSentOnLoadsSchema(ROW_ID_MINIMUM, stubTransformer)
 
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
+    })
+
+    it('has wasteRecordType set to SENT_ON', () => {
+      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.SENT_ON)
+    })
+
+    it('has sheetName set to Sent on', () => {
+      expect(schema.sheetName).toBe('Sent on')
+    })
+
+    it('passes through the rowTransformer argument', () => {
+      expect(schema.rowTransformer).toBe(stubTransformer)
     })
 
     it('has requiredHeaders with all 13 fields', () => {
@@ -30,21 +44,6 @@ describe('createSentOnLoadsSchema', () => {
       )
       expect(schema.unfilledValues.DESCRIPTION_WASTE).toContain('Choose option')
       expect(schema.unfilledValues.EWC_CODE).toContain('Choose option')
-    })
-
-    it('has fatalFields with waste balance fields only', () => {
-      expect(schema.fatalFields).toHaveLength(3)
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('DATE_LOAD_LEFT_SITE')
-      expect(schema.fatalFields).toContain(
-        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-      )
-    })
-
-    it('has fieldsRequiredForInclusionInWasteBalance matching fatalFields', () => {
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual(
-        schema.fatalFields
-      )
     })
   })
 
