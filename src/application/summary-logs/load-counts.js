@@ -71,34 +71,14 @@ export const createEmptyLoads = () => ({
   adjusted: createEmptyLoadValidity()
 })
 
-const createEmptyValidationResults = () => ({
-  added: {
-    valid: createEmptyLoadCategory(),
-    invalid: createEmptyLoadCategory()
-  },
-  unchanged: {
-    valid: createEmptyLoadCategory(),
-    invalid: createEmptyLoadCategory()
-  },
-  adjusted: {
-    valid: createEmptyLoadCategory(),
-    invalid: createEmptyLoadCategory()
-  }
+const emptyValidityBucket = () => ({
+  valid: createEmptyLoadCategory(),
+  invalid: createEmptyLoadCategory()
 })
 
-const createEmptyClassificationResults = () => ({
-  added: {
-    included: createEmptyLoadCategory(),
-    excluded: createEmptyLoadCategory()
-  },
-  unchanged: {
-    included: createEmptyLoadCategory(),
-    excluded: createEmptyLoadCategory()
-  },
-  adjusted: {
-    included: createEmptyLoadCategory(),
-    excluded: createEmptyLoadCategory()
-  }
+const emptyInclusionBucket = () => ({
+  included: createEmptyLoadCategory(),
+  excluded: createEmptyLoadCategory()
 })
 
 /**
@@ -126,17 +106,19 @@ const determineRecordStatus = (record, summaryLogId) => {
 }
 
 /**
- * Increments a load category's count and appends the rowId (up to MAX_ROW_IDS)
+ * Returns a new load category with the rowId added (up to MAX_ROW_IDS)
  *
- * @param {LoadCategory} category - The category to increment
+ * @param {LoadCategory} category - The existing category
  * @param {string} rowId - The row ID to append
+ * @returns {LoadCategory}
  */
-const incrementCategory = (category, rowId) => {
-  category.count++
-  if (category.rowIds.length < MAX_ROW_IDS) {
-    category.rowIds.push(rowId)
-  }
-}
+const addToCategory = (category, rowId) => ({
+  count: category.count + 1,
+  rowIds:
+    category.rowIds.length < MAX_ROW_IDS
+      ? [...category.rowIds, rowId]
+      : category.rowIds
+})
 
 /**
  * Counts validation results (valid/invalid) for ALL rows, grouped by record status.
@@ -147,23 +129,30 @@ const incrementCategory = (category, rowId) => {
  * @param {string} params.summaryLogId - The current summary log ID
  * @returns {{ added: ValidityCounts, unchanged: ValidityCounts, adjusted: ValidityCounts }}
  */
-export const countByValidity = ({ wasteRecords, summaryLogId }) => {
-  const results = createEmptyValidationResults()
-
-  for (const { record, issues, outcome } of wasteRecords) {
-    if (outcome === ROW_OUTCOME.IGNORED) {
-      continue
-    }
-
-    const classification = determineRecordStatus(record, summaryLogId)
-    const validityKey =
-      /** @type {ValidationIssue[]} */ (issues).length > 0 ? 'invalid' : 'valid'
-
-    incrementCategory(results[classification][validityKey], record.rowId)
-  }
-
-  return results
-}
+export const countByValidity = ({ wasteRecords, summaryLogId }) =>
+  wasteRecords
+    .filter((wr) => wr.outcome !== ROW_OUTCOME.IGNORED)
+    .reduce(
+      (acc, { record, issues }) => {
+        const status = determineRecordStatus(record, summaryLogId)
+        const key =
+          /** @type {ValidationIssue[]} */ (issues).length > 0
+            ? 'invalid'
+            : 'valid'
+        return {
+          ...acc,
+          [status]: {
+            ...acc[status],
+            [key]: addToCategory(acc[status][key], record.rowId)
+          }
+        }
+      },
+      {
+        added: emptyValidityBucket(),
+        unchanged: emptyValidityBucket(),
+        adjusted: emptyValidityBucket()
+      }
+    )
 
 /**
  * Classifies loads by included/excluded for waste-balance table rows only.
@@ -174,26 +163,27 @@ export const countByValidity = ({ wasteRecords, summaryLogId }) => {
  * @param {string} params.summaryLogId - The current summary log ID
  * @returns {{ added: InclusionCounts, unchanged: InclusionCounts, adjusted: InclusionCounts }}
  */
-export const countByWasteBalanceInclusion = ({
-  wasteRecords,
-  summaryLogId
-}) => {
-  const results = createEmptyClassificationResults()
-
-  for (const { record, outcome } of wasteRecords) {
-    if (outcome === ROW_OUTCOME.IGNORED) {
-      continue
-    }
-
-    const classification = determineRecordStatus(record, summaryLogId)
-    const inclusionKey =
-      outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
-
-    incrementCategory(results[classification][inclusionKey], record.rowId)
-  }
-
-  return results
-}
+export const countByWasteBalanceInclusion = ({ wasteRecords, summaryLogId }) =>
+  wasteRecords
+    .filter((wr) => wr.outcome !== ROW_OUTCOME.IGNORED)
+    .reduce(
+      (acc, { record, outcome }) => {
+        const status = determineRecordStatus(record, summaryLogId)
+        const key = outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
+        return {
+          ...acc,
+          [status]: {
+            ...acc[status],
+            [key]: addToCategory(acc[status][key], record.rowId)
+          }
+        }
+      },
+      {
+        added: emptyInclusionBucket(),
+        unchanged: emptyInclusionBucket(),
+        adjusted: emptyInclusionBucket()
+      }
+    )
 
 /**
  * Merges validation results (valid/invalid) and classification results (included/excluded)
