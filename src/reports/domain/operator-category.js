@@ -41,7 +41,7 @@ export function getOperatorCategory(registration) {
     OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE[registration.wasteProcessingType]
 
   if (!category) {
-    throw new Error(
+    throw new TypeError(
       `Unknown wasteProcessingType: ${registration.wasteProcessingType}`
     )
   }

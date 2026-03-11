@@ -21,7 +21,7 @@ export function discoverPeriods(
   const wasteRecordTypeMap = DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
 
   if (!wasteRecordTypeMap) {
-    throw new Error(`Unknown operator category: ${operatorCategory}`)
+    throw new TypeError(`Unknown operator category: ${operatorCategory}`)
   }
 
   const periodSet = new Set()

@@ -16,6 +16,7 @@
     "#glass-migration/*": "./src/glass-migration/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
+    "#reports/*": "./src/reports/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",

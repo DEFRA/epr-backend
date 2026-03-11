@@ -18,7 +18,7 @@ import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
-import * as reportsRoutes from '#routes/v1/organisations/registrations/reports/index.js'
+import * as reportsRoutes from '#reports/routes/index.js'
 
 const router = {
   plugin: {
