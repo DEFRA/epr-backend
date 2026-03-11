@@ -23,7 +23,7 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -91,10 +91,7 @@ export const REPROCESSED_LOADS = {
     }
 
     if (
-      !isWithinAccreditationDateRange(
-        data[FIELDS.DATE_LOAD_LEFT_SITE],
-        accreditation
-      )
+      !isAccreditedAtDates([data[FIELDS.DATE_LOAD_LEFT_SITE]], accreditation)
     ) {
       return {
         outcome: ROW_OUTCOME.IGNORED,

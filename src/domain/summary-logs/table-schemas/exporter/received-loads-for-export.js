@@ -33,7 +33,7 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -191,8 +191,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     }
 
     if (
-      !isWithinAccreditationDateRange(
-        data[FIELDS.DATE_OF_EXPORT],
+      !isAccreditedAtDates(
+        [data[FIELDS.DATE_OF_EXPORT], data[FIELDS.DATE_RECEIVED_BY_OSR]],
         accreditation
       )
     ) {

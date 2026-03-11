@@ -64,7 +64,20 @@
  */
 
 /**
- * @typedef {Id & {
+ * @typedef {{
+ *  status: 'created'|'approved'|'suspended';
+ *  updatedAt: string;
+ * }} StatusHistoryEntry
+ */
+
+/**
+ * @typedef {{
+ *  statusHistory: StatusHistoryEntry[];
+ * }} StatusHistory
+ */
+
+/**
+ * @typedef {Id & StatusHistory & {
  *  formSubmissionTime: Date;
  *  material: string;
  *  prnIssuance: PrnIssuance;
