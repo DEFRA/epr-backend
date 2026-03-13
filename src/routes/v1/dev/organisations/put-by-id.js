@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { validateOrganisationUpdate } from '#repositories/organisations/schema/index.js'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
@@ -56,6 +57,7 @@ export const devOrganisationsPutById = {
     const { organisation } = request.payload
 
     const { id: _, version: _v, ...document } = organisation
+    validateOrganisationUpdate(document, current)
 
     try {
       await organisationsRepository.replaceRaw(id, current.version, document)

@@ -225,6 +225,26 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       expect(body.message).toBe('"organisation" must be an object')
     })
 
+    it('should return 422 when organisation data fails schema validation', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const current = await organisationsRepository.findById(org.id)
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            ...current,
+            wasteProcessingTypes: ['invalid_type']
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
     it('should return 422 when organisation is not an object', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)
