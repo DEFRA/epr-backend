@@ -52,6 +52,17 @@ export function formatDateTimeDots(date) {
 }
 
 /**
+ * Formats year, month, and day components as an ISO date string (YYYY-MM-DD).
+ * @param {number} year
+ * @param {number} month - 0-indexed month
+ * @param {number} day - day of month (0 = last day of previous month)
+ * @returns {string}
+ */
+export function formatDateISO(year, month, day) {
+  return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
+}
+
+/**
  * Converts a Date or ISO string to ISO string, or returns empty string if null/undefined
  * @param {Date|string|null|undefined} date
  * @returns {string}

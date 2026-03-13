@@ -18,6 +18,7 @@ import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
+import * as reportsRoutes from '#reports/routes/index.js'
 
 const router = {
   plugin: {
@@ -28,6 +29,10 @@ const router = {
 
         const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
           ? Object.values(devRoutes)
+          : []
+
+        const reportsBehindFeatureFlag = featureFlags.isReportsEnabled()
+          ? Object.values(reportsRoutes)
           : []
 
         server.route([
@@ -50,7 +55,8 @@ const router = {
           packagingRecyclingNotesList,
           packagingRecyclingNotesReject,
           ...summaryLogUploadsReportRoutes,
-          adminPackagingRecyclingNotesList
+          adminPackagingRecyclingNotesList,
+          ...reportsBehindFeatureFlag
         ])
       })
     }
