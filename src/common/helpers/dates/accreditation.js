@@ -8,18 +8,18 @@
  * @returns { boolean } True if accredited at date
  */
 export function isAccreditedAtDates(dates, accreditation) {
-  if (!accreditation) return true
+  if (!accreditation) {
+    return true
+  }
   if (!accreditation.statusHistory) {
     return false
   }
   const sortedHistory = getStatusHistoryDateTimes(accreditation.statusHistory)
-  return dates.every((date) => {
-    const inRange = isWithinAccreditationDateRange(date, accreditation)
-    const approved = isAccreditationApprovedAtDate(date, sortedHistory)
-    if (!inRange) return false
-    if (!approved) return false
-    return true
-  })
+  return dates.every(
+    (date) =>
+      isWithinAccreditationDateRange(date, accreditation) &&
+      isAccreditationApprovedAtDate(date, sortedHistory)
+  )
 }
 
 /**
