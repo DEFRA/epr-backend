@@ -141,6 +141,35 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       expect(acc.status).toBe('approved')
     })
 
+    it('should collate users when status transitions to approved', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const current = await organisationsRepository.findById(org.id)
+
+      const customStatusHistory = [
+        { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' }
+      ]
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            ...current,
+            statusHistory: customStatusHistory
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const body = JSON.parse(response.payload)
+      expect(body.organisation.users).toBeDefined()
+      expect(body.organisation.users.length).toBeGreaterThan(0)
+    })
+
     it('should not require authentication', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)

@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { collateUsers } from '#repositories/organisations/helpers.js'
 import { validateOrganisationUpdate } from '#repositories/organisations/schema/index.js'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
@@ -58,6 +59,7 @@ export const devOrganisationsPutById = {
 
     const { id: _, version: _v, ...document } = organisation
     validateOrganisationUpdate(document, current)
+    document.users = collateUsers(current, document)
 
     try {
       await organisationsRepository.replaceRaw(id, current.version, document)
