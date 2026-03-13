@@ -1,3 +1,4 @@
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import Joi from 'joi'
 import {
   MESSAGES,
@@ -180,7 +181,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     })
     .prefs({ abortEarly: false }),
 
-  classifyForWasteBalance: (data, { accreditation }) => {
+  classifyForWasteBalance: (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | undefined} */ accreditation }
+  ) => {
     const missingResult = checkRequiredFields(
       data,
       WASTE_BALANCE_FIELDS,

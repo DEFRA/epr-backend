@@ -1,3 +1,4 @@
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import Joi from 'joi'
 import {
   DROPDOWN_PLACEHOLDER,
@@ -73,7 +74,10 @@ export const REPROCESSED_LOADS = {
     .unknown(true)
     .prefs({ abortEarly: false }),
 
-  classifyForWasteBalance: (data, { accreditation }) => {
+  classifyForWasteBalance: (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | null} */ accreditation }
+  ) => {
     const requiredFields = [
       FIELDS.PRODUCT_TONNAGE,
       FIELDS.DATE_LOAD_LEFT_SITE,

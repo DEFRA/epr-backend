@@ -192,7 +192,14 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = { validFrom: '2024-01-01', validTo: '2024-12-31' }
+    const accreditation = {
+      validFrom: '2024-01-01',
+      validTo: '2024-12-31',
+      statusHistory: [
+        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+      ]
+    }
 
     const completeRow = {
       ROW_ID: 5000,
@@ -261,6 +268,38 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
         }
         const result = schema.classifyForWasteBalance(row, { accreditation })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+    })
+
+    describe('IGNORED outcome - undefined or null accreditation', () => {
+      it('returns IGNORED when accreditation is undefined', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: undefined
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toEqual([
+          { code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }
+        ])
+      })
+
+      it('returns IGNORED when accreditation is null', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: null
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toEqual([
+          { code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }
+        ])
+      })
+
+      it('returns IGNORED when accreditation has no statusHistory', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: { validFrom: '2024-01-01', validTo: '2024-12-31' }
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+        })
       })
     })
 

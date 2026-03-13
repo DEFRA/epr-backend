@@ -36,6 +36,7 @@ import {
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
+/** @typedef {import('#repositories/organisations/port.js').Registration} Registration */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 /** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
@@ -220,15 +221,25 @@ const handleValidationFailure = (error, issues, loggingContext) => {
   }
 }
 
-const markIgnoredByDateRange = (wasteRecords, registration, processingType) => {
+const markIgnoredByDateRange = (
+  /** @type ValidatedWasteRecord[] */ wasteRecords,
+  /** @type Registration */ registration,
+  /** @type string */ processingType
+) => {
   for (const wasteRecord of wasteRecords) {
     const schema = findSchemaForProcessingType(
       processingType,
       wasteRecord.record.type
     )
 
+    /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: registration
+      accreditation: {
+        ...registration,
+        statusHistory: [
+          { status: 'approved', updatedAt: '1970-01-01T00:00:00.000Z' }
+        ]
+      }
     })
 
     if (result?.outcome === ROW_OUTCOME.IGNORED) {
@@ -399,7 +410,6 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {WasteRecordsRepository} params.wasteRecordsRepository
  * @param {SummaryLogExtractor} params.summaryLogExtractor
- * @returns {Function} Function that validates a summary log by ID
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {

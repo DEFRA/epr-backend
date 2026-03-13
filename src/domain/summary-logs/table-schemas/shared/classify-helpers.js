@@ -1,3 +1,4 @@
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 
@@ -45,7 +46,10 @@ export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
  */
 export const createDateOnlyClassifier =
   (dateField) =>
-  (data, { accreditation }) => {
+  (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | undefined} */ accreditation }
+  ) => {
     const date = data[dateField]
 
     if (date && !isAccreditedAtDates([date], accreditation)) {

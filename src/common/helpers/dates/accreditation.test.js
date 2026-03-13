@@ -14,6 +14,18 @@ describe('accreditation date helpers', () => {
       validTo: '2025-12-31T23:59:59.999Z'
     })
 
+    it('should return false when accreditation is undefined', () => {
+      expect(
+        isWithinAccreditationDateRange('2025-06-15T00:00:00.000Z', undefined)
+      ).toBe(false)
+    })
+
+    it('should return false when accreditation is null', () => {
+      expect(
+        isWithinAccreditationDateRange('2025-06-15T00:00:00.000Z', null)
+      ).toBe(false)
+    })
+
     it.each([
       {
         date: '2025-06-15T00:00:00.000Z',
@@ -299,6 +311,18 @@ describe('accreditation date helpers', () => {
           accreditation
         )
       ).toBe(true)
+    })
+
+    it('should return false when accreditation is undefined', () => {
+      expect(isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], undefined)).toBe(
+        false
+      )
+    })
+
+    it('should return false when accreditation is null', () => {
+      expect(isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], null)).toBe(
+        false
+      )
     })
 
     it('should return false when statusHistory is undefined', () => {
