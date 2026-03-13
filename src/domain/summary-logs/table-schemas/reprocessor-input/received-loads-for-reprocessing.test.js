@@ -774,7 +774,14 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = { validFrom: '2024-01-01', validTo: '2024-12-31' }
+    const accreditation = {
+      validFrom: '2024-01-01',
+      validTo: '2024-12-31',
+      statusHistory: [
+        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+      ]
+    }
 
     const completeRow = {
       ROW_ID: 1000,
@@ -903,6 +910,72 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         expect(result.reasons).toContainEqual({
           code: CLASSIFICATION_REASON.PRN_ISSUED
         })
+      })
+    })
+
+    describe('INCLUDED outcome - undefined or null accreditation', () => {
+      it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: undefined
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.reasons).toEqual([])
+      })
+
+      it('returns INCLUDED when accreditation is null (accreditation check passes)', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: null
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.reasons).toEqual([])
+      })
+
+      it('returns IGNORED when accreditation has no statusHistory', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: { validFrom: '2024-01-01', validTo: '2024-12-31' }
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+        })
+      })
+    })
+
+    describe('IGNORED outcome - suspended accreditation', () => {
+      it('returns IGNORED when accreditation was suspended before the row date', () => {
+        const suspendedAccreditation = {
+          validFrom: '2024-01-01',
+          validTo: '2024-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
+          ]
+        }
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: suspendedAccreditation
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
+        })
+      })
+
+      it('returns INCLUDED when accreditation was suspended then re-approved before the row date', () => {
+        const reapprovedAccreditation = {
+          validFrom: '2024-01-01',
+          validTo: '2024-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
+          ]
+        }
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: reapprovedAccreditation
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
     })
 

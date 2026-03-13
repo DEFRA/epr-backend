@@ -1,5 +1,6 @@
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 
 export const CLASSIFICATION_REASON = Object.freeze({
   MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
@@ -13,7 +14,7 @@ export const CLASSIFICATION_REASON = Object.freeze({
  *
  * @param {Record<string, any>} data - The row data
  * @param {string[]} requiredFields - Fields that must be filled
- * @param {Record<string, string[]>} unfilledValues - Per-field unfilled value definitions
+ * @param {Record<string, readonly string[]>} unfilledValues - Per-field unfilled value definitions
  * @returns {import('../validation-pipeline.js').WasteBalanceExcludedResult | null}
  *   Returns EXCLUDED result with missing field reasons, or null if all filled
  */
@@ -45,10 +46,13 @@ export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
  */
 export const createDateOnlyClassifier =
   (dateField) =>
-  (data, { accreditation }) => {
+  (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | undefined} */ accreditation }
+  ) => {
     const date = data[dateField]
 
-    if (date && !isWithinAccreditationDateRange(date, accreditation)) {
+    if (date && !isAccreditedAtDates([date], accreditation)) {
       return {
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]

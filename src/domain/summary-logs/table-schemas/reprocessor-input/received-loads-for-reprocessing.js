@@ -29,9 +29,9 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 /**
  * Fields required for waste balance calculation (Section 1)
  */
@@ -145,7 +145,10 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     })
     .prefs({ abortEarly: false }),
 
-  classifyForWasteBalance: (data, { accreditation }) => {
+  classifyForWasteBalance: (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | undefined} */ accreditation }
+  ) => {
     const missingResult = checkRequiredFields(
       data,
       WASTE_BALANCE_FIELDS,
@@ -156,8 +159,8 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     }
 
     if (
-      !isWithinAccreditationDateRange(
-        data[FIELDS.DATE_RECEIVED_FOR_REPROCESSING],
+      !isAccreditedAtDates(
+        [data[FIELDS.DATE_RECEIVED_FOR_REPROCESSING]],
         accreditation
       )
     ) {

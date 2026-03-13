@@ -40,7 +40,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+        ]
       })
 
       const record = buildWasteRecord({
@@ -79,7 +83,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+        ]
       })
 
       // Act
@@ -105,7 +113,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+        ]
       })
 
       const existingBalance = {
@@ -152,7 +164,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+        ]
       })
 
       // Record outside validity period
@@ -189,7 +205,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+        ]
       })
 
       const existingBalance = {
@@ -237,7 +257,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
-        validTo: '2023-12-31'
+        validTo: '2023-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+        ]
       })
 
       const validRecord = buildWasteRecord({
