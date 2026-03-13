@@ -174,11 +174,39 @@ describe('classify-helpers', () => {
       expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns IGNORED when accreditation is undefined', () => {
+    it('returns EXCLUDED when accreditation is undefined (accreditation check passes)', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: new Date('2024-06-15') }
 
       const result = classify(data, { accreditation: undefined })
+
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
+    })
+
+    it('returns EXCLUDED when accreditation is null (accreditation check passes)', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: new Date('2024-06-15') }
+
+      const result = classify(data, { accreditation: null })
+
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
+    })
+
+    it('returns IGNORED when accreditation was suspended before the row date', () => {
+      const classify = createDateOnlyClassifier('MY_DATE')
+      const data = { MY_DATE: new Date('2024-06-15') }
+
+      const result = classify(data, {
+        accreditation: {
+          validFrom: new Date('2024-01-01'),
+          validTo: new Date('2024-12-31'),
+          statusHistory: [
+            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
+          ]
+        }
+      })
 
       expect(result).toEqual({
         outcome: ROW_OUTCOME.IGNORED,
@@ -186,16 +214,24 @@ describe('classify-helpers', () => {
       })
     })
 
-    it('returns IGNORED when accreditation is null', () => {
+    it('returns EXCLUDED when accreditation was suspended then re-approved before the row date', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: new Date('2024-06-15') }
 
-      const result = classify(data, { accreditation: null })
-
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      const result = classify(data, {
+        accreditation: {
+          validFrom: new Date('2024-01-01'),
+          validTo: new Date('2024-12-31'),
+          statusHistory: [
+            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
+          ]
+        }
       })
+
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
     it('returns IGNORED when accreditation has no statusHistory', () => {

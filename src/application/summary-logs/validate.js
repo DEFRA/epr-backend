@@ -233,14 +233,10 @@ const markIgnoredByDateRange = (
     )
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
-    const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: {
-        ...registration,
-        statusHistory: [
-          { status: 'approved', updatedAt: '1970-01-01T00:00:00.000Z' }
-        ]
-      }
-    })
+    const result = schema?.classifyForWasteBalance?.(
+      wasteRecord.record.data,
+      registration
+    )
 
     if (result?.outcome === ROW_OUTCOME.IGNORED) {
       wasteRecord.outcome = ROW_OUTCOME.IGNORED

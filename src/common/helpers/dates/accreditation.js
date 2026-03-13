@@ -8,7 +8,8 @@
  * @returns { boolean } True if accredited at date
  */
 export function isAccreditedAtDates(dates, accreditation) {
-  if (!accreditation?.statusHistory) {
+  if (!accreditation) return true
+  if (!accreditation.statusHistory) {
     return false
   }
   const sortedHistory = getStatusHistoryDateTimes(accreditation.statusHistory)
@@ -37,13 +38,10 @@ export function getStatusHistoryDateTimes(statusHistory) {
 /**
  * Checks if a date is within the accreditation date range.
  * @param { Date|string } date - The date to check
- * @param { Accreditation | undefined } accreditation - Accreditation object with validFrom and validTo
+ * @param { Accreditation } accreditation - Accreditation object with validFrom and validTo
  * @returns { boolean } True if date is within range (inclusive)
  */
 export function isWithinAccreditationDateRange(date, accreditation) {
-  if (!accreditation) {
-    return false
-  }
   const compareDate = new Date(date)
   const validFrom = new Date(accreditation.validFrom)
   const validTo = new Date(accreditation.validTo)
