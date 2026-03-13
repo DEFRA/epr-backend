@@ -25,7 +25,11 @@ import {
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
-import { classifyLoads } from './classify-loads.js'
+import {
+  countByWasteBalanceInclusion,
+  countByValidity,
+  mergeLoads
+} from './load-counts.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -216,7 +220,7 @@ const handleValidationFailure = (error, issues, loggingContext) => {
   }
 }
 
-const classifyLoadDates = (wasteRecords, registration, processingType) => {
+const markIgnoredByDateRange = (wasteRecords, registration, processingType) => {
   for (const wasteRecord of wasteRecords) {
     const schema = findSchemaForProcessingType(
       processingType,
@@ -292,7 +296,7 @@ const performValidationChecks = async ({
 
     wasteRecords = dataResult.wasteRecords
 
-    classifyLoadDates(wasteRecords, registration, meta.PROCESSING_TYPE)
+    markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
     issues.merge(dataResult.issues)
   } catch (error) {
@@ -466,19 +470,27 @@ export const createSummaryLogsValidator = ({
     // Record validation issue metrics (if any issues exist)
     await recordValidationIssueMetrics(issues, processingType)
 
+    // Filter to only waste-balance table rows for inclusion/exclusion classification
+    const wasteBalanceRecords = wasteRecords?.filter((wr) => {
+      const schema = findSchemaForProcessingType(processingType, wr.record.type)
+      return schema?.classifyForWasteBalance != null
+    })
+
     // Classify loads only for validated summary logs
-    // wasteRecords is guaranteed to be non-null when status is VALIDATED
-    // because we only reach VALIDATED if we passed all short-circuits
+    // Valid/invalid counts ALL rows; included/excluded counts only WB rows
     const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
-        ? classifyLoads({
-            wasteRecords,
-            summaryLogId
-          })
+        ? mergeLoads(
+            countByValidity({ wasteRecords, summaryLogId }),
+            countByWasteBalanceInclusion({
+              wasteRecords: wasteBalanceRecords,
+              summaryLogId
+            })
+          )
         : null
 
-    // Record row outcome metrics (if we have waste records)
-    await recordRowOutcomeMetrics(wasteRecords, processingType)
+    // Record row outcome metrics only for waste-balance table rows
+    await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),

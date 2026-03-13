@@ -73,20 +73,6 @@ export const REPROCESSED_LOADS = {
     .unknown(true)
     .prefs({ abortEarly: false }),
 
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   *
-   * A load will only be added to your waste balance when you provide
-   * all the information in this section.
-   */
-  fieldsRequiredForInclusionInWasteBalance: [
-    FIELDS.PRODUCT_TONNAGE,
-    FIELDS.DATE_LOAD_LEFT_SITE,
-    FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
-    FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
-    FIELDS.ADD_PRODUCT_WEIGHT
-  ],
-
   classifyForWasteBalance: (data, { accreditation }) => {
     const requiredFields = [
       FIELDS.PRODUCT_TONNAGE,

@@ -54,57 +54,6 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
       })
     })
 
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('contains fields required for waste balance calculation', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'ROW_ID'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'DATE_LOAD_LEFT_SITE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-          'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
-        )
-      })
-
-      it('has exactly 3 fields required for waste balance', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(3)
-      })
-
-      it('does NOT contain supplementary columns', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_FACILITY_TYPE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_NAME'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_ADDRESS'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_POSTCODE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_EMAIL'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'FINAL_DESTINATION_PHONE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'YOUR_REFERENCE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'DESCRIPTION_WASTE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'EWC_CODE'
-        )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
-          'WEIGHBRIDGE_TICKET'
-        )
-      })
-    })
-
     it('has unfilledValues object', () => {
       expect(typeof schema.unfilledValues).toBe('object')
     })

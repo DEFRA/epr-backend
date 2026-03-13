@@ -23,7 +23,6 @@ export const TABLE_NAMES = {
  * - requiredHeaders: Headers that must be present in the table
  * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
- * - fieldsRequiredForInclusionInWasteBalance: Fields required for VAL011 (mandatory for Waste Balance)
  * - classifyForWasteBalance: {@link import('./validation-pipeline.js').ClassifyForWasteBalance}|null — classifies a row for waste balance (null if table does not contribute)
  * - rowTransformer: Function to transform a parsed row into waste record metadata
  */

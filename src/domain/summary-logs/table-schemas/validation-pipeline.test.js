@@ -6,6 +6,10 @@ import {
   classifyRow,
   ROW_OUTCOME
 } from './validation-pipeline.js'
+import {
+  checkRequiredFields,
+  CLASSIFICATION_REASON
+} from './shared/classify-helpers.js'
 
 describe('validation-pipeline', () => {
   describe('ROW_OUTCOME', () => {
@@ -99,19 +103,40 @@ describe('validation-pipeline', () => {
   })
 
   describe('classifyRow', () => {
-    const createTestSchema = () => ({
-      unfilledValues: {
+    const WASTE_BALANCE_FIELDS = ['ROW_ID', 'TEXT_FIELD']
+
+    const createTestSchema = () => {
+      const unfilledValues = {
         DROPDOWN: ['Please select...']
-      },
-      validationSchema: Joi.object({
-        ROW_ID: Joi.number().min(10000).optional(),
-        TEXT_FIELD: Joi.string().max(100).optional(),
-        DROPDOWN: Joi.string().valid('Option A', 'Option B').optional()
-      })
-        .unknown(true)
-        .prefs({ abortEarly: false }),
-      fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'TEXT_FIELD']
-    })
+      }
+
+      return {
+        unfilledValues,
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          TEXT_FIELD: Joi.string().max(100).optional(),
+          DROPDOWN: Joi.string().valid('Option A', 'Option B').optional()
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        classifyForWasteBalance: (data, _context) => {
+          const missingResult = checkRequiredFields(
+            data,
+            WASTE_BALANCE_FIELDS,
+            unfilledValues
+          )
+          if (missingResult) {
+            return missingResult
+          }
+
+          return {
+            outcome: ROW_OUTCOME.INCLUDED,
+            reasons: [],
+            transactionAmount: data.ROW_ID
+          }
+        }
+      }
+    }
 
     describe('REJECTED outcome (VAL010 fails)', () => {
       it('returns REJECTED when filled field fails validation', () => {
@@ -217,8 +242,8 @@ describe('validation-pipeline', () => {
       })
     })
 
-    describe('empty fieldsRequiredForInclusionInWasteBalance', () => {
-      it('returns EXCLUDED when fieldsRequiredForInclusionInWasteBalance is empty (table does not contribute to waste balance)', () => {
+    describe('schema without classifyForWasteBalance (no waste balance)', () => {
+      it('returns EXCLUDED when schema has no classifyForWasteBalance', () => {
         const schema = {
           unfilledValues: {},
           validationSchema: Joi.object({
@@ -226,12 +251,9 @@ describe('validation-pipeline', () => {
             SOME_FIELD: Joi.string().optional()
           })
             .unknown(true)
-            .prefs({ abortEarly: false }),
-          // Empty array means this table never contributes to waste balance
-          fieldsRequiredForInclusionInWasteBalance: []
+            .prefs({ abortEarly: false })
         }
 
-        // Even with all fields valid and filled, should be EXCLUDED
         const row = { ROW_ID: 10001, SOME_FIELD: 'valid value' }
 
         const result = classifyRow(row, schema)
@@ -240,24 +262,108 @@ describe('validation-pipeline', () => {
         expect(result.issues).toEqual([])
       })
 
-      it('returns REJECTED when validation fails even if fieldsRequiredForInclusionInWasteBalance is empty', () => {
+      it('returns REJECTED when validation fails even without classifyForWasteBalance', () => {
         const schema = {
           unfilledValues: {},
           validationSchema: Joi.object({
             ROW_ID: Joi.number().min(10000).optional()
           })
             .unknown(true)
-            .prefs({ abortEarly: false }),
-          fieldsRequiredForInclusionInWasteBalance: []
+            .prefs({ abortEarly: false })
         }
 
-        // ROW_ID is invalid - should still be REJECTED (VAL010 takes priority)
         const row = { ROW_ID: 9999 }
 
         const result = classifyRow(row, schema)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
         expect(result.issues.length).toBeGreaterThan(0)
+      })
+    })
+
+    describe('classifyForWasteBalance delegation', () => {
+      it('maps EXCLUDED with MISSING_REQUIRED_FIELD reasons to EXCLUDED issues', () => {
+        const schema = createTestSchema()
+        const row = { ROW_ID: 10000 } // TEXT_FIELD missing
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.issues).toEqual([
+          { code: 'MISSING_REQUIRED_FIELD', field: 'TEXT_FIELD' }
+        ])
+      })
+
+      it('maps EXCLUDED with empty reasons (non-contributing table) to EXCLUDED', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: Joi.object({}).unknown(true).prefs({
+            abortEarly: false
+          }),
+          classifyForWasteBalance: () => ({
+            outcome: ROW_OUTCOME.EXCLUDED,
+            reasons: []
+          })
+        }
+
+        const row = { SOME_FIELD: 'value' }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.issues).toEqual([])
+      })
+
+      it('maps EXCLUDED with non-MISSING_REQUIRED_FIELD reasons to INCLUDED', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: Joi.object({}).unknown(true).prefs({
+            abortEarly: false
+          }),
+          classifyForWasteBalance: () => ({
+            outcome: ROW_OUTCOME.EXCLUDED,
+            reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+          })
+        }
+
+        const row = { SOME_FIELD: 'value' }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.issues).toEqual([])
+      })
+
+      it('maps IGNORED outcome to INCLUDED', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: Joi.object({}).unknown(true).prefs({
+            abortEarly: false
+          }),
+          classifyForWasteBalance: () => ({
+            outcome: ROW_OUTCOME.IGNORED,
+            reasons: [
+              { code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }
+            ]
+          })
+        }
+
+        const row = { SOME_FIELD: 'value' }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.issues).toEqual([])
+      })
+
+      it('maps INCLUDED outcome to INCLUDED', () => {
+        const schema = createTestSchema()
+        const row = { ROW_ID: 10000, TEXT_FIELD: 'value' }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.issues).toEqual([])
       })
     })
 
@@ -289,11 +395,21 @@ describe('validation-pipeline', () => {
                 'must equal VALUE_A × VALUE_B'
             })
             .prefs({ abortEarly: false }),
-          fieldsRequiredForInclusionInWasteBalance: [
-            'VALUE_A',
-            'VALUE_B',
-            'RESULT'
-          ]
+          classifyForWasteBalance: (data) => {
+            const missingResult = checkRequiredFields(
+              data,
+              ['VALUE_A', 'VALUE_B', 'RESULT'],
+              {}
+            )
+            if (missingResult) {
+              return missingResult
+            }
+            return {
+              outcome: ROW_OUTCOME.INCLUDED,
+              reasons: [],
+              transactionAmount: data.RESULT
+            }
+          }
         }
 
         const row = { VALUE_A: 10, VALUE_B: 5, RESULT: 100 } // Should be 50

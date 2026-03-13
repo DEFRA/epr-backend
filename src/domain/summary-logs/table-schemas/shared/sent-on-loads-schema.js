@@ -72,10 +72,5 @@ export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: createWeightFieldSchema()
   })
     .unknown(true)
-    .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
+    .prefs({ abortEarly: false })
 })
