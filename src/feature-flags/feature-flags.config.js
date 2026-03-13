@@ -13,5 +13,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isReportsEnabled() {
     return config.get('featureFlags.reports')
+  },
+  isRegisteredOnlyEnabled() {
+    return config.get('featureFlags.registeredOnly')
   }
 })
