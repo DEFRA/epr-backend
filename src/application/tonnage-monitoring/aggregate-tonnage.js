@@ -194,7 +194,17 @@ const buildAggregationPipeline = () => [
       type: buildTypeExpression()
     }
   },
-  { $match: { dispatchDate: { $ne: null }, calculatedTonnage: { $gt: 0 } } },
+  {
+    $match: {
+      calculatedTonnage: { $gt: 0 },
+      $expr: {
+        $ne: [
+          { $dateFromString: { dateString: '$dispatchDate', onError: null } },
+          null
+        ]
+      }
+    }
+  },
   {
     $addFields: {
       year: buildYearExpression(),
