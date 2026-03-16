@@ -588,5 +588,116 @@ describe('SummaryLogsValidator integration', () => {
         ])
       )
     })
+
+    it('should produce zero waste records when data rows are present', async () => {
+      const receivedHeaders = [
+        'ROW_ID',
+        'MONTH_RECEIVED_FOR_REPROCESSING',
+        'NET_WEIGHT',
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+        'RECYCLABLE_PROPORTION_PERCENTAGE',
+        'TONNAGE_RECEIVED_FOR_RECYCLING',
+        'SUPPLIER_NAME',
+        'SUPPLIER_ADDRESS',
+        'SUPPLIER_POSTCODE',
+        'SUPPLIER_EMAIL',
+        'SUPPLIER_PHONE_NUMBER',
+        'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+      ]
+
+      const sentOnHeaders = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+        'FINAL_DESTINATION_FACILITY_TYPE',
+        'FINAL_DESTINATION_NAME',
+        'FINAL_DESTINATION_ADDRESS',
+        'FINAL_DESTINATION_POSTCODE'
+      ]
+
+      const testOrg = createTestOrg('reprocessor', 'REG-789')
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+      const summaryLog = createSummaryLog(testOrg)
+      const summaryLogId = randomUUID()
+
+      const extractor = createInMemorySummaryLogExtractor({
+        [summaryLog.file.id]: {
+          meta: registeredOnlyMetadata,
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              location: { sheet: 'Received', row: 7, column: 'A' },
+              headers: receivedHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    1000,
+                    'January',
+                    10.5,
+                    'Actual weight',
+                    0.95,
+                    9.975,
+                    'Supplier Co',
+                    '1 High St',
+                    'SW1A 1AA',
+                    'supplier@example.com',
+                    '01onal234567',
+                    'Sorting'
+                  ]
+                }
+              ]
+            },
+            SENT_ON_LOADS: {
+              location: { sheet: 'Sent on', row: 7, column: 'A' },
+              headers: sentOnHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    5000,
+                    new Date('2025-03-01'),
+                    5.0,
+                    'Reprocessor',
+                    'Dest Co',
+                    '2 Low St',
+                    'EC1A 1BB'
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      })
+
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor: extractor,
+        featureFlags: featureFlagsEnabled
+      })
+
+      await summaryLogsRepository.insert(summaryLogId, summaryLog)
+      await validateSummaryLog(summaryLogId).catch((err) => err)
+
+      const updated = await waitForVersion(
+        summaryLogsRepository,
+        summaryLogId,
+        2
+      )
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+
+      const wasteRecords = await wasteRecordsRepository.findByRegistration(
+        testOrg.id,
+        testOrg.registrations[0].id
+      )
+      expect(wasteRecords).toEqual([])
+    })
   })
 })
