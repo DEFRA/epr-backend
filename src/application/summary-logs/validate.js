@@ -422,6 +422,8 @@ const assertValidatingStatus = (result, summaryLogId) => {
   }
 }
 
+// NOSONAR(javascript:S138) — 2 lines over max due to featureFlags param added
+// for registered-only feature flag (temporary; will shrink when flag is removed)
 export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
