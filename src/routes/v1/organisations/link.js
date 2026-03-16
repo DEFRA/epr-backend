@@ -67,16 +67,17 @@ export const organisationsLink = {
       throw Boom.conflict('Organisation is not in an approvable state')
     }
 
+    const { email, id: credentialId } =
+      /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
+        request.auth.credentials
+      )
+
     const linkedDefraOrg = {
       orgId: orgInToken.defraIdOrgId,
       orgName: orgInToken.defraIdOrgName,
       linkedBy: {
-        email: /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
-          request.auth.credentials
-        ).email,
-        id: /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
-          request.auth.credentials
-        ).id
+        email,
+        id: credentialId
       },
       linkedAt: new Date().toISOString()
     }
