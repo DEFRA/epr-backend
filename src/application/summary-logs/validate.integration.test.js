@@ -542,27 +542,17 @@ describe('SummaryLogsValidator integration', () => {
       }
     }
 
-    const featureFlagsEnabled = { isRegisteredOnlyEnabled: () => true }
-    const featureFlagsDisabled = { isRegisteredOnlyEnabled: () => false }
-
-    it('should validate successfully with feature flag enabled', async () => {
-      const { updated } = await runValidation({
-        registrationType: 'reprocessor',
-        registrationWRN: 'REG-789',
-        metadata: registeredOnlyMetadata,
-        featureFlags: featureFlagsEnabled
-      })
-
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(updated.summaryLog.validation.issues).toEqual([])
-    })
+    // START: registered-only feature flag — delete this block when flag is removed
+    const registeredOnlyFeatureFlags = {
+      isRegisteredOnlyEnabled: () => true
+    }
 
     it('should reject with feature flag disabled', async () => {
       const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-789',
         metadata: registeredOnlyMetadata,
-        featureFlags: featureFlagsDisabled
+        featureFlags: { isRegisteredOnlyEnabled: () => false }
       })
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
@@ -572,13 +562,26 @@ describe('SummaryLogsValidator integration', () => {
         ])
       )
     })
+    // END: registered-only feature flag
+
+    it('should validate successfully', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+    })
 
     it('should not require accreditation number', async () => {
       const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-789',
         metadata: registeredOnlyMetadata,
-        featureFlags: featureFlagsEnabled
+        featureFlags: registeredOnlyFeatureFlags
       })
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
@@ -678,7 +681,7 @@ describe('SummaryLogsValidator integration', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor: extractor,
-        featureFlags: featureFlagsEnabled
+        featureFlags: registeredOnlyFeatureFlags
       })
 
       await summaryLogsRepository.insert(summaryLogId, summaryLog)
