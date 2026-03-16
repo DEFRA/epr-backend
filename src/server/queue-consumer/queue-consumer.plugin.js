@@ -66,19 +66,27 @@ export const commandQueueConsumerPlugin = {
         }
       })
 
-      consumer = await createCommandQueueConsumer(
-        {
-          sqsClient,
-          queueName,
-          logger: server.logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor
-        },
-        [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
-      )
+      const deps = {
+        sqsClient,
+        queueName,
+        logger: server.logger,
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        wasteBalancesRepository,
+        summaryLogExtractor
+      }
+
+      const handlers = [...summaryLogCommandHandlers]
+
+      if (server.app.orsImportsRepository) {
+        deps.orsImportsRepository = server.app.orsImportsRepository
+        deps.overseasSitesRepository = server.app.overseasSitesRepository
+        deps.uploadsRepository = uploadsRepository
+        handlers.push(...orsImportCommandHandlers)
+      }
+
+      consumer = await createCommandQueueConsumer(deps, handlers)
 
       consumer.start()
     })
