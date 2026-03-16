@@ -5,8 +5,10 @@ export const orsImportsRepositoryPlugin = {
   name: 'orsImportsRepository',
   version: '1.0.0',
   dependencies: ['mongodb'],
-  /** @param {{db?: import('mongodb').Db}} [options] */
-  register: async (server, options) => {
+  register: async (
+    /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
+    /** @type {{db?: import('mongodb').Db}} */ options = {}
+  ) => {
     const db = options?.db ?? server.db
 
     const createRepository = await createOrsImportsRepository(db)
