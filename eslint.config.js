@@ -28,9 +28,9 @@ export default [
     rules: {
       'import-x/default': 'error',
       'import-x/named': 'error',
-      'import-x/namespace': 'error'
+      'import-x/namespace': 'error',
       // 'import-x/no-unused-modules': 'error', is broken with flat config: https://github.com/import-js/eslint-plugin-import/issues/3079 (to enable when it's fixed! ☺️)
-      // 'import-x/no-cycle': 'error'
+      'import-x/no-cycle': 'error'
     }
   },
   {
