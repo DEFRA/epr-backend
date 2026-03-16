@@ -108,6 +108,12 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
         schema.unfilledValues.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
       ).toContain('Choose option')
     })
+
+    it('treats MONTH_RECEIVED_FOR_REPROCESSING as unfilled dropdown', () => {
+      expect(schema.unfilledValues.MONTH_RECEIVED_FOR_REPROCESSING).toContain(
+        'Choose option'
+      )
+    })
   })
 
   describe('validationSchema (VAL010)', () => {
@@ -132,6 +138,23 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
 
       const notInteger = validationSchema.validate({ ROW_ID: 1000.5 })
       expect(notInteger.error).toBeDefined()
+    })
+
+    it('validates MONTH_RECEIVED_FOR_REPROCESSING as first-of-month date string', () => {
+      const valid = validationSchema.validate({
+        MONTH_RECEIVED_FOR_REPROCESSING: '2025-01-01'
+      })
+      expect(valid.error).toBeUndefined()
+
+      const midMonth = validationSchema.validate({
+        MONTH_RECEIVED_FOR_REPROCESSING: '2025-01-15'
+      })
+      expect(midMonth.error).toBeDefined()
+
+      const notADate = validationSchema.validate({
+        MONTH_RECEIVED_FOR_REPROCESSING: 'January'
+      })
+      expect(notADate.error).toBeDefined()
     })
 
     it('validates NET_WEIGHT as number >= 0 and <= 1000', () => {

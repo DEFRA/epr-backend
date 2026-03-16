@@ -634,7 +634,7 @@ describe('SummaryLogsValidator integration', () => {
                   rowNumber: 8,
                   values: [
                     1000,
-                    'January',
+                    '2025-01-01',
                     10.5,
                     'Actual weight (100%)',
                     0.95,
