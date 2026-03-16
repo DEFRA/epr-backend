@@ -13,12 +13,13 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
  */
 
+
+
 /**
- * Prepares rows for transformation by building data objects
+ * Is this a template row?
  *
- * @param {Array<string|null>} headers - Array of header names
- * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
- * @returns {TransformableRow[]} Array of rows with data objects built
+ * @param {string | null | undefined} rowIdValue
+ * @returns {boolean}
  */
 const isTemplateRow = (rowIdValue) => {
   if (rowIdValue === null || rowIdValue === undefined) {
@@ -33,6 +34,14 @@ const isTemplateRow = (rowIdValue) => {
   return false
 }
 
+/**
+ * Prepares rows for transformation by building data objects
+ *
+ * @param {Array<string|null>} headers - Array of header names
+ * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
+ * @param {string} rowIdField - The header name used to identify the row ID
+ * @returns {TransformableRow[]} Array of rows with data objects built
+ */
 const prepareRows = (headers, rows, rowIdField) => {
   // Build header to index map, excluding EPR markers and nulls
   const headerToIndexMap = new Map()
