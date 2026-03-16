@@ -59,11 +59,11 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createExtractor = (fileId, metadata) => {
+  const createExtractor = (fileId, metadata, data = {}) => {
     return createInMemorySummaryLogExtractor({
       [fileId]: {
         meta: metadata,
-        data: {}
+        data
       }
     })
   }
@@ -82,6 +82,7 @@ describe('SummaryLogsValidator integration', () => {
    *  reprocessingType?: 'input' | 'output';
    *  metadata?: Record<string, MetadataEntry>;
    *  summaryLogExtractor?: SummaryLogExtractor;
+   *  featureFlags?: import('#feature-flags/feature-flags.port.js').FeatureFlags;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -91,7 +92,9 @@ describe('SummaryLogsValidator integration', () => {
     accreditationNumber,
     reprocessingType = 'input',
     metadata,
-    summaryLogExtractor = null
+    data,
+    summaryLogExtractor = null,
+    featureFlags
   }) => {
     const testOrg = createTestOrg(
       registrationType,
@@ -106,7 +109,7 @@ describe('SummaryLogsValidator integration', () => {
     const summaryLogId = randomUUID()
 
     const extractor =
-      summaryLogExtractor || createExtractor(summaryLog.file.id, metadata)
+      summaryLogExtractor || createExtractor(summaryLog.file.id, metadata, data)
 
     const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
@@ -114,7 +117,8 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      summaryLogExtractor: extractor
+      summaryLogExtractor: extractor,
+      featureFlags
     })
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
@@ -125,7 +129,9 @@ describe('SummaryLogsValidator integration', () => {
 
     return {
       updated,
-      summaryLog
+      summaryLog,
+      testOrg,
+      wasteRecordsRepository
     }
   }
 
@@ -516,6 +522,143 @@ describe('SummaryLogsValidator integration', () => {
           expect.objectContaining({ code: 'ACCREDITATION_UNEXPECTED' })
         ])
       )
+    })
+  })
+
+  describe('registered-only reprocessor', () => {
+    const registeredOnlyMetadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-789',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'REPROCESSOR_REGISTERED_ONLY',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 2,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      }
+    }
+
+    // START: registered-only feature flag — delete this block when flag is removed
+    const registeredOnlyFeatureFlags = {
+      isRegisteredOnlyEnabled: () => true
+    }
+
+    it('should reject with feature flag disabled', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: { isRegisteredOnlyEnabled: () => false }
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
+        ])
+      )
+    })
+    // END: registered-only feature flag
+
+    it('should validate successfully', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+
+    it('should produce zero waste records when data rows are present', async () => {
+      const { updated, testOrg, wasteRecordsRepository } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Received', row: 7, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'MONTH_RECEIVED_FOR_REPROCESSING',
+              'NET_WEIGHT',
+              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+              'RECYCLABLE_PROPORTION_PERCENTAGE',
+              'TONNAGE_RECEIVED_FOR_RECYCLING',
+              'SUPPLIER_NAME',
+              'SUPPLIER_ADDRESS',
+              'SUPPLIER_POSTCODE',
+              'SUPPLIER_EMAIL',
+              'SUPPLIER_PHONE_NUMBER',
+              'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+            ],
+            rows: [
+              {
+                rowNumber: 8,
+                values: [
+                  1000,
+                  '2025-01-01',
+                  10.5,
+                  'Actual weight (100%)',
+                  0.95,
+                  9.975,
+                  'Supplier Co',
+                  '1 High St',
+                  'SW1A 1AA',
+                  'supplier@example.com',
+                  '01234567',
+                  'Sorting'
+                ]
+              }
+            ]
+          },
+          SENT_ON_LOADS: {
+            location: { sheet: 'Sent on', row: 7, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'DATE_LOAD_LEFT_SITE',
+              'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+              'FINAL_DESTINATION_FACILITY_TYPE',
+              'FINAL_DESTINATION_NAME',
+              'FINAL_DESTINATION_ADDRESS',
+              'FINAL_DESTINATION_POSTCODE'
+            ],
+            rows: [
+              {
+                rowNumber: 8,
+                values: [
+                  5000,
+                  new Date('2025-03-01'),
+                  5.0,
+                  'Reprocessor',
+                  'Dest Co',
+                  '2 Low St',
+                  'EC1A 1BB'
+                ]
+              }
+            ]
+          }
+        },
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+
+      const wasteRecords = await wasteRecordsRepository.findByRegistration(
+        testOrg.id,
+        testOrg.registrations[0].id
+      )
+      expect(wasteRecords).toEqual([])
     })
   })
 })
