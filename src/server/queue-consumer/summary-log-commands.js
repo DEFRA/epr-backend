@@ -23,6 +23,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {WasteBalancesRepository} wasteBalancesRepository
  * @property {SummaryLogExtractor} summaryLogExtractor
+ * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} featureFlags
  */
 
 const userSchema = Joi.object({
