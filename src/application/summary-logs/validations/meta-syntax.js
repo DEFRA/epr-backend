@@ -3,7 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import { metaSchema } from './meta-syntax.schema.js'
+import { createMetaSchema } from './meta-syntax.schema.js'
 
 /**
  * Maps Joi error types to validation codes based on field name
@@ -43,11 +43,12 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags] - Feature flags for controlling accepted processing types
  * @param {Object} [params.registration] - Unused, for signature compatibility
  * @param {string} [params.loggingContext] - Unused, for signature compatibility
  * @returns {Object} validation issues with any issues found
  */
-export const validateMetaSyntax = ({ parsed }) => {
+export const validateMetaSyntax = ({ parsed, featureFlags }) => {
   const issues = createValidationIssues()
 
   const metaValues = {}
@@ -58,7 +59,11 @@ export const validateMetaSyntax = ({ parsed }) => {
     metaLocations[fieldName] = fieldData?.location
   }
 
-  const { error } = metaSchema.validate(metaValues, { abortEarly: false })
+  const schema = createMetaSchema({
+    registeredOnlyEnabled: featureFlags?.isRegisteredOnlyEnabled()
+  })
+
+  const { error } = schema.validate(metaValues, { abortEarly: false })
 
   if (error) {
     for (const detail of error.details) {

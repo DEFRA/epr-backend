@@ -88,7 +88,8 @@ describe('validateProcessingType', () => {
   it.each([
     ['REPROCESSOR_INPUT', 'reprocessor', 'input'],
     ['REPROCESSOR_OUTPUT', 'reprocessor', 'output'],
-    ['EXPORTER', 'exporter', undefined]
+    ['EXPORTER', 'exporter', undefined],
+    ['REPROCESSOR_REGISTERED_ONLY', 'reprocessor', undefined]
   ])(
     'returns valid result when types match - %s',
     (spreadsheetType, wasteProcessingType, reprocessingType) => {
