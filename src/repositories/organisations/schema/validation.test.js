@@ -301,13 +301,13 @@ describe('validateRegistration', () => {
       expect(() => validateRegistration(registration)).not.toThrow()
     })
 
-    it('exporter: defaults to empty map when overseasSites is omitted', () => {
+    it('exporter: does not inject overseasSites when omitted', () => {
       const registration = buildRegistration({
         wasteProcessingType: 'exporter'
       })
 
       const result = validateRegistration(registration)
-      expect(result.overseasSites).toEqual({})
+      expect(result.overseasSites).toBeUndefined()
     })
 
     it('exporter: strips overseasSites entries with non-three-digit keys', () => {

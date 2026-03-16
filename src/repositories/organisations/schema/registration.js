@@ -156,7 +156,7 @@ export const registrationSchema = Joi.object({
   ),
   overseasSites: Joi.when('wasteProcessingType', {
     is: WASTE_PROCESSING_TYPE.EXPORTER,
-    then: overseasSitesMapSchema.optional().default({}),
+    then: overseasSitesMapSchema.optional(),
     otherwise: Joi.forbidden()
   })
 })
