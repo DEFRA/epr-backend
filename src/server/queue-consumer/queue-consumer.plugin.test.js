@@ -32,6 +32,7 @@ describe('commandQueueConsumerPlugin', () => {
       events: {
         on: vi.fn()
       },
+      featureFlags: {},
       app: {
         summaryLogsRepository: {},
         organisationsRepository: {},
@@ -131,7 +132,8 @@ describe('commandQueueConsumerPlugin', () => {
           organisationsRepository: server.app.organisationsRepository,
           wasteRecordsRepository: server.app.wasteRecordsRepository,
           wasteBalancesRepository: server.app.wasteBalancesRepository,
-          summaryLogExtractor: expect.any(Object)
+          summaryLogExtractor: expect.any(Object),
+          featureFlags: server.featureFlags
         },
         [...summaryLogCommandHandlers]
       )

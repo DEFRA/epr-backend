@@ -251,7 +251,8 @@ const performValidationChecks = async ({
   summaryLogExtractor,
   organisationsRepository,
   wasteRecordsRepository,
-  validateDataSyntax
+  validateDataSyntax,
+  featureFlags
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
@@ -266,7 +267,7 @@ const performValidationChecks = async ({
 
     meta = extractMetaValues(parsed.meta)
 
-    issues.merge(validateMetaSyntax({ parsed }))
+    issues.merge(validateMetaSyntax({ parsed, featureFlags }))
 
     if (issues.isFatal()) {
       return { issues, wasteRecords, meta }
@@ -425,7 +426,8 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
-  summaryLogExtractor
+  summaryLogExtractor,
+  featureFlags
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
 
@@ -456,7 +458,8 @@ export const createSummaryLogsValidator = ({
       summaryLogExtractor,
       organisationsRepository,
       wasteRecordsRepository,
-      validateDataSyntax
+      validateDataSyntax,
+      featureFlags
     })
     const validationDurationMs = Date.now() - validationStart
 
