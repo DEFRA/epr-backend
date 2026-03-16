@@ -258,6 +258,27 @@ describe('accreditation date helpers', () => {
       ).toBe(false)
     })
 
+    it.each([
+      { status: 'cancelled', desc: 'cancelled' },
+      { status: 'revoked', desc: 'revoked' },
+      { status: 'created', desc: 'created' }
+    ])('should return false when most recent status is $desc', ({ status }) => {
+      const statusHistory = [
+        {
+          status,
+          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+        },
+        {
+          status: 'approved',
+          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+        }
+      ]
+
+      expect(
+        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
+      ).toBe(false)
+    })
+
     it('should use the first entry when multiple share the same timestamp', () => {
       const statusHistory = [
         {

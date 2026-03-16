@@ -4,7 +4,7 @@
 /**
  * Checks if all dates are accredited
  * @param { (Date|string)[] } dates - The date to check
- * @param { Accreditation | undefined } accreditation
+ * @param { Accreditation | null | undefined } accreditation
  * @returns { boolean } True if accredited at date
  */
 export function isAccreditedAtDates(dates, accreditation) {
@@ -23,7 +23,7 @@ export function isAccreditedAtDates(dates, accreditation) {
 }
 
 /**
- * Convert dates to numbers and sort ascending
+ * Convert dates to numbers and sort descending
  * @param { StatusHistoryEntry[] } [statusHistory] - Accreditation status history
  * @returns {{ updatedAt: number; status: string; }[]} Sorted list
  */
@@ -55,7 +55,7 @@ export function isWithinAccreditationDateRange(date, accreditation) {
  * and checks if it was 'approved'.
  *
  * @param {string|Date} date - The date to check
- * @param {{ updatedAt: number; status: string; }[]} [statusHistory] - Accreditation status history in ascending date order
+ * @param {{ updatedAt: number; status: string; }[]} [statusHistory] - Accreditation status history in descending date order
  * @returns {boolean} True if the accreditation was approved at the given date
  */
 export function isAccreditationApprovedAtDate(date, statusHistory) {
