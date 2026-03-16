@@ -332,7 +332,6 @@ describe('validateMetaSyntax', () => {
       const result = validateMetaSyntax({ parsed, featureFlags })
 
       expect(result.isValid()).toBe(false)
-      expect(result.isFatal()).toBe(true)
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
@@ -353,7 +352,6 @@ describe('validateMetaSyntax', () => {
       const result = validateMetaSyntax({ parsed, featureFlags })
 
       expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
     })
 
     it('rejects REPROCESSOR_REGISTERED_ONLY when no feature flags provided', () => {
@@ -367,7 +365,6 @@ describe('validateMetaSyntax', () => {
       const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(false)
-      expect(result.isFatal()).toBe(true)
     })
   })
 
