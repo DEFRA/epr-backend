@@ -74,7 +74,8 @@ export const commandQueueConsumerPlugin = {
           organisationsRepository,
           wasteRecordsRepository,
           wasteBalancesRepository,
-          summaryLogExtractor
+          summaryLogExtractor,
+          featureFlags: server.featureFlags
         },
         summaryLogCommandHandlers
       )
