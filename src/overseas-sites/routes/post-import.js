@@ -68,6 +68,7 @@ export const orsImportCreate = {
       return h
         .response({
           id: importId,
+          uploadId: cdpResponse.uploadId,
           status: ORS_IMPORT_STATUS.PREPROCESSING,
           uploadUrl: cdpResponse.uploadUrl,
           statusUrl: cdpResponse.statusUrl

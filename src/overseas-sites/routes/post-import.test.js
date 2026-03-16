@@ -47,7 +47,7 @@ describe(`${orsImportCreatePath} route`, () => {
 
     afterEach(() => {
       vi.clearAllMocks()
-      uploadsRepository.initiateCalls.length = 0
+      uploadsRepository.orsInitiateCalls.length = 0
     })
 
     afterAll(async () => {
@@ -69,8 +69,10 @@ describe(`${orsImportCreatePath} route`, () => {
 
         const body = JSON.parse(response.payload)
         expect(body.id).toBeDefined()
+        expect(body.uploadId).toBeDefined()
         expect(body.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
         expect(body.uploadUrl).toContain('upload-and-scan')
+        expect(body.uploadUrl).toContain(body.uploadId)
         expect(body.statusUrl).toContain('status')
       })
 
@@ -102,8 +104,8 @@ describe(`${orsImportCreatePath} route`, () => {
           }
         })
 
-        expect(uploadsRepository.initiateCalls).toHaveLength(1)
-        const call = uploadsRepository.initiateCalls[0]
+        expect(uploadsRepository.orsInitiateCalls).toHaveLength(1)
+        const call = uploadsRepository.orsInitiateCalls[0]
         expect(call.redirectUrl).toBe(
           'https://admin.test/overseas-sites/upload'
         )

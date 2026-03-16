@@ -11,12 +11,17 @@ import { randomUUID } from 'node:crypto'
  */
 
 /**
+ * @typedef {import('#domain/uploads/repository/port.js').InitiateOrsImportOptions} InitiateOrsImportOptions
+ */
+
+/**
  * Creates an in-memory uploads repository for testing.
  *
  * @param {{ s3Bucket?: string }} [config] - Optional configuration
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
- *   initiateCalls: InitiateSummaryLogUploadOptions[]
+ *   initiateCalls: InitiateSummaryLogUploadOptions[],
+ *   orsInitiateCalls: InitiateOrsImportOptions[]
  * }}
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
@@ -31,8 +36,12 @@ export const createInMemoryUploadsRepository = (config = {}) => {
   /** @type {InitiateSummaryLogUploadOptions[]} */
   const initiateCalls = []
 
+  /** @type {InitiateOrsImportOptions[]} */
+  const orsInitiateCalls = []
+
   return {
     initiateCalls,
+    orsInitiateCalls,
 
     async findByLocation(uri) {
       return storage.get(uri) ?? null
@@ -57,7 +66,7 @@ export const createInMemoryUploadsRepository = (config = {}) => {
     },
 
     async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
-      initiateCalls.push({ importId, redirectUrl, callbackUrl })
+      orsInitiateCalls.push({ importId, redirectUrl, callbackUrl })
 
       const uploadId = randomUUID()
 
