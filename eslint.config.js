@@ -1,4 +1,5 @@
 import vitest from '@vitest/eslint-plugin'
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import nodePlugin from 'eslint-plugin-n'
 import neostandard from 'neostandard'
 
@@ -20,6 +21,18 @@ for (const item of ns) {
 export default [
   ...ns,
   nodePlugin.configs['flat/recommended-module'],
+  {
+    settings: {
+      'import-x/resolver-next': [createTypeScriptImportResolver()]
+    },
+    rules: {
+      'import-x/default': 'error',
+      'import-x/named': 'error',
+      'import-x/namespace': 'error'
+      // 'import-x/no-unused-modules': 'error', is broken with flat config: https://github.com/import-js/eslint-plugin-import/issues/3079 (to enable when it's fixed! ☺️)
+      // 'import-x/no-cycle': 'error'
+    }
+  },
   {
     files: ['.vite/**/*.js', '**/*.contract.js', 'benchmarks/**/*.js'],
     rules: {
