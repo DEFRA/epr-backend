@@ -168,78 +168,102 @@ const buildMaterialLookupStage = () => ({
   }
 })
 
-const buildAggregationPipeline = () => [
-  {
-    $match: {
-      type: {
-        $in: [
-          WASTE_RECORD_TYPE.RECEIVED,
-          WASTE_RECORD_TYPE.PROCESSED,
-          WASTE_RECORD_TYPE.EXPORTED
-        ]
-      },
-      'data.processingType': {
-        $in: [
-          PROCESSING_TYPES.EXPORTER,
-          PROCESSING_TYPES.REPROCESSOR_INPUT,
-          PROCESSING_TYPES.REPROCESSOR_OUTPUT
-        ]
-      }
+const buildWasteRecordMatchStage = () => ({
+  $match: {
+    type: {
+      $in: [
+        WASTE_RECORD_TYPE.RECEIVED,
+        WASTE_RECORD_TYPE.PROCESSED,
+        WASTE_RECORD_TYPE.EXPORTED
+      ]
+    },
+    'data.processingType': {
+      $in: [
+        PROCESSING_TYPES.EXPORTER,
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      ]
     }
-  },
-  {
-    $addFields: {
-      dispatchDate: buildDispatchDateExpression(),
-      calculatedTonnage: buildTonnageExpression(),
-      type: buildTypeExpression()
+  }
+})
+
+const buildComputedFieldsStage = () => ({
+  $addFields: {
+    dispatchDate: buildDispatchDateExpression(),
+    calculatedTonnage: buildTonnageExpression(),
+    type: buildTypeExpression()
+  }
+})
+
+const buildValidRecordMatchStage = () => ({
+  $match: {
+    calculatedTonnage: { $gt: 0 },
+    $expr: {
+      $ne: [
+        { $dateFromString: { dateString: '$dispatchDate', onError: null } },
+        null
+      ]
     }
-  },
-  { $match: { dispatchDate: { $ne: null }, calculatedTonnage: { $gt: 0 } } },
-  {
-    $addFields: {
-      year: buildYearExpression(),
-      monthNumber: buildMonthNumberExpression(),
-      month: buildMonthExpression()
-    }
-  },
-  {
-    $group: {
-      _id: {
-        organisationId: '$organisationId',
-        registrationId: '$registrationId',
-        year: '$year',
-        monthNumber: '$monthNumber',
-        month: '$month',
-        type: '$type'
-      },
-      totalTonnage: { $sum: '$calculatedTonnage' }
-    }
-  },
-  buildMaterialLookupStage(),
-  ...buildEffectiveMaterialStages(),
-  {
-    $group: {
-      _id: {
-        material: '$effectiveMaterial',
-        year: '$_id.year',
-        monthNumber: '$_id.monthNumber',
-        month: '$_id.month',
-        type: '$_id.type'
-      },
-      totalTonnage: { $sum: '$totalTonnage' }
-    }
-  },
-  {
-    $project: {
-      _id: 0,
-      material: '$_id.material',
+  }
+})
+
+const buildDateFieldsStage = () => ({
+  $addFields: {
+    year: buildYearExpression(),
+    monthNumber: buildMonthNumberExpression(),
+    month: buildMonthExpression()
+  }
+})
+
+const buildTonnageGroupStage = () => ({
+  $group: {
+    _id: {
+      organisationId: '$organisationId',
+      registrationId: '$registrationId',
+      year: '$year',
+      monthNumber: '$monthNumber',
+      month: '$month',
+      type: '$type'
+    },
+    totalTonnage: { $sum: '$calculatedTonnage' }
+  }
+})
+
+const buildMaterialGroupStage = () => ({
+  $group: {
+    _id: {
+      material: '$effectiveMaterial',
       year: '$_id.year',
       monthNumber: '$_id.monthNumber',
       month: '$_id.month',
-      type: '$_id.type',
-      totalTonnage: 1
-    }
+      type: '$_id.type'
+    },
+    totalTonnage: { $sum: '$totalTonnage' }
   }
+})
+
+const buildProjectionStage = () => ({
+  $project: {
+    _id: 0,
+    material: '$_id.material',
+    year: '$_id.year',
+    monthNumber: '$_id.monthNumber',
+    month: '$_id.month',
+    type: '$_id.type',
+    totalTonnage: 1
+  }
+})
+
+const buildAggregationPipeline = () => [
+  buildWasteRecordMatchStage(),
+  buildComputedFieldsStage(),
+  buildValidRecordMatchStage(),
+  buildDateFieldsStage(),
+  buildTonnageGroupStage(),
+  buildMaterialLookupStage(),
+  ...buildEffectiveMaterialStages(),
+  buildMaterialGroupStage(),
+  buildProjectionStage()
 ]
 
 export const aggregateTonnageByMaterial = async (db) => {
