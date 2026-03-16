@@ -350,6 +350,16 @@ describe('accreditation date helpers', () => {
       ).toBe(false)
     })
 
+    it('should return false when accreditation has no date range', () => {
+      expect(
+        isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], {
+          ...accreditation,
+          validFrom: undefined,
+          validTo: undefined
+        })
+      ).toBe(false)
+    })
+
     it('should return false when a date is outside the accreditation range', () => {
       expect(
         isAccreditedAtDates(

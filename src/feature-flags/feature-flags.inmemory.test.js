@@ -19,6 +19,21 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isFormsDataMigrationEnabled()).toBe(false)
   })
 
+  it('returns true when copyFormFilesToS3 flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ copyFormFilesToS3: true })
+    expect(flags.isCopyFormFilesToS3Enabled()).toBe(true)
+  })
+
+  it('returns false when copyFormFilesToS3 flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ copyFormFilesToS3: false })
+    expect(flags.isCopyFormFilesToS3Enabled()).toBe(false)
+  })
+
+  it('returns false when copyFormFilesToS3 flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isCopyFormFilesToS3Enabled()).toBe(false)
+  })
+
   it('returns true when devEndpoints flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({ devEndpoints: true })
     expect(flags.isDevEndpointsEnabled()).toBe(true)

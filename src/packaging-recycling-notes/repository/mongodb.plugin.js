@@ -3,17 +3,12 @@ import { createPrnVisibilityFilter } from '#packaging-recycling-notes/applicatio
 import { registerRepository } from '#plugins/register-repository.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 
-/**
- * Plugin to register the packaging recycling notes MongoDB repository
- * @type {import('@hapi/hapi').Plugin<{db: import('mongodb').Db}>}
- */
 export const packagingRecyclingNotesRepositoryPlugin = {
   name: 'packagingRecyclingNotesRepository',
+  version: '1.0.0',
   dependencies: ['mongodb'],
-  register: async (
-    /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
-    options
-  ) => {
+  /** @param {{db?: import('mongodb').Db}} [options] */
+  register: async (server, options) => {
     const db = options?.db ?? server.db
 
     const { excludeOrganisationIds } = await createPrnVisibilityFilter(db, {

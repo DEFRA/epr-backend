@@ -64,7 +64,7 @@ export const createSystemLogsRepository = async (db) => {
           createdBy: doc.createdBy
         })),
         hasMore,
-        nextCursor: hasMore ? items.at(-1)._id.toHexString() : null
+        nextCursor: hasMore ? items[items.length - 1]._id.toHexString() : null
       }
     }
   })

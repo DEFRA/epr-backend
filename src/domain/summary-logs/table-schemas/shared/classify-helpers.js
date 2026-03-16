@@ -4,8 +4,6 @@ import { CLASSIFICATION_REASON } from './classification-reason.js'
 
 export { CLASSIFICATION_REASON }
 
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
-
 /**
  * Checks whether all required fields are filled in the row data.
  *
@@ -43,10 +41,7 @@ export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
  */
 export const createDateOnlyClassifier =
   (dateField) =>
-  (
-    /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | undefined} */ accreditation }
-  ) => {
+  (/** @type {Record<string, any>} */ data, { accreditation }) => {
     const date = data[dateField]
 
     if (date && !isAccreditedAtDates([date], accreditation)) {

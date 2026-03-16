@@ -49,7 +49,10 @@ export const organisationsLink = {
     // by the logic in `isAuthorisedOrgLinkingReq` which frontloads those checks.
     // It may make sense to move those checks into this handler
 
-    const { orgInToken } = request.server.app
+    const { orgInToken } =
+      /** @type {{ orgInToken: import('#common/helpers/auth/types.js').DefraIdRelationship }} */ (
+        request.server.app
+      )
 
     const { organisationId } = request.params
 
@@ -68,8 +71,12 @@ export const organisationsLink = {
       orgId: orgInToken.defraIdOrgId,
       orgName: orgInToken.defraIdOrgName,
       linkedBy: {
-        email: request.auth.credentials.email,
-        id: request.auth.credentials.id
+        email: /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
+          request.auth.credentials
+        ).email,
+        id: /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
+          request.auth.credentials
+        ).id
       },
       linkedAt: new Date().toISOString()
     }

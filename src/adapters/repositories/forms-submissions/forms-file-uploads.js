@@ -49,6 +49,10 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
       )
     }
 
+    if (!response.body) {
+      throw new Error('Failed to download file: response body is null')
+    }
+
     const upload = new Upload({
       client: s3Client,
       params: {
@@ -104,7 +108,12 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
       })
 
       const response = await s3Client.send(command)
-      return response.Body
+
+      if (!response.Body) {
+        throw new Error(`File not found in S3: ${fileId}`)
+      }
+
+      return /** @type {import('stream').Readable} */ (response.Body)
     }
   }
 }

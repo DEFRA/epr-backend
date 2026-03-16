@@ -1,4 +1,3 @@
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import { createSentOnLoadsSchema } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { transformSentOnLoadsRow } from '#application/waste-records/row-transformers/sent-on-loads.js'
@@ -29,7 +28,7 @@ export const SENT_ON_LOADS = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | undefined} */ accreditation }
+    { accreditation }
   ) => {
     const missingResult = checkRequiredFields(
       data,

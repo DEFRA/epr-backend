@@ -132,7 +132,7 @@ const performFindByStatus = (storage, excludeOrganisationIds) => {
 
     return {
       items,
-      nextCursor: hasMore ? items.at(-1).id : null,
+      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
       hasMore
     }
   }
@@ -185,7 +185,7 @@ const performUpdateStatus =
   }
 
 /**
- * @param {PackagingRecyclingNote[]} [initialData]
+ * @param {Array<PackagingRecyclingNote & {_id?: import('mongodb').ObjectId}>} [initialData]
  * @param {Organisation['id'][]} [excludeOrganisationIds]
  */
 export function createInMemoryPackagingRecyclingNotesRepository(
