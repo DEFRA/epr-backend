@@ -102,6 +102,12 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
         expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual([])
       })
     })
+
+    it('treats HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION as unfilled dropdown', () => {
+      expect(
+        schema.unfilledValues.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+      ).toContain('Choose option')
+    })
   })
 
   describe('validationSchema (VAL010)', () => {
@@ -115,6 +121,64 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
     it('accepts unknown fields', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
       expect(error).toBeUndefined()
+    })
+
+    it('validates ROW_ID as integer >= 1000', () => {
+      const valid = validationSchema.validate({ ROW_ID: 1000 })
+      expect(valid.error).toBeUndefined()
+
+      const tooLow = validationSchema.validate({ ROW_ID: 999 })
+      expect(tooLow.error).toBeDefined()
+
+      const notInteger = validationSchema.validate({ ROW_ID: 1000.5 })
+      expect(notInteger.error).toBeDefined()
+    })
+
+    it('validates NET_WEIGHT as number >= 0 and <= 1000', () => {
+      const valid = validationSchema.validate({ NET_WEIGHT: 10.5 })
+      expect(valid.error).toBeUndefined()
+
+      const negative = validationSchema.validate({ NET_WEIGHT: -1 })
+      expect(negative.error).toBeDefined()
+
+      const tooHigh = validationSchema.validate({ NET_WEIGHT: 1001 })
+      expect(tooHigh.error).toBeDefined()
+    })
+
+    it('validates HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION as enum', () => {
+      const valid = validationSchema.validate({
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)'
+      })
+      expect(valid.error).toBeUndefined()
+
+      const invalid = validationSchema.validate({
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Made it up'
+      })
+      expect(invalid.error).toBeDefined()
+    })
+
+    it('validates RECYCLABLE_PROPORTION_PERCENTAGE as number between 0 and 1', () => {
+      const valid = validationSchema.validate({
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.95
+      })
+      expect(valid.error).toBeUndefined()
+
+      const tooHigh = validationSchema.validate({
+        RECYCLABLE_PROPORTION_PERCENTAGE: 1.5
+      })
+      expect(tooHigh.error).toBeDefined()
+    })
+
+    it('validates TONNAGE_RECEIVED_FOR_RECYCLING as weight', () => {
+      const valid = validationSchema.validate({
+        TONNAGE_RECEIVED_FOR_RECYCLING: 9.975
+      })
+      expect(valid.error).toBeUndefined()
+
+      const negative = validationSchema.validate({
+        TONNAGE_RECEIVED_FOR_RECYCLING: -1
+      })
+      expect(negative.error).toBeDefined()
     })
   })
 })

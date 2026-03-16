@@ -636,7 +636,7 @@ describe('SummaryLogsValidator integration', () => {
                     1000,
                     'January',
                     10.5,
-                    'Actual weight',
+                    'Actual weight (100%)',
                     0.95,
                     9.975,
                     'Supplier Co',
