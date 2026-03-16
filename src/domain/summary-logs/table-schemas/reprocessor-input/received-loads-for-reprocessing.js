@@ -29,9 +29,9 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
 /**
  * Fields required for waste balance calculation (Section 1)
  */
@@ -147,7 +147,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | undefined} */ accreditation }
+    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
   ) => {
     const missingResult = checkRequiredFields(
       data,

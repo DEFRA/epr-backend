@@ -1,16 +1,13 @@
 import { registerRepository } from '#plugins/register-repository.js'
 import { createOverseasSitesRepository } from './mongodb.js'
 
-/**
- * Plugin to register the overseas sites MongoDB repository
- * @type {import('@hapi/hapi').Plugin<{db: import('mongodb').Db}>}
- */
 export const overseasSitesRepositoryPlugin = {
   name: 'overseasSitesRepository',
+  version: '1.0.0',
   dependencies: ['mongodb'],
   register: async (
     /** @type {import('@hapi/hapi').Server & {db: import('mongodb').Db}} */ server,
-    options
+    /** @type {{db?: import('mongodb').Db}} */ options = {}
   ) => {
     const db = options?.db ?? server.db
 

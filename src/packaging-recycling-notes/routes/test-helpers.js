@@ -1,4 +1,5 @@
 /** @import { CognitoAccessTokenPayload } from '#common/helpers/auth/types.js' */
+/** @import { JsonWebKey } from 'node:crypto' */
 
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'node:crypto'
@@ -6,7 +7,8 @@ import { generateKeyPairSync } from 'node:crypto'
 import { MATERIAL } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
-// @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format
+/** @type {{ publicKey: JsonWebKey, privateKey: string }} */
+// @ts-expect-error @types/node is missing generateKeyPairSync overloads for jwk format
 const keyPair = generateKeyPairSync('rsa', {
   modulusLength: 2048,
   publicKeyEncoding: {

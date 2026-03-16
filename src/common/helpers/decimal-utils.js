@@ -2,6 +2,7 @@ import Decimal from 'decimal.js'
 
 /** @typedef {import('decimal.js').Decimal} DecimalInstance */
 /** @typedef {import('decimal.js').Decimal.Value} DecimalValue */
+/** @typedef {import('mongodb').Decimal128} BsonDecimal128 */
 
 const DecimalConstructor =
   /** @type {import('decimal.js').Decimal.Constructor} */ (Decimal)
@@ -37,14 +38,18 @@ export function toDecimal(value) {
  * Convert a Decimal instance back to a JavaScript number.
  * Used when saving values to the database.
  *
- * @param {DecimalValue|null|undefined} value - Value to convert
+ * @param {DecimalValue|BsonDecimal128|null|undefined} value - Value to convert
  * @returns {number} JavaScript number
  */
 export function toNumber(value) {
   if (value === null || value === undefined) {
     return 0
   }
-  if (typeof value === 'object' && value._bsontype === 'Decimal128') {
+  if (
+    typeof value === 'object' &&
+    '_bsontype' in value &&
+    value._bsontype === 'Decimal128'
+  ) {
     return Number(value.toString())
   }
   if (value instanceof DecimalConstructor) {

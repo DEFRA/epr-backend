@@ -64,6 +64,7 @@ export const createSystemLogsRepository = async (db) => {
           createdBy: doc.createdBy
         })),
         hasMore,
+        // @ts-expect-error hasMore guarantees items is non-empty
         nextCursor: hasMore ? items.at(-1)._id.toHexString() : null
       }
     }

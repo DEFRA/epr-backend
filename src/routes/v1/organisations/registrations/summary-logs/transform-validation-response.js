@@ -125,9 +125,13 @@ const groupAndTransformRowIssues = (issues) => {
 export const transformValidationResponse = (validation) => {
   // Handle direct failures (e.g., from upload rejection)
   if ((validation?.failures?.length ?? 0) > 0) {
+    const failures =
+      /** @type {Array<{errorCode?: string, code?: string, [key: string]: unknown}>} */ (
+        validation.failures
+      )
     return {
       validation: {
-        failures: validation.failures.map((f) => ({
+        failures: failures.map((f) => ({
           ...f,
           errorCode: f.errorCode ?? f.code
         })),

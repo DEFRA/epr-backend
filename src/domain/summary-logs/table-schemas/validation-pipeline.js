@@ -43,7 +43,7 @@ import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: object | null }} context - Classification context; accreditation may be null when called from the validation pipeline
+ * @param {{ accreditation: import('#repositories/organisations/port.js').Accreditation | null }} context - Classification context; accreditation is null when absent
  * @returns {WasteBalanceClassificationResult}
  */
 
@@ -170,7 +170,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Object} tableSchema - The table schema
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
- * @param {ClassifyForWasteBalance} [tableSchema.classifyForWasteBalance] - Waste balance classifier
+ * @param {ClassifyForWasteBalance | null} tableSchema.classifyForWasteBalance - Waste balance classifier
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
  */
 export const classifyRow = (row, tableSchema) => {
