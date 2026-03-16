@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { processOrsImport } from './process-import.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
-import { ORS_IMPORT_STATUS } from '../domain/import-status.js'
+import {
+  ORS_FILE_RESULT_STATUS,
+  ORS_IMPORT_STATUS
+} from '../domain/import-status.js'
 
 vi.mock('./process-import-file.js')
 
@@ -63,7 +66,7 @@ describe('processOrsImport', () => {
       .mockResolvedValueOnce(Buffer.from('file2'))
 
     const successResult = {
-      status: 'success',
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 3,
       mappingsUpdated: 3,
       registrationNumber: 'EPR/AB1234CD/R1',
@@ -116,7 +119,7 @@ describe('processOrsImport', () => {
     orsImportsRepository.findById.mockResolvedValue(importDoc)
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
     processImportFile.mockResolvedValue({
-      status: 'success',
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
       registrationNumber: 'EPR/AB1234CD/R1',
@@ -161,7 +164,7 @@ describe('processOrsImport', () => {
       new Error('S3 access denied')
     )
     processImportFile.mockResolvedValue({
-      status: 'success',
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
       registrationNumber: 'EPR/AB1234CD/R1',
@@ -173,7 +176,7 @@ describe('processOrsImport', () => {
     expect(orsImportsRepository.recordFileResult).toHaveBeenCalledWith(
       'import-123',
       0,
-      expect.objectContaining({ status: 'success' })
+      expect.objectContaining({ status: ORS_FILE_RESULT_STATUS.SUCCESS })
     )
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -211,14 +214,14 @@ describe('processOrsImport', () => {
       .mockResolvedValueOnce(Buffer.from('good'))
 
     const failResult = {
-      status: 'failure',
+      status: ORS_FILE_RESULT_STATUS.FAILURE,
       sitesCreated: 0,
       mappingsUpdated: 0,
       registrationNumber: null,
       errors: [{ field: 'file', message: 'Corrupt file' }]
     }
     const successResult = {
-      status: 'success',
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 2,
       mappingsUpdated: 2,
       registrationNumber: 'EPR/AB1234CD/R1',
@@ -266,7 +269,7 @@ describe('processOrsImport', () => {
       'import-123',
       0,
       {
-        status: 'failure',
+        status: ORS_FILE_RESULT_STATUS.FAILURE,
         sitesCreated: 0,
         mappingsUpdated: 0,
         registrationNumber: null,
@@ -302,7 +305,7 @@ describe('processOrsImport', () => {
       'import-123',
       0,
       {
-        status: 'failure',
+        status: ORS_FILE_RESULT_STATUS.FAILURE,
         sitesCreated: 0,
         mappingsUpdated: 0,
         registrationNumber: null,

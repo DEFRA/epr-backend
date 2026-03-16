@@ -1,5 +1,6 @@
 import { parse } from '../parsers/ors-spreadsheet-parser.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /**
  * Processes a single ORS spreadsheet file: parses it, creates overseas site
@@ -81,7 +82,7 @@ export const processImportFile = async (
   })
 
   return {
-    status: 'success',
+    status: ORS_FILE_RESULT_STATUS.SUCCESS,
     sitesCreated: sites.length,
     mappingsUpdated: Object.keys(overseasSitesMap).length,
     registrationNumber: metadata.registrationNumber,
@@ -111,7 +112,7 @@ const createOverseasSites = async (sites, overseasSitesRepository) => {
 }
 
 const failureResult = (registrationNumber, errors) => ({
-  status: 'failure',
+  status: ORS_FILE_RESULT_STATUS.FAILURE,
   sitesCreated: 0,
   mappingsUpdated: 0,
   registrationNumber,

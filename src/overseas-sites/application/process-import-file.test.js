@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { processImportFile } from './process-import-file.js'
+import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
 vi.mock('../parsers/ors-spreadsheet-parser.js')
@@ -108,7 +109,7 @@ describe('processImportFile', () => {
     const result = await processImportFile(buffer, deps())
 
     expect(result).toEqual({
-      status: 'success',
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 2,
       mappingsUpdated: 2,
       registrationNumber: 'EPR/AB1234CD/R1',
@@ -159,7 +160,7 @@ describe('processImportFile', () => {
 
     const result = await processImportFile(buffer, deps())
 
-    expect(result.status).toBe('failure')
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
     expect(result.sitesCreated).toBe(0)
     expect(result.mappingsUpdated).toBe(0)
     expect(result.errors).toHaveLength(2)
@@ -188,7 +189,7 @@ describe('processImportFile', () => {
 
     const result = await processImportFile(buffer, deps())
 
-    expect(result.status).toBe('failure')
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
     expect(result.sitesCreated).toBe(0)
     expect(result.errors).toEqual([
       {
@@ -232,7 +233,7 @@ describe('processImportFile', () => {
 
     const result = await processImportFile(buffer, deps())
 
-    expect(result.status).toBe('failure')
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
     expect(result.errors).toEqual([
       {
         field: 'orgId',
@@ -287,7 +288,7 @@ describe('processImportFile', () => {
 
     const result = await processImportFile(buffer, deps())
 
-    expect(result.status).toBe('failure')
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
     expect(result.errors).toEqual([
       {
         field: 'registrationNumber',
@@ -402,7 +403,7 @@ describe('processImportFile', () => {
 
     const result = await processImportFile(buffer, deps())
 
-    expect(result.status).toBe('failure')
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
     expect(result.errors[0].message).toContain('version conflict')
   })
 

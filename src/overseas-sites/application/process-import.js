@@ -2,7 +2,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ORS_IMPORT_STATUS } from '../domain/import-status.js'
+import {
+  ORS_FILE_RESULT_STATUS,
+  ORS_IMPORT_STATUS
+} from '../domain/import-status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { processImportFile } from './process-import-file.js'
 
@@ -71,7 +74,7 @@ const processFile = async (file, deps) => {
     const buffer = await uploadsRepository.findByLocation(file.s3Uri)
     if (!buffer) {
       return {
-        status: 'failure',
+        status: ORS_FILE_RESULT_STATUS.FAILURE,
         sitesCreated: 0,
         mappingsUpdated: 0,
         registrationNumber: null,
@@ -114,7 +117,7 @@ const processFile = async (file, deps) => {
     })
 
     return {
-      status: 'failure',
+      status: ORS_FILE_RESULT_STATUS.FAILURE,
       sitesCreated: 0,
       mappingsUpdated: 0,
       registrationNumber: null,

@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb'
 
 import {
+  validateOverseasSiteId,
   validateOverseasSiteInsert,
   validateOverseasSiteRead
 } from './validation.js'
@@ -49,9 +50,10 @@ async function ensureCollection(db) {
  * @returns {Promise<OverseasSite | null>}
  */
 const performFindById = async (db, id) => {
+  const validatedId = validateOverseasSiteId(id)
   const doc = await db
     .collection(COLLECTION_NAME)
-    .findOne({ _id: ObjectId.createFromHexString(id) })
+    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
   if (!doc) {
     return null
@@ -82,10 +84,11 @@ const performCreate = async (db, site) => {
  * @returns {Promise<OverseasSite | null>}
  */
 const performUpdate = async (db, id, updates) => {
+  const validatedId = validateOverseasSiteId(id)
   const result = await db
     .collection(COLLECTION_NAME)
     .findOneAndUpdate(
-      { _id: ObjectId.createFromHexString(id) },
+      { _id: ObjectId.createFromHexString(validatedId) },
       { $set: updates },
       { returnDocument: 'after' }
     )
@@ -103,9 +106,10 @@ const performUpdate = async (db, id, updates) => {
  * @returns {Promise<boolean>}
  */
 const performRemove = async (db, id) => {
+  const validatedId = validateOverseasSiteId(id)
   const result = await db
     .collection(COLLECTION_NAME)
-    .deleteOne({ _id: ObjectId.createFromHexString(id) })
+    .deleteOne({ _id: ObjectId.createFromHexString(validatedId) })
 
   return result.deletedCount > 0
 }

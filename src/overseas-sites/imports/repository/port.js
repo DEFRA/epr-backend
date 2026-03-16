@@ -9,7 +9,7 @@
 /**
  * @typedef {Object} OrsImport
  * @property {string} _id
- * @property {string} status - 'pending' | 'processing' | 'completed' | 'failed'
+ * @property {string} status - 'preprocessing' | 'processing' | 'completed' | 'failed'
  * @property {OrsImportFile[]} files
  * @property {string} createdAt - ISO 8601 date string
  * @property {string} updatedAt - ISO 8601 date string
