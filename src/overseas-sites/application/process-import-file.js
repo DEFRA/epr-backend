@@ -4,7 +4,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /**
  * Processes a single ORS spreadsheet file: parses it, creates overseas site
- * records, and merges them into the registration's overseasSites map.
+ * records, and replaces the registration's overseasSites map.
  *
  * @param {Buffer} buffer - Excel file contents
  * @param {object} deps
@@ -61,14 +61,15 @@ export const processImportFile = async (
     overseasSitesRepository
   )
 
-  const merged = await organisationsRepository.mergeRegistrationOverseasSites(
-    org.id,
-    org.version,
-    registration.id,
-    overseasSitesMap
-  )
+  const replaced =
+    await organisationsRepository.replaceRegistrationOverseasSites(
+      org.id,
+      org.version,
+      registration.id,
+      overseasSitesMap
+    )
 
-  if (!merged) {
+  if (!replaced) {
     return failureResult(metadata.registrationNumber, [
       {
         field: 'version',

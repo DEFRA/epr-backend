@@ -49,7 +49,7 @@ describe('In-memory organisations repository', () => {
     })
   })
 
-  describe('mergeRegistrationOverseasSites', () => {
+  describe('replaceRegistrationOverseasSites', () => {
     let repository
 
     beforeEach(() => {
@@ -57,7 +57,7 @@ describe('In-memory organisations repository', () => {
       repository = factory()
     })
 
-    it('merges new entries into registration overseasSites', async () => {
+    it('sets entries on registration overseasSites', async () => {
       const organisation = buildOrganisation({
         registrations: [
           buildRegistration({
@@ -74,7 +74,7 @@ describe('In-memory organisations repository', () => {
         '002': { overseasSiteId: 'site-bbb' }
       }
 
-      const success = await repository.mergeRegistrationOverseasSites(
+      const success = await repository.replaceRegistrationOverseasSites(
         organisation.id,
         1,
         regId,
@@ -89,7 +89,7 @@ describe('In-memory organisations repository', () => {
       expect(reg.overseasSites['002']).toEqual({ overseasSiteId: 'site-bbb' })
     })
 
-    it('preserves existing entries when merging', async () => {
+    it('replaces existing entries', async () => {
       const organisation = buildOrganisation({
         registrations: [
           buildRegistration({
@@ -105,7 +105,7 @@ describe('In-memory organisations repository', () => {
         '002': { overseasSiteId: 'new-site' }
       }
 
-      await repository.mergeRegistrationOverseasSites(
+      await repository.replaceRegistrationOverseasSites(
         organisation.id,
         1,
         regId,
@@ -114,10 +114,9 @@ describe('In-memory organisations repository', () => {
 
       const updated = await repository.findById(organisation.id, 2)
       const reg = updated.registrations.find((r) => r.id === regId)
-      expect(reg.overseasSites['001']).toEqual({
-        overseasSiteId: 'existing-site'
+      expect(reg.overseasSites).toEqual({
+        '002': { overseasSiteId: 'new-site' }
       })
-      expect(reg.overseasSites['002']).toEqual({ overseasSiteId: 'new-site' })
     })
 
     it('overwrites existing keys', async () => {
@@ -136,7 +135,7 @@ describe('In-memory organisations repository', () => {
         '001': { overseasSiteId: 'new-site' }
       }
 
-      await repository.mergeRegistrationOverseasSites(
+      await repository.replaceRegistrationOverseasSites(
         organisation.id,
         1,
         regId,
@@ -162,7 +161,7 @@ describe('In-memory organisations repository', () => {
       const regId = organisation.registrations[0].id
       const entries = { '001': { overseasSiteId: 'site-aaa' } }
 
-      const success = await repository.mergeRegistrationOverseasSites(
+      const success = await repository.replaceRegistrationOverseasSites(
         organisation.id,
         999,
         regId,
@@ -173,7 +172,7 @@ describe('In-memory organisations repository', () => {
     })
 
     it('returns false when organisation not found', async () => {
-      const success = await repository.mergeRegistrationOverseasSites(
+      const success = await repository.replaceRegistrationOverseasSites(
         'nonexistent-id',
         1,
         'reg-id',
@@ -194,7 +193,7 @@ describe('In-memory organisations repository', () => {
       })
       await repository.insert(organisation)
 
-      const success = await repository.mergeRegistrationOverseasSites(
+      const success = await repository.replaceRegistrationOverseasSites(
         organisation.id,
         1,
         'nonexistent-reg-id',
@@ -222,7 +221,7 @@ describe('In-memory organisations repository', () => {
       const regId = organisation.registrations[0].id
       const entries = { '001': { overseasSiteId: 'site-aaa' } }
 
-      const success = await repository.mergeRegistrationOverseasSites(
+      const success = await repository.replaceRegistrationOverseasSites(
         organisation.id,
         1,
         regId,
