@@ -30,6 +30,20 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
 
+  it('returns true when overseasSites flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isOverseasSitesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.overseasSites')
+  })
+
+  it('returns false when overseasSites flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isOverseasSitesEnabled()).toBe(false)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.overseasSites')
+  })
+
   it('returns true when reports flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)

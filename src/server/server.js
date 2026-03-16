@@ -15,6 +15,10 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import {
+  overseasSitesRepositoryPlugin,
+  orsImportsRepositoryPlugin
+} from '#overseas-sites/index.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
@@ -95,7 +99,7 @@ function getSwaggerPlugins() {
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
-  return [
+  const plugins = [
     {
       plugin: mongoDbPlugin,
       options: config.get('mongo')
@@ -114,13 +118,20 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
-    { plugin: sqsCommandExecutorPlugin, options: { config } },
-    packagingRecyclingNotesRepositoryPlugin,
-    {
-      plugin: commandQueueConsumerPlugin,
-      options: { config }
-    }
+    { plugin: sqsCommandExecutorPlugin, options: { config } }
   ]
+
+  /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
+  if (config.get('featureFlags.overseasSites')) {
+    plugins.push(overseasSitesRepositoryPlugin, orsImportsRepositoryPlugin)
+  }
+
+  plugins.push(packagingRecyclingNotesRepositoryPlugin, {
+    plugin: commandQueueConsumerPlugin,
+    options: { config }
+  })
+
+  return plugins
 }
 
 async function createServer(options = {}) {

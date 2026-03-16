@@ -342,6 +342,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
     },
+    overseasSites: {
+      doc: 'Feature Flag: Enable overseas reprocessing and interim sites management',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_OVERSEAS_SITES'
+    },
     reports: {
       doc: 'Feature Flag: Enable reports',
       format: Boolean,

@@ -6,6 +6,7 @@ import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
+import { orsImportCommandHandlers } from './ors-import-commands.js'
 
 /**
  * @typedef {Object} CommandQueueConsumerPluginOptions
@@ -65,20 +66,28 @@ export const commandQueueConsumerPlugin = {
         }
       })
 
-      consumer = await createCommandQueueConsumer(
-        {
-          sqsClient,
-          queueName,
-          logger: server.logger,
-          summaryLogsRepository,
-          organisationsRepository,
-          wasteRecordsRepository,
-          wasteBalancesRepository,
-          summaryLogExtractor,
-          featureFlags: server.featureFlags
-        },
-        summaryLogCommandHandlers
-      )
+      const deps = {
+        sqsClient,
+        queueName,
+        logger: server.logger,
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        wasteBalancesRepository,
+        summaryLogExtractor,
+        featureFlags: server.featureFlags
+      }
+
+      const handlers = [...summaryLogCommandHandlers]
+
+      if (server.app.orsImportsRepository) {
+        deps.orsImportsRepository = server.app.orsImportsRepository
+        deps.overseasSitesRepository = server.app.overseasSitesRepository
+        deps.uploadsRepository = uploadsRepository
+        handlers.push(...orsImportCommandHandlers)
+      }
+
+      consumer = await createCommandQueueConsumer(deps, handlers)
 
       consumer.start()
     })

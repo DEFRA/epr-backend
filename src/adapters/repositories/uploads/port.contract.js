@@ -101,6 +101,34 @@ export const testUploadsRepositoryContract = (it) => {
       expect(result).toBeNull()
     })
 
+    it('deletes file so subsequent retrieval returns null', async () => {
+      const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
+
+      callbackReceiver.clear()
+
+      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId: 'org-del',
+        registrationId: 'reg-del',
+        summaryLogId: 'sl-del',
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-del/registrations/reg-del/summary-logs/sl-del/upload-completed`
+      })
+
+      await performUpload(uploadId, testFileBuffer)
+
+      const callback = await waitForCallback(callbackReceiver)
+      const { s3Bucket, s3Key } = callback.payload.form.file
+      const s3Uri = `s3://${s3Bucket}/${s3Key}`
+
+      const beforeDelete = await uploadsRepository.findByLocation(s3Uri)
+      expect(beforeDelete).toBeInstanceOf(Buffer)
+
+      await uploadsRepository.deleteByLocation(s3Uri)
+
+      const afterDelete = await uploadsRepository.findByLocation(s3Uri)
+      expect(afterDelete).toBeNull()
+    })
+
     it('makes HTTP callback when upload completes', async () => {
       callbackReceiver.clear()
 

@@ -6,12 +6,50 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
 
 /**
  * @typedef {{version: number, updateFragment: object}} PutByIdPayload
  */
 
 export const organisationsPutByIdPath = '/v1/organisations/{id}'
+
+/**
+ * @param {OverseasSitesRepository} overseasSitesRepository
+ * @param {Array<{overseasSites?: Record<string, {overseasSiteId: string}>}> | undefined} registrations
+ */
+async function validateOverseasSiteReferences(
+  overseasSitesRepository,
+  registrations
+) {
+  if (!overseasSitesRepository) {
+    return
+  }
+
+  const allSiteIds = new Set()
+
+  for (const reg of registrations ?? []) {
+    for (const entry of Object.values(reg.overseasSites ?? {})) {
+      allSiteIds.add(entry.overseasSiteId)
+    }
+  }
+
+  if (allSiteIds.size === 0) {
+    return
+  }
+
+  const missingIds = []
+  for (const siteId of allSiteIds) {
+    const site = await overseasSitesRepository.findById(siteId)
+    if (!site) {
+      missingIds.push(siteId)
+    }
+  }
+
+  if (missingIds.length > 0) {
+    throw Boom.badData(`Overseas site(s) not found: ${missingIds.join(', ')}`)
+  }
+}
 
 const validateMyPayload = (payload) => {
   if (typeof payload.version !== 'number') {
@@ -44,13 +82,14 @@ export const organisationsPutById = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
    *    organisationsRepository: OrganisationsRepository,
+   *    overseasSitesRepository: OverseasSitesRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { id: string }
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationsRepository, overseasSitesRepository } = request
 
     const id = request.params.id.trim()
 
@@ -64,6 +103,11 @@ export const organisationsPutById = {
 
     /** @type {OrganisationReplacement} */
     const updates = sanitisedFragment
+
+    await validateOverseasSiteReferences(
+      overseasSitesRepository,
+      updates.registrations
+    )
 
     try {
       const initial = await organisationsRepository.findById(id)
