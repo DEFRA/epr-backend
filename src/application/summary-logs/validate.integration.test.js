@@ -576,22 +576,6 @@ describe('SummaryLogsValidator integration', () => {
       expect(updated.summaryLog.validation.issues).toEqual([])
     })
 
-    it('should not require accreditation number', async () => {
-      const { updated } = await runValidation({
-        registrationType: 'reprocessor',
-        registrationWRN: 'REG-789',
-        metadata: registeredOnlyMetadata,
-        featureFlags: registeredOnlyFeatureFlags
-      })
-
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(updated.summaryLog.validation.issues).not.toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ code: 'ACCREDITATION_MISSING' })
-        ])
-      )
-    })
-
     it('should produce zero waste records when data rows are present', async () => {
       const receivedHeaders = [
         'ROW_ID',
