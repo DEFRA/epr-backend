@@ -13,11 +13,15 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  * @property {{get: (key: string) => string}} config
  */
 
-/** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
-/** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/**
+ * @typedef {{
+ *   uploadsRepository: import('#domain/uploads/repository/port.js').UploadsRepository,
+ *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
+ *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
+ *   wasteBalancesRepository: import('#repositories/waste-balances/port.js').WasteBalancesRepository
+ * }} QueueConsumerRepositories
+ */
 
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
@@ -52,10 +56,7 @@ export const commandQueueConsumerPlugin = {
       organisationsRepository,
       wasteRecordsRepository,
       wasteBalancesRepository
-    } =
-      /** @type {{ uploadsRepository: UploadsRepository, summaryLogsRepository: SummaryLogsRepository, organisationsRepository: OrganisationsRepository, wasteRecordsRepository: WasteRecordsRepository, wasteBalancesRepository: WasteBalancesRepository }} */ (
-        server.app
-      )
+    } = /** @type {QueueConsumerRepositories} */ (server.app)
 
     const summaryLogExtractor = createSummaryLogExtractor({
       uploadsRepository,

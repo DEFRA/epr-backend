@@ -41,9 +41,8 @@ export function createSystemLogsRepository() {
         return {
           systemLogs: page.map(({ _internalId, ...rest }) => rest),
           hasMore,
-          nextCursor: hasMore
-            ? toHexCursor(page[page.length - 1]._internalId)
-            : null
+          // @ts-expect-error hasMore guarantees page is non-empty
+          nextCursor: hasMore ? toHexCursor(page.at(-1)._internalId) : null
         }
       }
     }
