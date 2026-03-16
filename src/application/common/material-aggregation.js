@@ -55,7 +55,7 @@ const getMaterialMonthlyCombinations = () => {
     Object.values(WASTE_PROCESSING_TYPE)
       .map((type) => capitalize(type))
       .flatMap((type) =>
-        Object.entries(monthsByYear).map(([year, months]) => ({
+        Object.entries(monthsByYear).map(([year, months = []]) => ({
           material,
           type,
           year,

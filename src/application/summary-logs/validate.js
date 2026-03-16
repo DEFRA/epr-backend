@@ -233,10 +233,9 @@ const markIgnoredByDateRange = (
     )
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
-    const result = schema?.classifyForWasteBalance?.(
-      wasteRecord.record.data,
-      registration
-    )
+    const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
+      accreditation: registration.accreditation ?? null
+    })
 
     if (result?.outcome === ROW_OUTCOME.IGNORED) {
       wasteRecord.outcome = ROW_OUTCOME.IGNORED
@@ -480,10 +479,14 @@ export const createSummaryLogsValidator = ({
     await recordValidationIssueMetrics(issues, processingType)
 
     // Filter to only waste-balance table rows for inclusion/exclusion classification
-    const wasteBalanceRecords = wasteRecords?.filter((wr) => {
-      const schema = findSchemaForProcessingType(processingType, wr.record.type)
-      return schema?.classifyForWasteBalance != null
-    })
+    const wasteBalanceRecords =
+      wasteRecords?.filter((wr) => {
+        const schema = findSchemaForProcessingType(
+          processingType,
+          wr.record.type
+        )
+        return schema?.classifyForWasteBalance != null
+      }) ?? []
 
     // Classify loads only for validated summary logs
     // Valid/invalid counts ALL rows; included/excluded counts only WB rows

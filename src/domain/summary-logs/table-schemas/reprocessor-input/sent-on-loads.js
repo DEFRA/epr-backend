@@ -29,7 +29,7 @@ export const SENT_ON_LOADS = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | undefined} */ accreditation }
+    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
   ) => {
     const missingResult = checkRequiredFields(
       data,

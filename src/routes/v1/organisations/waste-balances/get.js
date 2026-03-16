@@ -47,7 +47,9 @@ export const wasteBalanceGet = {
    */
   handler: async ({ wasteBalancesRepository, query, params }, h) => {
     const { organisationId } = params
-    const accreditationIds = query.accreditationIds.split(',')
+    const accreditationIds = /** @type {string} */ (
+      query.accreditationIds
+    ).split(',')
 
     const wasteBalances =
       await wasteBalancesRepository.findByAccreditationIds(accreditationIds)
