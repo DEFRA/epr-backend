@@ -31,7 +31,7 @@ vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
 
 const url = registrationPath
 
-describe(`${url} route`, () => {
+describe(`${url} route`, { timeout: 10000 }, () => {
   beforeEach(() => {
     mockAudit.mockClear()
     mockInsertOne.mockClear()

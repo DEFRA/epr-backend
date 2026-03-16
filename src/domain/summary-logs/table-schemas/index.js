@@ -1,17 +1,7 @@
+import { PROCESSING_TYPES } from '../meta-fields.js'
+import { TABLE_SCHEMAS as EXPORTER } from './exporter/index.js'
 import { TABLE_SCHEMAS as REPROCESSOR_INPUT } from './reprocessor-input/index.js'
 import { TABLE_SCHEMAS as REPROCESSOR_OUTPUT } from './reprocessor-output/index.js'
-import { TABLE_SCHEMAS as EXPORTER } from './exporter/index.js'
-import { PROCESSING_TYPES } from '../meta-fields.js'
-
-/**
- * Table names used in summary logs
- */
-export const TABLE_NAMES = {
-  RECEIVED_LOADS_FOR_REPROCESSING: 'RECEIVED_LOADS_FOR_REPROCESSING',
-  REPROCESSED_LOADS: 'REPROCESSED_LOADS',
-  SENT_ON_LOADS: 'SENT_ON_LOADS',
-  RECEIVED_LOADS_FOR_EXPORT: 'RECEIVED_LOADS_FOR_EXPORT'
-}
 
 /**
  * Registry mapping processing types to their table schemas

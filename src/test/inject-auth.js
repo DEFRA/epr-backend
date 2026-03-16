@@ -53,37 +53,3 @@ export const asServiceMaintainer = (overrides = {}) => ({
     }
   }
 })
-
-/**
- * Creates auth injection options for a linker
- * @param {object} [overrides] - Optional credential overrides
- * @returns {object} Auth options for server.inject()
- */
-export const asLinker = (overrides = {}) => ({
-  auth: {
-    strategy: ACCESS_TOKEN_STRATEGY,
-    credentials: {
-      scope: [ROLES.linker],
-      id: 'test-linker-id',
-      email: 'linker@example.com',
-      ...overrides
-    }
-  }
-})
-
-/**
- * Creates auth injection options for an inquirer
- * @param {object} [overrides] - Optional credential overrides
- * @returns {object} Auth options for server.inject()
- */
-export const asInquirer = (overrides = {}) => ({
-  auth: {
-    strategy: ACCESS_TOKEN_STRATEGY,
-    credentials: {
-      scope: [ROLES.inquirer],
-      id: 'test-inquirer-id',
-      email: 'inquirer@example.com',
-      ...overrides
-    }
-  }
-})

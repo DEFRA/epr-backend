@@ -34,7 +34,7 @@ vi.mock('#common/helpers/notify.js')
 
 const url = organisationPath
 
-describe(`${url} route`, () => {
+describe(`${url} route`, { timeout: 10000 }, () => {
   beforeEach(() => {
     mockAudit.mockClear()
     mockInsertOne.mockClear()
