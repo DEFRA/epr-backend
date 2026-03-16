@@ -185,7 +185,7 @@ const performUpdateStatus =
   }
 
 /**
- * @param {Array<PackagingRecyclingNote & {_id?: import('mongodb').ObjectId}>} [initialData]
+ * @param {PackagingRecyclingNote[]} [initialData]
  * @param {Organisation['id'][]} [excludeOrganisationIds]
  */
 export function createInMemoryPackagingRecyclingNotesRepository(
@@ -196,7 +196,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
   const storage = new Map()
 
   for (const prn of initialData) {
-    const id = prn._id?.toString() ?? prn.id
+    const id = prn.id
     storage.set(id, structuredClone({ ...prn, id }))
   }
 
