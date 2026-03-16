@@ -56,6 +56,23 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       }
     },
 
+    async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
+      initiateCalls.push({ importId, redirectUrl, callbackUrl })
+
+      const uploadId = randomUUID()
+
+      pendingUploads.set(uploadId, {
+        uploadId,
+        options: { importId, redirectUrl, callbackUrl }
+      })
+
+      return {
+        uploadId,
+        uploadUrl: `https://cdp-uploader.test/upload-and-scan/${uploadId}`,
+        statusUrl: `https://cdp-uploader.test/status/${uploadId}`
+      }
+    },
+
     async completeUpload(uploadId, buffer) {
       const pending = pendingUploads.get(uploadId)
 
