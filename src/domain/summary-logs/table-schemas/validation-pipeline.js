@@ -1,3 +1,5 @@
+import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
+
 /**
  * Validation pipeline for summary log rows
  *
@@ -44,8 +46,6 @@
  * @param {{ accreditation: object | null }} context - Classification context; accreditation may be null when called from the validation pipeline
  * @returns {WasteBalanceClassificationResult}
  */
-
-import { CLASSIFICATION_REASON } from './shared/classify-helpers.js'
 
 /**
  * Row classification outcomes
