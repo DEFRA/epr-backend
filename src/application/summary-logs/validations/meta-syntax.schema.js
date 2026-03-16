@@ -12,7 +12,8 @@ const REGISTERED_ONLY_PROCESSING_TYPES = [
   PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
 ]
 
-const MIN_TEMPLATE_VERSION = 5
+const MIN_ACCREDITED_TEMPLATE_VERSION = 5
+const MIN_REGISTERED_ONLY_TEMPLATE_VERSION = 2
 
 const IS_REQUIRED = 'is required'
 
@@ -39,10 +40,21 @@ export const createMetaSchema = ({ registeredOnlyEnabled } = {}) => {
         'any.required': IS_REQUIRED
       }),
     TEMPLATE_VERSION: Joi.number()
-      .min(MIN_TEMPLATE_VERSION)
       .required()
+      .when('PROCESSING_TYPE', {
+        is: Joi.valid(...REGISTERED_ONLY_PROCESSING_TYPES),
+        then: Joi.number()
+          .min(MIN_REGISTERED_ONLY_TEMPLATE_VERSION)
+          .messages({
+            'number.min': `must be at least ${MIN_REGISTERED_ONLY_TEMPLATE_VERSION}`
+          }),
+        otherwise: Joi.number()
+          .min(MIN_ACCREDITED_TEMPLATE_VERSION)
+          .messages({
+            'number.min': `must be at least ${MIN_ACCREDITED_TEMPLATE_VERSION}`
+          })
+      })
       .messages({
-        'number.min': `must be at least ${MIN_TEMPLATE_VERSION}`,
         'any.required': IS_REQUIRED
       }),
     REGISTRATION_NUMBER: customJoi.coercedString().required().messages({

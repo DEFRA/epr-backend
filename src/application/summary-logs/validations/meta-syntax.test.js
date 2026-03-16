@@ -344,7 +344,8 @@ describe('validateMetaSyntax', () => {
       const parsed = {
         meta: {
           ...createValidMeta(),
-          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2 }
         }
       }
       const featureFlags = { isRegisteredOnlyEnabled: () => true }
@@ -352,6 +353,42 @@ describe('validateMetaSyntax', () => {
       const result = validateMetaSyntax({ parsed, featureFlags })
 
       expect(result.isValid()).toBe(true)
+    })
+
+    it('accepts TEMPLATE_VERSION >= 2 for registered-only', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2 }
+        }
+      }
+      const featureFlags = { isRegisteredOnlyEnabled: () => true }
+
+      const result = validateMetaSyntax({ parsed, featureFlags })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('rejects TEMPLATE_VERSION < 2 for registered-only', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 1 }
+        }
+      }
+      const featureFlags = { isRegisteredOnlyEnabled: () => true }
+
+      const result = validateMetaSyntax({ parsed, featureFlags })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('TEMPLATE_VERSION')
+      expect(fatals[0].message).toContain('at least 2')
     })
 
     it('rejects REPROCESSOR_REGISTERED_ONLY when no feature flags provided', () => {
