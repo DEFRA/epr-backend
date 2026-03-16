@@ -1,3 +1,4 @@
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import Joi from 'joi'
 import {
   DROPDOWN_PLACEHOLDER,
@@ -23,7 +24,7 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -73,7 +74,10 @@ export const REPROCESSED_LOADS = {
     .unknown(true)
     .prefs({ abortEarly: false }),
 
-  classifyForWasteBalance: (data, { accreditation }) => {
+  classifyForWasteBalance: (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | null} */ accreditation }
+  ) => {
     const requiredFields = [
       FIELDS.PRODUCT_TONNAGE,
       FIELDS.DATE_LOAD_LEFT_SITE,
@@ -91,10 +95,7 @@ export const REPROCESSED_LOADS = {
     }
 
     if (
-      !isWithinAccreditationDateRange(
-        data[FIELDS.DATE_LOAD_LEFT_SITE],
-        accreditation
-      )
+      !isAccreditedAtDates([data[FIELDS.DATE_LOAD_LEFT_SITE]], accreditation)
     ) {
       return {
         outcome: ROW_OUTCOME.IGNORED,

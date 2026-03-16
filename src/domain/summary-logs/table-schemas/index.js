@@ -31,13 +31,27 @@ export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT,
   [PROCESSING_TYPES.EXPORTER]: EXPORTER
 }
+/** @typedef {import('#repositories/organisations/port.js').Accreditation} Accreditation */
+/** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
+/** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
+/**
+ * @typedef {Object} TableSchema
+ * @property {string} rowIdField - Field name containing the row identifier
+ * @property {string} wasteRecordType - The waste record type this table maps to (e.g. 'received', 'exported')
+ * @property {string} sheetName - The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
+ * @property {(rowData: Record<string, any>, rowIndex: number) => {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata
+ * @property {string[]} requiredHeaders - Headers that must be present in the table
+ * @property {Record<string, string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
+ * @property {JoiObjectSchema} validationSchema - Joi schema for VAL010 (in-sheet validation of filled fields)
+ * @property {((data: Record<string, any>, context: {accreditation?: Accreditation }) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance (null if table does not contribute)
+ */
 
 /**
  * Finds a table schema by processing type and waste record type
  *
  * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
  * @param {string} wasteRecordType - The waste record type (e.g. 'received', 'sentOn')
- * @returns {Object|null} The matching table schema, or null if not found
+ * @returns {TableSchema|null} The matching table schema, or null if not found
  */
 export const findSchemaForProcessingType = (
   processingType,

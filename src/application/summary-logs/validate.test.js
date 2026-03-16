@@ -198,7 +198,15 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         validFrom: '2025-01-01T00:00:00.000Z',
-        validTo: '2025-12-31T23:59:59.999Z'
+        validTo: '2025-12-31T23:59:59.999Z',
+        accreditation: {
+          validFrom: '2025-01-01T00:00:00.000Z',
+          validTo: '2025-12-31T23:59:59.999Z',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
     }
 
@@ -360,7 +368,13 @@ describe('SummaryLogsValidator', () => {
       reprocessingType: 'input',
       material: 'aluminium',
       accreditation: {
-        accreditationNumber: 'ACC12345'
+        accreditationNumber: 'ACC12345',
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+        ]
       }
     })
 
@@ -913,7 +927,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -958,7 +980,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const reprocessedHeaders = [
@@ -1015,7 +1045,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const sentOnHeaders = [
@@ -1099,7 +1137,15 @@ describe('SummaryLogsValidator', () => {
         validFrom: '2025-01-01',
         validTo: '2025-12-31',
         wasteProcessingType: 'exporter',
-        material: 'paper'
+        material: 'paper',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const headers = [
@@ -1199,7 +1245,15 @@ describe('SummaryLogsValidator', () => {
         validFrom: '2025-01-01',
         validTo: '2025-12-31',
         wasteProcessingType: 'exporter',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const headers = [
@@ -1271,7 +1325,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -1313,7 +1375,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const reprocessedHeaders = [
@@ -1363,7 +1433,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const sentOnHeaders = [
@@ -1445,7 +1523,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const headers = [
@@ -1510,7 +1596,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const headers = [
@@ -1567,7 +1661,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       summaryLogExtractor.extract.mockResolvedValue(
@@ -1597,7 +1699,15 @@ describe('SummaryLogsValidator', () => {
         validFrom: '2025-01-01',
         validTo: '2025-12-31',
         wasteProcessingType: 'exporter',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const headers = [
@@ -1695,7 +1805,15 @@ describe('SummaryLogsValidator', () => {
         validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        accreditation: {
+          validFrom: '2025-01-01',
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
+        }
       })
 
       const reprocessedHeaders = [

@@ -88,7 +88,13 @@ describe('Submission and placeholder tests', () => {
             validFrom: VALID_FROM,
             validTo: VALID_TO,
             accreditation: {
-              accreditationNumber: 'ACC-2025-001'
+              accreditationNumber: 'ACC-2025-001',
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
+              statusHistory: [
+                { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+                { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+              ]
             }
           }
         ]

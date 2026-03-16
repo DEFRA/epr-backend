@@ -69,7 +69,7 @@ export const ROW_OUTCOME = Object.freeze({
  * - listed in the unfilledValues array for that field
  *
  * @param {any} value - The value to check
- * @param {string[]} [unfilledValues=[]] - Field-specific values that indicate "unfilled"
+ * @param {readonly string[]} [unfilledValues=[]] - Field-specific values that indicate "unfilled"
  * @returns {boolean} True if the value is filled
  */
 export const isFilled = (value, unfilledValues = []) => {
@@ -208,7 +208,7 @@ export const classifyRow = (row, tableSchema) => {
 
   // The validation pipeline only needs the required-fields check from
   // classifyForWasteBalance. Accreditation is null because the pipeline
-  // doesn't have that context — isWithinAccreditationDateRange treats
+  // doesn't have that context — isAccreditedAtDates treats
   // null accreditation as "within range", so subsequent checks are skipped.
   const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
     accreditation: null

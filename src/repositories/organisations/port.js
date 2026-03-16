@@ -64,7 +64,20 @@
  */
 
 /**
- * @typedef {Id & {
+ * @typedef {{
+ *  status: 'created'|'approved'|'suspended';
+ *  updatedAt: string;
+ * }} StatusHistoryEntry
+ */
+
+/**
+ * @typedef {{
+ *  statusHistory: StatusHistoryEntry[];
+ * }} StatusHistory
+ */
+
+/**
+ * @typedef {Id & StatusHistory & {
  *  formSubmissionTime: Date;
  *  material: string;
  *  prnIssuance: PrnIssuance;
@@ -154,6 +167,7 @@
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Object) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
+ * @property {(id: string, version: number, document: Object) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
  * @property {() => Promise<Object[]>} findAll
  * @property {(ids: string[]) => Promise<Object[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
