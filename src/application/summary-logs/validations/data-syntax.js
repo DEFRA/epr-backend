@@ -70,6 +70,8 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
   'string.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'date.base': VALIDATION_CODE.INVALID_DATE,
+  'date.min': VALIDATION_CODE.INVALID_DATE,
+  'date.max': VALIDATION_CODE.INVALID_DATE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
   'custom.tonnageCalculationMismatch':
