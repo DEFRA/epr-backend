@@ -420,6 +420,72 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 })
 
+describe('PUT /v1/organisations/{id} with ORS feature disabled', () => {
+  setupAuthContext()
+  let server
+  let organisationsRepository
+
+  beforeEach(async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    organisationsRepository = organisationsRepositoryFactory()
+
+    server = await createTestServer({
+      repositories: {
+        organisationsRepository: organisationsRepositoryFactory,
+        systemLogsRepository: createSystemLogsRepository()
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        organisations: true,
+        overseasSites: false
+      })
+    })
+  })
+
+  afterAll(() => {
+    vi.resetAllMocks()
+  })
+
+  it('skips overseas site validation when ORS feature is disabled', async () => {
+    const fixture = buildOrganisation()
+    await organisationsRepository.insert(fixture)
+
+    const fetchResponse = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${fixture.id}`,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    const org = JSON.parse(fetchResponse.payload)
+    const exporterReg = org.registrations.find(
+      (r) => r.wasteProcessingType === 'exporter'
+    )
+
+    const updateFragment = prepareOrgUpdate(org, {
+      registrations: [
+        {
+          ...exporterReg,
+          overseasSites: {
+            '001': { overseasSiteId: 'any-site-id' }
+          }
+        }
+      ]
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+})
+
 describe('PUT /v1/organisations/{id} overseas sites validation', () => {
   setupAuthContext()
   let server
@@ -578,6 +644,25 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('bogus-id')
     expect(body.message).not.toContain(knownSiteId)
+  })
+
+  it('allows update without registrations field', async () => {
+    const org = await createOrgWithExporter()
+
+    const { registrations: _, ...updateWithoutRegistrations } =
+      prepareOrgUpdate(org, { wasteProcessingTypes: org.wasteProcessingTypes })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/organisations/${org.id}`,
+      headers: { Authorization: `Bearer ${validToken}` },
+      payload: {
+        version: org.version,
+        updateFragment: updateWithoutRegistrations
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('allows empty overseasSites map', async () => {
