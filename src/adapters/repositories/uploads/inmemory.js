@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 /**
  * @typedef {Object} PendingUpload
  * @property {string} uploadId
- * @property {InitiateSummaryLogUploadOptions} options
+ * @property {object} options
  */
 
 /**
