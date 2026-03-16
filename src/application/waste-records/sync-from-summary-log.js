@@ -13,8 +13,6 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
  */
 
-
-
 /**
  * Is this a template row?
  *
