@@ -99,7 +99,7 @@ function getSwaggerPlugins() {
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
-  return [
+  const plugins = [
     {
       plugin: mongoDbPlugin,
       options: config.get('mongo')
@@ -118,15 +118,20 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
-    { plugin: sqsCommandExecutorPlugin, options: { config } },
-    overseasSitesRepositoryPlugin,
-    orsImportsRepositoryPlugin,
-    packagingRecyclingNotesRepositoryPlugin,
-    {
-      plugin: commandQueueConsumerPlugin,
-      options: { config }
-    }
+    { plugin: sqsCommandExecutorPlugin, options: { config } }
   ]
+
+  /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
+  if (config.get('featureFlags.overseasSites')) {
+    plugins.push(overseasSitesRepositoryPlugin, orsImportsRepositoryPlugin)
+  }
+
+  plugins.push(packagingRecyclingNotesRepositoryPlugin, {
+    plugin: commandQueueConsumerPlugin,
+    options: { config }
+  })
+
+  return plugins
 }
 
 async function createServer(options = {}) {

@@ -112,7 +112,10 @@ const repositoryConfigs = [
   {
     name: 'packagingRecyclingNotesRepository',
     createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
-  },
+  }
+]
+
+const overseasSitesRepositoryConfigs = [
   {
     name: 'overseasSitesRepository',
     createDefault: createInMemoryOverseasSitesRepositoryPlugin
@@ -125,11 +128,12 @@ const repositoryConfigs = [
 
 /**
  * Builds repository plugins from config, applying any overrides.
+ * @param {Array<{name: string, createDefault: Function}>} configs - Repository configurations
  * @param {Object} repoOverrides - Repository overrides keyed by name
  * @returns {import('@hapi/hapi').Plugin<void>[]}
  */
-function buildRepositoryPlugins(repoOverrides) {
-  return repositoryConfigs.map(({ name, createDefault }) => {
+function buildRepositoryPlugins(configs, repoOverrides) {
+  return configs.map(({ name, createDefault }) => {
     if (repoOverrides[name]) {
       return createRepositoryPlugin(name, repoOverrides[name])
     }
@@ -214,7 +218,13 @@ export async function createTestServer(options = {}) {
       plugin: featureFlagsPlugin,
       options: { config, featureFlags: options.featureFlags }
     },
-    ...buildRepositoryPlugins(options.repositories ?? {}),
+    ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
+    ...buildRepositoryPlugins(
+      options.featureFlags?.isOverseasSitesEnabled()
+        ? overseasSitesRepositoryConfigs
+        : [],
+      options.repositories ?? {}
+    ),
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     router
   ]

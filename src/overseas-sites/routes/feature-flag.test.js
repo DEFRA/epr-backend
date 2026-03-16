@@ -47,4 +47,30 @@ describe('Overseas Sites feature flag', () => {
 
     await server.stop()
   })
+
+  it('does not register ORS repositories when flag is disabled', async () => {
+    const server = await createTestServer({
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: false
+      })
+    })
+
+    expect(server.app.overseasSitesRepository).toBeUndefined()
+    expect(server.app.orsImportsRepository).toBeUndefined()
+
+    await server.stop()
+  })
+
+  it('registers ORS repositories when flag is enabled', async () => {
+    const server = await createTestServer({
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    expect(server.app.overseasSitesRepository).toBeDefined()
+    expect(server.app.orsImportsRepository).toBeDefined()
+
+    await server.stop()
+  })
 })
