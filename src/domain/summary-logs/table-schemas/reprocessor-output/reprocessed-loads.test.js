@@ -35,15 +35,6 @@ describe('REPROCESSED_LOADS', () => {
         'Choose option'
       )
     })
-
-    it('has fieldsRequiredForInclusionInWasteBalance array with PRODUCT_TONNAGE', () => {
-      expect(
-        Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
-      ).toBe(true)
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'PRODUCT_TONNAGE'
-      )
-    })
   })
 
   describe('validationSchema (VAL010)', () => {
@@ -520,24 +511,6 @@ describe('REPROCESSED_LOADS', () => {
       expect(schema.requiredHeaders).toContain('UK_PACKAGING_WEIGHT_PERCENTAGE')
       expect(schema.requiredHeaders).toContain('DATE_LOAD_LEFT_SITE')
       expect(schema.requiredHeaders).toContain(
-        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
-      )
-    })
-
-    it('has fieldsRequiredForInclusionInWasteBalance array with all expected fields', () => {
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'PRODUCT_TONNAGE'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'ADD_PRODUCT_WEIGHT'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'UK_PACKAGING_WEIGHT_PERCENTAGE'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
-        'DATE_LOAD_LEFT_SITE'
-      )
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
         'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
       )
     })

@@ -1,4 +1,4 @@
-import { createEmptyLoads } from '#application/summary-logs/classify-loads.js'
+import { createEmptyLoads } from '#application/summary-logs/load-counts.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES

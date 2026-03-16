@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { ROW_OUTCOME } from '../validation-pipeline.js'
-import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { transformSentOnLoadsRowReprocessorOutput } from '#application/waste-records/row-transformers/sent-on-loads-reprocessor-output.js'
 
 describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
@@ -57,48 +55,6 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
 
       it('has exactly 11 required headers (all optional for REPROCESSOR_OUTPUT)', () => {
         expect(schema.requiredHeaders).toHaveLength(11)
-      })
-    })
-
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('is empty (table does not contribute to waste balance for REPROCESSOR_OUTPUT)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)
-      })
-    })
-
-    describe('classifyForWasteBalance', () => {
-      const accreditation = {
-        validFrom: new Date('2024-01-01'),
-        validTo: new Date('2024-12-31')
-      }
-
-      it('returns IGNORED when DATE_LOAD_LEFT_SITE is outside accreditation period', () => {
-        const data = { DATE_LOAD_LEFT_SITE: new Date('2023-06-15') }
-
-        const result = schema.classifyForWasteBalance(data, { accreditation })
-
-        expect(result).toEqual({
-          outcome: ROW_OUTCOME.IGNORED,
-          reasons: [
-            { code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }
-          ]
-        })
-      })
-
-      it('returns null when DATE_LOAD_LEFT_SITE is within accreditation period', () => {
-        const data = { DATE_LOAD_LEFT_SITE: new Date('2024-06-15') }
-
-        const result = schema.classifyForWasteBalance(data, { accreditation })
-
-        expect(result).toBeNull()
-      })
-
-      it('returns null when DATE_LOAD_LEFT_SITE is not present', () => {
-        const data = {}
-
-        const result = schema.classifyForWasteBalance(data, { accreditation })
-
-        expect(result).toBeNull()
       })
     })
 

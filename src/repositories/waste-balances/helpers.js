@@ -10,91 +10,31 @@ import {
   classifyRow,
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import {
-  createTableSchemaGetter,
-  PROCESSING_TYPE_TABLES,
-  TABLE_NAMES
-} from '#domain/summary-logs/table-schemas/index.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
 import { add, subtract, toNumber } from '#common/helpers/decimal-utils.js'
 
-const getTableName = (recordType, processingType) => {
-  if (processingType === PROCESSING_TYPES.EXPORTER) {
-    if (recordType === WASTE_RECORD_TYPE.EXPORTED) {
-      return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
-    }
-    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
-      return TABLE_NAMES.SENT_ON_LOADS
-    }
-  }
-
-  if (processingType === PROCESSING_TYPES.REPROCESSOR_INPUT) {
-    if (recordType === WASTE_RECORD_TYPE.RECEIVED) {
-      return TABLE_NAMES.RECEIVED_LOADS_FOR_REPROCESSING
-    }
-    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
-      return TABLE_NAMES.SENT_ON_LOADS
-    }
-  }
-
-  if (processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
-    if (recordType === WASTE_RECORD_TYPE.PROCESSED) {
-      return TABLE_NAMES.REPROCESSED_LOADS
-    }
-    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
-      return TABLE_NAMES.SENT_ON_LOADS
-    }
-  }
-
-  return null
-}
-
 /**
  * Determines if a record should be included based on schema validation.
  *
- * @param {Object} actualRecord - The waste record to validate
- * @param {string} processingType - The processing type for schema lookup
- * @param {Function} getTableSchema - Function to get table schema
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record - The waste record
  * @returns {boolean} Whether the record passes validation
  */
-const isRecordValidBySchema = (
-  actualRecord,
-  processingType,
-  getTableSchema
-) => {
-  const tableName = getTableName(actualRecord.type, processingType)
-  const schema = tableName ? getTableSchema(tableName) : null
+const isRecordValid = (record) => {
+  const schema = findSchemaForProcessingType(
+    record.data?.processingType,
+    record.type
+  )
 
   if (!schema) {
     return true
   }
 
-  const { outcome } = classifyRow(actualRecord.data, schema)
+  const { outcome } = classifyRow(record.data, schema)
   return outcome === ROW_OUTCOME.INCLUDED
-}
-
-/**
- * Determines if a single record should be included in the valid records list.
- *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record - The waste record
- * @param {Function|null} getTableSchema - Function to get table schema, or null
- * @returns {boolean}
- */
-const isRecordValid = (record, getTableSchema) => {
-  if (!getTableSchema) {
-    return true
-  }
-
-  return isRecordValidBySchema(
-    record,
-    record.data?.processingType,
-    getTableSchema
-  )
 }
 
 /**
@@ -153,15 +93,9 @@ export const findOrCreateWasteBalance = async ({
  * @returns {import('#domain/waste-records/model.js').WasteRecord[]}
  */
 export const markExcludedRecords = (wasteRecords) => {
-  const processingType = wasteRecords[0]?.data?.processingType
-
-  const getTableSchema = processingType
-    ? createTableSchemaGetter(processingType, PROCESSING_TYPE_TABLES)
-    : null
-
   return wasteRecords.map((record) => ({
     ...record,
-    excludedFromWasteBalance: !isRecordValid(record, getTableSchema)
+    excludedFromWasteBalance: !isRecordValid(record)
   }))
 }
 

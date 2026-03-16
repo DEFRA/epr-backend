@@ -125,7 +125,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     await db.collection(WASTE_RECORDS_COLLECTION).deleteMany({})
   })
 
-  it('aggregates exporter tonnage by material', async () => {
+  it('aggregates exporter tonnage by material with year, month, and type', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -143,10 +143,64 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     const result = await aggregateTonnageByMaterial(db)
 
+    // Verify plastic Exporter has data
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
-      totalTonnage: 150
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 150 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
+
+    // Verify plastic Reprocessor has zero tonnage (no reprocessor records)
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 0 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
+    })
+
+    const nonPlasticMaterials = [
+      MATERIAL.ALUMINIUM,
+      MATERIAL.FIBRE,
+      MATERIAL.PAPER,
+      MATERIAL.STEEL,
+      MATERIAL.WOOD,
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      GLASS_RECYCLING_PROCESS.GLASS_OTHER
+    ]
+
+    nonPlasticMaterials.forEach((material) => {
+      expect(result.materials).toContainEqual({
+        material,
+        year: 2026,
+        type: 'Exporter',
+        months: [
+          { month: 'Jan', tonnage: 0 },
+          { month: 'Feb', tonnage: 0 },
+          { month: 'Mar', tonnage: 0 }
+        ]
+      })
+
+      expect(result.materials).toContainEqual({
+        material,
+        year: 2026,
+        type: 'Reprocessor',
+        months: [
+          { month: 'Jan', tonnage: 0 },
+          { month: 'Feb', tonnage: 0 },
+          { month: 'Mar', tonnage: 0 }
+        ]
+      })
+    })
+
     expect(result.total).toBe(150)
   })
 
@@ -172,7 +226,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-      totalTonnage: 100
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(100)
   })
@@ -199,7 +259,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
-      totalTonnage: 100
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(100)
   })
@@ -226,7 +292,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
-      totalTonnage: 200
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 200 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(200)
   })
@@ -258,11 +330,23 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-      totalTonnage: 100
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
-      totalTonnage: 75
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 75 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(175)
   })
@@ -285,7 +369,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PAPER,
-      totalTonnage: 500
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 500 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(500)
   })
@@ -308,7 +398,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.STEEL,
-      totalTonnage: 200
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 200 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(200)
   })
@@ -340,11 +436,33 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
-      totalTonnage: 300
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
+    })
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 200 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.materials).toContainEqual({
       material: GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-      totalTonnage: 50
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 50 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(350)
   })
@@ -377,7 +495,57 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.ALUMINIUM,
-      totalTonnage: 100
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
+    })
+    expect(result.total).toBe(100)
+  })
+
+  it('excludes records with null or unparseable dispatch dates', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC)
+        ])
+      )
+
+    await db.collection(WASTE_RECORDS_COLLECTION).insertMany([
+      createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+      createExporterWasteRecord(orgId1, regId1, 999, '09/02/20256'), // invalid year (5 digits)
+      createExporterWasteRecord(orgId1, regId1, 999, '2026-99-15'), // invalid month
+      createExporterWasteRecord(orgId1, regId1, 999, '2026-01-99'), // invalid day
+      createExporterWasteRecord(orgId1, regId1, 999, 'not-a-date'), // not a date string,
+      createExporterWasteRecord(orgId1, regId1, 999, null),
+      {
+        organisationId: orgId1,
+        registrationId: regId1,
+        rowId: 'row-null-date',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 999
+        },
+        versions: []
+      }
+    ])
+
+    const result = await aggregateTonnageByMaterial(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(100)
   })
@@ -400,23 +568,31 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.WOOD,
-      totalTonnage: 50
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 50 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(50)
   })
 
-  it('returns all materials with zero tonnage when no data exists', async () => {
+  it('returns zero tonnage rows by material and type when no data exists', async () => {
     const result = await aggregateTonnageByMaterial(db)
 
-    const expectedMaterials = Object.values(MATERIAL)
-      .filter((m) => m !== MATERIAL.GLASS)
-      .concat(Object.values(GLASS_RECYCLING_PROCESS))
+    // With pivoted structure: 8 materials × 2 types = 16 entries (each with months array)
+    const expectedCount = 8 * 2
 
-    expect(result.materials).toHaveLength(expectedMaterials.length)
-    expectedMaterials.forEach((material) => {
-      expect(result.materials).toContainEqual({ material, totalTonnage: 0 })
-    })
+    expect(result.materials).toHaveLength(expectedCount)
     expect(result.total).toBe(0)
+    // Verify all entries have zero tonnage in all months
+    expect(
+      result.materials.every((m) =>
+        m.months.every((month) => month.tonnage === 0)
+      )
+    ).toBe(true)
   })
 
   it('returns generatedAt timestamp', async () => {
@@ -457,7 +633,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.FIBRE,
-      totalTonnage: 100
+      year: 2026,
+      type: 'Reprocessor',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(100)
   })
@@ -487,7 +669,13 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
-      totalTonnage: 100
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
     })
     expect(result.total).toBe(100)
   })

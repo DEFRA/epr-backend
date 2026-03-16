@@ -10,5 +10,11 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isOverseasSitesEnabled() {
     return flags.overseasSites ?? false
+  },
+  isReportsEnabled() {
+    return flags.reports ?? false
+  },
+  isRegisteredOnlyEnabled() {
+    return flags.registeredOnly ?? false
   }
 })

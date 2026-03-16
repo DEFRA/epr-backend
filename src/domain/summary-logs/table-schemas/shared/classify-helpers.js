@@ -14,7 +14,7 @@ export const CLASSIFICATION_REASON = Object.freeze({
  * @param {Record<string, any>} data - The row data
  * @param {string[]} requiredFields - Fields that must be filled
  * @param {Record<string, string[]>} unfilledValues - Per-field unfilled value definitions
- * @returns {{ outcome: 'EXCLUDED', reasons: Array<{ code: string, field: string }> } | null}
+ * @returns {import('../validation-pipeline.js').WasteBalanceExcludedResult | null}
  *   Returns EXCLUDED result with missing field reasons, or null if all filled
  */
 export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
@@ -41,7 +41,7 @@ export const checkRequiredFields = (data, requiredFields, unfilledValues) => {
  * marking for rows with dates outside the accreditation period.
  *
  * @param {string} dateField - The field name containing the date to check
- * @returns {(data: Record<string, any>, context: { accreditation: object }) => object|null}
+ * @returns {import('../validation-pipeline.js').ClassifyForWasteBalance}
  */
 export const createDateOnlyClassifier =
   (dateField) =>
@@ -55,5 +55,8 @@ export const createDateOnlyClassifier =
       }
     }
 
-    return null
+    return {
+      outcome: ROW_OUTCOME.EXCLUDED,
+      reasons: []
+    }
   }

@@ -53,7 +53,6 @@ export const getCognitoToken = async (clientId, clientSecret, cognitoUrl) => {
   const cachedEntry = tokenCache.get(cacheKey)
 
   if (isCachedTokenValid(cachedEntry)) {
-    logger.info({ message: `returning cached token for ${cognitoUrl}` })
     return cachedEntry.token
   }
 

@@ -92,7 +92,7 @@ const SUPPLEMENTARY_FIELDS = [
  * Tracks waste received for export. This schema defines:
  * - What counts as "unfilled" per field (unfilledValues)
  * - How to validate filled fields (validationSchema for VAL010)
- * - Which fields must be present for inclusion in Waste Balance (fieldsRequiredForInclusionInWasteBalance for VAL011)
+ * - classifyForWasteBalance: classifies a row for waste balance inclusion (VAL011)
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
@@ -179,16 +179,6 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       ...TONNAGE_EXPORT_MESSAGES
     })
     .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for inclusion in Waste Balance
-   *
-   * Per PAE-984: Only the 22 business-mandated fields are required.
-   * Supplementary fields (EXPORT_CONTROLS, INTERIM_SITE_ID,
-   * TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR) are not required for
-   * waste balance inclusion.
-   */
-  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS,
 
   classifyForWasteBalance: (data, { accreditation }) => {
     const missingResult = checkRequiredFields(

@@ -13,5 +13,11 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isOverseasSitesEnabled() {
     return config.get('featureFlags.overseasSites')
+  },
+  isReportsEnabled() {
+    return config.get('featureFlags.reports')
+  },
+  isRegisteredOnlyEnabled() {
+    return config.get('featureFlags.registeredOnly')
   }
 })

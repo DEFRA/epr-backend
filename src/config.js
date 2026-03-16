@@ -347,6 +347,18 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_OVERSEAS_SITES'
+    },
+    reports: {
+      doc: 'Feature Flag: Enable reports',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REPORTS'
+    },
+    registeredOnly: {
+      doc: 'Feature Flag: Enable registered only summary log uploads',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REGISTERED_ONLY'
     }
   },
   formSubmissionOverrides: {

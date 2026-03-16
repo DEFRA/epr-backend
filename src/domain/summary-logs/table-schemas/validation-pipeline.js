@@ -14,6 +14,40 @@
  */
 
 /**
+ * Result of classifying a row for waste balance calculation.
+ *
+ * - INCLUDED: row contributes to waste balance with a transaction amount
+ * - EXCLUDED/IGNORED: row does not contribute (missing fields, PRN issued, outside date range, etc.)
+ *
+ * @typedef {Object} WasteBalanceClassificationReason
+ * @property {string} code - The reason code (e.g. MISSING_REQUIRED_FIELD, PRN_ISSUED)
+ * @property {string} [field] - The field name, when the reason is field-specific
+ */
+
+/**
+ * @typedef {{ outcome: 'INCLUDED', reasons: WasteBalanceClassificationReason[], transactionAmount: number }} WasteBalanceIncludedResult
+ */
+
+/**
+ * @typedef {{ outcome: 'EXCLUDED' | 'IGNORED', reasons: WasteBalanceClassificationReason[] }} WasteBalanceExcludedResult
+ */
+
+/**
+ * @typedef {WasteBalanceIncludedResult | WasteBalanceExcludedResult} WasteBalanceClassificationResult
+ */
+
+/**
+ * Classifies a row for waste balance calculation.
+ *
+ * @callback ClassifyForWasteBalance
+ * @param {Record<string, any>} data - The row data
+ * @param {{ accreditation: object | null }} context - Classification context; accreditation may be null when called from the validation pipeline
+ * @returns {WasteBalanceClassificationResult}
+ */
+
+import { CLASSIFICATION_REASON } from './shared/classify-helpers.js'
+
+/**
  * Row classification outcomes
  *
  * @type {Readonly<{REJECTED: 'REJECTED', EXCLUDED: 'EXCLUDED', INCLUDED: 'INCLUDED', IGNORED: 'IGNORED'}>}
@@ -79,6 +113,51 @@ export const filterToFilled = (row, unfilledValues) => {
  */
 
 /**
+ * Maps a classifyForWasteBalance result to a classifyRow result.
+ *
+ * Only MISSING_REQUIRED_FIELD reasons are relevant to the validation pipeline.
+ * Other exclusion reasons (PRN_ISSUED, OUTSIDE_ACCREDITATION_PERIOD) indicate
+ * the row had all required fields but was excluded for waste balance reasons —
+ * from classifyRow's perspective, those rows are INCLUDED (passed validation).
+ *
+ * @param {WasteBalanceClassificationResult} wasteBalanceResult
+ * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
+ */
+const mapWasteBalanceResult = (wasteBalanceResult) => {
+  const missingFieldReasons = wasteBalanceResult.reasons.filter(
+    (reason) => reason.code === CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD
+  )
+
+  if (missingFieldReasons.length > 0) {
+    return {
+      outcome: ROW_OUTCOME.EXCLUDED,
+      issues: missingFieldReasons.map((reason) => ({
+        code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+        field: /** @type {string} */ (reason.field)
+      }))
+    }
+  }
+
+  // EXCLUDED with no reasons means the table does not contribute to waste balance
+  if (
+    wasteBalanceResult.outcome === ROW_OUTCOME.EXCLUDED &&
+    wasteBalanceResult.reasons.length === 0
+  ) {
+    return {
+      outcome: ROW_OUTCOME.EXCLUDED,
+      issues: []
+    }
+  }
+
+  // INCLUDED or EXCLUDED/IGNORED for non-missing-field reasons (e.g. PRN_ISSUED)
+  // means all required fields were present — row passes validation
+  return {
+    outcome: ROW_OUTCOME.INCLUDED,
+    issues: []
+  }
+}
+
+/**
  * Classifies a row based on the validation pipeline
  *
  * Pipeline steps:
@@ -91,15 +170,11 @@ export const filterToFilled = (row, unfilledValues) => {
  * @param {Object} tableSchema - The table schema
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
- * @param {string[]} tableSchema.fieldsRequiredForInclusionInWasteBalance - Fields required for VAL011
+ * @param {ClassifyForWasteBalance} [tableSchema.classifyForWasteBalance] - Waste balance classifier
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
  */
 export const classifyRow = (row, tableSchema) => {
-  const {
-    unfilledValues,
-    validationSchema,
-    fieldsRequiredForInclusionInWasteBalance
-  } = tableSchema
+  const { unfilledValues, validationSchema } = tableSchema
 
   // Step 1: Filter to filled fields only
   const filledFields = filterToFilled(row, unfilledValues)
@@ -122,35 +197,21 @@ export const classifyRow = (row, tableSchema) => {
   }
 
   // Step 3: VAL011 - Check required fields are present
-  // If fieldsRequiredForInclusionInWasteBalance is empty, this table does not contribute
-  // to the waste balance at all - all rows should be EXCLUDED
-  if (fieldsRequiredForInclusionInWasteBalance.length === 0) {
+  // Schemas without classifyForWasteBalance have no waste balance, so all
+  // rows are EXCLUDED — there's nothing to include them in.
+  if (!tableSchema.classifyForWasteBalance) {
     return {
       outcome: ROW_OUTCOME.EXCLUDED,
       issues: []
     }
   }
 
-  const missingRequired = fieldsRequiredForInclusionInWasteBalance.filter(
-    (field) => {
-      const fieldUnfilledValues = unfilledValues[field] || []
-      return !isFilled(row[field], fieldUnfilledValues)
-    }
-  )
-
-  if (missingRequired.length > 0) {
-    return {
-      outcome: ROW_OUTCOME.EXCLUDED,
-      issues: missingRequired.map((field) => ({
-        code: 'MISSING_REQUIRED_FIELD',
-        field
-      }))
-    }
-  }
-
-  // Step 4: All pass - INCLUDED
-  return {
-    outcome: ROW_OUTCOME.INCLUDED,
-    issues: []
-  }
+  // The validation pipeline only needs the required-fields check from
+  // classifyForWasteBalance. Accreditation is null because the pipeline
+  // doesn't have that context — isWithinAccreditationDateRange treats
+  // null accreditation as "within range", so subsequent checks are skipped.
+  const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
+    accreditation: null
+  })
+  return mapWasteBalanceResult(wasteBalanceResult)
 }

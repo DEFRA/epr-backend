@@ -20,42 +20,9 @@ jobs:
     outputs:
       docs-only: ${{ steps.check.outputs.docs-only }}
     steps:
-      - name: Check branch name
-        uses: actions/github-script@v8
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const branchName = context.payload.pull_request.head.ref;
-            const regex = /^(PAE-\d+)[-_]{1}.+$/i;
-            const [match, ticketKey] = branchName.match(regex) ?? [null, null];
+      - name: Prepare PR
+        uses: DEFRA/epr-re-ex-service/.github/actions/pr-preparation@main
 
-            if (!match || !ticketKey) {
-              core.setFailed('Branch name does not match the required format: PAE-<NUMBER>-<desc>');
-            } else {
-              core.exportVariable('ticketKey', ticketKey.toUpperCase());
-            }
-      - name: Add ticket link to PR description
-        uses: actions/github-script@v8
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const { pull_request, repository } = context.payload;
-            const { body: previousBody } = pull_request;
-            const { ticketKey } = process.env;
-            const ticketLink = `[${ticketKey}](https://eaflood.atlassian.net/browse/${ticketKey})`;
-
-            if (!previousBody.includes(ticketLink)) {
-              github.rest.pulls.update({
-                owner: repository.owner.login,
-                repo: repository.name,
-                pull_number: pull_request.number,
-                body: `Ticket: ${ticketLink}\n${previousBody}`,
-              });
-            } else {
-              console.log('PR description already contains a link to the ticket')
-            }
       - name: Check for docs-only changes
         id: check
         uses: actions/github-script@v8
