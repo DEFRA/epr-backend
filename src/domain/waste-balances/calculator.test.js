@@ -73,7 +73,11 @@ const buildWasteRecord = (overrides = {}) => {
 describe('Waste Balance Calculator', () => {
   const accreditation = {
     validFrom: '2023-01-01',
-    validTo: '2023-12-31'
+    validTo: '2023-12-31',
+    statusHistory: [
+      { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+      { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+    ]
   }
 
   const testUser = {

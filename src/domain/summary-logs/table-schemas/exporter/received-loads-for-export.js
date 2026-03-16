@@ -1,3 +1,4 @@
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import Joi from 'joi'
 import {
   MESSAGES,
@@ -33,7 +34,7 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -180,7 +181,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     })
     .prefs({ abortEarly: false }),
 
-  classifyForWasteBalance: (data, { accreditation }) => {
+  classifyForWasteBalance: (
+    /** @type {Record<string, any>} */ data,
+    { /** @type {Accreditation | undefined} */ accreditation }
+  ) => {
     const missingResult = checkRequiredFields(
       data,
       WASTE_BALANCE_FIELDS,
@@ -191,8 +195,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     }
 
     if (
-      !isWithinAccreditationDateRange(
-        data[FIELDS.DATE_OF_EXPORT],
+      !isAccreditedAtDates(
+        [data[FIELDS.DATE_OF_EXPORT], data[FIELDS.DATE_RECEIVED_BY_OSR]],
         accreditation
       )
     ) {

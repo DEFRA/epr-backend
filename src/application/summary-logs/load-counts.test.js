@@ -3,7 +3,11 @@ import {
   countByValidity,
   mergeLoads
 } from './load-counts.js'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_TYPE
+} from '#domain/waste-records/model.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 const CURRENT_SUMMARY_LOG_ID = 'current-summary-log'
 const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
@@ -13,26 +17,30 @@ const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
  * @param {Object} options
  * @param {string} options.status - VERSION_STATUS value
  * @param {string} options.summaryLogId - The summary log ID for the last version
- * @param {Array} options.issues - Validation issues (default empty)
- * @param {string} options.outcome - Outcome from validation pipeline (default 'INCLUDED')
- * @returns {{ record: Object, issues: Array, outcome: string }}
+ * @param {Array} [options.issues] - Validation issues (default empty)
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} [options.outcome] - Outcome from validation pipeline (default 'INCLUDED')
+ * @param {Array} [options.previousVersions] - Previous versions to prepend (default empty)
+ * @param {import('#application/waste-records/transform-from-summary-log.js').WasteRecordChange} [options.change] - What happened to this record (default 'created')
+ * @returns {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord}
  */
 const createValidatedWasteRecord = ({
   status,
   summaryLogId,
   issues = [],
-  outcome = 'INCLUDED',
-  previousVersions = []
+  outcome = ROW_OUTCOME.INCLUDED,
+  previousVersions = [],
+  change = 'created'
 }) => ({
   record: {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     rowId: `row-${Math.random().toString(36).substring(7)}`,
-    type: 'received',
+    type: WASTE_RECORD_TYPE.RECEIVED,
     data: { ROW_ID: '10001' },
     versions: [
       ...previousVersions,
       {
+        id: `ver-${Math.random().toString(36).substring(7)}`,
         createdAt: new Date().toISOString(),
         status,
         summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
@@ -41,7 +49,8 @@ const createValidatedWasteRecord = ({
     ]
   },
   issues,
-  outcome
+  outcome,
+  change
 })
 
 describe('countByWasteBalanceInclusion', () => {
@@ -95,6 +104,7 @@ describe('countByWasteBalanceInclusion', () => {
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           previousVersions: [
             {
+              id: 'prev-ver-1',
               createdAt: '2025-01-01T00:00:00.000Z',
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -143,7 +153,7 @@ describe('countByWasteBalanceInclusion', () => {
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [],
-          outcome: 'INCLUDED'
+          outcome: ROW_OUTCOME.INCLUDED
         })
       ]
 
@@ -161,8 +171,15 @@ describe('countByWasteBalanceInclusion', () => {
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [{ severity: 'error', message: 'missing required field' }],
-          outcome: 'EXCLUDED'
+          issues: [
+            {
+              severity: 'error',
+              category: 'TECHNICAL',
+              message: 'missing required field',
+              code: 'MISSING_FIELD'
+            }
+          ],
+          outcome: ROW_OUTCOME.EXCLUDED
         })
       ]
 
@@ -180,8 +197,15 @@ describe('countByWasteBalanceInclusion', () => {
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [{ severity: 'error', message: 'invalid row id' }],
-          outcome: 'REJECTED'
+          issues: [
+            {
+              severity: 'error',
+              category: 'TECHNICAL',
+              message: 'invalid row id',
+              code: 'INVALID_ROW_ID'
+            }
+          ],
+          outcome: ROW_OUTCOME.REJECTED
         })
       ]
 
@@ -203,23 +227,31 @@ describe('countByWasteBalanceInclusion', () => {
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [],
-          outcome: 'INCLUDED'
+          outcome: ROW_OUTCOME.INCLUDED
         }),
         // Added, excluded
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          issues: [{ severity: 'error', message: 'test' }],
-          outcome: 'EXCLUDED'
+          issues: [
+            {
+              severity: 'error',
+              category: 'TECHNICAL',
+              message: 'test',
+              code: 'TEST_ERROR'
+            }
+          ],
+          outcome: ROW_OUTCOME.EXCLUDED
         }),
         // Adjusted, included
         createValidatedWasteRecord({
           status: VERSION_STATUS.UPDATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [],
-          outcome: 'INCLUDED',
+          outcome: ROW_OUTCOME.INCLUDED,
           previousVersions: [
             {
+              id: 'prev-ver-1',
               createdAt: '2025-01-01T00:00:00.000Z',
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -240,8 +272,15 @@ describe('countByWasteBalanceInclusion', () => {
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
-          issues: [{ severity: 'error', message: 'test' }],
-          outcome: 'EXCLUDED'
+          issues: [
+            {
+              severity: 'error',
+              category: 'TECHNICAL',
+              message: 'test',
+              code: 'TEST_ERROR'
+            }
+          ],
+          outcome: ROW_OUTCOME.EXCLUDED
         })
       ]
 
@@ -259,6 +298,85 @@ describe('countByWasteBalanceInclusion', () => {
     })
   })
 
+  describe('skips IGNORED rows (suspended accreditation silent exclusion)', () => {
+    it('does not count IGNORED rows in any category', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED
+        }),
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.INCLUDED
+        })
+      ]
+
+      const result = countByWasteBalanceInclusion({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.added.included.count).toBe(1)
+      expect(result.added.excluded.count).toBe(0)
+    })
+
+    it('silently excludes IGNORED rows across added, adjusted, and unchanged categories', () => {
+      const wasteRecords = [
+        // Added, IGNORED (suspended accreditation)
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED
+        }),
+        // Adjusted, IGNORED (suspended accreditation)
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED,
+          previousVersions: [
+            {
+              id: 'prev-ver-1',
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: {
+                id: PREVIOUS_SUMMARY_LOG_ID,
+                uri: 's3://bucket/old-key'
+              },
+              data: { ROW_ID: '10001' }
+            }
+          ]
+        }),
+        // Unchanged, IGNORED (suspended accreditation)
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED
+        }),
+        // Added, INCLUDED (not suspended)
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.INCLUDED
+        })
+      ]
+
+      const result = countByWasteBalanceInclusion({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      // Only the non-IGNORED record should appear
+      expect(result.added.included.count).toBe(1)
+      expect(result.added.excluded.count).toBe(0)
+      expect(result.adjusted.included.count).toBe(0)
+      expect(result.adjusted.excluded.count).toBe(0)
+      expect(result.unchanged.included.count).toBe(0)
+      expect(result.unchanged.excluded.count).toBe(0)
+    })
+  })
+
   describe('edge cases', () => {
     it('handles record with missing summaryLog gracefully (classifies as unchanged)', () => {
       const wasteRecords = [
@@ -267,10 +385,11 @@ describe('countByWasteBalanceInclusion', () => {
             organisationId: 'org-1',
             registrationId: 'reg-1',
             rowId: 'row-1',
-            type: 'received',
+            type: WASTE_RECORD_TYPE.RECEIVED,
             data: {},
             versions: [
               {
+                id: 'ver-1',
                 createdAt: new Date().toISOString(),
                 status: VERSION_STATUS.CREATED,
                 summaryLog: null, // Missing summaryLog
@@ -279,7 +398,8 @@ describe('countByWasteBalanceInclusion', () => {
             ]
           },
           issues: [],
-          outcome: 'INCLUDED'
+          outcome: ROW_OUTCOME.INCLUDED,
+          change: /** @type {const} */ ('created')
         }
       ]
 
@@ -301,12 +421,13 @@ describe('countByWasteBalanceInclusion', () => {
             organisationId: 'org-1',
             registrationId: 'reg-1',
             rowId: 'row-1',
-            type: 'received',
+            type: WASTE_RECORD_TYPE.RECEIVED,
             data: {},
             versions: []
           },
           issues: [],
-          outcome: 'INCLUDED'
+          outcome: ROW_OUTCOME.INCLUDED,
+          change: /** @type {const} */ ('created')
         }
       ]
 
@@ -329,10 +450,11 @@ describe('countByWasteBalanceInclusion', () => {
           organisationId: 'org-1',
           registrationId: 'reg-1',
           rowId: `row-${i + 1}`,
-          type: 'received',
+          type: WASTE_RECORD_TYPE.RECEIVED,
           data: {},
           versions: [
             {
+              id: `ver-${i + 1}`,
               createdAt: new Date().toISOString(),
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -344,7 +466,8 @@ describe('countByWasteBalanceInclusion', () => {
           ]
         },
         issues: [],
-        outcome: 'INCLUDED'
+        outcome: ROW_OUTCOME.INCLUDED,
+        change: /** @type {const} */ ('created')
       }))
 
       const result = countByWasteBalanceInclusion({
@@ -369,10 +492,11 @@ describe('countByWasteBalanceInclusion', () => {
           organisationId: 'org-1',
           registrationId: 'reg-1',
           rowId: `included-${i + 1}`,
-          type: 'received',
+          type: WASTE_RECORD_TYPE.RECEIVED,
           data: {},
           versions: [
             {
+              id: `ver-${i + 1}`,
               createdAt: new Date().toISOString(),
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -384,7 +508,8 @@ describe('countByWasteBalanceInclusion', () => {
           ]
         },
         issues: [],
-        outcome: 'INCLUDED'
+        outcome: ROW_OUTCOME.INCLUDED,
+        change: /** @type {const} */ ('created')
       }))
 
       const excludedRecords = Array.from({ length: 120 }, (_, i) => ({
@@ -392,10 +517,11 @@ describe('countByWasteBalanceInclusion', () => {
           organisationId: 'org-1',
           registrationId: 'reg-1',
           rowId: `excluded-${i + 1}`,
-          type: 'received',
+          type: WASTE_RECORD_TYPE.RECEIVED,
           data: {},
           versions: [
             {
+              id: `ver-${i + 1}`,
               createdAt: new Date().toISOString(),
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -406,8 +532,16 @@ describe('countByWasteBalanceInclusion', () => {
             }
           ]
         },
-        issues: [{ severity: 'error', message: 'test' }],
-        outcome: 'EXCLUDED'
+        issues: [
+          {
+            severity: 'error',
+            category: 'TECHNICAL',
+            message: 'test',
+            code: 'TEST_ERROR'
+          }
+        ],
+        outcome: ROW_OUTCOME.EXCLUDED,
+        change: /** @type {const} */ ('created')
       }))
 
       const result = countByWasteBalanceInclusion({
@@ -476,6 +610,7 @@ describe('countByValidity', () => {
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           previousVersions: [
             {
+              id: 'prev-ver-1',
               createdAt: '2025-01-01T00:00:00.000Z',
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -569,12 +704,12 @@ describe('countByValidity', () => {
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: 'IGNORED'
+          outcome: ROW_OUTCOME.IGNORED
         }),
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
-          outcome: 'INCLUDED'
+          outcome: ROW_OUTCOME.INCLUDED
         })
       ]
 
@@ -585,6 +720,59 @@ describe('countByValidity', () => {
 
       expect(result.added.valid.count).toBe(1)
     })
+
+    it('silently excludes IGNORED rows across added, adjusted, and unchanged categories', () => {
+      const wasteRecords = [
+        // Added, IGNORED
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED
+        }),
+        // Adjusted, IGNORED
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED,
+          previousVersions: [
+            {
+              id: 'prev-ver-1',
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: {
+                id: PREVIOUS_SUMMARY_LOG_ID,
+                uri: 's3://bucket/old-key'
+              },
+              data: { ROW_ID: '10001' }
+            }
+          ]
+        }),
+        // Unchanged, IGNORED
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED
+        }),
+        // Added, INCLUDED (not ignored)
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.INCLUDED
+        })
+      ]
+
+      const result = countByValidity({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.added.valid.count).toBe(1)
+      expect(result.added.invalid.count).toBe(0)
+      expect(result.adjusted.valid.count).toBe(0)
+      expect(result.adjusted.invalid.count).toBe(0)
+      expect(result.unchanged.valid.count).toBe(0)
+      expect(result.unchanged.invalid.count).toBe(0)
+    })
   })
 
   describe('truncation', () => {
@@ -594,10 +782,11 @@ describe('countByValidity', () => {
           organisationId: 'org-1',
           registrationId: 'reg-1',
           rowId: `row-${i + 1}`,
-          type: 'received',
+          type: WASTE_RECORD_TYPE.RECEIVED,
           data: {},
           versions: [
             {
+              id: `ver-${i + 1}`,
               createdAt: new Date().toISOString(),
               status: VERSION_STATUS.CREATED,
               summaryLog: {
@@ -609,7 +798,8 @@ describe('countByValidity', () => {
           ]
         },
         issues: [],
-        outcome: 'INCLUDED'
+        outcome: ROW_OUTCOME.INCLUDED,
+        change: /** @type {const} */ ('created')
       }))
 
       const result = countByValidity({
