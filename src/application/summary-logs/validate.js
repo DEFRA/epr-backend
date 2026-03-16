@@ -431,7 +431,6 @@ export const createSummaryLogsValidator = ({
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
 
-  // NOSONAR(javascript:S138) — 2 lines over max due to temporary featureFlags param for registered-only feature flag
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
     assertValidatingStatus(result, summaryLogId)
