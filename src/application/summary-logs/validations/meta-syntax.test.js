@@ -319,6 +319,58 @@ describe('validateMetaSyntax', () => {
     expect(fallback).toBeDefined()
   })
 
+  describe('registered-only processing types', () => {
+    it('rejects REPROCESSOR_REGISTERED_ONLY when feature flag is disabled', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+        }
+      }
+      const featureFlags = { isRegisteredOnlyEnabled: () => false }
+
+      const result = validateMetaSyntax({ parsed, featureFlags })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('PROCESSING_TYPE')
+      expect(fatals[0].message).toContain('must be one of')
+      expect(fatals[0].message).not.toContain('REPROCESSOR_REGISTERED_ONLY')
+    })
+
+    it('accepts REPROCESSOR_REGISTERED_ONLY when feature flag is enabled', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+        }
+      }
+      const featureFlags = { isRegisteredOnlyEnabled: () => true }
+
+      const result = validateMetaSyntax({ parsed, featureFlags })
+
+      expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+    })
+
+    it('rejects REPROCESSOR_REGISTERED_ONLY when no feature flags provided', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+    })
+  })
+
   describe('type coercion for ExcelJS values', () => {
     it('coerces numeric REGISTRATION_NUMBER to string', () => {
       // ExcelJS may return a number if the cell looks numeric
