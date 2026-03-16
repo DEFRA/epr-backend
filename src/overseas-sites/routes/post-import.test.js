@@ -30,7 +30,6 @@ describe(`${orsImportCreatePath} route`, () => {
     beforeAll(async () => {
       const factory = createInMemoryOrsImportsRepository()
       orsImportsRepository = factory()
-      vi.spyOn(orsImportsRepository, 'create')
 
       uploadsRepository = createInMemoryUploadsRepository()
 
