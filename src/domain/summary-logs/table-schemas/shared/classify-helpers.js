@@ -1,13 +1,10 @@
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
-import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
+import { isFilled, ROW_OUTCOME } from '../validation-pipeline.js'
+import { CLASSIFICATION_REASON } from './classification-reason.js'
 
-export const CLASSIFICATION_REASON = Object.freeze({
-  MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
-  PRN_ISSUED: 'PRN_ISSUED',
-  OUTSIDE_ACCREDITATION_PERIOD: 'OUTSIDE_ACCREDITATION_PERIOD',
-  PRODUCT_WEIGHT_NOT_ADDED: 'PRODUCT_WEIGHT_NOT_ADDED'
-})
+export { CLASSIFICATION_REASON }
+
+/** @import {Accreditation} from '#repositories/organisations/port.js' */
 
 /**
  * Checks whether all required fields are filled in the row data.

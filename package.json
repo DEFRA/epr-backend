@@ -105,6 +105,7 @@
     "@vitest/coverage-v8": "4.0.18",
     "@vitest/eslint-plugin": "1.6.9",
     "eslint": "9.39.2",
+    "eslint-import-resolver-typescript": "4.4.4",
     "eslint-plugin-n": "17.24.0",
     "husky": "9.1.7",
     "knip": "5.85.0",
