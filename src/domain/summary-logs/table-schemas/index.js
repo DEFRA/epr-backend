@@ -2,6 +2,7 @@ import { PROCESSING_TYPES } from '../meta-fields.js'
 import { TABLE_SCHEMAS as EXPORTER } from './exporter/index.js'
 import { TABLE_SCHEMAS as REPROCESSOR_INPUT } from './reprocessor-input/index.js'
 import { TABLE_SCHEMAS as REPROCESSOR_OUTPUT } from './reprocessor-output/index.js'
+import { TABLE_SCHEMAS as REPROCESSOR_REGISTERED_ONLY } from './reprocessor-registered-only/index.js'
 
 /**
  * Registry mapping processing types to their table schemas
@@ -19,6 +20,7 @@ import { TABLE_SCHEMAS as REPROCESSOR_OUTPUT } from './reprocessor-output/index.
 export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT,
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT,
+  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]: REPROCESSOR_REGISTERED_ONLY,
   [PROCESSING_TYPES.EXPORTER]: EXPORTER
 }
 /** @typedef {import('#repositories/organisations/port.js').Accreditation} Accreditation */

@@ -82,6 +82,7 @@ describe('SummaryLogsValidator integration', () => {
    *  reprocessingType?: 'input' | 'output';
    *  metadata?: Record<string, MetadataEntry>;
    *  summaryLogExtractor?: SummaryLogExtractor;
+   *  featureFlags?: import('#feature-flags/feature-flags.port.js').FeatureFlags;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -91,7 +92,8 @@ describe('SummaryLogsValidator integration', () => {
     accreditationNumber,
     reprocessingType = 'input',
     metadata,
-    summaryLogExtractor = null
+    summaryLogExtractor = null,
+    featureFlags
   }) => {
     const testOrg = createTestOrg(
       registrationType,
@@ -114,7 +116,8 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      summaryLogExtractor: extractor
+      summaryLogExtractor: extractor,
+      featureFlags
     })
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
@@ -514,6 +517,74 @@ describe('SummaryLogsValidator integration', () => {
       expect(updated.summaryLog.validation.issues).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ code: 'ACCREDITATION_UNEXPECTED' })
+        ])
+      )
+    })
+  })
+
+  describe('registered-only reprocessor', () => {
+    const registeredOnlyMetadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-789',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'REPROCESSOR_REGISTERED_ONLY',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 5,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      }
+    }
+
+    const featureFlagsEnabled = { isRegisteredOnlyEnabled: () => true }
+    const featureFlagsDisabled = { isRegisteredOnlyEnabled: () => false }
+
+    it('should validate successfully with feature flag enabled', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: featureFlagsEnabled
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+
+    it('should reject with feature flag disabled', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: featureFlagsDisabled
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
+        ])
+      )
+    })
+
+    it('should not require accreditation number', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: featureFlagsEnabled
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'ACCREDITATION_MISSING' })
         ])
       )
     })
