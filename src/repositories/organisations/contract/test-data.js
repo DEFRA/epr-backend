@@ -26,7 +26,9 @@ export const getValidDateRange = () => {
 function initializeStatusForItems(items) {
   if (Array.isArray(items)) {
     for (const item of items) {
-      item.statusHistory = createInitialStatusHistory()
+      if (!item.statusHistory) {
+        item.statusHistory = createInitialStatusHistory()
+      }
     }
   }
 }

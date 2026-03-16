@@ -318,9 +318,27 @@ export const createInMemoryOrganisationsRepository = (
     const insertFn = performInsert(storage, staleCache)
     const replaceFn = performReplace(storage, staleCache, pendingSyncRef)
 
+    const replaceRawFn = async (id, version, document) => {
+      const validatedId = validateId(id)
+      const existingIndex = storage.findIndex((o) => o._id === validatedId)
+      if (existingIndex === -1) {
+        throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+      }
+      if (storage[existingIndex].version !== version) {
+        throw Boom.conflict(`Version conflict`)
+      }
+      storage[existingIndex] = {
+        _id: validatedId,
+        ...document,
+        version: version + 1
+      }
+      scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+    }
+
     return {
       insert: insertFn,
       replace: replaceFn,
+      replaceRaw: replaceRawFn,
       findAll: performFindAll(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),

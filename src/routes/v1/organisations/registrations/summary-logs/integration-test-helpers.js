@@ -659,7 +659,11 @@ const buildComplexTestOrg = ({
             line1: '123 Test Street',
             postcode: 'AB1 2CD'
           }
-        }
+        },
+        statusHistory: [
+          { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+        ]
       }
     ]
   })

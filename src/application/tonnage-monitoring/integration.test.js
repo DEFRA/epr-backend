@@ -506,6 +506,50 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     expect(result.total).toBe(100)
   })
 
+  it('excludes records with null or unparseable dispatch dates', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC)
+        ])
+      )
+
+    await db.collection(WASTE_RECORDS_COLLECTION).insertMany([
+      createExporterWasteRecord(orgId1, regId1, 100, '2026-01-15'),
+      createExporterWasteRecord(orgId1, regId1, 999, '09/02/20256'), // invalid year (5 digits)
+      createExporterWasteRecord(orgId1, regId1, 999, '2026-99-15'), // invalid month
+      createExporterWasteRecord(orgId1, regId1, 999, '2026-01-99'), // invalid day
+      createExporterWasteRecord(orgId1, regId1, 999, 'not-a-date'), // not a date string,
+      createExporterWasteRecord(orgId1, regId1, 999, null),
+      {
+        organisationId: orgId1,
+        registrationId: regId1,
+        rowId: 'row-null-date',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 999
+        },
+        versions: []
+      }
+    ])
+
+    const result = await aggregateTonnageByMaterial(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      year: 2026,
+      type: 'Exporter',
+      months: [
+        { month: 'Jan', tonnage: 100 },
+        { month: 'Feb', tonnage: 0 },
+        { month: 'Mar', tonnage: 0 }
+      ]
+    })
+    expect(result.total).toBe(100)
+  })
+
   it('excludes records with zero tonnage', async () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
