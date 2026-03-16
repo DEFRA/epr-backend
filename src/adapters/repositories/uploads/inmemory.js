@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 /**
  * @typedef {Object} PendingUpload
  * @property {string} uploadId
- * @property {object} options
+ * @property {InitiateSummaryLogUploadOptions | InitiateOrsImportOptions} options
  */
 
 /**
@@ -89,7 +89,9 @@ export const createInMemoryUploadsRepository = (config = {}) => {
         throw new Error(`No pending upload found for uploadId: ${uploadId}`)
       }
 
-      const { organisationId, registrationId, callbackUrl } = pending.options
+      const /** @type {InitiateSummaryLogUploadOptions} */ options =
+          /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
+      const { organisationId, registrationId, callbackUrl } = options
       const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
       const s3Uri = `s3://${s3Bucket}/${s3Key}`
 
