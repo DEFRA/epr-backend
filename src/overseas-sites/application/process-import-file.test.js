@@ -22,7 +22,7 @@ describe('processImportFile', () => {
 
     organisationsRepository = {
       findByOrgId: vi.fn(),
-      mergeRegistrationOverseasSites: vi.fn()
+      replaceRegistrationOverseasSites: vi.fn()
     }
 
     logger = {
@@ -38,7 +38,7 @@ describe('processImportFile', () => {
     logger
   })
 
-  it('creates overseas site records and merges into registration', async () => {
+  it('creates overseas site records and replaces registration mapping', async () => {
     const buffer = Buffer.from('fake-spreadsheet')
 
     parse.mockResolvedValue({
@@ -102,7 +102,7 @@ describe('processImportFile', () => {
       .mockResolvedValueOnce({ id: 'site-id-aaa' })
       .mockResolvedValueOnce({ id: 'site-id-bbb' })
 
-    organisationsRepository.mergeRegistrationOverseasSites.mockResolvedValue(
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
       true
     )
 
@@ -130,7 +130,7 @@ describe('processImportFile', () => {
     expect(secondCall.country).toBe('France')
 
     expect(
-      organisationsRepository.mergeRegistrationOverseasSites
+      organisationsRepository.replaceRegistrationOverseasSites
     ).toHaveBeenCalledWith('org-mongo-id-123', 5, 'reg-id-abc', {
       '001': { overseasSiteId: 'site-id-aaa' },
       '002': { overseasSiteId: 'site-id-bbb' }
@@ -342,7 +342,7 @@ describe('processImportFile', () => {
     })
 
     overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
-    organisationsRepository.mergeRegistrationOverseasSites.mockResolvedValue(
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
       true
     )
 
@@ -353,7 +353,7 @@ describe('processImportFile', () => {
     expect(createArg.validFrom.toISOString()).toContain('2025-06-15')
   })
 
-  it('returns failure when mergeRegistrationOverseasSites has version conflict', async () => {
+  it('returns failure when replaceRegistrationOverseasSites has version conflict', async () => {
     const buffer = Buffer.from('spreadsheet')
 
     parse.mockResolvedValue({
@@ -397,7 +397,7 @@ describe('processImportFile', () => {
     })
 
     overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
-    organisationsRepository.mergeRegistrationOverseasSites.mockResolvedValue(
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
       false
     )
 
@@ -451,7 +451,7 @@ describe('processImportFile', () => {
     })
 
     overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
-    organisationsRepository.mergeRegistrationOverseasSites.mockResolvedValue(
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
       true
     )
 
