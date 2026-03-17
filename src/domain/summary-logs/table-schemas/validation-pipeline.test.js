@@ -60,6 +60,18 @@ describe('validation-pipeline', () => {
         isFilled('-- Select --', ['Please select...', '-- Select --'])
       ).toBe(false)
     })
+
+    it('returns false for value with leading whitespace matching unfilledValues', () => {
+      expect(isFilled(' Please select...', ['Please select...'])).toBe(false)
+    })
+
+    it('returns false for value with trailing whitespace matching unfilledValues', () => {
+      expect(isFilled('Please select... ', ['Please select...'])).toBe(false)
+    })
+
+    it('returns false for value with leading and trailing whitespace matching unfilledValues', () => {
+      expect(isFilled('  Please select...  ', ['Please select...'])).toBe(false)
+    })
   })
 
   describe('filterToFilled', () => {
