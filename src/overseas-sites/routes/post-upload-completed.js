@@ -15,6 +15,10 @@ import {
 /** @import { OrsImportsCommandExecutor } from '#overseas-sites/imports/worker/port.js' */
 
 /**
+ * @typedef {{ form: { file: object | object[] } }} OrsUploadCompletedPayload
+ */
+
+/**
  * @param {object|object[]} fileOrFiles
  * @returns {object[]}
  */
@@ -51,7 +55,7 @@ export const orsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {orsImportsRepository: OrsImportsRepository, orsImportsWorker: OrsImportsCommandExecutor}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<OrsUploadCompletedPayload> & {orsImportsRepository: OrsImportsRepository, orsImportsWorker: OrsImportsCommandExecutor}} request
    * @param {object} h
    */
   handler: async (request, h) => {
