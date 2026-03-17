@@ -3,9 +3,6 @@ import { transformReceivedLoadsRowRegisteredOnly } from './received-loads-reproc
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
-const TEST_ROW_INDEX_5 = 5
-const TEST_ROW_INDEX_42 = 42
-
 describe('transformReceivedLoadsRowRegisteredOnly', () => {
   it('transforms valid row data correctly', () => {
     const rowData = {
@@ -32,9 +29,9 @@ describe('transformReceivedLoadsRowRegisteredOnly', () => {
       NET_WEIGHT: 10.5
     }
 
-    expect(() =>
-      transformReceivedLoadsRowRegisteredOnly(rowData, TEST_ROW_INDEX_5)
-    ).toThrow(`Missing ROW_ID at row ${TEST_ROW_INDEX_5}`)
+    expect(() => transformReceivedLoadsRowRegisteredOnly(rowData, 5)).toThrow(
+      'Missing ROW_ID at row 5'
+    )
   })
 
   it('transforms row when optional fields are missing', () => {
@@ -60,8 +57,8 @@ describe('transformReceivedLoadsRowRegisteredOnly', () => {
       NET_WEIGHT: 10.5
     }
 
-    expect(() =>
-      transformReceivedLoadsRowRegisteredOnly(rowData, TEST_ROW_INDEX_42)
-    ).toThrow(`Missing ROW_ID at row ${TEST_ROW_INDEX_42}`)
+    expect(() => transformReceivedLoadsRowRegisteredOnly(rowData, 42)).toThrow(
+      'Missing ROW_ID at row 42'
+    )
   })
 })
