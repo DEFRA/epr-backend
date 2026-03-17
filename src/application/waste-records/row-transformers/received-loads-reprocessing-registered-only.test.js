@@ -17,7 +17,9 @@ describe('transformReceivedLoadsRowRegisteredOnly', () => {
       wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
       rowId: 'row-1000',
       data: {
-        ...rowData,
+        ROW_ID: 'row-1000',
+        MONTH_RECEIVED_FOR_REPROCESSING: '2025-01',
+        NET_WEIGHT: 10.5,
         processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
       }
     })
