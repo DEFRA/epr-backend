@@ -6,6 +6,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSitesCreatePath } from './post.js'
 import { overseasSiteByIdPath } from './get-by-id.js'
 import { orsImportStatusPath } from './get-import-status.js'
+import { orsImportCreatePath } from './post-import.js'
 import { overseasSitesListPath } from './list.js'
 
 const hasRoute = (server, method, path) =>
@@ -24,6 +25,7 @@ describe('Overseas Sites feature flag', () => {
     expect(hasRoute(server, 'post', overseasSitesCreatePath)).toBe(true)
     expect(hasRoute(server, 'get', overseasSiteByIdPath)).toBe(true)
     expect(hasRoute(server, 'get', orsImportStatusPath)).toBe(true)
+    expect(hasRoute(server, 'post', orsImportCreatePath)).toBe(true)
     expect(hasRoute(server, 'get', overseasSitesListPath)).toBe(true)
     expect(hasRoute(server, 'put', overseasSiteByIdPath)).toBe(true)
     expect(hasRoute(server, 'delete', overseasSiteByIdPath)).toBe(true)
@@ -41,6 +43,7 @@ describe('Overseas Sites feature flag', () => {
     expect(hasRoute(server, 'post', overseasSitesCreatePath)).toBe(false)
     expect(hasRoute(server, 'get', overseasSiteByIdPath)).toBe(false)
     expect(hasRoute(server, 'get', orsImportStatusPath)).toBe(false)
+    expect(hasRoute(server, 'post', orsImportCreatePath)).toBe(false)
     expect(hasRoute(server, 'get', overseasSitesListPath)).toBe(false)
     expect(hasRoute(server, 'put', overseasSiteByIdPath)).toBe(false)
     expect(hasRoute(server, 'delete', overseasSiteByIdPath)).toBe(false)

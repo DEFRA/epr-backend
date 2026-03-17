@@ -60,6 +60,22 @@ export const testUploadsRepositoryContract = (it) => {
       expect(result.statusUrl).toContain(result.uploadId)
     })
 
+    it('initiates ORS import upload and returns upload details', async () => {
+      const result = await uploadsRepository.initiateOrsImport({
+        importId: 'import-123',
+        redirectUrl: 'https://admin.test/overseas-sites/upload',
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/overseas-sites/imports/import-123/upload-completed`
+      })
+
+      expect(result).toMatchObject({
+        uploadId: expect.any(String),
+        uploadUrl: expect.any(String),
+        statusUrl: expect.any(String)
+      })
+      expect(result.uploadUrl).toContain(result.uploadId)
+      expect(result.statusUrl).toContain(result.uploadId)
+    })
+
     it('completes full upload flow: initiate, upload file, callback, retrieve', async () => {
       const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
 
