@@ -1,6 +1,14 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import {
+  vi,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach
+} from 'vitest'
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
@@ -18,12 +26,14 @@ describe(`${orsImportCreatePath} route`, () => {
     let server
     let orsImportsRepository
     let uploadsRepository
+    let originalInitiateOrsImport
 
     beforeAll(async () => {
       const factory = createInMemoryOrsImportsRepository()
       orsImportsRepository = factory()
 
       uploadsRepository = createInMemoryUploadsRepository()
+      originalInitiateOrsImport = uploadsRepository.initiateOrsImport
 
       server = await createTestServer({
         repositories: {
@@ -37,6 +47,7 @@ describe(`${orsImportCreatePath} route`, () => {
     })
 
     afterEach(() => {
+      uploadsRepository.initiateOrsImport = originalInitiateOrsImport
       uploadsRepository.orsInitiateCalls.length = 0
     })
 
@@ -166,9 +177,9 @@ describe(`${orsImportCreatePath} route`, () => {
 
     describe('error handling', () => {
       it('re-throws Boom errors from uploads repository', async () => {
-        uploadsRepository.nextOrsImportError = Boom.badGateway(
-          'CDP Uploader is down'
-        )
+        uploadsRepository.initiateOrsImport = vi
+          .fn()
+          .mockRejectedValue(Boom.badGateway('CDP Uploader is down'))
 
         const response = await server.inject({
           method: 'POST',
@@ -183,7 +194,9 @@ describe(`${orsImportCreatePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        uploadsRepository.nextOrsImportError = new Error('Network failure')
+        uploadsRepository.initiateOrsImport = vi
+          .fn()
+          .mockRejectedValue(new Error('Network failure'))
 
         const response = await server.inject({
           method: 'POST',

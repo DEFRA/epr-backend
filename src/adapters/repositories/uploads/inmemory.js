@@ -21,8 +21,7 @@ import { randomUUID } from 'node:crypto'
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
  *   initiateCalls: InitiateSummaryLogUploadOptions[],
- *   orsInitiateCalls: InitiateOrsImportOptions[],
- *   nextOrsImportError: Error | null
+ *   orsInitiateCalls: InitiateOrsImportOptions[]
  * }}
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
@@ -43,9 +42,6 @@ export const createInMemoryUploadsRepository = (config = {}) => {
   return {
     initiateCalls,
     orsInitiateCalls,
-
-    /** @type {Error | null} */
-    nextOrsImportError: null,
 
     async findByLocation(uri) {
       return storage.get(uri) ?? null
@@ -70,12 +66,6 @@ export const createInMemoryUploadsRepository = (config = {}) => {
     },
 
     async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
-      if (this.nextOrsImportError) {
-        const error = this.nextOrsImportError
-        this.nextOrsImportError = null
-        throw error
-      }
-
       orsInitiateCalls.push({ importId, redirectUrl, callbackUrl })
 
       const uploadId = randomUUID()
