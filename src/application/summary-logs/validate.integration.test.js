@@ -579,7 +579,7 @@ describe('SummaryLogsValidator integration', () => {
       expect(updated.summaryLog.validation.issues).toEqual([])
     })
 
-    it('should produce zero waste records when data rows are present', async () => {
+    it('should validate successfully with data rows present', async () => {
       const { updated, testOrg, wasteRecordsRepository } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-789',

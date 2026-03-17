@@ -5,6 +5,8 @@ import {
   createWeightFieldSchema,
   createDateFieldSchema
 } from '../shared/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformSentOnLoadsRowRegisteredOnly } from '#application/waste-records/row-transformers/sent-on-loads-reprocessor-registered-only.js'
 
 const ALL_FIELDS = Object.values(FIELDS)
 
@@ -17,6 +19,9 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const SENT_ON_LOADS = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+  sheetName: 'Sent on',
+  rowTransformer: transformSentOnLoadsRowRegisteredOnly,
 
   /**
    * VAL008: All columns that must be present in the uploaded file
