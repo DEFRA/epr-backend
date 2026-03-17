@@ -420,6 +420,27 @@ describe('field-schemas', () => {
       expect(schema.validate(undefined).error).toBeUndefined()
     })
 
+    it('accepts value with leading whitespace by trimming', () => {
+      const schema = createEnumFieldSchema(validValues, invalidMessage)
+      const { error, value } = schema.validate(' Option A')
+      expect(error).toBeUndefined()
+      expect(value).toBe('Option A')
+    })
+
+    it('accepts value with trailing whitespace by trimming', () => {
+      const schema = createEnumFieldSchema(validValues, invalidMessage)
+      const { error, value } = schema.validate('Option B ')
+      expect(error).toBeUndefined()
+      expect(value).toBe('Option B')
+    })
+
+    it('accepts value with leading and trailing whitespace by trimming', () => {
+      const schema = createEnumFieldSchema(validValues, invalidMessage)
+      const { error, value } = schema.validate('  Option C  ')
+      expect(error).toBeUndefined()
+      expect(value).toBe('Option C')
+    })
+
     it('coerces numeric value to string when enum values look like numbers', () => {
       // If enum values are numeric-looking strings like '1', '2', '3',
       // ExcelJS may return a number instead of the string
