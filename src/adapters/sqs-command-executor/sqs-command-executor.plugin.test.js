@@ -44,8 +44,13 @@ describe('sqsCommandExecutorPlugin', () => {
     }
 
     mockExecutor = {
-      validate: vi.fn(),
-      submit: vi.fn()
+      summaryLogsWorker: {
+        validate: vi.fn(),
+        submit: vi.fn()
+      },
+      orsImportsWorker: {
+        importOverseasSites: vi.fn()
+      }
     }
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
@@ -99,7 +104,7 @@ describe('sqsCommandExecutorPlugin', () => {
     })
   })
 
-  it('decorates request with summaryLogsWorker', async () => {
+  it('decorates request with summaryLogsWorker and orsImportsWorker', async () => {
     await server.register({
       plugin: sqsCommandExecutorPlugin,
       options: { config }
@@ -110,9 +115,12 @@ describe('sqsCommandExecutorPlugin', () => {
       path: '/test',
       handler: (request) => {
         return {
-          hasWorker: !!request.summaryLogsWorker,
+          hasSummaryLogsWorker: !!request.summaryLogsWorker,
           hasValidate: typeof request.summaryLogsWorker.validate === 'function',
-          hasSubmit: typeof request.summaryLogsWorker.submit === 'function'
+          hasSubmit: typeof request.summaryLogsWorker.submit === 'function',
+          hasOrsImportsWorker: !!request.orsImportsWorker,
+          hasImportOverseasSites:
+            typeof request.orsImportsWorker.importOverseasSites === 'function'
         }
       }
     })
@@ -124,9 +132,11 @@ describe('sqsCommandExecutorPlugin', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.result).toEqual({
-      hasWorker: true,
+      hasSummaryLogsWorker: true,
       hasValidate: true,
-      hasSubmit: true
+      hasSubmit: true,
+      hasOrsImportsWorker: true,
+      hasImportOverseasSites: true
     })
   })
 
