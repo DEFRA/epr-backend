@@ -197,8 +197,8 @@ export const transformFromSummaryLog = (
   const results = Object.entries(tableSchemas).map(([tableName, schema]) => {
     const tableData = parsedData.data[tableName]
 
-    // Skip tables that don't exist in this summary log
-    if (!tableData) {
+    // Skip tables that don't exist in this summary log or have no transformer
+    if (!tableData || !schema.rowTransformer) {
       return []
     }
 

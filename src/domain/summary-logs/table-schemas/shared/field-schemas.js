@@ -15,6 +15,13 @@ import { customJoi } from '#common/validation/custom-joi.js'
 const DEFAULT_MAX_WEIGHT = 1000
 
 /**
+ * Valid date range for operational load/export records.
+ * Guards against Excel epoch dates (1900-01-01) and clearly out-of-range values.
+ */
+const DATE_MIN = new Date('2000-01-01')
+const DATE_MAX = new Date('2100-01-01')
+
+/**
  * 3-digit ID constraints
  *
  * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 1-999.
@@ -56,13 +63,15 @@ export const createYesNoFieldSchema = () =>
   })
 
 /**
- * Creates a date field schema
+ * Creates a date field schema (2000-01-01 to 2100-01-01)
  *
  * @returns {Joi.DateSchema} Joi date schema
  */
 export const createDateFieldSchema = () =>
-  Joi.date().optional().messages({
-    'date.base': MESSAGES.MUST_BE_A_VALID_DATE
+  Joi.date().min(DATE_MIN).max(DATE_MAX).optional().messages({
+    'date.base': MESSAGES.MUST_BE_A_VALID_DATE,
+    'date.min': MESSAGES.MUST_BE_A_VALID_DATE,
+    'date.max': MESSAGES.MUST_BE_A_VALID_DATE
   })
 
 /**

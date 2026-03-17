@@ -132,7 +132,7 @@ const performFindByStatus = (storage, excludeOrganisationIds) => {
 
     return {
       items,
-      nextCursor: hasMore ? items.at(-1).id : null,
+      nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
       hasMore
     }
   }
@@ -196,7 +196,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
   const storage = new Map()
 
   for (const prn of initialData) {
-    const id = prn._id?.toString() ?? prn.id
+    const id = prn.id
     storage.set(id, structuredClone({ ...prn, id }))
   }
 

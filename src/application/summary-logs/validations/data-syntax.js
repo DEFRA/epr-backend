@@ -16,7 +16,6 @@ import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/inde
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
-import { TONNAGE_RECEIVED_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-input/validators/tonnage-received-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 
 /**
@@ -71,6 +70,8 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
   'string.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'date.base': VALIDATION_CODE.INVALID_DATE,
+  'date.min': VALIDATION_CODE.INVALID_DATE,
+  'date.max': VALIDATION_CODE.INVALID_DATE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
   'custom.tonnageCalculationMismatch':
@@ -123,8 +124,6 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [NET_WEIGHT_MESSAGES['custom.netWeightCalculationMismatch']]:
     VALIDATION_CODE.NET_WEIGHT_CALCULATION_MISMATCH,
   [TONNAGE_EXPORT_MESSAGES['custom.tonnageCalculationMismatch']]:
-    VALIDATION_CODE.TONNAGE_CALCULATION_MISMATCH,
-  [TONNAGE_RECEIVED_MESSAGES['custom.tonnageCalculationMismatch']]:
     VALIDATION_CODE.TONNAGE_CALCULATION_MISMATCH,
   [UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES[
     'custom.ukPackagingProportionCalculationMismatch'

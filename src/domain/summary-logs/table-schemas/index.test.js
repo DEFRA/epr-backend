@@ -23,6 +23,26 @@ describe('table-schemas', () => {
         PROCESSING_TYPES.REPROCESSOR_OUTPUT
       )
       expect(PROCESSING_TYPE_TABLES).toHaveProperty(PROCESSING_TYPES.EXPORTER)
+      expect(PROCESSING_TYPE_TABLES).toHaveProperty(
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      )
+    })
+
+    describe('REPROCESSOR_REGISTERED_ONLY', () => {
+      const tables =
+        PROCESSING_TYPE_TABLES[PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]
+
+      it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
+        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
+      })
+
+      it('does not have REPROCESSED_LOADS table', () => {
+        expect(tables).not.toHaveProperty('REPROCESSED_LOADS')
+      })
+
+      it('has SENT_ON_LOADS table', () => {
+        expect(tables).toHaveProperty('SENT_ON_LOADS')
+      })
     })
 
     describe('REPROCESSOR_INPUT', () => {

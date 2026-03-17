@@ -14,17 +14,21 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (!accreditation.statusHistory) {
     return false
   }
+  const { validFrom, validTo } = accreditation
+  if (!validFrom || !validTo) {
+    return false
+  }
   const sortedHistory = getStatusHistoryDateTimes(accreditation.statusHistory)
   return dates.every(
     (date) =>
-      isWithinAccreditationDateRange(date, accreditation) &&
+      isWithinAccreditationDateRange(date, { validFrom, validTo }) &&
       isAccreditationApprovedAtDate(date, sortedHistory)
   )
 }
 
 /**
  * Convert dates to numbers and sort descending
- * @param { StatusHistoryEntry[] } [statusHistory] - Accreditation status history
+ * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history
  * @returns {{ updatedAt: number; status: string; }[]} Sorted list
  */
 export function getStatusHistoryDateTimes(statusHistory) {
@@ -38,7 +42,7 @@ export function getStatusHistoryDateTimes(statusHistory) {
 /**
  * Checks if a date is within the accreditation date range.
  * @param { Date|string } date - The date to check
- * @param { Accreditation } accreditation - Accreditation object with validFrom and validTo
+ * @param { {validFrom: string, validTo: string} } accreditation - Accreditation with date range
  * @returns { boolean } True if date is within range (inclusive)
  */
 export function isWithinAccreditationDateRange(date, accreditation) {
@@ -55,7 +59,7 @@ export function isWithinAccreditationDateRange(date, accreditation) {
  * and checks if it was 'approved'.
  *
  * @param {string|Date} date - The date to check
- * @param {{ updatedAt: number; status: string; }[]} [statusHistory] - Accreditation status history in descending date order
+ * @param {{ updatedAt: number; status: string; }[]} statusHistory - Accreditation status history in descending date order
  * @returns {boolean} True if the accreditation was approved at the given date
  */
 export function isAccreditationApprovedAtDate(date, statusHistory) {
