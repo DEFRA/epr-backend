@@ -1137,4 +1137,79 @@ describe('syncFromSummaryLog', () => {
       })
     })
   })
+
+  it('persists registered-only received and sent-on rows as waste records', async () => {
+    const fileId = 'test-file-registered-only'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key-registered-only'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Received', row: 7, column: 'A' },
+          headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_REPROCESSING', 'NET_WEIGHT'],
+          rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
+        },
+        SENT_ON_LOADS: {
+          location: { sheet: 'Sent on', row: 7, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_LOAD_LEFT_SITE',
+            'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+          ],
+          rows: [{ rowNumber: 8, values: [5000, '2025-03-01', 5.0] }]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository
+    })
+
+    const result = await sync(summaryLog)
+
+    expect(result).toEqual({ created: 2, updated: 0 })
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords).toHaveLength(2)
+
+    const received = savedRecords.find(
+      (r) => r.type === WASTE_RECORD_TYPE.RECEIVED
+    )
+    expect(received).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 1000,
+      type: WASTE_RECORD_TYPE.RECEIVED
+    })
+    expect(received.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
+
+    const sentOn = savedRecords.find(
+      (r) => r.type === WASTE_RECORD_TYPE.SENT_ON
+    )
+    expect(sentOn).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 5000,
+      type: WASTE_RECORD_TYPE.SENT_ON
+    })
+    expect(sentOn.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
+  })
 })
