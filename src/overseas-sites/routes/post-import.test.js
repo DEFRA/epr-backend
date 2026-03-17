@@ -1,14 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach
-} from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
@@ -45,7 +37,6 @@ describe(`${orsImportCreatePath} route`, () => {
     })
 
     afterEach(() => {
-      vi.clearAllMocks()
       uploadsRepository.orsInitiateCalls.length = 0
     })
 
@@ -175,9 +166,9 @@ describe(`${orsImportCreatePath} route`, () => {
 
     describe('error handling', () => {
       it('re-throws Boom errors from uploads repository', async () => {
-        uploadsRepository.initiateOrsImport = vi
-          .fn()
-          .mockRejectedValue(Boom.badGateway('CDP Uploader is down'))
+        uploadsRepository.nextOrsImportError = Boom.badGateway(
+          'CDP Uploader is down'
+        )
 
         const response = await server.inject({
           method: 'POST',
@@ -192,9 +183,7 @@ describe(`${orsImportCreatePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        uploadsRepository.initiateOrsImport = vi
-          .fn()
-          .mockRejectedValue(new Error('Network failure'))
+        uploadsRepository.nextOrsImportError = new Error('Network failure')
 
         const response = await server.inject({
           method: 'POST',
