@@ -280,11 +280,13 @@ const processRowCell = (
 ) => {
   const headerName = draftCollection.headers[columnIndex]
   const columnUnfilledValues = unfilledValues[headerName] || []
+  const trimmedValue =
+    typeof cellValue === 'string' ? cellValue.trim() : cellValue
   const normalisedValue =
     cellValue === null ||
     cellValue === undefined ||
     cellValue === '' ||
-    columnUnfilledValues.includes(cellValue)
+    columnUnfilledValues.includes(trimmedValue)
       ? null
       : cellValue
   draftCollection.currentRow.push(normalisedValue)

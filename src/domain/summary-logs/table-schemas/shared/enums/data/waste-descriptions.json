@@ -13,10 +13,10 @@
   "Paper - AAIG EN643 grade 1.04.01 (70%)",
   "Paper - AAIG EN643 grade 1.04.02 (80%)",
   "Paper - AAIG EN643 grades 1.04.00, 1.05.00 and 1.05.01 (97.5%)",
-  "Paper - sorted mixed paper or board ",
-  "Paper - unsorted mixed paper or board (unusable materials removed) ",
+  "Paper - sorted mixed paper or board",
+  "Paper - unsorted mixed paper or board (unusable materials removed)",
   "Plastic - HDPE bottles",
-  "Plastic - HDPE other ",
+  "Plastic - HDPE other",
   "Plastic - LDPE film clear",
   "Plastic - LDPE film coloured",
   "Plastic - mixed plastic",
@@ -39,5 +39,5 @@
   "Steel - other",
   "Wood - grade A",
   "Wood - grade B",
-  "Wood - mixed "
+  "Wood - mixed"
 ]

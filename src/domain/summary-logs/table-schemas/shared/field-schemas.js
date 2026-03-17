@@ -142,6 +142,7 @@ export const createFreeTextFieldSchema = (
 export const createEnumFieldSchema = (validValues, invalidMessage) =>
   customJoi
     .coercedString()
+    .trim()
     .valid(...validValues)
     .optional()
     .messages({

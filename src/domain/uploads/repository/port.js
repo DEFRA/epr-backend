@@ -15,10 +15,18 @@
  */
 
 /**
+ * @typedef {Object} InitiateOrsImportOptions
+ * @property {string} importId - ORS import ID
+ * @property {string} redirectUrl - URL to redirect user after upload completes
+ * @property {string} callbackUrl - URL for CDP Uploader to call when upload completes
+ */
+
+/**
  * @typedef {Object} UploadsRepository
  * @property {(location: string) => Promise<Buffer|null>} findByLocation
  * @property {(location: string) => Promise<void>} deleteByLocation
  * @property {(options: InitiateSummaryLogUploadOptions) => Promise<InitiateUploadResponse>} initiateSummaryLogUpload
+ * @property {(options: InitiateOrsImportOptions) => Promise<InitiateUploadResponse>} initiateOrsImport
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
