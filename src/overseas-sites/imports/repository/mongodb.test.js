@@ -58,6 +58,26 @@ describe('MongoDB ORS imports repository', () => {
     expect(found.status).toBe(ORS_IMPORT_STATUS.PROCESSING)
   })
 
+  it('appends files to the import', async ({ repository }) => {
+    await repository.create({
+      _id: 'import-test-add',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    const files = [
+      { fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' },
+      { fileId: 'f2', fileName: 'more.xlsx', s3Uri: 's3://bucket/f2' }
+    ]
+
+    await repository.addFiles('import-test-add', files)
+
+    const found = await repository.findById('import-test-add')
+    expect(found.files).toHaveLength(2)
+    expect(found.files[0]).toEqual(files[0])
+    expect(found.files[1]).toEqual(files[1])
+  })
+
   it('records a file result by index', async ({ repository }) => {
     await repository.create({
       _id: 'import-test-3',
