@@ -1842,6 +1842,29 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.TEST.rows[1].values).toEqual([1002, null])
     })
 
+    it('should normalise unfilled values with leading or trailing whitespace', async () => {
+      const result = await parseWorkbook(
+        {
+          Cover: [],
+          Test: [
+            ['__EPR_DATA_TEST', 'ROW_ID', 'DROPDOWN'],
+            [null, 1001, ' Choose option'],
+            [null, 1002, 'Choose option '],
+            [null, 1003, '  Choose option  ']
+          ]
+        },
+        {
+          unfilledValues: {
+            DROPDOWN: ['Choose option']
+          }
+        }
+      )
+
+      expect(result.data.TEST.rows[0].values).toEqual([1001, null])
+      expect(result.data.TEST.rows[1].values).toEqual([1002, null])
+      expect(result.data.TEST.rows[2].values).toEqual([1003, null])
+    })
+
     it('should still normalise null, undefined, and empty string without config', async () => {
       const result = await parseWorkbook(
         {

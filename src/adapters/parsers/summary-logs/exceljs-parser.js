@@ -284,7 +284,9 @@ const processRowCell = (
     cellValue === null ||
     cellValue === undefined ||
     cellValue === '' ||
-    columnUnfilledValues.includes(cellValue)
+    columnUnfilledValues.includes(
+      typeof cellValue === 'string' ? cellValue.trim() : cellValue
+    )
       ? null
       : cellValue
   draftCollection.currentRow.push(normalisedValue)

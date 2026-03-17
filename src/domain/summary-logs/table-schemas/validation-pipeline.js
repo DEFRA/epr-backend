@@ -76,7 +76,8 @@ export const isFilled = (value, unfilledValues = []) => {
   if (value === null || value === undefined || value === '') {
     return false
   }
-  return !unfilledValues.includes(value)
+  const trimmed = typeof value === 'string' ? value.trim() : value
+  return !unfilledValues.includes(trimmed)
 }
 
 /**
