@@ -78,7 +78,10 @@ function filterRecordsByPeriod(wasteRecords, dateFields, startDate, endDate) {
 
       const dateOnly = dateValue.slice(0, 10)
 
-      return dateOnly >= startDate && dateOnly <= endDate
+      return (
+        dateOnly.localeCompare(startDate) >= 0 &&
+        dateOnly.localeCompare(endDate) <= 0
+      )
     })
   })
 }
