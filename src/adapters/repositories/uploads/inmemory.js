@@ -7,7 +7,11 @@ import { randomUUID } from 'node:crypto'
 /**
  * @typedef {Object} PendingUpload
  * @property {string} uploadId
- * @property {InitiateSummaryLogUploadOptions} options
+ * @property {InitiateSummaryLogUploadOptions | InitiateOrsImportOptions} options
+ */
+
+/**
+ * @typedef {import('#domain/uploads/repository/port.js').InitiateOrsImportOptions} InitiateOrsImportOptions
  */
 
 /**
@@ -16,7 +20,8 @@ import { randomUUID } from 'node:crypto'
  * @param {{ s3Bucket?: string }} [config] - Optional configuration
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
- *   initiateCalls: InitiateSummaryLogUploadOptions[]
+ *   initiateCalls: InitiateSummaryLogUploadOptions[],
+ *   orsInitiateCalls: InitiateOrsImportOptions[]
  * }}
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
@@ -31,8 +36,12 @@ export const createInMemoryUploadsRepository = (config = {}) => {
   /** @type {InitiateSummaryLogUploadOptions[]} */
   const initiateCalls = []
 
+  /** @type {InitiateOrsImportOptions[]} */
+  const orsInitiateCalls = []
+
   return {
     initiateCalls,
+    orsInitiateCalls,
 
     async findByLocation(uri) {
       return storage.get(uri) ?? null
@@ -56,6 +65,23 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       }
     },
 
+    async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
+      orsInitiateCalls.push({ importId, redirectUrl, callbackUrl })
+
+      const uploadId = randomUUID()
+
+      pendingUploads.set(uploadId, {
+        uploadId,
+        options: { importId, redirectUrl, callbackUrl }
+      })
+
+      return {
+        uploadId,
+        uploadUrl: `https://cdp-uploader.test/upload-and-scan/${uploadId}`,
+        statusUrl: `https://cdp-uploader.test/status/${uploadId}`
+      }
+    },
+
     async completeUpload(uploadId, buffer) {
       const pending = pendingUploads.get(uploadId)
 
@@ -63,7 +89,9 @@ export const createInMemoryUploadsRepository = (config = {}) => {
         throw new Error(`No pending upload found for uploadId: ${uploadId}`)
       }
 
-      const { organisationId, registrationId, callbackUrl } = pending.options
+      const /** @type {InitiateSummaryLogUploadOptions} */ options =
+          /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
+      const { organisationId, registrationId, callbackUrl } = options
       const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
       const s3Uri = `s3://${s3Bucket}/${s3Key}`
 

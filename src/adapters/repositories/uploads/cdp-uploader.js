@@ -12,7 +12,7 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * @property {string} s3Bucket - S3 bucket for summary log uploads
  */
 
-const SUMMARY_LOG_MIME_TYPES = [
+const SPREADSHEET_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 ]
 
@@ -73,8 +73,24 @@ export const createUploadsRepository = ({
         callback: callbackUrl,
         s3Bucket,
         s3Path,
-        mimeTypes: SUMMARY_LOG_MIME_TYPES,
+        mimeTypes: SPREADSHEET_MIME_TYPES,
         metadata: { summaryLogId }
+      })
+    })
+  },
+
+  async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
+    const s3Path = `/overseas-sites/imports/${importId}`
+
+    return fetchJson(`${cdpUploaderUrl}/initiate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        redirect: redirectUrl,
+        callback: callbackUrl,
+        s3Bucket,
+        s3Path,
+        mimeTypes: SPREADSHEET_MIME_TYPES,
+        metadata: { importId }
       })
     })
   }
