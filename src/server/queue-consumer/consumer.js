@@ -261,6 +261,69 @@ const createMessageHandler =
   }
 
 /**
+ * Attaches error, processing_error, and timeout_error event handlers
+ * to the SQS consumer.
+ * @param {Consumer} consumer
+ * @param {ConsumerDependencies} deps
+ * @param {TypedLogger} logger
+ * @param {import('joi').ObjectSchema} envelopeSchema
+ * @param {Map<string, CommandHandler>} handlerMap
+ */
+const attachEventHandlers = (
+  consumer,
+  deps,
+  logger,
+  envelopeSchema,
+  handlerMap
+) => {
+  consumer.on('error', (err) => {
+    logger.error({
+      err,
+      message: 'SQS consumer error',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILURE
+      }
+    })
+  })
+
+  consumer.on('processing_error', (err) => {
+    logger.warn({
+      err,
+      message: 'SQS message processing error',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+  })
+
+  consumer.on('timeout_error', async (err, message) => {
+    const result = parseCommandMessage(
+      message,
+      logger,
+      envelopeSchema,
+      handlerMap
+    )
+
+    logger.error({
+      err,
+      message: result
+        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
+        : `Command timed out for messageId=${message.MessageId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    if (result) {
+      await result.handler.onFailure(result.payload, deps)
+    }
+  })
+}
+
+/**
  * Creates the SQS command queue consumer.
  *
  * `deps` must include the consumer's own dependencies (sqsClient, queueName,
@@ -315,51 +378,7 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
     attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 
-  consumer.on('error', (err) => {
-    logger.error({
-      err,
-      message: 'SQS consumer error',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILURE
-      }
-    })
-  })
-
-  consumer.on('processing_error', (err) => {
-    logger.warn({
-      err,
-      message: 'SQS message processing error',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-  })
-
-  consumer.on('timeout_error', async (err, message) => {
-    const result = parseCommandMessage(
-      message,
-      logger,
-      envelopeSchema,
-      handlerMap
-    )
-
-    logger.error({
-      err,
-      message: result
-        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
-        : `Command timed out for messageId=${message.MessageId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-
-    if (result) {
-      await result.handler.onFailure(result.payload, deps)
-    }
-  })
+  attachEventHandlers(consumer, deps, logger, envelopeSchema, handlerMap)
 
   return consumer
 }
