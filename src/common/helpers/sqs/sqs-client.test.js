@@ -1,6 +1,6 @@
-import { SQSClient, ChangeMessageVisibilityCommand } from '@aws-sdk/client-sqs'
+import { SQSClient } from '@aws-sdk/client-sqs'
 
-import { createSqsClient, resetVisibilityTimeout } from './sqs-client.js'
+import { createSqsClient } from './sqs-client.js'
 
 vi.mock('@aws-sdk/client-sqs')
 
@@ -50,24 +50,5 @@ describe('createSqsClient', () => {
       endpoint,
       credentials
     })
-  })
-})
-
-describe('resetVisibilityTimeout', () => {
-  it('sends ChangeMessageVisibilityCommand with timeout 0', async () => {
-    const sqsClient = { send: vi.fn().mockResolvedValue({}) }
-
-    await resetVisibilityTimeout(
-      sqsClient,
-      'http://queue-url',
-      'receipt-handle-123'
-    )
-
-    expect(ChangeMessageVisibilityCommand).toHaveBeenCalledWith({
-      QueueUrl: 'http://queue-url',
-      ReceiptHandle: 'receipt-handle-123',
-      VisibilityTimeout: 0
-    })
-    expect(sqsClient.send).toHaveBeenCalled()
   })
 })
