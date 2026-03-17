@@ -12,8 +12,6 @@ const REGISTERED_ONLY_PROCESSING_TYPES = [
   PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
 ]
 
-const MIN_TEMPLATE_VERSION = 5
-
 const IS_REQUIRED = 'is required'
 
 /**
@@ -22,9 +20,13 @@ const IS_REQUIRED = 'is required'
  *
  * @param {Object} [options]
  * @param {boolean} [options.registeredOnlyEnabled] - Whether registered-only processing types are accepted
+ * @param {Record<string, number>} [options.minTemplateVersions] - Minimum template version per processing type
  * @returns {Joi.ObjectSchema}
  */
-export const createMetaSchema = ({ registeredOnlyEnabled } = {}) => {
+export const createMetaSchema = ({
+  registeredOnlyEnabled,
+  minTemplateVersions = {}
+} = {}) => {
   const validTypes = registeredOnlyEnabled
     ? [...ALWAYS_VALID_PROCESSING_TYPES, ...REGISTERED_ONLY_PROCESSING_TYPES]
     : ALWAYS_VALID_PROCESSING_TYPES
@@ -39,10 +41,19 @@ export const createMetaSchema = ({ registeredOnlyEnabled } = {}) => {
         'any.required': IS_REQUIRED
       }),
     TEMPLATE_VERSION: Joi.number()
-      .min(MIN_TEMPLATE_VERSION)
       .required()
+      .when('PROCESSING_TYPE', {
+        switch: Object.entries(minTemplateVersions).map(([type, min]) => ({
+          is: type,
+          then: Joi.number()
+            .min(min)
+            .messages({ 'number.min': `must be at least ${min}` })
+        })),
+        otherwise: Joi.number()
+          .min(Math.max(...Object.values(minTemplateVersions), 1))
+          .messages({ 'number.min': 'must be a supported template version' })
+      })
       .messages({
-        'number.min': `must be at least ${MIN_TEMPLATE_VERSION}`,
         'any.required': IS_REQUIRED
       }),
     REGISTRATION_NUMBER: customJoi.coercedString().required().messages({

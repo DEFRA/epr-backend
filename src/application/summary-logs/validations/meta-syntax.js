@@ -3,6 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
+import { MIN_TEMPLATE_VERSIONS } from '#domain/summary-logs/table-schemas/index.js'
 import { createMetaSchema } from './meta-syntax.schema.js'
 
 /**
@@ -60,7 +61,8 @@ export const validateMetaSyntax = ({ parsed, featureFlags }) => {
   }
 
   const schema = createMetaSchema({
-    registeredOnlyEnabled: featureFlags?.isRegisteredOnlyEnabled()
+    registeredOnlyEnabled: featureFlags?.isRegisteredOnlyEnabled(),
+    minTemplateVersions: MIN_TEMPLATE_VERSIONS
   })
 
   const { error } = schema.validate(metaValues, { abortEarly: false })
