@@ -9,6 +9,8 @@ import {
   MESSAGES,
   RECYCLABLE_PROPORTION_METHODS
 } from '../shared/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRowRegisteredOnly } from '#application/waste-records/row-transformers/received-loads-reprocessing-registered-only.js'
 
 const ALL_FIELDS = Object.values(FIELDS)
 
@@ -20,6 +22,9 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received',
+  rowTransformer: transformReceivedLoadsRowRegisteredOnly,
 
   /**
    * VAL008: All columns that must be present in the uploaded file
