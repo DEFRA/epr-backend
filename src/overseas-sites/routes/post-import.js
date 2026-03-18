@@ -40,6 +40,7 @@ export const orsImportCreate = {
     const { redirectUrl } = payload
 
     const importId = randomUUID()
+    const resolvedRedirectUrl = redirectUrl.replace('{importId}', importId)
     const appBaseUrl = config.get('appBaseUrl')
     const callbackUrl = `${appBaseUrl}/v1/overseas-sites/imports/${importId}/upload-completed`
 
@@ -52,7 +53,7 @@ export const orsImportCreate = {
 
       const cdpResponse = await uploadsRepository.initiateOrsImport({
         importId,
-        redirectUrl,
+        redirectUrl: resolvedRedirectUrl,
         callbackUrl
       })
 
