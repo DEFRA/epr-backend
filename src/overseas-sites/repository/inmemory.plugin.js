@@ -54,17 +54,48 @@ const performRemove = (storage) => async (id) => {
  * @param {*} a
  * @param {*} b
  */
-const nullishEqual = (a, b) => (a == null && b == null) || a === b
+const nullishEqual = (a, b) => {
+  if (a == null && b == null) {
+    return true
+  }
+  return a === b
+}
 
 /**
  * @param {*} a
  * @param {*} b
  */
 const dateEqual = (a, b) => {
-  if (a == null && b == null) return true
-  if (a == null || b == null) return false
+  if (a == null && b == null) {
+    return true
+  }
+  if (a == null || b == null) {
+    return false
+  }
   return new Date(a).getTime() === new Date(b).getTime()
 }
+
+/**
+ * @param {import('./port.js').OverseasSiteAddress} a
+ * @param {import('./port.js').OverseasSiteAddress} b
+ */
+const addressEqual = (a, b) =>
+  a.line1 === b.line1 &&
+  a.townOrCity === b.townOrCity &&
+  nullishEqual(a.line2, b.line2) &&
+  nullishEqual(a.stateOrRegion, b.stateOrRegion) &&
+  nullishEqual(a.postcode, b.postcode)
+
+/**
+ * @param {import('./port.js').OverseasSite} site
+ * @param {FindByPropertiesParams} properties
+ */
+const siteMatchesProperties = (site, properties) =>
+  site.name === properties.name &&
+  site.country === properties.country &&
+  addressEqual(site.address, properties.address) &&
+  nullishEqual(site.coordinates, properties.coordinates) &&
+  dateEqual(site.validFrom, properties.validFrom)
 
 /**
  * @param {Storage} storage
@@ -72,20 +103,7 @@ const dateEqual = (a, b) => {
  */
 const performFindByProperties = (storage) => async (properties) => {
   for (const site of storage.values()) {
-    if (
-      site.name === properties.name &&
-      site.country === properties.country &&
-      site.address.line1 === properties.address.line1 &&
-      site.address.townOrCity === properties.address.townOrCity &&
-      nullishEqual(site.address.line2, properties.address.line2) &&
-      nullishEqual(
-        site.address.stateOrRegion,
-        properties.address.stateOrRegion
-      ) &&
-      nullishEqual(site.address.postcode, properties.address.postcode) &&
-      nullishEqual(site.coordinates, properties.coordinates) &&
-      dateEqual(site.validFrom, properties.validFrom)
-    ) {
+    if (siteMatchesProperties(site, properties)) {
       return structuredClone(site)
     }
   }
