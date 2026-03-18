@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { auditOverseasSiteCreate } from '#root/auditing/overseas-sites.js'
+import { auditOverseasSiteCreate } from '../auditing.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES

@@ -5,7 +5,7 @@ import {
   auditOverseasSiteUpdate,
   auditOverseasSiteDelete,
   auditOverseasSiteImport
-} from './overseas-sites.js'
+} from './auditing.js'
 
 const mockAudit = vi.fn()
 const mockInsert = vi.fn()

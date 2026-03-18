@@ -3,7 +3,7 @@ import {
   isPayloadSmallEnoughToAudit,
   recordSystemLog,
   safeAudit
-} from './helpers.js'
+} from '#root/auditing/helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
