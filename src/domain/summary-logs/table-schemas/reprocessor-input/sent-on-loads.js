@@ -1,4 +1,3 @@
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import { createSentOnLoadsSchema } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { transformSentOnLoadsRow } from '#application/waste-records/row-transformers/sent-on-loads.js'
@@ -9,6 +8,8 @@ import {
 } from '../shared/classify-helpers.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 const WASTE_BALANCE_FIELDS = [
   FIELDS.ROW_ID,

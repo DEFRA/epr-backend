@@ -1,5 +1,7 @@
 import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
 
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
 /**
  * Validation pipeline for summary log rows
  *
@@ -43,7 +45,7 @@ import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: import('#repositories/organisations/port.js').Accreditation | null }} context - Classification context; accreditation is null when absent
+ * @param {{ accreditation: Accreditation | null }} context - Classification context; accreditation is null when absent
  * @returns {WasteBalanceClassificationResult}
  */
 
