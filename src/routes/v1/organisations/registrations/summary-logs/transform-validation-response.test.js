@@ -644,7 +644,7 @@ describe('transformValidationResponse', () => {
       )
     })
 
-    it('includes totalIssues in fatal response when present', () => {
+    it('includes totalIssuesCount in fatal response when present', () => {
       const validation = {
         issues: [
           {
@@ -654,15 +654,15 @@ describe('transformValidationResponse', () => {
             code: 'VALIDATION_SYSTEM_ERROR'
           }
         ],
-        totalIssues: 5000
+        totalIssuesCount: 5000
       }
 
       const result = transformValidationResponse(validation)
 
-      expect(result.validation.totalIssues).toBe(5000)
+      expect(result.validation.totalIssuesCount).toBe(5000)
     })
 
-    it('includes totalIssues in concerns response when present', () => {
+    it('includes totalIssuesCount in concerns response when present', () => {
       const validation = {
         issues: [
           {
@@ -681,15 +681,15 @@ describe('transformValidationResponse', () => {
             }
           }
         ],
-        totalIssues: 3000
+        totalIssuesCount: 3000
       }
 
       const result = transformValidationResponse(validation)
 
-      expect(result.validation.totalIssues).toBe(3000)
+      expect(result.validation.totalIssuesCount).toBe(3000)
     })
 
-    it('omits totalIssues from response when not present in stored validation', () => {
+    it('omits totalIssuesCount from response when not present in stored validation', () => {
       const validation = {
         issues: [
           {
@@ -712,7 +712,7 @@ describe('transformValidationResponse', () => {
 
       const result = transformValidationResponse(validation)
 
-      expect(result.validation.totalIssues).toBeUndefined()
+      expect(result.validation.totalIssuesCount).toBeUndefined()
     })
 
     it('passes response schema validation with errorCode', () => {

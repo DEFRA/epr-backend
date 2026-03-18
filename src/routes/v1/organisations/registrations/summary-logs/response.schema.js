@@ -56,7 +56,7 @@ export const summaryLogResponseSchema = Joi.object({
   validation: Joi.object({
     failures: Joi.array().items(validationIssueSchema).required(),
     concerns: validationConcernsSchema.required(),
-    totalIssues: Joi.number().integer().optional()
+    totalIssuesCount: Joi.number().integer().optional()
   }).optional(),
   loads: loadsSchema.optional(),
   processingType: Joi.string().optional(),

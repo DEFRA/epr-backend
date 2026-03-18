@@ -120,7 +120,7 @@ const groupAndTransformRowIssues = (issues) => {
  * @param {Object} validation - The validation object from database
  * @param {Array} [validation.issues] - Array of validation issues (from validation pipeline)
  * @param {Array} [validation.failures] - Array of failure codes (from upload rejection)
- * @param {number} [validation.totalIssues] - Total issue count when issues were truncated
+ * @param {number} [validation.totalIssuesCount] - Total issue count when issues were truncated
  * @returns {Object} Transformed validation for HTTP response
  */
 export const transformValidationResponse = (validation) => {
@@ -160,7 +160,9 @@ export const transformValidationResponse = (validation) => {
           .filter((i) => i.severity === VALIDATION_SEVERITY.FATAL)
           .map(transformFatalIssue),
         concerns: {},
-        ...(validation.totalIssues && { totalIssues: validation.totalIssues })
+        ...(validation.totalIssuesCount && {
+          totalIssuesCount: validation.totalIssuesCount
+        })
       }
     }
   }
@@ -169,7 +171,9 @@ export const transformValidationResponse = (validation) => {
     validation: {
       failures: [],
       concerns: groupAndTransformRowIssues(issues),
-      ...(validation.totalIssues && { totalIssues: validation.totalIssues })
+      ...(validation.totalIssuesCount && {
+        totalIssuesCount: validation.totalIssuesCount
+      })
     }
   }
 }

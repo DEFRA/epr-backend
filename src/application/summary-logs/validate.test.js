@@ -1859,7 +1859,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   describe('Validation issues truncation', () => {
-    it('truncates issues to MAX_VALIDATION_ISSUES and records totalIssues', async () => {
+    it('truncates issues to MAX_VALIDATION_ISSUES and records totalIssuesCount', async () => {
       const issueCount = MAX_VALIDATION_ISSUES + 50
       const rows = Array.from({ length: issueCount }, (_, i) =>
         buildReceivedLoadRow({
@@ -1881,7 +1881,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.validation.issues).toHaveLength(MAX_VALIDATION_ISSUES)
-      expect(updateCall.validation.totalIssues).toBeGreaterThan(
+      expect(updateCall.validation.totalIssuesCount).toBeGreaterThan(
         MAX_VALIDATION_ISSUES
       )
     })
@@ -1940,7 +1940,7 @@ describe('SummaryLogsValidator', () => {
       expect(issueWithActual.context.actual).toBe('bad-code')
     })
 
-    it('always includes totalIssues matching actual issue count', async () => {
+    it('always includes totalIssuesCount matching actual issue count', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
@@ -1959,7 +1959,7 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.validation.totalIssues).toBe(
+      expect(updateCall.validation.totalIssuesCount).toBe(
         updateCall.validation.issues.length
       )
     })

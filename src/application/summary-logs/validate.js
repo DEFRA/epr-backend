@@ -508,13 +508,13 @@ export const createSummaryLogsValidator = ({
     await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
     const allIssues = issues.getAllIssues()
-    const { issues: cappedIssues, totalIssues } = capIssuesForStorage(allIssues)
+    const { cappedIssues, totalIssuesCount } = capIssuesForStorage(allIssues)
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
       validation: {
         issues: cappedIssues,
-        totalIssues
+        totalIssuesCount
       },
       ...(loads && { loads }),
       ...(meta && { meta })
@@ -538,7 +538,7 @@ export const createSummaryLogsValidator = ({
  * @see https://eaflood.atlassian.net/browse/PAE-1244
  *
  * @param {ValidationIssue[]} allIssues - All validation issues
- * @returns {{ issues: ValidationIssue[], totalIssues: number }}
+ * @returns {{ cappedIssues: ValidationIssue[], totalIssuesCount: number }}
  */
 const capIssuesForStorage = (allIssues) => {
   const shouldTruncate = allIssues.length > MAX_VALIDATION_ISSUES
@@ -557,7 +557,7 @@ const capIssuesForStorage = (allIssues) => {
   }
 
   return {
-    issues,
-    totalIssues: allIssues.length
+    cappedIssues: issues,
+    totalIssuesCount: allIssues.length
   }
 }
