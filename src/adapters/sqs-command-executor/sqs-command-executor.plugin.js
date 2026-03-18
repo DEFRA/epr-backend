@@ -37,13 +37,17 @@ export const sqsCommandExecutorPlugin = {
       }
     })
 
-    const summaryLogsWorker = await createSqsCommandExecutor({
-      sqsClient,
-      queueName,
-      logger: server.logger
-    })
+    const { summaryLogsWorker, orsImportsWorker } =
+      await createSqsCommandExecutor({
+        sqsClient,
+        queueName,
+        logger: server.logger
+      })
 
     server.decorate('request', 'summaryLogsWorker', () => summaryLogsWorker, {
+      apply: true
+    })
+    server.decorate('request', 'orsImportsWorker', () => orsImportsWorker, {
       apply: true
     })
 

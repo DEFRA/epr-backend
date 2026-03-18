@@ -105,6 +105,53 @@ describe('In-memory ORS imports repository', () => {
     })
   })
 
+  describe('addFiles', () => {
+    it('appends files to the import files array', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
+        files: []
+      })
+
+      const files = [
+        { fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' },
+        { fileId: 'f2', fileName: 'more.xlsx', s3Uri: 's3://bucket/f2' }
+      ]
+
+      await repository.addFiles('import-1', files)
+
+      const doc = await repository.findById('import-1')
+      expect(doc.files).toHaveLength(2)
+      expect(doc.files[0]).toEqual(files[0])
+      expect(doc.files[1]).toEqual(files[1])
+    })
+
+    it('appends to existing files without replacing them', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
+        files: [{ fileId: 'f1', fileName: 'a.xlsx', s3Uri: 's3://bucket/f1' }]
+      })
+
+      await repository.addFiles('import-1', [
+        { fileId: 'f2', fileName: 'b.xlsx', s3Uri: 's3://bucket/f2' }
+      ])
+
+      const doc = await repository.findById('import-1')
+      expect(doc.files).toHaveLength(2)
+      expect(doc.files[1].fileId).toBe('f2')
+    })
+
+    it('does nothing when import does not exist', async () => {
+      await repository.addFiles('nonexistent', [
+        { fileId: 'f1', fileName: 'a.xlsx', s3Uri: 's3://bucket/f1' }
+      ])
+
+      const found = await repository.findById('nonexistent')
+      expect(found).toBeNull()
+    })
+  })
+
   describe('createInMemoryOrsImportsRepositoryPlugin', () => {
     it('creates a plugin with the correct name', () => {
       const plugin = createInMemoryOrsImportsRepositoryPlugin()

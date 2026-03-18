@@ -40,7 +40,7 @@ describe('SQS command executor integration', () => {
         })
 
         const summaryLogId = `validate-test-${Date.now()}`
-        await executor.validate(summaryLogId)
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         // Verify message was sent by receiving it from the queue
         const { QueueUrl: queueUrl } = await sqsClient.send(
@@ -75,7 +75,7 @@ describe('SQS command executor integration', () => {
         })
 
         const summaryLogId = 'log-test-123'
-        await executor.validate(summaryLogId)
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -100,7 +100,7 @@ describe('SQS command executor integration', () => {
         })
 
         const summaryLogId = `submit-test-${Date.now()}`
-        await executor.submit(summaryLogId)
+        await executor.summaryLogsWorker.submit(summaryLogId)
 
         // Verify message was sent by receiving it from the queue
         const { QueueUrl: queueUrl } = await sqsClient.send(
@@ -145,7 +145,7 @@ describe('SQS command executor integration', () => {
           }
         }
 
-        await executor.submit(summaryLogId, mockRequest)
+        await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
@@ -184,7 +184,7 @@ describe('SQS command executor integration', () => {
         })
 
         const summaryLogId = 'submit-log-456'
-        await executor.submit(summaryLogId)
+        await executor.summaryLogsWorker.submit(summaryLogId)
 
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -193,6 +193,42 @@ describe('SQS command executor integration', () => {
             )
           })
         )
+      }
+    )
+  })
+
+  describe('importOverseasSites', () => {
+    it(
+      'sends import-overseas-sites command message to queue',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const importId = `import-test-${Date.now()}`
+        await executor.orsImportsWorker.importOverseasSites(importId)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        const response = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 5
+          })
+        )
+
+        expect(response.Messages).toHaveLength(1)
+
+        const message = JSON.parse(response.Messages[0].Body)
+        expect(message).toEqual({
+          command: 'import-overseas-sites',
+          importId
+        })
       }
     )
   })

@@ -4,7 +4,7 @@ import { vi } from 'vitest'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
-import { mockSqsCommandExecutorPlugin } from '#adapters/validators/summary-logs/mock.plugin.js'
+import { mockSqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/mock.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
