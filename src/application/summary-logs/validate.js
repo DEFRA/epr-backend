@@ -31,6 +31,8 @@ import {
   mergeLoads
 } from './load-counts.js'
 
+export const MAX_VALIDATION_ISSUES = 1000
+
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -504,10 +506,16 @@ export const createSummaryLogsValidator = ({
     // Record row outcome metrics only for waste-balance table rows
     await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
+    const allIssues = issues.getAllIssues()
+    const truncated = allIssues.length > MAX_VALIDATION_ISSUES
+
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
       validation: {
-        issues: issues.getAllIssues()
+        issues: truncated
+          ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
+          : allIssues,
+        ...(truncated && { totalIssues: allIssues.length })
       },
       ...(loads && { loads }),
       ...(meta && { meta })
