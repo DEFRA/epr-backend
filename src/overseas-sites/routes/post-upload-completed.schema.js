@@ -34,7 +34,7 @@ const fileSchema = Joi.object({
 
 export const orsUploadCompletedPayloadSchema = Joi.object({
   form: Joi.object({
-    file: Joi.alternatives()
+    orsUpload: Joi.alternatives()
       .try(fileSchema, Joi.array().items(fileSchema).min(1))
       .required()
   })
