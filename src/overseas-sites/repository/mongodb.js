@@ -124,43 +124,21 @@ const performRemove = async (db, id) => {
  * @param {Date} [properties.validFrom]
  * @returns {Promise<OverseasSite | null>}
  */
+const nullishFilter = (value) =>
+  value == null ? { $in: [null, undefined] } : value
+
 const performFindByProperties = async (db, properties) => {
   /** @type {import('mongodb').Filter<import('mongodb').Document>} */
   const filter = {
     name: properties.name,
     country: properties.country,
     'address.line1': properties.address.line1,
-    'address.townOrCity': properties.address.townOrCity
-  }
-
-  if (properties.address.line2 != null) {
-    filter['address.line2'] = properties.address.line2
-  } else {
-    filter['address.line2'] = { $in: [null, undefined] }
-  }
-
-  if (properties.address.stateOrRegion != null) {
-    filter['address.stateOrRegion'] = properties.address.stateOrRegion
-  } else {
-    filter['address.stateOrRegion'] = { $in: [null, undefined] }
-  }
-
-  if (properties.address.postcode != null) {
-    filter['address.postcode'] = properties.address.postcode
-  } else {
-    filter['address.postcode'] = { $in: [null, undefined] }
-  }
-
-  if (properties.coordinates != null) {
-    filter.coordinates = properties.coordinates
-  } else {
-    filter.coordinates = { $in: [null, undefined] }
-  }
-
-  if (properties.validFrom != null) {
-    filter.validFrom = properties.validFrom
-  } else {
-    filter.validFrom = { $in: [null, undefined] }
+    'address.townOrCity': properties.address.townOrCity,
+    'address.line2': nullishFilter(properties.address.line2),
+    'address.stateOrRegion': nullishFilter(properties.address.stateOrRegion),
+    'address.postcode': nullishFilter(properties.address.postcode),
+    coordinates: nullishFilter(properties.coordinates),
+    validFrom: nullishFilter(properties.validFrom)
   }
 
   const doc = await db.collection(COLLECTION_NAME).findOne(filter)
