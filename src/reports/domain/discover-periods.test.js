@@ -196,7 +196,7 @@ describe('discoverPeriods', () => {
     it('extracts dates from REPROCESSOR_REGISTERED_ONLY received records', () => {
       const records = [
         record('received', {
-          MONTH_RECEIVED_FOR_REPROCESSING: '2026-04-01'
+          MONTH_RECEIVED_FOR_REPROCESSING: '2026-04'
         })
       ]
 
