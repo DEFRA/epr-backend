@@ -45,6 +45,9 @@ export const orsImportCommandHandlers = [
           payload.importId,
           ORS_IMPORT_STATUS.FAILED
         )
+        await orsImportMetrics.recordStatusTransition({
+          status: ORS_IMPORT_STATUS.FAILED
+        })
       } catch (err) {
         deps.logger.error({
           err,

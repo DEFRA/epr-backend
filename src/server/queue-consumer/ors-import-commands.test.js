@@ -90,6 +90,14 @@ describe('orsImportCommandHandlers', () => {
         )
       })
 
+      it('records failed status transition metric', async () => {
+        await handler.onFailure({ importId: 'import-123' }, deps)
+
+        expect(orsImportMetrics.recordStatusTransition).toHaveBeenCalledWith({
+          status: 'failed'
+        })
+      })
+
       it('logs error when marking as failed throws', async () => {
         const updateError = new Error('Database error')
         deps.orsImportsRepository.updateStatus.mockRejectedValue(updateError)
