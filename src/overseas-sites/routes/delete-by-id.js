@@ -29,13 +29,14 @@ export const overseasSiteDelete = {
     const { id } = params
 
     try {
-      const removed = await overseasSitesRepository.remove(id)
+      const site = await overseasSitesRepository.findById(id)
 
-      if (!removed) {
+      if (!site) {
         throw Boom.notFound('Overseas site not found')
       }
 
-      await auditOverseasSiteDelete(request, id)
+      await overseasSitesRepository.remove(id)
+      await auditOverseasSiteDelete(request, id, site)
 
       logger.info({
         message: `Overseas site deleted: id=${id}`,

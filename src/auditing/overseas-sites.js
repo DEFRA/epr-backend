@@ -1,4 +1,9 @@
-import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
+import {
+  extractUserDetails,
+  isPayloadSmallEnoughToAudit,
+  recordSystemLog,
+  safeAudit
+} from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -39,15 +44,34 @@ async function auditOverseasSiteCreate(request, site) {
  * @param {object} next
  */
 async function auditOverseasSiteUpdate(request, siteId, previous, next) {
-  await auditOverseasSite(request, 'update', { siteId, previous, next })
+  const payload = {
+    event: {
+      category: 'entity',
+      subCategory: 'overseas-sites',
+      action: 'update'
+    },
+    context: { siteId, previous, next },
+    user: extractUserDetails(request)
+  }
+
+  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
+    ? payload
+    : {
+        ...payload,
+        context: { siteId }
+      }
+
+  safeAudit(safeAuditingPayload)
+  await recordSystemLog(request, payload)
 }
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {string} siteId
+ * @param {object} site
  */
-async function auditOverseasSiteDelete(request, siteId) {
-  await auditOverseasSite(request, 'delete', { siteId })
+async function auditOverseasSiteDelete(request, siteId, site) {
+  await auditOverseasSite(request, 'delete', { siteId, site })
 }
 
 /**

@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   auditOverseasSiteCreate,
@@ -112,13 +113,45 @@ describe('overseas sites auditing', () => {
         })
       )
     })
+
+    it('omits previous and next from audit event for large payloads', async () => {
+      const siteId = 'site-001'
+      const veryLongString = randomBytes(1e6).toString('hex')
+      const previous = { name: 'Old Name', veryLongString }
+      const next = { name: 'New Name', veryLongString }
+
+      await auditOverseasSiteUpdate(createMockRequest(), siteId, previous, next)
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: {
+            category: 'entity',
+            subCategory: 'overseas-sites',
+            action: 'update'
+          },
+          context: { siteId }
+        })
+      )
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: {
+            category: 'entity',
+            subCategory: 'overseas-sites',
+            action: 'update'
+          },
+          context: { siteId, previous, next }
+        })
+      )
+    })
   })
 
   describe('auditOverseasSiteDelete', () => {
-    it('sends audit event and system log for site deletion', async () => {
+    it('sends audit event and system log with deleted site record', async () => {
       const siteId = 'site-001'
+      const site = { id: siteId, name: 'Mumbai Plant', country: 'India' }
 
-      await auditOverseasSiteDelete(createMockRequest(), siteId)
+      await auditOverseasSiteDelete(createMockRequest(), siteId, site)
 
       expect(mockAudit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -127,7 +160,7 @@ describe('overseas sites auditing', () => {
             subCategory: 'overseas-sites',
             action: 'delete'
           },
-          context: { siteId },
+          context: { siteId, site },
           user: expectedUser
         })
       )
@@ -141,7 +174,7 @@ describe('overseas sites auditing', () => {
             subCategory: 'overseas-sites',
             action: 'delete'
           },
-          context: { siteId }
+          context: { siteId, site }
         })
       )
     })

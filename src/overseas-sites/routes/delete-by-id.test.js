@@ -99,7 +99,10 @@ describe(`${overseasSiteDeletePath} route`, () => {
               subCategory: 'overseas-sites',
               action: 'delete'
             },
-            context: { siteId: created.id }
+            context: expect.objectContaining({
+              siteId: created.id,
+              site: expect.objectContaining({ name: created.name })
+            })
           })
         )
       })
@@ -140,6 +143,9 @@ describe(`${overseasSiteDeletePath} route`, () => {
 
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
         const Boom = await import('@hapi/boom')
         overseasSitesRepository.remove.mockRejectedValueOnce(
           Boom.default.badRequest('Invalid ID')
@@ -147,7 +153,7 @@ describe(`${overseasSiteDeletePath} route`, () => {
 
         const response = await server.inject({
           method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
+          url: `/v1/overseas-sites/${created.id}`,
           ...asServiceMaintainer()
         })
 
@@ -155,13 +161,16 @@ describe(`${overseasSiteDeletePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
         overseasSitesRepository.remove.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
         const response = await server.inject({
           method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
+          url: `/v1/overseas-sites/${created.id}`,
           ...asServiceMaintainer()
         })
 
