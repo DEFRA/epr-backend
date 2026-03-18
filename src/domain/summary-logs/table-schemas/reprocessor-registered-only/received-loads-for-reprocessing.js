@@ -2,7 +2,6 @@ import Joi from 'joi'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
   createRowIdSchema,
-  createWeightFieldSchema,
   createUnboundedWeightFieldSchema,
   createPercentageFieldSchema,
   createEnumFieldSchema,
@@ -60,7 +59,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
       MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
     ),
     [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
-    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createWeightFieldSchema()
+    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createUnboundedWeightFieldSchema()
   })
     .unknown(true)
     .prefs({ abortEarly: false }),
