@@ -34,6 +34,28 @@ import {
 export const MAX_VALIDATION_ISSUES = 100
 export const MAX_ACTUAL_LENGTH = 200
 
+const capIssuesForStorage = (allIssues) => {
+  const truncated = allIssues.length > MAX_VALIDATION_ISSUES
+  const capped = truncated
+    ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
+    : allIssues
+
+  for (const issue of capped) {
+    if (
+      typeof issue.context?.actual === 'string' &&
+      issue.context.actual.length > MAX_ACTUAL_LENGTH
+    ) {
+      issue.context.actual =
+        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
+    }
+  }
+
+  return {
+    issues: capped,
+    totalIssues: truncated ? allIssues.length : undefined
+  }
+}
+
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -508,26 +530,13 @@ export const createSummaryLogsValidator = ({
     await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
     const allIssues = issues.getAllIssues()
-    const truncated = allIssues.length > MAX_VALIDATION_ISSUES
-    const cappedIssues = truncated
-      ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
-      : allIssues
-
-    for (const issue of cappedIssues) {
-      if (
-        typeof issue.context?.actual === 'string' &&
-        issue.context.actual.length > MAX_ACTUAL_LENGTH
-      ) {
-        issue.context.actual =
-          issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-      }
-    }
+    const { issues: cappedIssues, totalIssues } = capIssuesForStorage(allIssues)
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
       validation: {
         issues: cappedIssues,
-        ...(truncated && { totalIssues: allIssues.length })
+        ...(totalIssues && { totalIssues })
       },
       ...(loads && { loads }),
       ...(meta && { meta })
