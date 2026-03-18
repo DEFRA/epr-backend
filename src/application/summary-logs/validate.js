@@ -533,6 +533,10 @@ export const createSummaryLogsValidator = ({
 /**
  * Caps the issues array and truncates long actual values for MongoDB storage.
  *
+ * Both the issue count and per-issue actual values are bounded to prevent
+ * the summary log document exceeding MongoDB's 16 MiB BSON limit.
+ * See PAE-1244 / PAE-1225.
+ *
  * @param {ValidationIssue[]} allIssues - All validation issues
  * @returns {{ issues: ValidationIssue[], totalIssues: number }}
  */
