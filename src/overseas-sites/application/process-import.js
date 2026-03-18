@@ -56,9 +56,9 @@ export const processOrsImport = async (importId, deps) => {
     results.push(result)
   }
 
-  const allFailed = results.every(
-    (r) => r.status === ORS_FILE_RESULT_STATUS.FAILURE
-  )
+  const allFailed =
+    results.length > 0 &&
+    results.every((r) => r.status === ORS_FILE_RESULT_STATUS.FAILURE)
   await orsImportsRepository.updateStatus(
     importId,
     allFailed ? ORS_IMPORT_STATUS.FAILED : ORS_IMPORT_STATUS.COMPLETED
