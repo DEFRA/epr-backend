@@ -34,28 +34,6 @@ import {
 export const MAX_VALIDATION_ISSUES = 100
 export const MAX_ACTUAL_LENGTH = 200
 
-const capIssuesForStorage = (allIssues) => {
-  const truncated = allIssues.length > MAX_VALIDATION_ISSUES
-  const capped = truncated
-    ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
-    : allIssues
-
-  for (const issue of capped) {
-    if (
-      typeof issue.context?.actual === 'string' &&
-      issue.context.actual.length > MAX_ACTUAL_LENGTH
-    ) {
-      issue.context.actual =
-        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-    }
-  }
-
-  return {
-    issues: capped,
-    totalIssues: allIssues.length
-  }
-}
-
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -549,5 +527,33 @@ export const createSummaryLogsValidator = ({
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
+  }
+}
+
+/**
+ * Caps the issues array and truncates long actual values for MongoDB storage.
+ *
+ * @param {ValidationIssue[]} allIssues - All validation issues
+ * @returns {{ issues: ValidationIssue[], totalIssues: number }}
+ */
+const capIssuesForStorage = (allIssues) => {
+  const shouldTruncate = allIssues.length > MAX_VALIDATION_ISSUES
+  const capped = shouldTruncate
+    ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
+    : allIssues
+
+  for (const issue of capped) {
+    if (
+      typeof issue.context?.actual === 'string' &&
+      issue.context.actual.length > MAX_ACTUAL_LENGTH
+    ) {
+      issue.context.actual =
+        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
+    }
+  }
+
+  return {
+    issues: capped,
+    totalIssues: allIssues.length
   }
 }
