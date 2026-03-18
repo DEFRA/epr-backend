@@ -77,7 +77,7 @@ export const REPROCESSED_LOADS = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | null} */ accreditation }
+    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
   ) => {
     const requiredFields = [
       FIELDS.PRODUCT_TONNAGE,

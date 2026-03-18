@@ -323,20 +323,16 @@ const performFindByOrgId = (db) => async (orgId) => {
   return mapDocumentWithCurrentStatuses(doc)
 }
 
-const performMergeRegistrationOverseasSites =
+const performReplaceRegistrationOverseasSites =
   (db) => async (id, version, registrationId, entries) => {
-    const setFields = {}
-    for (const [key, value] of Object.entries(entries)) {
-      setFields[`registrations.$[reg].overseasSites.${key}`] = value
-    }
-
-    const result = await db
-      .collection(COLLECTION_NAME)
-      .updateOne(
-        { _id: ObjectId.createFromHexString(id), version },
-        { $set: setFields, $inc: { version: 1 } },
-        { arrayFilters: [{ 'reg.id': registrationId }] }
-      )
+    const result = await db.collection(COLLECTION_NAME).updateOne(
+      { _id: ObjectId.createFromHexString(id), version },
+      {
+        $set: { 'registrations.$[reg].overseasSites': entries },
+        $inc: { version: 1 }
+      },
+      { arrayFilters: [{ 'reg.id': registrationId }] }
+    )
 
     return result.matchedCount > 0
   }
@@ -425,7 +421,8 @@ export const createOrganisationsRepository = async (
       },
 
       findByOrgId: performFindByOrgId(db),
-      mergeRegistrationOverseasSites: performMergeRegistrationOverseasSites(db)
+      replaceRegistrationOverseasSites:
+        performReplaceRegistrationOverseasSites(db)
     }
   }
 }

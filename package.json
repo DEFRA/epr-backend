@@ -17,6 +17,7 @@
     "#overseas-sites/*": "./src/overseas-sites/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
+    "#reports/*": "./src/reports/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",

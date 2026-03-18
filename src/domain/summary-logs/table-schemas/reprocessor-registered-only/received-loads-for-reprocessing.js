@@ -1,5 +1,16 @@
 import Joi from 'joi'
-import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
+import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import {
+  createRowIdSchema,
+  createWeightFieldSchema,
+  createPercentageFieldSchema,
+  createEnumFieldSchema,
+  DROPDOWN_PLACEHOLDER,
+  MESSAGES,
+  RECYCLABLE_PROPORTION_METHODS
+} from '../shared/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRowRegisteredOnly } from '#application/waste-records/row-transformers/received-loads-reprocessing-registered-only.js'
 
 const ALL_FIELDS = Object.values(FIELDS)
 
@@ -11,6 +22,9 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received',
+  rowTransformer: transformReceivedLoadsRowRegisteredOnly,
 
   /**
    * VAL008: All columns that must be present in the uploaded file
@@ -20,15 +34,35 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   /**
    * Per-field values that indicate "unfilled"
    */
-  unfilledValues: {},
+  unfilledValues: {
+    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.MONTH_RECEIVED_FOR_REPROCESSING]: DROPDOWN_PLACEHOLDER
+  },
 
   /**
    * VAL010: Validation schema for filled fields
-   *
-   * Placeholder — accepts anything for now. Field-level validation
-   * to be added when business rules are confirmed.
    */
-  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
+  validationSchema: Joi.object({
+    [FIELDS.ROW_ID]: createRowIdSchema(
+      ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_REPROCESSING
+    ),
+    [FIELDS.MONTH_RECEIVED_FOR_REPROCESSING]: Joi.string()
+      .pattern(/^\d{4}-(0[1-9]|1[0-2])-01$/)
+      .optional()
+      .messages({
+        'string.base': MESSAGES.MUST_BE_A_STRING,
+        'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)'
+      }),
+    [FIELDS.NET_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: createEnumFieldSchema(
+      RECYCLABLE_PROPORTION_METHODS,
+      MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
+    ),
+    [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
+    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createWeightFieldSchema()
+  })
+    .unknown(true)
+    .prefs({ abortEarly: false }),
 
   /**
    * VAL011: Fields required for Waste Balance calculation

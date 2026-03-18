@@ -1,7 +1,20 @@
 import { PROCESSING_TYPES } from '../meta-fields.js'
-import { TABLE_SCHEMAS as EXPORTER } from './exporter/index.js'
-import { TABLE_SCHEMAS as REPROCESSOR_INPUT } from './reprocessor-input/index.js'
-import { TABLE_SCHEMAS as REPROCESSOR_OUTPUT } from './reprocessor-output/index.js'
+import {
+  TABLE_SCHEMAS as EXPORTER,
+  MIN_TEMPLATE_VERSION as EXPORTER_MIN
+} from './exporter/index.js'
+import {
+  TABLE_SCHEMAS as REPROCESSOR_INPUT,
+  MIN_TEMPLATE_VERSION as REPROCESSOR_INPUT_MIN
+} from './reprocessor-input/index.js'
+import {
+  TABLE_SCHEMAS as REPROCESSOR_OUTPUT,
+  MIN_TEMPLATE_VERSION as REPROCESSOR_OUTPUT_MIN
+} from './reprocessor-output/index.js'
+import {
+  TABLE_SCHEMAS as REPROCESSOR_REGISTERED_ONLY,
+  MIN_TEMPLATE_VERSION as REPROCESSOR_REGISTERED_ONLY_MIN
+} from './reprocessor-registered-only/index.js'
 
 /**
  * Registry mapping processing types to their table schemas
@@ -19,7 +32,16 @@ import { TABLE_SCHEMAS as REPROCESSOR_OUTPUT } from './reprocessor-output/index.
 export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT,
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT,
+  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]: REPROCESSOR_REGISTERED_ONLY,
   [PROCESSING_TYPES.EXPORTER]: EXPORTER
+}
+
+export const MIN_TEMPLATE_VERSIONS = {
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT_MIN,
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT_MIN,
+  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]:
+    REPROCESSOR_REGISTERED_ONLY_MIN,
+  [PROCESSING_TYPES.EXPORTER]: EXPORTER_MIN
 }
 /** @typedef {import('#repositories/organisations/port.js').Accreditation} Accreditation */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
@@ -33,7 +55,7 @@ export const PROCESSING_TYPE_TABLES = {
  * @property {string[]} requiredHeaders - Headers that must be present in the table
  * @property {Record<string, string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * @property {JoiObjectSchema} validationSchema - Joi schema for VAL010 (in-sheet validation of filled fields)
- * @property {((data: Record<string, any>, context: {accreditation?: Accreditation }) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance (null if table does not contribute)
+ * @property {((data: Record<string, any>, context: {accreditation: Accreditation | null}) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance (null if table does not contribute)
  */
 
 /**

@@ -100,8 +100,8 @@ describe('Organisations repository - ORS operations', () => {
     })
   })
 
-  describe('mergeRegistrationOverseasSites', () => {
-    it('merges new entries into the overseas sites map', async ({
+  describe('replaceRegistrationOverseasSites', () => {
+    it('sets entries on the overseas sites map', async ({
       repository,
       database
     }) => {
@@ -114,7 +114,7 @@ describe('Organisations repository - ORS operations', () => {
         '002': { overseasSiteId: 'site-bbb' }
       }
 
-      const result = await repository.mergeRegistrationOverseasSites(
+      const result = await repository.replaceRegistrationOverseasSites(
         orgId,
         1,
         'reg-001',
@@ -134,10 +134,7 @@ describe('Organisations repository - ORS operations', () => {
       expect(updated.version).toBe(2)
     })
 
-    it('preserves existing entries not in the update', async ({
-      repository,
-      database
-    }) => {
+    it('replaces existing entries', async ({ repository, database }) => {
       const orgId = new ObjectId().toHexString()
       const org = buildOrganisation({ id: orgId })
       org.registrations[0].overseasSites = {
@@ -149,7 +146,7 @@ describe('Organisations repository - ORS operations', () => {
         '001': { overseasSiteId: 'new-site' }
       }
 
-      await repository.mergeRegistrationOverseasSites(
+      await repository.replaceRegistrationOverseasSites(
         orgId,
         1,
         'reg-001',
@@ -161,7 +158,6 @@ describe('Organisations repository - ORS operations', () => {
         .findOne({ _id: ObjectId.createFromHexString(orgId) })
 
       expect(updated.registrations[0].overseasSites).toEqual({
-        '010': { overseasSiteId: 'existing-site' },
         '001': { overseasSiteId: 'new-site' }
       })
     })
@@ -181,7 +177,7 @@ describe('Organisations repository - ORS operations', () => {
         '001': { overseasSiteId: 'new-site' }
       }
 
-      await repository.mergeRegistrationOverseasSites(
+      await repository.replaceRegistrationOverseasSites(
         orgId,
         1,
         'reg-001',
@@ -205,7 +201,7 @@ describe('Organisations repository - ORS operations', () => {
       const org = buildOrganisation({ id: orgId })
       await database.collection(COLLECTION_NAME).insertOne(org)
 
-      const result = await repository.mergeRegistrationOverseasSites(
+      const result = await repository.replaceRegistrationOverseasSites(
         orgId,
         999,
         'reg-001',

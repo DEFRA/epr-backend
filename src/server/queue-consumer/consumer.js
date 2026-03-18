@@ -3,7 +3,8 @@ import { Consumer } from 'sqs-consumer'
 
 import {
   resolveQueueUrl,
-  getMaxReceiveCount
+  getMaxReceiveCount,
+  resetVisibilityTimeout
 } from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -137,6 +138,7 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * @param {object} params.payload
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
+ * @param {string} params.queueUrl
  * @param {ConsumerDependencies} params.deps
  * @param {TypedLogger} params.logger
  */
@@ -146,6 +148,7 @@ const handleCommandError = async ({
   payload,
   message,
   maxReceiveCount,
+  queueUrl,
   deps,
   logger
 }) => {
@@ -154,8 +157,9 @@ const handleCommandError = async ({
   const isFinalTransientAttempt =
     !isPermanent && maxReceiveCount !== null && receiveCount >= maxReceiveCount
   const isTerminal = isPermanent || isFinalTransientAttempt
+  const logLevel = isTerminal ? 'error' : 'warn'
 
-  logger.error({
+  logger[logLevel]({
     err,
     message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
     event: {
@@ -171,6 +175,22 @@ const handleCommandError = async ({
   if (isPermanent) {
     return
   }
+
+  if (!isFinalTransientAttempt && message.ReceiptHandle) {
+    try {
+      await resetVisibilityTimeout(
+        deps.sqsClient,
+        queueUrl,
+        message.ReceiptHandle
+      )
+    } catch (resetErr) {
+      logger.warn({
+        err: resetErr,
+        message: `Failed to reset visibility timeout for messageId=${message.MessageId}`
+      })
+    }
+  }
+
   throw err
 }
 
@@ -178,12 +198,14 @@ const handleCommandError = async ({
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
  * @param {number|null} maxReceiveCount
+ * @param {string} queueUrl
  * @param {import('joi').ObjectSchema} envelopeSchema
  * @param {Map<string, CommandHandler>} handlerMap
  * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<import('@aws-sdk/client-sqs').Message | void>}
  */
 const createMessageHandler =
-  (deps, maxReceiveCount, envelopeSchema, handlerMap) => async (message) => {
+  (deps, maxReceiveCount, queueUrl, envelopeSchema, handlerMap) =>
+  async (message) => {
     const { logger } = deps
 
     const result = parseCommandMessage(
@@ -227,6 +249,7 @@ const createMessageHandler =
         payload,
         message,
         maxReceiveCount,
+        queueUrl,
         deps,
         logger
       })
@@ -236,6 +259,69 @@ const createMessageHandler =
       return message
     }
   }
+
+/**
+ * Attaches error, processing_error, and timeout_error event handlers
+ * to the SQS consumer.
+ * @param {Consumer} consumer
+ * @param {ConsumerDependencies} deps
+ * @param {TypedLogger} logger
+ * @param {import('joi').ObjectSchema} envelopeSchema
+ * @param {Map<string, CommandHandler>} handlerMap
+ */
+const attachEventHandlers = (
+  consumer,
+  deps,
+  logger,
+  envelopeSchema,
+  handlerMap
+) => {
+  consumer.on('error', (err) => {
+    logger.error({
+      err,
+      message: 'SQS consumer error',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILURE
+      }
+    })
+  })
+
+  consumer.on('processing_error', (err) => {
+    logger.warn({
+      err,
+      message: 'SQS message processing error',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+  })
+
+  consumer.on('timeout_error', async (err, message) => {
+    const result = parseCommandMessage(
+      message,
+      logger,
+      envelopeSchema,
+      handlerMap
+    )
+
+    logger.error({
+      err,
+      message: result
+        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
+        : `Command timed out for messageId=${message.MessageId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    if (result) {
+      await result.handler.onFailure(result.payload, deps)
+    }
+  })
+}
 
 /**
  * Creates the SQS command queue consumer.
@@ -280,57 +366,19 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
     queueUrl,
     sqs: sqsClient,
     handleMessage: /** @type {*} */ (
-      createMessageHandler(deps, maxReceiveCount, envelopeSchema, handlerMap)
+      createMessageHandler(
+        deps,
+        maxReceiveCount,
+        queueUrl,
+        envelopeSchema,
+        handlerMap
+      )
     ),
     handleMessageTimeout: COMMAND_TIMEOUT_MS,
     attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 
-  consumer.on('error', (err) => {
-    logger.error({
-      err,
-      message: 'SQS consumer error',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILURE
-      }
-    })
-  })
-
-  consumer.on('processing_error', (err) => {
-    logger.error({
-      err,
-      message: 'SQS message processing error',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-  })
-
-  consumer.on('timeout_error', async (err, message) => {
-    const result = parseCommandMessage(
-      message,
-      logger,
-      envelopeSchema,
-      handlerMap
-    )
-
-    logger.error({
-      err,
-      message: result
-        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
-        : `Command timed out for messageId=${message.MessageId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-
-    if (result) {
-      await result.handler.onFailure(result.payload, deps)
-    }
-  })
+  attachEventHandlers(consumer, deps, logger, envelopeSchema, handlerMap)
 
   return consumer
 }

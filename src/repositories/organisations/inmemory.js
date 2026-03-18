@@ -239,7 +239,7 @@ const performFindByOrgId = (staleCache) => async (orgId) => {
   return mapDocumentWithCurrentStatuses(structuredClone(found))
 }
 
-const performMergeRegistrationOverseasSites =
+const performReplaceRegistrationOverseasSites =
   (storage, staleCache, pendingSyncRef) =>
   async (id, version, registrationId, entries) => {
     const existingIndex = storage.findIndex((o) => o._id === id)
@@ -259,13 +259,7 @@ const performMergeRegistrationOverseasSites =
       return false
     }
 
-    if (!registration.overseasSites) {
-      registration.overseasSites = {}
-    }
-
-    for (const [key, value] of Object.entries(entries)) {
-      registration.overseasSites[key] = value
-    }
+    registration.overseasSites = { ...entries }
 
     existing.version += 1
 
@@ -389,7 +383,7 @@ export const createInMemoryOrganisationsRepository = (
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findByOrgId: performFindByOrgId(staleCache),
-      mergeRegistrationOverseasSites: performMergeRegistrationOverseasSites(
+      replaceRegistrationOverseasSites: performReplaceRegistrationOverseasSites(
         storage,
         staleCache,
         pendingSyncRef

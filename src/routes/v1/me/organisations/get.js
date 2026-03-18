@@ -99,7 +99,10 @@ export const organisationsLinkedGetAll = {
   handler: async (request, h) => {
     const { organisationsRepository, auth, logger } = request
 
-    const { email } = auth.credentials
+    const { email } =
+      /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
+        auth.credentials
+      )
 
     const current = getCurrentDetailsFromToken(auth, logger)
 

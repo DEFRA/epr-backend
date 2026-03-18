@@ -92,21 +92,52 @@ describe('field-schemas', () => {
   })
 
   describe('createDateFieldSchema', () => {
-    it('accepts valid date', () => {
-      const schema = createDateFieldSchema()
-      expect(schema.validate(new Date()).error).toBeUndefined()
-    })
-
-    it('accepts date string', () => {
+    it('accepts valid date within range', () => {
       const schema = createDateFieldSchema()
       expect(schema.validate('2024-01-01').error).toBeUndefined()
     })
 
-    it('rejects invalid date', () => {
+    it('accepts minimum boundary date', () => {
+      const schema = createDateFieldSchema()
+      expect(schema.validate('2000-01-01').error).toBeUndefined()
+    })
+
+    it('accepts maximum boundary date', () => {
+      const schema = createDateFieldSchema()
+      expect(schema.validate('2100-01-01').error).toBeUndefined()
+    })
+
+    it('rejects invalid date string', () => {
       const schema = createDateFieldSchema()
       const { error } = schema.validate('not-a-date')
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects date before 2000', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate('1999-12-31')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects date after 2100', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate('2100-01-02')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects invalid year', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate('20256-01-02')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('accepts numeric timestamps within valid range', () => {
+      const schema = createDateFieldSchema()
+      expect(schema.validate(1704067200000).error).toBeUndefined()
     })
 
     it('is optional', () => {
@@ -387,6 +418,27 @@ describe('field-schemas', () => {
     it('is optional', () => {
       const schema = createEnumFieldSchema(validValues, invalidMessage)
       expect(schema.validate(undefined).error).toBeUndefined()
+    })
+
+    it('accepts value with leading whitespace by trimming', () => {
+      const schema = createEnumFieldSchema(validValues, invalidMessage)
+      const { error, value } = schema.validate(' Option A')
+      expect(error).toBeUndefined()
+      expect(value).toBe('Option A')
+    })
+
+    it('accepts value with trailing whitespace by trimming', () => {
+      const schema = createEnumFieldSchema(validValues, invalidMessage)
+      const { error, value } = schema.validate('Option B ')
+      expect(error).toBeUndefined()
+      expect(value).toBe('Option B')
+    })
+
+    it('accepts value with leading and trailing whitespace by trimming', () => {
+      const schema = createEnumFieldSchema(validValues, invalidMessage)
+      const { error, value } = schema.validate('  Option C  ')
+      expect(error).toBeUndefined()
+      expect(value).toBe('Option C')
     })
 
     it('coerces numeric value to string when enum values look like numbers', () => {

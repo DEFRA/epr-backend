@@ -142,11 +142,11 @@ describe('REPROCESSED_LOADS', () => {
         expect(error.details[0].message).toBe('must be a valid date')
       })
 
-      it('accepts numeric timestamps (Joi interprets as epoch ms)', () => {
+      it('accepts numeric timestamps within valid range (Joi interprets as epoch ms)', () => {
         // Joi's date() validator accepts numbers as timestamps
         // ExcelJS will provide Date objects for date cells, so this is acceptable
         const { error } = validationSchema.validate({
-          DATE_LOAD_LEFT_SITE: 12345
+          DATE_LOAD_LEFT_SITE: 1704067200000
         })
         expect(error).toBeUndefined()
       })

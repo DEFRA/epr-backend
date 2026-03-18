@@ -75,5 +75,23 @@ export const testCreateBehaviour = (it) => {
       expect(found.address.stateOrRegion).toBeUndefined()
       expect(found.address.postcode).toBeUndefined()
     })
+
+    it('accepts null for optional address fields', async () => {
+      const input = buildOverseasSite({
+        address: {
+          line1: '1 Test Street',
+          line2: null,
+          townOrCity: 'TESTTOWN',
+          stateOrRegion: null,
+          postcode: null
+        }
+      })
+
+      const created = await repository.create(input)
+      const found = await repository.findById(created.id)
+
+      expect(found).toBeTruthy()
+      expect(found.address.line1).toBe('1 Test Street')
+    })
   })
 }

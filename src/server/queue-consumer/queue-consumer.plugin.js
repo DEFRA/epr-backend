@@ -13,6 +13,16 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  * @property {{get: (key: string) => string}} config
  */
 
+/**
+ * @typedef {{
+ *   uploadsRepository: import('#domain/uploads/repository/port.js').UploadsRepository,
+ *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
+ *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+ *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
+ *   wasteBalancesRepository: import('#repositories/waste-balances/port.js').WasteBalancesRepository
+ * }} QueueConsumerRepositories
+ */
+
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
@@ -46,7 +56,7 @@ export const commandQueueConsumerPlugin = {
       organisationsRepository,
       wasteRecordsRepository,
       wasteBalancesRepository
-    } = server.app
+    } = /** @type {QueueConsumerRepositories} */ (server.app)
 
     const summaryLogExtractor = createSummaryLogExtractor({
       uploadsRepository,

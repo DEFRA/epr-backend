@@ -1,12 +1,18 @@
 /**
  * @typedef {Object} MockSqsCommandExecutorPluginOptions
  * @property {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} [summaryLogsWorker] - Mock executor to use
+ * @property {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} [orsImportsWorker] - Mock executor to use
  */
 
 /** @returns {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} */
-const createNoOpExecutor = () => ({
+const createNoOpSummaryLogsExecutor = () => ({
   validate: async () => {},
   submit: async () => {}
+})
+
+/** @returns {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} */
+const createNoOpOrsImportsExecutor = () => ({
+  importOverseasSites: async () => {}
 })
 
 // No SQS - runs synchronously for predictable test behaviour.
@@ -18,9 +24,15 @@ export const mockSqsCommandExecutorPlugin = {
 
   /** @param {MockSqsCommandExecutorPluginOptions} [options] */
   register: (server, options = {}) => {
-    const summaryLogsWorker = options.summaryLogsWorker ?? createNoOpExecutor()
+    const summaryLogsWorker =
+      options.summaryLogsWorker ?? createNoOpSummaryLogsExecutor()
+    const orsImportsWorker =
+      options.orsImportsWorker ?? createNoOpOrsImportsExecutor()
 
     server.decorate('request', 'summaryLogsWorker', () => summaryLogsWorker, {
+      apply: true
+    })
+    server.decorate('request', 'orsImportsWorker', () => orsImportsWorker, {
       apply: true
     })
   }

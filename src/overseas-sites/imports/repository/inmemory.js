@@ -36,6 +36,14 @@ export function createInMemoryOrsImportsRepository() {
       }
     },
 
+    async addFiles(id, files) {
+      const doc = storage.get(id)
+      if (doc) {
+        doc.files.push(...files.map((f) => structuredClone(f)))
+        doc.updatedAt = new Date().toISOString()
+      }
+    },
+
     async recordFileResult(id, fileIndex, result) {
       const doc = storage.get(id)
       if (doc?.files[fileIndex]) {

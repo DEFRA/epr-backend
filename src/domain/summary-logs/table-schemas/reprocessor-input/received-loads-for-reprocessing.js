@@ -149,7 +149,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | undefined} */ accreditation }
+    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
   ) => {
     const missingResult = checkRequiredFields(
       data,

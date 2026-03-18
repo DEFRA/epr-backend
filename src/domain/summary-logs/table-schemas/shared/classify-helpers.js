@@ -45,7 +45,7 @@ export const createDateOnlyClassifier =
   (dateField) =>
   (
     /** @type {Record<string, any>} */ data,
-    { /** @type {Accreditation | undefined} */ accreditation }
+    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
   ) => {
     const date = data[dateField]
 

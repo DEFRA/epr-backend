@@ -114,6 +114,27 @@ describe('createFormsFileUploadsRepository', () => {
       expect(mockUploadDone).not.toHaveBeenCalled()
     })
 
+    it('should throw error when response body is null', async () => {
+      const fileId = 'test-file-123'
+      const regulator = 'ea'
+      const accessToken = 'test-access-token'
+      const presignedUrl = 'https://presigned.example.com/file'
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: null
+      })
+
+      mockGetCognitoToken.mockResolvedValue(accessToken)
+      mockFetchJson.mockResolvedValue({ url: presignedUrl })
+
+      await expect(
+        repository.copyFormFileToS3({ fileId, regulator })
+      ).rejects.toThrow('Failed to download file: response body is null')
+
+      expect(mockUploadDone).not.toHaveBeenCalled()
+    })
+
     it('should throw error when S3 upload fails', async () => {
       const fileId = 'test-file-123'
       const regulator = 'sepa'
@@ -195,6 +216,16 @@ describe('createFormsFileUploadsRepository', () => {
       mockS3Client.send.mockRejectedValue(s3Error)
 
       await expect(repository.getFileById(fileId)).rejects.toThrow(s3Error)
+    })
+
+    it('should throw error when S3 response Body is undefined', async () => {
+      const fileId = 'test-file-123'
+
+      mockS3Client.send.mockResolvedValue({ Body: undefined })
+
+      await expect(repository.getFileById(fileId)).rejects.toThrow(
+        `File not found in S3: ${fileId}`
+      )
     })
   })
 })
