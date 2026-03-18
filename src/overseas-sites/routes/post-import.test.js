@@ -114,6 +114,22 @@ describe(`${orsImportCreatePath} route`, () => {
         expect(call.callbackUrl).toContain('/upload-completed')
       })
 
+      it('resolves the redirectUrl {importId} placeholder before initiating upload', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: '/v1/overseas-sites/imports',
+          ...asServiceMaintainer(),
+          payload: {
+            redirectUrl: '/overseas-sites/imports/{importId}'
+          }
+        })
+
+        const body = JSON.parse(response.payload)
+        const call = uploadsRepository.orsInitiateCalls[0]
+
+        expect(call.redirectUrl).toBe(`/overseas-sites/imports/${body.id}`)
+      })
+
       it('generates unique import IDs for each request', async () => {
         const responses = await Promise.all([
           server.inject({
