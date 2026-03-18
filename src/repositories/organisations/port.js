@@ -1,154 +1,11 @@
-/** @import {User, Organisation, Material, GlassRecyclingProcess} from '#domain/organisations/model.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 
 /**
  * @typedef {{
  *  id: string
  * }} Id
-
-/**
- * @typedef {{
- *  line1?: string;
- *  line2?: string;
- *  town?: string;
- *  county?: string;
- *  country?: string;
- *  postcode?: string;
- *  region?: string;
- *  fullAddress?: string;
- * }} RegistrationAddress
- */
-
-/**
- * @typedef {{
- *  line1: string;
- *  postcode: string;
- * }} AccreditationAddress
- */
-
-/**
- * @typedef {{
- *  address: AccreditationAddress;
- * }} AccreditationSite
- */
-
-/**
- * @typedef {{
- *  capacity: number;
- *  material: string;
- *  siteCapacityTimescale: string;
- * }} SiteCapacity
- */
-
-/**
- * @typedef {{
- *  address: RegistrationAddress;
- *  gridReference: string;
- *  siteCapacity: SiteCapacity[];
- * }} RegistrationSite
- */
-
-/**
- * @typedef {{
- *  detailedExplanation: string;
- *  percentIncomeSpent: number;
- *  usageDescription: string;
- * }} PrnIncomeBusinessPlan
- */
-
-/**
- * @typedef {{
- *  incomeBusinessPlan: PrnIncomeBusinessPlan[];
- *  signatories: User[];
- *  tonnageBand: string;
- * }} PrnIssuance
- */
-
-/**
- * @typedef {{
- *  status: 'created'|'approved'|'suspended';
- *  updatedAt: string;
- * }} StatusHistoryEntry
- */
-
-/**
- * @typedef {{
- *  statusHistory: StatusHistoryEntry[];
- * }} StatusHistory
- */
-
-/**
- * @typedef {Id & StatusHistory & {
- *  formSubmissionTime: Date;
- *  material: string;
- *  prnIssuance: PrnIssuance;
- *  site?: AccreditationSite;
- *  submittedToRegulator: string;
- *  submitterContactDetails: User;
- *  wasteProcessingType: string;
- * }} AccreditationBase
- */
-
-/**
- * @typedef {AccreditationBase & {
- *  accreditationNumber: string;
- *  status: 'approved'|'suspended';
- *  validFrom: string;
- *  validTo: string
- * }} AccreditationApproved
- */
-
-/**
- * @typedef {AccreditationBase & {
- *  accreditationNumber?: string;
- *  status: 'created'|'rejected'|'archived';
- *  validFrom?: string;
- *  validTo?: string
- * }} AccreditationOther
- */
-
-/**
- * @typedef {AccreditationApproved | AccreditationOther} Accreditation
- */
-
-/**
- * @typedef {Id & {
- *  accreditation?: Accreditation;
- *  accreditationId?: string;
- *  approvedPersons: User[]
- *  formSubmissionTime: Date;
- *  material: Material;
- *  glassRecyclingProcess?: GlassRecyclingProcess[];
- *  orgName: string;
- *  site: RegistrationSite;
- *  submittedToRegulator: string;
- *  submitterContactDetails: User;
- *  wasteProcessingType: string;
- *  overseasSites?: Record<string, {overseasSiteId: string}>;
- * }} RegistrationBase
- */
-
-/**
- * @typedef {RegistrationBase & {
- *  registrationNumber: string;
- *  status: 'approved'|'suspended';
- *  validFrom: string;
- *  validTo: string;
- * }} RegistrationApproved
- */
-
-/**
- * @typedef {RegistrationBase & {
- *  registrationNumber?: string;
- *  cbduNumber?: string;
- *  status: 'created'|'rejected'|'archived';
- *  validFrom?: string;
- *  validTo?: string
- * }} RegistrationOther
- */
-
-/**
- * @typedef {RegistrationApproved | RegistrationOther} Registration
- */
 
 /**
  * @typedef {Object} OrganisationIds
@@ -165,12 +22,12 @@
 
 /**
  * @typedef {Object} OrganisationsRepository
- * @property {(organisation: Object) => Promise<void>} insert
+ * @property {(organisation: Organisation) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
- * @property {(id: string, version: number, document: Object) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
- * @property {() => Promise<Object[]>} findAll
- * @property {(ids: string[]) => Promise<Object[]>} findByIds - Find organisations by array of IDs
- * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
+ * @property {(id: string, version: number, document: Organisation) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
+ * @property {() => Promise<Organisation[]>} findAll
+ * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
+ * @property {(id: string, minimumVersion?: number) => Promise<Organisation|null>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(filter?: { name?: string }) => Promise<Organisation[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
  * @property {(email: string) => Promise<Organisation[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
