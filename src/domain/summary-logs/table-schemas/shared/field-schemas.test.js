@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createWeightFieldSchema,
+  createUnboundedWeightFieldSchema,
   createYesNoFieldSchema,
   createDateFieldSchema,
   createThreeDigitIdSchema,
@@ -55,6 +56,38 @@ describe('field-schemas', () => {
 
     it('is optional', () => {
       const schema = createWeightFieldSchema()
+      expect(schema.validate(undefined).error).toBeUndefined()
+    })
+  })
+
+  describe('createUnboundedWeightFieldSchema', () => {
+    it('accepts valid weight', () => {
+      const schema = createUnboundedWeightFieldSchema()
+      expect(schema.validate(500).error).toBeUndefined()
+      expect(schema.validate(0).error).toBeUndefined()
+    })
+
+    it('accepts values above 1000', () => {
+      const schema = createUnboundedWeightFieldSchema()
+      expect(schema.validate(50000).error).toBeUndefined()
+    })
+
+    it('rejects weight below 0', () => {
+      const schema = createUnboundedWeightFieldSchema()
+      const { error } = schema.validate(-1)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be at least 0')
+    })
+
+    it('rejects non-number', () => {
+      const schema = createUnboundedWeightFieldSchema()
+      const { error } = schema.validate('abc')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a number')
+    })
+
+    it('is optional', () => {
+      const schema = createUnboundedWeightFieldSchema()
       expect(schema.validate(undefined).error).toBeUndefined()
     })
   })

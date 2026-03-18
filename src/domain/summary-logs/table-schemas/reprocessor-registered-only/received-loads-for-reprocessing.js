@@ -3,6 +3,7 @@ import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
   createRowIdSchema,
   createWeightFieldSchema,
+  createUnboundedWeightFieldSchema,
   createPercentageFieldSchema,
   createEnumFieldSchema,
   DROPDOWN_PLACEHOLDER,
@@ -53,7 +54,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
         'string.base': MESSAGES.MUST_BE_A_STRING,
         'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)'
       }),
-    [FIELDS.NET_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.NET_WEIGHT]: createUnboundedWeightFieldSchema(),
     [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: createEnumFieldSchema(
       RECYCLABLE_PROPORTION_METHODS,
       MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
