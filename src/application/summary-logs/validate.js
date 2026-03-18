@@ -31,7 +31,8 @@ import {
   mergeLoads
 } from './load-counts.js'
 
-export const MAX_VALIDATION_ISSUES = 1000
+export const MAX_VALIDATION_ISSUES = 100
+export const MAX_ACTUAL_LENGTH = 200
 
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
@@ -508,13 +509,24 @@ export const createSummaryLogsValidator = ({
 
     const allIssues = issues.getAllIssues()
     const truncated = allIssues.length > MAX_VALIDATION_ISSUES
+    const cappedIssues = truncated
+      ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
+      : allIssues
+
+    for (const issue of cappedIssues) {
+      if (
+        typeof issue.context?.actual === 'string' &&
+        issue.context.actual.length > MAX_ACTUAL_LENGTH
+      ) {
+        issue.context.actual =
+          issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
+      }
+    }
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
       validation: {
-        issues: truncated
-          ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
-          : allIssues,
+        issues: cappedIssues,
         ...(truncated && { totalIssues: allIssues.length })
       },
       ...(loads && { loads }),

@@ -7,7 +7,8 @@ import Boom from '@hapi/boom'
 
 import {
   createSummaryLogsValidator,
-  MAX_VALIDATION_ISSUES
+  MAX_VALIDATION_ISSUES,
+  MAX_ACTUAL_LENGTH
 } from './validate.js'
 import {
   createEmptyLoadCategory,
@@ -1859,7 +1860,7 @@ describe('SummaryLogsValidator', () => {
 
   describe('Validation issues truncation', () => {
     it('truncates issues to MAX_VALIDATION_ISSUES and records totalIssues', async () => {
-      const issueCount = MAX_VALIDATION_ISSUES + 500
+      const issueCount = MAX_VALIDATION_ISSUES + 50
       const rows = Array.from({ length: issueCount }, (_, i) =>
         buildReceivedLoadRow({
           ROW_ID: 10000 + i,
@@ -1883,6 +1884,60 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.validation.totalIssues).toBeGreaterThan(
         MAX_VALIDATION_ISSUES
       )
+    })
+
+    it('truncates long actual values in issues before saving', async () => {
+      const longValue = 'x'.repeat(MAX_ACTUAL_LENGTH + 100)
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  EWC_CODE: longValue
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      const issueWithActual = updateCall.validation.issues.find(
+        (i) =>
+          typeof i.context?.actual === 'string' && i.context.actual.length > 1
+      )
+
+      expect(issueWithActual.context.actual).toHaveLength(MAX_ACTUAL_LENGTH + 1)
+      expect(issueWithActual.context.actual).toMatch(/…$/)
+    })
+
+    it('does not truncate short actual values', async () => {
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  EWC_CODE: 'bad-code'
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      const issueWithActual = updateCall.validation.issues.find(
+        (i) => i.context?.actual === 'bad-code'
+      )
+
+      expect(issueWithActual.context.actual).toBe('bad-code')
     })
 
     it('does not add totalIssues when issues are within the limit', async () => {
