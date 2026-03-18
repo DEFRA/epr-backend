@@ -2,8 +2,8 @@
  * Pure utility functions for formatting public register data
  */
 
-/** @import {RegistrationAddress} from '#repositories/organisations/port.js' */
-/** @import {Material, GlassRecyclingProcess, TonnageBand, Address} from '#domain/organisations/model.js' */
+/** @import {Address, GlassRecyclingProcess, Material, TonnageBand} from '#domain/organisations/model.js' */
+/** @import {RegistrationAddress} from '#domain/organisations/registration.js' */
 
 import {
   GLASS_RECYCLING_PROCESS,

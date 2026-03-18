@@ -1,4 +1,3 @@
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
 import Joi from 'joi'
 import {
   DROPDOWN_PLACEHOLDER,
@@ -26,6 +25,8 @@ import {
 } from '../shared/classify-helpers.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
  * Table schema for REPROCESSED_LOADS (REPROCESSOR_OUTPUT)

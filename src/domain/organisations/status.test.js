@@ -6,8 +6,10 @@ import {
 import { ORGANISATION_STATUS, REG_ACC_STATUS } from './model.js'
 import Boom from '@hapi/boom'
 
+/** @import {OrganisationStatus, RegAccStatus} from './model.js' */
+
 describe('assertOrgStatusTransitionValid', () => {
-  // Test cases: [fromStatus, toStatus, isValid]
+  /** @type {[OrganisationStatus, OrganisationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [ORGANISATION_STATUS.CREATED, ORGANISATION_STATUS.APPROVED, true],
@@ -68,7 +70,7 @@ describe('assertOrgStatusTransitionValid', () => {
 })
 
 describe('assertRegAccStatusTransitionValid', () => {
-  // Test cases: [fromStatus, toStatus, isValid]
+  /** @type {[RegAccStatus, RegAccStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [REG_ACC_STATUS.CREATED, REG_ACC_STATUS.APPROVED, true],

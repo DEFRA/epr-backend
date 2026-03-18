@@ -31,12 +31,12 @@ import {
   mergeLoads
 } from './load-counts.js'
 
+/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
-/** @typedef {import('#repositories/organisations/port.js').Registration} Registration */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 /** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */

@@ -1,4 +1,5 @@
-/** @import {Accreditation, Registration} from '#repositories/organisations/port.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 
 /**
  * Status values for registrations and accreditations
@@ -31,9 +32,8 @@ export const REGULATOR = Object.freeze({
 })
 
 /**
- * @typedef {'aluminium' | 'fibre' | 'glass' | 'paper' | 'plastic' | 'steel' | 'wood'} Material
+ * @typedef {typeof MATERIAL[keyof typeof MATERIAL]} Material
  */
-
 export const MATERIAL = Object.freeze({
   ALUMINIUM: 'aluminium',
   FIBRE: 'fibre',
@@ -45,18 +45,16 @@ export const MATERIAL = Object.freeze({
 })
 
 /**
- * @typedef {'reprocessor' | 'exporter'} WasteProcessingTypeValue
+ * @typedef {typeof WASTE_PROCESSING_TYPE[keyof typeof WASTE_PROCESSING_TYPE]} WasteProcessingTypeValue
  */
-
 export const WASTE_PROCESSING_TYPE = Object.freeze({
   REPROCESSOR: 'reprocessor',
   EXPORTER: 'exporter'
 })
 
 /**
- * @typedef {'input' | 'output'} ReprocessingType
+ * @typedef {typeof REPROCESSING_TYPE[keyof typeof REPROCESSING_TYPE]} ReprocessingType
  */
-
 export const REPROCESSING_TYPE = Object.freeze({
   INPUT: 'input',
   OUTPUT: 'output'
@@ -81,6 +79,9 @@ export const PARTNER_TYPE = Object.freeze({
   CORPORATE: 'corporate'
 })
 
+/**
+ * @typedef {typeof PARTNERSHIP_TYPE[keyof typeof PARTNERSHIP_TYPE]} PartnershipType
+ */
 export const PARTNERSHIP_TYPE = Object.freeze({
   LTD: 'ltd',
   LTD_LIABILITY: 'ltd_liability'
@@ -99,9 +100,8 @@ export const WASTE_PERMIT_TYPE = Object.freeze({
 })
 
 /**
- * @typedef {'glass_re_melt' | 'glass_other'} GlassRecyclingProcess
+ * @typedef {typeof GLASS_RECYCLING_PROCESS[keyof typeof GLASS_RECYCLING_PROCESS]} GlassRecyclingProcess
  */
-
 export const GLASS_RECYCLING_PROCESS = Object.freeze({
   GLASS_RE_MELT: 'glass_re_melt',
   GLASS_OTHER: 'glass_other'
@@ -114,9 +114,8 @@ export const TONNAGE_MONITORING_MATERIALS = Object.freeze([
 ])
 
 /**
- * @typedef {'up_to_500' | 'up_to_5000' | 'up_to_10000' | 'over_10000'} TonnageBand
+ * @typedef {typeof TONNAGE_BAND[keyof typeof TONNAGE_BAND]} TonnageBand
  */
-
 export const TONNAGE_BAND = Object.freeze({
   UP_TO_500: 'up_to_500',
   UP_TO_5000: 'up_to_5000',
@@ -193,15 +192,15 @@ export const USER_ROLES = Object.freeze({
  */
 
 /**
- * @typedef {'ea'|'niea'|'nrw'|'sepa'} RegulatorValue
+ * @typedef {typeof REGULATOR[keyof typeof REGULATOR]} RegulatorValue
  */
 
 /**
- * @typedef {'individual'|'partnership'|'unincorporated'} BusinessTypeValue
+ * @typedef {typeof BUSINESS_TYPE[keyof typeof BUSINESS_TYPE]} BusinessTypeValue
  */
 
 /**
- * @typedef {'england'|'northern_ireland'|'scotland'|'wales'} NationValue
+ * @typedef {typeof NATION[keyof typeof NATION]} NationValue
  */
 
 /**
@@ -221,7 +220,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
- *   type: 'ltd'|'ltd_liability';
+ *   type: PartnershipType;
  *   partners?: Partner[];
  * }} Partnership
  */
