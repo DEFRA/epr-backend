@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { describe, expect, vi } from 'vitest'
+import { afterEach, describe, expect, vi } from 'vitest'
 import { createOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
@@ -23,6 +23,10 @@ const it = mongoIt.extend({
 })
 
 describe('MongoDB ORS imports repository', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('creates and retrieves an import document', async ({ repository }) => {
     const created = await repository.create({
       _id: 'import-test-1',
@@ -133,8 +137,6 @@ describe('MongoDB ORS imports repository', () => {
     expect(found.expiresAt.getTime()).toBeGreaterThan(
       new Date('2026-01-15T13:00:00.000Z').getTime()
     )
-
-    vi.useRealTimers()
   })
 
   it('sets expiresAt to null when status changes to COMPLETED', async ({
