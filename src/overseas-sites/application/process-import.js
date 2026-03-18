@@ -48,6 +48,7 @@ export const processOrsImport = async (importId, deps) => {
       status: ORS_IMPORT_STATUS.PROCESSING
     })
 
+    const results = []
     for (let i = 0; i < importDoc.files.length; i++) {
       const file = importDoc.files[i]
       const result = await processFile(file, {
@@ -60,15 +61,17 @@ export const processOrsImport = async (importId, deps) => {
       await orsImportsRepository.recordFileResult(importId, i, result)
       await orsImportMetrics.recordFileResult({ status: result.status })
       await orsImportMetrics.recordSitesCreated(result.sitesCreated)
+      results.push(result)
     }
 
-    await orsImportsRepository.updateStatus(
-      importId,
-      ORS_IMPORT_STATUS.COMPLETED
-    )
-    await orsImportMetrics.recordStatusTransition({
-      status: ORS_IMPORT_STATUS.COMPLETED
-    })
+    const allFailed =
+      results.length > 0 &&
+      results.every((r) => r.status === ORS_FILE_RESULT_STATUS.FAILURE)
+    const finalStatus = allFailed
+      ? ORS_IMPORT_STATUS.FAILED
+      : ORS_IMPORT_STATUS.COMPLETED
+    await orsImportsRepository.updateStatus(importId, finalStatus)
+    await orsImportMetrics.recordStatusTransition({ status: finalStatus })
   })
 }
 
