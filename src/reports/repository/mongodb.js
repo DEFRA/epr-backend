@@ -333,7 +333,10 @@ const performDeleteReport = async (db, params) => {
     { returnDocument: 'after' }
   )
 
-  logger.info({}, `Report ${currentReportId} deletion result: ${updated}`)
+  logger.info(
+    {},
+    `Report ${currentReportId} deletion, isSuccess = ${updated != null}`
+  )
 
   await clearPeriodicReportSlot(db, {
     organisationId,
