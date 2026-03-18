@@ -535,7 +535,7 @@ export const createSummaryLogsValidator = ({
  *
  * Both the issue count and per-issue actual values are bounded to prevent
  * the summary log document exceeding MongoDB's 16 MiB BSON limit.
- * See PAE-1244 / PAE-1225.
+ * @see https://eaflood.atlassian.net/browse/PAE-1244
  *
  * @param {ValidationIssue[]} allIssues - All validation issues
  * @returns {{ issues: ValidationIssue[], totalIssues: number }}
