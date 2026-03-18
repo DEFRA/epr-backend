@@ -1200,6 +1200,7 @@ describe('syncFromSummaryLog', () => {
       type: WASTE_RECORD_TYPE.RECEIVED
     })
     expect(received.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
+    expect(received.data.MONTH_RECEIVED_FOR_REPROCESSING).toBe('2025-01')
 
     const sentOn = savedRecords.find(
       (r) => r.type === WASTE_RECORD_TYPE.SENT_ON
