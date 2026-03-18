@@ -22,12 +22,12 @@
 
 /**
  * @typedef {Object} OrganisationsRepository
- * @property {(organisation: Object) => Promise<void>} insert
+ * @property {(organisation: Organisation) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
- * @property {(id: string, version: number, document: Object) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
- * @property {() => Promise<Object[]>} findAll
- * @property {(ids: string[]) => Promise<Object[]>} findByIds - Find organisations by array of IDs
- * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
+ * @property {(id: string, version: number, document: Organisation) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
+ * @property {() => Promise<Organisation[]>} findAll
+ * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
+ * @property {(id: string, minimumVersion?: number) => Promise<Organisation|null>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(filter?: { name?: string }) => Promise<Organisation[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
  * @property {(email: string) => Promise<Organisation[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
