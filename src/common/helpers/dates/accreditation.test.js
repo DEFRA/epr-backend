@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  isWithinAccreditationDateRange,
+  getStatusHistoryDateTimes,
   isAccreditationApprovedAtDate,
   isAccreditedAtDates,
-  getStatusHistoryDateTimes
+  isWithinAccreditationDateRange
 } from './accreditation.js'
-/** @import {Accreditation, StatusHistoryEntry} from '#repositories/organisations/port.js' */
+
+/** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 
 describe('accreditation date helpers', () => {
   describe('isWithinAccreditationDateRange', () => {

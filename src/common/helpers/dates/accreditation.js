@@ -1,5 +1,4 @@
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
-/** @import {StatusHistoryEntry} from '#repositories/organisations/port.js' */
+/** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 
 /**
  * Checks if all dates are accredited

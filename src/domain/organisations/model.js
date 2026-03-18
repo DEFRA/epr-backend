@@ -1,4 +1,5 @@
-/** @import {Accreditation, Registration} from '#repositories/organisations/port.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 
 /**
  * Status values for registrations and accreditations
@@ -31,9 +32,8 @@ export const REGULATOR = Object.freeze({
 })
 
 /**
- * @typedef {'aluminium' | 'fibre' | 'glass' | 'paper' | 'plastic' | 'steel' | 'wood'} Material
+ * @typedef {typeof MATERIAL[keyof typeof MATERIAL]} Material
  */
-
 export const MATERIAL = Object.freeze({
   ALUMINIUM: 'aluminium',
   FIBRE: 'fibre',
@@ -45,18 +45,16 @@ export const MATERIAL = Object.freeze({
 })
 
 /**
- * @typedef {'reprocessor' | 'exporter'} WasteProcessingTypeValue
+ * @typedef {typeof WASTE_PROCESSING_TYPE[keyof typeof WASTE_PROCESSING_TYPE]} WasteProcessingTypeValue
  */
-
 export const WASTE_PROCESSING_TYPE = Object.freeze({
   REPROCESSOR: 'reprocessor',
   EXPORTER: 'exporter'
 })
 
 /**
- * @typedef {'input' | 'output'} ReprocessingType
+ * @typedef {typeof REPROCESSING_TYPE[keyof typeof REPROCESSING_TYPE]} ReprocessingType
  */
-
 export const REPROCESSING_TYPE = Object.freeze({
   INPUT: 'input',
   OUTPUT: 'output'

@@ -31,7 +31,9 @@ import {
 } from '../shared/classify-helpers.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
+
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
 /**
  * Fields required for waste balance calculation (Section 1)
  */

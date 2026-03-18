@@ -4,7 +4,7 @@ import { CLASSIFICATION_REASON } from './classification-reason.js'
 
 export { CLASSIFICATION_REASON }
 
-/** @import {Accreditation} from '#repositories/organisations/port.js' */
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
  * Checks whether all required fields are filled in the row data.
