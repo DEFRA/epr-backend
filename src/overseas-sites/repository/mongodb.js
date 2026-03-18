@@ -133,31 +133,31 @@ const performFindByProperties = async (db, properties) => {
     'address.townOrCity': properties.address.townOrCity
   }
 
-  if (properties.address.line2) {
+  if (properties.address.line2 != null) {
     filter['address.line2'] = properties.address.line2
   } else {
     filter['address.line2'] = { $in: [null, undefined] }
   }
 
-  if (properties.address.stateOrRegion) {
+  if (properties.address.stateOrRegion != null) {
     filter['address.stateOrRegion'] = properties.address.stateOrRegion
   } else {
     filter['address.stateOrRegion'] = { $in: [null, undefined] }
   }
 
-  if (properties.address.postcode) {
+  if (properties.address.postcode != null) {
     filter['address.postcode'] = properties.address.postcode
   } else {
     filter['address.postcode'] = { $in: [null, undefined] }
   }
 
-  if (properties.coordinates) {
+  if (properties.coordinates != null) {
     filter.coordinates = properties.coordinates
   } else {
     filter.coordinates = { $in: [null, undefined] }
   }
 
-  if (properties.validFrom) {
+  if (properties.validFrom != null) {
     filter.validFrom = properties.validFrom
   } else {
     filter.validFrom = { $in: [null, undefined] }

@@ -109,6 +109,84 @@ export const testFindByPropertiesBehaviour = (it) => {
       expect(found).toBeNull()
     })
 
+    it('returns null when address line2 differs', async () => {
+      await repository.create(
+        buildOverseasSite({
+          name: 'Line2 Site',
+          country: 'India',
+          address: {
+            line1: '42 Industrial Rd',
+            line2: 'Unit 5',
+            townOrCity: 'Mumbai'
+          }
+        })
+      )
+
+      const found = await repository.findByProperties({
+        name: 'Line2 Site',
+        country: 'India',
+        address: {
+          line1: '42 Industrial Rd',
+          line2: null,
+          townOrCity: 'Mumbai'
+        }
+      })
+
+      expect(found).toBeNull()
+    })
+
+    it('returns null when stateOrRegion differs', async () => {
+      await repository.create(
+        buildOverseasSite({
+          name: 'Region Site',
+          country: 'India',
+          address: {
+            line1: '42 Industrial Rd',
+            townOrCity: 'Mumbai',
+            stateOrRegion: 'Maharashtra'
+          }
+        })
+      )
+
+      const found = await repository.findByProperties({
+        name: 'Region Site',
+        country: 'India',
+        address: {
+          line1: '42 Industrial Rd',
+          townOrCity: 'Mumbai',
+          stateOrRegion: 'Gujarat'
+        }
+      })
+
+      expect(found).toBeNull()
+    })
+
+    it('returns null when postcode differs', async () => {
+      await repository.create(
+        buildOverseasSite({
+          name: 'Postcode Site',
+          country: 'India',
+          address: {
+            line1: '42 Industrial Rd',
+            townOrCity: 'Mumbai',
+            postcode: '400001'
+          }
+        })
+      )
+
+      const found = await repository.findByProperties({
+        name: 'Postcode Site',
+        country: 'India',
+        address: {
+          line1: '42 Industrial Rd',
+          townOrCity: 'Mumbai',
+          postcode: '400002'
+        }
+      })
+
+      expect(found).toBeNull()
+    })
+
     it('matches with all optional fields populated', async () => {
       const site = buildFullOverseasSite({
         name: 'Full Match Site',
