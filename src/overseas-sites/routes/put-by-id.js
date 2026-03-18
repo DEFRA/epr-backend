@@ -11,6 +11,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteUpdatePayloadSchema } from './put-by-id.schema.js'
 
 /** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const overseasSiteUpdatePath = '/v1/overseas-sites/{id}'
 
@@ -25,7 +26,7 @@ export const overseasSiteUpdate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

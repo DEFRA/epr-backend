@@ -15,6 +15,7 @@ import { orsImportCreatePayloadSchema } from './post-import.schema.js'
 
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 /**
  * @typedef {{redirectUrl: string}} OrsImportCreatePayload
@@ -33,7 +34,7 @@ export const orsImportCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<OrsImportCreatePayload> & {orsImportsRepository: OrsImportsRepository, uploadsRepository: UploadsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<OrsImportCreatePayload> & {orsImportsRepository: OrsImportsRepository, uploadsRepository: UploadsRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

@@ -10,6 +10,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const overseasSiteDeletePath = '/v1/overseas-sites/{id}'
 
@@ -21,7 +22,7 @@ export const overseasSiteDelete = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
