@@ -48,16 +48,14 @@ describe(`${orsImportStatusPath} route`, () => {
     })
 
     describe('when import does not exist', () => {
-      it('returns OK with default pending status', async () => {
+      it('returns 404', async () => {
         const response = await server.inject({
           method: 'GET',
           url: '/v1/overseas-sites/imports/non-existent-id',
           ...asServiceMaintainer()
         })
 
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        const body = JSON.parse(response.payload)
-        expect(body.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
     })
 
