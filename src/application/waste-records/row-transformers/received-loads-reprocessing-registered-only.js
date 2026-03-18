@@ -3,6 +3,7 @@ import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reproc
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const rowIdField = RECEIVED_LOADS_FIELDS.ROW_ID
+const monthField = RECEIVED_LOADS_FIELDS.MONTH_RECEIVED_FOR_REPROCESSING
 
 /**
  * Transforms a row from RECEIVED_LOADS_FOR_REPROCESSING table into waste record metadata
@@ -18,12 +19,20 @@ export const transformReceivedLoadsRowRegisteredOnly = (rowData, rowIndex) => {
     throw new Error(`Missing ${rowIdField} at row ${rowIndex}`)
   }
 
+  const data = {
+    ...rowData,
+    processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+  }
+
+  // The Excel template stores month as a first-of-month date (e.g. '2026-03-01').
+  // Strip the day portion so the persisted value reflects month granularity ('2026-03').
+  if (data[monthField]) {
+    data[monthField] = data[monthField].slice(0, 7)
+  }
+
   return {
     wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
     rowId: rowData[rowIdField],
-    data: {
-      ...rowData,
-      processingType: PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-    }
+    data
   }
 }
