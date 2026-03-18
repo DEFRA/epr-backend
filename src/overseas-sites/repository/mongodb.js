@@ -116,6 +116,64 @@ const performRemove = async (db, id) => {
 
 /**
  * @param {Db} db
+ * @param {object} properties
+ * @param {string} properties.name
+ * @param {string} properties.country
+ * @param {import('./port.js').OverseasSiteAddress} properties.address
+ * @param {string} [properties.coordinates]
+ * @param {Date} [properties.validFrom]
+ * @returns {Promise<OverseasSite | null>}
+ */
+const performFindByProperties = async (db, properties) => {
+  /** @type {import('mongodb').Filter<import('mongodb').Document>} */
+  const filter = {
+    name: properties.name,
+    country: properties.country,
+    'address.line1': properties.address.line1,
+    'address.townOrCity': properties.address.townOrCity
+  }
+
+  if (properties.address.line2) {
+    filter['address.line2'] = properties.address.line2
+  } else {
+    filter['address.line2'] = { $in: [null, undefined] }
+  }
+
+  if (properties.address.stateOrRegion) {
+    filter['address.stateOrRegion'] = properties.address.stateOrRegion
+  } else {
+    filter['address.stateOrRegion'] = { $in: [null, undefined] }
+  }
+
+  if (properties.address.postcode) {
+    filter['address.postcode'] = properties.address.postcode
+  } else {
+    filter['address.postcode'] = { $in: [null, undefined] }
+  }
+
+  if (properties.coordinates) {
+    filter.coordinates = properties.coordinates
+  } else {
+    filter.coordinates = { $in: [null, undefined] }
+  }
+
+  if (properties.validFrom) {
+    filter.validFrom = properties.validFrom
+  } else {
+    filter.validFrom = { $in: [null, undefined] }
+  }
+
+  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+
+  if (!doc) {
+    return null
+  }
+
+  return validateOverseasSiteRead({ ...doc, id: doc._id.toHexString() })
+}
+
+/**
+ * @param {Db} db
  * @param {FindAllParams} [params]
  * @returns {Promise<OverseasSite[]>}
  */
@@ -149,6 +207,7 @@ export const createOverseasSitesRepository = async (db) => {
     create: (site) => performCreate(db, site),
     findAll: (params) => performFindAll(db, params),
     findById: (id) => performFindById(db, id),
+    findByProperties: (properties) => performFindByProperties(db, properties),
     remove: (id) => performRemove(db, id),
     update: (id, updates) => performUpdate(db, id, updates)
   })

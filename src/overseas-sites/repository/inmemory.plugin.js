@@ -2,7 +2,7 @@ import { registerRepository } from '#plugins/register-repository.js'
 import { ObjectId } from 'mongodb'
 import { validateOverseasSiteInsert } from './validation.js'
 
-/** @import { OverseasSite, FindAllParams } from './port.js' */
+/** @import { OverseasSite, FindAllParams, FindByPropertiesParams } from './port.js' */
 
 /** @typedef {Map<string, OverseasSite>} Storage */
 
@@ -51,6 +51,48 @@ const performRemove = (storage) => async (id) => {
 }
 
 /**
+ * @param {*} a
+ * @param {*} b
+ */
+const nullishEqual = (a, b) => (a == null && b == null) || a === b
+
+/**
+ * @param {*} a
+ * @param {*} b
+ */
+const dateEqual = (a, b) => {
+  if (a == null && b == null) return true
+  if (a == null || b == null) return false
+  return new Date(a).getTime() === new Date(b).getTime()
+}
+
+/**
+ * @param {Storage} storage
+ * @returns {(properties: FindByPropertiesParams) => Promise<OverseasSite | null>}
+ */
+const performFindByProperties = (storage) => async (properties) => {
+  for (const site of storage.values()) {
+    if (
+      site.name === properties.name &&
+      site.country === properties.country &&
+      site.address.line1 === properties.address.line1 &&
+      site.address.townOrCity === properties.address.townOrCity &&
+      nullishEqual(site.address.line2, properties.address.line2) &&
+      nullishEqual(
+        site.address.stateOrRegion,
+        properties.address.stateOrRegion
+      ) &&
+      nullishEqual(site.address.postcode, properties.address.postcode) &&
+      nullishEqual(site.coordinates, properties.coordinates) &&
+      dateEqual(site.validFrom, properties.validFrom)
+    ) {
+      return structuredClone(site)
+    }
+  }
+  return null
+}
+
+/**
  * @param {Storage} storage
  * @returns {(params?: FindAllParams) => Promise<OverseasSite[]>}
  */
@@ -87,6 +129,7 @@ export function createInMemoryOverseasSitesRepository(initialData = []) {
     create: performCreate(storage),
     findAll: performFindAll(storage),
     findById: performFindById(storage),
+    findByProperties: performFindByProperties(storage),
     remove: performRemove(storage),
     update: performUpdate(storage)
   })
