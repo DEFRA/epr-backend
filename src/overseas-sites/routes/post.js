@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteCreate } from '#root/auditing/overseas-sites.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -40,6 +41,8 @@ export const overseasSitesCreate = {
         createdAt: now,
         updatedAt: now
       })
+
+      await auditOverseasSiteCreate(request, site)
 
       logger.info({
         message: `Overseas site created: id=${site.id}`,

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteImport } from '#root/auditing/overseas-sites.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -56,6 +57,8 @@ export const orsImportCreate = {
         redirectUrl: resolvedRedirectUrl,
         callbackUrl
       })
+
+      await auditOverseasSiteImport(request, importId)
 
       logger.info({
         message: `ORS import initiated: id=${importId}`,

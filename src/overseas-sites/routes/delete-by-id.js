@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteDelete } from '#root/auditing/overseas-sites.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -33,6 +34,8 @@ export const overseasSiteDelete = {
       if (!removed) {
         throw Boom.notFound('Overseas site not found')
       }
+
+      await auditOverseasSiteDelete(request, id)
 
       logger.info({
         message: `Overseas site deleted: id=${id}`,

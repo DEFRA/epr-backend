@@ -17,6 +17,12 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSiteDeletePath } from './delete-by-id.js'
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 describe(`${overseasSiteDeletePath} route`, () => {
   setupAuthContext()
 
@@ -72,6 +78,30 @@ describe(`${overseasSiteDeletePath} route`, () => {
 
         const found = await overseasSitesRepository.findById(created.id)
         expect(found).toBeNull()
+      })
+
+      it('records audit event for site deletion', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
+        const response = await server.inject({
+          method: 'DELETE',
+          url: `/v1/overseas-sites/${created.id}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+
+        expect(mockCdpAuditing).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: {
+              category: 'entity',
+              subCategory: 'overseas-sites',
+              action: 'delete'
+            },
+            context: { siteId: created.id }
+          })
+        )
       })
     })
 

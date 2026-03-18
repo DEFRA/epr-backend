@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteUpdate } from '#root/auditing/overseas-sites.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -32,6 +33,12 @@ export const overseasSiteUpdate = {
     const { id } = params
 
     try {
+      const previous = await overseasSitesRepository.findById(id)
+
+      if (!previous) {
+        throw Boom.notFound('Overseas site not found')
+      }
+
       /** @type {Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>} */
       const updates = payload
       const site = await overseasSitesRepository.update(id, {
@@ -39,9 +46,7 @@ export const overseasSiteUpdate = {
         updatedAt: new Date()
       })
 
-      if (!site) {
-        throw Boom.notFound('Overseas site not found')
-      }
+      await auditOverseasSiteUpdate(request, id, previous, site)
 
       logger.info({
         message: `Overseas site updated: id=${id}`,
