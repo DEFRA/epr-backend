@@ -1,4 +1,5 @@
 import { registerRepository } from '#plugins/register-repository.js'
+import { calculateOrsImportExpiresAt } from '../../domain/import-status.js'
 
 /** @import { OrsImport, OrsImportsRepositoryFactory } from './port.js' */
 
@@ -14,10 +15,12 @@ export function createInMemoryOrsImportsRepository() {
   return () => ({
     async create(importDoc) {
       const now = new Date().toISOString()
+      const expiresAt = calculateOrsImportExpiresAt(importDoc.status)
       const doc = {
         ...structuredClone(importDoc),
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
+        expiresAt
       }
       storage.set(doc._id, doc)
       return structuredClone(doc)
@@ -32,6 +35,7 @@ export function createInMemoryOrsImportsRepository() {
       const doc = storage.get(id)
       if (doc) {
         doc.status = status
+        doc.expiresAt = calculateOrsImportExpiresAt(status)
         doc.updatedAt = new Date().toISOString()
       }
     },
