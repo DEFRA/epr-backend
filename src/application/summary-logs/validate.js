@@ -542,11 +542,11 @@ export const createSummaryLogsValidator = ({
  */
 const capIssuesForStorage = (allIssues) => {
   const shouldTruncate = allIssues.length > MAX_VALIDATION_ISSUES
-  const capped = shouldTruncate
+  const issues = shouldTruncate
     ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
     : allIssues
 
-  for (const issue of capped) {
+  for (const issue of issues) {
     if (
       typeof issue.context?.actual === 'string' &&
       issue.context.actual.length > MAX_ACTUAL_LENGTH
@@ -557,7 +557,7 @@ const capIssuesForStorage = (allIssues) => {
   }
 
   return {
-    issues: capped,
+    issues,
     totalIssues: allIssues.length
   }
 }
