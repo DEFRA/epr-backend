@@ -7,7 +7,6 @@ import {
 } from '#common/enums/index.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 
@@ -32,9 +31,7 @@ export const orsImportStatus = {
       const result = await orsImportsRepository.findById(importId)
 
       if (!result) {
-        return h
-          .response({ status: ORS_IMPORT_STATUS.PREPROCESSING })
-          .code(StatusCodes.OK)
+        throw Boom.notFound(`Import ${importId} not found`)
       }
 
       const response = {
