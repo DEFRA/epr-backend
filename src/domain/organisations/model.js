@@ -79,6 +79,9 @@ export const PARTNER_TYPE = Object.freeze({
   CORPORATE: 'corporate'
 })
 
+/**
+ * @typedef {typeof PARTNERSHIP_TYPE[keyof typeof PARTNERSHIP_TYPE]} PartnershipType
+ */
 export const PARTNERSHIP_TYPE = Object.freeze({
   LTD: 'ltd',
   LTD_LIABILITY: 'ltd_liability'
@@ -97,9 +100,8 @@ export const WASTE_PERMIT_TYPE = Object.freeze({
 })
 
 /**
- * @typedef {'glass_re_melt' | 'glass_other'} GlassRecyclingProcess
+ * @typedef {typeof GLASS_RECYCLING_PROCESS[keyof typeof GLASS_RECYCLING_PROCESS]} GlassRecyclingProcess
  */
-
 export const GLASS_RECYCLING_PROCESS = Object.freeze({
   GLASS_RE_MELT: 'glass_re_melt',
   GLASS_OTHER: 'glass_other'
@@ -112,9 +114,8 @@ export const TONNAGE_MONITORING_MATERIALS = Object.freeze([
 ])
 
 /**
- * @typedef {'up_to_500' | 'up_to_5000' | 'up_to_10000' | 'over_10000'} TonnageBand
+ * @typedef {typeof TONNAGE_BAND[keyof typeof TONNAGE_BAND]} TonnageBand
  */
-
 export const TONNAGE_BAND = Object.freeze({
   UP_TO_500: 'up_to_500',
   UP_TO_5000: 'up_to_5000',
@@ -191,15 +192,15 @@ export const USER_ROLES = Object.freeze({
  */
 
 /**
- * @typedef {'ea'|'niea'|'nrw'|'sepa'} RegulatorValue
+ * @typedef {typeof REGULATOR[keyof typeof REGULATOR]} RegulatorValue
  */
 
 /**
- * @typedef {'individual'|'partnership'|'unincorporated'} BusinessTypeValue
+ * @typedef {typeof BUSINESS_TYPE[keyof typeof BUSINESS_TYPE]} BusinessTypeValue
  */
 
 /**
- * @typedef {'england'|'northern_ireland'|'scotland'|'wales'} NationValue
+ * @typedef {typeof NATION[keyof typeof NATION]} NationValue
  */
 
 /**
@@ -219,7 +220,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
- *   type: 'ltd'|'ltd_liability';
+ *   type: PartnershipType;
  *   partners?: Partner[];
  * }} Partnership
  */
