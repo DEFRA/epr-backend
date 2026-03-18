@@ -17,7 +17,7 @@ const s3Key = 'overseas-sites/imports/import-123/file-456'
 
 const createPayload = (overrides = {}) => ({
   form: {
-    file: {
+    orsUpload: {
       fileId,
       filename,
       fileStatus: 'complete',
@@ -30,7 +30,7 @@ const createPayload = (overrides = {}) => ({
 
 const createMultipleFilesPayload = () => ({
   form: {
-    file: [
+    orsUpload: [
       {
         fileId: 'file-1',
         filename: 'sites-a.xlsx',
@@ -190,7 +190,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('returns 422 when payload is missing form.file', async () => {
+  it('returns 422 when payload is missing form.orsUpload', async () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
