@@ -52,7 +52,7 @@ const capIssuesForStorage = (allIssues) => {
 
   return {
     issues: capped,
-    totalIssues: truncated ? allIssues.length : undefined
+    totalIssues: allIssues.length
   }
 }
 
@@ -536,7 +536,7 @@ export const createSummaryLogsValidator = ({
       ...transitionStatus(summaryLog, status),
       validation: {
         issues: cappedIssues,
-        ...(totalIssues && { totalIssues })
+        totalIssues
       },
       ...(loads && { loads }),
       ...(meta && { meta })

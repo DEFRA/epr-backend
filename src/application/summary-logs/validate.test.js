@@ -1940,7 +1940,7 @@ describe('SummaryLogsValidator', () => {
       expect(issueWithActual.context.actual).toBe('bad-code')
     })
 
-    it('does not add totalIssues when issues are within the limit', async () => {
+    it('always includes totalIssues matching actual issue count', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
@@ -1959,8 +1959,9 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.validation.issues.length).toBeGreaterThan(0)
-      expect(updateCall.validation.totalIssues).toBeUndefined()
+      expect(updateCall.validation.totalIssues).toBe(
+        updateCall.validation.issues.length
+      )
     })
   })
 })
