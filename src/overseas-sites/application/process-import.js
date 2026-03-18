@@ -22,6 +22,7 @@ import { processImportFile } from './process-import-file.js'
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
  * @param {object} deps.logger
+ * @param {import('#overseas-sites/metrics/ors-imports.js').OrsImportMetrics} deps.orsImportMetrics
  */
 export const processOrsImport = async (importId, deps) => {
   const {
@@ -29,7 +30,8 @@ export const processOrsImport = async (importId, deps) => {
     uploadsRepository,
     overseasSitesRepository,
     organisationsRepository,
-    logger
+    logger,
+    orsImportMetrics
   } = deps
 
   const importDoc = await orsImportsRepository.findById(importId)
@@ -37,24 +39,37 @@ export const processOrsImport = async (importId, deps) => {
     throw new PermanentError(`ORS import ${importId} not found`)
   }
 
-  await orsImportsRepository.updateStatus(
-    importId,
-    ORS_IMPORT_STATUS.PROCESSING
-  )
-
-  for (let i = 0; i < importDoc.files.length; i++) {
-    const file = importDoc.files[i]
-    const result = await processFile(file, {
-      uploadsRepository,
-      overseasSitesRepository,
-      organisationsRepository,
-      logger
+  await orsImportMetrics.timedImport(async () => {
+    await orsImportsRepository.updateStatus(
+      importId,
+      ORS_IMPORT_STATUS.PROCESSING
+    )
+    await orsImportMetrics.recordStatusTransition({
+      status: ORS_IMPORT_STATUS.PROCESSING
     })
 
-    await orsImportsRepository.recordFileResult(importId, i, result)
-  }
+    for (let i = 0; i < importDoc.files.length; i++) {
+      const file = importDoc.files[i]
+      const result = await processFile(file, {
+        uploadsRepository,
+        overseasSitesRepository,
+        organisationsRepository,
+        logger
+      })
 
-  await orsImportsRepository.updateStatus(importId, ORS_IMPORT_STATUS.COMPLETED)
+      await orsImportsRepository.recordFileResult(importId, i, result)
+      await orsImportMetrics.recordFileResult({ status: result.status })
+      await orsImportMetrics.recordSitesCreated(result.sitesCreated)
+    }
+
+    await orsImportsRepository.updateStatus(
+      importId,
+      ORS_IMPORT_STATUS.COMPLETED
+    )
+    await orsImportMetrics.recordStatusTransition({
+      status: ORS_IMPORT_STATUS.COMPLETED
+    })
+  })
 }
 
 /**

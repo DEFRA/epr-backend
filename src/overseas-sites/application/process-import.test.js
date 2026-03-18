@@ -17,6 +17,7 @@ describe('processOrsImport', () => {
   let overseasSitesRepository
   let organisationsRepository
   let logger
+  let orsImportMetrics
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -40,6 +41,13 @@ describe('processOrsImport', () => {
       error: vi.fn(),
       warn: vi.fn()
     }
+
+    orsImportMetrics = {
+      recordStatusTransition: vi.fn(),
+      recordSitesCreated: vi.fn(),
+      recordFileResult: vi.fn(),
+      timedImport: vi.fn((fn) => fn())
+    }
   })
 
   const deps = () => ({
@@ -47,7 +55,8 @@ describe('processOrsImport', () => {
     uploadsRepository,
     overseasSitesRepository,
     organisationsRepository,
-    logger
+    logger,
+    orsImportMetrics
   })
 
   it('processes all files in the import batch', async () => {
@@ -105,6 +114,123 @@ describe('processOrsImport', () => {
       'import-123',
       ORS_IMPORT_STATUS.COMPLETED
     )
+  })
+
+  it('records status transition metrics throughout processing', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: [
+        { fileId: 'f1', fileName: 'sites1.xlsx', s3Uri: 's3://bucket/f1' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('file1'))
+
+    const successResult = {
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
+      sitesCreated: 3,
+      mappingsUpdated: 3,
+      registrationNumber: 'EPR/AB1234CD/R1',
+      errors: []
+    }
+    processImportFile.mockResolvedValue(successResult)
+
+    await processOrsImport('import-123', deps())
+
+    expect(orsImportMetrics.recordStatusTransition).toHaveBeenCalledWith({
+      status: ORS_IMPORT_STATUS.PROCESSING
+    })
+    expect(orsImportMetrics.recordStatusTransition).toHaveBeenCalledWith({
+      status: ORS_IMPORT_STATUS.COMPLETED
+    })
+  })
+
+  it('records file result and sites created metrics per file', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: [
+        { fileId: 'f1', fileName: 'sites1.xlsx', s3Uri: 's3://bucket/f1' },
+        { fileId: 'f2', fileName: 'sites2.xlsx', s3Uri: 's3://bucket/f2' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+
+    uploadsRepository.findByLocation
+      .mockResolvedValueOnce(Buffer.from('file1'))
+      .mockResolvedValueOnce(Buffer.from('file2'))
+
+    processImportFile
+      .mockResolvedValueOnce({
+        status: ORS_FILE_RESULT_STATUS.SUCCESS,
+        sitesCreated: 5,
+        mappingsUpdated: 5,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        errors: []
+      })
+      .mockResolvedValueOnce({
+        status: ORS_FILE_RESULT_STATUS.FAILURE,
+        sitesCreated: 0,
+        mappingsUpdated: 0,
+        registrationNumber: null,
+        errors: [{ field: 'file', message: 'bad data' }]
+      })
+
+    await processOrsImport('import-123', deps())
+
+    expect(orsImportMetrics.recordFileResult).toHaveBeenCalledWith({
+      status: ORS_FILE_RESULT_STATUS.SUCCESS
+    })
+    expect(orsImportMetrics.recordFileResult).toHaveBeenCalledWith({
+      status: ORS_FILE_RESULT_STATUS.FAILURE
+    })
+    expect(orsImportMetrics.recordSitesCreated).toHaveBeenCalledWith(5)
+    expect(orsImportMetrics.recordSitesCreated).toHaveBeenCalledWith(0)
+  })
+
+  it('wraps processing in timedImport for duration metrics', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: [
+        { fileId: 'f1', fileName: 'sites1.xlsx', s3Uri: 's3://bucket/f1' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('file1'))
+    processImportFile.mockResolvedValue({
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
+      sitesCreated: 1,
+      mappingsUpdated: 1,
+      registrationNumber: 'EPR/AB1234CD/R1',
+      errors: []
+    })
+
+    await processOrsImport('import-123', deps())
+
+    expect(orsImportMetrics.timedImport).toHaveBeenCalledWith(
+      expect.any(Function)
+    )
+  })
+
+  it('records file result metrics even when file cannot be retrieved', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: [
+        { fileId: 'f1', fileName: 'missing.xlsx', s3Uri: 's3://bucket/f1' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(null)
+
+    await processOrsImport('import-123', deps())
+
+    expect(orsImportMetrics.recordFileResult).toHaveBeenCalledWith({
+      status: ORS_FILE_RESULT_STATUS.FAILURE
+    })
+    expect(orsImportMetrics.recordSitesCreated).toHaveBeenCalledWith(0)
   })
 
   it('deletes files from S3 after successful processing', async () => {

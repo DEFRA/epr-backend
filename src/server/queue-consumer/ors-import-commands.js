@@ -9,6 +9,7 @@ import {
   ORS_IMPORT_STATUS
 } from '#overseas-sites/domain/import-status.js'
 import { processOrsImport } from '#overseas-sites/application/process-import.js'
+import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
 
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 
@@ -34,7 +35,8 @@ export const orsImportCommandHandlers = [
         uploadsRepository: deps.uploadsRepository,
         overseasSitesRepository: deps.overseasSitesRepository,
         organisationsRepository: deps.organisationsRepository,
-        logger: deps.logger
+        logger: deps.logger,
+        orsImportMetrics
       })
     },
     onFailure: async (payload, /** @type {OrsImportHandlerDeps} */ deps) => {
