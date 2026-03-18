@@ -284,7 +284,7 @@ describe('processOrsImport', () => {
 
     expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
       'import-123',
-      ORS_IMPORT_STATUS.COMPLETED
+      ORS_IMPORT_STATUS.FAILED
     )
   })
 
@@ -317,7 +317,40 @@ describe('processOrsImport', () => {
 
     expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
       'import-123',
-      ORS_IMPORT_STATUS.COMPLETED
+      ORS_IMPORT_STATUS.FAILED
+    )
+  })
+
+  it('sets FAILED when all files in a multi-file batch fail', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: [
+        { fileId: 'f1', fileName: 'bad1.xlsx', s3Uri: 's3://bucket/f1' },
+        { fileId: 'f2', fileName: 'bad2.xlsx', s3Uri: 's3://bucket/f2' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+
+    uploadsRepository.findByLocation
+      .mockResolvedValueOnce(Buffer.from('bad1'))
+      .mockResolvedValueOnce(Buffer.from('bad2'))
+
+    const failResult = {
+      status: ORS_FILE_RESULT_STATUS.FAILURE,
+      sitesCreated: 0,
+      mappingsUpdated: 0,
+      registrationNumber: null,
+      errors: [{ field: 'file', message: 'Invalid format' }]
+    }
+    processImportFile.mockResolvedValue(failResult)
+
+    await processOrsImport('import-123', deps())
+
+    expect(processImportFile).toHaveBeenCalledTimes(2)
+    expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
+      'import-123',
+      ORS_IMPORT_STATUS.FAILED
     )
   })
 })
