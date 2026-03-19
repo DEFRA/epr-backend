@@ -26,11 +26,21 @@
  */
 
 /**
+ * @typedef {Object} FindByPropertiesParams
+ * @property {string} name
+ * @property {string} country
+ * @property {OverseasSiteAddress} address
+ * @property {string} [coordinates]
+ * @property {Date} [validFrom]
+ */
+
+/**
  * @typedef {Object} OverseasSitesRepository
  * @property {(id: string) => Promise<OverseasSite | null>} findById
+ * @property {(properties: FindByPropertiesParams) => Promise<OverseasSite | null>} findByProperties
  * @property {(site: Omit<OverseasSite, 'id'>) => Promise<OverseasSite>} create
  * @property {(id: string, updates: Partial<Omit<OverseasSite, 'id' | 'createdAt'>>) => Promise<OverseasSite | null>} update
- * @property {(id: string) => Promise<boolean>} remove
+ * @property {(id: string) => Promise<OverseasSite | null>} remove
  * @property {(params?: FindAllParams) => Promise<OverseasSite[]>} findAll
  */
 

@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteUpdate } from '../auditing.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -10,6 +11,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteUpdatePayloadSchema } from './put-by-id.schema.js'
 
 /** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const overseasSiteUpdatePath = '/v1/overseas-sites/{id}'
 
@@ -24,7 +26,7 @@ export const overseasSiteUpdate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>> & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -32,6 +34,12 @@ export const overseasSiteUpdate = {
     const { id } = params
 
     try {
+      const previous = await overseasSitesRepository.findById(id)
+
+      if (!previous) {
+        throw Boom.notFound('Overseas site not found')
+      }
+
       /** @type {Partial<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>>} */
       const updates = payload
       const site = await overseasSitesRepository.update(id, {
@@ -42,6 +50,8 @@ export const overseasSiteUpdate = {
       if (!site) {
         throw Boom.notFound('Overseas site not found')
       }
+
+      await auditOverseasSiteUpdate(request, id, previous, site)
 
       logger.info({
         message: `Overseas site updated: id=${id}`,

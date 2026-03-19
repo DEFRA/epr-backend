@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { DATE_FIELDS_BY_OPERATOR_CATEGORY } from './date-fields-by-operator-category.js'
+import {
+  DATE_FIELDS_BY_OPERATOR_CATEGORY,
+  TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
+} from './fields-by-operator-category.js'
 
 describe('DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
   it('is frozen', () => {
@@ -94,5 +97,42 @@ describe('DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
         ]
       ).toStrictEqual(['DATE_LOAD_LEFT_SITE'])
     })
+  })
+})
+
+describe('TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY', () => {
+  it('is frozen', () => {
+    expect(Object.isFrozen(TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY)).toBe(
+      true
+    )
+  })
+
+  it('has entries for all operator categories', () => {
+    expect(
+      Object.keys(TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY).sort()
+    ).toStrictEqual([
+      'EXPORTER',
+      'EXPORTER_REGISTERED_ONLY',
+      'REPROCESSOR',
+      'REPROCESSOR_REGISTERED_ONLY'
+    ])
+  })
+
+  it('maps reprocessor categories to TONNAGE_RECEIVED_FOR_RECYCLING', () => {
+    expect(TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY.REPROCESSOR).toBe(
+      'TONNAGE_RECEIVED_FOR_RECYCLING'
+    )
+    expect(
+      TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
+    ).toBe('TONNAGE_RECEIVED_FOR_RECYCLING')
+  })
+
+  it('maps exporter categories to TONNAGE_RECEIVED_FOR_EXPORT', () => {
+    expect(TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY.EXPORTER).toBe(
+      'TONNAGE_RECEIVED_FOR_EXPORT'
+    )
+    expect(
+      TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
+    ).toBe('TONNAGE_RECEIVED_FOR_EXPORT')
   })
 })

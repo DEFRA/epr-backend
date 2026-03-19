@@ -17,6 +17,12 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSiteUpdatePath } from './put-by-id.js'
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 describe(`${overseasSiteUpdatePath} route`, () => {
   setupAuthContext()
 
@@ -104,6 +110,35 @@ describe(`${overseasSiteUpdatePath} route`, () => {
         const body = JSON.parse(response.payload)
         expect(body.updatedAt).toBeDefined()
       })
+
+      it('records audit event with previous and next state', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
+        const response = await server.inject({
+          method: 'PUT',
+          url: `/v1/overseas-sites/${created.id}`,
+          ...asServiceMaintainer(),
+          payload: { name: 'Audited Update' }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        expect(mockCdpAuditing).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: {
+              category: 'entity',
+              subCategory: 'overseas-sites',
+              action: 'update'
+            },
+            context: expect.objectContaining({
+              siteId: created.id,
+              previous: expect.objectContaining({ name: created.name }),
+              next: expect.objectContaining({ name: 'Audited Update' })
+            })
+          })
+        )
+      })
     })
 
     describe('not found', () => {
@@ -113,6 +148,22 @@ describe(`${overseasSiteUpdatePath} route`, () => {
           url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
           ...asServiceMaintainer(),
           payload: { name: 'Nonexistent' }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
+      it('returns 404 when site is deleted between read and update', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
+        overseasSitesRepository.update.mockResolvedValueOnce(null)
+
+        const response = await server.inject({
+          method: 'PUT',
+          url: `/v1/overseas-sites/${created.id}`,
+          ...asServiceMaintainer(),
+          payload: { name: 'Race Condition' }
         })
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -168,6 +219,9 @@ describe(`${overseasSiteUpdatePath} route`, () => {
 
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
         const Boom = await import('@hapi/boom')
         overseasSitesRepository.update.mockRejectedValueOnce(
           Boom.default.badRequest('Invalid data')
@@ -175,7 +229,7 @@ describe(`${overseasSiteUpdatePath} route`, () => {
 
         const response = await server.inject({
           method: 'PUT',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
+          url: `/v1/overseas-sites/${created.id}`,
           ...asServiceMaintainer(),
           payload: { name: 'Test' }
         })
@@ -184,13 +238,16 @@ describe(`${overseasSiteUpdatePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
         overseasSitesRepository.update.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
         const response = await server.inject({
           method: 'PUT',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
+          url: `/v1/overseas-sites/${created.id}`,
           ...asServiceMaintainer(),
           payload: { name: 'Test' }
         })

@@ -3,9 +3,12 @@ import Joi from 'joi'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
 
 vi.mock('#overseas-sites/application/process-import.js')
+vi.mock('#overseas-sites/metrics/ors-imports.js')
 
 const { processOrsImport } =
   await import('#overseas-sites/application/process-import.js')
+const { orsImportMetrics } =
+  await import('#overseas-sites/metrics/ors-imports.js')
 
 describe('orsImportCommandHandlers', () => {
   let deps
@@ -71,7 +74,8 @@ describe('orsImportCommandHandlers', () => {
           uploadsRepository: deps.uploadsRepository,
           overseasSitesRepository: deps.overseasSitesRepository,
           organisationsRepository: deps.organisationsRepository,
-          logger: deps.logger
+          logger: deps.logger,
+          orsImportMetrics
         })
       })
     })
@@ -84,6 +88,14 @@ describe('orsImportCommandHandlers', () => {
           'import-123',
           'failed'
         )
+      })
+
+      it('records failed status transition metric', async () => {
+        await handler.onFailure({ importId: 'import-123' }, deps)
+
+        expect(orsImportMetrics.recordStatusTransition).toHaveBeenCalledWith({
+          status: 'failed'
+        })
       })
 
       it('logs error when marking as failed throws', async () => {

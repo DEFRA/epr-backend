@@ -4,7 +4,7 @@ import Joi from 'joi'
 
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { QUARTERLY } from '#reports/domain/cadence.js'
+import { MONTHLY, QUARTERLY } from '#reports/domain/cadence.js'
 import {
   getOperatorCategory,
   OPERATOR_CATEGORY
@@ -44,9 +44,13 @@ export const reportsGetDetail = {
 
     const operatorCategory = getOperatorCategory(registration)
 
-    if (operatorCategory !== OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY) {
+    if (operatorCategory === OPERATOR_CATEGORY.EXPORTER) {
       throw Boom.notFound()
     }
+
+    const isAccredited = operatorCategory === OPERATOR_CATEGORY.REPROCESSOR
+
+    const cadence = isAccredited ? MONTHLY : QUARTERLY
 
     const wasteRecords = await wasteRecordsRepository.findByRegistration(
       organisationId,
@@ -55,7 +59,7 @@ export const reportsGetDetail = {
 
     const report = aggregateReportDetail(wasteRecords, {
       operatorCategory,
-      cadence: QUARTERLY,
+      cadence,
       year,
       period
     })

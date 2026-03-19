@@ -2,7 +2,7 @@ import { registerRepository } from '#plugins/register-repository.js'
 import { ObjectId } from 'mongodb'
 import { validateOverseasSiteInsert } from './validation.js'
 
-/** @import { OverseasSite, FindAllParams } from './port.js' */
+/** @import { OverseasSite, FindAllParams, FindByPropertiesParams } from './port.js' */
 
 /** @typedef {Map<string, OverseasSite>} Storage */
 
@@ -44,10 +44,75 @@ const performUpdate = (storage) => async (id, updates) => {
 
 /**
  * @param {Storage} storage
- * @returns {(id: string) => Promise<boolean>}
+ * @returns {(id: string) => Promise<OverseasSite | null>}
  */
 const performRemove = (storage) => async (id) => {
-  return storage.delete(id)
+  const site = storage.get(id)
+  if (!site) {
+    return null
+  }
+  storage.delete(id)
+  return structuredClone(site)
+}
+
+/**
+ * @param {*} a
+ * @param {*} b
+ */
+const nullishEqual = (a, b) => {
+  if (a == null && b == null) {
+    return true
+  }
+  return a === b
+}
+
+/**
+ * @param {*} a
+ * @param {*} b
+ */
+const dateEqual = (a, b) => {
+  if (a == null && b == null) {
+    return true
+  }
+  if (a == null || b == null) {
+    return false
+  }
+  return new Date(a).getTime() === new Date(b).getTime()
+}
+
+/**
+ * @param {import('./port.js').OverseasSiteAddress} a
+ * @param {import('./port.js').OverseasSiteAddress} b
+ */
+const addressEqual = (a, b) =>
+  a.line1 === b.line1 &&
+  a.townOrCity === b.townOrCity &&
+  nullishEqual(a.line2, b.line2) &&
+  nullishEqual(a.stateOrRegion, b.stateOrRegion) &&
+  nullishEqual(a.postcode, b.postcode)
+
+/**
+ * @param {import('./port.js').OverseasSite} site
+ * @param {FindByPropertiesParams} properties
+ */
+const siteMatchesProperties = (site, properties) =>
+  site.name === properties.name &&
+  site.country === properties.country &&
+  addressEqual(site.address, properties.address) &&
+  nullishEqual(site.coordinates, properties.coordinates) &&
+  dateEqual(site.validFrom, properties.validFrom)
+
+/**
+ * @param {Storage} storage
+ * @returns {(properties: FindByPropertiesParams) => Promise<OverseasSite | null>}
+ */
+const performFindByProperties = (storage) => async (properties) => {
+  for (const site of storage.values()) {
+    if (siteMatchesProperties(site, properties)) {
+      return structuredClone(site)
+    }
+  }
+  return null
 }
 
 /**
@@ -87,6 +152,7 @@ export function createInMemoryOverseasSitesRepository(initialData = []) {
     create: performCreate(storage),
     findAll: performFindAll(storage),
     findById: performFindById(storage),
+    findByProperties: performFindByProperties(storage),
     remove: performRemove(storage),
     update: performUpdate(storage)
   })

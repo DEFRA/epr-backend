@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteCreate } from '../auditing.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -10,6 +11,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteCreatePayloadSchema } from './post.schema.js'
 
 /** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const overseasSitesCreatePath = '/v1/overseas-sites'
 
@@ -24,7 +26,7 @@ export const overseasSitesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>> & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<Omit<OverseasSite, 'id' | 'createdAt' | 'updatedAt'>> & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -40,6 +42,8 @@ export const overseasSitesCreate = {
         createdAt: now,
         updatedAt: now
       })
+
+      await auditOverseasSiteCreate(request, site)
 
       logger.info({
         message: `Overseas site created: id=${site.id}`,

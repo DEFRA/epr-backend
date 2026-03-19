@@ -9,18 +9,21 @@ export const testRemoveBehaviour = (it) => {
       repository = overseasSitesRepository
     })
 
-    it('returns false when removing non-existent site', async () => {
+    it('returns null when removing non-existent site', async () => {
       const result = await repository.remove('000000000000000000000000')
 
-      expect(result).toBe(false)
+      expect(result).toBeNull()
     })
 
-    it('returns true when removing existing site', async () => {
+    it('returns the removed site when removing existing site', async () => {
       const created = await repository.create(buildOverseasSite())
 
       const result = await repository.remove(created.id)
 
-      expect(result).toBe(true)
+      expect(result).toMatchObject({
+        id: created.id,
+        name: created.name
+      })
     })
 
     it('makes the site unfindable after removal', async () => {
