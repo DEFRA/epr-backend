@@ -31,6 +31,13 @@ export const PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE = Object.freeze({
 })
 
 /**
+ * Processing types that require registered-only (non-accredited) registrations
+ */
+export const REGISTERED_ONLY_PROCESSING_TYPES = new Set([
+  PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+])
+
+/**
  * Mapping from spreadsheet PROCESSING_TYPE values to registration reprocessingType values
  * Only applicable for reprocessors (REPROCESSOR_INPUT and REPROCESSOR_OUTPUT)
  */

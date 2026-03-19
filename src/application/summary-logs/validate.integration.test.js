@@ -579,6 +579,49 @@ describe('SummaryLogsValidator integration', () => {
       expect(updated.summaryLog.validation.issues).toEqual([])
     })
 
+    it('should fail when accredited registration uploads registered-only template', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        accreditationNumber: 'ACC-999',
+        metadata: registeredOnlyMetadata,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_MISMATCH' })
+        ])
+      )
+    })
+
+    it('should fail when registered-only registration uploads accredited template', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-789',
+        metadata: {
+          ...registeredOnlyMetadata,
+          PROCESSING_TYPE: {
+            value: 'REPROCESSOR_INPUT',
+            location: { sheet: 'Cover', row: 2, column: 'B' }
+          },
+          TEMPLATE_VERSION: {
+            value: 5,
+            location: { sheet: 'Cover', row: 4, column: 'B' }
+          }
+        },
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_MISMATCH' })
+        ])
+      )
+    })
+
     it('should validate successfully with data rows present', async () => {
       const { updated, testOrg, wasteRecordsRepository } = await runValidation({
         registrationType: 'reprocessor',

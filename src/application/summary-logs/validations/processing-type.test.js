@@ -12,6 +12,9 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
+const registeredOnlyEnabled = { isRegisteredOnlyEnabled: () => true }
+const registeredOnlyDisabled = { isRegisteredOnlyEnabled: () => false }
+
 describe('validateProcessingType', () => {
   afterEach(() => {
     vi.resetAllMocks()
@@ -86,13 +89,23 @@ describe('validateProcessingType', () => {
   })
 
   it.each([
-    ['REPROCESSOR_INPUT', 'reprocessor', 'input'],
-    ['REPROCESSOR_OUTPUT', 'reprocessor', 'output'],
-    ['EXPORTER', 'exporter', undefined],
-    ['REPROCESSOR_REGISTERED_ONLY', 'reprocessor', undefined]
+    [
+      'REPROCESSOR_INPUT',
+      'reprocessor',
+      'input',
+      { accreditationNumber: 'ACC1' }
+    ],
+    [
+      'REPROCESSOR_OUTPUT',
+      'reprocessor',
+      'output',
+      { accreditationNumber: 'ACC2' }
+    ],
+    ['EXPORTER', 'exporter', undefined, { accreditationNumber: 'ACC3' }],
+    ['REPROCESSOR_REGISTERED_ONLY', 'reprocessor', undefined, undefined]
   ])(
     'returns valid result when types match - %s',
-    (spreadsheetType, wasteProcessingType, reprocessingType) => {
+    (spreadsheetType, wasteProcessingType, reprocessingType, accreditation) => {
       const parsed = {
         meta: {
           REGISTRATION_NUMBER: { value: 'REG12345' },
@@ -101,13 +114,15 @@ describe('validateProcessingType', () => {
       }
       const registration = {
         wasteProcessingType,
-        reprocessingType
+        reprocessingType,
+        accreditation
       }
 
       const result = validateProcessingType({
         parsed,
         registration,
-        loggingContext: 'test'
+        loggingContext: 'test',
+        featureFlags: registeredOnlyEnabled
       })
 
       expect(result.isValid()).toBe(true)
@@ -134,13 +149,15 @@ describe('validateProcessingType', () => {
       }
       const registration = {
         wasteProcessingType: 'reprocessor',
-        reprocessingType
+        reprocessingType,
+        accreditation: { accreditationNumber: 'ACC123' }
       }
 
       const result = validateProcessingType({
         parsed,
         registration,
-        loggingContext: 'test'
+        loggingContext: 'test',
+        featureFlags: registeredOnlyEnabled
       })
 
       expect(result.isValid()).toBe(false)
@@ -156,6 +173,117 @@ describe('validateProcessingType', () => {
       expect(fatals[0].context.actual).toBe(spreadsheetType)
     }
   )
+
+  it.each([['REPROCESSOR_REGISTERED_ONLY', 'reprocessor']])(
+    'returns fatal error when %s template is uploaded against accredited registration',
+    (spreadsheetType, wasteProcessingType) => {
+      const parsed = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: spreadsheetType,
+            location: { sheet: 'Cover', row: 5, column: 'B' }
+          }
+        }
+      }
+      const registration = {
+        wasteProcessingType,
+        accreditation: { accreditationNumber: 'ACC123' }
+      }
+
+      const result = validateProcessingType({
+        parsed,
+        registration,
+        loggingContext: 'test',
+        featureFlags: registeredOnlyEnabled
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('accredited')
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
+    }
+  )
+
+  it.each([
+    ['REPROCESSOR_INPUT', 'reprocessor', 'input'],
+    ['REPROCESSOR_OUTPUT', 'reprocessor', 'output']
+  ])(
+    'returns fatal error when %s template is uploaded against registered-only registration',
+    (spreadsheetType, wasteProcessingType, reprocessingType) => {
+      const parsed = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: spreadsheetType,
+            location: { sheet: 'Cover', row: 5, column: 'B' }
+          }
+        }
+      }
+      const registration = {
+        wasteProcessingType,
+        reprocessingType
+        // No accreditation — registered-only
+      }
+
+      const result = validateProcessingType({
+        parsed,
+        registration,
+        loggingContext: 'test',
+        featureFlags: registeredOnlyEnabled
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('registered-only')
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
+    }
+  )
+
+  it('skips accredited-vs-registered-only check when feature flag is disabled', () => {
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'EXPORTER' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'exporter'
+      // No accreditation — registered-only
+    }
+
+    const result = validateProcessingType({
+      parsed,
+      registration,
+      loggingContext: 'test',
+      featureFlags: registeredOnlyDisabled
+    })
+
+    expect(result.isValid()).toBe(true)
+  })
+
+  it('skips accredited-vs-registered-only check when featureFlags is not provided', () => {
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'EXPORTER' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'exporter'
+      // No accreditation — registered-only
+    }
+
+    const result = validateProcessingType({
+      parsed,
+      registration,
+      loggingContext: 'test'
+    })
+
+    expect(result.isValid()).toBe(true)
+  })
 
   it('categorizes type mismatch as fatal business error', () => {
     const parsed = {
