@@ -135,8 +135,6 @@ const isPlaceholderRow = (row) => {
  */
 const extractSiteFromRow = (row) => {
   const rawOrsId = cellToValue(row.getCell(COL.ORS_ID).value)
-  const postcode = cellToValue(row.getCell(COL.POSTCODE).value)
-  const validFromRaw = cellToString(row.getCell(COL.VALID_FROM).value)
 
   return {
     orsId: rawOrsId,
@@ -147,10 +145,10 @@ const extractSiteFromRow = (row) => {
       line2: cellToString(row.getCell(COL.LINE2).value),
       townOrCity: cellToString(row.getCell(COL.TOWN_OR_CITY).value),
       stateOrRegion: cellToString(row.getCell(COL.STATE_OR_REGION).value),
-      postcode: postcode === null ? null : String(postcode)
+      postcode: cellToString(row.getCell(COL.POSTCODE).value)
     },
     coordinates: cellToString(row.getCell(COL.COORDINATES).value),
-    validFrom: validFromRaw
+    validFrom: cellToString(row.getCell(COL.VALID_FROM).value)
   }
 }
 

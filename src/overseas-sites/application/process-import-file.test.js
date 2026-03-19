@@ -17,7 +17,8 @@ describe('processImportFile', () => {
     vi.clearAllMocks()
 
     overseasSitesRepository = {
-      create: vi.fn()
+      create: vi.fn(),
+      findByProperties: vi.fn()
     }
 
     organisationsRepository = {
@@ -405,6 +406,90 @@ describe('processImportFile', () => {
 
     expect(result.status).toBe(ORS_FILE_RESULT_STATUS.FAILURE)
     expect(result.errors[0].message).toContain('version conflict')
+  })
+
+  it('reuses existing site when all properties match instead of creating a new one', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 500001,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Existing Site',
+          address: {
+            line1: '1 Berlin St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: '10115'
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        },
+        {
+          orsId: '002',
+          country: 'France',
+          name: 'New Site',
+          address: {
+            line1: '2 Paris Ave',
+            line2: null,
+            townOrCity: 'Paris',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 11
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue({
+      id: 'org-id',
+      orgId: 500001,
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-id',
+          registrationNumber: 'EPR/AB1234CD/R1',
+          wasteProcessingType: 'exporter'
+        }
+      ]
+    })
+
+    overseasSitesRepository.findByProperties
+      .mockResolvedValueOnce({ id: 'existing-site-id' })
+      .mockResolvedValueOnce(null)
+
+    overseasSitesRepository.create.mockResolvedValue({ id: 'new-site-id' })
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
+      true
+    )
+
+    const result = await processImportFile(buffer, deps())
+
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.SUCCESS)
+    expect(result.sitesCreated).toBe(1)
+    expect(result.mappingsUpdated).toBe(2)
+
+    expect(overseasSitesRepository.findByProperties).toHaveBeenCalledTimes(2)
+    expect(overseasSitesRepository.create).toHaveBeenCalledTimes(1)
+
+    expect(
+      organisationsRepository.replaceRegistrationOverseasSites
+    ).toHaveBeenCalledWith('org-id', 1, 'reg-id', {
+      '001': { overseasSiteId: 'existing-site-id' },
+      '002': { overseasSiteId: 'new-site-id' }
+    })
   })
 
   it('sets null validFrom when not provided', async () => {
