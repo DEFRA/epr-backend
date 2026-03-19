@@ -2,9 +2,7 @@ import { beforeEach, describe, expect } from 'vitest'
 import { MONTHLY, QUARTERLY } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
-  MONTHLY_PERIOD_LABELS,
   MONTHLY_PERIODS,
-  QUARTERLY_PERIOD_LABELS,
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -56,7 +54,7 @@ export const testCreateReportBehaviour = (it) => {
       })
     })
 
-    it(`does not store organisationId, registrationId, year, cadence, period on the report (${QUARTERLY_PERIOD_LABELS[2]})`, async () => {
+    it(`does not store organisationId, registrationId, year, cadence, period on the report `, async () => {
       const reportId = await repository.createReport(
         buildCreateReportParams({
           cadence: QUARTERLY.id,
@@ -83,7 +81,7 @@ export const testCreateReportBehaviour = (it) => {
       })
     })
 
-    it(`moves existing currentReportId to end of previousReportIds when re-creating for same slot (${MONTHLY_PERIOD_LABELS[2]})`, async () => {
+    it(`moves existing currentReportId to end of previousReportIds when re-creating for same slot)`, async () => {
       const first = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.February })
       )
@@ -142,7 +140,7 @@ export const testCreateReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
-    it(`creates separate slots for different periods (${MONTHLY_PERIOD_LABELS[3]} and ${MONTHLY_PERIOD_LABELS[4]})`, async () => {
+    it(`creates separate slots for different periods`, async () => {
       const reportId1 = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.March })
       )

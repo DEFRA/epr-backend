@@ -1,20 +1,17 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import { MONTHLY } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import {
-  MONTHLY_PERIODS,
-  MONTHLY_PERIOD_LABELS
-} from '#reports/domain/period-labels.js'
+import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
   DEFAULT_REG_ID,
-  DEFAULT_REPORT_YEAR,
+  DEFAULT_REPORT_DUE_DATE,
+  DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_START_DATE,
-  DEFAULT_REPORT_END_DATE,
-  DEFAULT_REPORT_DUE_DATE
+  DEFAULT_REPORT_YEAR
 } from './test-data.js'
 
 const buildDeleteParams = (overrides = {}) => ({
@@ -112,7 +109,7 @@ export const testDeleteReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
     })
 
-    it(`throws notFound when no current report for given period (${MONTHLY_PERIOD_LABELS[12]})`, async () => {
+    it(`throws notFound when no current report for given period)`, async () => {
       await expect(
         repository.deleteReport(
           buildDeleteParams({ period: MONTHLY_PERIODS.December })
