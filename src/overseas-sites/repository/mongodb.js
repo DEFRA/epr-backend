@@ -103,15 +103,19 @@ const performUpdate = async (db, id, updates) => {
 /**
  * @param {Db} db
  * @param {string} id
- * @returns {Promise<boolean>}
+ * @returns {Promise<OverseasSite | null>}
  */
 const performRemove = async (db, id) => {
   const validatedId = validateOverseasSiteId(id)
   const result = await db
     .collection(COLLECTION_NAME)
-    .deleteOne({ _id: ObjectId.createFromHexString(validatedId) })
+    .findOneAndDelete({ _id: ObjectId.createFromHexString(validatedId) })
 
-  return result.deletedCount > 0
+  if (!result) {
+    return null
+  }
+
+  return validateOverseasSiteRead({ ...result, id: result._id.toHexString() })
 }
 
 /**

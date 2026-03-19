@@ -19,6 +19,12 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportCreatePath } from './post-import.js'
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 describe(`${orsImportCreatePath} route`, () => {
   setupAuthContext()
 
@@ -128,6 +134,31 @@ describe(`${orsImportCreatePath} route`, () => {
         const call = uploadsRepository.orsInitiateCalls[0]
 
         expect(call.redirectUrl).toBe(`/overseas-sites/imports/${body.id}`)
+      })
+
+      it('records audit event for import initiation', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: '/v1/overseas-sites/imports',
+          ...asServiceMaintainer(),
+          payload: {
+            redirectUrl: 'https://admin.test/overseas-sites/upload'
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+
+        const body = JSON.parse(response.payload)
+        expect(mockCdpAuditing).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: {
+              category: 'entity',
+              subCategory: 'overseas-sites',
+              action: 'import-initiated'
+            },
+            context: { importId: body.id }
+          })
+        )
       })
 
       it('generates unique import IDs for each request', async () => {

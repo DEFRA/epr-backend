@@ -40,7 +40,7 @@
  * @property {(properties: FindByPropertiesParams) => Promise<OverseasSite | null>} findByProperties
  * @property {(site: Omit<OverseasSite, 'id'>) => Promise<OverseasSite>} create
  * @property {(id: string, updates: Partial<Omit<OverseasSite, 'id' | 'createdAt'>>) => Promise<OverseasSite | null>} update
- * @property {(id: string) => Promise<boolean>} remove
+ * @property {(id: string) => Promise<OverseasSite | null>} remove
  * @property {(params?: FindAllParams) => Promise<OverseasSite[]>} findAll
  */
 
