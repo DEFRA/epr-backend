@@ -173,15 +173,15 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
       expect(notADate.error).toBeDefined()
     })
 
-    it('validates NET_WEIGHT as number >= 0 and <= 1000', () => {
+    it('validates NET_WEIGHT as number >= 0 with no upper bound', () => {
       const valid = validationSchema.validate({ NET_WEIGHT: 10.5 })
       expect(valid.error).toBeUndefined()
 
       const negative = validationSchema.validate({ NET_WEIGHT: -1 })
       expect(negative.error).toBeDefined()
 
-      const tooHigh = validationSchema.validate({ NET_WEIGHT: 1001 })
-      expect(tooHigh.error).toBeDefined()
+      const large = validationSchema.validate({ NET_WEIGHT: 50000 })
+      expect(large.error).toBeUndefined()
     })
 
     it('validates HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION as enum', () => {
@@ -208,7 +208,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
       expect(tooHigh.error).toBeDefined()
     })
 
-    it('validates TONNAGE_RECEIVED_FOR_RECYCLING as weight', () => {
+    it('validates TONNAGE_RECEIVED_FOR_RECYCLING as number >= 0 with no upper bound', () => {
       const valid = validationSchema.validate({
         TONNAGE_RECEIVED_FOR_RECYCLING: 9.975
       })
@@ -218,6 +218,11 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
         TONNAGE_RECEIVED_FOR_RECYCLING: -1
       })
       expect(negative.error).toBeDefined()
+
+      const large = validationSchema.validate({
+        TONNAGE_RECEIVED_FOR_RECYCLING: 50000
+      })
+      expect(large.error).toBeUndefined()
     })
   })
 })
