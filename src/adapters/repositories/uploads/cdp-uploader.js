@@ -9,7 +9,8 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * @typedef {Object} UploadsRepositoryConfig
  * @property {S3Client} s3Client - AWS S3 client
  * @property {string} cdpUploaderUrl - CDP Uploader service URL
- * @property {string} s3Bucket - S3 bucket for summary log uploads
+ * @property {string} summaryLogsBucket - S3 bucket for summary log uploads
+ * @property {string} orsBucket - S3 bucket for ORS file uploads
  */
 
 const SPREADSHEET_MIME_TYPES = [
@@ -23,7 +24,8 @@ const SPREADSHEET_MIME_TYPES = [
 export const createUploadsRepository = ({
   s3Client,
   cdpUploaderUrl,
-  s3Bucket
+  summaryLogsBucket,
+  orsBucket
 }) => ({
   async findByLocation(uri) {
     const s3Location = parseS3Uri(uri)
@@ -71,7 +73,7 @@ export const createUploadsRepository = ({
       body: JSON.stringify({
         redirect: redirectUrl,
         callback: callbackUrl,
-        s3Bucket,
+        s3Bucket: summaryLogsBucket,
         s3Path,
         mimeTypes: SPREADSHEET_MIME_TYPES,
         metadata: { summaryLogId }
@@ -87,7 +89,7 @@ export const createUploadsRepository = ({
       body: JSON.stringify({
         redirect: redirectUrl,
         callback: callbackUrl,
-        s3Bucket,
+        s3Bucket: orsBucket,
         s3Path,
         mimeTypes: SPREADSHEET_MIME_TYPES,
         metadata: { importId }

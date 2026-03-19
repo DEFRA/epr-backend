@@ -117,7 +117,7 @@ const cdpUploaderStackFixture = {
               AWS_DEFAULT_REGION: REGION,
               AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
               AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey,
-              CONSUMER_BUCKETS: 're-ex-summary-logs',
+              CONSUMER_BUCKETS: 're-ex-summary-logs,re-ex-overseas-sites',
               MOCK_VIRUS_RESULT_DELAY: '1',
               MOCK_VIRUS_SCAN_ENABLED: 'true',
               NODE_ENV: 'development',
@@ -209,7 +209,8 @@ const extendedFixtures = {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
-      s3Bucket: 're-ex-summary-logs'
+      summaryLogsBucket: 're-ex-summary-logs',
+      orsBucket: 're-ex-overseas-sites'
     })
 
     await use(repository)
