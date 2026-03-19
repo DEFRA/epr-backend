@@ -22,6 +22,7 @@ export {
   createWeightFieldSchema,
   createUnboundedWeightFieldSchema,
   createYesNoFieldSchema,
+  createFirstOfMonthFieldSchema,
   createDateFieldSchema,
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
