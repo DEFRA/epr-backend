@@ -312,6 +312,26 @@ describe('ORS spreadsheet parser', () => {
       expect(result.sites[0].address.stateOrRegion).toBeNull()
     })
 
+    it('should trim whitespace from numeric postcode', async () => {
+      const workbook = buildOrsWorkbook({
+        dataRows: [
+          {
+            orsId: 1,
+            country: 'India',
+            name: 'Site',
+            line1: 'Addr',
+            townOrCity: 'Town',
+            postcode: '  10115  '
+          }
+        ]
+      })
+      const buffer = await writeBuffer(workbook)
+
+      const result = await parse(buffer)
+
+      expect(result.sites[0].address.postcode).toBe('10115')
+    })
+
     it('should parse numeric postcode as string', async () => {
       const workbook = buildOrsWorkbook({
         dataRows: [
