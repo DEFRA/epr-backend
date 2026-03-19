@@ -221,7 +221,7 @@ const baseConfig = {
       default: 'http://localhost:7337',
       env: 'CDP_UPLOADER_URL'
     },
-    s3Bucket: {
+    summaryLogsBucket: {
       doc: 'S3 bucket for summary log uploads',
       format: String,
       default: 're-ex-summary-logs',

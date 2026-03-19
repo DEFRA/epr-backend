@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createUploadsRepository } from './cdp-uploader.js'
 
@@ -49,10 +49,12 @@ describe('CDP Uploader error handling', () => {
   })
 })
 
-describe('initiateSummaryLogUpload', () => {
-  it('sends summary logs bucket in the request body', async () => {
-    const mockS3Client = { send: vi.fn() }
+describe('bucket routing', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
 
+  const stubFetch = () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -65,9 +67,18 @@ describe('initiateSummaryLogUpload', () => {
           })
       })
     )
+  }
+
+  const parseFetchBody = () => {
+    const fetchCall = vi.mocked(fetch).mock.calls[0]
+    return JSON.parse(fetchCall[1].body)
+  }
+
+  it('sends summary logs bucket for summary log uploads', async () => {
+    stubFetch()
 
     const repository = createUploadsRepository({
-      s3Client: mockS3Client,
+      s3Client: { send: vi.fn() },
       ...testConfig
     })
 
@@ -79,33 +90,14 @@ describe('initiateSummaryLogUpload', () => {
       callbackUrl: 'https://backend.test/callback'
     })
 
-    const fetchCall = vi.mocked(fetch).mock.calls[0]
-    const body = JSON.parse(fetchCall[1].body)
-    expect(body.s3Bucket).toBe('test-summary-logs-bucket')
-
-    vi.unstubAllGlobals()
+    expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
   })
-})
 
-describe('initiateOrsImport', () => {
-  it('sends ORS bucket in the request body', async () => {
-    const mockS3Client = { send: vi.fn() }
-
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            uploadId: 'upload-1',
-            uploadUrl: 'https://cdp-uploader.test/upload-and-scan/upload-1',
-            statusUrl: 'https://cdp-uploader.test/status/upload-1'
-          })
-      })
-    )
+  it('sends ORS bucket for ORS imports', async () => {
+    stubFetch()
 
     const repository = createUploadsRepository({
-      s3Client: mockS3Client,
+      s3Client: { send: vi.fn() },
       ...testConfig
     })
 
@@ -115,11 +107,7 @@ describe('initiateOrsImport', () => {
       callbackUrl: 'https://backend.test/callback'
     })
 
-    const fetchCall = vi.mocked(fetch).mock.calls[0]
-    const body = JSON.parse(fetchCall[1].body)
-    expect(body.s3Bucket).toBe('test-ors-bucket')
-
-    vi.unstubAllGlobals()
+    expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
   })
 })
 

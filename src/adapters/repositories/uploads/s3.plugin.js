@@ -18,7 +18,7 @@ export const s3UploadsRepositoryPlugin = {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: config.get('cdpUploader.url'),
-      summaryLogsBucket: config.get('cdpUploader.s3Bucket'),
+      summaryLogsBucket: config.get('cdpUploader.summaryLogsBucket'),
       orsBucket: config.get('cdpUploader.orsBucket')
     })
 
