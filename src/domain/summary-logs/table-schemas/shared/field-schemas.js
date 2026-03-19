@@ -52,6 +52,19 @@ export const createWeightFieldSchema = (
   })
 
 /**
+ * Creates an unbounded weight field schema (number, min 0, no upper limit)
+ *
+ * Used for V2.1+ registered-only templates where the 1000-tonne cap was removed.
+ *
+ * @returns {Joi.NumberSchema} Joi number schema
+ */
+export const createUnboundedWeightFieldSchema = () =>
+  Joi.number().min(0).optional().messages({
+    'number.base': MESSAGES.MUST_BE_A_NUMBER,
+    'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO
+  })
+
+/**
  * Creates a Yes/No dropdown field schema
  *
  * @returns {Joi.StringSchema} Joi string schema
