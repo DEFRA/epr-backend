@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes'
-import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 import { ROLES } from '#common/helpers/auth/constants.js'
@@ -44,11 +43,19 @@ export const reportsGetDetail = {
 
     const operatorCategory = getOperatorCategory(registration)
 
-    if (operatorCategory === OPERATOR_CATEGORY.EXPORTER) {
-      throw Boom.notFound()
-    }
-
-    const isAccredited = operatorCategory === OPERATOR_CATEGORY.REPROCESSOR
+    /**
+     * Accredited Operators report Monthly, Registered-Only report Quarterly
+     *
+     * This is currently a simple binary check - when the accreditation entity
+     * gains status/date fields (approvedAt, cancelledAt, suspendedAt), this
+     * will need to account for mid-quarter transitions:
+     *   - Accreditation mid-quarter → entire quarter becomes monthly
+     *   - Cancellation → monthly continues until first full quarter without accreditation
+     *   - Suspension → monthly continues (no change)
+     */
+    const isAccredited =
+      operatorCategory === OPERATOR_CATEGORY.REPROCESSOR ||
+      operatorCategory === OPERATOR_CATEGORY.EXPORTER
 
     const cadence = isAccredited ? MONTHLY : QUARTERLY
 
