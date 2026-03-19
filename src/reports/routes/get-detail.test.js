@@ -300,8 +300,33 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       })
     })
 
-    describe('access control', () => {
-      it('returns 404 for accredited reprocessor', async () => {
+    describe('accredited reprocessor', () => {
+      it('returns 200 with monthly cadence', async () => {
+        const accreditationId = new ObjectId().toString()
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2026,
+          2
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.operatorCategory).toBe('REPROCESSOR')
+        expect(payload.cadence).toBe('monthly')
+        expect(payload.year).toBe(2026)
+        expect(payload.period).toBe(2)
+        expect(payload.startDate).toBe('2026-02-01')
+        expect(payload.endDate).toBe('2026-02-28')
+      })
+
+      it('returns registration details', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'reprocessor',
           accreditationId: new ObjectId().toString()
@@ -312,10 +337,64 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId
         )
+        const payload = JSON.parse(response.payload)
 
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+        expect(payload.details.material).toBeDefined()
+        expect(payload.details.site).toBeDefined()
       })
 
+      it('aggregates waste received from matching monthly records', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'reprocessor',
+            accreditationId: new ObjectId().toString()
+          },
+          [
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-05',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 42.21,
+                SUPPLIER_NAME: 'Grantham Waste',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-20',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 38.04,
+                SUPPLIER_NAME: 'SUEZ recycling',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-03-01',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 100,
+                SUPPLIER_NAME: 'Out of period',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Collector'
+              }
+            }
+          ]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2026,
+          2
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.sections.wasteReceived.totalTonnage).toBe(80.25)
+        expect(payload.sections.wasteReceived.suppliers).toHaveLength(2)
+      })
+    })
+
+    describe('access control', () => {
       it('returns 404 for registered-only exporter', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
