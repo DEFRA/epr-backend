@@ -47,6 +47,10 @@ export const overseasSiteUpdate = {
         updatedAt: new Date()
       })
 
+      if (!site) {
+        throw Boom.notFound('Overseas site not found')
+      }
+
       await auditOverseasSiteUpdate(request, id, previous, site)
 
       logger.info({

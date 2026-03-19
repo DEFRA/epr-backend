@@ -152,6 +152,22 @@ describe(`${overseasSiteUpdatePath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
+
+      it('returns 404 when site is deleted between read and update', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
+        overseasSitesRepository.update.mockResolvedValueOnce(null)
+
+        const response = await server.inject({
+          method: 'PUT',
+          url: `/v1/overseas-sites/${created.id}`,
+          ...asServiceMaintainer(),
+          payload: { name: 'Race Condition' }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
     })
 
     describe('validation errors', () => {
