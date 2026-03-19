@@ -102,7 +102,8 @@ describe('validateProcessingType', () => {
       { accreditationNumber: 'ACC2' }
     ],
     ['EXPORTER', 'exporter', undefined, { accreditationNumber: 'ACC3' }],
-    ['REPROCESSOR_REGISTERED_ONLY', 'reprocessor', undefined, undefined]
+    ['REPROCESSOR_REGISTERED_ONLY', 'reprocessor', undefined, undefined],
+    ['EXPORTER_REGISTERED_ONLY', 'exporter', undefined, undefined]
   ])(
     'returns valid result when types match - %s',
     (spreadsheetType, wasteProcessingType, reprocessingType, accreditation) => {
