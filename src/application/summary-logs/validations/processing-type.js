@@ -101,11 +101,10 @@ export const validateProcessingType = ({
     const isRegisteredOnlyTemplate = REGISTERED_ONLY_PROCESSING_TYPES.has(
       spreadsheetProcessingType
     )
-    const isAccreditedRegistration = Boolean(
-      registration.accreditation?.accreditationNumber
-    )
+    const isRegisteredOnlyOrganisation =
+      !registration.accreditation?.accreditationNumber
 
-    if (isRegisteredOnlyTemplate !== !isAccreditedRegistration) {
+    if (isRegisteredOnlyTemplate !== isRegisteredOnlyOrganisation) {
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         'Summary log template type does not match registration accreditation status',
