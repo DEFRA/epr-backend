@@ -106,7 +106,7 @@ describe('SENT_ON_LOADS (REPROCESSOR_REGISTERED_ONLY)', () => {
       expect(invalid.error).toBeDefined()
     })
 
-    it('validates TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON as weight', () => {
+    it('validates TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON as number >= 0 with no upper bound', () => {
       const valid = validationSchema.validate({
         TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 5.0
       })
@@ -116,6 +116,11 @@ describe('SENT_ON_LOADS (REPROCESSOR_REGISTERED_ONLY)', () => {
         TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
       })
       expect(negative.error).toBeDefined()
+
+      const large = validationSchema.validate({
+        TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50000
+      })
+      expect(large.error).toBeUndefined()
     })
   })
 })

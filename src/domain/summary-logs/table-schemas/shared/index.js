@@ -20,6 +20,7 @@ export { createRowIdSchema } from './row-id.schema.js'
 // Field schema factories
 export {
   createWeightFieldSchema,
+  createUnboundedWeightFieldSchema,
   createYesNoFieldSchema,
   createDateFieldSchema,
   createThreeDigitIdSchema,
