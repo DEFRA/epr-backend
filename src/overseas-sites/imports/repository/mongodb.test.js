@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { describe, expect } from 'vitest'
+import { afterEach, describe, expect, vi } from 'vitest'
 import { createOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
@@ -23,6 +23,10 @@ const it = mongoIt.extend({
 })
 
 describe('MongoDB ORS imports repository', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('creates and retrieves an import document', async ({ repository }) => {
     const created = await repository.create({
       _id: 'import-test-1',
@@ -76,6 +80,78 @@ describe('MongoDB ORS imports repository', () => {
     expect(found.files).toHaveLength(2)
     expect(found.files[0]).toEqual(files[0])
     expect(found.files[1]).toEqual(files[1])
+  })
+
+  it('creates a TTL index on expiresAt', async ({ mongoClient }) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    await database.collection(COLLECTION_NAME).deleteMany({})
+    await createOrsImportsRepository(database)
+
+    const indexes = await database
+      .collection(COLLECTION_NAME)
+      .listIndexes()
+      .toArray()
+
+    const ttlIndex = indexes.find(
+      (idx) => idx.key?.expiresAt === 1 && idx.expireAfterSeconds === 0
+    )
+    expect(ttlIndex).toBeDefined()
+  })
+
+  it('sets expiresAt when creating a document', async ({ repository }) => {
+    const created = await repository.create({
+      _id: 'import-ttl-1',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    expect(created.expiresAt).toBeInstanceOf(Date)
+  })
+
+  it('sets expiresAt to null for COMPLETED status on create', async ({
+    repository
+  }) => {
+    const created = await repository.create({
+      _id: 'import-ttl-completed',
+      status: ORS_IMPORT_STATUS.COMPLETED,
+      files: []
+    })
+
+    expect(created.expiresAt).toBeNull()
+  })
+
+  it('updates expiresAt when status changes', async ({ repository }) => {
+    vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'))
+
+    await repository.create({
+      _id: 'import-ttl-2',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    vi.setSystemTime(new Date('2026-01-15T13:00:00.000Z'))
+    await repository.updateStatus('import-ttl-2', ORS_IMPORT_STATUS.PROCESSING)
+
+    const found = await repository.findById('import-ttl-2')
+    expect(found.expiresAt).toBeInstanceOf(Date)
+    expect(found.expiresAt.getTime()).toBeGreaterThan(
+      new Date('2026-01-15T13:00:00.000Z').getTime()
+    )
+  })
+
+  it('sets expiresAt to null when status changes to COMPLETED', async ({
+    repository
+  }) => {
+    await repository.create({
+      _id: 'import-ttl-3',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    await repository.updateStatus('import-ttl-3', ORS_IMPORT_STATUS.COMPLETED)
+
+    const found = await repository.findById('import-ttl-3')
+    expect(found.expiresAt).toBeNull()
   })
 
   it('records a file result by index', async ({ repository }) => {

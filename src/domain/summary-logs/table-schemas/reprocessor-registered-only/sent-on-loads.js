@@ -2,7 +2,7 @@ import Joi from 'joi'
 import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
   createRowIdSchema,
-  createWeightFieldSchema,
+  createUnboundedWeightFieldSchema,
   createDateFieldSchema
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -39,7 +39,8 @@ export const SENT_ON_LOADS = {
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(ROW_ID_MINIMUMS.SENT_ON_LOADS),
     [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
-    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: createWeightFieldSchema()
+    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
+      createUnboundedWeightFieldSchema()
   })
     .unknown(true)
     .prefs({ abortEarly: false }),
