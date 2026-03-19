@@ -325,113 +325,190 @@ describe('validateMetaSyntax', () => {
       isRegisteredOnlyEnabled: () => true
     }
 
-    it.each(['REPROCESSOR_REGISTERED_ONLY', 'EXPORTER_REGISTERED_ONLY'])(
-      'rejects %s when feature flag is disabled',
-      (processingType) => {
-        const parsed = {
-          meta: {
-            ...createValidMeta(),
-            PROCESSING_TYPE: { value: processingType }
-          }
+    it('rejects REPROCESSOR_REGISTERED_ONLY when feature flag is disabled', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
         }
-
-        const result = validateMetaSyntax({
-          parsed,
-          featureFlags: { isRegisteredOnlyEnabled: () => false }
-        })
-
-        expect(result.isValid()).toBe(false)
-
-        const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0].message).toContain('PROCESSING_TYPE')
-        expect(fatals[0].message).toContain('must be one of')
-        expect(fatals[0].message).not.toContain(processingType)
       }
-    )
 
-    it.each(['REPROCESSOR_REGISTERED_ONLY', 'EXPORTER_REGISTERED_ONLY'])(
-      'rejects %s when no feature flags provided',
-      (processingType) => {
-        const parsed = {
-          meta: {
-            ...createValidMeta(),
-            PROCESSING_TYPE: { value: processingType }
-          }
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: { isRegisteredOnlyEnabled: () => false }
+      })
+
+      expect(result.isValid()).toBe(false)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('PROCESSING_TYPE')
+      expect(fatals[0].message).toContain('must be one of')
+      expect(fatals[0].message).not.toContain('REPROCESSOR_REGISTERED_ONLY')
+    })
+
+    it('rejects REPROCESSOR_REGISTERED_ONLY when no feature flags provided', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
         }
-
-        const result = validateMetaSyntax({ parsed })
-
-        expect(result.isValid()).toBe(false)
       }
-    )
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(false)
+    })
+
+    it('rejects EXPORTER_REGISTERED_ONLY when feature flag is disabled', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: { isRegisteredOnlyEnabled: () => false }
+      })
+
+      expect(result.isValid()).toBe(false)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('PROCESSING_TYPE')
+      expect(fatals[0].message).toContain('must be one of')
+      expect(fatals[0].message).not.toContain('EXPORTER_REGISTERED_ONLY')
+    })
+
+    it('rejects EXPORTER_REGISTERED_ONLY when no feature flags provided', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(false)
+    })
     // END: registered-only feature flag
 
-    it.each(['REPROCESSOR_REGISTERED_ONLY', 'EXPORTER_REGISTERED_ONLY'])(
-      'accepts %s',
-      (processingType) => {
-        const parsed = {
-          meta: {
-            ...createValidMeta(),
-            PROCESSING_TYPE: { value: processingType },
-            TEMPLATE_VERSION: { value: 2.1 }
-          }
+    it('accepts REPROCESSOR_REGISTERED_ONLY', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2.1 }
         }
-
-        const result = validateMetaSyntax({
-          parsed,
-          featureFlags: registeredOnlyFeatureFlags
-        })
-
-        expect(result.isValid()).toBe(true)
       }
-    )
 
-    it.each(['REPROCESSOR_REGISTERED_ONLY', 'EXPORTER_REGISTERED_ONLY'])(
-      'accepts TEMPLATE_VERSION >= 2.1 for %s',
-      (processingType) => {
-        const parsed = {
-          meta: {
-            ...createValidMeta(),
-            PROCESSING_TYPE: { value: processingType },
-            TEMPLATE_VERSION: { value: 2.1 }
-          }
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('accepts TEMPLATE_VERSION >= 2.1 for registered-only reprocessor', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2.1 }
         }
-
-        const result = validateMetaSyntax({
-          parsed,
-          featureFlags: registeredOnlyFeatureFlags
-        })
-
-        expect(result.isValid()).toBe(true)
       }
-    )
 
-    it.each(['REPROCESSOR_REGISTERED_ONLY', 'EXPORTER_REGISTERED_ONLY'])(
-      'rejects TEMPLATE_VERSION < 2.1 for %s',
-      (processingType) => {
-        const parsed = {
-          meta: {
-            ...createValidMeta(),
-            PROCESSING_TYPE: { value: processingType },
-            TEMPLATE_VERSION: { value: 2 }
-          }
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('rejects TEMPLATE_VERSION < 2.1 for registered-only reprocessor', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2 }
         }
-
-        const result = validateMetaSyntax({
-          parsed,
-          featureFlags: registeredOnlyFeatureFlags
-        })
-
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(true)
-
-        const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0].message).toContain('TEMPLATE_VERSION')
-        expect(fatals[0].message).toContain('at least 2.1')
       }
-    )
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('TEMPLATE_VERSION')
+      expect(fatals[0].message).toContain('at least 2.1')
+    })
+
+    it('accepts EXPORTER_REGISTERED_ONLY', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2.1 }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('accepts TEMPLATE_VERSION >= 2.1 for registered-only exporter', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2.1 }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('rejects TEMPLATE_VERSION < 2.1 for registered-only exporter', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2 }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('TEMPLATE_VERSION')
+      expect(fatals[0].message).toContain('at least 2.1')
+    })
   })
 
   describe('type coercion for ExcelJS values', () => {
