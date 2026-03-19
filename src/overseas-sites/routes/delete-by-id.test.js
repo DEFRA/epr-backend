@@ -17,6 +17,12 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSiteDeletePath } from './delete-by-id.js'
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 describe(`${overseasSiteDeletePath} route`, () => {
   setupAuthContext()
 
@@ -73,6 +79,33 @@ describe(`${overseasSiteDeletePath} route`, () => {
         const found = await overseasSitesRepository.findById(created.id)
         expect(found).toBeNull()
       })
+
+      it('records audit event for site deletion', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
+        const response = await server.inject({
+          method: 'DELETE',
+          url: `/v1/overseas-sites/${created.id}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+
+        expect(mockCdpAuditing).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: {
+              category: 'entity',
+              subCategory: 'overseas-sites',
+              action: 'delete'
+            },
+            context: expect.objectContaining({
+              siteId: created.id,
+              site: expect.objectContaining({ name: created.name })
+            })
+          })
+        )
+      })
     })
 
     describe('not found', () => {
@@ -110,6 +143,9 @@ describe(`${overseasSiteDeletePath} route`, () => {
 
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
         const Boom = await import('@hapi/boom')
         overseasSitesRepository.remove.mockRejectedValueOnce(
           Boom.default.badRequest('Invalid ID')
@@ -117,7 +153,7 @@ describe(`${overseasSiteDeletePath} route`, () => {
 
         const response = await server.inject({
           method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
+          url: `/v1/overseas-sites/${created.id}`,
           ...asServiceMaintainer()
         })
 
@@ -125,13 +161,16 @@ describe(`${overseasSiteDeletePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
+        const created =
+          await overseasSitesRepository.create(buildOverseasSite())
+
         overseasSitesRepository.remove.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
         const response = await server.inject({
           method: 'DELETE',
-          url: '/v1/overseas-sites/aaaaaaaaaaaaaaaaaaaaaaaa',
+          url: `/v1/overseas-sites/${created.id}`,
           ...asServiceMaintainer()
         })
 

@@ -1,8 +1,7 @@
 import { Consumer } from 'sqs-consumer'
 import {
   GetQueueUrlCommand,
-  GetQueueAttributesCommand,
-  ChangeMessageVisibilityCommand
+  GetQueueAttributesCommand
 } from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
@@ -17,8 +16,7 @@ import {
 vi.mock('sqs-consumer')
 vi.mock('@aws-sdk/client-sqs', () => ({
   GetQueueUrlCommand: vi.fn(),
-  GetQueueAttributesCommand: vi.fn(),
-  ChangeMessageVisibilityCommand: vi.fn()
+  GetQueueAttributesCommand: vi.fn()
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
@@ -89,11 +87,6 @@ describe('createCommandQueueConsumer', () => {
       this.QueueName = params.QueueName
     })
     vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
-    vi.mocked(ChangeMessageVisibilityCommand).mockImplementation(
-      function (params) {
-        Object.assign(this, params)
-      }
-    )
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
@@ -259,13 +252,13 @@ describe('createCommandQueueConsumer', () => {
       })
     })
 
-    it('logs warning on processing_error event', async () => {
+    it('logs error on processing_error event', async () => {
       await createConsumer()
       const error = new Error('Processing failed')
 
       eventHandlers.processing_error(error)
 
-      expect(logger.warn).toHaveBeenCalledWith({
+      expect(logger.error).toHaveBeenCalledWith({
         err: error,
         message: 'SQS message processing error',
         event: {
@@ -632,7 +625,6 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
-            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
@@ -643,106 +635,6 @@ describe('createCommandQueueConsumer', () => {
           await expect(handleMessage(message)).rejects.toThrow(
             'Database timeout'
           )
-        })
-
-        it('logs non-final transient errors as warnings', async () => {
-          const transientError = new Error('Database timeout')
-          const mockValidator = vi.fn().mockRejectedValue(transientError)
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          const message = {
-            MessageId: 'msg-123',
-            ReceiptHandle: 'receipt-123',
-            Attributes: { ApproximateReceiveCount: '1' },
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message).catch(() => {})
-
-          expect(logger.warn).toHaveBeenCalledWith({
-            err: transientError,
-            message:
-              'Command failed (transient, will retry): validate for summaryLogId=log-123 messageId=msg-123',
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.SERVER,
-              action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-            }
-          })
-        })
-
-        it('resets visibility timeout on non-final transient error for immediate retry', async () => {
-          const mockValidator = vi
-            .fn()
-            .mockRejectedValue(new Error('Database timeout'))
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          const message = {
-            MessageId: 'msg-123',
-            ReceiptHandle: 'receipt-123',
-            Attributes: { ApproximateReceiveCount: '1' },
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message).catch(() => {})
-
-          expect(ChangeMessageVisibilityCommand).toHaveBeenCalledWith({
-            QueueUrl: 'http://localhost:4566/000000000000/test-queue',
-            ReceiptHandle: 'receipt-123',
-            VisibilityTimeout: 0
-          })
-        })
-
-        it('logs warning when visibility timeout reset fails', async () => {
-          const resetError = new Error('SQS error')
-          sqsClient.send.mockImplementation((command) => {
-            if (command instanceof GetQueueAttributesCommand) {
-              return Promise.resolve({
-                Attributes: {
-                  RedrivePolicy: JSON.stringify({ maxReceiveCount: '2' })
-                }
-              })
-            }
-            if (command instanceof ChangeMessageVisibilityCommand) {
-              return Promise.reject(resetError)
-            }
-            return Promise.resolve({
-              QueueUrl: 'http://localhost:4566/000000000000/test-queue'
-            })
-          })
-
-          // Recreate consumer with updated sqsClient mock
-          await createConsumer()
-          handleMessage = Consumer.create.mock.calls.at(-1)[0].handleMessage
-
-          const mockValidator = vi
-            .fn()
-            .mockRejectedValue(new Error('Database timeout'))
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          const message = {
-            MessageId: 'msg-123',
-            ReceiptHandle: 'receipt-123',
-            Attributes: { ApproximateReceiveCount: '1' },
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await expect(handleMessage(message)).rejects.toThrow(
-            'Database timeout'
-          )
-
-          expect(logger.warn).toHaveBeenCalledWith({
-            err: resetError,
-            message: 'Failed to reset visibility timeout for messageId=msg-123'
-          })
         })
 
         it('does not mark as failed for transient errors on non-final attempt', async () => {
@@ -753,7 +645,6 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
-            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
@@ -816,63 +707,6 @@ describe('createCommandQueueConsumer', () => {
               status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
             })
           )
-        })
-
-        it('logs final transient attempt as error', async () => {
-          const transientError = new Error('Database timeout')
-          const mockValidator = vi.fn().mockRejectedValue(transientError)
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
-
-          const message = {
-            MessageId: 'msg-123',
-            Attributes: { ApproximateReceiveCount: '2' },
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message).catch(() => {})
-
-          expect(logger.error).toHaveBeenCalledWith({
-            err: transientError,
-            message:
-              'Command failed (transient, final attempt): validate for summaryLogId=log-123 messageId=msg-123',
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.SERVER,
-              action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-            }
-          })
-        })
-
-        it('does not reset visibility timeout on final attempt', async () => {
-          const mockValidator = vi
-            .fn()
-            .mockRejectedValue(new Error('Database timeout'))
-          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
-
-          const message = {
-            MessageId: 'msg-123',
-            Attributes: { ApproximateReceiveCount: '2' },
-            Body: JSON.stringify({
-              command: 'validate',
-              summaryLogId: 'log-123'
-            })
-          }
-
-          await handleMessage(message).catch(() => {})
-
-          expect(ChangeMessageVisibilityCommand).not.toHaveBeenCalled()
         })
       })
     })

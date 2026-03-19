@@ -1,5 +1,5 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
-import { DATE_FIELDS_BY_OPERATOR_CATEGORY } from './date-fields-by-operator-category.js'
+import { DATE_FIELDS_BY_OPERATOR_CATEGORY } from './fields-by-operator-category.js'
 
 /**
  * Derives distinct reporting periods from waste record dates.

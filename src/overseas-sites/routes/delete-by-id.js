@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditOverseasSiteDelete } from '../auditing.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -9,6 +10,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 
 export const overseasSiteDeletePath = '/v1/overseas-sites/{id}'
 
@@ -20,7 +22,7 @@ export const overseasSiteDelete = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {overseasSitesRepository: OverseasSitesRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -28,11 +30,13 @@ export const overseasSiteDelete = {
     const { id } = params
 
     try {
-      const removed = await overseasSitesRepository.remove(id)
+      const site = await overseasSitesRepository.remove(id)
 
-      if (!removed) {
+      if (!site) {
         throw Boom.notFound('Overseas site not found')
       }
+
+      await auditOverseasSiteDelete(request, id, site)
 
       logger.info({
         message: `Overseas site deleted: id=${id}`,

@@ -16,6 +16,12 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSitesCreatePath } from './post.js'
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 const validPayload = {
   name: 'Mumbai Reprocessing Plant',
   address: {
@@ -106,6 +112,27 @@ describe(`${overseasSitesCreatePath} route`, () => {
         expect(body.address.postcode).toBe(fullPayload.address.postcode)
         expect(body.coordinates).toBe(fullPayload.coordinates)
         expect(body.validFrom).toBeDefined()
+      })
+
+      it('records audit event for site creation', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: '/v1/overseas-sites',
+          ...asServiceMaintainer(),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CREATED)
+
+        expect(mockCdpAuditing).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: {
+              category: 'entity',
+              subCategory: 'overseas-sites',
+              action: 'create'
+            }
+          })
+        )
       })
 
       it('passes correct data to repository', async () => {
