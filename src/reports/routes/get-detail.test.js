@@ -394,8 +394,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       })
     })
 
-    describe('access control', () => {
-      it('returns 404 for registered-only exporter', async () => {
+    describe('registered-only exporter', () => {
+      it('returns 200', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
@@ -407,9 +407,250 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           registrationId
         )
 
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
+      it('returns period metadata', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2026,
+          1
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.operatorCategory).toBe('EXPORTER_REGISTERED_ONLY')
+        expect(payload.cadence).toBe('quarterly')
+        expect(payload.year).toBe(2026)
+        expect(payload.period).toBe(1)
+        expect(payload.startDate).toBe('2026-01-01')
+        expect(payload.endDate).toBe('2026-03-31')
+      })
+
+      it('returns registration details without site', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.details.material).toBeDefined()
+        expect(payload.details.site).toBeUndefined()
+      })
+
+      it('aggregates waste received for export from matching records', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          },
+          [
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+                TONNAGE_RECEIVED_FOR_EXPORT: 50.25,
+                SUPPLIER_NAME: 'Grantham Waste',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
+                TONNAGE_RECEIVED_FOR_EXPORT: 30,
+                SUPPLIER_NAME: 'SUEZ recycling',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
+              }
+            }
+          ]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.sections.wasteReceived.totalTonnage).toBe(80.25)
+        expect(payload.sections.wasteReceived.suppliers).toHaveLength(2)
+        expect(payload.sections.wasteReceived.suppliers[0].supplierName).toBe(
+          'Grantham Waste'
+        )
+      })
+
+      it('aggregates waste exported with overseas site details', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          },
+          [
+            {
+              type: WASTE_RECORD_TYPE.EXPORTED,
+              data: {
+                DATE_OF_EXPORT: '2026-01-15',
+                TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5,
+                OSR_NAME: 'EuroPlast Recycling GmbH',
+                OSR_ID: '001'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.EXPORTED,
+              data: {
+                DATE_OF_EXPORT: '2026-02-10',
+                TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3.47,
+                OSR_NAME: 'EuroPlast Recycling GmbH',
+                OSR_ID: '001'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.EXPORTED,
+              data: {
+                DATE_OF_EXPORT: '2026-03-05',
+                TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+                OSR_NAME: 'RecyclePlast SA',
+                OSR_ID: '096'
+              }
+            }
+          ]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.sections.wasteExported.totalTonnage).toBe(11.47)
+        expect(payload.sections.wasteExported.overseasSites).toHaveLength(2)
+        expect(payload.sections.wasteExported.overseasSites).toStrictEqual([
+          { siteName: 'EuroPlast Recycling GmbH', osrId: '001' },
+          { siteName: 'RecyclePlast SA', osrId: '096' }
+        ])
+      })
+
+      it('aggregates waste sent on with facility type breakdown', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          },
+          [
+            {
+              type: WASTE_RECORD_TYPE.SENT_ON,
+              data: {
+                DATE_LOAD_LEFT_SITE: '2026-01-20',
+                TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 5,
+                FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+                FINAL_DESTINATION_NAME: 'Lincoln recycling'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.SENT_ON,
+              data: {
+                DATE_LOAD_LEFT_SITE: '2026-02-10',
+                TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 3,
+                FINAL_DESTINATION_FACILITY_TYPE: 'Exporter',
+                FINAL_DESTINATION_NAME: 'Thames exports'
+              }
+            }
+          ]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.sections.wasteSentOn.totalTonnage).toBe(8)
+        expect(payload.sections.wasteSentOn.toReprocessors).toBe(5)
+        expect(payload.sections.wasteSentOn.toExporters).toBe(3)
+        expect(payload.sections.wasteSentOn.toOtherSites).toBe(0)
+        expect(payload.sections.wasteSentOn.destinations).toHaveLength(2)
+      })
+
+      it('excludes records outside the requested period', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          },
+          [
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+                TONNAGE_RECEIVED_FOR_EXPORT: 50,
+                SUPPLIER_NAME: 'In period',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
+              }
+            },
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                MONTH_RECEIVED_FOR_EXPORT: '2026-04-01',
+                TONNAGE_RECEIVED_FOR_EXPORT: 100,
+                SUPPLIER_NAME: 'Out of period',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
+              }
+            }
+          ]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2026,
+          1
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.sections.wasteReceived.totalTonnage).toBe(50)
+        expect(payload.sections.wasteReceived.suppliers).toHaveLength(1)
+      })
+
+      it('returns empty sections when no records exist', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: undefined
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.sections.wasteReceived.totalTonnage).toBe(0)
+        expect(payload.sections.wasteReceived.suppliers).toStrictEqual([])
+        expect(payload.sections.wasteExported.totalTonnage).toBe(0)
+        expect(payload.sections.wasteExported.overseasSites).toStrictEqual([])
+        expect(payload.sections.wasteSentOn.totalTonnage).toBe(0)
+        expect(payload.sections.wasteSentOn.destinations).toStrictEqual([])
+      })
+    })
+
+    describe('access control', () => {
       it('returns 404 for accredited exporter', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
