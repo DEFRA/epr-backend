@@ -44,10 +44,15 @@ const performUpdate = (storage) => async (id, updates) => {
 
 /**
  * @param {Storage} storage
- * @returns {(id: string) => Promise<boolean>}
+ * @returns {(id: string) => Promise<OverseasSite | null>}
  */
 const performRemove = (storage) => async (id) => {
-  return storage.delete(id)
+  const site = storage.get(id)
+  if (!site) {
+    return null
+  }
+  storage.delete(id)
+  return structuredClone(site)
 }
 
 /**
