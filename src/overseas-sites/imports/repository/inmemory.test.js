@@ -28,6 +28,26 @@ describe('In-memory ORS imports repository', () => {
       expect(result.createdAt).toBeDefined()
       expect(result.updatedAt).toBeDefined()
     })
+
+    it('sets expiresAt on create', async () => {
+      const result = await repository.create({
+        _id: 'import-ttl',
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
+        files: []
+      })
+
+      expect(result.expiresAt).toBeInstanceOf(Date)
+    })
+
+    it('sets expiresAt to null for COMPLETED status', async () => {
+      const result = await repository.create({
+        _id: 'import-ttl-completed',
+        status: ORS_IMPORT_STATUS.COMPLETED,
+        files: []
+      })
+
+      expect(result.expiresAt).toBeNull()
+    })
   })
 
   describe('findById', () => {
@@ -68,6 +88,19 @@ describe('In-memory ORS imports repository', () => {
       const after = await repository.findById('import-1')
       expect(after.status).toBe(ORS_IMPORT_STATUS.PROCESSING)
       expect(after.updatedAt).toBeDefined()
+    })
+
+    it('updates expiresAt when status changes', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.PREPROCESSING,
+        files: []
+      })
+
+      await repository.updateStatus('import-1', ORS_IMPORT_STATUS.COMPLETED)
+
+      const after = await repository.findById('import-1')
+      expect(after.expiresAt).toBeNull()
     })
   })
 
