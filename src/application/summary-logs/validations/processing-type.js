@@ -6,6 +6,7 @@ import {
 import {
   PROCESSING_TYPE_TO_REPROCESSING_TYPE,
   PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE,
+  REGISTERED_ONLY_PROCESSING_TYPES,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
 import {
@@ -17,6 +18,16 @@ import {
 const VALID_WASTE_PROCESSING_TYPES = [
   ...new Set(Object.values(PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE))
 ]
+
+/**
+ * Waste processing types that have a registered-only template counterpart
+ * e.g. 'reprocessor' has REPROCESSOR_REGISTERED_ONLY
+ */
+const WASTE_TYPES_WITH_REGISTERED_ONLY = new Set(
+  [...REGISTERED_ONLY_PROCESSING_TYPES].map(
+    (pt) => PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE[pt]
+  )
+)
 
 /**
  * Validates that the summary log type in the spreadsheet matches the registration's waste processing type
@@ -32,7 +43,8 @@ const VALID_WASTE_PROCESSING_TYPES = [
 export const validateProcessingType = ({
   parsed,
   registration,
-  loggingContext
+  loggingContext,
+  featureFlags
 }) => {
   const issues = createValidationIssues()
 
@@ -77,6 +89,33 @@ export const validateProcessingType = ({
       }
     )
     return issues
+  }
+
+  // Validate accredited vs registered-only template matches registration
+  // Only applies when registered-only is enabled AND a registered-only
+  // counterpart exists for this waste processing type
+  if (
+    featureFlags?.isRegisteredOnlyEnabled() &&
+    WASTE_TYPES_WITH_REGISTERED_ONLY.has(wasteProcessingType)
+  ) {
+    const isRegisteredOnlyTemplate = REGISTERED_ONLY_PROCESSING_TYPES.has(
+      spreadsheetProcessingType
+    )
+    const isRegisteredOnlyOrganisation =
+      !registration.accreditation?.accreditationNumber
+
+    if (isRegisteredOnlyTemplate !== isRegisteredOnlyOrganisation) {
+      issues.addFatal(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Summary log template type does not match registration accreditation status',
+        VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
+        {
+          location,
+          actual: spreadsheetProcessingType
+        }
+      )
+      return issues
+    }
   }
 
   // For reprocessors, also validate that reprocessingType (input/output) matches

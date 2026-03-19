@@ -309,6 +309,109 @@ describe('validateAccreditationNumber', () => {
     expect(issues.getAllIssues()).toHaveLength(0)
   })
 
+  it('skips validation when template is registered-only and feature flag is enabled', () => {
+    const registration = {
+      id: 'reg-123'
+    }
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg',
+      featureFlags: { isRegisteredOnlyEnabled: () => true }
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+    expect(mockLoggerInfo).not.toHaveBeenCalled()
+  })
+
+  it('skips validation when template is registered-only even with accredited registration', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg',
+      featureFlags: { isRegisteredOnlyEnabled: () => true }
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+    expect(mockLoggerInfo).not.toHaveBeenCalled()
+  })
+
+  it('does not skip validation for accredited template when feature flag is enabled', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+        ACCREDITATION_NUMBER: { value: '12345678' }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg',
+      featureFlags: { isRegisteredOnlyEnabled: () => true }
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
+    expect(mockLoggerInfo).toHaveBeenCalled()
+  })
+
+  it('does not skip validation for registered-only template when feature flag is disabled', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+        ACCREDITATION_NUMBER: { value: undefined }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg',
+      featureFlags: { isRegisteredOnlyEnabled: () => false }
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()[0]).toMatchObject({
+      message: 'Invalid summary log: missing accreditation number'
+    })
+  })
+
   it('coerces numeric spreadsheet value to string before comparing', () => {
     const registration = {
       id: 'reg-123',
