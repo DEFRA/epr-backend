@@ -202,7 +202,7 @@ describe('validateProcessingType', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('accredited')
+      expect(fatals[0].message).toContain('accreditation status')
       expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     }
   )
@@ -239,7 +239,7 @@ describe('validateProcessingType', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('registered-only')
+      expect(fatals[0].message).toContain('accreditation status')
       expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     }
   )

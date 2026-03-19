@@ -105,23 +105,10 @@ export const validateProcessingType = ({
       registration.accreditation?.accreditationNumber
     )
 
-    if (isRegisteredOnlyTemplate && isAccreditedRegistration) {
+    if (isRegisteredOnlyTemplate !== !isAccreditedRegistration) {
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
-        'This registration is accredited — use the accredited template instead of the registered-only template',
-        VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
-        {
-          location,
-          actual: spreadsheetProcessingType
-        }
-      )
-      return issues
-    }
-
-    if (!isRegisteredOnlyTemplate && !isAccreditedRegistration) {
-      issues.addFatal(
-        VALIDATION_CATEGORY.BUSINESS,
-        'This registration is registered-only — use the registered-only template instead of the accredited template',
+        'Summary log template type does not match registration accreditation status',
         VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
         {
           location,
