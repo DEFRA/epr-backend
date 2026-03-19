@@ -1,7 +1,6 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
-  DATE_FIELDS_BY_OPERATOR_CATEGORY,
+  SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
 } from './fields-by-operator-category.js'
 
@@ -26,29 +25,30 @@ export function aggregateReportDetail(
   const startDate = formatDateISO(year, startMonth, 1)
   const endDate = formatDateISO(year, startMonth + cadence.monthsPerPeriod, 0)
 
-  const operatorDateFields = DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
+  const sectionDateFields =
+    SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
 
-  const receivedDateFields = operatorDateFields[WASTE_RECORD_TYPE.RECEIVED]
-  const exportedDateFields = operatorDateFields[WASTE_RECORD_TYPE.EXPORTED]
-  const sentOnDateFields = operatorDateFields[WASTE_RECORD_TYPE.SENT_ON]
+  const wasteReceivedDateField = sectionDateFields.wasteReceived
+  const wasteExportedDateField = sectionDateFields.wasteExported
+  const wasteSentOnDateField = sectionDateFields.wasteSentOn
 
-  const wasteReceivedRecords = filterRecordsByPeriod(
+  const wasteReceivedRecords = filterRecordsByDateField(
     wasteRecords,
-    receivedDateFields,
+    wasteReceivedDateField,
     startDate,
     endDate
   )
 
-  const wasteExportedRecords = filterRecordsByPeriod(
+  const wasteExportedRecords = filterRecordsByDateField(
     wasteRecords,
-    exportedDateFields,
+    wasteExportedDateField,
     startDate,
     endDate
   )
 
-  const wasteSentOnRecords = filterRecordsByPeriod(
+  const wasteSentOnRecords = filterRecordsByDateField(
     wasteRecords,
-    sentOnDateFields,
+    wasteSentOnDateField,
     startDate,
     endDate
   )
@@ -75,7 +75,7 @@ export function aggregateReportDetail(
     lastUploadedAt,
     sections: {
       wasteReceived,
-      ...(exportedDateFields && { wasteExported }),
+      ...(wasteExportedDateField && { wasteExported }),
       wasteSentOn
     }
   }
@@ -83,30 +83,27 @@ export function aggregateReportDetail(
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
- * @param {string[] | undefined} dateFields
+ * @param {string | undefined} dateField
  * @param {string} startDate
  * @param {string} endDate
  */
-function filterRecordsByPeriod(wasteRecords, dateFields, startDate, endDate) {
-  if (!dateFields) {
+function filterRecordsByDateField(wasteRecords, dateField, startDate, endDate) {
+  if (!dateField) {
     return []
   }
 
   return wasteRecords.filter((wasteRecord) => {
-    return dateFields.some((dateField) => {
-      const dateValue = wasteRecord.data[dateField]
+    const dateValue = wasteRecord.data[dateField]
 
-      if (typeof dateValue !== 'string') {
-        return false
-      }
+    if (typeof dateValue !== 'string') {
+      return false
+    }
 
-      const dateOnly = dateValue.slice(0, 10)
+    const date = dateValue.slice(0, 10)
 
-      return (
-        dateOnly.localeCompare(startDate) >= 0 &&
-        dateOnly.localeCompare(endDate) <= 0
-      )
-    })
+    return (
+      date.localeCompare(startDate) >= 0 && date.localeCompare(endDate) <= 0
+    )
   })
 }
 
@@ -145,18 +142,17 @@ function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
   let totalTonnage = 0
   const suppliers = []
 
-  for (const wasteReceivedRecord of wasteReceivedRecords) {
-    const tonnage = toFiniteNumber(wasteReceivedRecord.data[tonnageField])
+  for (const { data } of wasteReceivedRecords) {
+    const tonnage = toFiniteNumber(data[tonnageField])
 
     totalTonnage += tonnage
 
-    const supplier = {
-      supplierName: wasteReceivedRecord.data.SUPPLIER_NAME,
-      role: wasteReceivedRecord.data.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER,
-      tonnage
-    }
+    const supplierName = data.SUPPLIER_NAME
+    const role = data.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER
 
-    suppliers.push(supplier)
+    if (supplierName) {
+      suppliers.push({ supplierName, role, tonnage })
+    }
   }
 
   return { totalTonnage, suppliers }
@@ -170,20 +166,17 @@ function aggregateWasteExported(wasteExportedRecords) {
   const seenOsrIds = new Set()
   const overseasSites = []
 
-  for (const wasteExportedRecord of wasteExportedRecords) {
-    const tonnage = toFiniteNumber(
-      wasteExportedRecord.data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-    )
+  for (const { data } of wasteExportedRecords) {
+    const tonnage = toFiniteNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
 
     totalTonnage += tonnage
 
-    const osrId = wasteExportedRecord.data.OSR_ID
+    const osrId = data.OSR_ID
+    const siteName = data.OSR_NAME
+
     if (osrId && !seenOsrIds.has(osrId)) {
       seenOsrIds.add(osrId)
-      overseasSites.push({
-        siteName: wasteExportedRecord.data.OSR_NAME,
-        osrId
-      })
+      overseasSites.push({ osrId, siteName })
     }
   }
 
@@ -200,30 +193,23 @@ function aggregateWasteSentOn(wasteSentOnRecords) {
   let toOtherSites = 0
   const destinations = []
 
-  for (const wasteSentOnRecord of wasteSentOnRecords) {
-    const tonnage = toFiniteNumber(
-      wasteSentOnRecord.data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
-    )
+  for (const { data } of wasteSentOnRecords) {
+    const recipientName = data.FINAL_DESTINATION_NAME
+    const role = data.FINAL_DESTINATION_FACILITY_TYPE
 
-    const facilityType = wasteSentOnRecord.data.FINAL_DESTINATION_FACILITY_TYPE
+    const tonnage = toFiniteNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
 
     totalTonnage += tonnage
 
-    if (facilityType === 'Reprocessor') {
+    if (role === 'Reprocessor') {
       toReprocessors += tonnage
-    } else if (facilityType === 'Exporter') {
+    } else if (role === 'Exporter') {
       toExporters += tonnage
     } else {
       toOtherSites += tonnage
     }
 
-    const destination = {
-      recipientName: wasteSentOnRecord.data.FINAL_DESTINATION_NAME,
-      role: facilityType,
-      tonnage
-    }
-
-    destinations.push(destination)
+    destinations.push({ recipientName, role, tonnage })
   }
 
   return {
