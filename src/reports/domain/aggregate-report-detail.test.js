@@ -328,6 +328,158 @@ describe('#aggregateReportDetail', () => {
     })
   })
 
+  describe('registered-only exporter', () => {
+    const exporterArgs = {
+      operatorCategory: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY,
+      cadence: QUARTERLY,
+      year: 2026,
+      period: 1
+    }
+
+    const buildExporterReceivedRecord = (overrides = {}) => ({
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: {
+        MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+        TONNAGE_RECEIVED_FOR_EXPORT: 50,
+        SUPPLIER_NAME: 'Grantham Waste',
+        ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
+        ...overrides
+      },
+      versions: [
+        {
+          createdAt: '2026-02-10T09:00:00.000Z',
+          summaryLog: { id: 'sl-1' }
+        }
+      ]
+    })
+
+    const buildExportedRecord = (overrides = {}) => ({
+      type: WASTE_RECORD_TYPE.EXPORTED,
+      data: {
+        DATE_OF_EXPORT: '2026-01-15',
+        TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5,
+        OSR_NAME: 'EuroPlast Recycling GmbH',
+        OSR_ID: '001',
+        ...overrides
+      },
+      versions: [
+        {
+          createdAt: '2026-02-10T09:00:00.000Z',
+          summaryLog: { id: 'sl-1' }
+        }
+      ]
+    })
+
+    it('uses TONNAGE_RECEIVED_FOR_EXPORT for waste received', () => {
+      const records = [
+        buildExporterReceivedRecord({ TONNAGE_RECEIVED_FOR_EXPORT: 42.21 }),
+        buildExporterReceivedRecord({
+          MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
+          TONNAGE_RECEIVED_FOR_EXPORT: 38.04
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.sections.wasteReceived.totalTonnage).toBe(80.25)
+      expect(result.sections.wasteReceived.suppliers).toHaveLength(2)
+    })
+
+    it('returns wasteExported section with total tonnage', () => {
+      const records = [
+        buildExportedRecord({
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3.47
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-03-05',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.sections.wasteExported.totalTonnage).toBe(11.47)
+    })
+
+    it('extracts overseas sites from exported records', () => {
+      const records = [
+        buildExportedRecord({
+          OSR_NAME: 'EuroPlast Recycling GmbH',
+          OSR_ID: '001'
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          OSR_NAME: 'RecyclePlast SA',
+          OSR_ID: '096'
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.sections.wasteExported.overseasSites).toStrictEqual([
+        { siteName: 'EuroPlast Recycling GmbH', osrId: '001' },
+        { siteName: 'RecyclePlast SA', osrId: '096' }
+      ])
+    })
+
+    it('deduplicates overseas sites by OSR_ID', () => {
+      const records = [
+        buildExportedRecord({
+          OSR_NAME: 'EuroPlast Recycling GmbH',
+          OSR_ID: '001'
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          OSR_NAME: 'EuroPlast Recycling GmbH',
+          OSR_ID: '001'
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-03-05',
+          OSR_NAME: 'RecyclePlast SA',
+          OSR_ID: '096'
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.sections.wasteExported.overseasSites).toHaveLength(2)
+    })
+
+    it('returns empty wasteExported when no exported records match', () => {
+      const result = aggregateReportDetail([], exporterArgs)
+
+      expect(result.sections.wasteExported.totalTonnage).toBe(0)
+      expect(result.sections.wasteExported.overseasSites).toStrictEqual([])
+    })
+
+    it('excludes exported records outside the period', () => {
+      const records = [
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-01-15',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-04-01',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 99
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.sections.wasteExported.totalTonnage).toBe(5)
+    })
+
+    it('does not include wasteExported for reprocessor categories', () => {
+      const result = aggregateReportDetail([], defaultArgs)
+
+      expect(result.sections.wasteExported).toBeUndefined()
+    })
+  })
+
   describe('unvalidated data (registered-only validation is placeholder)', () => {
     it('treats non-numeric tonnage as zero', () => {
       const records = [

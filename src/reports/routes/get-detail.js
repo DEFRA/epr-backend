@@ -44,10 +44,7 @@ export const reportsGetDetail = {
 
     const operatorCategory = getOperatorCategory(registration)
 
-    if (
-      operatorCategory === OPERATOR_CATEGORY.EXPORTER ||
-      operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
-    ) {
+    if (operatorCategory === OPERATOR_CATEGORY.EXPORTER) {
       throw Boom.notFound()
     }
 
