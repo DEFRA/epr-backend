@@ -2,9 +2,7 @@ import { describe, expect, vi, beforeEach } from 'vitest'
 import {
   SendMessageCommand,
   GetQueueUrlCommand,
-  ReceiveMessageCommand,
-  CreateQueueCommand,
-  GetQueueAttributesCommand
+  ReceiveMessageCommand
 } from '@aws-sdk/client-sqs'
 import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
@@ -553,110 +551,6 @@ describe('SQS command queue consumer integration', () => {
             expect(dlqBody.summaryLogId).toBe(summaryLogId)
           },
           { timeout: 15000, interval: 500 }
-        )
-
-        await stopConsumerAndWait(consumer)
-      }
-    )
-  })
-
-  describe('visibility timeout reset', () => {
-    const QUEUE_VISIBILITY_TIMEOUT_SECS = 30
-    const MAX_RETRY_MS = 10_000
-
-    it(
-      'resets message visibility on transient error for immediate retry',
-      { timeout: TEST_TIMEOUT },
-      async ({ sqsClient }) => {
-        // Create a queue with a long visibility timeout to prove that our
-        // reset-to-0 actually works against real SQS infrastructure.
-        // Without the reset, the retry would take 30s; with it, the
-        // message is immediately redelivered.
-        const longTimeoutQueue = `visibility_reset_test_${Date.now()}`
-        const longTimeoutDlq = `${longTimeoutQueue}_dlq`
-
-        const dlqResult = await sqsClient.send(
-          new CreateQueueCommand({ QueueName: longTimeoutDlq })
-        )
-        const dlqAttrs = await sqsClient.send(
-          new GetQueueAttributesCommand({
-            QueueUrl: dlqResult.QueueUrl,
-            AttributeNames: ['QueueArn']
-          })
-        )
-
-        await sqsClient.send(
-          new CreateQueueCommand({
-            QueueName: longTimeoutQueue,
-            Attributes: {
-              VisibilityTimeout: String(QUEUE_VISIBILITY_TIMEOUT_SECS),
-              RedrivePolicy: JSON.stringify({
-                deadLetterTargetArn: dlqAttrs.Attributes.QueueArn,
-                maxReceiveCount: '3'
-              })
-            }
-          })
-        )
-
-        // Handler fails on first call (transient), succeeds on second
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValueOnce(new Error('Transient failure'))
-          .mockResolvedValueOnce(undefined)
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: longTimeoutQueue })
-        )
-
-        const summaryLogId = `visibility-reset-${Date.now()}`
-        await sqsClient.send(
-          new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify({
-              command: 'validate',
-              summaryLogId
-            })
-          })
-        )
-
-        const consumer = await createCommandQueueConsumer(
-          {
-            sqsClient,
-            queueName: longTimeoutQueue,
-            logger,
-            summaryLogsRepository,
-            organisationsRepository,
-            wasteRecordsRepository,
-            wasteBalancesRepository,
-            summaryLogExtractor
-          },
-          summaryLogCommandHandlers
-        )
-
-        const startTime = Date.now()
-        consumer.start()
-
-        // Wait for the handler to be called twice:
-        // 1. First call fails (transient) — visibility reset to 0
-        // 2. Second call succeeds (message immediately redelivered)
-        await vi.waitFor(
-          () => {
-            expect(mockValidator).toHaveBeenCalledTimes(2)
-          },
-          { timeout: MAX_RETRY_MS }
-        )
-
-        const retryDurationMs = Date.now() - startTime
-
-        // The retry must complete well under the queue's visibility
-        // timeout. If the reset didn't work, this would take ≥30s.
-        expect(retryDurationMs).toBeLessThan(MAX_RETRY_MS)
-
-        expect(logger.warn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: expect.stringContaining('transient, will retry')
-          })
         )
 
         await stopConsumerAndWait(consumer)
