@@ -366,7 +366,7 @@ describe('validateMetaSyntax', () => {
         meta: {
           ...createValidMeta(),
           PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
-          TEMPLATE_VERSION: { value: 2 }
+          TEMPLATE_VERSION: { value: 2.1 }
         }
       }
 
@@ -378,12 +378,12 @@ describe('validateMetaSyntax', () => {
       expect(result.isValid()).toBe(true)
     })
 
-    it('accepts TEMPLATE_VERSION >= 2 for registered-only', () => {
+    it('accepts TEMPLATE_VERSION >= 2.1 for registered-only', () => {
       const parsed = {
         meta: {
           ...createValidMeta(),
           PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
-          TEMPLATE_VERSION: { value: 2 }
+          TEMPLATE_VERSION: { value: 2.1 }
         }
       }
 
@@ -395,12 +395,12 @@ describe('validateMetaSyntax', () => {
       expect(result.isValid()).toBe(true)
     })
 
-    it('rejects TEMPLATE_VERSION < 2 for registered-only', () => {
+    it('rejects TEMPLATE_VERSION < 2.1 for registered-only', () => {
       const parsed = {
         meta: {
           ...createValidMeta(),
           PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
-          TEMPLATE_VERSION: { value: 1 }
+          TEMPLATE_VERSION: { value: 2 }
         }
       }
 
@@ -415,7 +415,7 @@ describe('validateMetaSyntax', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].message).toContain('TEMPLATE_VERSION')
-      expect(fatals[0].message).toContain('at least 2')
+      expect(fatals[0].message).toContain('at least 2.1')
     })
   })
 

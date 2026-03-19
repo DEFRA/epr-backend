@@ -15,7 +15,7 @@ import {
 /** @import { OrsImportsCommandExecutor } from '#overseas-sites/imports/worker/port.js' */
 
 /**
- * @typedef {{ form: { file: object | object[] } }} OrsUploadCompletedPayload
+ * @typedef {{ form: { orsUpload: object | object[] } }} OrsUploadCompletedPayload
  */
 
 /**
@@ -70,7 +70,7 @@ export const orsUploadCompleted = {
         throw Boom.notFound(`ORS import ${id} not found`)
       }
 
-      const uploads = normaliseToArray(payload.form.file)
+      const uploads = normaliseToArray(payload.form.orsUpload)
       const completedFiles = uploads
         .filter((u) => u.fileStatus === UPLOAD_FILE_STATUS.COMPLETE)
         .map(toFileRecord)

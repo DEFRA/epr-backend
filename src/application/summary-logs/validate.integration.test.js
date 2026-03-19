@@ -540,7 +540,7 @@ describe('SummaryLogsValidator integration', () => {
         location: { sheet: 'Cover', row: 3, column: 'B' }
       },
       TEMPLATE_VERSION: {
-        value: 2,
+        value: 2.1,
         location: { sheet: 'Cover', row: 4, column: 'B' }
       }
     }

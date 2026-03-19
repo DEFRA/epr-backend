@@ -43,7 +43,8 @@ export const MIN_TEMPLATE_VERSIONS = {
     REPROCESSOR_REGISTERED_ONLY_MIN,
   [PROCESSING_TYPES.EXPORTER]: EXPORTER_MIN
 }
-/** @typedef {import('#repositories/organisations/port.js').Accreditation} Accreditation */
+
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
 /** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
 /**

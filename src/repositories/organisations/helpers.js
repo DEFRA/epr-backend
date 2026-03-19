@@ -11,8 +11,9 @@ import {
 } from '#repositories/organisations/schema/status-transition.js'
 import { validateApprovals } from './schema/helpers.js'
 
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {CollatedUser, Organisation, RegAccStatus, UserRoles} from '#domain/organisations/model.js' */
-/** @import {Accreditation, Registration} from './port.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
 
 export const SCHEMA_VERSION = 1
 

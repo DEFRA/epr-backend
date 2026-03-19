@@ -13,11 +13,12 @@
  * @property {OrsImportFile[]} files
  * @property {string} createdAt - ISO 8601 date string
  * @property {string} updatedAt - ISO 8601 date string
+ * @property {Date|null} expiresAt - TTL expiry date, null for completed imports
  */
 
 /**
  * @typedef {Object} OrsImportsRepository
- * @property {(importDoc: Omit<OrsImport, 'createdAt' | 'updatedAt'>) => Promise<OrsImport>} create
+ * @property {(importDoc: Omit<OrsImport, 'createdAt' | 'updatedAt' | 'expiresAt'>) => Promise<OrsImport>} create
  * @property {(id: string) => Promise<OrsImport|null>} findById
  * @property {(id: string, files: OrsImportFile[]) => Promise<void>} addFiles
  * @property {(id: string, status: string) => Promise<void>} updateStatus
