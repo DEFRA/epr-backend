@@ -146,50 +146,67 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
   })
 
   it('handles organisations with missing registrations', async () => {
-    const organisationsRepository = getServer().app.organisationsRepository
+    const malformedOrganisationsRepository = {
+      findAll: vi.fn().mockResolvedValue([{ registrations: null }])
+    }
+    const emptyOverseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([])
+    }
 
-    await organisationsRepository.insert(
-      buildOrganisation({
-        registrations: undefined,
-        accreditations: []
+    const malformedServer = await createTestServer({
+      repositories: {
+        organisationsRepository: () => malformedOrganisationsRepository,
+        overseasSitesRepository: () => emptyOverseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
       })
-    )
+    })
 
-    const response = await getServer().inject({
+    const response = await malformedServer.inject({
       method: 'GET',
       url: adminOverseasSitesListPath,
       ...asServiceMaintainer()
     })
 
+    await malformedServer.stop()
+
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toHaveLength(2)
+    expect(JSON.parse(response.payload)).toStrictEqual([])
   })
 }
 
-const defineAdditionalEdgeCaseTests = ({ getServer }) => {
+const defineAdditionalEdgeCaseTests = () => {
   it('handles registrations with missing overseasSites mappings', async () => {
-    const organisationsRepository = getServer().app.organisationsRepository
+    const malformedOrganisationsRepository = {
+      findAll: vi
+        .fn()
+        .mockResolvedValue([{ registrations: [{ overseasSites: null }] }])
+    }
+    const emptyOverseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([])
+    }
 
-    await organisationsRepository.insert(
-      buildOrganisation({
-        registrations: [
-          buildRegistration({
-            wasteProcessingType: 'exporter',
-            overseasSites: undefined
-          })
-        ],
-        accreditations: []
+    const malformedServer = await createTestServer({
+      repositories: {
+        organisationsRepository: () => malformedOrganisationsRepository,
+        overseasSitesRepository: () => emptyOverseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
       })
-    )
+    })
 
-    const response = await getServer().inject({
+    const response = await malformedServer.inject({
       method: 'GET',
       url: adminOverseasSitesListPath,
       ...asServiceMaintainer()
     })
 
+    await malformedServer.stop()
+
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toHaveLength(2)
+    expect(JSON.parse(response.payload)).toStrictEqual([])
   })
 
   it('handles repository rows without a registrations property', async () => {
@@ -337,8 +354,6 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     defineMappingEdgeCaseTests({
       getServer: () => server
     })
-    defineAdditionalEdgeCaseTests({
-      getServer: () => server
-    })
+    defineAdditionalEdgeCaseTests()
   })
 })
