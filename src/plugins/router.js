@@ -19,7 +19,6 @@ import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
-import { summaryLogDownload } from '#routes/v1/summary-logs/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
 
 const router = {
@@ -62,7 +61,6 @@ const router = {
           packagingRecyclingNotesList,
           packagingRecyclingNotesReject,
           ...summaryLogUploadsReportRoutes,
-          summaryLogDownload,
           adminPackagingRecyclingNotesList,
           ...overseasSitesRoutesBehindFeatureFlag,
           ...reportsBehindFeatureFlag
