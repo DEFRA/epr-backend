@@ -9,7 +9,8 @@ const it = baseIt.extend({
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
-      s3Bucket: 're-ex-summary-logs'
+      summaryLogsBucket: 're-ex-summary-logs',
+      orsBucket: 're-ex-overseas-sites'
     })
 
     await use(repository)

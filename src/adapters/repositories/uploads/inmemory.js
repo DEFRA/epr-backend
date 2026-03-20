@@ -17,7 +17,7 @@ import { randomUUID } from 'node:crypto'
 /**
  * Creates an in-memory uploads repository for testing.
  *
- * @param {{ s3Bucket?: string }} [config] - Optional configuration
+ * @param {{ summaryLogsBucket?: string }} [config] - Optional configuration
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
  *   initiateCalls: InitiateSummaryLogUploadOptions[],
@@ -25,7 +25,7 @@ import { randomUUID } from 'node:crypto'
  * }}
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
-  const s3Bucket = config.s3Bucket ?? 'test-bucket'
+  const summaryLogsBucket = config.summaryLogsBucket ?? 'test-bucket'
 
   /** @type {Map<string, Buffer>} */
   const storage = new Map()
@@ -93,7 +93,7 @@ export const createInMemoryUploadsRepository = (config = {}) => {
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
       const { organisationId, registrationId, callbackUrl } = options
       const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
-      const s3Uri = `s3://${s3Bucket}/${s3Key}`
+      const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)
       pendingUploads.delete(uploadId)
@@ -104,7 +104,7 @@ export const createInMemoryUploadsRepository = (config = {}) => {
             fileId: randomUUID(),
             filename: 'summary-log.xlsx',
             fileStatus: 'complete',
-            s3Bucket,
+            s3Bucket: summaryLogsBucket,
             s3Key
           }
         }

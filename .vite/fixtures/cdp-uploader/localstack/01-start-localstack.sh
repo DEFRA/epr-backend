@@ -10,6 +10,7 @@ echo "[INIT SCRIPT] Creating buckets and queues" >&2
 
 aws --endpoint-url=http://localhost:4566 s3 mb s3://cdp-uploader-quarantine &
 aws --endpoint-url=http://localhost:4566 s3 mb s3://re-ex-summary-logs &
+aws --endpoint-url=http://localhost:4566 s3 mb s3://re-ex-overseas-sites &
 aws --endpoint-url=http://localhost:4566 s3 mb s3://re-ex-public-register &
 
 # queues
