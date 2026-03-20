@@ -70,6 +70,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     await server.initialize()
   })
 
+  const fileUri = 's3://my-bucket/summary-logs/file-123.xlsx'
+
   beforeEach(() => {
     // Default happy path: transition succeeds
     summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
@@ -79,6 +81,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         organisationId,
         registrationId,
         validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION,
+        file: { uri: fileUri },
         meta: {
           [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
             PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -207,7 +210,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId,
           registrationId,
-          validatedAgainstSummaryLogId: baselineId
+          validatedAgainstSummaryLogId: baselineId,
+          file: { uri: fileUri }
         },
         version: 2
       })
@@ -431,7 +435,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         {
           summaryLogId,
           organisationId,
-          registrationId
+          registrationId,
+          fileUri
         }
       )
     })
