@@ -8,7 +8,7 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import './get.js'
 
-describe('GET /v1/summary-logs/{summaryLogId}/download', () => {
+describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/download', () => {
   setupAuthContext()
 
   const summaryLogId = new ObjectId().toString()
@@ -37,7 +37,7 @@ describe('GET /v1/summary-logs/{summaryLogId}/download', () => {
   const makeRequest = (server, logId = summaryLogId) =>
     server.inject({
       method: 'GET',
-      url: `/v1/summary-logs/${logId}/download`,
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${logId}/download`,
       ...asServiceMaintainer()
     })
 
@@ -92,7 +92,7 @@ describe('GET /v1/summary-logs/{summaryLogId}/download', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/summary-logs/${summaryLogId}/download`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/download`
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -103,7 +103,7 @@ describe('GET /v1/summary-logs/{summaryLogId}/download', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/summary-logs/${summaryLogId}/download`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/download`,
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 

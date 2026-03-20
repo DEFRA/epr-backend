@@ -2,7 +2,8 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
-export const summaryLogDownloadPath = '/v1/summary-logs/{summaryLogId}/download'
+export const summaryLogDownloadPath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/download'
 
 export const summaryLogDownload = {
   method: 'GET',
