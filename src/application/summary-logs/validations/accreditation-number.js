@@ -3,7 +3,10 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  REGISTERED_ONLY_PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
   extractMetaField,
@@ -22,9 +25,19 @@ import {
 export const validateAccreditationNumber = ({
   parsed,
   registration,
-  loggingContext
+  loggingContext,
+  featureFlags
 }) => {
   const issues = createValidationIssues()
+
+  // Registered-only templates have no accreditation field — nothing to validate
+  if (featureFlags?.isRegisteredOnlyEnabled()) {
+    const processingType =
+      parsed.meta[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]?.value
+    if (REGISTERED_ONLY_PROCESSING_TYPES.has(processingType)) {
+      return issues
+    }
+  }
 
   const accreditationNumber = registration.accreditation?.accreditationNumber
   const accreditationField = extractMetaField(
