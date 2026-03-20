@@ -23,6 +23,9 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
 
+import { asServiceMaintainer } from '#test/inject-auth.js'
+import { StatusCodes } from 'http-status-codes'
+
 import {
   asStandardUser,
   buildGetUrl,
@@ -474,6 +477,17 @@ describe('Submission and placeholder tests', () => {
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBe('ACC-2025-001')
+    })
+
+    it('should allow a service maintainer to download the submitted file', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/summary-logs/${summaryLogId}/download`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+      expect(response.headers.location).toContain('test-bucket')
     })
 
     it('should classify loads as added, adjusted, and unchanged on second upload', async () => {
