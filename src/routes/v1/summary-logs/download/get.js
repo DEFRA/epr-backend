@@ -1,5 +1,3 @@
-import { StatusCodes } from 'http-status-codes'
-
 import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
@@ -25,8 +23,8 @@ export const summaryLogDownload = {
     const { summaryLogsRepository } = request
     const { summaryLogId } = request.params
 
-    const downloadUrl = await summaryLogsRepository.getDownloadUrl(summaryLogId)
+    const { url } = await summaryLogsRepository.getDownloadUrl(summaryLogId)
 
-    return h.response(downloadUrl).code(StatusCodes.OK)
+    return h.redirect(url).temporary()
   }
 }

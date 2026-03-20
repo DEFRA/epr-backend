@@ -42,7 +42,7 @@ describe('GET /v1/summary-logs/{summaryLogId}/download', () => {
     })
 
   describe('when summary log exists and is submitted', () => {
-    it('returns a pre-signed URL', async () => {
+    it('redirects to the download URL', async () => {
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
@@ -55,10 +55,9 @@ describe('GET /v1/summary-logs/{summaryLogId}/download', () => {
 
       const response = await makeRequest(server)
 
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.url).toBeDefined()
-      expect(payload.expiresAt).toBeDefined()
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+      expect(response.headers.location).toContain('re-ex-summary-logs')
+      expect(response.headers.location).toContain('uploads/test-file.xlsx')
     })
   })
 
