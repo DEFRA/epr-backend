@@ -85,7 +85,10 @@ const asOrganisation = (organisation) =>
     /** @type {unknown} */ (organisation)
   )
 
-const defineErrorHandlingTests = ({ getServer, getOverseasSitesRepository }) => {
+const defineErrorHandlingTests = ({
+  getServer,
+  getOverseasSitesRepository
+}) => {
   it('returns 500 for unexpected repository failures', async () => {
     getOverseasSitesRepository().findAll.mockRejectedValueOnce(
       new Error('Database timeout')
@@ -283,7 +286,10 @@ const createExporterRegistration = ({ siteOne, siteTwo }) => {
   })
 }
 
-const insertBaseOrganisation = async (organisationsRepository, registration) => {
+const insertBaseOrganisation = async (
+  organisationsRepository,
+  registration
+) => {
   await organisationsRepository.insert(
     asOrganisation(
       buildOrganisation({
