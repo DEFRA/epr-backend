@@ -3,12 +3,12 @@ import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
-export const summaryLogDownloadPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/download'
+export const summaryLogFilePath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/file'
 
-export const summaryLogDownload = {
+export const summaryLogFile = {
   method: 'GET',
-  path: summaryLogDownloadPath,
+  path: summaryLogFilePath,
   options: {
     auth: {
       scope: [ROLES.serviceMaintainer]

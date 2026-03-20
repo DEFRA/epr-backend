@@ -14,7 +14,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogDownload: (...args) => mockAuditSummaryLogDownload(...args)
 }))
 
-describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/download', () => {
+describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/file', () => {
   setupAuthContext()
 
   const summaryLogId = new ObjectId().toString()
@@ -43,7 +43,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   const makeRequest = (server, logId = summaryLogId) =>
     server.inject({
       method: 'GET',
-      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${logId}/download`,
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${logId}/file`,
       ...asServiceMaintainer()
     })
 
@@ -125,7 +125,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/download`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -136,7 +136,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/download`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/file`,
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 
