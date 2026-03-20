@@ -8,6 +8,19 @@ import { summaryLogFactory } from './contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 
+const SIXTY_SECONDS = 60
+
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn().mockImplementation(async (_client, command) => {
+    return `https://${command.input.Bucket}.s3.amazonaws.com/${command.input.Key}?signed=true`
+  })
+}))
+
+const mockS3Config = {
+  s3Client: {},
+  preSignedUrlExpiry: SIXTY_SECONDS
+}
+
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
@@ -17,7 +30,7 @@ const it = mongoIt.extend({
 
   summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = await createSummaryLogsRepository(database)
+    const factory = await createSummaryLogsRepository(database, mockS3Config)
     await use(factory)
   },
 
@@ -53,7 +66,10 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(
+        mockDb,
+        mockS3Config
+      )
       const repository = repositoryFactory(mockLogger)
 
       await expect(
@@ -93,7 +109,10 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(
+        mockDb,
+        mockS3Config
+      )
       const repository = repositoryFactory(mockLogger)
 
       const result = await repository.transitionToSubmittingExclusive(
@@ -140,7 +159,10 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(
+        mockDb,
+        mockS3Config
+      )
       const repository = repositoryFactory(mockLogger)
 
       const result = await repository.transitionToSubmittingExclusive(
@@ -184,12 +206,64 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = await createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(
+        mockDb,
+        mockS3Config
+      )
       const repository = repositoryFactory(mockLogger)
 
       await expect(
         repository.transitionToSubmittingExclusive(logId, 1, 'org-1', 'reg-1')
       ).rejects.toThrow('Connection timeout')
+    })
+  })
+
+  describe('getDownloadUrl', () => {
+    it('returns a download URL for a submitted summary log', async ({
+      summaryLogsRepository
+    }) => {
+      const id = `test-${randomUUID()}`
+      await summaryLogsRepository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+        })
+      )
+
+      const result = await summaryLogsRepository.getDownloadUrl(id)
+
+      expect(result.url).toContain('re-ex-summary-logs')
+      expect(result.url).toContain('uploads/test-file.xlsx')
+      expect(result.expiresAt).toBeTruthy()
+    })
+
+    it('throws 404 when summary log does not exist', async ({
+      summaryLogsRepository
+    }) => {
+      const id = `test-${randomUUID()}`
+
+      await expect(summaryLogsRepository.getDownloadUrl(id)).rejects.toThrow(
+        'Summary log file not found'
+      )
+    })
+
+    it('throws 404 when summary log has no file URI', async ({
+      summaryLogsRepository
+    }) => {
+      const id = `test-${randomUUID()}`
+      await summaryLogsRepository.insert(
+        id,
+        summaryLogFactory.preprocessing({
+          organisationId: 'org-1',
+          registrationId: 'reg-1'
+        })
+      )
+
+      await expect(summaryLogsRepository.getDownloadUrl(id)).rejects.toThrow(
+        'Summary log file not found'
+      )
     })
   })
 })
