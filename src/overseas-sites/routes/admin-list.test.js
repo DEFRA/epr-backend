@@ -169,5 +169,48 @@ describe(`${adminOverseasSitesListPath} route`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
+
+    it('re-throws Boom errors from repository', async () => {
+      const Boom = await import('@hapi/boom')
+      overseasSitesRepository.findAll.mockRejectedValueOnce(
+        Boom.default.badRequest('Invalid query')
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: adminOverseasSitesListPath,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+    })
+
+    it('skips mappings that reference unknown overseas site ids', async () => {
+      const organisationsRepository = server.app.organisationsRepository
+      await organisationsRepository.insert(
+        buildOrganisation({
+          registrations: [
+            buildRegistration({
+              wasteProcessingType: 'exporter',
+              overseasSites: {
+                999: { overseasSiteId: 'missing-site-id' }
+              }
+            })
+          ],
+          accreditations: []
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: adminOverseasSitesListPath,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(
+        JSON.parse(response.payload).some((row) => row.orsId === '999')
+      ).toBe(false)
+    })
   })
 })
