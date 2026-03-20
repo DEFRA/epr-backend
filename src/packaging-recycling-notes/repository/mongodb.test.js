@@ -415,6 +415,69 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
   })
 
+  describe('ensureOrganisationRegistrationIndex', () => {
+    it('handles NamespaceNotFound when collection does not exist', async () => {
+      const nsError = new Error('ns not found')
+      nsError.codeName = 'NamespaceNotFound'
+
+      let createIndexCalls = 0
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [],
+        createIndex: async () => {
+          createIndexCalls++
+          if (createIndexCalls === 4) {
+            throw nsError
+          }
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
+      expect(factory).toBeTypeOf('function')
+    })
+
+    it('re-throws non-NamespaceNotFound errors from createIndex', async () => {
+      const connectionError = new Error('Connection lost')
+      connectionError.codeName = 'NetworkError'
+
+      let createIndexCalls = 0
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [],
+        createIndex: async () => {
+          createIndexCalls++
+          if (createIndexCalls === 4) {
+            throw connectionError
+          }
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await expect(
+        createPackagingRecyclingNotesRepository(mockDb, [])
+      ).rejects.toThrow('Connection lost')
+    })
+  })
+
   describe('ensureCollection index management', () => {
     it('creates unique index on prnNumber when no index exists', async () => {
       const createdIndexes = []

@@ -91,13 +91,10 @@ async function ensureStatusDateIndex(collection) {
 
 /**
  * Ensures the compound index for getTotalIssuedTonnage exists.
- * Uses only the scalar prefix (organisation.id + registrationId) — empirically
- * the most efficient choice. Adding multikey history fields increases
- * keysExamined due to array expansion without reducing docsExamined.
- *
+ * This is used to find total tonnage of PRN's issued for a specific registration/
  * @param {Collection} collection
  */
-async function ensureHistoryStatusAtIndex(collection) {
+async function ensureOrganisationRegistrationIndex(collection) {
   try {
     await collection.createIndex(
       { 'organisation.id': 1, registrationId: 1 },
@@ -124,7 +121,7 @@ async function ensureCollection(db) {
   await ensurePrnNumberIndex(collection)
 
   await ensureStatusDateIndex(collection)
-  await ensureHistoryStatusAtIndex(collection)
+  await ensureOrganisationRegistrationIndex(collection)
 
   return collection
 }
