@@ -13,6 +13,9 @@ import {
 import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { reportsGetDetailPath } from './get-detail.js'
 
 describe(`GET ${reportsGetDetailPath}`, () => {
@@ -977,6 +980,108 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(payload.id).toBeUndefined()
         expect(payload.recyclingActivity).toBeDefined()
+      })
+    })
+
+    describe('prnData', () => {
+      const ONE_HOUR_MS = 3600000
+      const IN_PERIOD = new Date('2026-02-15T12:00:00.000Z')
+
+      it('is absent for registered-only operators', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.prnData).toBeUndefined()
+      })
+
+      it('returns issuedTonnage of 0 when no PRNs exist for accredited operator', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: new ObjectId().toString()
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2026,
+          2
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.prnData.issuedTonnage).toBe(0)
+      })
+
+      it('returns summed issuedTonnage from PRNs with matching history in period', async () => {
+        const registration = buildRegistration({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: new ObjectId().toString()
+        })
+        const org = buildOrganisation({ registrations: [registration] })
+
+        const organisationsRepositoryFactory =
+          createInMemoryOrganisationsRepository()
+        const organisationsRepository = organisationsRepositoryFactory()
+        await organisationsRepository.insert(org)
+
+        const prnFactory = createInMemoryPackagingRecyclingNotesRepository()
+        const prnRepo = prnFactory()
+
+        const buildIssuedPrn = (tonnage) =>
+          buildPrn({
+            organisation: {
+              id: org.id,
+              name: 'Test Organisation',
+              tradingName: 'Test Trading'
+            },
+            registrationId: registration.id,
+            tonnage,
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+              currentStatusAt: IN_PERIOD,
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date(IN_PERIOD.getTime() - ONE_HOUR_MS),
+                  by: { id: 'test', name: 'test' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: IN_PERIOD,
+                  by: { id: 'test', name: 'test' }
+                }
+              ]
+            }
+          })
+
+        await prnRepo.create(buildIssuedPrn(30))
+        await prnRepo.create(buildIssuedPrn(20))
+
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: organisationsRepositoryFactory,
+            packagingRecyclingNotesRepository: prnFactory
+          },
+          featureFlags: createInMemoryFeatureFlags({ reports: true })
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: makeUrl(org.id, registration.id, 2026, 2),
+          ...asStandardUser({ linkedOrgId: org.id })
+        })
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.prnData.issuedTonnage).toBe(50)
       })
     })
 

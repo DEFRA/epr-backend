@@ -6,7 +6,7 @@ import { validatePrnInsert } from './validation.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { FindByStatusParams, PaginatedResult, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, GetTotalIssuedTonnageParams, PaginatedResult, UpdateStatusParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -140,6 +140,38 @@ const performFindByStatus = (storage, excludeOrganisationIds) => {
 
 /**
  * @param {Storage} storage
+ * @returns {(params: GetTotalIssuedTonnageParams) => Promise<number>}
+ */
+const performGetTotalIssuedTonnage =
+  (storage) =>
+  async ({ organisationId, registrationId, statuses, startDate, endDate }) => {
+    let total = 0
+
+    for (const prn of storage.values()) {
+      if (
+        prn.organisation.id !== organisationId ||
+        prn.registrationId !== registrationId
+      ) {
+        continue
+      }
+
+      const wasIssued = prn.status.history.some(
+        (entry) =>
+          statuses.includes(entry.status) &&
+          entry.at >= startDate &&
+          entry.at <= endDate
+      )
+
+      if (wasIssued) {
+        total += prn.tonnage
+      }
+    }
+
+    return total
+  }
+
+/**
+ * @param {Storage} storage
  * @returns {(params: UpdateStatusParams) => Promise<PackagingRecyclingNote | null>}
  */
 const performUpdateStatus =
@@ -206,6 +238,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
+    getTotalIssuedTonnage: performGetTotalIssuedTonnage(storage),
     updateStatus: performUpdateStatus(storage)
   })
 }

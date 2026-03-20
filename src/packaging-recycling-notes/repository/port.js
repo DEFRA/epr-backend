@@ -30,6 +30,15 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
+ * @typedef {Object} GetTotalIssuedTonnageParams
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus[]} statuses
+ * @property {Date} startDate
+ * @property {Date} endDate
+ */
+
+/**
  * @typedef {Object} PaginatedResult
  * @property {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]} items
  * @property {string | null} nextCursor
@@ -44,6 +53,7 @@ export class PrnNumberConflictError extends Error {
  * @property {(accreditationId: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
+ * @property {(params: GetTotalIssuedTonnageParams) => Promise<number>} getTotalIssuedTonnage
  */
 
 /**

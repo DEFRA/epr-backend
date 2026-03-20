@@ -7,7 +7,7 @@ import { validatePrnInsert, validatePrnRead } from './validation.js'
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, GetTotalIssuedTonnageParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, UpdateStatusParams } from './port.js' */
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -90,6 +90,27 @@ async function ensureStatusDateIndex(collection) {
 }
 
 /**
+ * Ensures the compound index for getTotalIssuedTonnage exists.
+ * Uses only the scalar prefix (organisation.id + registrationId) — empirically
+ * the most efficient choice. Adding multikey history fields increases
+ * keysExamined due to array expansion without reducing docsExamined.
+ *
+ * @param {Collection} collection
+ */
+async function ensureHistoryStatusAtIndex(collection) {
+  try {
+    await collection.createIndex(
+      { 'organisation.id': 1, registrationId: 1 },
+      { name: 'organisation_registrationId' }
+    )
+  } catch (error) {
+    if (error.codeName !== 'NamespaceNotFound') {
+      throw error
+    }
+  }
+}
+
+/**
  * @param {Db} db
  * @returns {Promise<Collection>}
  */
@@ -103,6 +124,7 @@ async function ensureCollection(db) {
   await ensurePrnNumberIndex(collection)
 
   await ensureStatusDateIndex(collection)
+  await ensureHistoryStatusAtIndex(collection)
 
   return collection
 }
@@ -245,6 +267,42 @@ const performFindByStatus = (db, excludeOrganisationIds) => {
 
 /**
  * @param {Db} db
+ * @param {GetTotalIssuedTonnageParams} params
+ * @returns {Promise<number>}
+ */
+const performGetTotalIssuedTonnage = async (
+  db,
+  { organisationId, registrationId, statuses, startDate, endDate }
+) => {
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .aggregate([
+      {
+        $match: {
+          'organisation.id': organisationId,
+          registrationId,
+          'status.history': {
+            $elemMatch: {
+              status: { $in: statuses },
+              at: { $gte: startDate, $lte: endDate }
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$tonnage' }
+        }
+      }
+    ])
+    .toArray()
+
+  return result[0]?.total ?? 0
+}
+
+/**
+ * @param {Db} db
  * @param {UpdateStatusParams} params
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
@@ -316,6 +374,7 @@ export const createPackagingRecyclingNotesRepository = async (
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
+    getTotalIssuedTonnage: (params) => performGetTotalIssuedTonnage(db, params),
     updateStatus: (params) => performUpdateStatus(db, params)
   })
 }
