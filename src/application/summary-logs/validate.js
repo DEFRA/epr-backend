@@ -279,7 +279,14 @@ const performValidationChecks = async ({
       loggingContext
     })
 
-    issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
+    issues.merge(
+      validateMetaBusiness({
+        parsed,
+        registration,
+        loggingContext,
+        featureFlags
+      })
+    )
 
     if (issues.isFatal()) {
       return { issues, wasteRecords, meta }
