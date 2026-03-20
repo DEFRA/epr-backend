@@ -6,7 +6,7 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{summaryLogId: string, organisationId: string, registrationId: string, fileUri: string}} context
+ * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
  */
 async function auditSummaryLogSubmit(request, context) {
   await auditSummaryLog(request, context, 'submit')
@@ -14,7 +14,7 @@ async function auditSummaryLogSubmit(request, context) {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{summaryLogId: string, organisationId: string, registrationId: string, fileUri: string}} context
+ * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
  * @param {'upload' | 'submit'} action
  */
 async function auditSummaryLog(request, context, action) {

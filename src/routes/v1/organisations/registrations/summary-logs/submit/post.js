@@ -131,8 +131,7 @@ export const summaryLogsSubmit = {
       await auditSummaryLogSubmit(request, {
         summaryLogId,
         organisationId,
-        registrationId,
-        fileUri: summaryLog.file.uri
+        registrationId
       })
 
       logger.info({
