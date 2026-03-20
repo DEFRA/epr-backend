@@ -1,4 +1,5 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -22,9 +23,15 @@ export const summaryLogDownload = {
    */
   handler: async (request, h) => {
     const { summaryLogsRepository } = request
-    const { summaryLogId } = request.params
+    const { organisationId, registrationId, summaryLogId } = request.params
 
     const { url } = await summaryLogsRepository.getDownloadUrl(summaryLogId)
+
+    await auditSummaryLogDownload(request, {
+      summaryLogId,
+      organisationId,
+      registrationId
+    })
 
     return h.redirect(url).temporary()
   }

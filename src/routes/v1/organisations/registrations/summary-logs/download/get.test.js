@@ -8,6 +8,12 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import './get.js'
 
+const mockAuditSummaryLogDownload = vi.fn()
+
+vi.mock('#root/auditing/summary-logs.js', () => ({
+  auditSummaryLogDownload: (...args) => mockAuditSummaryLogDownload(...args)
+}))
+
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/download', () => {
   setupAuthContext()
 
@@ -41,6 +47,10 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       ...asServiceMaintainer()
     })
 
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('when summary log exists and is submitted', () => {
     it('redirects to the download URL', async () => {
       const { server, summaryLogsRepository } = await createServer()
@@ -58,6 +68,29 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
       expect(response.headers.location).toContain('re-ex-summary-logs')
       expect(response.headers.location).toContain('uploads/test-file.xlsx')
+    })
+
+    it('records an audit log entry for the download', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+        })
+      )
+
+      await makeRequest(server)
+
+      expect(mockAuditSummaryLogDownload).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          summaryLogId,
+          organisationId,
+          registrationId
+        }
+      )
     })
   })
 
