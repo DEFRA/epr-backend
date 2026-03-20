@@ -175,7 +175,10 @@ describe('validateProcessingType', () => {
     }
   )
 
-  it.each([['REPROCESSOR_REGISTERED_ONLY', 'reprocessor']])(
+  it.each([
+    ['REPROCESSOR_REGISTERED_ONLY', 'reprocessor'],
+    ['EXPORTER_REGISTERED_ONLY', 'exporter']
+  ])(
     'returns fatal error when %s template is uploaded against accredited registration',
     (spreadsheetType, wasteProcessingType) => {
       const parsed = {
@@ -210,7 +213,8 @@ describe('validateProcessingType', () => {
 
   it.each([
     ['REPROCESSOR_INPUT', 'reprocessor', 'input'],
-    ['REPROCESSOR_OUTPUT', 'reprocessor', 'output']
+    ['REPROCESSOR_OUTPUT', 'reprocessor', 'output'],
+    ['EXPORTER', 'exporter', undefined]
   ])(
     'returns fatal error when %s template is uploaded against registered-only registration',
     (spreadsheetType, wasteProcessingType, reprocessingType) => {
