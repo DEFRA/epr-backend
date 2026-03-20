@@ -81,7 +81,7 @@ export const buildAccreditation = (overrides = {}) => {
   return accreditation
 }
 
-/** @returns {import('#domain/organisations/model.js').Organisation} */
+/** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
 export const buildOrganisation = (overrides = {}) => {
   // Build a mapping from old accreditation IDs to new ones
   // This ensures registration.accreditationId links are preserved
@@ -115,6 +115,7 @@ export const buildOrganisation = (overrides = {}) => {
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
     formSubmissionTime: new Date(org1.formSubmissionTime),
+    partnership: org1.partnership,
     statusHistory: createInitialStatusHistory(),
     registrations,
     accreditations,
@@ -124,8 +125,8 @@ export const buildOrganisation = (overrides = {}) => {
   initializeStatusForItems(org.registrations)
   initializeStatusForItems(org.accreditations)
 
-  // @ts-expect-error JSON fixture properties are widened (string vs Date, string vs union literal);
-  // Joi schema validation on insert catches any real shape mismatches at runtime
+  // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
+  // Accreditation/Registration types require computed 'status' that only exists after read
   return org
 }
 

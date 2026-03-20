@@ -22,7 +22,7 @@
 
 /**
  * @typedef {Object} OrganisationsRepository
- * @property {(organisation: Organisation) => Promise<void>} insert
+ * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {(id: string, version: number, document: Organisation) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
  * @property {() => Promise<Organisation[]>} findAll
