@@ -212,5 +212,80 @@ describe(`${adminOverseasSitesListPath} route`, () => {
         JSON.parse(response.payload).some((row) => row.orsId === '999')
       ).toBe(false)
     })
+
+    it('handles organisations with missing registrations', async () => {
+      const organisationsRepository = server.app.organisationsRepository
+
+      await organisationsRepository.insert(
+        buildOrganisation({
+          registrations: undefined,
+          accreditations: []
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: adminOverseasSitesListPath,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toHaveLength(2)
+    })
+
+    it('handles registrations with missing overseasSites mappings', async () => {
+      const organisationsRepository = server.app.organisationsRepository
+
+      await organisationsRepository.insert(
+        buildOrganisation({
+          registrations: [
+            buildRegistration({
+              wasteProcessingType: 'exporter',
+              overseasSites: undefined
+            })
+          ],
+          accreditations: []
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: adminOverseasSitesListPath,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toHaveLength(2)
+    })
+
+    it('handles repository rows without a registrations property', async () => {
+      const malformedOrganisationsRepository = {
+        findAll: vi.fn().mockResolvedValue([{}])
+      }
+      const emptyOverseasSitesRepository = {
+        findAll: vi.fn().mockResolvedValue([])
+      }
+
+      const malformedServer = await createTestServer({
+        repositories: {
+          organisationsRepository: () => malformedOrganisationsRepository,
+          overseasSitesRepository: () => emptyOverseasSitesRepository
+        },
+        featureFlags: createInMemoryFeatureFlags({
+          overseasSites: true
+        })
+      })
+
+      const response = await malformedServer.inject({
+        method: 'GET',
+        url: adminOverseasSitesListPath,
+        ...asServiceMaintainer()
+      })
+
+      await malformedServer.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(JSON.parse(response.payload)).toStrictEqual([])
+    })
   })
 })
