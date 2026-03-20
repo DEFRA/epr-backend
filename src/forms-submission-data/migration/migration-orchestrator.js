@@ -66,16 +66,13 @@ export class MigrationOrchestrator {
       )
 
     const organisationEntries = await Promise.all(
-      [...existingOrganisationsWithNewSubmissions].map(async (orgId) => {
-        const org = await this.organisationsRepository.findById(orgId)
-        /* v8 ignore next 5 -- repository throws Boom.notFound; guard satisfies tsc */
-        if (!org) {
-          throw new Error(
-            `Organisation ${orgId} not found during migration — expected to exist`
-          )
-        }
-        return /** @type {const} */ ([orgId, org])
-      })
+      [...existingOrganisationsWithNewSubmissions].map(
+        async (orgId) =>
+          /** @type {const} */ ([
+            orgId,
+            await this.organisationsRepository.findById(orgId)
+          ])
+      )
     )
 
     return new Map(organisationEntries)

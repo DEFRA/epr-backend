@@ -57,15 +57,11 @@ export const organisationsLink = {
     const { organisationId } = request.params
 
     const { organisationsRepository } = request
-    const foundOrganisation =
-      await organisationsRepository.findById(organisationId)
-
-    /* v8 ignore next 3 -- repository throws Boom.notFound; guard satisfies tsc */
-    if (!foundOrganisation) {
-      throw Boom.notFound(`Organisation ${organisationId} not found`)
-    }
-
-    const { id, version: currentVersion, ...organisation } = foundOrganisation
+    const {
+      id,
+      version: currentVersion,
+      ...organisation
+    } = await organisationsRepository.findById(organisationId)
 
     if (organisation.status !== ORGANISATION_STATUS.APPROVED) {
       throw Boom.conflict('Organisation is not in an approvable state')
@@ -102,11 +98,6 @@ export const organisationsLink = {
       id,
       currentVersion + 1
     )
-
-    /* v8 ignore next 5 -- repository throws Boom.notFound; guard satisfies tsc */
-    if (!updatedOrganisation) {
-      throw Boom.badImplementation(`Organisation ${id} not found after update`)
-    }
 
     /** @type {LinkedOrganisationResponse} */
     const payload = {
