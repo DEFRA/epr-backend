@@ -7,6 +7,7 @@ import HapiSwagger from 'hapi-swagger'
 import { secureContext } from '@defra/hapi-secure-context'
 
 import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
+import { s3SummaryLogFilesRepositoryPlugin } from '#adapters/repositories/summary-log-files/s3.plugin.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
@@ -119,6 +120,7 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
+    s3SummaryLogFilesRepositoryPlugin,
     { plugin: sqsCommandExecutorPlugin, options: { config } }
   ]
 

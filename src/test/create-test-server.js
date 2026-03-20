@@ -20,6 +20,7 @@ import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
+import { createInMemorySummaryLogFilesRepositoryPlugin } from '#adapters/repositories/summary-log-files/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
@@ -112,6 +113,10 @@ const repositoryConfigs = [
   {
     name: 'packagingRecyclingNotesRepository',
     createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
+  },
+  {
+    name: 'summaryLogFilesRepository',
+    createDefault: createInMemorySummaryLogFilesRepositoryPlugin
   }
 ]
 
