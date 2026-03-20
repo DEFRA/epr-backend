@@ -1,0 +1,104 @@
+import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
+
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+
+/**
+ * @typedef {import('#overseas-sites/repository/port.js').OverseasSite} OverseasSite
+ */
+
+export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
+
+/**
+ * @param {Array<{registrations?: Array<{overseasSites?: Record<string, {overseasSiteId: string}>}>}>} organisations
+ * @param {Map<string, OverseasSite>} sitesById
+ */
+const buildRows = (organisations, sitesById) => {
+  const rows = []
+
+  for (const organisation of organisations) {
+    for (const registration of organisation.registrations ?? []) {
+      for (const [orsId, mapping] of Object.entries(
+        registration.overseasSites ?? {}
+      )) {
+        const site = sitesById.get(mapping.overseasSiteId)
+        if (!site) {
+          continue
+        }
+
+        rows.push({
+          orsId,
+          destinationCountry: site.country,
+          overseasReprocessorName: site.name,
+          addressLine1: site.address.line1,
+          addressLine2: site.address.line2 ?? null,
+          cityOrTown: site.address.townOrCity,
+          stateProvinceOrRegion: site.address.stateOrRegion ?? null,
+          postcode: site.address.postcode ?? null,
+          coordinates: site.coordinates ?? null,
+          validFrom: site.validFrom ?? null
+        })
+      }
+    }
+  }
+
+  return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
+}
+
+export const adminOverseasSitesList = {
+  method: 'GET',
+  path: adminOverseasSitesListPath,
+  options: {
+    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    tags: ['api']
+  },
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+   * }} request
+   */
+  handler: async (request, h) => {
+    const { logger, organisationsRepository, overseasSitesRepository } = request
+
+    try {
+      const [organisations, sites] = await Promise.all([
+        organisationsRepository.findAll(),
+        overseasSitesRepository.findAll()
+      ])
+
+      const sitesById = new Map(sites.map((site) => [site.id, site]))
+      const rows = buildRows(organisations, sitesById)
+
+      logger.info({
+        message: `Admin listed ${rows.length} overseas sites mappings`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+        }
+      })
+
+      return h.response(rows).code(StatusCodes.OK)
+    } catch (error) {
+      if (error.isBoom) {
+        throw error
+      }
+
+      logger.error({
+        err: error,
+        message: `Failure on ${adminOverseasSitesListPath}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+        }
+      })
+
+      throw Boom.badImplementation(`Failure on ${adminOverseasSitesListPath}`)
+    }
+  }
+}
