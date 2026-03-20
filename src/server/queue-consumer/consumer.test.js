@@ -373,16 +373,15 @@ describe('createCommandQueueConsumer', () => {
     })
 
     describe('message parsing', () => {
-      it('throws for invalid JSON so SQS retries and sends to DLQ', async () => {
+      it('acknowledges invalid JSON instead of retrying', async () => {
         const message = {
           MessageId: 'msg-123',
           Body: 'not valid json'
         }
 
-        await expect(handleMessage(message)).rejects.toThrow(
-          'Unparseable command message, messageId=msg-123'
-        )
+        const result = await handleMessage(message)
 
+        expect(result).toBe(message)
         expect(logger.error).toHaveBeenCalledWith({
           message: 'Failed to parse SQS message body for messageId=msg-123',
           event: {
@@ -395,10 +394,9 @@ describe('createCommandQueueConsumer', () => {
       it('uses unknown as fallback when MessageId is missing', async () => {
         const message = { Body: 'not valid json' }
 
-        await expect(handleMessage(message)).rejects.toThrow(
-          'Unparseable command message, messageId=undefined'
-        )
+        const result = await handleMessage(message)
 
+        expect(result).toBe(message)
         expect(logger.error).toHaveBeenCalledWith({
           message: 'Failed to parse SQS message body for messageId=unknown',
           event: {
@@ -408,13 +406,12 @@ describe('createCommandQueueConsumer', () => {
         })
       })
 
-      it('throws for missing body so SQS retries and sends to DLQ', async () => {
+      it('acknowledges missing body instead of retrying', async () => {
         const message = { MessageId: 'msg-123' }
 
-        await expect(handleMessage(message)).rejects.toThrow(
-          'Unparseable command message, messageId=msg-123'
-        )
+        const result = await handleMessage(message)
 
+        expect(result).toBe(message)
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
@@ -423,16 +420,15 @@ describe('createCommandQueueConsumer', () => {
         )
       })
 
-      it('throws for missing command field so SQS retries and sends to DLQ', async () => {
+      it('acknowledges missing command field instead of retrying', async () => {
         const message = {
           MessageId: 'msg-123',
           Body: JSON.stringify({ summaryLogId: 'log-123' })
         }
 
-        await expect(handleMessage(message)).rejects.toThrow(
-          'Unparseable command message, messageId=msg-123'
-        )
+        const result = await handleMessage(message)
 
+        expect(result).toBe(message)
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
@@ -441,16 +437,15 @@ describe('createCommandQueueConsumer', () => {
         )
       })
 
-      it('throws for missing summaryLogId field so SQS retries and sends to DLQ', async () => {
+      it('acknowledges missing summaryLogId field instead of retrying', async () => {
         const message = {
           MessageId: 'msg-123',
           Body: JSON.stringify({ command: 'validate' })
         }
 
-        await expect(handleMessage(message)).rejects.toThrow(
-          'Unparseable command message, messageId=msg-123'
-        )
+        const result = await handleMessage(message)
 
+        expect(result).toBe(message)
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
@@ -459,16 +454,15 @@ describe('createCommandQueueConsumer', () => {
         )
       })
 
-      it('throws for invalid command type so SQS retries and sends to DLQ', async () => {
+      it('acknowledges invalid command type instead of retrying', async () => {
         const message = {
           MessageId: 'msg-123',
           Body: JSON.stringify({ command: 'unknown', summaryLogId: 'log-123' })
         }
 
-        await expect(handleMessage(message)).rejects.toThrow(
-          'Unparseable command message, messageId=msg-123'
-        )
+        const result = await handleMessage(message)
 
+        expect(result).toBe(message)
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
