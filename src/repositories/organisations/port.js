@@ -17,7 +17,7 @@
 /**
  * Organisation replacement payload with identity fields removed.
  * Identity (id, version) is passed as separate parameters to replace().
- * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationReplacement
+ * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'statusHistory'>>} OrganisationReplacement
  */
 
 /**

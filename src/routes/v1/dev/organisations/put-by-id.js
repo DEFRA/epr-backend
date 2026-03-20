@@ -55,6 +55,11 @@ export const devOrganisationsPutById = {
 
     const current = await organisationsRepository.findById(id)
 
+    /* v8 ignore next 3 -- repository throws Boom.notFound; guard satisfies tsc */
+    if (!current) {
+      throw Boom.notFound(`Organisation ${id} not found`)
+    }
+
     const { organisation } = request.payload
 
     const { id: _, version: _v, ...document } = organisation

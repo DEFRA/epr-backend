@@ -13,7 +13,7 @@ import { upsertOrganisations } from './organisation-persistence.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- * @import {FormDataMigrator, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
+ * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
  */
 
 export class MigrationOrchestrator {
@@ -66,13 +66,16 @@ export class MigrationOrchestrator {
       )
 
     const organisationEntries = await Promise.all(
-      [...existingOrganisationsWithNewSubmissions].map(
-        async (orgId) =>
-          /** @type {OrganisationMapEntry} */ ([
-            orgId,
-            await this.organisationsRepository.findById(orgId)
-          ])
-      )
+      [...existingOrganisationsWithNewSubmissions].map(async (orgId) => {
+        const org = await this.organisationsRepository.findById(orgId)
+        /* v8 ignore next 5 -- repository throws Boom.notFound; guard satisfies tsc */
+        if (!org) {
+          throw new Error(
+            `Organisation ${orgId} not found during migration — expected to exist`
+          )
+        }
+        return /** @type {const} */ ([orgId, org])
+      })
     )
 
     return new Map(organisationEntries)

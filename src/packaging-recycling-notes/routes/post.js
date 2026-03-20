@@ -163,6 +163,12 @@ export const packagingRecyclingNotesCreate = {
         ),
         organisationsRepository.findById(organisationId)
       ])
+
+      /* v8 ignore next 3 -- repository throws Boom.notFound; guard satisfies tsc */
+      if (!org) {
+        throw Boom.notFound(`Organisation ${organisationId} not found`)
+      }
+
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
