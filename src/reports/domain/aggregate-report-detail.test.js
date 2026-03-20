@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { QUARTERLY } from './cadence.js'
+import { MONTHLY, QUARTERLY } from './cadence.js'
 import { OPERATOR_CATEGORY } from './operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
 
@@ -421,8 +421,8 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail(records, exporterArgs)
 
       expect(result.sections.wasteExported.overseasSites).toStrictEqual([
-        { siteName: 'EuroPlast Recycling GmbH', osrId: '001' },
-        { siteName: 'RecyclePlast SA', osrId: '096' }
+        { osrId: '001', siteName: 'EuroPlast Recycling GmbH' },
+        { osrId: '096', siteName: 'RecyclePlast SA' }
       ])
     })
 
@@ -477,6 +477,116 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail([], defaultArgs)
 
       expect(result.sections.wasteExported).toBeUndefined()
+    })
+  })
+
+  describe('accredited exporter', () => {
+    const accreditedExporterArgs = {
+      operatorCategory: OPERATOR_CATEGORY.EXPORTER,
+      cadence: MONTHLY,
+      year: 2026,
+      period: 2
+    }
+
+    const buildAccreditedExportedRecord = (overrides = {}) => ({
+      type: WASTE_RECORD_TYPE.EXPORTED,
+      data: {
+        DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+        DATE_OF_EXPORT: '2026-02-20',
+        TONNAGE_RECEIVED_FOR_EXPORT: 50,
+        TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48,
+        OSR_ID: '001',
+        ...overrides
+      },
+      versions: [
+        {
+          createdAt: '2026-02-10T09:00:00.000Z',
+          summaryLog: { id: 'sl-1' }
+        }
+      ]
+    })
+
+    it('aggregates waste received from exported records using DATE_RECEIVED_FOR_EXPORT', () => {
+      const records = [
+        buildAccreditedExportedRecord({
+          DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+          TONNAGE_RECEIVED_FOR_EXPORT: 50.25
+        }),
+        buildAccreditedExportedRecord({
+          DATE_RECEIVED_FOR_EXPORT: '2026-02-10',
+          TONNAGE_RECEIVED_FOR_EXPORT: 30
+        })
+      ]
+
+      const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+      expect(result.sections.wasteReceived.totalTonnage).toBe(80.25)
+    })
+
+    it('returns empty suppliers for wasteReceived', () => {
+      const records = [buildAccreditedExportedRecord()]
+
+      const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+      expect(result.sections.wasteReceived.suppliers).toStrictEqual([])
+    })
+
+    it('aggregates waste exported using DATE_OF_EXPORT', () => {
+      const records = [
+        buildAccreditedExportedRecord({
+          DATE_OF_EXPORT: '2026-02-15',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildAccreditedExportedRecord({
+          DATE_OF_EXPORT: '2026-02-20',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6.5
+        })
+      ]
+
+      const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+      expect(result.sections.wasteExported.totalTonnage).toBe(11.5)
+    })
+
+    it('filters wasteReceived and wasteExported by different date fields', () => {
+      const records = [
+        buildAccreditedExportedRecord({
+          DATE_RECEIVED_FOR_EXPORT: '2026-01-15',
+          DATE_OF_EXPORT: '2026-02-10',
+          TONNAGE_RECEIVED_FOR_EXPORT: 42,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 40
+        })
+      ]
+
+      const january = aggregateReportDetail(records, {
+        ...accreditedExporterArgs,
+        period: 1
+      })
+
+      expect(january.sections.wasteReceived.totalTonnage).toBe(42)
+      expect(january.sections.wasteExported.totalTonnage).toBe(0)
+
+      const february = aggregateReportDetail(records, accreditedExporterArgs)
+
+      expect(february.sections.wasteReceived.totalTonnage).toBe(0)
+      expect(february.sections.wasteExported.totalTonnage).toBe(40)
+    })
+
+    it('returns overseas sites with osrId only when OSR_NAME is absent', () => {
+      const records = [
+        buildAccreditedExportedRecord({ OSR_ID: '001' }),
+        buildAccreditedExportedRecord({
+          DATE_OF_EXPORT: '2026-02-25',
+          OSR_ID: '096'
+        })
+      ]
+
+      const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+      expect(result.sections.wasteExported.overseasSites).toStrictEqual([
+        { osrId: '001', siteName: undefined },
+        { osrId: '096', siteName: undefined }
+      ])
     })
   })
 

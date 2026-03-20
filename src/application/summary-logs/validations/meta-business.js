@@ -22,7 +22,8 @@ import { validateMaterialType } from './material-type.js'
 export const validateMetaBusiness = ({
   parsed,
   registration,
-  loggingContext
+  loggingContext,
+  featureFlags
 }) => {
   const issues = createValidationIssues()
 
@@ -32,7 +33,9 @@ export const validateMetaBusiness = ({
     validateAccreditationNumber,
     validateMaterialType
   ]) {
-    issues.merge(validate({ parsed, registration, loggingContext }))
+    issues.merge(
+      validate({ parsed, registration, loggingContext, featureFlags })
+    )
   }
 
   return issues

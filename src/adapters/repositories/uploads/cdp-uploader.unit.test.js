@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createUploadsRepository } from './cdp-uploader.js'
 
@@ -13,7 +13,8 @@ vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
 const testConfig = {
   cdpUploaderUrl: 'https://cdp-uploader.test',
   backendUrl: 'https://backend.test',
-  s3Bucket: 'test-bucket'
+  summaryLogsBucket: 'test-summary-logs-bucket',
+  orsBucket: 'test-ors-bucket'
 }
 
 describe('CDP Uploader error handling', () => {
@@ -45,6 +46,68 @@ describe('CDP Uploader error handling', () => {
     await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
       'Network error'
     )
+  })
+})
+
+describe('bucket routing', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const stubFetch = () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            uploadId: 'upload-1',
+            uploadUrl: 'https://cdp-uploader.test/upload-and-scan/upload-1',
+            statusUrl: 'https://cdp-uploader.test/status/upload-1'
+          })
+      })
+    )
+  }
+
+  const parseFetchBody = () => {
+    const fetchCall = vi.mocked(fetch).mock.calls[0]
+    return JSON.parse(fetchCall[1].body)
+  }
+
+  it('sends summary logs bucket for summary log uploads', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: { send: vi.fn() },
+      ...testConfig
+    })
+
+    await repository.initiateSummaryLogUpload({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      summaryLogId: 'sl-1',
+      redirectUrl: 'https://frontend.test/redirect',
+      callbackUrl: 'https://backend.test/callback'
+    })
+
+    expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
+  })
+
+  it('sends ORS bucket for ORS imports', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: { send: vi.fn() },
+      ...testConfig
+    })
+
+    await repository.initiateOrsImport({
+      importId: 'import-1',
+      redirectUrl: 'https://admin.test/redirect',
+      callbackUrl: 'https://backend.test/callback'
+    })
+
+    expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
   })
 })
 

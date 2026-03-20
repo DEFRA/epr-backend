@@ -33,6 +33,7 @@ import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mon
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/mongodb.plugin.js'
 import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
+import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
@@ -124,6 +125,11 @@ function getProductionPlugins(config) {
   /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
   if (config.get('featureFlags.overseasSites')) {
     plugins.push(overseasSitesRepositoryPlugin, orsImportsRepositoryPlugin)
+  }
+
+  /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
+  if (config.get('featureFlags.reports')) {
+    plugins.push(mongoReportsRepositoryPlugin)
   }
 
   plugins.push(packagingRecyclingNotesRepositoryPlugin, {
