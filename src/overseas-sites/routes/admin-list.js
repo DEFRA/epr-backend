@@ -19,33 +19,35 @@ export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
  * @param {Map<string, OverseasSite>} sitesById
  */
 const buildRows = (organisations, sitesById) => {
-  const rows = []
+  const registrations = organisations.flatMap(
+    (organisation) => organisation.registrations ?? []
+  )
 
-  for (const organisation of organisations) {
-    for (const registration of organisation.registrations ?? []) {
-      for (const [orsId, mapping] of Object.entries(
-        registration.overseasSites ?? {}
-      )) {
-        const site = sitesById.get(mapping.overseasSiteId)
-        if (!site) {
-          continue
-        }
+  const mappings = registrations.flatMap((registration) =>
+    Object.entries(registration.overseasSites ?? {})
+  )
 
-        rows.push({
-          orsId,
-          destinationCountry: site.country,
-          overseasReprocessorName: site.name,
-          addressLine1: site.address.line1,
-          addressLine2: site.address.line2 ?? null,
-          cityOrTown: site.address.townOrCity,
-          stateProvinceOrRegion: site.address.stateOrRegion ?? null,
-          postcode: site.address.postcode ?? null,
-          coordinates: site.coordinates ?? null,
-          validFrom: site.validFrom ?? null
-        })
+  const rows = mappings
+    .map(([orsId, mapping]) => {
+      const site = sitesById.get(mapping.overseasSiteId)
+      if (!site) {
+        return null
       }
-    }
-  }
+
+      return {
+        orsId,
+        destinationCountry: site.country,
+        overseasReprocessorName: site.name,
+        addressLine1: site.address.line1,
+        addressLine2: site.address.line2 ?? null,
+        cityOrTown: site.address.townOrCity,
+        stateProvinceOrRegion: site.address.stateOrRegion ?? null,
+        postcode: site.address.postcode ?? null,
+        coordinates: site.coordinates ?? null,
+        validFrom: site.validFrom ?? null
+      }
+    })
+    .filter((row) => row !== null)
 
   return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
 }
