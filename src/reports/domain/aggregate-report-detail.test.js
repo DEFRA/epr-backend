@@ -641,4 +641,12 @@ describe('#aggregateReportDetail', () => {
       expect(result.sections.wasteReceived.totalTonnage).toBe(0)
     })
   })
+
+  describe('validation', () => {
+    it('throws TypeError for unknown cadence', () => {
+      expect(() =>
+        aggregateReportDetail([], { ...defaultArgs, cadence: 'biweekly' })
+      ).toThrow(TypeError)
+    })
+  })
 })

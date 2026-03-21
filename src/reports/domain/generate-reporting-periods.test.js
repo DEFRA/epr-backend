@@ -117,4 +117,12 @@ describe('generateReportingPeriods', () => {
       expect(periods).toHaveLength(4)
     })
   })
+
+  describe('validation', () => {
+    it('throws TypeError for unknown cadence', () => {
+      expect(() => generateReportingPeriods('biweekly', 2026, march20)).toThrow(
+        TypeError
+      )
+    })
+  })
 })
