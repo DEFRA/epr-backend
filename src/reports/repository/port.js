@@ -1,6 +1,5 @@
 /**
  * @typedef {import('#reports/domain/report-status.js').ReportStatus} ReportStatus
- * @typedef {import('#reports/domain/cadence.js').MONTHLY | import('#reports/domain/cadence.js').QUARTERLY} CadenceObject
  */
 
 /**

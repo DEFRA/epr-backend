@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { MONTHLY, QUARTERLY } from './cadence.js'
 import { OPERATOR_CATEGORY } from './operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
 
@@ -42,7 +41,7 @@ const buildSentOnRecord = (overrides = {}) => ({
 describe('#aggregateReportDetail', () => {
   const defaultArgs = {
     operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
-    cadence: QUARTERLY,
+    cadence: 'quarterly',
     year: 2026,
     period: 1
   }
@@ -331,7 +330,7 @@ describe('#aggregateReportDetail', () => {
   describe('registered-only exporter', () => {
     const exporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY,
-      cadence: QUARTERLY,
+      cadence: 'quarterly',
       year: 2026,
       period: 1
     }
@@ -483,7 +482,7 @@ describe('#aggregateReportDetail', () => {
   describe('accredited exporter', () => {
     const accreditedExporterArgs = {
       operatorCategory: OPERATOR_CATEGORY.EXPORTER,
-      cadence: MONTHLY,
+      cadence: 'monthly',
       year: 2026,
       period: 2
     }

@@ -1,11 +1,9 @@
-export const MONTHLY = Object.freeze({
-  id: 'monthly',
-  monthsPerPeriod: 1,
-  periodsPerYear: 12
+export const CADENCE = Object.freeze({
+  monthly: 'monthly',
+  quarterly: 'quarterly'
 })
 
-export const QUARTERLY = Object.freeze({
-  id: 'quarterly',
-  monthsPerPeriod: 3,
-  periodsPerYear: 4
+export const MONTHS_PER_PERIOD = Object.freeze({
+  [CADENCE.monthly]: 1,
+  [CADENCE.quarterly]: 3
 })

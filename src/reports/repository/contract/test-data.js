@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { MONTHLY } from '#reports/domain/cadence.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
@@ -29,7 +28,7 @@ export const buildCreateReportParams = (overrides = {}) => ({
   organisationId: DEFAULT_ORG_ID,
   registrationId: DEFAULT_REG_ID,
   year: DEFAULT_REPORT_YEAR,
-  cadence: MONTHLY.id,
+  cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,
   startDate: DEFAULT_REPORT_START_DATE,
   endDate: DEFAULT_REPORT_END_DATE,
