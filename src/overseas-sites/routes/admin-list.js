@@ -14,6 +14,47 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
 
+const getAccreditationNumber = (organisation, registration) => {
+  const matchedAccreditation =
+    organisation.accreditations?.find(
+      (accreditation) => accreditation.id === registration.accreditationId
+    ) ?? null
+
+  return (
+    registration.accreditation?.accreditationNumber ??
+    registration.accreditationNumber ??
+    matchedAccreditation?.accreditationNumber ??
+    null
+  )
+}
+
+const mapMappingToRow = (
+  { organisation, registration, orsId, mapping },
+  sitesById
+) => {
+  const site = sitesById.get(mapping.overseasSiteId)
+  if (!site) {
+    return null
+  }
+
+  return {
+    orsId,
+    packagingWasteCategory: registration.material ?? null,
+    orgId: organisation.orgId ?? null,
+    registrationNumber: registration.registrationNumber ?? null,
+    accreditationNumber: getAccreditationNumber(organisation, registration),
+    destinationCountry: site.country,
+    overseasReprocessorName: site.name,
+    addressLine1: site.address.line1,
+    addressLine2: site.address.line2 ?? null,
+    cityOrTown: site.address.townOrCity,
+    stateProvinceOrRegion: site.address.stateOrRegion ?? null,
+    postcode: site.address.postcode ?? null,
+    coordinates: site.coordinates ?? null,
+    validFrom: site.validFrom ?? null
+  }
+}
+
 /**
  * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationId?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>, accreditations?: Array<{id?: string, accreditationNumber?: string}>}>} organisations
  * @param {Map<string, OverseasSite>} sitesById
@@ -39,40 +80,7 @@ const buildRows = (organisations, sitesById) => {
   )
 
   const rows = mappings
-    .map(({ organisation, registration, orsId, mapping }) => {
-      const site = sitesById.get(mapping.overseasSiteId)
-      if (!site) {
-        return null
-      }
-
-      const matchedAccreditation =
-        organisation.accreditations?.find(
-          (accreditation) => accreditation.id === registration.accreditationId
-        ) ?? null
-
-      const accreditationNumber =
-        registration.accreditation?.accreditationNumber ??
-        registration.accreditationNumber ??
-        matchedAccreditation?.accreditationNumber ??
-        null
-
-      return {
-        orsId,
-        packagingWasteCategory: registration.material ?? null,
-        orgId: organisation.orgId ?? null,
-        registrationNumber: registration.registrationNumber ?? null,
-        accreditationNumber,
-        destinationCountry: site.country,
-        overseasReprocessorName: site.name,
-        addressLine1: site.address.line1,
-        addressLine2: site.address.line2 ?? null,
-        cityOrTown: site.address.townOrCity,
-        stateProvinceOrRegion: site.address.stateOrRegion ?? null,
-        postcode: site.address.postcode ?? null,
-        coordinates: site.coordinates ?? null,
-        validFrom: site.validFrom ?? null
-      }
-    })
+    .map((mappingContext) => mapMappingToRow(mappingContext, sitesById))
     .filter((row) => row !== null)
 
   return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
