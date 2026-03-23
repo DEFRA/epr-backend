@@ -180,6 +180,93 @@ describe(`${orsUploadCompletedPath} route`, () => {
     expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
   })
 
+  it('marks import as failed when all files are rejected', async () => {
+    await orsImportsRepository.create({
+      _id: importId,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    await server.inject({
+      method: 'POST',
+      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      payload: createPayload({
+        fileStatus: 'rejected',
+        s3Bucket: undefined,
+        s3Key: undefined
+      })
+    })
+
+    const doc = await orsImportsRepository.findById(importId)
+    expect(doc.status).toBe(ORS_IMPORT_STATUS.FAILED)
+  })
+
+  it('marks import as failed when all files in a batch are rejected', async () => {
+    await orsImportsRepository.create({
+      _id: importId,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    await server.inject({
+      method: 'POST',
+      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      payload: {
+        form: {
+          orsUpload: [
+            {
+              fileId: 'file-1',
+              filename: 'sites-a.xlsm',
+              fileStatus: 'rejected'
+            },
+            {
+              fileId: 'file-2',
+              filename: 'sites-b.xlsm',
+              fileStatus: 'rejected'
+            }
+          ]
+        }
+      }
+    })
+
+    const doc = await orsImportsRepository.findById(importId)
+    expect(doc.status).toBe(ORS_IMPORT_STATUS.FAILED)
+  })
+
+  it('does not mark as failed when some files complete and others are rejected', async () => {
+    await orsImportsRepository.create({
+      _id: importId,
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: []
+    })
+
+    await server.inject({
+      method: 'POST',
+      url: `/v1/overseas-sites/imports/${importId}/upload-completed`,
+      payload: {
+        form: {
+          orsUpload: [
+            {
+              fileId: 'file-1',
+              filename: 'sites-a.xlsx',
+              fileStatus: 'complete',
+              s3Bucket: 'test-bucket',
+              s3Key: 'path/file-1'
+            },
+            {
+              fileId: 'file-2',
+              filename: 'sites-b.xlsm',
+              fileStatus: 'rejected'
+            }
+          ]
+        }
+      }
+    })
+
+    const doc = await orsImportsRepository.findById(importId)
+    expect(doc.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
+  })
+
   it('returns 404 when import does not exist', async () => {
     const response = await server.inject({
       method: 'POST',

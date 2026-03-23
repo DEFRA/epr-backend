@@ -14,7 +14,8 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  */
 
 const SPREADSHEET_MIME_TYPES = [
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel.sheet.macroEnabled.12'
 ]
 
 /**

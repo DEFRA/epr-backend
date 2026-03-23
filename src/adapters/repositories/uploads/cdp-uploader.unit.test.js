@@ -109,6 +109,26 @@ describe('bucket routing', () => {
 
     expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
   })
+
+  it('sends both xlsx and xlsm MIME types for ORS imports', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: { send: vi.fn() },
+      ...testConfig
+    })
+
+    await repository.initiateOrsImport({
+      importId: 'import-1',
+      redirectUrl: 'https://admin.test/redirect',
+      callbackUrl: 'https://backend.test/callback'
+    })
+
+    expect(parseFetchBody().mimeTypes).toEqual([
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12'
+    ])
+  })
 })
 
 describe('deleteByLocation', () => {
