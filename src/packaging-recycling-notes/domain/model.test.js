@@ -6,6 +6,8 @@ import {
   PRN_ACTOR,
   isValidTransition,
   validateTransition,
+  assertAccreditationNotSuspended,
+  SuspendedAccreditationError,
   StatusConflictError,
   UnauthorisedTransitionError
 } from './model.js'
@@ -149,5 +151,25 @@ describe('validateTransition', () => {
     expect(thrownError?.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     expect(thrownError?.newStatus).toBe(PRN_STATUS.ACCEPTED)
     expect(thrownError?.actor).toBe(PRN_ACTOR.SIGNATORY)
+  })
+})
+
+describe('assertAccreditationNotSuspended', () => {
+  it('throws SuspendedAccreditationError when accreditation is suspended', () => {
+    expect(() =>
+      assertAccreditationNotSuspended({ status: 'suspended' })
+    ).toThrow(SuspendedAccreditationError)
+  })
+
+  it('throws SuspendedAccreditationError with descriptive message', () => {
+    expect(() =>
+      assertAccreditationNotSuspended({ status: 'suspended' })
+    ).toThrow('Cannot issue a PRN on a suspended accreditation')
+  })
+
+  it('does not throw when accreditation is approved', () => {
+    expect(() =>
+      assertAccreditationNotSuspended({ status: 'approved' })
+    ).not.toThrow()
   })
 })
