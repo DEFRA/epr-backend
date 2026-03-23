@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   getStatusHistoryDateTimes,
-  isAccreditationApprovedAtDate,
+  isSuspendedAtDate,
   isAccreditedAtDates,
   isWithinAccreditationDateRange
 } from './accreditation.js'
@@ -100,14 +100,12 @@ describe('accreditation date helpers', () => {
     })
   })
 
-  describe('isAccreditationApprovedAtDate', () => {
+  describe('isSuspendedAtDate', () => {
     it('should return false when statusHistory is empty', () => {
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', [])
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', [])).toBe(false)
     })
 
-    it('should return true when accreditation was approved at the given date', () => {
+    it('should return false when most recent status is approved', () => {
       const statusHistory = [
         {
           status: 'approved',
@@ -119,12 +117,12 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(true)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', statusHistory)).toBe(
+        false
+      )
     })
 
-    it('should return false when accreditation was suspended at the given date', () => {
+    it('should return true when accreditation was suspended at the given date', () => {
       const statusHistory = [
         {
           status: 'suspended',
@@ -140,12 +138,12 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', statusHistory)).toBe(
+        true
+      )
     })
 
-    it('should return true when accreditation was re-approved after suspension', () => {
+    it('should return false when accreditation was re-approved after suspension', () => {
       const statusHistory = [
         {
           status: 'approved',
@@ -165,12 +163,12 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-08-01T00:00:00.000Z', statusHistory)
-      ).toBe(true)
+      expect(isSuspendedAtDate('2025-08-01T00:00:00.000Z', statusHistory)).toBe(
+        false
+      )
     })
 
-    it('should return false when date falls within a suspension period before re-approval', () => {
+    it('should return true when date falls within a suspension period before re-approval', () => {
       const statusHistory = [
         {
           status: 'approved',
@@ -190,9 +188,9 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', statusHistory)).toBe(
+        true
+      )
     })
 
     it('should return false when date is before any status history entries', () => {
@@ -203,12 +201,12 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-01-01T00:00:00.000Z', statusHistory)
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-01-01T00:00:00.000Z', statusHistory)).toBe(
+        false
+      )
     })
 
-    it('should return false on the exact date of suspension', () => {
+    it('should return true on the exact date of suspension', () => {
       const statusHistory = [
         {
           status: 'suspended',
@@ -224,29 +222,25 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-06-01T00:00:00.000Z', statusHistory)
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-06-01T00:00:00.000Z', statusHistory)).toBe(
+        true
+      )
     })
 
-    it('should return true on exact approval boundary', () => {
+    it('should return false when most recent status is created', () => {
       const statusHistory = [
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
         {
           status: 'created',
           updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-03-01T00:00:00.000Z', statusHistory)
-      ).toBe(true)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', statusHistory)).toBe(
+        false
+      )
     })
 
-    it('should return false with a single suspended entry', () => {
+    it('should return true with a single suspended entry', () => {
       const statusHistory = [
         {
           status: 'suspended',
@@ -254,30 +248,9 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
-    })
-
-    it.each([
-      { status: 'cancelled', desc: 'cancelled' },
-      { status: 'revoked', desc: 'revoked' },
-      { status: 'created', desc: 'created' }
-    ])('should return false when most recent status is $desc', ({ status }) => {
-      const statusHistory = [
-        {
-          status,
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', statusHistory)).toBe(
+        true
+      )
     })
 
     it('should use the first entry when multiple share the same timestamp', () => {
@@ -296,9 +269,9 @@ describe('accreditation date helpers', () => {
         }
       ]
 
-      expect(
-        isAccreditationApprovedAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
+      expect(isSuspendedAtDate('2025-06-15T00:00:00.000Z', statusHistory)).toBe(
+        true
+      )
     })
   })
 
@@ -331,24 +304,6 @@ describe('accreditation date helpers', () => {
 
     it('should return true when accreditation is null', () => {
       expect(isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], null)).toBe(true)
-    })
-
-    it('should return false when statusHistory is undefined', () => {
-      expect(
-        isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], {
-          ...accreditation,
-          statusHistory: undefined
-        })
-      ).toBe(false)
-    })
-
-    it('should return false when statusHistory is null', () => {
-      expect(
-        isAccreditedAtDates(['2025-06-15T00:00:00.000Z'], {
-          ...accreditation,
-          statusHistory: null
-        })
-      ).toBe(false)
     })
 
     it('should return false when accreditation has no date range', () => {
@@ -404,7 +359,7 @@ describe('accreditation date helpers', () => {
       ).toBe(true)
     })
 
-    it('should return false when accreditation was not yet approved at the date', () => {
+    it('should return true when date is before approval in status history but within validFrom/validTo', () => {
       const accreditationLateApproval = /** @type {Accreditation} */ ({
         ...accreditation,
         statusHistory: [
@@ -424,7 +379,7 @@ describe('accreditation date helpers', () => {
           ['2025-07-01T00:00:00.000Z'],
           accreditationLateApproval
         )
-      ).toBe(false)
+      ).toBe(true)
     })
 
     it('should handle out-of-order statusHistory entries', () => {
@@ -480,6 +435,33 @@ describe('accreditation date helpers', () => {
           accreditationWithGap
         )
       ).toBe(false)
+    })
+
+    it('should include loads before approval date when within validFrom/validTo', () => {
+      // Approved on 30th Jan, validFrom 1st Jan.
+      // Loads between 1st-30th Jan must be included — approval is
+      // determined by validFrom/validTo, not the status history date.
+      const lateApprovalAccreditation = /** @type {Accreditation} */ ({
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z',
+        statusHistory: [
+          /** @type {StatusHistoryEntry} */ ({
+            status: 'created',
+            updatedAt: '2024-11-15T00:00:00.000Z'
+          }),
+          /** @type {StatusHistoryEntry} */ ({
+            status: 'approved',
+            updatedAt: '2025-01-30T00:00:00.000Z'
+          })
+        ]
+      })
+
+      expect(
+        isAccreditedAtDates(
+          ['2025-01-10T00:00:00.000Z', '2025-01-20T00:00:00.000Z'],
+          lateApprovalAccreditation
+        )
+      ).toBe(true)
     })
   })
 })

@@ -234,21 +234,19 @@ describe('classify-helpers', () => {
       expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
 
-    it('returns IGNORED when accreditation has no statusHistory', () => {
+    it('returns EXCLUDED when date is within range and not suspended (empty statusHistory)', () => {
       const classify = createDateOnlyClassifier('MY_DATE')
       const data = { MY_DATE: new Date('2024-06-15') }
 
       const result = classify(data, {
         accreditation: {
           validFrom: new Date('2024-01-01'),
-          validTo: new Date('2024-12-31')
+          validTo: new Date('2024-12-31'),
+          statusHistory: []
         }
       })
 
-      expect(result).toEqual({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
-      })
+      expect(result).toEqual({ outcome: ROW_OUTCOME.EXCLUDED, reasons: [] })
     })
   })
 })
