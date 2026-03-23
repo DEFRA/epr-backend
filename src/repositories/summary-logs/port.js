@@ -29,6 +29,12 @@
  */
 
 /**
+ * @typedef {Object} DownloadUrlResult
+ * @property {string} url - The download URL
+ * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
+ */
+
+/**
  * @typedef {Object} SummaryLogsRepository
  * @property {(id: string, summaryLog: Object) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
@@ -36,6 +42,7 @@
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
+ * @property {(summaryLogId: string) => Promise<DownloadUrlResult>} getDownloadUrl
  */
 
 /**

@@ -9,6 +9,7 @@ import {
   validateSummaryLogUpdate
 } from './validation.js'
 import { SUMMARY_LOG_FAILURE_STATUS } from '#domain/summary-logs/status.js'
+import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 
 const FAILURE_STATUS = new Set(SUMMARY_LOG_FAILURE_STATUS)
 
@@ -156,6 +157,23 @@ const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
   }))
 }
 
+const SIXTY_SECONDS = 60
+
+const getDownloadUrl = (staleCache) => async (summaryLogId) => {
+  const validatedId = validateId(summaryLogId)
+  const doc = staleCache.get(validatedId)
+
+  if (!doc?.summaryLog?.file?.uri) {
+    throw Boom.notFound('Summary log file not found')
+  }
+
+  const { Bucket, Key } = parseS3Uri(doc.summaryLog.file.uri)
+  const url = `https://${Bucket}.test/${Key}/download`
+  const expiresAt = new Date(Date.now() + SIXTY_SECONDS * 1000).toISOString()
+
+  return { url, expiresAt }
+}
+
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
     const validatedId = validateId(logId)
@@ -233,6 +251,7 @@ export const createInMemorySummaryLogsRepository = () => {
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
       storage,
       staleCache
-    )
+    ),
+    getDownloadUrl: getDownloadUrl(staleCache)
   })
 }

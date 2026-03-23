@@ -1,3 +1,5 @@
+import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import Boom from '@hapi/boom'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -8,6 +10,7 @@ import {
   calculateExpiresAt,
   SUMMARY_LOG_FAILURE_STATUS
 } from '#domain/summary-logs/status.js'
+import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -275,11 +278,43 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 }
 
+/** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
+
+const getDownloadUrl =
+  (db, s3Client, preSignedUrlExpiry) => async (summaryLogId) => {
+    const validatedId = validateId(summaryLogId)
+    /** @type {any} */
+    const filter = { _id: validatedId }
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+
+    if (!doc?.file?.uri) {
+      throw Boom.notFound('Summary log file not found')
+    }
+
+    const { Bucket, Key } = parseS3Uri(doc.file.uri)
+    const command = new GetObjectCommand({ Bucket, Key })
+    const url = await getSignedUrl(s3Client, command, {
+      expiresIn: preSignedUrlExpiry
+    })
+    const expiresAt = new Date(
+      Date.now() + preSignedUrlExpiry * 1000
+    ).toISOString()
+
+    return { url, expiresAt }
+  }
+
+/**
+ * @typedef {Object} SummaryLogsS3Config
+ * @property {S3Client} s3Client - AWS S3 client for generating download URLs
+ * @property {number} preSignedUrlExpiry - Expiry time in seconds for download URLs
+ */
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
+ * @param {SummaryLogsS3Config} s3Config - S3 configuration for download URLs
  * @returns {Promise<import('./port.js').SummaryLogsRepositoryFactory>}
  */
-export const createSummaryLogsRepository = async (db) => {
+export const createSummaryLogsRepository = async (db, s3Config) => {
   await ensureCollection(db)
 
   return (logger) => ({
@@ -289,6 +324,11 @@ export const createSummaryLogsRepository = async (db) => {
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(db),
-    transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
+    transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),
+    getDownloadUrl: getDownloadUrl(
+      db,
+      s3Config.s3Client,
+      s3Config.preSignedUrlExpiry
+    )
   })
 }

@@ -15,7 +15,15 @@ async function auditSummaryLogSubmit(request, context) {
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
- * @param {'upload' | 'submit'} action
+ */
+async function auditSummaryLogDownload(request, context) {
+  await auditSummaryLog(request, context, 'download')
+}
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
+ * @param {'upload' | 'submit' | 'download'} action
  */
 async function auditSummaryLog(request, context, action) {
   const user = extractUserDetails(request)
@@ -33,4 +41,4 @@ async function auditSummaryLog(request, context, action) {
   await recordSystemLog(request, payload)
 }
 
-export { auditSummaryLogSubmit }
+export { auditSummaryLogSubmit, auditSummaryLogDownload }
