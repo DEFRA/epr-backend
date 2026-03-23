@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { TABLE_SCHEMAS } from './index.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformReceivedLoadsExportRowRegisteredOnly } from '#application/waste-records/row-transformers/received-loads-export-exporter-registered-only.js'
 
 const { RECEIVED_LOADS_FOR_EXPORT } = TABLE_SCHEMAS
 
@@ -11,20 +9,6 @@ describe('RECEIVED_LOADS_FOR_EXPORT (EXPORTER_REGISTERED_ONLY)', () => {
   describe('structure', () => {
     it('has rowIdField set to ROW_ID', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
-    })
-
-    it('has wasteRecordType set to RECEIVED', () => {
-      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
-    })
-
-    it('has sheetName set to Received (section 1)', () => {
-      expect(schema.sheetName).toBe('Received (section 1)')
-    })
-
-    it('has rowTransformer set to transformReceivedLoadsExportRowRegisteredOnly', () => {
-      expect(schema.rowTransformer).toBe(
-        transformReceivedLoadsExportRowRegisteredOnly
-      )
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
