@@ -192,8 +192,8 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
   })
 }
 
-const defineNoBackfillAccreditationNumberTest = () => {
-  it('does not backfill accreditation number from organisation accreditations', async () => {
+const defineAccreditationNumberBackfillTest = () => {
+  it('backfills accreditation number from organisation accreditations when registration has accreditation id', async () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
@@ -255,7 +255,7 @@ const defineNoBackfillAccreditationNumberTest = () => {
       {
         orgId: 42,
         registrationNumber: 'REG-123',
-        accreditationNumber: null,
+        accreditationNumber: 'ACC-002',
         orsId: '003',
         packagingWasteCategory: TEST_PLASTIC_CATEGORY,
         destinationCountry: 'France',
@@ -410,7 +410,7 @@ const defineMissingRegistrationsPropertyTest = () => {
 }
 
 const defineAdditionalEdgeCaseTests = () => {
-  defineNoBackfillAccreditationNumberTest()
+  defineAccreditationNumberBackfillTest()
   defineMissingOverseasSiteMappingsTest()
   defineMissingMaterialAndOrgIdTest()
   defineMissingRegistrationsPropertyTest()

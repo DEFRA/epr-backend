@@ -151,10 +151,13 @@ const performFindAll = (staleCache) => async () => {
 }
 
 const performFindAllForOverseasSitesAdminList = (staleCache) => async () => {
-  return structuredClone(staleCache).map(({ orgId, registrations }) => ({
-    orgId,
-    registrations
-  }))
+  return structuredClone(staleCache).map(
+    ({ orgId, registrations, accreditations }) => ({
+      orgId,
+      registrations,
+      accreditations
+    })
+  )
 }
 
 const toLinkedOrganisationSummary = (org) => ({

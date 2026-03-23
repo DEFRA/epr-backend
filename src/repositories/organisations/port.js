@@ -20,10 +20,12 @@
  * @property {Array<{
  *   material?: string,
  *   registrationNumber?: string,
+ *   accreditationId?: string,
  *   accreditationNumber?: string,
  *   accreditation?: { accreditationNumber?: string },
  *   overseasSites?: Record<string, { overseasSiteId: string }>
  * }>} [registrations]
+ * @property {Array<{ id?: string, accreditationNumber?: string }>} [accreditations]
  */
 
 /**

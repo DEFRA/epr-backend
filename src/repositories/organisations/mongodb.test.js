@@ -162,7 +162,8 @@ describe('MongoDB organisations repository', () => {
       expect(result).toHaveLength(1)
       expect(result[0]).toMatchObject({
         orgId: organisation.orgId,
-        registrations: expect.any(Array)
+        registrations: expect.any(Array),
+        accreditations: expect.any(Array)
       })
       expect(result[0].companyDetails).toBeUndefined()
       expect(result[0].statusHistory).toBeUndefined()

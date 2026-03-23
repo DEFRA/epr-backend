@@ -187,9 +187,12 @@ const ORS_ADMIN_LIST_PROJECTION = {
   orgId: 1,
   'registrations.material': 1,
   'registrations.registrationNumber': 1,
+  'registrations.accreditationId': 1,
   'registrations.accreditationNumber': 1,
   'registrations.accreditation.accreditationNumber': 1,
-  'registrations.overseasSites': 1
+  'registrations.overseasSites': 1,
+  'accreditations.id': 1,
+  'accreditations.accreditationNumber': 1
 }
 
 const performFindAllForOverseasSitesAdminList = (db) => async () => {
@@ -198,9 +201,10 @@ const performFindAllForOverseasSitesAdminList = (db) => async () => {
     .find({}, { projection: ORS_ADMIN_LIST_PROJECTION })
     .toArray()
 
-  return docs.map(({ orgId, registrations }) => ({
+  return docs.map(({ orgId, registrations, accreditations }) => ({
     orgId,
-    registrations
+    registrations,
+    accreditations
   }))
 }
 

@@ -25,10 +25,15 @@ const firstPresent = (...values) => {
   return null
 }
 
-const getAccreditationNumber = (registration) => {
+const getAccreditationNumber = (organisation, registration) => {
+  const matchedAccreditationNumber = organisation.accreditations?.find(
+    (accreditation) => accreditation.id === registration.accreditationId
+  )?.accreditationNumber
+
   return firstPresent(
     registration.accreditation?.accreditationNumber,
-    registration.accreditationNumber
+    registration.accreditationNumber,
+    matchedAccreditationNumber
   )
 }
 
@@ -56,7 +61,7 @@ const mapMappingToRow = (
   return {
     orgId: nullable(organisation.orgId),
     registrationNumber: nullable(registration.registrationNumber),
-    accreditationNumber: getAccreditationNumber(registration),
+    accreditationNumber: getAccreditationNumber(organisation, registration),
     orsId,
     packagingWasteCategory: nullable(registration.material),
     ...mapSiteFields(site)
@@ -64,7 +69,7 @@ const mapMappingToRow = (
 }
 
 /**
- * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>}>} organisations
+ * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationId?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>, accreditations?: Array<{id?: string, accreditationNumber?: string}>}>} organisations
  * @param {Map<string, OverseasSite>} sitesById
  */
 const buildRows = (organisations, sitesById) => {
