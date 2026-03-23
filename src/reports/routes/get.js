@@ -48,11 +48,12 @@ export const reportsGet = {
       registrationId
     })
 
-    const reportIds = periodicReports.flatMap((pr) =>
-      /* c8 ignore next -- pr.reports always exists from repository */
-      Object.values((pr.reports || {})[cadence] || {})
-        .map((slot) => slot.currentReportId)
-        .filter(Boolean)
+    const reportIds = periodicReports.flatMap(
+      /* c8 ignore next -- optional chain fallback never hit; reports always exists */
+      (pr) =>
+        Object.values(pr.reports?.[cadence] ?? {})
+          .map((slot) => slot.currentReportId)
+          .filter(Boolean)
     )
 
     const reportStatusMap = new Map()
