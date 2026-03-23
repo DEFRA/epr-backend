@@ -5,6 +5,7 @@ import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildOrganisation,
   buildRegistration
@@ -18,7 +19,10 @@ describe(`GET ${reportsGetPath}`, () => {
     `/v1/organisations/${orgId}/registrations/${regId}/reports/calendar`
 
   describe('when feature flag is enabled', () => {
-    const createServer = async (registrationOverrides = {}) => {
+    const createServer = async (
+      registrationOverrides = {},
+      reportsRepositoryFactory
+    ) => {
       const registration = buildRegistration(registrationOverrides)
       const org = buildOrganisation({
         registrations: [registration]
@@ -31,7 +35,10 @@ describe(`GET ${reportsGetPath}`, () => {
 
       const server = await createTestServer({
         repositories: {
-          organisationsRepository: organisationsRepositoryFactory
+          organisationsRepository: organisationsRepositoryFactory,
+          ...(reportsRepositoryFactory && {
+            reportsRepository: reportsRepositoryFactory
+          })
         },
         featureFlags: createInMemoryFeatureFlags({ reports: true })
       })
@@ -82,7 +89,7 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(payload.cadence).toBe('quarterly')
       })
 
-      it('returns reportingPeriods with dueDate and report fields', async () => {
+      it('returns reportingPeriods with dueDate', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
@@ -97,7 +104,6 @@ describe(`GET ${reportsGetPath}`, () => {
 
         for (const period of payload.reportingPeriods) {
           expect(period).toHaveProperty('dueDate')
-          expect(period).toHaveProperty('report', null)
         }
       })
 
@@ -141,7 +147,7 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(found).toBeUndefined()
       })
 
-      it('returns report as null for all periods', async () => {
+      it('omits report field when no persisted report exists', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
@@ -154,9 +160,9 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.reportingPeriods.every((p) => p.report === null)).toBe(
-          true
-        )
+        expect(
+          payload.reportingPeriods.every((p) => p.report === undefined)
+        ).toBe(true)
       })
     })
 
@@ -213,6 +219,127 @@ describe(`GET ${reportsGetPath}`, () => {
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
         expect(january.dueDate).toBe(`${currentYear}-02-20`)
+      })
+    })
+
+    describe('with persisted reports', () => {
+      it('includes report object for period with persisted report', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory
+        )
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${new Date().getUTCFullYear()}-01-01`,
+          endDate: `${new Date().getUTCFullYear()}-01-31`,
+          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'exporter'
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        const january = payload.reportingPeriods.find((p) => p.period === 1)
+        expect(january.report).toBeDefined()
+        expect(january.report.id).toBeDefined()
+        expect(january.report.status).toBe('in_progress')
+      })
+
+      it('handles deleted report (null currentReportId)', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory
+        )
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${new Date().getUTCFullYear()}-01-01`,
+          endDate: `${new Date().getUTCFullYear()}-01-31`,
+          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'exporter'
+        })
+
+        await reportsRepository.deleteReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' }
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        const january = payload.reportingPeriods.find((p) => p.period === 1)
+        expect(january.report).toBeUndefined()
+      })
+
+      it('omits report field for period without persisted report', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory
+        )
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${new Date().getUTCFullYear()}-01-01`,
+          endDate: `${new Date().getUTCFullYear()}-01-31`,
+          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'exporter'
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        const february = payload.reportingPeriods.find((p) => p.period === 2)
+        expect(february.report).toBeUndefined()
       })
     })
 

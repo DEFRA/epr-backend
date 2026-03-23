@@ -5,6 +5,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
+import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 
 export const reportsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/calendar'
@@ -23,7 +24,7 @@ export const reportsGet = {
     }
   },
   handler: async (request, h) => {
-    const { organisationsRepository, params } = request
+    const { organisationsRepository, reportsRepository, params } = request
     const { organisationId, registrationId } = params
 
     const registration = await organisationsRepository.findRegistrationById(
@@ -40,7 +41,34 @@ export const reportsGet = {
      * support once outstanding historical reports are submitted.
      */
     const currentYear = new Date().getUTCFullYear()
-    const reportingPeriods = generateReportingPeriods(cadence, currentYear)
+    const computedPeriods = generateReportingPeriods(cadence, currentYear)
+
+    const periodicReports = await reportsRepository.findPeriodicReports({
+      organisationId,
+      registrationId
+    })
+
+    const reportIds = periodicReports.flatMap((pr) =>
+      /* c8 ignore next -- pr.reports always exists from repository */
+      Object.values((pr.reports || {})[cadence] || {})
+        .map((slot) => slot.currentReportId)
+        .filter(Boolean)
+    )
+
+    const reportStatusMap = new Map()
+    await Promise.all(
+      reportIds.map(async (reportId) => {
+        const report = await reportsRepository.findReportById(reportId)
+        reportStatusMap.set(reportId, report.status)
+      })
+    )
+
+    const reportingPeriods = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      cadence,
+      reportStatusMap
+    )
 
     return h.response({ cadence, reportingPeriods }).code(StatusCodes.OK)
   }

@@ -30,7 +30,12 @@ export const reportsGetDetail = {
     }
   },
   handler: async (request, h) => {
-    const { organisationsRepository, wasteRecordsRepository, params } = request
+    const {
+      organisationsRepository,
+      wasteRecordsRepository,
+      reportsRepository,
+      params
+    } = request
     const { organisationId, registrationId, year, cadence, period } = params
 
     const registration = await organisationsRepository.findRegistrationById(
@@ -38,6 +43,31 @@ export const reportsGetDetail = {
       registrationId
     )
 
+    // Check for a stored report first
+    const periodicReports = await reportsRepository.findPeriodicReports({
+      organisationId,
+      registrationId
+    })
+
+    const periodicReport = periodicReports.find((pr) => pr.year === year)
+    const slot = periodicReport?.reports?.[cadence]?.[period]
+
+    if (slot?.currentReportId) {
+      const storedReport = await reportsRepository.findReportById(
+        slot.currentReportId
+      )
+      return h
+        .response({
+          ...storedReport,
+          details: {
+            material: registration.material,
+            site: registration.site
+          }
+        })
+        .code(StatusCodes.OK)
+    }
+
+    // No stored report — compute on the fly
     const operatorCategory = getOperatorCategory(registration)
 
     const wasteRecords = await wasteRecordsRepository.findByRegistration(

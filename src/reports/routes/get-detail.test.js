@@ -12,6 +12,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { reportsGetDetailPath } from './get-detail.js'
 
 describe(`GET ${reportsGetDetailPath}`, () => {
@@ -811,6 +812,97 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.sections.wasteExported.overseasSites).toStrictEqual([])
         expect(payload.sections.wasteSentOn.totalTonnage).toBe(0)
         expect(payload.sections.wasteSentOn.destinations).toStrictEqual([])
+      })
+    })
+
+    describe('stored report retrieval', () => {
+      const createServerWithReports = async (registrationOverrides = {}) => {
+        const registration = buildRegistration(registrationOverrides)
+        const org = buildOrganisation({ registrations: [registration] })
+
+        const organisationsRepositoryFactory =
+          createInMemoryOrganisationsRepository()
+        const organisationsRepository = organisationsRepositoryFactory()
+        await organisationsRepository.insert(org)
+
+        const wasteRecordsRepositoryFactory =
+          createInMemoryWasteRecordsRepository([])
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: organisationsRepositoryFactory,
+            wasteRecordsRepository: wasteRecordsRepositoryFactory,
+            reportsRepository: reportsRepositoryFactory
+          },
+          featureFlags: createInMemoryFeatureFlags({ reports: true })
+        })
+
+        return {
+          server,
+          organisationId: org.id,
+          registrationId: registration.id,
+          reportsRepositoryFactory
+        }
+      }
+
+      it('returns stored report when one exists', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepositoryFactory
+        } = await createServerWithReports({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: 2026,
+          cadence: 'quarterly',
+          period: 1,
+          startDate: '2026-01-01',
+          endDate: '2026-03-31',
+          dueDate: '2026-04-20',
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'reprocessor'
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.id).toBeDefined()
+        expect(payload.status).toBe('in_progress')
+        expect(payload.material).toBe('plastic')
+        expect(payload.details).toBeDefined()
+      })
+
+      it('returns computed data when no stored report exists', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReports({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.id).toBeUndefined()
+        expect(payload.sections).toBeDefined()
       })
     })
 
