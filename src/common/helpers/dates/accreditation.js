@@ -10,9 +10,6 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (!accreditation) {
     return true
   }
-  if (!accreditation.statusHistory) {
-    return false
-  }
   const { validFrom, validTo } = accreditation
   if (!validFrom || !validTo) {
     return false
@@ -21,7 +18,7 @@ export function isAccreditedAtDates(dates, accreditation) {
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, { validFrom, validTo }) &&
-      isAccreditationApprovedAtDate(date, sortedHistory)
+      !isSuspendedAtDate(date, sortedHistory)
   )
 }
 
@@ -53,17 +50,17 @@ export function isWithinAccreditationDateRange(date, accreditation) {
 }
 
 /**
- * Checks if an accreditation was approved at a given date by examining the
+ * Checks if an accreditation was suspended at a given date by examining the
  * status history. Finds the most recent status change on or before the date
- * and checks if it was 'approved'.
+ * and checks if it was 'suspended'.
  *
  * @param {string|Date} date - The date to check
  * @param {{ updatedAt: number; status: string; }[]} statusHistory - Accreditation status history in descending date order
- * @returns {boolean} True if the accreditation was approved at the given date
+ * @returns {boolean} True if the accreditation was suspended at the given date
  */
-export function isAccreditationApprovedAtDate(date, statusHistory) {
+export function isSuspendedAtDate(date, statusHistory) {
   return (
     statusHistory.find((entry) => entry.updatedAt <= new Date(date).getTime())
-      ?.status === 'approved'
+      ?.status === 'suspended'
   )
 }
