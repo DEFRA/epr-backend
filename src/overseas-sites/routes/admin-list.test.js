@@ -22,7 +22,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 
 const defineResponseAndAccessTests = ({ getServer }) => {
-  it('returns 200 and ORS mapping site fields', async () => {
+  it('returns 200 and all ticket fields for ORS mappings', async () => {
     const response = await getServer().inject({
       method: 'GET',
       url: adminOverseasSitesListPath,
@@ -35,6 +35,10 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     expect(body).toStrictEqual([
       {
         orsId: '001',
+        packagingWasteCategory: 'plastic',
+        orgId: expect.any(Number),
+        registrationNumber: null,
+        accreditationNumber: null,
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
@@ -47,6 +51,10 @@ const defineResponseAndAccessTests = ({ getServer }) => {
       },
       {
         orsId: '002',
+        packagingWasteCategory: 'plastic',
+        orgId: expect.any(Number),
+        registrationNumber: null,
+        accreditationNumber: null,
         destinationCountry: 'Germany',
         overseasReprocessorName: 'Beta Reprocessor',
         addressLine1: '2 Teststrasse',
@@ -180,7 +188,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
 }
 
 const defineAdditionalEdgeCaseTests = () => {
-  it('returns rows when registration references an accreditation id', async () => {
+  it('uses matched organisation accreditation when registration references an accreditation id', async () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
@@ -241,6 +249,10 @@ const defineAdditionalEdgeCaseTests = () => {
     expect(JSON.parse(response.payload)).toStrictEqual([
       {
         orsId: '003',
+        packagingWasteCategory: 'plastic',
+        orgId: 42,
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-002',
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
@@ -286,7 +298,7 @@ const defineAdditionalEdgeCaseTests = () => {
     expect(JSON.parse(response.payload)).toStrictEqual([])
   })
 
-  it('handles registrations with missing metadata fields', async () => {
+  it('uses null defaults when material and orgId are missing', async () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
@@ -338,6 +350,10 @@ const defineAdditionalEdgeCaseTests = () => {
     expect(JSON.parse(response.payload)).toStrictEqual([
       {
         orsId: '004',
+        packagingWasteCategory: null,
+        orgId: null,
+        registrationNumber: null,
+        accreditationNumber: null,
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
