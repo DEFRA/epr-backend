@@ -1,6 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
-import { MONTHLY } from '#reports/domain/cadence.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
@@ -44,7 +43,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
         reports: {
-          [MONTHLY.id]: {
+          monthly: {
             [DEFAULT_REPORT_PERIOD]: {
               currentReportId: reportId,
               previousReportIds: [],
@@ -76,7 +75,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
         reports: {
-          [MONTHLY.id]: {
+          monthly: {
             [MONTHLY_PERIODS.January]: {
               currentReportId: r1,
               previousReportIds: [],
@@ -115,7 +114,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
         reports: {
-          [MONTHLY.id]: {
+          monthly: {
             [MONTHLY_PERIODS.January]: {
               currentReportId: second,
               previousReportIds: [first],

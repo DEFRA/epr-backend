@@ -1,28 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { MONTHLY, QUARTERLY } from './cadence.js'
+import { CADENCE, MONTHS_PER_PERIOD } from './cadence.js'
 
-describe('cadence', () => {
-  it('MONTHLY has 1-month periods, 12 per year', () => {
-    expect(MONTHLY).toStrictEqual({
-      id: 'monthly',
-      monthsPerPeriod: 1,
-      periodsPerYear: 12
-    })
+describe('CADENCE', () => {
+  it('has monthly and quarterly values', () => {
+    expect(CADENCE.monthly).toBe('monthly')
+    expect(CADENCE.quarterly).toBe('quarterly')
   })
 
-  it('QUARTERLY has 3-month periods, 4 per year', () => {
-    expect(QUARTERLY).toStrictEqual({
-      id: 'quarterly',
-      monthsPerPeriod: 3,
-      periodsPerYear: 4
-    })
+  it('is frozen', () => {
+    expect(Object.isFrozen(CADENCE)).toBe(true)
+  })
+})
+
+describe('MONTHS_PER_PERIOD', () => {
+  it('monthly has 1 month per period', () => {
+    expect(MONTHS_PER_PERIOD.monthly).toBe(1)
   })
 
-  it('MONTHLY is frozen', () => {
-    expect(Object.isFrozen(MONTHLY)).toBe(true)
+  it('quarterly has 3 months per period', () => {
+    expect(MONTHS_PER_PERIOD.quarterly).toBe(3)
   })
 
-  it('QUARTERLY is frozen', () => {
-    expect(Object.isFrozen(QUARTERLY)).toBe(true)
+  it('is frozen', () => {
+    expect(Object.isFrozen(MONTHS_PER_PERIOD)).toBe(true)
+  })
+
+  it('has an entry for each cadence', () => {
+    for (const key of Object.values(CADENCE)) {
+      expect(MONTHS_PER_PERIOD[key]).toBeDefined()
+    }
   })
 })
