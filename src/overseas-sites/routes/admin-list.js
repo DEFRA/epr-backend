@@ -14,20 +14,6 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
 
-const getAccreditationNumber = (organisation, registration) => {
-  const matchedAccreditation =
-    organisation.accreditations?.find(
-      (accreditation) => accreditation.id === registration.accreditationId
-    ) ?? null
-
-  return (
-    registration.accreditation?.accreditationNumber ??
-    registration.accreditationNumber ??
-    matchedAccreditation?.accreditationNumber ??
-    null
-  )
-}
-
 const mapMappingToRow = (
   { organisation, registration, orsId, mapping },
   sitesById
@@ -38,11 +24,14 @@ const mapMappingToRow = (
   }
 
   return {
-    orsId,
-    packagingWasteCategory: registration.material ?? null,
     orgId: organisation.orgId ?? null,
     registrationNumber: registration.registrationNumber ?? null,
-    accreditationNumber: getAccreditationNumber(organisation, registration),
+    accreditationNumber:
+      registration.accreditation?.accreditationNumber ??
+      registration.accreditationNumber ??
+      null,
+    orsId,
+    packagingWasteCategory: registration.material ?? null,
     destinationCountry: site.country,
     overseasReprocessorName: site.name,
     addressLine1: site.address.line1,
@@ -56,7 +45,7 @@ const mapMappingToRow = (
 }
 
 /**
- * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationId?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>, accreditations?: Array<{id?: string, accreditationNumber?: string}>}>} organisations
+ * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>}>} organisations
  * @param {Map<string, OverseasSite>} sitesById
  */
 const buildRows = (organisations, sitesById) => {
@@ -104,7 +93,9 @@ export const adminOverseasSitesList = {
 
     try {
       const [organisations, sites] = await Promise.all([
-        organisationsRepository.findAll(),
+        organisationsRepository.findAllForOverseasSitesAdminList
+          ? organisationsRepository.findAllForOverseasSitesAdminList()
+          : organisationsRepository.findAll(),
         overseasSitesRepository.findAll()
       ])
 

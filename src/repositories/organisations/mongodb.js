@@ -185,6 +185,27 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const ORS_ADMIN_LIST_PROJECTION = {
+  orgId: 1,
+  'registrations.material': 1,
+  'registrations.registrationNumber': 1,
+  'registrations.accreditationNumber': 1,
+  'registrations.accreditation.accreditationNumber': 1,
+  'registrations.overseasSites': 1
+}
+
+const performFindAllForOverseasSitesAdminList = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({}, { projection: ORS_ADMIN_LIST_PROJECTION })
+    .toArray()
+
+  return docs.map(({ orgId, registrations }) => ({
+    orgId,
+    registrations
+  }))
+}
+
 const LINKED_ORG_PROJECTION = {
   orgId: 1,
   'companyDetails.name': 1,
@@ -363,6 +384,8 @@ export const createOrganisationsRepository = async (
       replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
+      findAllForOverseasSitesAdminList:
+        performFindAllForOverseasSitesAdminList(db),
       findAllLinked: performFindAllLinked(db),
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),

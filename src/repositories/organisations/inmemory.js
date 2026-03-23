@@ -150,6 +150,13 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
+const performFindAllForOverseasSitesAdminList = (staleCache) => async () => {
+  return structuredClone(staleCache).map(({ orgId, registrations }) => ({
+    orgId,
+    registrations
+  }))
+}
+
 const toLinkedOrganisationSummary = (org) => ({
   id: org._id.toString(),
   orgId: org.orgId,
@@ -376,6 +383,8 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       replaceRaw: replaceRawFn,
       findAll: performFindAll(staleCache),
+      findAllForOverseasSitesAdminList:
+        performFindAllForOverseasSitesAdminList(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,

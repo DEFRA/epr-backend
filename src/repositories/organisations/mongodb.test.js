@@ -147,4 +147,26 @@ describe('MongoDB organisations repository', () => {
       expect(rawDoc.accreditations[0].status).toBeUndefined()
     })
   })
+
+  describe('findAllForOverseasSitesAdminList', () => {
+    it('returns only fields required by the ORS admin list endpoint', async ({
+      organisationsRepository
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation()
+
+      await repository.insert(organisation)
+
+      const result = await repository.findAllForOverseasSitesAdminList()
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({
+        orgId: organisation.orgId,
+        registrations: expect.any(Array)
+      })
+      expect(result[0].companyDetails).toBeUndefined()
+      expect(result[0].statusHistory).toBeUndefined()
+      expect(result[0]._id).toBeUndefined()
+    })
+  })
 })

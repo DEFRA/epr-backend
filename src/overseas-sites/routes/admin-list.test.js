@@ -34,11 +34,11 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     const body = JSON.parse(response.payload)
     expect(body).toStrictEqual([
       {
-        orsId: '001',
-        packagingWasteCategory: 'plastic',
         orgId: expect.any(Number),
         registrationNumber: null,
         accreditationNumber: null,
+        orsId: '001',
+        packagingWasteCategory: 'plastic',
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
@@ -50,11 +50,11 @@ const defineResponseAndAccessTests = ({ getServer }) => {
         validFrom: '2025-04-01T00:00:00.000Z'
       },
       {
-        orsId: '002',
-        packagingWasteCategory: 'plastic',
         orgId: expect.any(Number),
         registrationNumber: null,
         accreditationNumber: null,
+        orsId: '002',
+        packagingWasteCategory: 'plastic',
         destinationCountry: 'Germany',
         overseasReprocessorName: 'Beta Reprocessor',
         addressLine1: '2 Teststrasse',
@@ -188,7 +188,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
 }
 
 const defineAdditionalEdgeCaseTests = () => {
-  it('uses matched organisation accreditation when registration references an accreditation id', async () => {
+  it('does not backfill accreditation number from organisation accreditations', async () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
         {
@@ -248,11 +248,11 @@ const defineAdditionalEdgeCaseTests = () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual([
       {
-        orsId: '003',
-        packagingWasteCategory: 'plastic',
         orgId: 42,
         registrationNumber: 'REG-123',
-        accreditationNumber: 'ACC-002',
+        accreditationNumber: null,
+        orsId: '003',
+        packagingWasteCategory: 'plastic',
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
@@ -349,11 +349,11 @@ const defineAdditionalEdgeCaseTests = () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual([
       {
-        orsId: '004',
-        packagingWasteCategory: null,
         orgId: null,
         registrationNumber: null,
         accreditationNumber: null,
+        orsId: '004',
+        packagingWasteCategory: null,
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
