@@ -1213,4 +1213,111 @@ describe('syncFromSummaryLog', () => {
     })
     expect(sentOn.data.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
   })
+
+  it('persists exporter registered-only received, exported, and sent-on rows as waste records', async () => {
+    const fileId = 'test-file-exporter-registered-only'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key-exporter-registered-only'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: {
+            sheet: 'Received (section 1)',
+            row: 7,
+            column: 'A'
+          },
+          headers: ['ROW_ID', 'MONTH_RECEIVED_FOR_EXPORT', 'NET_WEIGHT'],
+          rows: [{ rowNumber: 8, values: [1000, '2025-01-01', 10.5] }]
+        },
+        LOADS_EXPORTED: {
+          location: {
+            sheet: 'Exported (sections 2 and 3)',
+            row: 7,
+            column: 'A'
+          },
+          headers: [
+            'ROW_ID',
+            'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+            'DATE_OF_EXPORT'
+          ],
+          rows: [{ rowNumber: 8, values: [2000, 5.0, '2025-03-01'] }]
+        },
+        SENT_ON_LOADS: {
+          location: {
+            sheet: 'Sent on (section 4)',
+            row: 7,
+            column: 'A'
+          },
+          headers: [
+            'ROW_ID',
+            'DATE_LOAD_LEFT_SITE',
+            'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+          ],
+          rows: [{ rowNumber: 8, values: [4000, '2025-03-01', 3.0] }]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository
+    })
+
+    const result = await sync(summaryLog)
+
+    expect(result).toEqual({ created: 3, updated: 0 })
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords).toHaveLength(3)
+
+    const received = savedRecords.find(
+      (r) => r.type === WASTE_RECORD_TYPE.RECEIVED
+    )
+    expect(received).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 1000,
+      type: WASTE_RECORD_TYPE.RECEIVED
+    })
+    expect(received.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
+
+    const exported = savedRecords.find(
+      (r) => r.type === WASTE_RECORD_TYPE.EXPORTED
+    )
+    expect(exported).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 2000,
+      type: WASTE_RECORD_TYPE.EXPORTED
+    })
+    expect(exported.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
+
+    const sentOn = savedRecords.find(
+      (r) => r.type === WASTE_RECORD_TYPE.SENT_ON
+    )
+    expect(sentOn).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 4000,
+      type: WASTE_RECORD_TYPE.SENT_ON
+    })
+    expect(sentOn.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
+  })
 })
