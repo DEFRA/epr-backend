@@ -101,7 +101,7 @@ describe(`GET ${reportsGetPath}`, () => {
         }
       })
 
-      it('returns quarterly periods up to current quarter', async () => {
+      it('returns only ended quarterly periods', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
@@ -114,19 +114,13 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        const currentYear = new Date().getUTCFullYear()
         const currentQuarter = Math.floor(new Date().getUTCMonth() / 3) + 1
+        const endedQuarters = currentQuarter - 1
 
-        expect(payload.reportingPeriods).toHaveLength(currentQuarter)
-        expect(payload.reportingPeriods[0].year).toBe(currentYear)
-        expect(payload.reportingPeriods[0].period).toBe(1)
-        expect(payload.reportingPeriods[0].startDate).toBe(
-          `${currentYear}-01-01`
-        )
-        expect(payload.reportingPeriods[0].endDate).toBe(`${currentYear}-03-31`)
+        expect(payload.reportingPeriods).toHaveLength(endedQuarters)
       })
 
-      it('computes dueDate as 20th of month following period end', async () => {
+      it('does not include the current in-progress quarter', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: undefined
@@ -139,9 +133,12 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        const currentYear = new Date().getUTCFullYear()
-        const q1 = payload.reportingPeriods.find((p) => p.period === 1)
-        expect(q1.dueDate).toBe(`${currentYear}-04-20`)
+        const currentQuarter = Math.floor(new Date().getUTCMonth() / 3) + 1
+        const found = payload.reportingPeriods.find(
+          (p) => p.period === currentQuarter
+        )
+
+        expect(found).toBeUndefined()
       })
 
       it('returns report as null for all periods', async () => {
@@ -182,7 +179,7 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(payload.cadence).toBe('monthly')
       })
 
-      it('returns monthly periods up to and including current month', async () => {
+      it('returns only ended monthly periods', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
@@ -196,12 +193,9 @@ describe(`GET ${reportsGetPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         const currentMonth = new Date().getUTCMonth() + 1
-        expect(payload.reportingPeriods).toHaveLength(currentMonth)
-        expect(payload.reportingPeriods[0].year).toBe(currentYear)
-        expect(payload.reportingPeriods[0].period).toBe(1)
-        expect(payload.reportingPeriods[0].startDate).toBe(
-          `${currentYear}-01-01`
-        )
+        const endedMonths = currentMonth - 1
+
+        expect(payload.reportingPeriods).toHaveLength(endedMonths)
       })
 
       it('includes dueDate for each monthly period', async () => {

@@ -24,6 +24,7 @@ import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/up
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
 import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
@@ -112,6 +113,10 @@ const repositoryConfigs = [
   {
     name: 'packagingRecyclingNotesRepository',
     createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
+  },
+  {
+    name: 'reportsRepository',
+    createDefault: createInMemoryReportsRepositoryPlugin
   }
 ]
 

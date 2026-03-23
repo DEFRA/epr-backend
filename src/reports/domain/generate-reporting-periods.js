@@ -46,5 +46,9 @@ export function generateReportingPeriods(cadence, year, now = new Date()) {
     return { year, period, startDate, endDate, dueDate, report: null }
   })
 
-  return allPeriods.filter((p) => new Date(p.startDate) <= now)
+  return allPeriods.filter((p) => {
+    const dayAfterEnd = new Date(p.endDate)
+    dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
+    return dayAfterEnd <= now
+  })
 }
