@@ -15,27 +15,53 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
 
 /**
- * @param {Array<{registrations?: Array<{overseasSites?: Record<string, {overseasSiteId: string}>}>}>} organisations
+ * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationId?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>, accreditations?: Array<{id?: string, accreditationNumber?: string}>}>} organisations
  * @param {Map<string, OverseasSite>} sitesById
  */
 const buildRows = (organisations, sitesById) => {
-  const registrations = organisations.flatMap(
-    (organisation) => organisation.registrations ?? []
+  const registrationContexts = organisations.flatMap((organisation) =>
+    (organisation.registrations ?? []).map((registration) => ({
+      organisation,
+      registration
+    }))
   )
 
-  const mappings = registrations.flatMap((registration) =>
-    Object.entries(registration.overseasSites ?? {})
+  const mappings = registrationContexts.flatMap(
+    ({ organisation, registration }) =>
+      Object.entries(registration.overseasSites ?? {}).map(
+        ([orsId, mapping]) => ({
+          organisation,
+          registration,
+          orsId,
+          mapping
+        })
+      )
   )
 
   const rows = mappings
-    .map(([orsId, mapping]) => {
+    .map(({ organisation, registration, orsId, mapping }) => {
       const site = sitesById.get(mapping.overseasSiteId)
       if (!site) {
         return null
       }
 
+      const matchedAccreditation =
+        organisation.accreditations?.find(
+          (accreditation) => accreditation.id === registration.accreditationId
+        ) ?? null
+
+      const accreditationNumber =
+        registration.accreditation?.accreditationNumber ??
+        registration.accreditationNumber ??
+        matchedAccreditation?.accreditationNumber ??
+        null
+
       return {
         orsId,
+        packagingWasteCategory: registration.material ?? null,
+        orgId: organisation.orgId ?? null,
+        registrationNumber: registration.registrationNumber ?? null,
+        accreditationNumber,
         destinationCountry: site.country,
         overseasReprocessorName: site.name,
         addressLine1: site.address.line1,

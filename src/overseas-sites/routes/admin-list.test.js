@@ -35,6 +35,10 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     expect(body).toStrictEqual([
       {
         orsId: '001',
+        packagingWasteCategory: 'plastic',
+        orgId: expect.any(Number),
+        registrationNumber: null,
+        accreditationNumber: null,
         destinationCountry: 'France',
         overseasReprocessorName: 'Alpha Reprocessor',
         addressLine1: '1 Rue de Test',
@@ -47,6 +51,10 @@ const defineResponseAndAccessTests = ({ getServer }) => {
       },
       {
         orsId: '002',
+        packagingWasteCategory: 'plastic',
+        orgId: expect.any(Number),
+        registrationNumber: null,
+        accreditationNumber: null,
         destinationCountry: 'Germany',
         overseasReprocessorName: 'Beta Reprocessor',
         addressLine1: '2 Teststrasse',
@@ -180,6 +188,84 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
 }
 
 const defineAdditionalEdgeCaseTests = () => {
+  it('uses matched organisation accreditation when registration references an accreditation id', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          orgId: 42,
+          registrations: [
+            {
+              material: 'plastic',
+              registrationNumber: 'REG-123',
+              accreditationId: 'acc-2',
+              overseasSites: {
+                '003': { overseasSiteId: 'site-1' }
+              }
+            }
+          ],
+          accreditations: [
+            { id: 'acc-1', accreditationNumber: 'ACC-001' },
+            { id: 'acc-2', accreditationNumber: 'ACC-002' }
+          ]
+        }
+      ])
+    }
+
+    const overseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 'site-1',
+          country: 'France',
+          name: 'Alpha Reprocessor',
+          address: {
+            line1: '1 Rue de Test',
+            townOrCity: 'Paris'
+          },
+          coordinates: null,
+          validFrom: null
+        }
+      ])
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository,
+        overseasSitesRepository: () => overseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: adminOverseasSitesListPath,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual([
+      {
+        orsId: '003',
+        packagingWasteCategory: 'plastic',
+        orgId: 42,
+        registrationNumber: 'REG-123',
+        accreditationNumber: 'ACC-002',
+        destinationCountry: 'France',
+        overseasReprocessorName: 'Alpha Reprocessor',
+        addressLine1: '1 Rue de Test',
+        addressLine2: null,
+        cityOrTown: 'Paris',
+        stateProvinceOrRegion: null,
+        postcode: null,
+        coordinates: null,
+        validFrom: null
+      }
+    ])
+  })
+
   it('handles registrations with missing overseasSites mappings', async () => {
     const malformedOrganisationsRepository = {
       findAll: vi
@@ -210,6 +296,75 @@ const defineAdditionalEdgeCaseTests = () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual([])
+  })
+
+  it('uses null defaults when material and orgId are missing', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          registrations: [
+            {
+              overseasSites: {
+                '004': { overseasSiteId: 'site-1' }
+              }
+            }
+          ],
+          accreditations: []
+        }
+      ])
+    }
+
+    const overseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 'site-1',
+          country: 'France',
+          name: 'Alpha Reprocessor',
+          address: {
+            line1: '1 Rue de Test',
+            townOrCity: 'Paris'
+          }
+        }
+      ])
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository,
+        overseasSitesRepository: () => overseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: adminOverseasSitesListPath,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual([
+      {
+        orsId: '004',
+        packagingWasteCategory: null,
+        orgId: null,
+        registrationNumber: null,
+        accreditationNumber: null,
+        destinationCountry: 'France',
+        overseasReprocessorName: 'Alpha Reprocessor',
+        addressLine1: '1 Rue de Test',
+        addressLine2: null,
+        cityOrTown: 'Paris',
+        stateProvinceOrRegion: null,
+        postcode: null,
+        coordinates: null,
+        validFrom: null
+      }
+    ])
   })
 
   it('handles repository rows without a registrations property', async () => {
