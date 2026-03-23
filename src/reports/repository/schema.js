@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { MONTHLY, QUARTERLY } from '#reports/domain/cadence.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
@@ -17,7 +17,7 @@ const MONGO_ID_LENGTH = 24
 const MONGO_ID_SCHEMA = Joi.string().hex().length(MONGO_ID_LENGTH).required()
 
 export const cadenceSchema = Joi.string()
-  .valid(MONTHLY.id, QUARTERLY.id)
+  .valid(...Object.values(CADENCE))
   .required()
 
 const PERIOD_END = 12

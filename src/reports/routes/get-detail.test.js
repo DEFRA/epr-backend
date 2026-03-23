@@ -17,8 +17,8 @@ import { reportsGetDetailPath } from './get-detail.js'
 describe(`GET ${reportsGetDetailPath}`, () => {
   setupAuthContext()
 
-  const makeUrl = (orgId, regId, year, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${period}`
+  const makeUrl = (orgId, regId, year, cadence, period) =>
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
 
   describe('when feature flag is enabled', () => {
     const createServer = async (
@@ -61,10 +61,17 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       }
     }
 
-    const makeRequest = (server, orgId, regId, year = 2026, period = 1) =>
+    const makeRequest = (
+      server,
+      orgId,
+      regId,
+      year = 2026,
+      cadence = 'quarterly',
+      period = 1
+    ) =>
       server.inject({
         method: 'GET',
-        url: makeUrl(orgId, regId, year, period),
+        url: makeUrl(orgId, regId, year, cadence, period),
         ...asStandardUser({ linkedOrgId: orgId })
       })
 
@@ -95,6 +102,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'quarterly',
           1
         )
         const payload = JSON.parse(response.payload)
@@ -241,6 +249,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'quarterly',
           1
         )
         const payload = JSON.parse(response.payload)
@@ -313,6 +322,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const payload = JSON.parse(response.payload)
@@ -385,6 +395,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const payload = JSON.parse(response.payload)
@@ -421,6 +432,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'quarterly',
           1
         )
         const payload = JSON.parse(response.payload)
@@ -577,6 +589,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'quarterly',
           1
         )
         const payload = JSON.parse(response.payload)
@@ -620,6 +633,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const payload = JSON.parse(response.payload)
@@ -668,6 +682,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const payload = JSON.parse(response.payload)
@@ -711,6 +726,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const payload = JSON.parse(response.payload)
@@ -750,6 +766,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           1
         )
         const january = JSON.parse(januaryResponse.payload)
@@ -762,6 +779,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const february = JSON.parse(februaryResponse.payload)
@@ -781,6 +799,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          'monthly',
           2
         )
         const payload = JSON.parse(response.payload)
@@ -815,7 +834,28 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: makeUrl(organisationId, registrationId, 'invalid', 1),
+          url: makeUrl(
+            organisationId,
+            registrationId,
+            'invalid',
+            'quarterly',
+            1
+          ),
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 for invalid cadence', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: makeUrl(organisationId, registrationId, 2026, 'biweekly', 1),
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -830,7 +870,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: makeUrl(organisationId, registrationId, 2026, 13),
+          url: makeUrl(organisationId, registrationId, 2026, 'quarterly', 13),
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -851,7 +891,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: makeUrl(organisationId, registrationId, 2026, 1),
+        url: makeUrl(organisationId, registrationId, 2026, 'quarterly', 1),
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 

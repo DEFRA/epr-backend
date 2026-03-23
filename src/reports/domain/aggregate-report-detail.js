@@ -1,4 +1,5 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
+import { MONTHS_PER_PERIOD } from './cadence.js'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
@@ -12,7 +13,7 @@ import {
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @param {object} options
  * @param {string} options.operatorCategory
- * @param {import('./cadence.js').MONTHLY | import('./cadence.js').QUARTERLY} options.cadence
+ * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
  */
@@ -20,10 +21,16 @@ export function aggregateReportDetail(
   wasteRecords,
   { operatorCategory, cadence, year, period }
 ) {
-  const startMonth = (period - 1) * cadence.monthsPerPeriod
+  const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
+
+  if (!monthsPerPeriod) {
+    throw new TypeError(`Unknown cadence: ${cadence}`)
+  }
+
+  const startMonth = (period - 1) * monthsPerPeriod
 
   const startDate = formatDateISO(year, startMonth, 1)
-  const endDate = formatDateISO(year, startMonth + cadence.monthsPerPeriod, 0)
+  const endDate = formatDateISO(year, startMonth + monthsPerPeriod, 0)
 
   const sectionDateFields =
     SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
@@ -67,7 +74,7 @@ export function aggregateReportDetail(
 
   return {
     operatorCategory,
-    cadence: cadence.id,
+    cadence,
     year,
     period,
     startDate,

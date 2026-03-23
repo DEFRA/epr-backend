@@ -6,6 +6,7 @@ import { testFindLatestSubmittedForOrgReg } from './contract/find-latest-submitt
 import { testTransitionToSubmittingExclusive } from './contract/transition-to-submitting-exclusive.contract.js'
 import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
+import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -17,5 +18,6 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testTransitionToSubmittingExclusive(repositoryFactory)
     testExpiresAtBehaviour(repositoryFactory)
     testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
+    testGetDownloadUrlBehaviour(repositoryFactory)
   })
 }
