@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { MONTHLY } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -18,7 +17,7 @@ const buildDeleteParams = (overrides = {}) => ({
   organisationId: DEFAULT_ORG_ID,
   registrationId: DEFAULT_REG_ID,
   year: DEFAULT_REPORT_YEAR,
-  cadence: MONTHLY.id,
+  cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,
   changedBy: { id: 'user-3', name: 'Carol', position: 'Admin' },
   ...overrides
@@ -36,7 +35,7 @@ export const testDeleteReportBehaviour = (it) => {
       const changedBy = buildDeleteParams().changedBy
       const reportId = await repository.createReport(
         buildCreateReportParams({
-          cadence: MONTHLY.id,
+          cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD
         })
       )
@@ -69,7 +68,7 @@ export const testDeleteReportBehaviour = (it) => {
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID
       })
-      const slot = periodicReport.reports[MONTHLY.id][DEFAULT_REPORT_PERIOD]
+      const slot = periodicReport.reports.monthly[DEFAULT_REPORT_PERIOD]
       expect(slot).toEqual({
         currentReportId: null,
         previousReportIds: [reportId],
@@ -82,7 +81,7 @@ export const testDeleteReportBehaviour = (it) => {
     it('throws notFound on second delete', async () => {
       await repository.createReport(
         buildCreateReportParams({
-          cadence: MONTHLY.id,
+          cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD
         })
       )
@@ -97,7 +96,7 @@ export const testDeleteReportBehaviour = (it) => {
     it('throws not found when non existing report', async () => {
       await repository.createReport(
         buildCreateReportParams({
-          cadence: MONTHLY.id,
+          cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD
         })
       )
