@@ -76,6 +76,23 @@ export const createYesNoFieldSchema = () =>
   })
 
 /**
+ * Creates a first-of-month date string schema (YYYY-MM-01)
+ *
+ * Used for registered-only templates where monthly granularity replaces daily dates.
+ * Excel stores the dropdown value as a first-of-month date string.
+ *
+ * @returns {Joi.StringSchema} Joi string schema
+ */
+export const createFirstOfMonthFieldSchema = () =>
+  Joi.string()
+    .pattern(/^\d{4}-(0[1-9]|1[0-2])-01$/)
+    .optional()
+    .messages({
+      'string.base': MESSAGES.MUST_BE_A_STRING,
+      'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)'
+    })
+
+/**
  * Creates a date field schema (2000-01-01 to 2100-01-01)
  *
  * @returns {Joi.DateSchema} Joi date schema

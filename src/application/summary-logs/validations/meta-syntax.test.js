@@ -359,6 +359,41 @@ describe('validateMetaSyntax', () => {
 
       expect(result.isValid()).toBe(false)
     })
+
+    it('rejects EXPORTER_REGISTERED_ONLY when feature flag is disabled', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: { isRegisteredOnlyEnabled: () => false }
+      })
+
+      expect(result.isValid()).toBe(false)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('PROCESSING_TYPE')
+      expect(fatals[0].message).toContain('must be one of')
+      expect(fatals[0].message).not.toContain('EXPORTER_REGISTERED_ONLY')
+    })
+
+    it('rejects EXPORTER_REGISTERED_ONLY when no feature flags provided', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(false)
+    })
     // END: registered-only feature flag
 
     it('accepts REPROCESSOR_REGISTERED_ONLY', () => {
@@ -378,7 +413,7 @@ describe('validateMetaSyntax', () => {
       expect(result.isValid()).toBe(true)
     })
 
-    it('accepts TEMPLATE_VERSION >= 2.1 for registered-only', () => {
+    it('accepts TEMPLATE_VERSION >= 2.1 for registered-only reprocessor', () => {
       const parsed = {
         meta: {
           ...createValidMeta(),
@@ -395,11 +430,68 @@ describe('validateMetaSyntax', () => {
       expect(result.isValid()).toBe(true)
     })
 
-    it('rejects TEMPLATE_VERSION < 2.1 for registered-only', () => {
+    it('rejects TEMPLATE_VERSION < 2.1 for registered-only reprocessor', () => {
       const parsed = {
         meta: {
           ...createValidMeta(),
           PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2 }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('TEMPLATE_VERSION')
+      expect(fatals[0].message).toContain('at least 2.1')
+    })
+
+    it('accepts EXPORTER_REGISTERED_ONLY', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2.1 }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('accepts TEMPLATE_VERSION >= 2.1 for registered-only exporter', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' },
+          TEMPLATE_VERSION: { value: 2.1 }
+        }
+      }
+
+      const result = validateMetaSyntax({
+        parsed,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+
+    it('rejects TEMPLATE_VERSION < 2.1 for registered-only exporter', () => {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' },
           TEMPLATE_VERSION: { value: 2 }
         }
       }

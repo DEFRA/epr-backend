@@ -1,6 +1,10 @@
 import Joi from 'joi'
-import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
-
+import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import {
+  createRowIdSchema,
+  createUnboundedWeightFieldSchema,
+  createDateFieldSchema
+} from '../shared/index.js'
 const ALL_FIELDS = Object.values(FIELDS)
 
 /**
@@ -25,11 +29,15 @@ export const SENT_ON_LOADS = {
 
   /**
    * VAL010: Validation schema for filled fields
-   *
-   * Placeholder — accepts anything for now. Field-level validation
-   * to be added when business rules are confirmed.
    */
-  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
+  validationSchema: Joi.object({
+    [FIELDS.ROW_ID]: createRowIdSchema(ROW_ID_MINIMUMS.SENT_ON_LOADS),
+    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
+    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
+      createUnboundedWeightFieldSchema()
+  })
+    .unknown(true)
+    .prefs({ abortEarly: false }),
 
   /**
    * VAL011: Fields required for Waste Balance calculation
