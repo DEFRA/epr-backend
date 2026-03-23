@@ -438,10 +438,10 @@ describe('accreditation date helpers', () => {
     })
 
     it('should include loads before approval date when within validFrom/validTo', () => {
-      // Stacey Processing: approved on 30th Jan, validFrom 1st Jan.
+      // Approved on 30th Jan, validFrom 1st Jan.
       // Loads between 1st-30th Jan must be included — approval is
       // determined by validFrom/validTo, not the status history date.
-      const staceyAccreditation = /** @type {Accreditation} */ ({
+      const lateApprovalAccreditation = /** @type {Accreditation} */ ({
         validFrom: '2025-01-01T00:00:00.000Z',
         validTo: '2025-12-31T23:59:59.999Z',
         statusHistory: [
@@ -459,7 +459,7 @@ describe('accreditation date helpers', () => {
       expect(
         isAccreditedAtDates(
           ['2025-01-10T00:00:00.000Z', '2025-01-20T00:00:00.000Z'],
-          staceyAccreditation
+          lateApprovalAccreditation
         )
       ).toBe(true)
     })
