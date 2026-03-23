@@ -1,16 +1,17 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import Joi from 'joi'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-import { cadenceSchema, periodSchema } from '#reports/repository/schema.js'
+import {
+  periodParamsSchema,
+  standardUserAuth,
+  withRegistrationDetails,
+  findCurrentReportId,
+  extractChangedBy
+} from './shared.js'
 
-const MIN_YEAR = 2024
-const MAX_YEAR = 2100
 const FAR_FUTURE = new Date('2099-12-31')
 
 /**
@@ -20,6 +21,16 @@ const FAR_FUTURE = new Date('2099-12-31')
  * @param {object} registration
  * @returns {string}
  */
+function resolveTonnageMaterial(registration) {
+  if (
+    registration.material === 'glass' &&
+    registration.glassRecyclingProcess?.length > 0
+  ) {
+    return registration.glassRecyclingProcess[0]
+  }
+  return registration.material
+}
+
 /**
  * Formats a site address object into a single-line string.
  * @param {object|undefined} address
@@ -32,16 +43,6 @@ function formatSiteAddress(address) {
     .join(', ')
 }
 
-function resolveTonnageMaterial(registration) {
-  if (
-    registration.material === 'glass' &&
-    registration.glassRecyclingProcess?.length > 0
-  ) {
-    return registration.glassRecyclingProcess[0]
-  }
-  return registration.material
-}
-
 export const reportsPostPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
 
@@ -49,16 +50,10 @@ export const reportsPost = {
   method: 'POST',
   path: reportsPostPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: standardUserAuth,
     tags: ['api'],
     validate: {
-      params: Joi.object({
-        organisationId: Joi.string().required(),
-        registrationId: Joi.string().required(),
-        year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required(),
-        cadence: cadenceSchema,
-        period: periodSchema
-      })
+      params: periodParamsSchema
     }
   },
   handler: async (request, h) => {
@@ -100,10 +95,7 @@ export const reportsPost = {
       registrationId
     })
 
-    const periodicReport = periodicReports.find((pr) => pr.year === year)
-    const slot = periodicReport?.reports?.[cadence]?.[period]
-
-    if (slot?.currentReportId) {
+    if (findCurrentReportId(periodicReports, year, cadence, period)) {
       throw Boom.conflict(
         `Report already exists for ${cadence} period ${period} of ${year}`
       )
@@ -123,11 +115,7 @@ export const reportsPost = {
       period
     })
 
-    const changedBy = {
-      id: request.auth.credentials.id,
-      name: request.auth.credentials.name ?? request.auth.credentials.email,
-      position: request.auth.credentials.position ?? 'User'
-    }
+    const changedBy = extractChangedBy(request.auth.credentials)
 
     // Persist the report
     const reportId = await reportsRepository.createReport({
@@ -169,13 +157,7 @@ export const reportsPost = {
     const createdReport = await reportsRepository.findReportById(reportId)
 
     return h
-      .response({
-        ...createdReport,
-        details: {
-          material: registration.material,
-          site: registration.site
-        }
-      })
+      .response(withRegistrationDetails(createdReport, registration))
       .code(StatusCodes.CREATED)
   }
 }

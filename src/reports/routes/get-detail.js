@@ -1,32 +1,25 @@
 import { StatusCodes } from 'http-status-codes'
-import Joi from 'joi'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
-import { cadenceSchema, periodSchema } from '#reports/repository/schema.js'
+import {
+  periodParamsSchema,
+  standardUserAuth,
+  withRegistrationDetails,
+  findCurrentReportId
+} from './shared.js'
 
 export const reportsGetDetailPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
-
-const MIN_YEAR = 2024
-const MAX_YEAR = 2100
 
 export const reportsGetDetail = {
   method: 'GET',
   path: reportsGetDetailPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: standardUserAuth,
     tags: ['api'],
     validate: {
-      params: Joi.object({
-        organisationId: Joi.string().required(),
-        registrationId: Joi.string().required(),
-        year: Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR).required(),
-        cadence: cadenceSchema,
-        period: periodSchema
-      })
+      params: periodParamsSchema
     }
   },
   handler: async (request, h) => {
@@ -49,21 +42,18 @@ export const reportsGetDetail = {
       registrationId
     })
 
-    const periodicReport = periodicReports.find((pr) => pr.year === year)
-    const slot = periodicReport?.reports?.[cadence]?.[period]
+    const currentReportId = findCurrentReportId(
+      periodicReports,
+      year,
+      cadence,
+      period
+    )
 
-    if (slot?.currentReportId) {
-      const storedReport = await reportsRepository.findReportById(
-        slot.currentReportId
-      )
+    if (currentReportId) {
+      const storedReport =
+        await reportsRepository.findReportById(currentReportId)
       return h
-        .response({
-          ...storedReport,
-          details: {
-            material: registration.material,
-            site: registration.site
-          }
-        })
+        .response(withRegistrationDetails(storedReport, registration))
         .code(StatusCodes.OK)
     }
 
@@ -83,13 +73,7 @@ export const reportsGetDetail = {
     })
 
     return h
-      .response({
-        ...report,
-        details: {
-          material: registration.material,
-          site: registration.site
-        }
-      })
+      .response(withRegistrationDetails(report, registration))
       .code(StatusCodes.OK)
   }
 }
