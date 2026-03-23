@@ -265,6 +265,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
+    expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(importId)
   })
 
   it('returns 404 when import does not exist', async () => {
