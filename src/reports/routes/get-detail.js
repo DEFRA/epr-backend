@@ -1,10 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
+import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import {
-  getOperatorCategory,
-  OPERATOR_CATEGORY
-} from '#reports/domain/operator-category.js'
+import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { findReportForPeriod } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
@@ -14,27 +12,6 @@ import {
 
 export const reportsGetDetailPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
-
-async function getPrnData(
-  isAccredited,
-  packagingRecyclingNotesRepository,
-  organisationId,
-  registrationId,
-  report
-) {
-  return isAccredited
-    ? {
-        issuedTonnage:
-          await packagingRecyclingNotesRepository.getTotalIssuedTonnage({
-            organisationId,
-            registrationId,
-            statuses: [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED],
-            startDate: new Date(report.startDate),
-            endDate: new Date(report.endDate + 'T23:59:59.999Z')
-          })
-      }
-    : undefined
-}
 
 export const reportsGetDetail = {
   method: 'GET',
@@ -62,9 +39,6 @@ export const reportsGetDetail = {
     )
 
     const operatorCategory = getOperatorCategory(registration)
-    const isAccredited =
-      operatorCategory === OPERATOR_CATEGORY.EXPORTER ||
-      operatorCategory === OPERATOR_CATEGORY.REPROCESSOR
 
     const { report } = await findReportForPeriod({
       reportsRepository,
@@ -77,13 +51,12 @@ export const reportsGetDetail = {
       period
     })
 
-    const prnData = await getPrnData(
-      isAccredited,
-      packagingRecyclingNotesRepository,
-      organisationId,
-      registrationId,
-      report
-    )
+    const prnData = await getIssuedTonnage(packagingRecyclingNotesRepository, {
+      accreditationId: registration.accreditationId,
+      statuses: [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED],
+      startDate: report.startDate,
+      endDate: report.endDate
+    })
 
     return h
       .response({ ...withRegistrationDetails(report, registration), prnData })

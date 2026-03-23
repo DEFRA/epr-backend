@@ -17,6 +17,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { reportsGetDetailPath } from './get-detail.js'
+import { CADENCE } from '#root/reports/domain/cadence.js'
 
 describe(`GET ${reportsGetDetailPath}`, () => {
   setupAuthContext()
@@ -1014,6 +1015,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationId,
           registrationId,
           2026,
+          CADENCE.monthly,
           2
         )
         const payload = JSON.parse(response.payload)
@@ -1038,12 +1040,14 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
         const buildIssuedPrn = (tonnage) =>
           buildPrn({
-            organisation: {
-              id: org.id,
-              name: 'Test Organisation',
-              tradingName: 'Test Trading'
+            accreditation: {
+              id: registration.accreditationId,
+              accreditationNumber: 'ACC-001',
+              accreditationYear: 2026,
+              material: 'plastic',
+              submittedToRegulator: 'ea',
+              siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
             },
-            registrationId: registration.id,
             tonnage,
             status: {
               currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -1076,7 +1080,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: makeUrl(org.id, registration.id, 2026, 2),
+          url: makeUrl(org.id, registration.id, 2026, CADENCE.monthly, 2),
           ...asStandardUser({ linkedOrgId: org.id })
         })
         const payload = JSON.parse(response.payload)
