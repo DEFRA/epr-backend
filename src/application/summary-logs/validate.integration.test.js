@@ -661,4 +661,59 @@ describe('SummaryLogsValidator integration', () => {
       expect(wasteRecords).toEqual([])
     })
   })
+
+  describe('registered-only exporter', () => {
+    const registeredOnlyMetadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-EXP-789',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'EXPORTER_REGISTERED_ONLY',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 2.1,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      }
+    }
+
+    // START: registered-only feature flag — delete this block when flag is removed
+    const registeredOnlyFeatureFlags = {
+      isRegisteredOnlyEnabled: () => true
+    }
+
+    it('should reject with feature flag disabled', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-EXP-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: { isRegisteredOnlyEnabled: () => false }
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
+        ])
+      )
+    })
+    // END: registered-only feature flag
+
+    it('should validate successfully', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-EXP-789',
+        metadata: registeredOnlyMetadata,
+        featureFlags: registeredOnlyFeatureFlags
+      })
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+  })
 })

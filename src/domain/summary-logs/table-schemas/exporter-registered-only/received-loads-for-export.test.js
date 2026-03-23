@@ -94,6 +94,18 @@ describe('RECEIVED_LOADS_FOR_EXPORT (EXPORTER_REGISTERED_ONLY)', () => {
         expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual([])
       })
     })
+
+    it('treats HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION as unfilled dropdown', () => {
+      expect(
+        schema.unfilledValues.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+      ).toContain('Choose option')
+    })
+
+    it('treats MONTH_RECEIVED_FOR_EXPORT as unfilled dropdown', () => {
+      expect(schema.unfilledValues.MONTH_RECEIVED_FOR_EXPORT).toContain(
+        'Choose option'
+      )
+    })
   })
 
   describe('validationSchema (VAL010)', () => {
@@ -107,6 +119,86 @@ describe('RECEIVED_LOADS_FOR_EXPORT (EXPORTER_REGISTERED_ONLY)', () => {
     it('accepts unknown fields', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
       expect(error).toBeUndefined()
+    })
+
+    it('validates ROW_ID as integer >= 1000', () => {
+      const valid = validationSchema.validate({ ROW_ID: 1000 })
+      expect(valid.error).toBeUndefined()
+
+      const tooLow = validationSchema.validate({ ROW_ID: 999 })
+      expect(tooLow.error).toBeDefined()
+
+      const notInteger = validationSchema.validate({ ROW_ID: 1000.5 })
+      expect(notInteger.error).toBeDefined()
+    })
+
+    it('validates MONTH_RECEIVED_FOR_EXPORT as first-of-month date string', () => {
+      const valid = validationSchema.validate({
+        MONTH_RECEIVED_FOR_EXPORT: '2025-01-01'
+      })
+      expect(valid.error).toBeUndefined()
+
+      const midMonth = validationSchema.validate({
+        MONTH_RECEIVED_FOR_EXPORT: '2025-01-15'
+      })
+      expect(midMonth.error).toBeDefined()
+
+      const notADate = validationSchema.validate({
+        MONTH_RECEIVED_FOR_EXPORT: 'January'
+      })
+      expect(notADate.error).toBeDefined()
+    })
+
+    it('validates NET_WEIGHT as number >= 0 with no upper bound', () => {
+      const valid = validationSchema.validate({ NET_WEIGHT: 10.5 })
+      expect(valid.error).toBeUndefined()
+
+      const negative = validationSchema.validate({ NET_WEIGHT: -1 })
+      expect(negative.error).toBeDefined()
+
+      const large = validationSchema.validate({ NET_WEIGHT: 50000 })
+      expect(large.error).toBeUndefined()
+    })
+
+    it('validates HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION as enum', () => {
+      const valid = validationSchema.validate({
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)'
+      })
+      expect(valid.error).toBeUndefined()
+
+      const invalid = validationSchema.validate({
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Made it up'
+      })
+      expect(invalid.error).toBeDefined()
+    })
+
+    it('validates RECYCLABLE_PROPORTION_PERCENTAGE as number between 0 and 1', () => {
+      const valid = validationSchema.validate({
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.95
+      })
+      expect(valid.error).toBeUndefined()
+
+      const tooHigh = validationSchema.validate({
+        RECYCLABLE_PROPORTION_PERCENTAGE: 1.5
+      })
+      expect(tooHigh.error).toBeDefined()
+    })
+
+    it('validates TONNAGE_RECEIVED_FOR_EXPORT as number >= 0 with no upper bound', () => {
+      const valid = validationSchema.validate({
+        TONNAGE_RECEIVED_FOR_EXPORT: 9.975
+      })
+      expect(valid.error).toBeUndefined()
+
+      const negative = validationSchema.validate({
+        TONNAGE_RECEIVED_FOR_EXPORT: -1
+      })
+      expect(negative.error).toBeDefined()
+
+      const large = validationSchema.validate({
+        TONNAGE_RECEIVED_FOR_EXPORT: 50000
+      })
+      expect(large.error).toBeUndefined()
     })
   })
 })
