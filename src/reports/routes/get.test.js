@@ -160,9 +160,9 @@ describe(`GET ${reportsGetPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(
-          payload.reportingPeriods.every((p) => p.report === undefined)
-        ).toBe(true)
+        expect(payload.reportingPeriods.every((p) => p.report === null)).toBe(
+          true
+        )
       })
     })
 
@@ -303,10 +303,10 @@ describe(`GET ${reportsGetPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
-        expect(january.report).toBeUndefined()
+        expect(january.report).toBeNull()
       })
 
-      it('omits report field for period without persisted report', async () => {
+      it('returns report as null for period without persisted report', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
         const { server, organisationId, registrationId } = await createServer(
           {
@@ -339,7 +339,7 @@ describe(`GET ${reportsGetPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         const february = payload.reportingPeriods.find((p) => p.period === 2)
-        expect(february.report).toBeUndefined()
+        expect(february.report).toBeNull()
       })
     })
 

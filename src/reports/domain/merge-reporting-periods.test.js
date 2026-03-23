@@ -25,8 +25,8 @@ describe('mergeReportingPeriods', () => {
     const result = mergeReportingPeriods(computedPeriods, [], 'monthly')
 
     expect(result).toHaveLength(2)
-    expect(result[0].report).toBeUndefined()
-    expect(result[1].report).toBeUndefined()
+    expect(result[0].report).toBeNull()
+    expect(result[1].report).toBeNull()
   })
 
   it('merges persisted report into matching period', () => {
@@ -62,10 +62,10 @@ describe('mergeReportingPeriods', () => {
       id: 'report-uuid-1',
       status: 'in_progress'
     })
-    expect(result[1].report).toBeUndefined()
+    expect(result[1].report).toBeNull()
   })
 
-  it('excludes report field when currentReportId is null (deleted)', () => {
+  it('sets report to null when currentReportId is null (deleted)', () => {
     const periodicReports = [
       {
         organisationId: 'org-1',
@@ -93,7 +93,7 @@ describe('mergeReportingPeriods', () => {
       new Map()
     )
 
-    expect(result[0].report).toBeUndefined()
+    expect(result[0].report).toBeNull()
   })
 
   it('includes persisted periods not in computed set', () => {
@@ -191,7 +191,7 @@ describe('mergeReportingPeriods', () => {
     )
 
     expect(result).toHaveLength(2)
-    expect(result[0].report).toBeUndefined()
+    expect(result[0].report).toBeNull()
   })
 
   it('defaults status to in_progress when reportStatusMap has no entry', () => {

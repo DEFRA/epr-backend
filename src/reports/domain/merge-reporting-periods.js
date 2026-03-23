@@ -7,7 +7,7 @@
  *
  * For each period:
  * - If a persisted report exists with a non-null currentReportId, include report: { id, status }
- * - If no persisted report or currentReportId is null, omit the report field
+ * - If no persisted report or currentReportId is null, set report: null
  * - Periods with persisted reports that aren't in the computed set are included
  *   (e.g. waste records deleted but report still exists)
  *
@@ -15,7 +15,7 @@
  * @param {import('../repository/port.js').PeriodicReport[]} periodicReports
  * @param {string} cadence
  * @param {Map<string, string>} reportStatusMap - Maps reportId to status
- * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report?: {id: string, status: string}}>}
+ * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: {id: string, status: string} | null}>}
  */
 export function mergeReportingPeriods(
   computedPeriods,
@@ -45,22 +45,19 @@ export function mergeReportingPeriods(
     const key = `${cp.year}:${cp.period}`
     const slot = persistedSlots.get(key)
 
-    const entry = {
+    merged.set(key, {
       year: cp.year,
       period: cp.period,
       startDate: cp.startDate,
       endDate: cp.endDate,
-      dueDate: cp.dueDate
-    }
-
-    if (slot?.currentReportId) {
-      entry.report = {
-        id: slot.currentReportId,
-        status: reportStatusMap.get(slot.currentReportId) ?? 'in_progress'
-      }
-    }
-
-    merged.set(key, entry)
+      dueDate: cp.dueDate,
+      report: slot?.currentReportId
+        ? {
+            id: slot.currentReportId,
+            status: reportStatusMap.get(slot.currentReportId) ?? 'in_progress'
+          }
+        : null
+    })
   }
 
   for (const [key, slot] of persistedSlots) {
