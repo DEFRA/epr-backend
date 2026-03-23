@@ -21,6 +21,11 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 
+const TEST_REPROCESSOR_NAME = 'Alpha Reprocessor'
+const TEST_ADDRESS_LINE1 = '1 Rue de Test'
+const TEST_ORS_ID_ONE = '001'
+const TEST_PLASTIC_CATEGORY = 'plastic'
+
 const defineResponseAndAccessTests = ({ getServer }) => {
   it('returns 200 and all ticket fields for ORS mappings', async () => {
     const response = await getServer().inject({
@@ -37,11 +42,11 @@ const defineResponseAndAccessTests = ({ getServer }) => {
         orgId: expect.any(Number),
         registrationNumber: null,
         accreditationNumber: null,
-        orsId: '001',
-        packagingWasteCategory: 'plastic',
+        orsId: TEST_ORS_ID_ONE,
+        packagingWasteCategory: TEST_PLASTIC_CATEGORY,
         destinationCountry: 'France',
-        overseasReprocessorName: 'Alpha Reprocessor',
-        addressLine1: '1 Rue de Test',
+        overseasReprocessorName: TEST_REPROCESSOR_NAME,
+        addressLine1: TEST_ADDRESS_LINE1,
         addressLine2: 'Zone 2',
         cityOrTown: 'Paris',
         stateProvinceOrRegion: 'Ile-de-France',
@@ -54,7 +59,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
         registrationNumber: null,
         accreditationNumber: null,
         orsId: '002',
-        packagingWasteCategory: 'plastic',
+        packagingWasteCategory: TEST_PLASTIC_CATEGORY,
         destinationCountry: 'Germany',
         overseasReprocessorName: 'Beta Reprocessor',
         addressLine1: '2 Teststrasse',
@@ -187,7 +192,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
   })
 }
 
-const defineAdditionalEdgeCaseTests = () => {
+const defineNoBackfillAccreditationNumberTest = () => {
   it('does not backfill accreditation number from organisation accreditations', async () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
@@ -195,7 +200,7 @@ const defineAdditionalEdgeCaseTests = () => {
           orgId: 42,
           registrations: [
             {
-              material: 'plastic',
+              material: TEST_PLASTIC_CATEGORY,
               registrationNumber: 'REG-123',
               accreditationId: 'acc-2',
               overseasSites: {
@@ -216,9 +221,9 @@ const defineAdditionalEdgeCaseTests = () => {
         {
           id: 'site-1',
           country: 'France',
-          name: 'Alpha Reprocessor',
+          name: TEST_REPROCESSOR_NAME,
           address: {
-            line1: '1 Rue de Test',
+            line1: TEST_ADDRESS_LINE1,
             townOrCity: 'Paris'
           },
           coordinates: null,
@@ -252,10 +257,10 @@ const defineAdditionalEdgeCaseTests = () => {
         registrationNumber: 'REG-123',
         accreditationNumber: null,
         orsId: '003',
-        packagingWasteCategory: 'plastic',
+        packagingWasteCategory: TEST_PLASTIC_CATEGORY,
         destinationCountry: 'France',
-        overseasReprocessorName: 'Alpha Reprocessor',
-        addressLine1: '1 Rue de Test',
+        overseasReprocessorName: TEST_REPROCESSOR_NAME,
+        addressLine1: TEST_ADDRESS_LINE1,
         addressLine2: null,
         cityOrTown: 'Paris',
         stateProvinceOrRegion: null,
@@ -265,7 +270,9 @@ const defineAdditionalEdgeCaseTests = () => {
       }
     ])
   })
+}
 
+const defineMissingOverseasSiteMappingsTest = () => {
   it('handles registrations with missing overseasSites mappings', async () => {
     const malformedOrganisationsRepository = {
       findAll: vi
@@ -297,7 +304,9 @@ const defineAdditionalEdgeCaseTests = () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual([])
   })
+}
 
+const defineMissingMaterialAndOrgIdTest = () => {
   it('uses null defaults when material and orgId are missing', async () => {
     const organisationsRepository = {
       findAll: vi.fn().mockResolvedValue([
@@ -319,9 +328,9 @@ const defineAdditionalEdgeCaseTests = () => {
         {
           id: 'site-1',
           country: 'France',
-          name: 'Alpha Reprocessor',
+          name: TEST_REPROCESSOR_NAME,
           address: {
-            line1: '1 Rue de Test',
+            line1: TEST_ADDRESS_LINE1,
             townOrCity: 'Paris'
           }
         }
@@ -355,8 +364,8 @@ const defineAdditionalEdgeCaseTests = () => {
         orsId: '004',
         packagingWasteCategory: null,
         destinationCountry: 'France',
-        overseasReprocessorName: 'Alpha Reprocessor',
-        addressLine1: '1 Rue de Test',
+        overseasReprocessorName: TEST_REPROCESSOR_NAME,
+        addressLine1: TEST_ADDRESS_LINE1,
         addressLine2: null,
         cityOrTown: 'Paris',
         stateProvinceOrRegion: null,
@@ -366,7 +375,9 @@ const defineAdditionalEdgeCaseTests = () => {
       }
     ])
   })
+}
 
+const defineMissingRegistrationsPropertyTest = () => {
   it('handles repository rows without a registrations property', async () => {
     const malformedOrganisationsRepository = {
       findAll: vi.fn().mockResolvedValue([{}])
@@ -398,14 +409,21 @@ const defineAdditionalEdgeCaseTests = () => {
   })
 }
 
+const defineAdditionalEdgeCaseTests = () => {
+  defineNoBackfillAccreditationNumberTest()
+  defineMissingOverseasSiteMappingsTest()
+  defineMissingMaterialAndOrgIdTest()
+  defineMissingRegistrationsPropertyTest()
+}
+
 const seedOverseasSites = async (overseasSitesRepository) => {
   const now = new Date('2026-01-01T00:00:00.000Z')
 
   const siteOne = await overseasSitesRepository.create({
-    name: 'Alpha Reprocessor',
+    name: TEST_REPROCESSOR_NAME,
     country: 'France',
     address: {
-      line1: '1 Rue de Test',
+      line1: TEST_ADDRESS_LINE1,
       line2: 'Zone 2',
       townOrCity: 'Paris',
       stateOrRegion: 'Ile-de-France',
@@ -436,7 +454,7 @@ const createExporterRegistration = ({ siteOne, siteTwo }) => {
     wasteProcessingType: 'exporter',
     overseasSites: {
       '002': { overseasSiteId: siteTwo.id },
-      '001': { overseasSiteId: siteOne.id }
+      [TEST_ORS_ID_ONE]: { overseasSiteId: siteOne.id }
     }
   })
 }

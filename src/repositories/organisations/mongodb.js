@@ -140,13 +140,11 @@ const handleFoundDocument = (doc, minimumVersion) => {
 
 const performFindById =
   (db, maxRetries, retryDelayMs) => async (id, minimumVersion) => {
-    // validate the ID and throw early
-    let validatedId
-    try {
-      validatedId = validateId(id)
-    } catch (_error) {
+    // Validate early and normalize invalid IDs to not found.
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
     }
+    const validatedId = validateId(id)
 
     for (let i = 0; i < maxRetries; i++) {
       const doc = await db
@@ -273,7 +271,8 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   return mapDocumentWithCurrentStatuses(doc)
 }
 
-const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const escapeRegex = (string) =>
+  string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db

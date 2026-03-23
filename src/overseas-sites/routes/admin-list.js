@@ -14,6 +14,36 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
 
+const nullable = (value) => value ?? null
+
+const firstPresent = (...values) => {
+  for (const value of values) {
+    if (value !== undefined && value !== null) {
+      return value
+    }
+  }
+  return null
+}
+
+const getAccreditationNumber = (registration) => {
+  return firstPresent(
+    registration.accreditation?.accreditationNumber,
+    registration.accreditationNumber
+  )
+}
+
+const mapSiteFields = (site) => ({
+  destinationCountry: site.country,
+  overseasReprocessorName: site.name,
+  addressLine1: site.address.line1,
+  addressLine2: nullable(site.address.line2),
+  cityOrTown: site.address.townOrCity,
+  stateProvinceOrRegion: nullable(site.address.stateOrRegion),
+  postcode: nullable(site.address.postcode),
+  coordinates: nullable(site.coordinates),
+  validFrom: nullable(site.validFrom)
+})
+
 const mapMappingToRow = (
   { organisation, registration, orsId, mapping },
   sitesById
@@ -24,23 +54,12 @@ const mapMappingToRow = (
   }
 
   return {
-    orgId: organisation.orgId ?? null,
-    registrationNumber: registration.registrationNumber ?? null,
-    accreditationNumber:
-      registration.accreditation?.accreditationNumber ??
-      registration.accreditationNumber ??
-      null,
+    orgId: nullable(organisation.orgId),
+    registrationNumber: nullable(registration.registrationNumber),
+    accreditationNumber: getAccreditationNumber(registration),
     orsId,
-    packagingWasteCategory: registration.material ?? null,
-    destinationCountry: site.country,
-    overseasReprocessorName: site.name,
-    addressLine1: site.address.line1,
-    addressLine2: site.address.line2 ?? null,
-    cityOrTown: site.address.townOrCity,
-    stateProvinceOrRegion: site.address.stateOrRegion ?? null,
-    postcode: site.address.postcode ?? null,
-    coordinates: site.coordinates ?? null,
-    validFrom: site.validFrom ?? null
+    packagingWasteCategory: nullable(registration.material),
+    ...mapSiteFields(site)
   }
 }
 
