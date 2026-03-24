@@ -6,7 +6,8 @@ import {
   createDateFieldSchema
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformSentOnLoadsRowExporterRegisteredOnly } from '#application/waste-records/row-transformers/sent-on-loads-exporter-registered-only.js'
+import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 const ALL_FIELDS = Object.values(FIELDS)
 
 /**
@@ -20,7 +21,11 @@ export const SENT_ON_LOADS = {
   rowIdField: FIELDS.ROW_ID,
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   sheetName: 'Sent on (section 4)',
-  rowTransformer: transformSentOnLoadsRowExporterRegisteredOnly,
+  rowTransformer: createRowTransformer({
+    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+    processingType: PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+    rowIdField: FIELDS.ROW_ID
+  }),
 
   /**
    * VAL008: All columns that must be present in the uploaded file
