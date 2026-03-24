@@ -97,7 +97,7 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * @param {Object} accreditation
  * @returns {number}
  */
-const getTargetAmount = (record, accreditation) => {
+const getTargetAmount = (record, accreditation, overseasSites) => {
   if (record.excludedFromWasteBalance) {
     return 0
   }
@@ -112,7 +112,10 @@ const getTargetAmount = (record, accreditation) => {
   }
 
   /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} */
-  const result = schema.classifyForWasteBalance(record.data, { accreditation })
+  const result = schema.classifyForWasteBalance(record.data, {
+    accreditation,
+    overseasSites
+  })
   return result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
 }
 
@@ -134,7 +137,8 @@ const getTargetAmount = (record, accreditation) => {
 export const calculateWasteBalanceUpdates = ({
   currentBalance,
   wasteRecords,
-  accreditation
+  accreditation,
+  overseasSites
 }) => {
   const newTransactions = []
   let currentAmount = currentBalance.amount || 0
@@ -149,7 +153,7 @@ export const calculateWasteBalanceUpdates = ({
   )
 
   for (const record of wasteRecords) {
-    const targetAmount = getTargetAmount(record, accreditation)
+    const targetAmount = getTargetAmount(record, accreditation, overseasSites)
 
     // Calculate Already Credited Amount
     const alreadyCreditedAmount =

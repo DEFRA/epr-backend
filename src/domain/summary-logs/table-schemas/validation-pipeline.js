@@ -45,7 +45,7 @@ import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: Accreditation | null }} context - Classification context; accreditation is null when absent
+ * @param {{ accreditation: Accreditation | null, overseasSites?: Record<number, { validFrom: Date | null }> }} context - Classification context; accreditation is null when absent
  * @returns {WasteBalanceClassificationResult}
  */
 

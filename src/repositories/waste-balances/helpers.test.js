@@ -695,6 +695,108 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       // Should not save balance
       expect(saveBalance).not.toHaveBeenCalled()
     })
+
+    describe('overseasSites passthrough (VAL014)', () => {
+      it('should pass overseasSites to calculator when provided', async () => {
+        const overseasSites = {
+          100: { validFrom: new Date('2024-01-01') }
+        }
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1
+        }
+
+        const dependencies = {
+          organisationsRepository: {
+            findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+          }
+        }
+
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 'trans-1' }],
+          newAmount: 10,
+          newAvailableAmount: 10
+        })
+
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditationId: 'acc-1',
+          dependencies,
+          findBalance,
+          saveBalance,
+          overseasSites
+        })
+
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledWith(
+          expect.objectContaining({
+            overseasSites
+          })
+        )
+      })
+
+      it('should pass undefined overseasSites when not provided', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1
+        }
+
+        const dependencies = {
+          organisationsRepository: {
+            findAccreditationById: vi.fn().mockResolvedValue(accreditation)
+          }
+        }
+
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 'trans-1' }],
+          newAmount: 10,
+          newAvailableAmount: 10
+        })
+
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditationId: 'acc-1',
+          dependencies,
+          findBalance,
+          saveBalance
+        })
+
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledWith(
+          expect.objectContaining({
+            overseasSites: undefined
+          })
+        )
+      })
+    })
   })
 
   describe('buildPrnCreationTransaction', () => {

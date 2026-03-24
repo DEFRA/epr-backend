@@ -21,13 +21,19 @@ describe('syncFromSummaryLog', () => {
   let wasteRecordRepository
   let wasteBalancesRepository
   let organisationsRepository
+  let overseasSitesRepository
 
   beforeEach(() => {
     wasteRecordRepository = createInMemoryWasteRecordsRepository()()
     wasteBalancesRepository = {
       updateWasteBalanceTransactions: vi.fn()
     }
-    organisationsRepository = {}
+    organisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue(null)
+    }
+    overseasSitesRepository = {
+      findById: vi.fn().mockResolvedValue(null)
+    }
   })
 
   it('extracts, transforms, and saves waste records from summary log', async () => {
@@ -75,7 +81,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -145,7 +152,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -157,7 +165,12 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', undefined)
+    ).toHaveBeenCalledWith(
+      expect.any(Array),
+      'accred-123',
+      undefined,
+      undefined
+    )
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -229,7 +242,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -316,7 +330,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -401,7 +416,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -496,7 +512,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -581,7 +598,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -645,7 +663,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -704,7 +723,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -767,7 +787,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -833,7 +854,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -848,8 +870,77 @@ describe('syncFromSummaryLog', () => {
         })
       ]),
       'acc-1',
+      undefined,
       undefined
     )
+  })
+
+  it('resolves overseas sites for exporter waste balance validation', async () => {
+    const fileId = 'test-file-ors'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const validFrom = new Date('2024-01-01')
+    const overseasSitesRepository = {
+      findById: vi.fn().mockResolvedValue({ id: 'site-aaa', validFrom })
+    }
+
+    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
+      overseasSites: {
+        100: { overseasSiteId: 'site-aaa' }
+      }
+    })
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      overseasSitesRepository
+    })
+
+    await sync(summaryLog)
+
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', undefined, {
+      100: { validFrom }
+    })
   })
 
   it('does not attempt to fetch accreditationId if organisationsRepository is not provided', async () => {
@@ -871,7 +962,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository: undefined
+      organisationsRepository: undefined,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -903,7 +995,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -1177,7 +1270,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     const result = await sync(summaryLog)

@@ -173,7 +173,8 @@ const calculateAndApplyUpdates = async (
   dependencies,
   validRecords,
   validatedAccreditationId,
-  findBalance
+  findBalance,
+  overseasSites
 ) => {
   const accreditation = await getAccreditation(
     dependencies.organisationsRepository,
@@ -196,7 +197,8 @@ const calculateAndApplyUpdates = async (
     calculateWasteBalanceUpdates({
       currentBalance: wasteBalance,
       wasteRecords: validRecords,
-      accreditation
+      accreditation,
+      overseasSites
     })
 
   if (newTransactions.length === 0) {
@@ -227,6 +229,7 @@ const calculateAndApplyUpdates = async (
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {any} [params.user]
+ * @param {Record<number, { validFrom: Date | null }> | undefined} [params.overseasSites] - Resolved ORS lookup map for exporter validation
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
@@ -234,7 +237,8 @@ export const performUpdateWasteBalanceTransactions = async ({
   dependencies,
   findBalance,
   saveBalance,
-  user
+  user,
+  overseasSites
 }) => {
   const annotatedRecords = markExcludedRecords(wasteRecords)
 
@@ -248,7 +252,8 @@ export const performUpdateWasteBalanceTransactions = async ({
     dependencies,
     annotatedRecords,
     validatedAccreditationId,
-    findBalance
+    findBalance,
+    overseasSites
   )
 
   if (!result) {

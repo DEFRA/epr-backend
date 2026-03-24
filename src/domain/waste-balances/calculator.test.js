@@ -783,6 +783,69 @@ describe('Waste Balance Calculator', () => {
     })
   })
 
+  describe('ORS approval (VAL014)', () => {
+    it('excludes record when ORS is not in overseasSites map', () => {
+      const record = buildWasteRecord({
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
+          [FIELDS.OSR_ID]: 100
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation,
+        overseasSites: { 200: { validFrom: new Date('2023-01-01') } }
+      })
+
+      expect(result.newTransactions).toHaveLength(0)
+      expect(result.newAmount).toBe(0)
+    })
+
+    it('includes record when ORS is approved and validFrom is before export date', () => {
+      const record = buildWasteRecord({
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
+          [FIELDS.OSR_ID]: 100
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation,
+        overseasSites: { 100: { validFrom: new Date('2023-01-01') } }
+      })
+
+      expect(result.newTransactions).toHaveLength(1)
+      expect(result.newTransactions[0].amount).toBe(10)
+    })
+
+    it('skips ORS check when overseasSites is not provided', () => {
+      const record = buildWasteRecord({
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
+          [FIELDS.OSR_ID]: 100
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation
+      })
+
+      expect(result.newTransactions).toHaveLength(1)
+    })
+  })
+
   describe('Version Handling', () => {
     it('Should populate previousVersionIds when multiple versions exist', () => {
       const record = buildWasteRecord({

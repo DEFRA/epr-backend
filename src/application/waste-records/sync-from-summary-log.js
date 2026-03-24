@@ -1,4 +1,5 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
+import { resolveOverseasSites } from './resolve-overseas-sites.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -127,7 +128,8 @@ const updateWasteBalances = async ({
   accreditationId,
   wasteBalancesRepository,
   wasteRecords,
-  user
+  user,
+  overseasSites
 }) => {
   // We only calculate waste balance for exporters and reprocessor inputs currently
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -140,7 +142,8 @@ const updateWasteBalances = async ({
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       accreditationId,
-      user
+      user,
+      overseasSites
     )
   }
 }
@@ -206,6 +209,7 @@ const calculateMetrics = (wasteRecords) => {
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
@@ -213,7 +217,8 @@ export const syncFromSummaryLog = (dependencies) => {
     extractor,
     wasteRecordRepository,
     wasteBalancesRepository,
-    organisationsRepository
+    organisationsRepository,
+    overseasSitesRepository
   } = dependencies
 
   /**
@@ -274,16 +279,29 @@ export const syncFromSummaryLog = (dependencies) => {
       wasteRecordVersions
     )
 
-    // 8. Update waste balances if accreditation ID exists
+    // 8. Resolve overseas sites for exporter ORS validation (VAL014)
+    const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
+    const overseasSites =
+      processingType === PROCESSING_TYPES.EXPORTER
+        ? await resolveOverseasSites(
+            organisationsRepository,
+            overseasSitesRepository,
+            summaryLog.organisationId,
+            summaryLog.registrationId
+          )
+        : undefined
+
+    // 9. Update waste balances if accreditation ID exists
     await updateWasteBalances({
       parsedData,
       accreditationId,
       wasteBalancesRepository,
       wasteRecords,
-      user
+      user,
+      overseasSites
     })
 
-    // 9. Count created/updated records for metrics
+    // 10. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
     return calculateMetrics(wasteRecords)
   }

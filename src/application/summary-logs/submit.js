@@ -15,6 +15,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} wasteRecordsRepository
  * @property {object} wasteBalancesRepository
  * @property {object} summaryLogExtractor
+ * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {object} [user]
  */
 
@@ -33,6 +34,7 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     wasteRecordsRepository,
     wasteBalancesRepository,
     summaryLogExtractor,
+    overseasSitesRepository,
     user
   } = deps
 
@@ -57,7 +59,8 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     extractor: summaryLogExtractor,
     wasteRecordRepository: wasteRecordsRepository,
     wasteBalancesRepository,
-    organisationsRepository
+    organisationsRepository,
+    overseasSitesRepository
   })
 
   const { created, updated } = await summaryLogMetrics.timedSubmission(
