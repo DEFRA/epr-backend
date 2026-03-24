@@ -6,6 +6,46 @@ import {
 } from './fields-by-operator-category.js'
 
 /**
+ * @typedef {Object} AggregatedRecyclingActivity
+ * @property {Array<{supplierName: string, facilityType: string, tonnageReceived: number}>} suppliers
+ * @property {number} totalTonnageReceived
+ * @property {null} tonnageRecycled - Always null for computed reports (not yet entered)
+ * @property {null} tonnageNotRecycled - Always null for computed reports (not yet entered)
+ */
+
+/**
+ * @typedef {Object} AggregatedExportActivity
+ * @property {Array<{orsId: string, siteName: string|undefined}>} overseasSites
+ * @property {number} totalTonnageReceivedForExporting
+ * @property {null} tonnageReceivedNotExported
+ * @property {null} tonnageRefusedAtRecepientDestination
+ * @property {null} tonnageStoppedDuringExport
+ * @property {null} tonnageRepatriated
+ */
+
+/**
+ * @typedef {Object} AggregatedWasteSent
+ * @property {number} tonnageSentToReprocessor
+ * @property {number} tonnageSentToExporter
+ * @property {number} tonnageSentToAnotherSite
+ * @property {Array<{recipientName: string, facilityType: string, tonnageSentOn: number}>} finalDestinations
+ */
+
+/**
+ * @typedef {Object} AggregatedReportDetail
+ * @property {string} operatorCategory
+ * @property {string} cadence
+ * @property {number} year
+ * @property {number} period
+ * @property {string} startDate
+ * @property {string} endDate
+ * @property {string|null} lastUploadedAt
+ * @property {AggregatedRecyclingActivity} recyclingActivity
+ * @property {AggregatedExportActivity} [exportActivity]
+ * @property {AggregatedWasteSent} wasteSent
+ */
+
+/**
  * Aggregates waste records into a report detail for a specific period.
  *
  * Pure function — no repository or infrastructure dependencies.
@@ -16,6 +56,7 @@ import {
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
+ * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(
   wasteRecords,
@@ -80,11 +121,9 @@ export function aggregateReportDetail(
     startDate,
     endDate,
     lastUploadedAt,
-    sections: {
-      wasteReceived,
-      ...(wasteExportedDateField && { wasteExported }),
-      wasteSentOn
-    }
+    recyclingActivity: wasteReceived,
+    ...(wasteExportedDateField && { exportActivity: wasteExported }),
+    wasteSent: wasteSentOn
   }
 }
 
@@ -146,84 +185,94 @@ function toFiniteNumber(value) {
  * @param {string} tonnageField
  */
 function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
-  let totalTonnage = 0
+  let totalTonnageReceived = 0
   const suppliers = []
 
   for (const { data } of wasteReceivedRecords) {
-    const tonnage = toFiniteNumber(data[tonnageField])
+    const tonnageReceived = toFiniteNumber(data[tonnageField])
 
-    totalTonnage += tonnage
+    totalTonnageReceived += tonnageReceived
 
     const supplierName = data.SUPPLIER_NAME
-    const role = data.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER
+    const facilityType = data.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER
 
     if (supplierName) {
-      suppliers.push({ supplierName, role, tonnage })
+      suppliers.push({ supplierName, facilityType, tonnageReceived })
     }
   }
 
-  return { totalTonnage, suppliers }
+  return {
+    suppliers,
+    totalTonnageReceived,
+    tonnageRecycled: null,
+    tonnageNotRecycled: null
+  }
 }
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteExportedRecords
  */
 function aggregateWasteExported(wasteExportedRecords) {
-  let totalTonnage = 0
-  const seenOsrIds = new Set()
+  let totalTonnageReceivedForExporting = 0
+  const seenOrsIds = new Set()
   const overseasSites = []
 
   for (const { data } of wasteExportedRecords) {
     const tonnage = toFiniteNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
 
-    totalTonnage += tonnage
+    totalTonnageReceivedForExporting += tonnage
 
-    const osrId = data.OSR_ID
+    const orsId = data.OSR_ID
     const siteName = data.OSR_NAME
 
-    if (osrId && !seenOsrIds.has(osrId)) {
-      seenOsrIds.add(osrId)
-      overseasSites.push({ osrId, siteName })
+    if (orsId && !seenOrsIds.has(orsId)) {
+      seenOrsIds.add(orsId)
+      overseasSites.push({ orsId, siteName })
     }
   }
 
-  return { totalTonnage, overseasSites }
+  return {
+    overseasSites,
+    totalTonnageReceivedForExporting,
+    tonnageReceivedNotExported: null,
+    tonnageRefusedAtRecepientDestination: null,
+    tonnageStoppedDuringExport: null,
+    tonnageRepatriated: null
+  }
 }
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteSentOnRecords
  */
 function aggregateWasteSentOn(wasteSentOnRecords) {
-  let totalTonnage = 0
-  let toReprocessors = 0
-  let toExporters = 0
-  let toOtherSites = 0
-  const destinations = []
+  let tonnageSentToReprocessor = 0
+  let tonnageSentToExporter = 0
+  let tonnageSentToAnotherSite = 0
+  const finalDestinations = []
 
   for (const { data } of wasteSentOnRecords) {
     const recipientName = data.FINAL_DESTINATION_NAME
-    const role = data.FINAL_DESTINATION_FACILITY_TYPE
+    const facilityType = data.FINAL_DESTINATION_FACILITY_TYPE
 
-    const tonnage = toFiniteNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
+    const tonnageSentOn = toFiniteNumber(
+      data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+    )
 
-    totalTonnage += tonnage
-
-    if (role === 'Reprocessor') {
-      toReprocessors += tonnage
-    } else if (role === 'Exporter') {
-      toExporters += tonnage
+    if (facilityType === 'Reprocessor') {
+      tonnageSentToReprocessor += tonnageSentOn
+    } else if (facilityType === 'Exporter') {
+      tonnageSentToExporter += tonnageSentOn
     } else {
-      toOtherSites += tonnage
+      tonnageSentToAnotherSite += tonnageSentOn
     }
 
-    destinations.push({ recipientName, role, tonnage })
+    finalDestinations.push({ recipientName, facilityType, tonnageSentOn })
   }
 
   return {
-    totalTonnage,
-    toReprocessors,
-    toExporters,
-    toOtherSites,
-    destinations
+    tonnageSentToReprocessor,
+    tonnageSentToExporter,
+    tonnageSentToAnotherSite,
+    finalDestinations
   }
 }
