@@ -433,15 +433,21 @@ const assertValidatingStatus = (result, summaryLogId) => {
 }
 
 /**
- * Records validation metrics and classifies loads.
+ * Records all validation-related metrics.
+ *
+ * @param {Object} params
+ * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {string} params.processingType
+ * @param {SummaryLogStatus} params.status
+ * @param {number} params.validationDurationMs
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
  */
-const recordMetricsAndClassify = async ({
+const recordValidationMetrics = async ({
   issues,
-  wasteRecords,
   processingType,
   status,
-  summaryLogId,
-  validationDurationMs
+  validationDurationMs,
+  wasteBalanceRecords
 }) => {
   await summaryLogMetrics.recordValidationDuration(
     { processingType },
@@ -449,38 +455,33 @@ const recordMetricsAndClassify = async ({
   )
   await summaryLogMetrics.recordStatusTransition({ status, processingType })
   await recordValidationIssueMetrics(issues, processingType)
-
-  const wasteBalanceRecords = filterWasteBalanceRecords(
-    wasteRecords,
-    processingType
-  )
-
-  const { loads, loadsByWasteRecordType } = classifyLoads({
-    status,
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    processingType
-  })
-
   await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
-
-  return { loads, loadsByWasteRecordType }
 }
 
 /**
  * Persists the validation result to the summary log document.
+ *
+ * @param {Object} params
+ * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {object | null} params.loads
+ * @param {Array | null} params.loadsByWasteRecordType
+ * @param {ExtractedMeta} params.meta
+ * @param {string} params.status
+ * @param {SummaryLog} params.summaryLog
+ * @param {string} params.summaryLogId
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
+ * @param {number} params.version
  */
 const persistValidationResult = async ({
-  summaryLogsRepository,
-  summaryLogId,
-  version,
-  summaryLog,
-  status,
   issues,
   loads,
   loadsByWasteRecordType,
-  meta
+  meta,
+  status,
+  summaryLog,
+  summaryLogId,
+  summaryLogsRepository,
+  version
 }) => {
   const allIssues = issues.getAllIssues()
   const { cappedIssues, totalIssuesCount } = capIssuesForStorage(allIssues)
@@ -522,11 +523,11 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @returns {{ loads: Loads | null, loadsByWasteRecordType: Array | null }}
  */
 const classifyLoads = ({
+  processingType,
   status,
-  wasteRecords,
-  wasteBalanceRecords,
   summaryLogId,
-  processingType
+  wasteBalanceRecords,
+  wasteRecords
 }) => {
   if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
     return { loads: null, loadsByWasteRecordType: null }
@@ -599,25 +600,37 @@ export const createSummaryLogsValidator = ({
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    const { loads, loadsByWasteRecordType } = await recordMetricsAndClassify({
-      issues,
+    const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
+      processingType
+    )
+
+    await recordValidationMetrics({
+      issues,
+      processingType,
+      status,
+      validationDurationMs,
+      wasteBalanceRecords
+    })
+
+    const { loads, loadsByWasteRecordType } = classifyLoads({
       processingType,
       status,
       summaryLogId,
-      validationDurationMs
+      wasteBalanceRecords,
+      wasteRecords
     })
 
     await persistValidationResult({
-      summaryLogsRepository,
-      summaryLogId,
-      version,
-      summaryLog,
-      status,
       issues,
       loads,
       loadsByWasteRecordType,
-      meta
+      meta,
+      status,
+      summaryLog,
+      summaryLogId,
+      summaryLogsRepository,
+      version
     })
 
     logger.info({

@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_CHANGE
+} from '#domain/waste-records/model.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
@@ -38,7 +41,7 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  */
 
 /**
- * @typedef {'created' | 'updated' | 'unchanged'} WasteRecordChange
+ * @typedef {import('#domain/waste-records/model.js').WasteRecordChange} WasteRecordChange
  */
 
 /**
@@ -68,15 +71,14 @@ const updateExistingRecord = (
   data,
   { timestamp, summaryLog }
 ) => {
-  const delta = {}
-  for (const [key, value] of Object.entries(data)) {
-    if (key !== 'ROW_ID' && existingRecord.data[key] !== value) {
-      delta[key] = value
-    }
-  }
+  const delta = Object.fromEntries(
+    Object.entries(data).filter(
+      ([key, value]) => key !== 'ROW_ID' && existingRecord.data[key] !== value
+    )
+  )
 
   if (Object.keys(delta).length === 0) {
-    return { record: existingRecord, change: 'unchanged' }
+    return { record: existingRecord, change: WASTE_RECORD_CHANGE.UNCHANGED }
   }
 
   return {
@@ -94,7 +96,7 @@ const updateExistingRecord = (
         }
       ]
     },
-    change: 'updated'
+    change: WASTE_RECORD_CHANGE.UPDATED
   }
 }
 
@@ -185,7 +187,7 @@ const transformTable = (
       record: wasteRecord,
       issues,
       outcome,
-      change: 'created',
+      change: WASTE_RECORD_CHANGE.CREATED,
       tableName,
       wasteRecordType: tableWasteRecordType
     }
