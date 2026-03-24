@@ -34,10 +34,18 @@ export const resolveOverseasSites = async (
 
   const entries = Object.entries(registration.overseasSites ?? {})
 
+  if (entries.length === 0) {
+    return {}
+  }
+
+  const siteIds = entries.map(([, { overseasSiteId }]) => overseasSiteId)
+  const sites = await overseasSitesRepository.findByIds(siteIds)
+  const sitesById = new Map(sites.map((site) => [site.id, site]))
+
   /** @type {Record<number, { validFrom: Date | null }>} */
   const resolved = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
-    const site = await overseasSitesRepository.findById(overseasSiteId)
+    const site = sitesById.get(overseasSiteId)
     resolved[Number(osrKey)] = { validFrom: site?.validFrom ?? null }
   }
 

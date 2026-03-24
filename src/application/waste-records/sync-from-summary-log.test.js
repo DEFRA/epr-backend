@@ -32,7 +32,7 @@ describe('syncFromSummaryLog', () => {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} })
     }
     overseasSitesRepository = {
-      findById: vi.fn().mockResolvedValue(null)
+      findByIds: vi.fn().mockResolvedValue([])
     }
   })
 
@@ -918,7 +918,7 @@ describe('syncFromSummaryLog', () => {
 
     const validFrom = new Date('2024-01-01')
     const overseasSitesRepository = {
-      findById: vi.fn().mockResolvedValue({ id: 'site-aaa', validFrom })
+      findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
     }
 
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
@@ -986,10 +986,11 @@ describe('syncFromSummaryLog', () => {
     })
 
     const localOverseasSitesRepository = {
-      findById: vi.fn().mockResolvedValue({
-        id: 'site-aaa',
-        validFrom: new Date('2024-01-01')
-      })
+      findByIds: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'site-aaa', validFrom: new Date('2024-01-01') }
+        ])
     }
 
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
@@ -1011,7 +1012,7 @@ describe('syncFromSummaryLog', () => {
 
     await sync(summaryLog)
 
-    expect(localOverseasSitesRepository.findById).not.toHaveBeenCalled()
+    expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', undefined, undefined)

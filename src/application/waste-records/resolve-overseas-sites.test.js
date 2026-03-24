@@ -13,15 +13,10 @@ describe('resolveOverseasSites', () => {
       })
     }
     const overseasSitesRepository = {
-      findById: vi.fn().mockImplementation((id) => {
-        if (id === 'site-aaa') {
-          return Promise.resolve({ id: 'site-aaa', validFrom })
-        }
-        return Promise.resolve({
-          id: 'site-bbb',
-          validFrom: new Date('2024-06-01')
-        })
-      })
+      findByIds: vi.fn().mockResolvedValue([
+        { id: 'site-aaa', validFrom },
+        { id: 'site-bbb', validFrom: new Date('2024-06-01') }
+      ])
     }
 
     const result = await resolveOverseasSites(
@@ -39,6 +34,10 @@ describe('resolveOverseasSites', () => {
       'org-1',
       'reg-1'
     )
+    expect(overseasSitesRepository.findByIds).toHaveBeenCalledWith([
+      'site-aaa',
+      'site-bbb'
+    ])
   })
 
   it('returns empty map when registration has no overseasSites', async () => {
@@ -47,7 +46,7 @@ describe('resolveOverseasSites', () => {
         overseasSites: undefined
       })
     }
-    const overseasSitesRepository = { findById: vi.fn() }
+    const overseasSitesRepository = { findByIds: vi.fn() }
 
     const result = await resolveOverseasSites(
       organisationsRepository,
@@ -57,7 +56,7 @@ describe('resolveOverseasSites', () => {
     )
 
     expect(result).toEqual({})
-    expect(overseasSitesRepository.findById).not.toHaveBeenCalled()
+    expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
   })
 
   it('returns empty map when overseasSites map is empty', async () => {
@@ -66,7 +65,7 @@ describe('resolveOverseasSites', () => {
         overseasSites: {}
       })
     }
-    const overseasSitesRepository = { findById: vi.fn() }
+    const overseasSitesRepository = { findByIds: vi.fn() }
 
     const result = await resolveOverseasSites(
       organisationsRepository,
@@ -76,14 +75,14 @@ describe('resolveOverseasSites', () => {
     )
 
     expect(result).toEqual({})
-    expect(overseasSitesRepository.findById).not.toHaveBeenCalled()
+    expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
   })
 
   it('throws when registration is not found', async () => {
     const organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue(null)
     }
-    const overseasSitesRepository = { findById: vi.fn() }
+    const overseasSitesRepository = { findByIds: vi.fn() }
 
     await expect(
       resolveOverseasSites(
@@ -104,7 +103,7 @@ describe('resolveOverseasSites', () => {
       })
     }
     const overseasSitesRepository = {
-      findById: vi.fn().mockResolvedValue(null)
+      findByIds: vi.fn().mockResolvedValue([])
     }
 
     const result = await resolveOverseasSites(
@@ -128,9 +127,9 @@ describe('resolveOverseasSites', () => {
       })
     }
     const overseasSitesRepository = {
-      findById: vi
+      findByIds: vi
         .fn()
-        .mockResolvedValue({ id: 'site-no-date', validFrom: undefined })
+        .mockResolvedValue([{ id: 'site-no-date', validFrom: undefined }])
     }
 
     const result = await resolveOverseasSites(

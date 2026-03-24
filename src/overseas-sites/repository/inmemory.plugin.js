@@ -17,6 +17,16 @@ const performFindById = (storage) => async (id) => {
 
 /**
  * @param {Storage} storage
+ * @returns {(ids: string[]) => Promise<OverseasSite[]>}
+ */
+const performFindByIds = (storage) => async (ids) =>
+  ids.flatMap((id) => {
+    const site = storage.get(id)
+    return site ? [structuredClone(site)] : []
+  })
+
+/**
+ * @param {Storage} storage
  * @returns {(site: Omit<OverseasSite, 'id'>) => Promise<OverseasSite>}
  */
 const performCreate = (storage) => async (site) => {
@@ -152,6 +162,7 @@ export function createInMemoryOverseasSitesRepository(initialData = []) {
     create: performCreate(storage),
     findAll: performFindAll(storage),
     findById: performFindById(storage),
+    findByIds: performFindByIds(storage),
     findByProperties: performFindByProperties(storage),
     remove: performRemove(storage),
     update: performUpdate(storage)
