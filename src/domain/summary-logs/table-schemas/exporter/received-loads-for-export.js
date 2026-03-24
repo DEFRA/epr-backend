@@ -218,7 +218,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
     if (overseasSites) {
       const ors = overseasSites[data[FIELDS.OSR_ID]]
-      if (!ors?.validFrom || ors.validFrom > data[FIELDS.DATE_OF_EXPORT]) {
+      if (
+        !ors?.validFrom ||
+        new Date(ors.validFrom) > new Date(data[FIELDS.DATE_OF_EXPORT])
+      ) {
         return {
           outcome: ROW_OUTCOME.EXCLUDED,
           reasons: [{ code: CLASSIFICATION_REASON.ORS_NOT_APPROVED }]
