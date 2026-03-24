@@ -463,8 +463,8 @@ const recordValidationMetrics = async ({
  *
  * @param {Object} params
  * @param {ReturnType<typeof createValidationIssues>} params.issues
- * @param {object | null} params.loads
- * @param {Array | null} params.loadsByWasteRecordType
+ * @param {Loads | null} params.loads
+ * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta} params.meta
  * @param {string} params.status
  * @param {SummaryLog} params.summaryLog
@@ -520,7 +520,7 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {string} params.summaryLogId
  * @param {string} params.processingType
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: Array | null }}
+ * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
  */
 const classifyLoads = ({
   processingType,

@@ -39,6 +39,11 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * @property {LoadValidity} adjusted - Loads adjusted in this upload
  */
 
+/**
+ * @typedef {{ wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType, sheetName: string } & Loads} LoadsByWasteRecordTypeEntry
+ * @typedef {LoadsByWasteRecordTypeEntry[]} LoadsByWasteRecordType
+ */
+
 const MAX_ROW_IDS = 100
 
 /**
