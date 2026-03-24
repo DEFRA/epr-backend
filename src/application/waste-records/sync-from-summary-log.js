@@ -142,8 +142,7 @@ const updateWasteBalances = async ({
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       accreditationId,
-      user,
-      overseasSites
+      { user, overseasSites }
     )
   }
 }

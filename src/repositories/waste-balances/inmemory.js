@@ -83,8 +83,7 @@ export const createInMemoryWasteBalancesRepository = (
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
-      user,
-      overseasSites
+      { user, overseasSites } = {}
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,

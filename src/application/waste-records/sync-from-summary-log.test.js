@@ -165,12 +165,10 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(
-      expect.any(Array),
-      'accred-123',
-      undefined,
-      undefined
-    )
+    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', {
+      user: undefined,
+      overseasSites: undefined
+    })
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -871,8 +869,7 @@ describe('syncFromSummaryLog', () => {
         })
       ]),
       'acc-1',
-      undefined,
-      {}
+      { user: undefined, overseasSites: {} }
     )
   })
 
@@ -940,8 +937,9 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', undefined, {
-      100: { validFrom }
+    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+      user: undefined,
+      overseasSites: { 100: { validFrom } }
     })
   })
 
@@ -1015,7 +1013,10 @@ describe('syncFromSummaryLog', () => {
     expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', undefined, undefined)
+    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+      user: undefined,
+      overseasSites: undefined
+    })
   })
 
   it('does not attempt to fetch accreditationId if organisationsRepository is not provided', async () => {
