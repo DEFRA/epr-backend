@@ -526,6 +526,13 @@ describe('Submission and placeholder tests', () => {
 
       expect(payload.loads.unchanged.valid.count).toBe(1)
       expect(payload.loads.unchanged.valid.rowIds).toContain(1001)
+
+      expect(payload.loadsByWasteRecordType).toHaveLength(1)
+      expect(payload.loadsByWasteRecordType[0].wasteRecordType).toBe('received')
+      expect(payload.loadsByWasteRecordType[0].sheetName).toBe('Received')
+      expect(payload.loadsByWasteRecordType[0].added.valid.count).toBe(1)
+      expect(payload.loadsByWasteRecordType[0].adjusted.valid.count).toBe(1)
+      expect(payload.loadsByWasteRecordType[0].unchanged.valid.count).toBe(1)
     })
   })
 

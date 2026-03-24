@@ -49,6 +49,8 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
  * @property {WasteRecordChange} change - What happened to this record: created, updated, or unchanged
+ * @property {string} tableName - The table schema key (e.g. RECEIVED_LOADS_FOR_EXPORT)
+ * @property {string} wasteRecordType - The waste record type (e.g. received, exported, sentOn)
  */
 
 const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
@@ -77,7 +79,8 @@ const transformTable = (
   tableData,
   rowTransformer,
   context,
-  existingRecords
+  existingRecords,
+  { tableName, wasteRecordType: tableWasteRecordType } = {}
 ) => {
   const { rows } = tableData
   const {
@@ -109,7 +112,14 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, issues, outcome, change: 'unchanged' }
+        return {
+          record: existingRecord,
+          issues,
+          outcome,
+          change: 'unchanged',
+          tableName,
+          wasteRecordType: tableWasteRecordType
+        }
       }
 
       // Add new version with only changed fields
@@ -129,7 +139,9 @@ const transformTable = (
         },
         issues,
         outcome,
-        change: 'updated'
+        change: 'updated',
+        tableName,
+        wasteRecordType: tableWasteRecordType
       }
     }
 
@@ -156,7 +168,14 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, issues, outcome, change: 'created' }
+    return {
+      record: wasteRecord,
+      issues,
+      outcome,
+      change: 'created',
+      tableName,
+      wasteRecordType: tableWasteRecordType
+    }
   })
 }
 
@@ -206,7 +225,8 @@ export const transformFromSummaryLog = (
       tableData,
       schema.rowTransformer,
       summaryLogContext,
-      existingRecords
+      existingRecords,
+      { tableName, wasteRecordType: schema.wasteRecordType }
     )
   })
 

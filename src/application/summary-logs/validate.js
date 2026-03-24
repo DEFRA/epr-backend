@@ -28,6 +28,7 @@ import { transformFromSummaryLog } from '#application/waste-records/transform-fr
 import {
   countByWasteBalanceInclusion,
   countByValidity,
+  countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
 
@@ -500,16 +501,28 @@ export const createSummaryLogsValidator = ({
 
     // Classify loads only for validated summary logs
     // Valid/invalid counts ALL rows; included/excluded counts only WB rows
-    const loads =
-      status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
-        ? mergeLoads(
-            countByValidity({ wasteRecords, summaryLogId }),
-            countByWasteBalanceInclusion({
-              wasteRecords: wasteBalanceRecords,
-              summaryLogId
-            })
-          )
-        : null
+    const isValidated = status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
+
+    const loads = isValidated
+      ? mergeLoads(
+          countByValidity({ wasteRecords, summaryLogId }),
+          countByWasteBalanceInclusion({
+            wasteRecords: wasteBalanceRecords,
+            summaryLogId
+          })
+        )
+      : null
+
+    const tableSchemas = PROCESSING_TYPE_TABLES[processingType] ?? {}
+
+    const loadsByWasteRecordType = isValidated
+      ? countByWasteRecordType({
+          wasteRecords,
+          wasteBalanceRecords,
+          summaryLogId,
+          tableSchemas
+        })
+      : null
 
     // Record row outcome metrics only for waste-balance table rows
     await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
@@ -524,6 +537,7 @@ export const createSummaryLogsValidator = ({
         totalIssuesCount
       },
       ...(loads && { loads }),
+      ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
       ...(meta && { meta })
     })
 

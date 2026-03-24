@@ -201,3 +201,55 @@ export const mergeLoads = (validationResults, classificationResults) => ({
   },
   adjusted: { ...validationResults.adjusted, ...classificationResults.adjusted }
 })
+
+/**
+ * Groups waste records by wasteRecordType and computes per-type load counts.
+ * Uses a Map to guarantee unique wasteRecordType entries by construction.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records with tableName and wasteRecordType
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records only
+ * @param {string} params.summaryLogId - The current summary log ID
+ * @param {Object<string, { sheetName: string }>} params.tableSchemas - Table schemas keyed by table name
+ * @returns {Array<{ wasteRecordType: string, sheetName: string } & Loads>}
+ */
+export const countByWasteRecordType = ({
+  wasteRecords,
+  wasteBalanceRecords,
+  summaryLogId,
+  tableSchemas
+}) => {
+  const wbByType = new Map()
+  for (const wr of wasteBalanceRecords) {
+    if (!wbByType.has(wr.wasteRecordType)) {
+      wbByType.set(wr.wasteRecordType, [])
+    }
+    wbByType.get(wr.wasteRecordType).push(wr)
+  }
+
+  const grouped = new Map()
+  for (const wr of wasteRecords) {
+    if (!grouped.has(wr.wasteRecordType)) {
+      grouped.set(wr.wasteRecordType, {
+        wasteRecordType: wr.wasteRecordType,
+        tableName: wr.tableName,
+        records: []
+      })
+    }
+    grouped.get(wr.wasteRecordType).records.push(wr)
+  }
+
+  return Array.from(grouped.values()).map(
+    ({ wasteRecordType, tableName, records }) => ({
+      wasteRecordType,
+      sheetName: tableSchemas[tableName]?.sheetName ?? tableName,
+      ...mergeLoads(
+        countByValidity({ wasteRecords: records, summaryLogId }),
+        countByWasteBalanceInclusion({
+          wasteRecords: wbByType.get(wasteRecordType) ?? [],
+          summaryLogId
+        })
+      )
+    })
+  )
+}

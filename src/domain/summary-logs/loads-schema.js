@@ -26,3 +26,15 @@ export const loadsSchema = Joi.object({
   unchanged: loadValiditySchema.required(),
   adjusted: loadValiditySchema.required()
 })
+
+export const loadsByWasteRecordTypeSchema = Joi.array()
+  .items(
+    Joi.object({
+      wasteRecordType: Joi.string().required(),
+      sheetName: Joi.string().required(),
+      added: loadValiditySchema.required(),
+      unchanged: loadValiditySchema.required(),
+      adjusted: loadValiditySchema.required()
+    })
+  )
+  .unique('wasteRecordType')
