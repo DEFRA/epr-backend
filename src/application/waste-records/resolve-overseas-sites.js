@@ -34,6 +34,7 @@ export const resolveOverseasSites = async (
 
   const entries = Object.entries(registration.overseasSites ?? {})
 
+  /** @type {Record<number, { validFrom: Date | null }>} */
   const resolved = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
     const site = await overseasSitesRepository.findById(overseasSiteId)
