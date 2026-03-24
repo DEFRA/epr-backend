@@ -44,6 +44,7 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 /** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
+/** @typedef {import('./load-counts.js').Loads} Loads */
 
 /** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
 

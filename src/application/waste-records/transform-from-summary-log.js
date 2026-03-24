@@ -125,7 +125,7 @@ const transformTable = (
   rowTransformer,
   context,
   existingRecords,
-  { tableName, wasteRecordType: tableWasteRecordType } = {}
+  { tableName, wasteRecordType: tableWasteRecordType }
 ) => {
   const { rows } = tableData
   const {

@@ -40,7 +40,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  */
 
 /**
- * @typedef {{ wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType, sheetName: string } & Loads} LoadsByWasteRecordTypeEntry
+ * @typedef {{ wasteRecordType: string, sheetName: string } & Loads} LoadsByWasteRecordTypeEntry
  * @typedef {LoadsByWasteRecordTypeEntry[]} LoadsByWasteRecordType
  */
 
@@ -216,7 +216,7 @@ export const mergeLoads = (validationResults, classificationResults) => ({
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records only
  * @param {string} params.summaryLogId - The current summary log ID
  * @param {Object<string, { sheetName: string }>} params.tableSchemas - Table schemas keyed by table name
- * @returns {Array<{ wasteRecordType: string, sheetName: string } & Loads>}
+ * @returns {LoadsByWasteRecordType}
  */
 export const countByWasteRecordType = ({
   wasteRecords,
