@@ -864,7 +864,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         }
       }
 
-      it('returns stored report when one exists', async () => {
+      it('returns stored report with full data sections', async () => {
         const {
           server,
           organisationId,
@@ -887,7 +887,31 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           dueDate: '2026-04-20',
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           material: 'plastic',
-          wasteProcessingType: 'reprocessor'
+          wasteProcessingType: 'reprocessor',
+          recyclingActivity: {
+            suppliers: [
+              {
+                supplierName: 'Grantham Waste',
+                facilityType: 'Baler',
+                tonnageReceived: 42.21
+              }
+            ],
+            totalTonnageReceived: 42.21,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 5,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: [
+              {
+                recipientName: 'Lincoln recycling',
+                facilityType: 'Reprocessor',
+                tonnageSentOn: 5
+              }
+            ]
+          }
         })
 
         const response = await makeRequest(
@@ -900,8 +924,40 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(payload.id).toBeDefined()
         expect(payload.status).toBe('in_progress')
+        expect(payload.statusHistory).toStrictEqual([
+          expect.objectContaining({
+            status: 'in_progress',
+            changedAt: expect.any(String)
+          })
+        ])
         expect(payload.material).toBe('plastic')
-        expect(payload.details).toBeDefined()
+        expect(payload.wasteProcessingType).toBe('reprocessor')
+        expect(payload.details.material).toBe('glass')
+        expect(payload.details.site).toBeDefined()
+        expect(payload.recyclingActivity).toStrictEqual({
+          suppliers: [
+            {
+              supplierName: 'Grantham Waste',
+              facilityType: 'Baler',
+              tonnageReceived: 42.21
+            }
+          ],
+          totalTonnageReceived: 42.21,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        })
+        expect(payload.wasteSent).toStrictEqual({
+          tonnageSentToReprocessor: 5,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: [
+            {
+              recipientName: 'Lincoln recycling',
+              facilityType: 'Reprocessor',
+              tonnageSentOn: 5
+            }
+          ]
+        })
       })
 
       it('returns computed data when no stored report exists', async () => {

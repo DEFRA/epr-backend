@@ -129,8 +129,8 @@ export async function findReportForPeriod({
   )
 
   if (currentReportId) {
-    const report = await reportsRepository.findReportById(currentReportId)
-    return { report }
+    const storedReport = await reportsRepository.findReportById(currentReportId)
+    return { report: storedReport }
   }
 
   const operatorCategory = getOperatorCategory(registration)

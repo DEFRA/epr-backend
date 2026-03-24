@@ -343,6 +343,48 @@ describe(`GET ${reportsGetPath}`, () => {
       })
     })
 
+    describe('periodic reports under a different cadence', () => {
+      it('ignores periodic reports stored under a mismatched cadence', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          },
+          reportsRepositoryFactory
+        )
+
+        // Create a report under monthly cadence, but the handler will query quarterly
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${new Date().getUTCFullYear()}-01-01`,
+          endDate: `${new Date().getUTCFullYear()}-01-31`,
+          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'exporter'
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.cadence).toBe('quarterly')
+        expect(payload.reportingPeriods.every((p) => p.report === null)).toBe(
+          true
+        )
+      })
+    })
+
     describe('registration not found', () => {
       it('returns 404', async () => {
         const { server, organisationId } = await createServer()

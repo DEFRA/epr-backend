@@ -64,7 +64,7 @@ describe(`POST ${reportsPostPath}`, () => {
         ...asStandardUser({ linkedOrgId: orgId })
       })
 
-    it('returns 201 with created report', async () => {
+    it('returns 201 with created report including data sections', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: undefined
@@ -76,7 +76,29 @@ describe(`POST ${reportsPostPath}`, () => {
       const payload = JSON.parse(response.payload)
       expect(payload.id).toBeDefined()
       expect(payload.status).toBe('in_progress')
-      expect(payload.details).toBeDefined()
+      expect(payload.statusHistory).toStrictEqual([
+        expect.objectContaining({
+          status: 'in_progress',
+          changedAt: expect.any(String)
+        })
+      ])
+      expect(payload.material).toBe('glass_re_melt')
+      expect(payload.wasteProcessingType).toBe('reprocessor')
+      expect(payload.details.material).toBe('glass')
+      expect(payload.details.site).toBeDefined()
+      expect(payload.recyclingActivity).toStrictEqual({
+        suppliers: [],
+        totalTonnageReceived: 0,
+        tonnageRecycled: null,
+        tonnageNotRecycled: null
+      })
+      expect(payload.wasteSent).toStrictEqual({
+        tonnageSentToReprocessor: 0,
+        tonnageSentToExporter: 0,
+        tonnageSentToAnotherSite: 0,
+        finalDestinations: []
+      })
+      expect(payload.exportActivity).toBeUndefined()
     })
 
     it('returns 409 when report already exists', async () => {
