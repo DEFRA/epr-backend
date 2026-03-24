@@ -222,6 +222,7 @@ function aggregateWasteExported(wasteExportedRecords) {
 
     totalTonnageReceivedForExporting += tonnage
 
+    // not OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
     const orsId = data.OSR_ID
     const siteName = data.OSR_NAME
 
