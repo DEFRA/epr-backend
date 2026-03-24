@@ -140,13 +140,11 @@ const handleFoundDocument = (doc, minimumVersion) => {
 
 const performFindById =
   (db, maxRetries, retryDelayMs) => async (id, minimumVersion) => {
-    // validate the ID and throw early
-    let validatedId
-    try {
-      validatedId = validateId(id)
-    } catch (_error) {
+    // Validate early and normalize invalid IDs to not found.
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
     }
+    const validatedId = validateId(id)
 
     for (let i = 0; i < maxRetries; i++) {
       const doc = await db
@@ -183,6 +181,31 @@ const performFindById =
 const performFindAll = (db) => async () => {
   const docs = await db.collection(COLLECTION_NAME).find().toArray()
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
+const ORS_ADMIN_LIST_PROJECTION = {
+  orgId: 1,
+  'registrations.material': 1,
+  'registrations.registrationNumber': 1,
+  'registrations.accreditationId': 1,
+  'registrations.accreditationNumber': 1,
+  'registrations.accreditation.accreditationNumber': 1,
+  'registrations.overseasSites': 1,
+  'accreditations.id': 1,
+  'accreditations.accreditationNumber': 1
+}
+
+const performFindAllForOverseasSitesAdminList = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({}, { projection: ORS_ADMIN_LIST_PROJECTION })
+    .toArray()
+
+  return docs.map(({ orgId, registrations, accreditations }) => ({
+    orgId,
+    registrations,
+    accreditations
+  }))
 }
 
 const LINKED_ORG_PROJECTION = {
@@ -252,7 +275,8 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   return mapDocumentWithCurrentStatuses(doc)
 }
 
-const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const escapeRegex = (string) =>
+  string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
@@ -363,6 +387,8 @@ export const createOrganisationsRepository = async (
       replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
+      findAllForOverseasSitesAdminList:
+        performFindAllForOverseasSitesAdminList(db),
       findAllLinked: performFindAllLinked(db),
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),

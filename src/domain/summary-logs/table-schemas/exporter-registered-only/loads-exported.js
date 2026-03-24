@@ -12,6 +12,8 @@ import {
   MESSAGES,
   BASEL_CODES
 } from '../shared/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformLoadsExportedRowRegisteredOnly } from '#application/waste-records/row-transformers/loads-exported-exporter-registered-only.js'
 const ALL_FIELDS = Object.values(FIELDS)
 
 /**
@@ -23,6 +25,9 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const LOADS_EXPORTED = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+  sheetName: 'Exported (sections 2 and 3)',
+  rowTransformer: transformLoadsExportedRowRegisteredOnly,
 
   /**
    * VAL008: All columns that must be present in the uploaded file
