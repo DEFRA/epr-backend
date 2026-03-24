@@ -13,6 +13,7 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const buildWasteRecord = (overrides = {}) => {
   const defaultData = {
@@ -109,7 +110,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -131,7 +133,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -152,7 +155,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -171,7 +175,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -199,7 +204,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record1, record2],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(2)
@@ -228,7 +234,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -248,7 +255,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -267,7 +275,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -287,7 +296,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -306,7 +316,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -350,7 +361,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     // Target is 20, already credited 10. Delta is 10.
@@ -420,7 +432,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -441,7 +454,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: balance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -486,7 +500,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     // Target 10, Credited 20. Delta -10.
@@ -533,7 +548,8 @@ describe('Waste Balance Calculator', () => {
         transactions: [existingTransaction]
       },
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -581,7 +597,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     // Target is 0 (excluded), already credited 100 → delta -100 → DEBIT of 100
@@ -608,7 +625,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     // Target is 0 (excluded), already credited 0 → delta 0 → no transaction
@@ -631,7 +649,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -652,7 +671,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -685,7 +705,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: balanceWithTransaction,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     // Should create a new transaction because the existing one isn't linked to this record
@@ -826,7 +847,7 @@ describe('Waste Balance Calculator', () => {
       expect(result.newTransactions[0].amount).toBe(10)
     })
 
-    it('skips ORS check when overseasSites is not provided', () => {
+    it('skips ORS check when ORS validation is disabled', () => {
       const record = buildWasteRecord({
         data: {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
@@ -839,7 +860,8 @@ describe('Waste Balance Calculator', () => {
       const result = calculateWasteBalanceUpdates({
         currentBalance: emptyBalance,
         wasteRecords: [record],
-        accreditation
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(result.newTransactions).toHaveLength(1)
@@ -864,7 +886,8 @@ describe('Waste Balance Calculator', () => {
       const result = calculateWasteBalanceUpdates({
         currentBalance: emptyBalance,
         wasteRecords: [record],
-        accreditation
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(result.newTransactions).toHaveLength(1)
@@ -886,7 +909,8 @@ describe('Waste Balance Calculator', () => {
       const result = calculateWasteBalanceUpdates({
         currentBalance: emptyBalance,
         wasteRecords: [record],
-        accreditation
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(result.newTransactions).toHaveLength(1)

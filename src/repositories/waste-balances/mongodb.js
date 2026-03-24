@@ -119,7 +119,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
-      { user, overseasSites } = {}
+      { user, overseasSites }
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,

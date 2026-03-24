@@ -95,7 +95,7 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * Calculates the target amount for a waste record based on accreditation.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @param {Object} accreditation
- * @param {Record<number, { validFrom: Date | null }> | undefined} [overseasSites]
+ * @param {Record<number, { validFrom: Date | null }> | symbol} overseasSites
  * @returns {number}
  */
 const getTargetAmount = (record, accreditation, overseasSites) => {
@@ -130,7 +130,7 @@ const getTargetAmount = (record, accreditation, overseasSites) => {
  * @param {Object} params.accreditation - The accreditation details.
  * @param {string} [params.accreditation.validFrom] - ISO date string.
  * @param {string} [params.accreditation.validTo] - ISO date string.
- * @param {Record<number, { validFrom: Date | null }> | undefined} [params.overseasSites] - Resolved ORS lookup map for exporter validation.
+ * @param {Record<number, { validFrom: Date | null }> | symbol} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED.
  * @returns {Object} Result containing new transactions and updated totals.
  * @property {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} newTransactions
  * @property {number} newAmount

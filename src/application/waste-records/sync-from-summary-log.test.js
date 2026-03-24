@@ -10,6 +10,7 @@ import {
   buildVersionData,
   toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -167,7 +168,7 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', {
       user: undefined,
-      overseasSites: undefined
+      overseasSites: ORS_VALIDATION_DISABLED
     })
   })
 
@@ -1015,7 +1016,7 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
       user: undefined,
-      overseasSites: undefined
+      overseasSites: ORS_VALIDATION_DISABLED
     })
   })
 

@@ -23,6 +23,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import * as validationPipeline from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -339,7 +340,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           organisationsRepository: {}
         },
         findBalance: vi.fn(),
-        saveBalance: vi.fn()
+        saveBalance: vi.fn(),
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(result).toBeUndefined()
@@ -391,7 +393,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         dependencies,
         findBalance,
         saveBalance,
-        user
+        user,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(audit).toHaveBeenCalledWith(
@@ -452,8 +455,9 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
+        saveBalance,
         // user undefined
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(audit).not.toHaveBeenCalled()
@@ -504,7 +508,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         dependencies,
         findBalance,
         saveBalance,
-        user
+        user,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // Should still audit
@@ -568,7 +573,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         dependencies,
         findBalance,
         saveBalance,
-        user
+        user,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // CDP audit should get reduced context
@@ -609,7 +615,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           accreditationId: 'acc-1',
           dependencies: {}, // missing organisationsRepository
           findBalance: vi.fn(),
-          saveBalance: vi.fn()
+          saveBalance: vi.fn(),
+          overseasSites: ORS_VALIDATION_DISABLED
         })
       ).rejects.toThrow('organisationsRepository dependency is required')
     })
@@ -629,7 +636,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           accreditationId: 'acc-1',
           dependencies,
           findBalance: vi.fn(),
-          saveBalance: vi.fn()
+          saveBalance: vi.fn(),
+          overseasSites: ORS_VALIDATION_DISABLED
         })
       ).rejects.toThrow('Accreditation not found: acc-1')
     })
@@ -657,7 +665,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
+        saveBalance,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       expect(saveBalance).not.toHaveBeenCalled()
@@ -689,7 +698,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         accreditationId: 'acc-1',
         dependencies,
         findBalance,
-        saveBalance
+        saveBalance,
+        overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // Should not save balance
@@ -749,7 +759,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
         )
       })
 
-      it('should pass undefined overseasSites when not provided', async () => {
+      it('should pass ORS_VALIDATION_DISABLED to calculator when feature is off', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -787,12 +797,13 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           accreditationId: 'acc-1',
           dependencies,
           findBalance,
-          saveBalance
+          saveBalance,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
 
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledWith(
           expect.objectContaining({
-            overseasSites: undefined
+            overseasSites: ORS_VALIDATION_DISABLED
           })
         )
       })

@@ -10,6 +10,7 @@ import {
 } from '#domain/summary-logs/markers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_CHANGE } from '#domain/waste-records/model.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 /**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
@@ -292,7 +293,7 @@ export const syncFromSummaryLog = (dependencies) => {
           summaryLog.organisationId,
           summaryLog.registrationId
         )
-      : undefined
+      : ORS_VALIDATION_DISABLED
 
     // 9. Update waste balances if accreditation ID exists
     await updateWasteBalances({

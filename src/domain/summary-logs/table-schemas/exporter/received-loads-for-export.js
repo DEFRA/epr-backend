@@ -34,6 +34,7 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
+import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
@@ -190,7 +191,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null, overseasSites?: Record<number, Pick<OverseasSite, 'validFrom'>> }} */ {
+    /** @type {{ accreditation: Accreditation | null, overseasSites: Record<number, Pick<OverseasSite, 'validFrom'>> | typeof ORS_VALIDATION_DISABLED }} */ {
       accreditation,
       overseasSites
     }
@@ -216,7 +217,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       }
     }
 
-    if (overseasSites) {
+    if (overseasSites !== ORS_VALIDATION_DISABLED) {
       const ors = overseasSites[data[FIELDS.OSR_ID]]
       if (
         !ors?.validFrom ||
