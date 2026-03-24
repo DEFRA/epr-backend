@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_CHANGE
+} from '#domain/waste-records/model.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
@@ -38,7 +41,7 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  */
 
 /**
- * @typedef {'created' | 'updated' | 'unchanged'} WasteRecordChange
+ * @typedef {import('#domain/waste-records/model.js').WasteRecordChange} WasteRecordChange
  */
 
 /**
@@ -49,9 +52,53 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
  * @property {WasteRecordChange} change - What happened to this record: created, updated, or unchanged
+ * @property {string} tableName - The table schema key (e.g. RECEIVED_LOADS_FOR_EXPORT)
+ * @property {string} wasteRecordType - The waste record type (e.g. received, exported, sentOn)
  */
 
 const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
+
+/**
+ * Updates an existing waste record with changed fields, or returns it unchanged.
+ *
+ * @param {WasteRecord} existingRecord
+ * @param {Record<string, any>} data - Full row data from the transformer
+ * @param {{ timestamp: string, summaryLog: object }} versionContext
+ * @returns {{ record: WasteRecord, change: WasteRecordChange }}
+ */
+const updateExistingRecord = (
+  existingRecord,
+  data,
+  { timestamp, summaryLog }
+) => {
+  const delta = Object.fromEntries(
+    Object.entries(data).filter(
+      ([key, value]) => key !== 'ROW_ID' && existingRecord.data[key] !== value
+    )
+  )
+
+  if (Object.keys(delta).length === 0) {
+    return { record: existingRecord, change: WASTE_RECORD_CHANGE.UNCHANGED }
+  }
+
+  return {
+    record: {
+      ...existingRecord,
+      data,
+      versions: [
+        ...existingRecord.versions,
+        {
+          id: randomUUID(),
+          createdAt: timestamp,
+          status: VERSION_STATUS.UPDATED,
+          summaryLog,
+          data: delta
+        }
+      ]
+    },
+    change: WASTE_RECORD_CHANGE.UPDATED
+  }
+}
 
 /**
  * Generic table transformation function
@@ -77,7 +124,8 @@ const transformTable = (
   tableData,
   rowTransformer,
   context,
-  existingRecords
+  existingRecords,
+  { tableName, wasteRecordType: tableWasteRecordType }
 ) => {
   const { rows } = tableData
   const {
@@ -99,37 +147,16 @@ const transformTable = (
       existingRecords.get(`${wasteRecordType}:${rowId}`) ?? null
 
     if (existingRecord) {
-      // Calculate delta: find fields that changed (excluding ROW_ID)
-      const delta = {}
-      for (const [key, value] of Object.entries(data)) {
-        if (key !== 'ROW_ID' && existingRecord.data[key] !== value) {
-          delta[key] = value
-        }
-      }
-
-      // If nothing changed, return existing record unchanged
-      if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, issues, outcome, change: 'unchanged' }
-      }
-
-      // Add new version with only changed fields
-      const newVersion = {
-        id: randomUUID(),
-        createdAt: timestamp,
-        status: VERSION_STATUS.UPDATED,
-        summaryLog,
-        data: delta
-      }
-
+      const updated = updateExistingRecord(existingRecord, data, {
+        timestamp,
+        summaryLog
+      })
       return {
-        record: {
-          ...existingRecord,
-          data,
-          versions: [...existingRecord.versions, newVersion]
-        },
+        ...updated,
         issues,
         outcome,
-        change: 'updated'
+        tableName,
+        wasteRecordType: tableWasteRecordType
       }
     }
 
@@ -156,7 +183,14 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, issues, outcome, change: 'created' }
+    return {
+      record: wasteRecord,
+      issues,
+      outcome,
+      change: WASTE_RECORD_CHANGE.CREATED,
+      tableName,
+      wasteRecordType: tableWasteRecordType
+    }
   })
 }
 
@@ -206,7 +240,8 @@ export const transformFromSummaryLog = (
       tableData,
       schema.rowTransformer,
       summaryLogContext,
-      existingRecords
+      existingRecords,
+      { tableName, wasteRecordType: schema.wasteRecordType }
     )
   })
 

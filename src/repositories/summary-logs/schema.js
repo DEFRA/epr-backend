@@ -1,7 +1,10 @@
 import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
+import {
+  loadsSchema,
+  loadsByWasteRecordTypeSchema
+} from '#domain/summary-logs/loads-schema.js'
 
 const commonMessages = {
   'any.required': '{#label} is required',
@@ -79,6 +82,7 @@ export const summaryLogUpdateSchema = Joi.object({
     failures: Joi.array().items(Joi.object()).optional()
   }).optional(),
   loads: loadsSchema.optional(),
+  loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),

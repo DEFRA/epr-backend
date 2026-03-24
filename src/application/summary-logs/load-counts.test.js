@@ -1,6 +1,7 @@
 import {
   countByWasteBalanceInclusion,
   countByValidity,
+  countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
 import {
@@ -867,5 +868,40 @@ describe('mergeLoads', () => {
         excluded: { count: 0, rowIds: [] }
       }
     })
+  })
+})
+
+// Happy-path coverage provided by integration.submission-and-placeholders test.
+// Only the sheetName fallback branch (unreachable via the normal pipeline) is tested here.
+describe('countByWasteRecordType', () => {
+  it('falls back to tableName when tableSchemas has no sheetName', () => {
+    const record = {
+      rowId: '1001',
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      versions: [
+        {
+          summaryLog: { id: 'log-1' },
+          status: VERSION_STATUS.CREATED
+        }
+      ]
+    }
+
+    const result = countByWasteRecordType({
+      wasteRecords: [
+        {
+          record,
+          issues: [],
+          outcome: ROW_OUTCOME.INCLUDED,
+          tableName: 'UNKNOWN_TABLE',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED
+        }
+      ],
+      wasteBalanceRecords: [],
+      summaryLogId: 'log-1',
+      tableSchemas: {}
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].sheetName).toBe('UNKNOWN_TABLE')
   })
 })

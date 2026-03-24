@@ -39,6 +39,11 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * @property {LoadValidity} adjusted - Loads adjusted in this upload
  */
 
+/**
+ * @typedef {{ wasteRecordType: string, sheetName: string } & Loads} LoadsByWasteRecordTypeEntry
+ * @typedef {LoadsByWasteRecordTypeEntry[]} LoadsByWasteRecordType
+ */
+
 const MAX_ROW_IDS = 100
 
 /**
@@ -201,3 +206,45 @@ export const mergeLoads = (validationResults, classificationResults) => ({
   },
   adjusted: { ...validationResults.adjusted, ...classificationResults.adjusted }
 })
+
+/**
+ * Groups waste records by wasteRecordType and computes per-type load counts.
+ * Uses a Map to guarantee unique wasteRecordType entries by construction.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records with tableName and wasteRecordType
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records only
+ * @param {string} params.summaryLogId - The current summary log ID
+ * @param {Object<string, { sheetName: string }>} params.tableSchemas - Table schemas keyed by table name
+ * @returns {LoadsByWasteRecordType}
+ */
+export const countByWasteRecordType = ({
+  wasteRecords,
+  wasteBalanceRecords,
+  summaryLogId,
+  tableSchemas
+}) => {
+  const wasteBalancesGroupedByType = Map.groupBy(
+    wasteBalanceRecords,
+    (wr) => wr.wasteRecordType
+  )
+  const wasteRecordsGroupedByType = Map.groupBy(
+    wasteRecords,
+    (wr) => wr.wasteRecordType
+  )
+
+  return Array.from(wasteRecordsGroupedByType.entries()).map(
+    ([type, records]) => ({
+      wasteRecordType: type,
+      sheetName:
+        tableSchemas[records[0].tableName]?.sheetName ?? records[0].tableName,
+      ...mergeLoads(
+        countByValidity({ wasteRecords: records, summaryLogId }),
+        countByWasteBalanceInclusion({
+          wasteRecords: wasteBalancesGroupedByType.get(type) ?? [],
+          summaryLogId
+        })
+      )
+    })
+  )
+}
