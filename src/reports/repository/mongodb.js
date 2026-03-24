@@ -365,6 +365,24 @@ const performFindPeriodicReports = async (db, params) => {
 }
 
 /**
+ * @param {import('mongodb').Db} db
+ * @param {string[]} reportIds
+ * @returns {Promise<Map<string, import('./port.js').ReportStatus>>}
+ */
+const performFindReportStatusesByIds = async (db, reportIds) => {
+  if (reportIds.length === 0) {
+    return new Map()
+  }
+
+  const docs = await db
+    .collection(REPORTS_COLLECTION)
+    .find({ id: { $in: reportIds } }, { projection: { id: 1, status: 1 } })
+    .toArray()
+
+  return new Map(docs.map((doc) => [doc.id, doc.status]))
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {import('mongodb').Db} db
@@ -378,6 +396,8 @@ export const createReportsRepository = async (db) => {
     updateReport: (params) => performUpdateReport(db, params),
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
-    findReportById: (reportId) => performFindReportId(db, reportId)
+    findReportById: (reportId) => performFindReportId(db, reportId),
+    findReportStatusesByIds: (reportIds) =>
+      performFindReportStatusesByIds(db, reportIds)
   })
 }

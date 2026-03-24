@@ -2,9 +2,7 @@ import Boom from '@hapi/boom'
 
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
-import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
-
-const FAR_FUTURE = new Date('2099-12-31')
+import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 
 /**
  * Finds the current report ID for a specific period slot within periodic reports.
@@ -57,7 +55,7 @@ function formatSiteAddress(address) {
  * @returns {{ startDate: string, endDate: string, dueDate: string }}
  */
 function getValidatedPeriodInfo(cadence, year, period) {
-  const allPeriods = generateReportingPeriods(cadence, year, FAR_FUTURE)
+  const allPeriods = generateAllPeriodsForYear(cadence, year)
   const periodInfo = allPeriods.find((p) => p.period === period)
 
   if (!periodInfo) {

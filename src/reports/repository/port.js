@@ -179,6 +179,7 @@
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(reportIds: string[]) => Promise<Map<string, ReportStatus>>} findReportStatusesByIds
  */
 
 /**

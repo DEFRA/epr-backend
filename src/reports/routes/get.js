@@ -56,13 +56,8 @@ export const reportsGet = {
           .filter(Boolean)
     )
 
-    const reportStatusMap = new Map()
-    await Promise.all(
-      reportIds.map(async (reportId) => {
-        const report = await reportsRepository.findReportById(reportId)
-        reportStatusMap.set(reportId, report.status)
-      })
-    )
+    const reportStatusMap =
+      await reportsRepository.findReportStatusesByIds(reportIds)
 
     const reportingPeriods = mergeReportingPeriods(
       computedPeriods,

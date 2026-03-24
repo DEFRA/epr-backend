@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { CADENCE } from './cadence.js'
-import { generateReportingPeriods } from './generate-reporting-periods.js'
+import {
+  generateAllPeriodsForYear,
+  generateReportingPeriods
+} from './generate-reporting-periods.js'
+
+describe('generateAllPeriodsForYear', () => {
+  it('returns all 12 monthly periods regardless of current date', () => {
+    const periods = generateAllPeriodsForYear(CADENCE.monthly, 2099)
+
+    expect(periods).toHaveLength(12)
+    expect(periods[0].period).toBe(1)
+    expect(periods[11].period).toBe(12)
+  })
+
+  it('returns all 4 quarterly periods regardless of current date', () => {
+    const periods = generateAllPeriodsForYear(CADENCE.quarterly, 2099)
+
+    expect(periods).toHaveLength(4)
+  })
+
+  it('throws TypeError for unknown cadence', () => {
+    expect(() => generateAllPeriodsForYear('biweekly', 2026)).toThrow(TypeError)
+  })
+})
 
 const march20 = new Date('2026-03-20T12:00:00Z')
 

@@ -16,18 +16,13 @@ function computeDueDate(year, endMonth) {
 }
 
 /**
- * Generates all reporting periods for a given year and cadence,
- * up to and including the period that contains the current date.
- *
- * Each period includes `dueDate` and `report: null` (placeholder
- * for future persistence layer).
+ * Generates all reporting periods for a given year and cadence.
  *
  * @param {string} cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} year
- * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
  * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}
  */
-export function generateReportingPeriods(cadence, year, now = new Date()) {
+export function generateAllPeriodsForYear(cadence, year) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
 
   if (!monthsPerPeriod) {
@@ -35,7 +30,7 @@ export function generateReportingPeriods(cadence, year, now = new Date()) {
   }
 
   const periodsPerYear = MONTHS_IN_YEAR / monthsPerPeriod
-  const allPeriods = Array.from({ length: periodsPerYear }, (_, i) => {
+  return Array.from({ length: periodsPerYear }, (_, i) => {
     const period = i + 1
     const startMonth = i * monthsPerPeriod
     const endMonth = startMonth + monthsPerPeriod - 1
@@ -45,8 +40,19 @@ export function generateReportingPeriods(cadence, year, now = new Date()) {
 
     return { year, period, startDate, endDate, dueDate, report: null }
   })
+}
 
-  return allPeriods.filter((p) => {
+/**
+ * Generates reporting periods for a given year and cadence,
+ * filtered to only include periods that have ended.
+ *
+ * @param {string} cadence - Cadence key ('monthly' or 'quarterly')
+ * @param {number} year
+ * @param {Date} [now] - Current date (defaults to new Date(), injectable for testing)
+ * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: null}>}
+ */
+export function generateReportingPeriods(cadence, year, now = new Date()) {
+  return generateAllPeriodsForYear(cadence, year).filter((p) => {
     const dayAfterEnd = new Date(p.endDate)
     dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
     return dayAfterEnd <= now
