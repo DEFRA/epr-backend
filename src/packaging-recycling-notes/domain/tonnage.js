@@ -15,14 +15,15 @@
  * @returns {number}
  */
 export function aggregateIssuedTonnage(prns, { startDate, endDate, statuses }) {
-  return prns.reduce((total, prn) => {
-    const inPeriod = prn.status.history.filter(
-      (e) => e.at >= startDate && e.at <= endDate
-    )
-    if (!inPeriod.length) {
-      return total
-    }
-    const latest = inPeriod.at(-1)
-    return statuses.includes(latest.status) ? total + prn.tonnage : total
-  }, 0)
+  const changesInPeriod = (prn) =>
+    prn.status.history.filter((e) => e.at >= startDate && e.at <= endDate)
+
+  const hasMatchingLatestStatus = (prn) => {
+    const changes = changesInPeriod(prn)
+    return changes.length > 0 && statuses.includes(changes.at(-1).status)
+  }
+
+  return prns
+    .filter(hasMatchingLatestStatus)
+    .reduce((total, prn) => total + prn.tonnage, 0)
 }
