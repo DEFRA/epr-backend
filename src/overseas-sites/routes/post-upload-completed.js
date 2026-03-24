@@ -6,6 +6,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
+import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
+
 import {
   orsUploadCompletedPayloadSchema,
   UPLOAD_FILE_STATUS
@@ -81,6 +83,8 @@ export const orsUploadCompleted = {
 
       if (hasCompletedFiles(uploads)) {
         await orsImportsWorker.importOverseasSites(id)
+      } else {
+        await orsImportsRepository.updateStatus(id, ORS_IMPORT_STATUS.FAILED)
       }
 
       const fileCount = uploads.length

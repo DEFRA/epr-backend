@@ -93,6 +93,27 @@ describe('bucket routing', () => {
     expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
   })
 
+  it('sends only xlsx MIME type for summary log uploads', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: { send: vi.fn() },
+      ...testConfig
+    })
+
+    await repository.initiateSummaryLogUpload({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      summaryLogId: 'sl-1',
+      redirectUrl: 'https://frontend.test/redirect',
+      callbackUrl: 'https://backend.test/callback'
+    })
+
+    expect(parseFetchBody().mimeTypes).toEqual([
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ])
+  })
+
   it('sends ORS bucket for ORS imports', async () => {
     stubFetch()
 
@@ -108,6 +129,26 @@ describe('bucket routing', () => {
     })
 
     expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
+  })
+
+  it('sends both xlsx and xlsm MIME types for ORS imports', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: { send: vi.fn() },
+      ...testConfig
+    })
+
+    await repository.initiateOrsImport({
+      importId: 'import-1',
+      redirectUrl: 'https://admin.test/redirect',
+      callbackUrl: 'https://backend.test/callback'
+    })
+
+    expect(parseFetchBody().mimeTypes).toEqual([
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12'
+    ])
   })
 })
 
