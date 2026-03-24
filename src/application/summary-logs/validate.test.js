@@ -5,7 +5,11 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import Boom from '@hapi/boom'
 
-import { createSummaryLogsValidator } from './validate.js'
+import {
+  createSummaryLogsValidator,
+  MAX_VALIDATION_ISSUES,
+  MAX_ACTUAL_LENGTH
+} from './validate.js'
 import {
   createEmptyLoadCategory,
   createEmptyLoadValidity
@@ -1851,6 +1855,113 @@ describe('SummaryLogsValidator', () => {
 
       // Non-waste-balance table rows should not generate row outcome metrics
       expect(mockRecordRowOutcome).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Validation issues truncation', () => {
+    it('truncates issues to MAX_VALIDATION_ISSUES and records totalIssuesCount', async () => {
+      const issueCount = MAX_VALIDATION_ISSUES + 50
+      const rows = Array.from({ length: issueCount }, (_, i) =>
+        buildReceivedLoadRow({
+          ROW_ID: 10000 + i,
+          EWC_CODE: 'bad-code' // Each row produces at least one fatal issue
+        })
+      )
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({ rows })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.validation.issues).toHaveLength(MAX_VALIDATION_ISSUES)
+      expect(updateCall.validation.totalIssuesCount).toBeGreaterThan(
+        MAX_VALIDATION_ISSUES
+      )
+    })
+
+    it('truncates long actual values in issues before saving', async () => {
+      const longValue = 'x'.repeat(MAX_ACTUAL_LENGTH + 100)
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  EWC_CODE: longValue
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      const issueWithActual = updateCall.validation.issues.find(
+        (i) =>
+          typeof i.context?.actual === 'string' && i.context.actual.length > 1
+      )
+
+      expect(issueWithActual.context.actual).toHaveLength(MAX_ACTUAL_LENGTH + 1)
+      expect(issueWithActual.context.actual).toMatch(/…$/)
+    })
+
+    it('does not truncate short actual values', async () => {
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  EWC_CODE: 'bad-code'
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      const issueWithActual = updateCall.validation.issues.find(
+        (i) => i.context?.actual === 'bad-code'
+      )
+
+      expect(issueWithActual.context.actual).toBe('bad-code')
+    })
+
+    it('always includes totalIssuesCount matching actual issue count', async () => {
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  EWC_CODE: 'bad-code'
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.validation.totalIssuesCount).toBe(
+        updateCall.validation.issues.length
+      )
     })
   })
 })

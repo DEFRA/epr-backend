@@ -644,6 +644,77 @@ describe('transformValidationResponse', () => {
       )
     })
 
+    it('includes totalIssuesCount in fatal response when present', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'technical',
+            message: 'System error',
+            code: 'VALIDATION_SYSTEM_ERROR'
+          }
+        ],
+        totalIssuesCount: 5000
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.totalIssuesCount).toBe(5000)
+    })
+
+    it('includes totalIssuesCount in concerns response when present', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'VALUE_OUT_OF_RANGE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'ROW_ID'
+              }
+            }
+          }
+        ],
+        totalIssuesCount: 3000
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.totalIssuesCount).toBe(3000)
+    })
+
+    it('omits totalIssuesCount from response when not present in stored validation', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Invalid value',
+            code: 'VALUE_OUT_OF_RANGE',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                row: 8,
+                column: 'B',
+                header: 'ROW_ID'
+              }
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result.validation.totalIssuesCount).toBeUndefined()
+    })
+
     it('passes response schema validation with errorCode', () => {
       const validation = {
         issues: [

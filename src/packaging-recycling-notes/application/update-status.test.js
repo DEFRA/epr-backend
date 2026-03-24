@@ -4,6 +4,7 @@ import {
   PRN_STATUS,
   PRN_ACTOR,
   StatusConflictError,
+  SuspendedAccreditationError,
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
@@ -679,6 +680,50 @@ describe('updatePrnStatus', () => {
         user: { id: 'user-789', name: 'Test User' }
       })
     ).rejects.toThrow()
+
+    expect(prnRepository.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('throws forbidden when issuing a PRN on a suspended accreditation', async () => {
+    const prnRepository = createMockPrnRepository({
+      findById: vi.fn().mockResolvedValue({
+        id: '507f1f77bcf86cd799439011',
+        organisation: { id: 'org-123' },
+        accreditation: { id: 'acc-456', accreditationYear: 2026 },
+        isExport: false,
+        tonnage: 50,
+        status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+      }),
+      updateStatus: vi.fn()
+    })
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue({
+        accreditationId: 'acc-456',
+        amount: 1000,
+        availableAmount: 1000
+      }),
+      deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
+    }
+    const organisationsRepository = {
+      findAccreditationById: vi.fn().mockResolvedValue({
+        submittedToRegulator: REGULATOR.EA,
+        status: 'suspended'
+      })
+    }
+
+    await expect(
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository,
+        id: '507f1f77bcf86cd799439011',
+        organisationId: 'org-123',
+        accreditationId: 'acc-456',
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+    ).rejects.toThrow(SuspendedAccreditationError)
 
     expect(prnRepository.updateStatus).not.toHaveBeenCalled()
   })

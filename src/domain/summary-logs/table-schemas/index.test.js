@@ -26,6 +26,9 @@ describe('table-schemas', () => {
       expect(PROCESSING_TYPE_TABLES).toHaveProperty(
         PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
       )
+      expect(PROCESSING_TYPE_TABLES).toHaveProperty(
+        PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
+      )
     })
 
     describe('REPROCESSOR_REGISTERED_ONLY', () => {
@@ -104,6 +107,23 @@ describe('table-schemas', () => {
 
       it('has RECEIVED_LOADS_FOR_EXPORT table', () => {
         expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
+      })
+
+      it('has SENT_ON_LOADS table', () => {
+        expect(tables).toHaveProperty('SENT_ON_LOADS')
+      })
+    })
+
+    describe('EXPORTER_REGISTERED_ONLY', () => {
+      const tables =
+        PROCESSING_TYPE_TABLES[PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]
+
+      it('has RECEIVED_LOADS_FOR_EXPORT table', () => {
+        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
+      })
+
+      it('has LOADS_EXPORTED table', () => {
+        expect(tables).toHaveProperty('LOADS_EXPORTED')
       })
 
       it('has SENT_ON_LOADS table', () => {
@@ -340,6 +360,10 @@ describe('table-schemas', () => {
       expect(result.END_OF_WASTE_STANDARDS).toContain('Choose option')
       expect(result.FINAL_DESTINATION_FACILITY_TYPE).toContain('Choose option')
       expect(result.BASEL_EXPORT_CODE).toContain('Choose option')
+      expect(result.MONTH_RECEIVED_FOR_EXPORT).toContain('Choose option')
+      expect(result.WAS_THE_WASTE_REFUSED).toContain('Choose option')
+      expect(result.WAS_THE_WASTE_STOPPED).toContain('Choose option')
+      expect(result.OSR_COUNTRY).toContain('Choose option')
     })
   })
 })

@@ -506,14 +506,16 @@ describe('REPROCESSED_LOADS', () => {
         expect(result.reasons).toEqual([])
       })
 
-      it('returns IGNORED when accreditation has no statusHistory', () => {
+      it('returns INCLUDED when accreditation has empty statusHistory', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: { validFrom: '2024-01-01', validTo: '2024-12-31' }
+          accreditation: {
+            validFrom: '2024-01-01',
+            validTo: '2024-12-31',
+            statusHistory: []
+          }
         })
-        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
-        expect(result.reasons).toContainEqual({
-          code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
-        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.reasons).toEqual([])
       })
     })
 

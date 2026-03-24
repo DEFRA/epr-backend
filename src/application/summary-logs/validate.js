@@ -31,6 +31,9 @@ import {
   mergeLoads
 } from './load-counts.js'
 
+export const MAX_VALIDATION_ISSUES = 100
+export const MAX_ACTUAL_LENGTH = 200
+
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -511,10 +514,14 @@ export const createSummaryLogsValidator = ({
     // Record row outcome metrics only for waste-balance table rows
     await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 
+    const allIssues = issues.getAllIssues()
+    const { cappedIssues, totalIssuesCount } = capIssuesForStorage(allIssues)
+
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
       validation: {
-        issues: issues.getAllIssues()
+        issues: cappedIssues,
+        totalIssuesCount
       },
       ...(loads && { loads }),
       ...(meta && { meta })
@@ -527,5 +534,37 @@ export const createSummaryLogsValidator = ({
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
+  }
+}
+
+/**
+ * Caps the issues array and truncates long actual values for MongoDB storage.
+ *
+ * Both the issue count and per-issue actual values are bounded to prevent
+ * the summary log document exceeding MongoDB's 16 MiB BSON limit.
+ * @see https://eaflood.atlassian.net/browse/PAE-1244
+ *
+ * @param {ValidationIssue[]} allIssues - All validation issues
+ * @returns {{ cappedIssues: ValidationIssue[], totalIssuesCount: number }}
+ */
+const capIssuesForStorage = (allIssues) => {
+  const shouldTruncate = allIssues.length > MAX_VALIDATION_ISSUES
+  const issues = shouldTruncate
+    ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
+    : allIssues
+
+  for (const issue of issues) {
+    if (
+      typeof issue.context?.actual === 'string' &&
+      issue.context.actual.length > MAX_ACTUAL_LENGTH
+    ) {
+      issue.context.actual =
+        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
+    }
+  }
+
+  return {
+    cappedIssues: issues,
+    totalIssuesCount: allIssues.length
   }
 }

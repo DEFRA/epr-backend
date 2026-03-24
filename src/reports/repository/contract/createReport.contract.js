@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { MONTHLY, QUARTERLY } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   MONTHLY_PERIODS,
@@ -57,7 +56,7 @@ export const testCreateReportBehaviour = (it) => {
     it(`does not store organisationId, registrationId, year, cadence, period on the report `, async () => {
       const reportId = await repository.createReport(
         buildCreateReportParams({
-          cadence: QUARTERLY.id,
+          cadence: 'quarterly',
           period: QUARTERLY_PERIODS.Q2
         })
       )
@@ -94,8 +93,7 @@ export const testCreateReportBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID
       })
 
-      const result =
-        periodicReport.reports[MONTHLY.id][MONTHLY_PERIODS.February]
+      const result = periodicReport.reports.monthly[MONTHLY_PERIODS.February]
 
       expect(result).toEqual({
         currentReportId: second,
