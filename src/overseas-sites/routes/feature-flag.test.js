@@ -8,6 +8,7 @@ import { overseasSiteByIdPath } from './get-by-id.js'
 import { orsImportStatusPath } from './get-import-status.js'
 import { orsImportCreatePath } from './post-import.js'
 import { overseasSitesListPath } from './list.js'
+import { adminOverseasSitesListPath } from './admin-list.js'
 
 const hasRoute = (server, method, path) =>
   server.table().some((route) => route.method === method && route.path === path)
@@ -27,6 +28,7 @@ describe('Overseas Sites feature flag', () => {
     expect(hasRoute(server, 'get', orsImportStatusPath)).toBe(true)
     expect(hasRoute(server, 'post', orsImportCreatePath)).toBe(true)
     expect(hasRoute(server, 'get', overseasSitesListPath)).toBe(true)
+    expect(hasRoute(server, 'get', adminOverseasSitesListPath)).toBe(true)
     expect(hasRoute(server, 'put', overseasSiteByIdPath)).toBe(true)
     expect(hasRoute(server, 'delete', overseasSiteByIdPath)).toBe(true)
 
@@ -45,6 +47,7 @@ describe('Overseas Sites feature flag', () => {
     expect(hasRoute(server, 'get', orsImportStatusPath)).toBe(false)
     expect(hasRoute(server, 'post', orsImportCreatePath)).toBe(false)
     expect(hasRoute(server, 'get', overseasSitesListPath)).toBe(false)
+    expect(hasRoute(server, 'get', adminOverseasSitesListPath)).toBe(false)
     expect(hasRoute(server, 'put', overseasSiteByIdPath)).toBe(false)
     expect(hasRoute(server, 'delete', overseasSiteByIdPath)).toBe(false)
 
