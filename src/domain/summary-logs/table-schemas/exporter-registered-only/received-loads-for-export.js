@@ -10,6 +10,8 @@ import {
   MESSAGES,
   RECYCLABLE_PROPORTION_METHODS
 } from '../shared/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsExportRowRegisteredOnly } from '#application/waste-records/row-transformers/received-loads-export-exporter-registered-only.js'
 const ALL_FIELDS = Object.values(FIELDS)
 
 /**
@@ -21,6 +23,9 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received (section 1)',
+  rowTransformer: transformReceivedLoadsExportRowRegisteredOnly,
 
   /**
    * VAL008: All columns that must be present in the uploaded file

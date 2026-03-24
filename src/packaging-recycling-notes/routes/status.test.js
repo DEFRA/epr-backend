@@ -666,6 +666,44 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
+      it('returns 403 when issuing a PRN on a suspended accreditation', async () => {
+        const awaitingAuthPrnId = '507f1f77bcf86cd799439044'
+        const awaitingAuthPrn = createMockPrn({
+          id: awaitingAuthPrnId,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at: new Date(),
+                by: { id: 'user-123', name: 'Test User' }
+              }
+            ]
+          }
+        })
+
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce({
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          submittedToRegulator: REGULATOR.EA,
+          status: 'suspended'
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${awaitingAuthPrnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+        expect(response.payload).toContain(
+          'Cannot issue a PRN on a suspended accreditation'
+        )
+      })
+
       it('returns 500 when updateStatus returns null', async () => {
         // Reset PRN to draft status for this test
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(

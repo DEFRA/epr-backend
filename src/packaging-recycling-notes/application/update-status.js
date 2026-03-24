@@ -3,7 +3,8 @@ import Boom from '@hapi/boom'
 import { prnMetrics } from './metrics.js'
 import {
   PRN_STATUS,
-  validateTransition
+  validateTransition,
+  assertAccreditationNotSuspended
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
@@ -280,6 +281,8 @@ export async function updatePrnStatus({
       organisationId,
       accreditationId
     )
+
+    assertAccreditationNotSuspended(accreditation)
 
     const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       regulator: accreditation.submittedToRegulator,

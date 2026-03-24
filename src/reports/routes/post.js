@@ -71,36 +71,20 @@ function getValidatedPeriodInfo(cadence, year, period) {
 }
 
 /**
- * Maps aggregated sections to the createReport params shape.
- * @param {object} aggregated - Result from aggregateReportDetail
+ * Extracts the report-specific fields from the aggregated detail.
+ * @param {import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail} aggregated
  * @param {object} registration
  * @returns {object}
  */
 function buildReportData(aggregated, registration) {
+  const { recyclingActivity, exportActivity, wasteSent } = aggregated
   return {
     material: resolveTonnageMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
-    recyclingActivity: {
-      suppliers: aggregated.sections.wasteReceived.suppliers,
-      totalTonnageReceived: aggregated.sections.wasteReceived.totalTonnage,
-      tonnageRecycled: 0,
-      tonnageNotRecycled: 0
-    },
-    exportActivity: aggregated.sections.wasteExported
-      ? {
-          overseasSites: aggregated.sections.wasteExported.overseasSites,
-          totalTonnageReceivedForExporting:
-            aggregated.sections.wasteExported.totalTonnage,
-          tonnageReceivedNotExported: 0
-        }
-      : undefined,
-    wasteSent: {
-      tonnageSentToReprocessor: aggregated.sections.wasteSentOn.toReprocessors,
-      tonnageSentToExporter: aggregated.sections.wasteSentOn.toExporters,
-      tonnageSentToAnotherSite: aggregated.sections.wasteSentOn.toOtherSites,
-      finalDestinations: aggregated.sections.wasteSentOn.destinations
-    }
+    recyclingActivity,
+    ...(exportActivity && { exportActivity }),
+    wasteSent
   }
 }
 

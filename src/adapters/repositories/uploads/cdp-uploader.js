@@ -13,8 +13,14 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * @property {string} orsBucket - S3 bucket for ORS file uploads
  */
 
-const SPREADSHEET_MIME_TYPES = [
+const SUMMARY_LOG_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+]
+
+const ORS_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel.sheet.macroEnabled.12',
+  'application/vnd.ms-excel.sheet.macroenabled.12'
 ]
 
 /**
@@ -75,7 +81,7 @@ export const createUploadsRepository = ({
         callback: callbackUrl,
         s3Bucket: summaryLogsBucket,
         s3Path,
-        mimeTypes: SPREADSHEET_MIME_TYPES,
+        mimeTypes: SUMMARY_LOG_MIME_TYPES,
         metadata: { summaryLogId }
       })
     })
@@ -91,7 +97,7 @@ export const createUploadsRepository = ({
         callback: callbackUrl,
         s3Bucket: orsBucket,
         s3Path,
-        mimeTypes: SPREADSHEET_MIME_TYPES,
+        mimeTypes: ORS_MIME_TYPES,
         metadata: { importId }
       })
     })
