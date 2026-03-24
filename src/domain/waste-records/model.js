@@ -19,6 +19,16 @@ export const VERSION_STATUS = Object.freeze({
  * @typedef {typeof VERSION_STATUS[keyof typeof VERSION_STATUS]} VersionStatus
  */
 
+export const WASTE_RECORD_CHANGE = Object.freeze({
+  CREATED: 'created',
+  UPDATED: 'updated',
+  UNCHANGED: 'unchanged'
+})
+
+/**
+ * @typedef {typeof WASTE_RECORD_CHANGE[keyof typeof WASTE_RECORD_CHANGE]} WasteRecordChange
+ */
+
 /**
  * @typedef {Object} SummaryLogReference
  * @property {string} id - Summary log ID
