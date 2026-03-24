@@ -56,6 +56,49 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
 const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
 
 /**
+ * Updates an existing waste record with changed fields, or returns it unchanged.
+ *
+ * @param {WasteRecord} existingRecord
+ * @param {Record<string, any>} data - Full row data from the transformer
+ * @param {{ timestamp: string, summaryLog: object }} versionContext
+ * @returns {{ record: WasteRecord, change: WasteRecordChange }}
+ */
+const updateExistingRecord = (
+  existingRecord,
+  data,
+  { timestamp, summaryLog }
+) => {
+  const delta = {}
+  for (const [key, value] of Object.entries(data)) {
+    if (key !== 'ROW_ID' && existingRecord.data[key] !== value) {
+      delta[key] = value
+    }
+  }
+
+  if (Object.keys(delta).length === 0) {
+    return { record: existingRecord, change: 'unchanged' }
+  }
+
+  return {
+    record: {
+      ...existingRecord,
+      data,
+      versions: [
+        ...existingRecord.versions,
+        {
+          id: randomUUID(),
+          createdAt: timestamp,
+          status: VERSION_STATUS.UPDATED,
+          summaryLog,
+          data: delta
+        }
+      ]
+    },
+    change: 'updated'
+  }
+}
+
+/**
  * Generic table transformation function
  * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
  *
@@ -102,44 +145,14 @@ const transformTable = (
       existingRecords.get(`${wasteRecordType}:${rowId}`) ?? null
 
     if (existingRecord) {
-      // Calculate delta: find fields that changed (excluding ROW_ID)
-      const delta = {}
-      for (const [key, value] of Object.entries(data)) {
-        if (key !== 'ROW_ID' && existingRecord.data[key] !== value) {
-          delta[key] = value
-        }
-      }
-
-      // If nothing changed, return existing record unchanged
-      if (Object.keys(delta).length === 0) {
-        return {
-          record: existingRecord,
-          issues,
-          outcome,
-          change: 'unchanged',
-          tableName,
-          wasteRecordType: tableWasteRecordType
-        }
-      }
-
-      // Add new version with only changed fields
-      const newVersion = {
-        id: randomUUID(),
-        createdAt: timestamp,
-        status: VERSION_STATUS.UPDATED,
-        summaryLog,
-        data: delta
-      }
-
+      const updated = updateExistingRecord(existingRecord, data, {
+        timestamp,
+        summaryLog
+      })
       return {
-        record: {
-          ...existingRecord,
-          data,
-          versions: [...existingRecord.versions, newVersion]
-        },
+        ...updated,
         issues,
         outcome,
-        change: 'updated',
         tableName,
         wasteRecordType: tableWasteRecordType
       }
