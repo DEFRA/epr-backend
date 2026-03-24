@@ -34,19 +34,6 @@ export function withRegistrationDetails(report, registration) {
 }
 
 /**
- * Finds the current report ID for a specific period slot.
- * @param {import('../repository/port.js').PeriodicReport[]} periodicReports
- * @param {number} year
- * @param {string} cadence
- * @param {number} period
- * @returns {string|null}
- */
-export function findCurrentReportId(periodicReports, year, cadence, period) {
-  const periodicReport = periodicReports.find((pr) => pr.year === year)
-  return periodicReport?.reports?.[cadence]?.[period]?.currentReportId ?? null
-}
-
-/**
  * Extracts a changedBy user summary from request credentials.
  * @param {object} credentials
  * @returns {{ id: string, name: string, position: string }}

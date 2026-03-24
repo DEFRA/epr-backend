@@ -1,12 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
-import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
+import { findReportForPeriod } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
   standardUserAuth,
-  withRegistrationDetails,
-  findCurrentReportId
+  withRegistrationDetails
 } from './shared.js'
 
 export const reportsGetDetailPath =
@@ -36,39 +34,14 @@ export const reportsGetDetail = {
       registrationId
     )
 
-    // Check for a stored report first
-    const periodicReports = await reportsRepository.findPeriodicReports({
+    const { report } = await findReportForPeriod({
+      reportsRepository,
+      wasteRecordsRepository,
       organisationId,
-      registrationId
-    })
-
-    const currentReportId = findCurrentReportId(
-      periodicReports,
+      registrationId,
+      registration,
       year,
       cadence,
-      period
-    )
-
-    if (currentReportId) {
-      const storedReport =
-        await reportsRepository.findReportById(currentReportId)
-      return h
-        .response(withRegistrationDetails(storedReport, registration))
-        .code(StatusCodes.OK)
-    }
-
-    // No stored report — compute on the fly
-    const operatorCategory = getOperatorCategory(registration)
-
-    const wasteRecords = await wasteRecordsRepository.findByRegistration(
-      organisationId,
-      registrationId
-    )
-
-    const report = aggregateReportDetail(wasteRecords, {
-      operatorCategory,
-      cadence,
-      year,
       period
     })
 
