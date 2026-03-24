@@ -8,6 +8,7 @@ import {
   SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_RECORD_CHANGE } from '#domain/waste-records/model.js'
 
 /**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
@@ -187,8 +188,12 @@ const prepareWasteRecordVersions = (wasteRecords) => {
 }
 
 const calculateMetrics = (wasteRecords) => {
-  const created = wasteRecords.filter((wr) => wr.change === 'created').length
-  const updated = wasteRecords.filter((wr) => wr.change === 'updated').length
+  const created = wasteRecords.filter(
+    (wr) => wr.change === WASTE_RECORD_CHANGE.CREATED
+  ).length
+  const updated = wasteRecords.filter(
+    (wr) => wr.change === WASTE_RECORD_CHANGE.UPDATED
+  ).length
 
   return { created, updated }
 }

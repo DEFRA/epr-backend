@@ -28,6 +28,7 @@ import { transformFromSummaryLog } from '#application/waste-records/transform-fr
 import {
   countByWasteBalanceInclusion,
   countByValidity,
+  countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
 
@@ -43,6 +44,7 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 /** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
+/** @typedef {import('./load-counts.js').Loads} Loads */
 
 /** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
 
@@ -431,6 +433,127 @@ const assertValidatingStatus = (result, summaryLogId) => {
   }
 }
 
+/**
+ * Records all validation-related metrics.
+ *
+ * @param {Object} params
+ * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {string} params.processingType
+ * @param {SummaryLogStatus} params.status
+ * @param {number} params.validationDurationMs
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ */
+const recordValidationMetrics = async ({
+  issues,
+  processingType,
+  status,
+  validationDurationMs,
+  wasteBalanceRecords
+}) => {
+  await summaryLogMetrics.recordValidationDuration(
+    { processingType },
+    validationDurationMs
+  )
+  await summaryLogMetrics.recordStatusTransition({ status, processingType })
+  await recordValidationIssueMetrics(issues, processingType)
+  await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
+}
+
+/**
+ * Persists the validation result to the summary log document.
+ *
+ * @param {Object} params
+ * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {Loads | null} params.loads
+ * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
+ * @param {ExtractedMeta} params.meta
+ * @param {string} params.status
+ * @param {SummaryLog} params.summaryLog
+ * @param {string} params.summaryLogId
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
+ * @param {number} params.version
+ */
+const persistValidationResult = async ({
+  issues,
+  loads,
+  loadsByWasteRecordType,
+  meta,
+  status,
+  summaryLog,
+  summaryLogId,
+  summaryLogsRepository,
+  version
+}) => {
+  const allIssues = issues.getAllIssues()
+  const { cappedIssues, totalIssuesCount } = capIssuesForStorage(allIssues)
+
+  await summaryLogsRepository.update(summaryLogId, version, {
+    ...transitionStatus(summaryLog, status),
+    validation: {
+      issues: cappedIssues,
+      totalIssuesCount
+    },
+    ...(loads && { loads }),
+    ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
+    ...(meta && { meta })
+  })
+}
+
+/**
+ * Filters waste records to only those from tables that participate in waste balance.
+ *
+ * @param {ValidatedWasteRecord[] | null} wasteRecords
+ * @param {string} processingType
+ * @returns {ValidatedWasteRecord[]}
+ */
+const filterWasteBalanceRecords = (wasteRecords, processingType) =>
+  wasteRecords?.filter((wr) => {
+    const schema = findSchemaForProcessingType(processingType, wr.record.type)
+    return schema?.classifyForWasteBalance != null
+  }) ?? []
+
+/**
+ * Computes aggregate and per-waste-record-type load counts for validated summary logs.
+ *
+ * @param {Object} params
+ * @param {string} params.status - Summary log status after validation
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
+ * @param {string} params.summaryLogId
+ * @param {string} params.processingType
+ * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
+ */
+const classifyLoads = ({
+  processingType,
+  status,
+  summaryLogId,
+  wasteBalanceRecords,
+  wasteRecords
+}) => {
+  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
+    return { loads: null, loadsByWasteRecordType: null }
+  }
+
+  const loads = mergeLoads(
+    countByValidity({ wasteRecords, summaryLogId }),
+    countByWasteBalanceInclusion({
+      wasteRecords: wasteBalanceRecords,
+      summaryLogId
+    })
+  )
+
+  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
+
+  const loadsByWasteRecordType = countByWasteRecordType({
+    wasteRecords,
+    wasteBalanceRecords,
+    summaryLogId,
+    tableSchemas
+  })
+
+  return { loads, loadsByWasteRecordType }
+}
+
 export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
@@ -474,57 +597,41 @@ export const createSummaryLogsValidator = ({
 
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 
-    await summaryLogMetrics.recordValidationDuration(
-      { processingType },
-      validationDurationMs
-    )
-
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    await summaryLogMetrics.recordStatusTransition({ status, processingType })
+    const wasteBalanceRecords = filterWasteBalanceRecords(
+      wasteRecords,
+      processingType
+    )
 
-    // Record validation issue metrics (if any issues exist)
-    await recordValidationIssueMetrics(issues, processingType)
+    await recordValidationMetrics({
+      issues,
+      processingType,
+      status,
+      validationDurationMs,
+      wasteBalanceRecords
+    })
 
-    // Filter to only waste-balance table rows for inclusion/exclusion classification
-    const wasteBalanceRecords =
-      wasteRecords?.filter((wr) => {
-        const schema = findSchemaForProcessingType(
-          processingType,
-          wr.record.type
-        )
-        return schema?.classifyForWasteBalance != null
-      }) ?? []
+    const { loads, loadsByWasteRecordType } = classifyLoads({
+      processingType,
+      status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords
+    })
 
-    // Classify loads only for validated summary logs
-    // Valid/invalid counts ALL rows; included/excluded counts only WB rows
-    const loads =
-      status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
-        ? mergeLoads(
-            countByValidity({ wasteRecords, summaryLogId }),
-            countByWasteBalanceInclusion({
-              wasteRecords: wasteBalanceRecords,
-              summaryLogId
-            })
-          )
-        : null
-
-    // Record row outcome metrics only for waste-balance table rows
-    await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
-
-    const allIssues = issues.getAllIssues()
-    const { cappedIssues, totalIssuesCount } = capIssuesForStorage(allIssues)
-
-    await summaryLogsRepository.update(summaryLogId, version, {
-      ...transitionStatus(summaryLog, status),
-      validation: {
-        issues: cappedIssues,
-        totalIssuesCount
-      },
-      ...(loads && { loads }),
-      ...(meta && { meta })
+    await persistValidationResult({
+      issues,
+      loads,
+      loadsByWasteRecordType,
+      meta,
+      status,
+      summaryLog,
+      summaryLogId,
+      summaryLogsRepository,
+      version
     })
 
     logger.info({
