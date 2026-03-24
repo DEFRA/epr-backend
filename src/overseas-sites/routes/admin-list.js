@@ -34,6 +34,60 @@ const buildPaginationMetadata = ({ page, pageSize, totalItems }) => {
   }
 }
 
+const nullable = (value) => value ?? null
+
+const firstPresent = (...values) => {
+  for (const value of values) {
+    if (value !== undefined && value !== null) {
+      return value
+    }
+  }
+  return null
+}
+
+const getAccreditationNumber = (organisation, registration) => {
+  const matchedAccreditationNumber = organisation.accreditations?.find(
+    (accreditation) => accreditation.id === registration.accreditationId
+  )?.accreditationNumber
+
+  return firstPresent(
+    registration.accreditation?.accreditationNumber,
+    registration.accreditationNumber,
+    matchedAccreditationNumber
+  )
+}
+
+const mapSiteFields = (site) => ({
+  destinationCountry: site.country,
+  overseasReprocessorName: site.name,
+  addressLine1: site.address.line1,
+  addressLine2: nullable(site.address.line2),
+  cityOrTown: site.address.townOrCity,
+  stateProvinceOrRegion: nullable(site.address.stateOrRegion),
+  postcode: nullable(site.address.postcode),
+  coordinates: nullable(site.coordinates),
+  validFrom: nullable(site.validFrom)
+})
+
+const mapMappingToRow = (
+  { organisation, registration, orsId, mapping },
+  sitesById
+) => {
+  const site = sitesById.get(mapping.overseasSiteId)
+  if (!site) {
+    return null
+  }
+
+  return {
+    orgId: nullable(organisation.orgId),
+    registrationNumber: nullable(registration.registrationNumber),
+    accreditationNumber: getAccreditationNumber(organisation, registration),
+    orsId,
+    packagingWasteCategory: nullable(registration.material),
+    ...mapSiteFields(site)
+  }
+}
+
 /**
  * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationId?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>, accreditations?: Array<{id?: string, accreditationNumber?: string}>}>} organisations
  * @param {Map<string, OverseasSite>} sitesById
@@ -59,40 +113,7 @@ const buildRows = (organisations, sitesById) => {
   )
 
   const rows = mappings
-    .map(({ organisation, registration, orsId, mapping }) => {
-      const site = sitesById.get(mapping.overseasSiteId)
-      if (!site) {
-        return null
-      }
-
-      const matchedAccreditation =
-        organisation.accreditations?.find(
-          (accreditation) => accreditation.id === registration.accreditationId
-        ) ?? null
-
-      const accreditationNumber =
-        registration.accreditation?.accreditationNumber ??
-        registration.accreditationNumber ??
-        matchedAccreditation?.accreditationNumber ??
-        null
-
-      return {
-        orsId,
-        packagingWasteCategory: registration.material ?? null,
-        orgId: organisation.orgId ?? null,
-        registrationNumber: registration.registrationNumber ?? null,
-        accreditationNumber,
-        destinationCountry: site.country,
-        overseasReprocessorName: site.name,
-        addressLine1: site.address.line1,
-        addressLine2: site.address.line2 ?? null,
-        cityOrTown: site.address.townOrCity,
-        stateProvinceOrRegion: site.address.stateOrRegion ?? null,
-        postcode: site.address.postcode ?? null,
-        coordinates: site.coordinates ?? null,
-        validFrom: site.validFrom ?? null
-      }
-    })
+    .map((mappingContext) => mapMappingToRow(mappingContext, sitesById))
     .filter((row) => row !== null)
 
   return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
@@ -126,7 +147,9 @@ export const adminOverseasSitesList = {
 
     try {
       const [organisations, sites] = await Promise.all([
-        organisationsRepository.findAll(),
+        organisationsRepository.findAllForOverseasSitesAdminList
+          ? organisationsRepository.findAllForOverseasSitesAdminList()
+          : organisationsRepository.findAll(),
         overseasSitesRepository.findAll()
       ])
 

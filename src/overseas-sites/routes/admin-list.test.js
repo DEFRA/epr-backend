@@ -22,6 +22,26 @@ import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 
+const TEST_REPROCESSOR_NAME = 'Alpha Reprocessor'
+const TEST_ADDRESS_LINE1 = '1 Rue de Test'
+const TEST_ORS_ID_ONE = '001'
+const TEST_PLASTIC_CATEGORY = 'plastic'
+const EMPTY_PAGINATION = {
+  page: 1,
+  pageSize: 50,
+  totalItems: 0,
+  totalPages: 0,
+  hasNextPage: false,
+  hasPreviousPage: false
+}
+
+const expectEmptyPaginatedResponse = (payload) => {
+  expect(JSON.parse(payload)).toStrictEqual({
+    rows: [],
+    pagination: EMPTY_PAGINATION
+  })
+}
+
 const defineResponseAndAccessTests = ({ getServer }) => {
   it('returns 200 and all ticket fields for ORS mappings', async () => {
     const response = await getServer().inject({
@@ -36,14 +56,14 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     expect(body).toStrictEqual({
       rows: [
         {
-          orsId: '001',
-          packagingWasteCategory: 'plastic',
           orgId: expect.any(Number),
           registrationNumber: null,
           accreditationNumber: null,
+          orsId: TEST_ORS_ID_ONE,
+          packagingWasteCategory: TEST_PLASTIC_CATEGORY,
           destinationCountry: 'France',
-          overseasReprocessorName: 'Alpha Reprocessor',
-          addressLine1: '1 Rue de Test',
+          overseasReprocessorName: TEST_REPROCESSOR_NAME,
+          addressLine1: TEST_ADDRESS_LINE1,
           addressLine2: 'Zone 2',
           cityOrTown: 'Paris',
           stateProvinceOrRegion: 'Ile-de-France',
@@ -52,11 +72,11 @@ const defineResponseAndAccessTests = ({ getServer }) => {
           validFrom: '2025-04-01T00:00:00.000Z'
         },
         {
-          orsId: '002',
-          packagingWasteCategory: 'plastic',
           orgId: expect.any(Number),
           registrationNumber: null,
           accreditationNumber: null,
+          orsId: '002',
+          packagingWasteCategory: TEST_PLASTIC_CATEGORY,
           destinationCountry: 'Germany',
           overseasReprocessorName: 'Beta Reprocessor',
           addressLine1: '2 Teststrasse',
@@ -280,13 +300,94 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
     await malformedServer.stop()
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+    expectEmptyPaginatedResponse(response.payload)
+  })
+}
+
+const defineProjectionSelectionTest = () => {
+  it('uses the lightweight repository projection when available', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn().mockResolvedValue([]),
+      findAllForOverseasSitesAdminList: vi.fn().mockResolvedValue([
+        {
+          orgId: 42,
+          registrations: [
+            {
+              material: TEST_PLASTIC_CATEGORY,
+              registrationNumber: 'REG-123',
+              overseasSites: {
+                '003': { overseasSiteId: 'site-1' }
+              }
+            }
+          ],
+          accreditations: []
+        }
+      ])
+    }
+
+    const overseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 'site-1',
+          country: 'France',
+          name: TEST_REPROCESSOR_NAME,
+          address: {
+            line1: TEST_ADDRESS_LINE1,
+            townOrCity: 'Paris'
+          },
+          coordinates: null,
+          validFrom: null
+        }
+      ])
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository,
+        overseasSitesRepository: () => overseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: adminOverseasSitesListPath,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(
+      organisationsRepository.findAllForOverseasSitesAdminList
+    ).toHaveBeenCalledTimes(1)
+    expect(organisationsRepository.findAll).not.toHaveBeenCalled()
     expect(JSON.parse(response.payload)).toStrictEqual({
-      rows: [],
+      rows: [
+        {
+          orgId: 42,
+          registrationNumber: 'REG-123',
+          accreditationNumber: null,
+          orsId: '003',
+          packagingWasteCategory: TEST_PLASTIC_CATEGORY,
+          destinationCountry: 'France',
+          overseasReprocessorName: TEST_REPROCESSOR_NAME,
+          addressLine1: TEST_ADDRESS_LINE1,
+          addressLine2: null,
+          cityOrTown: 'Paris',
+          stateProvinceOrRegion: null,
+          postcode: null,
+          coordinates: null,
+          validFrom: null
+        }
+      ],
       pagination: {
         page: 1,
         pageSize: 50,
-        totalItems: 0,
-        totalPages: 0,
+        totalItems: 1,
+        totalPages: 1,
         hasNextPage: false,
         hasPreviousPage: false
       }
@@ -294,7 +395,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
   })
 }
 
-const defineAdditionalEdgeCaseTests = () => {
+const defineMissingOverseasSiteMappingsTest = () => {
   it('handles registrations with missing overseasSites mappings', async () => {
     const malformedOrganisationsRepository = {
       findAll: vi
@@ -324,19 +425,92 @@ const defineAdditionalEdgeCaseTests = () => {
     await malformedServer.stop()
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+    expectEmptyPaginatedResponse(response.payload)
+  })
+}
+
+const defineMissingMaterialAndOrgIdTest = () => {
+  it('uses null defaults when material and orgId are missing', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          registrations: [
+            {
+              overseasSites: {
+                '004': { overseasSiteId: 'site-1' }
+              }
+            }
+          ],
+          accreditations: []
+        }
+      ])
+    }
+
+    const overseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 'site-1',
+          country: 'France',
+          name: TEST_REPROCESSOR_NAME,
+          address: {
+            line1: TEST_ADDRESS_LINE1,
+            townOrCity: 'Paris'
+          }
+        }
+      ])
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository,
+        overseasSitesRepository: () => overseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: adminOverseasSitesListPath,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual({
-      rows: [],
+      rows: [
+        {
+          orgId: null,
+          registrationNumber: null,
+          accreditationNumber: null,
+          orsId: '004',
+          packagingWasteCategory: null,
+          destinationCountry: 'France',
+          overseasReprocessorName: TEST_REPROCESSOR_NAME,
+          addressLine1: TEST_ADDRESS_LINE1,
+          addressLine2: null,
+          cityOrTown: 'Paris',
+          stateProvinceOrRegion: null,
+          postcode: null,
+          coordinates: null,
+          validFrom: null
+        }
+      ],
       pagination: {
         page: 1,
         pageSize: 50,
-        totalItems: 0,
-        totalPages: 0,
+        totalItems: 1,
+        totalPages: 1,
         hasNextPage: false,
         hasPreviousPage: false
       }
     })
   })
+}
 
+const defineMissingRegistrationsPropertyTest = () => {
   it('handles repository rows without a registrations property', async () => {
     const malformedOrganisationsRepository = {
       findAll: vi.fn().mockResolvedValue([{}])
@@ -364,84 +538,25 @@ const defineAdditionalEdgeCaseTests = () => {
     await malformedServer.stop()
 
     expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({
-      rows: [],
-      pagination: {
-        page: 1,
-        pageSize: 50,
-        totalItems: 0,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPreviousPage: false
-      }
-    })
+    expectEmptyPaginatedResponse(response.payload)
   })
+}
 
-  it('maps missing material and orgId to null in response rows', async () => {
-    const malformedOrganisationsRepository = {
-      findAll: vi.fn().mockResolvedValue([
-        {
-          orgId: undefined,
-          registrations: [
-            {
-              overseasSites: {
-                '010': { overseasSiteId: 'site-010' }
-              }
-            }
-          ]
-        }
-      ])
-    }
-    const overseasSitesRepository = {
-      findAll: vi.fn().mockResolvedValue([
-        {
-          id: 'site-010',
-          country: 'Norway',
-          name: 'Mapped Site',
-          address: {
-            line1: '1 Main St',
-            townOrCity: 'Oslo'
-          }
-        }
-      ])
-    }
-
-    const malformedServer = await createTestServer({
-      repositories: {
-        organisationsRepository: () => malformedOrganisationsRepository,
-        overseasSitesRepository: () => overseasSitesRepository
-      },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
-    })
-
-    const response = await malformedServer.inject({
-      method: 'GET',
-      url: adminOverseasSitesListPath,
-      ...asServiceMaintainer()
-    })
-
-    await malformedServer.stop()
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    const body = JSON.parse(response.payload)
-
-    expect(body.rows).toHaveLength(1)
-    expect(body.rows[0].orsId).toBe('010')
-    expect(body.rows[0].packagingWasteCategory).toBeNull()
-    expect(body.rows[0].orgId).toBeNull()
-  })
+const defineAdditionalEdgeCaseTests = () => {
+  defineProjectionSelectionTest()
+  defineMissingOverseasSiteMappingsTest()
+  defineMissingMaterialAndOrgIdTest()
+  defineMissingRegistrationsPropertyTest()
 }
 
 const seedOverseasSites = async (overseasSitesRepository) => {
   const now = new Date('2026-01-01T00:00:00.000Z')
 
   const siteOne = await overseasSitesRepository.create({
-    name: 'Alpha Reprocessor',
+    name: TEST_REPROCESSOR_NAME,
     country: 'France',
     address: {
-      line1: '1 Rue de Test',
+      line1: TEST_ADDRESS_LINE1,
       line2: 'Zone 2',
       townOrCity: 'Paris',
       stateOrRegion: 'Ile-de-France',
@@ -472,7 +587,7 @@ const createExporterRegistration = ({ siteOne, siteTwo }) => {
     wasteProcessingType: 'exporter',
     overseasSites: {
       '002': { overseasSiteId: siteTwo.id },
-      '001': { overseasSiteId: siteOne.id }
+      [TEST_ORS_ID_ONE]: { overseasSiteId: siteOne.id }
     }
   })
 }
