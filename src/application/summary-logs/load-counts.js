@@ -219,37 +219,19 @@ export const countByWasteRecordType = ({
   summaryLogId,
   tableSchemas
 }) => {
-  const wbByType = new Map()
-  for (const wr of wasteBalanceRecords) {
-    if (!wbByType.has(wr.wasteRecordType)) {
-      wbByType.set(wr.wasteRecordType, [])
-    }
-    wbByType.get(wr.wasteRecordType).push(wr)
-  }
+  const wbByType = Map.groupBy(wasteBalanceRecords, (wr) => wr.wasteRecordType)
+  const grouped = Map.groupBy(wasteRecords, (wr) => wr.wasteRecordType)
 
-  const grouped = new Map()
-  for (const wr of wasteRecords) {
-    if (!grouped.has(wr.wasteRecordType)) {
-      grouped.set(wr.wasteRecordType, {
-        wasteRecordType: wr.wasteRecordType,
-        tableName: wr.tableName,
-        records: []
+  return Array.from(grouped.entries()).map(([type, records]) => ({
+    wasteRecordType: type,
+    sheetName:
+      tableSchemas[records[0].tableName]?.sheetName ?? records[0].tableName,
+    ...mergeLoads(
+      countByValidity({ wasteRecords: records, summaryLogId }),
+      countByWasteBalanceInclusion({
+        wasteRecords: wbByType.get(type) ?? [],
+        summaryLogId
       })
-    }
-    grouped.get(wr.wasteRecordType).records.push(wr)
-  }
-
-  return Array.from(grouped.values()).map(
-    ({ wasteRecordType, tableName, records }) => ({
-      wasteRecordType,
-      sheetName: tableSchemas[tableName]?.sheetName ?? tableName,
-      ...mergeLoads(
-        countByValidity({ wasteRecords: records, summaryLogId }),
-        countByWasteBalanceInclusion({
-          wasteRecords: wbByType.get(wasteRecordType) ?? [],
-          summaryLogId
-        })
-      )
-    })
-  )
+    )
+  }))
 }
