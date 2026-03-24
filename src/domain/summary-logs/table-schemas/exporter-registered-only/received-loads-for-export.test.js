@@ -89,12 +89,6 @@ describe('RECEIVED_LOADS_FOR_EXPORT (EXPORTER_REGISTERED_ONLY)', () => {
       expect(typeof schema.validationSchema.validate).toBe('function')
     })
 
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('is empty (registered-only operators have no waste balance)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual([])
-      })
-    })
-
     it('treats HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION as unfilled dropdown', () => {
       expect(
         schema.unfilledValues.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION

@@ -49,7 +49,7 @@ const createWorkbook = async (worksheets) => {
  */
 const createTestSchema = (options = {}) => {
   const unfilledValues = options.unfilledValues || {}
-  const requiredFields = options.fieldsRequiredForInclusionInWasteBalance || []
+  const requiredFields = options.wasteBalanceFields || []
 
   return {
     rowIdField: 'ROW_ID',
@@ -63,7 +63,6 @@ const createTestSchema = (options = {}) => {
       })
         .unknown(true)
         .prefs({ abortEarly: false }),
-    fieldsRequiredForInclusionInWasteBalance: requiredFields,
     ...(requiredFields.length > 0 && {
       classifyForWasteBalance: (data, _context) => {
         const missing = requiredFields.filter(
@@ -560,7 +559,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         unfilledValues: {
           VALUE: ['Choose option']
         },
-        fieldsRequiredForInclusionInWasteBalance: ['VALUE']
+        wasteBalanceFields: ['VALUE']
       })
 
       // Row where parser normalised 'Choose option' to null via config
@@ -605,7 +604,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
           unfilledValues: {
             VALUE: ['Choose option']
           },
-          fieldsRequiredForInclusionInWasteBalance: ['VALUE']
+          wasteBalanceFields: ['VALUE']
         })
       })
 

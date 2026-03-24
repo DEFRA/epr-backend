@@ -856,7 +856,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       // Note: ROW_ID values come directly from test data as numbers
-      // Row 10001 is excluded because EWC_CODE is missing (fieldsRequiredForInclusionInWasteBalance)
+      // Row 10001 is excluded because EWC_CODE is missing (classifyForWasteBalance)
       expect(updateCall.loads).toEqual({
         added: {
           valid: { count: 1, rowIds: [10000] },
