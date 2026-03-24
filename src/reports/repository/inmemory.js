@@ -95,7 +95,7 @@ const upsertSlot = (periodicReports, params) => {
  * @param {Map<string, Object>} reports
  * @param {Object[]} periodicReports
  * @param {Object} params
- * @returns {Promise<string>}
+ * @returns {Promise<import('./port.js').Report>}
  */
 const createReport = async (reports, periodicReports, params) => {
   const validated = validateCreateReport(params)
@@ -152,7 +152,7 @@ const createReport = async (reports, periodicReports, params) => {
     newReportId: reportId
   })
 
-  return reportId
+  return structuredClone(reports.get(reportId))
 }
 
 /**

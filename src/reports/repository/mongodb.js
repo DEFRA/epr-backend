@@ -164,7 +164,7 @@ const clearPeriodicReportSlot = async (db, params) => {
 /**
  * @param {import('mongodb').Db} db
  * @param {import('./port.js').CreateReportParams} params
- * @returns {Promise<string>} the new report id
+ * @returns {Promise<import('./port.js').Report>} the created report
  */
 const performCreateReport = async (db, params) => {
   const validated = validateCreateReport(params)
@@ -225,7 +225,8 @@ const performCreateReport = async (db, params) => {
     newReportId: reportId
   })
 
-  return reportId
+  const { _id, ...report } = reportDoc
+  return /** @type {import('./port.js').Report} */ (report)
 }
 
 /**

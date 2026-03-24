@@ -145,7 +145,7 @@ export const reportsPost = {
       period
     })
 
-    const reportId = await reportsRepository.createReport({
+    const createdReport = await reportsRepository.createReport({
       organisationId,
       registrationId,
       year,
@@ -157,8 +157,6 @@ export const reportsPost = {
       changedBy: extractChangedBy(request.auth.credentials),
       ...buildReportData(aggregated, registration)
     })
-
-    const createdReport = await reportsRepository.findReportById(reportId)
 
     return h
       .response(withRegistrationDetails(createdReport, registration))
