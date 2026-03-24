@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
@@ -11,7 +13,7 @@
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<Record<number, { validFrom: Date | null }> | undefined>}
+ * @returns {Promise<Record<number, { validFrom: Date | null }>>}
  */
 export const resolveOverseasSites = async (
   organisationsRepository,
@@ -24,14 +26,13 @@ export const resolveOverseasSites = async (
     registrationId
   )
 
-  if (!registration?.overseasSites) {
-    return undefined
+  if (!registration) {
+    throw Boom.internal(
+      `Registration not found: ${registrationId} for organisation ${organisationId}`
+    )
   }
 
-  const entries = Object.entries(registration.overseasSites)
-  if (entries.length === 0) {
-    return undefined
-  }
+  const entries = Object.entries(registration.overseasSites ?? {})
 
   const resolved = {}
   for (const [osrKey, { overseasSiteId }] of entries) {

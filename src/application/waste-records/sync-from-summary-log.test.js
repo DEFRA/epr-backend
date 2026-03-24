@@ -29,7 +29,7 @@ describe('syncFromSummaryLog', () => {
       updateWasteBalanceTransactions: vi.fn()
     }
     organisationsRepository = {
-      findRegistrationById: vi.fn().mockResolvedValue(null)
+      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} })
     }
     overseasSitesRepository = {
       findById: vi.fn().mockResolvedValue(null)
@@ -871,7 +871,7 @@ describe('syncFromSummaryLog', () => {
       ]),
       'acc-1',
       undefined,
-      undefined
+      {}
     )
   })
 

@@ -41,7 +41,7 @@ describe('resolveOverseasSites', () => {
     )
   })
 
-  it('returns undefined when registration has no overseasSites', async () => {
+  it('returns empty map when registration has no overseasSites', async () => {
     const organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: undefined
@@ -56,11 +56,11 @@ describe('resolveOverseasSites', () => {
       'reg-1'
     )
 
-    expect(result).toBeUndefined()
+    expect(result).toEqual({})
     expect(overseasSitesRepository.findById).not.toHaveBeenCalled()
   })
 
-  it('returns undefined when overseasSites map is empty', async () => {
+  it('returns empty map when overseasSites map is empty', async () => {
     const organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {}
@@ -75,24 +75,24 @@ describe('resolveOverseasSites', () => {
       'reg-1'
     )
 
-    expect(result).toBeUndefined()
+    expect(result).toEqual({})
     expect(overseasSitesRepository.findById).not.toHaveBeenCalled()
   })
 
-  it('returns undefined when registration is null', async () => {
+  it('throws when registration is not found', async () => {
     const organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue(null)
     }
     const overseasSitesRepository = { findById: vi.fn() }
 
-    const result = await resolveOverseasSites(
-      organisationsRepository,
-      overseasSitesRepository,
-      'org-1',
-      'reg-1'
-    )
-
-    expect(result).toBeUndefined()
+    await expect(
+      resolveOverseasSites(
+        organisationsRepository,
+        overseasSitesRepository,
+        'org-1',
+        'reg-1'
+      )
+    ).rejects.toThrow('Registration not found: reg-1 for organisation org-1')
   })
 
   it('sets validFrom to null when overseas site is not found', async () => {
