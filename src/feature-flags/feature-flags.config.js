@@ -19,5 +19,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isRegisteredOnlyEnabled() {
     return config.get('featureFlags.registeredOnly')
+  },
+  isOrsWasteBalanceValidationEnabled() {
+    return config.get('featureFlags.orsWasteBalanceValidation')
   }
 })

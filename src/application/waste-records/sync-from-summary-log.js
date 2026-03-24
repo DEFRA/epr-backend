@@ -210,6 +210,7 @@ const calculateMetrics = (wasteRecords) => {
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags] - Feature flags for controlling ORS validation
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
@@ -218,7 +219,8 @@ export const syncFromSummaryLog = (dependencies) => {
     wasteRecordRepository,
     wasteBalancesRepository,
     organisationsRepository,
-    overseasSitesRepository
+    overseasSitesRepository,
+    featureFlags
   } = dependencies
 
   /**
@@ -281,15 +283,17 @@ export const syncFromSummaryLog = (dependencies) => {
 
     // 8. Resolve overseas sites for exporter ORS validation (VAL014)
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-    const overseasSites =
+    const shouldValidateOrs =
+      featureFlags?.isOrsWasteBalanceValidationEnabled?.() &&
       processingType === PROCESSING_TYPES.EXPORTER
-        ? await resolveOverseasSites(
-            organisationsRepository,
-            overseasSitesRepository,
-            summaryLog.organisationId,
-            summaryLog.registrationId
-          )
-        : undefined
+    const overseasSites = shouldValidateOrs
+      ? await resolveOverseasSites(
+          organisationsRepository,
+          overseasSitesRepository,
+          summaryLog.organisationId,
+          summaryLog.registrationId
+        )
+      : undefined
 
     // 9. Update waste balances if accreditation ID exists
     await updateWasteBalances({
