@@ -19,7 +19,8 @@ const SUMMARY_LOG_MIME_TYPES = [
 
 const ORS_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel.sheet.macroEnabled.12'
+  'application/vnd.ms-excel.sheet.macroEnabled.12',
+  'application/vnd.ms-excel.sheet.macroenabled.12'
 ]
 
 /**
