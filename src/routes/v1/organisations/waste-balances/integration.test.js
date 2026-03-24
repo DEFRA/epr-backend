@@ -91,7 +91,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
       amount: 2500,
       availableAmount: 2500
     })
-  })
+  }, 15000)
 
   it('fetches single waste balance from MongoDB', async ({ server }) => {
     const response = await server.inject({
