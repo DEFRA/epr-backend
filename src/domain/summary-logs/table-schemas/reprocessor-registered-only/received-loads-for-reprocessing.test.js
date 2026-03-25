@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TABLE_SCHEMAS } from './index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformReceivedLoadsRowRegisteredOnly } from '#application/waste-records/row-transformers/received-loads-reprocessing-registered-only.js'
 
 const { RECEIVED_LOADS_FOR_REPROCESSING } = TABLE_SCHEMAS
 
@@ -19,12 +18,6 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
 
     it('has sheetName set to Received', () => {
       expect(schema.sheetName).toBe('Received')
-    })
-
-    it('has rowTransformer set to transformReceivedLoadsRowRegisteredOnly', () => {
-      expect(schema.rowTransformer).toBe(
-        transformReceivedLoadsRowRegisteredOnly
-      )
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
@@ -217,6 +210,15 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => 
         TONNAGE_RECEIVED_FOR_RECYCLING: 50000
       })
       expect(large.error).toBeUndefined()
+    })
+  })
+
+  // The month-slicing wrapper skips slicing when the month field is absent.
+  // This branch is unreachable via the normal pipeline (month is always present).
+  describe('rowTransformer month-slicing', () => {
+    it('handles missing month field without error', () => {
+      const result = schema.rowTransformer({ ROW_ID: 1000 }, 0)
+      expect(result.data.MONTH_RECEIVED_FOR_REPROCESSING).toBeUndefined()
     })
   })
 })

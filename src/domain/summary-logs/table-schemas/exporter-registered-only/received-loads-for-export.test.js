@@ -195,4 +195,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT (EXPORTER_REGISTERED_ONLY)', () => {
       expect(large.error).toBeUndefined()
     })
   })
+
+  // The month-slicing wrapper skips slicing when the month field is absent.
+  // This branch is unreachable via the normal pipeline (month is always present).
+  describe('rowTransformer month-slicing', () => {
+    it('handles missing month field without error', () => {
+      const result = schema.rowTransformer({ ROW_ID: 1000 }, 0)
+      expect(result.data.MONTH_RECEIVED_FOR_EXPORT).toBeUndefined()
+    })
+  })
 })

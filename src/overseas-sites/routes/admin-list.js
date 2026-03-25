@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import {
@@ -13,6 +14,24 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
  */
 
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
+
+const DEFAULT_PAGE = 1
+const DEFAULT_PAGE_SIZE = 50
+const MAX_PAGE_SIZE = 200
+
+const buildPaginationMetadata = ({ page, pageSize, totalItems }) => {
+  const totalPages = totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize)
+  const currentPage = totalPages === 0 ? DEFAULT_PAGE : page
+
+  return {
+    page: currentPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    hasNextPage: totalPages > 0 && currentPage < totalPages,
+    hasPreviousPage: totalPages > 0 && currentPage > 1
+  }
+}
 
 const nullable = (value) => value ?? null
 
@@ -99,12 +118,22 @@ const buildRows = (organisations, sitesById) => {
   return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
 }
 
+const buildAllPageSize = (rowCount) =>
+  rowCount === 0 ? DEFAULT_PAGE_SIZE : rowCount
+
 export const adminOverseasSitesList = {
   method: 'GET',
   path: adminOverseasSitesListPath,
   options: {
     auth: getAuthConfig([ROLES.serviceMaintainer]),
-    tags: ['api']
+    tags: ['api'],
+    validate: {
+      query: Joi.object({
+        all: Joi.boolean().optional(),
+        page: Joi.number().integer().min(1).optional(),
+        pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).optional()
+      })
+    }
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
@@ -114,27 +143,62 @@ export const adminOverseasSitesList = {
    */
   handler: async (request, h) => {
     const { logger, organisationsRepository, overseasSitesRepository } = request
+    const all = /** @type {boolean | undefined} */ (request.query.all) === true
+    const page = Number(request.query.page ?? DEFAULT_PAGE)
+    const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
 
     try {
-      const [organisations, sites] = await Promise.all([
-        organisationsRepository.findAllForOverseasSitesAdminList
-          ? organisationsRepository.findAllForOverseasSitesAdminList()
-          : organisationsRepository.findAll(),
-        overseasSitesRepository.findAll()
-      ])
+      let selectedRows
+      let totalItems
 
-      const sitesById = new Map(sites.map((site) => [site.id, site]))
-      const rows = buildRows(organisations, sitesById)
+      if (!all && organisationsRepository.findPageForOverseasSitesAdminList) {
+        const pageResult =
+          await organisationsRepository.findPageForOverseasSitesAdminList({
+            page,
+            pageSize
+          })
+
+        selectedRows = pageResult.rows
+        totalItems = pageResult.totalItems
+      } else {
+        const [organisations, sites] = await Promise.all([
+          organisationsRepository.findAllForOverseasSitesAdminList
+            ? organisationsRepository.findAllForOverseasSitesAdminList()
+            : organisationsRepository.findAll(),
+          overseasSitesRepository.findAll()
+        ])
+
+        const sitesById = new Map(sites.map((site) => [site.id, site]))
+        const rows = buildRows(organisations, sitesById)
+        const startIndex = (page - 1) * pageSize
+
+        totalItems = rows.length
+        selectedRows = all
+          ? rows
+          : rows.slice(startIndex, startIndex + pageSize)
+      }
+
+      const selectedPageSize = all ? buildAllPageSize(totalItems) : pageSize
+      const pagination = buildPaginationMetadata({
+        page: all ? DEFAULT_PAGE : page,
+        pageSize: selectedPageSize,
+        totalItems
+      })
 
       logger.info({
-        message: `Admin listed ${rows.length} overseas sites mappings`,
+        message: `Admin listed ${selectedRows.length} of ${totalItems} overseas sites mappings`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
         }
       })
 
-      return h.response(rows).code(StatusCodes.OK)
+      return h
+        .response({
+          rows: selectedRows,
+          pagination
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       if (error.isBoom) {
         throw error

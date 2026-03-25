@@ -17,7 +17,8 @@ export const summaryLogFile = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   summaryLogsRepository: SummaryLogsRepository
+   *   summaryLogsRepository: SummaryLogsRepository,
+   *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
