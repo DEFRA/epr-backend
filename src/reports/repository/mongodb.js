@@ -226,7 +226,9 @@ const performCreateReport = async (db, params) => {
   })
 
   const { _id, ...report } = reportDoc
-  return /** @type {import('./port.js').Report} */ (report)
+  return /** @type {import('./port.js').Report} */ (
+    /** @type {unknown} */ (report)
+  )
 }
 
 /**
