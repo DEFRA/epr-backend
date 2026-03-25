@@ -12,13 +12,13 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
-import { reportsPatchPath } from './patch.js'
+import { reportsStatusPath } from './status.js'
 
-describe(`PATCH ${reportsPatchPath}`, () => {
+describe(`POST ${reportsStatusPath}`, () => {
   setupAuthContext()
 
   const makeUrl = (orgId, regId, year, cadence, period) =>
-    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
+    `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/status`
 
   describe('when feature flag is enabled', () => {
     const createServerWithReport = async (registrationOverrides = {}) => {
@@ -89,7 +89,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       }
     }
 
-    const patchReport = (
+    const postStatus = (
       server,
       orgId,
       regId,
@@ -99,95 +99,152 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       period = 1
     ) =>
       server.inject({
-        method: 'PATCH',
+        method: 'POST',
         url: makeUrl(orgId, regId, year, cadence, period),
         payload,
         ...asStandardUser({ linkedOrgId: orgId })
       })
 
-    describe('updating supporting information', () => {
-      it('returns 200 with updated report', async () => {
-        const {
-          server,
-          organisationId,
-          registrationId,
-          reportsRepository,
-          reportId
-        } = await createServerWithReport({
-          wasteProcessingType: 'reprocessor',
-          accreditationId: undefined
-        })
-
-        const before = await reportsRepository.findReportById(reportId)
-        expect(before.supportingInformation).toBeUndefined()
-
-        const response = await patchReport(
-          server,
-          organisationId,
-          registrationId,
-          { supportingInformation: 'Supply chain disruption' }
-        )
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        const payload = JSON.parse(response.payload)
-        expect(payload.supportingInformation).toBe('Supply chain disruption')
-      })
-
-      it('accepts empty string for supporting information', async () => {
+    describe('successful transitions', () => {
+      it('advances status to ready_to_submit', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
             wasteProcessingType: 'reprocessor',
             accreditationId: undefined
           })
 
-        const response = await patchReport(
+        const response = await postStatus(
           server,
           organisationId,
           registrationId,
-          { supportingInformation: '' }
+          { status: 'ready_to_submit', version: 1 }
         )
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         const payload = JSON.parse(response.payload)
-        expect(payload.supportingInformation).toBe('')
+        expect(payload.status).toBe('ready_to_submit')
       })
 
-      it('increments report version after update', async () => {
-        const {
+      it('increments report version', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
           server,
           organisationId,
           registrationId,
-          reportsRepository,
-          reportId
-        } = await createServerWithReport({
-          wasteProcessingType: 'reprocessor',
-          accreditationId: undefined
-        })
-
-        const before = await reportsRepository.findReportById(reportId)
-        expect(before.version).toBe(1)
-
-        const response = await patchReport(
-          server,
-          organisationId,
-          registrationId,
-          { supportingInformation: 'notes' }
+          { status: 'ready_to_submit', version: 1 }
         )
 
         const payload = JSON.parse(response.payload)
         expect(payload.version).toBe(2)
       })
-    })
 
-    describe('error handling', () => {
-      it('returns 422 when status is sent via PATCH', async () => {
+      it('appends to status history', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
             wasteProcessingType: 'reprocessor',
             accreditationId: undefined
           })
 
-        const response = await patchReport(
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 1 }
+        )
+
+        const payload = JSON.parse(response.payload)
+        expect(payload.statusHistory).toHaveLength(2)
+        expect(payload.statusHistory[0].status).toBe('in_progress')
+        expect(payload.statusHistory[1].status).toBe('ready_to_submit')
+      })
+    })
+
+    describe('optimistic locking', () => {
+      it('returns 409 when version does not match', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 99 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+    })
+
+    describe('transition guards', () => {
+      it('returns 400 for invalid transition from in_progress to submitted', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'submitted', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+    })
+
+    describe('error handling', () => {
+      it('returns 404 when no report exists for period', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithoutReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
+      it('returns 422 for invalid status value', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'banana', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when version is missing', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
           server,
           organisationId,
           registrationId,
@@ -197,23 +254,6 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
-      it('returns 404 when no report exists for period', async () => {
-        const { server, organisationId, registrationId } =
-          await createServerWithoutReport({
-            wasteProcessingType: 'reprocessor',
-            accreditationId: undefined
-          })
-
-        const response = await patchReport(
-          server,
-          organisationId,
-          registrationId,
-          { supportingInformation: 'notes' }
-        )
-
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-      })
-
       it('returns 422 when payload is empty', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithoutReport({
@@ -221,28 +261,11 @@ describe(`PATCH ${reportsPatchPath}`, () => {
             accreditationId: undefined
           })
 
-        const response = await patchReport(
+        const response = await postStatus(
           server,
           organisationId,
           registrationId,
           {}
-        )
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when supporting information exceeds max length', async () => {
-        const { server, organisationId, registrationId } =
-          await createServerWithReport({
-            wasteProcessingType: 'reprocessor',
-            accreditationId: undefined
-          })
-
-        const response = await patchReport(
-          server,
-          organisationId,
-          registrationId,
-          { supportingInformation: 'x'.repeat(2001) }
         )
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -256,9 +279,9 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           })
 
         const response = await server.inject({
-          method: 'PATCH',
+          method: 'POST',
           url: makeUrl(organisationId, registrationId, 2025, 'biweekly', 1),
-          payload: { supportingInformation: 'notes' },
+          payload: { status: 'ready_to_submit', version: 1 },
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -278,9 +301,9 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       const response = await server.inject({
-        method: 'PATCH',
+        method: 'POST',
         url: makeUrl(organisationId, registrationId, 2025, 'quarterly', 1),
-        payload: { supportingInformation: 'notes' },
+        payload: { status: 'ready_to_submit', version: 1 },
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 

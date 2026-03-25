@@ -2,28 +2,33 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
+import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { findReportForPeriod } from '#reports/application/report-service.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import {
   periodParamsSchema,
   standardUserAuth,
   extractChangedBy
 } from './shared.js'
 
-export const reportsPatchPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
-
-const MAX_SUPPORTING_INFO_LENGTH = 2000
+export const reportsStatusPath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/status'
 
 const payloadSchema = Joi.object({
-  supportingInformation: Joi.string()
-    .allow('')
-    .max(MAX_SUPPORTING_INFO_LENGTH)
-    .required()
+  status: Joi.string()
+    .valid(
+      REPORT_STATUS.IN_PROGRESS,
+      REPORT_STATUS.READY_TO_SUBMIT,
+      REPORT_STATUS.SUBMITTED
+    )
+    .required(),
+  version: Joi.number().integer().min(1).required()
 })
 
-export const reportsPatch = {
-  method: 'PATCH',
-  path: reportsPatchPath,
+export const reportsStatus = {
+  method: 'POST',
+  path: reportsStatusPath,
   options: {
     auth: standardUserAuth,
     tags: ['api'],
@@ -40,6 +45,7 @@ export const reportsPatch = {
       params
     } = request
     const { organisationId, registrationId, year, cadence, period } = params
+    const { status, version } = request.payload
 
     const registration = await organisationsRepository.findRegistrationById(
       organisationId,
@@ -63,14 +69,29 @@ export const reportsPatch = {
       )
     }
 
+    if (!isValidReportTransition(report.status, status)) {
+      throw Boom.badRequest(
+        `Cannot transition from '${report.status}' to '${status}'`
+      )
+    }
+
+    const previous = { status: report.status, version: report.version }
+
     await reportsRepository.updateReport({
       reportId: report.id,
-      version: report.version,
-      fields: request.payload,
+      version,
+      fields: { status },
       changedBy: extractChangedBy(request.auth.credentials)
     })
 
     const updated = await reportsRepository.findReportById(report.id)
+
+    await auditReportStatusTransition(request, {
+      organisationId,
+      reportId: report.id,
+      previous,
+      next: { status: updated.status, version: updated.version }
+    })
 
     return h.response(updated).code(StatusCodes.OK)
   }
