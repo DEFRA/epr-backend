@@ -217,12 +217,7 @@ const ORS_ADMIN_LIST_BASE_PIPELINE = [
       accreditations: 1
     }
   },
-  {
-    $unwind: {
-      path: '$registrations',
-      preserveNullAndEmptyArrays: false
-    }
-  },
+  { $unwind: '$registrations' },
   {
     $project: {
       orgId: 1,
@@ -235,12 +230,7 @@ const ORS_ADMIN_LIST_BASE_PIPELINE = [
       }
     }
   },
-  {
-    $unwind: {
-      path: '$overseasSiteMappings',
-      preserveNullAndEmptyArrays: false
-    }
-  },
+  { $unwind: '$overseasSiteMappings' },
   {
     $project: {
       orgId: 1,
@@ -266,15 +256,8 @@ const ORS_ADMIN_LIST_BASE_PIPELINE = [
       as: 'site'
     }
   },
-  {
-    $unwind: {
-      path: '$site',
-      preserveNullAndEmptyArrays: false
-    }
-  },
-  {
-    $sort: { orsId: 1 }
-  }
+  { $unwind: '$site' },
+  { $sort: { orsId: 1 } }
 ]
 
 const ORS_ADMIN_LIST_ROW_PROJECTION = {
@@ -329,7 +312,7 @@ const ORS_ADMIN_LIST_ROW_PROJECTION = {
   }
 }
 
-const performFindPageForOverseasSitesAdminList =
+const performFindPageForOrsAdminList =
   (db) =>
   async ({ page, pageSize }) => {
     const skip = (page - 1) * pageSize
@@ -538,8 +521,7 @@ export const createOrganisationsRepository = async (
       findAll: performFindAll(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
-      findPageForOverseasSitesAdminList:
-        performFindPageForOverseasSitesAdminList(db),
+      findPageForOverseasSitesAdminList: performFindPageForOrsAdminList(db),
       findAllLinked: performFindAllLinked(db),
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),
