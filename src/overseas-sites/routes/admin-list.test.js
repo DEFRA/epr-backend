@@ -121,6 +121,27 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     expect(body.rows[0].orsId).toBe('002')
   })
 
+  it('returns an empty page when the requested page is beyond totalPages', async () => {
+    const response = await getServer().inject({
+      method: 'GET',
+      url: `${adminOverseasSitesListPath}?page=999&pageSize=1`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+
+    const body = JSON.parse(response.payload)
+    expect(body.pagination).toStrictEqual({
+      page: 999,
+      pageSize: 1,
+      totalItems: 2,
+      totalPages: 2,
+      hasNextPage: false,
+      hasPreviousPage: true
+    })
+    expect(body.rows).toStrictEqual([])
+  })
+
   it('returns all rows when all=true is provided', async () => {
     const response = await getServer().inject({
       method: 'GET',
@@ -141,6 +162,33 @@ const defineResponseAndAccessTests = ({ getServer }) => {
       hasNextPage: false,
       hasPreviousPage: false
     })
+  })
+
+  it('returns the default empty page size when all=true and there are no rows', async () => {
+    const emptyServer = await createTestServer({
+      repositories: {
+        organisationsRepository: () => ({
+          findAllForOverseasSitesAdminList: vi.fn().mockResolvedValue([])
+        }),
+        overseasSitesRepository: () => ({
+          findAll: vi.fn().mockResolvedValue([])
+        })
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await emptyServer.inject({
+      method: 'GET',
+      url: `${adminOverseasSitesListPath}?all=true`,
+      ...asServiceMaintainer()
+    })
+
+    await emptyServer.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expectEmptyPaginatedResponse(response.payload)
   })
 
   it('resolves accreditationNumber from matched accreditation when registration values are missing', async () => {
@@ -392,6 +440,105 @@ const defineProjectionSelectionTest = () => {
         hasPreviousPage: false
       }
     })
+  })
+
+  it('uses repository-level pagination when available', async () => {
+    const paginatedRows = [
+      {
+        orgId: 42,
+        registrationNumber: 'REG-123',
+        accreditationNumber: null,
+        orsId: '003',
+        packagingWasteCategory: TEST_PLASTIC_CATEGORY,
+        destinationCountry: 'France',
+        overseasReprocessorName: TEST_REPROCESSOR_NAME,
+        addressLine1: TEST_ADDRESS_LINE1,
+        addressLine2: null,
+        cityOrTown: 'Paris',
+        stateProvinceOrRegion: null,
+        postcode: null,
+        coordinates: null,
+        validFrom: null
+      }
+    ]
+
+    const organisationsRepository = {
+      findAll: vi.fn(),
+      findAllForOverseasSitesAdminList: vi.fn(),
+      findPageForOverseasSitesAdminList: vi.fn().mockResolvedValue({
+        rows: paginatedRows,
+        totalItems: 1
+      })
+    }
+
+    const overseasSitesRepository = {
+      findAll: vi.fn()
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository,
+        overseasSitesRepository: () => overseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${adminOverseasSitesListPath}?page=1&pageSize=10`,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(
+      organisationsRepository.findPageForOverseasSitesAdminList
+    ).toHaveBeenCalledWith({ page: 1, pageSize: 10 })
+    expect(
+      organisationsRepository.findAllForOverseasSitesAdminList
+    ).not.toHaveBeenCalled()
+    expect(overseasSitesRepository.findAll).not.toHaveBeenCalled()
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      rows: paginatedRows,
+      pagination: {
+        page: 1,
+        pageSize: 10,
+        totalItems: 1,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false
+      }
+    })
+  })
+}
+
+const defineValidationTests = () => {
+  it.each([
+    `${adminOverseasSitesListPath}?page=0`,
+    `${adminOverseasSitesListPath}?page=1.5`,
+    `${adminOverseasSitesListPath}?pageSize=0`,
+    `${adminOverseasSitesListPath}?pageSize=201`,
+    `${adminOverseasSitesListPath}?pageSize=1.5`,
+    `${adminOverseasSitesListPath}?all=maybe`
+  ])('returns 400 for invalid query %s', async (url) => {
+    const server = await createTestServer({
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 }
 
@@ -667,6 +814,7 @@ describe(`${adminOverseasSitesListPath} route`, () => {
       getServer: () => server
     })
     defineAdditionalEdgeCaseTests()
+    defineValidationTests()
   })
 
   describe('when feature flag is disabled', () => {

@@ -11,6 +11,7 @@ import {
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 
 const COLLECTION_NAME = 'epr-organisations'
+const OVERSEAS_SITES_COLLECTION_NAME = 'overseas-sites'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
@@ -208,6 +209,154 @@ const performFindAllForOverseasSitesAdminList = (db) => async () => {
   }))
 }
 
+const ORS_ADMIN_LIST_BASE_PIPELINE = [
+  {
+    $project: {
+      orgId: 1,
+      registrations: 1,
+      accreditations: 1
+    }
+  },
+  {
+    $unwind: {
+      path: '$registrations',
+      preserveNullAndEmptyArrays: false
+    }
+  },
+  {
+    $project: {
+      orgId: 1,
+      registration: '$registrations',
+      accreditations: 1,
+      overseasSiteMappings: {
+        $objectToArray: {
+          $ifNull: ['$registrations.overseasSites', {}]
+        }
+      }
+    }
+  },
+  {
+    $unwind: {
+      path: '$overseasSiteMappings',
+      preserveNullAndEmptyArrays: false
+    }
+  },
+  {
+    $project: {
+      orgId: 1,
+      registration: 1,
+      accreditations: 1,
+      orsId: '$overseasSiteMappings.k',
+      overseasSiteId: '$overseasSiteMappings.v.overseasSiteId'
+    }
+  },
+  {
+    $lookup: {
+      from: OVERSEAS_SITES_COLLECTION_NAME,
+      let: { overseasSiteId: '$overseasSiteId' },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $eq: [{ $toString: '$_id' }, '$$overseasSiteId']
+            }
+          }
+        }
+      ],
+      as: 'site'
+    }
+  },
+  {
+    $unwind: {
+      path: '$site',
+      preserveNullAndEmptyArrays: false
+    }
+  },
+  {
+    $sort: { orsId: 1 }
+  }
+]
+
+const ORS_ADMIN_LIST_ROW_PROJECTION = {
+  $project: {
+    _id: 0,
+    orgId: { $ifNull: ['$orgId', null] },
+    registrationNumber: { $ifNull: ['$registration.registrationNumber', null] },
+    accreditationNumber: {
+      $let: {
+        vars: {
+          matchedAccreditation: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$accreditations',
+                  as: 'accreditation',
+                  cond: {
+                    $eq: ['$$accreditation.id', '$registration.accreditationId']
+                  }
+                }
+              },
+              0
+            ]
+          }
+        },
+        in: {
+          $ifNull: [
+            '$registration.accreditation.accreditationNumber',
+            {
+              $ifNull: [
+                '$registration.accreditationNumber',
+                {
+                  $ifNull: ['$$matchedAccreditation.accreditationNumber', null]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    orsId: '$orsId',
+    packagingWasteCategory: { $ifNull: ['$registration.material', null] },
+    destinationCountry: '$site.country',
+    overseasReprocessorName: '$site.name',
+    addressLine1: '$site.address.line1',
+    addressLine2: { $ifNull: ['$site.address.line2', null] },
+    cityOrTown: '$site.address.townOrCity',
+    stateProvinceOrRegion: { $ifNull: ['$site.address.stateOrRegion', null] },
+    postcode: { $ifNull: ['$site.address.postcode', null] },
+    coordinates: { $ifNull: ['$site.coordinates', null] },
+    validFrom: { $ifNull: ['$site.validFrom', null] }
+  }
+}
+
+const performFindPageForOverseasSitesAdminList =
+  (db) =>
+  async ({ page, pageSize }) => {
+    const skip = (page - 1) * pageSize
+
+    const [result] = await db
+      .collection(COLLECTION_NAME)
+      .aggregate([
+        ...ORS_ADMIN_LIST_BASE_PIPELINE,
+        {
+          $facet: {
+            rows: [
+              { $skip: skip },
+              { $limit: pageSize },
+              ORS_ADMIN_LIST_ROW_PROJECTION
+            ],
+            totalCount: [{ $count: 'totalItems' }]
+          }
+        }
+      ])
+      .toArray()
+
+    return {
+      rows: result.rows,
+      totalItems: result.totalCount[0]?.totalItems ?? 0
+    }
+  }
+
 const LINKED_ORG_PROJECTION = {
   orgId: 1,
   'companyDetails.name': 1,
@@ -389,6 +538,8 @@ export const createOrganisationsRepository = async (
       findAll: performFindAll(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
+      findPageForOverseasSitesAdminList:
+        performFindPageForOverseasSitesAdminList(db),
       findAllLinked: performFindAllLinked(db),
       findByIds: performFindByIds(db),
       findAllIds: findAllIds(db),

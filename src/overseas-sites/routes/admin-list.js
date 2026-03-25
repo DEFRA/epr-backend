@@ -21,16 +21,15 @@ const MAX_PAGE_SIZE = 200
 
 const buildPaginationMetadata = ({ page, pageSize, totalItems }) => {
   const totalPages = totalItems === 0 ? 0 : Math.ceil(totalItems / pageSize)
-  const effectivePage =
-    totalPages === 0 ? DEFAULT_PAGE : Math.min(page, totalPages)
+  const currentPage = totalPages === 0 ? DEFAULT_PAGE : page
 
   return {
-    page: effectivePage,
+    page: currentPage,
     pageSize,
     totalItems,
     totalPages,
-    hasNextPage: totalPages > 0 && effectivePage < totalPages,
-    hasPreviousPage: totalPages > 0 && effectivePage > 1
+    hasNextPage: totalPages > 0 && currentPage < totalPages,
+    hasPreviousPage: totalPages > 0 && currentPage > 1
   }
 }
 
@@ -119,6 +118,9 @@ const buildRows = (organisations, sitesById) => {
   return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
 }
 
+const buildAllPageSize = (rowCount) =>
+  rowCount === 0 ? DEFAULT_PAGE_SIZE : rowCount
+
 export const adminOverseasSitesList = {
   method: 'GET',
   path: adminOverseasSitesListPath,
@@ -141,33 +143,50 @@ export const adminOverseasSitesList = {
    */
   handler: async (request, h) => {
     const { logger, organisationsRepository, overseasSitesRepository } = request
-    const all = String(request.query.all).toLowerCase() === 'true'
+    const all = /** @type {boolean | undefined} */ (request.query.all) === true
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
 
     try {
-      const [organisations, sites] = await Promise.all([
-        organisationsRepository.findAllForOverseasSitesAdminList
-          ? organisationsRepository.findAllForOverseasSitesAdminList()
-          : organisationsRepository.findAll(),
-        overseasSitesRepository.findAll()
-      ])
+      let selectedRows
+      let totalItems
 
-      const sitesById = new Map(sites.map((site) => [site.id, site]))
-      const rows = buildRows(organisations, sitesById)
-      const selectedPageSize = all ? Math.max(rows.length, 1) : pageSize
+      if (!all && organisationsRepository.findPageForOverseasSitesAdminList) {
+        const pageResult =
+          await organisationsRepository.findPageForOverseasSitesAdminList({
+            page,
+            pageSize
+          })
+
+        selectedRows = pageResult.rows
+        totalItems = pageResult.totalItems
+      } else {
+        const [organisations, sites] = await Promise.all([
+          organisationsRepository.findAllForOverseasSitesAdminList
+            ? organisationsRepository.findAllForOverseasSitesAdminList()
+            : organisationsRepository.findAll(),
+          overseasSitesRepository.findAll()
+        ])
+
+        const sitesById = new Map(sites.map((site) => [site.id, site]))
+        const rows = buildRows(organisations, sitesById)
+        const startIndex = (page - 1) * pageSize
+
+        totalItems = rows.length
+        selectedRows = all
+          ? rows
+          : rows.slice(startIndex, startIndex + pageSize)
+      }
+
+      const selectedPageSize = all ? buildAllPageSize(totalItems) : pageSize
       const pagination = buildPaginationMetadata({
         page: all ? DEFAULT_PAGE : page,
         pageSize: selectedPageSize,
-        totalItems: rows.length
+        totalItems
       })
-      const startIndex = (pagination.page - 1) * pagination.pageSize
-      const selectedRows = all
-        ? rows
-        : rows.slice(startIndex, startIndex + pagination.pageSize)
 
       logger.info({
-        message: `Admin listed ${selectedRows.length} of ${rows.length} overseas sites mappings`,
+        message: `Admin listed ${selectedRows.length} of ${totalItems} overseas sites mappings`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
