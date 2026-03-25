@@ -1,3 +1,4 @@
 export { reportsGet } from './get.js'
 export { reportsGetDetail } from './get-detail.js'
+export { reportsPatch } from './patch.js'
 export { reportsPost } from './post.js'
