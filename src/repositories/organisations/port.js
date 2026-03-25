@@ -29,6 +29,27 @@
  */
 
 /**
+ * @typedef {Object} OrganisationsOverseasSitesAdminListPage
+ * @property {Array<{
+ *   orgId: number | null,
+ *   registrationNumber: string | null,
+ *   accreditationNumber: string | null,
+ *   orsId: string,
+ *   packagingWasteCategory: string | null,
+ *   destinationCountry: string,
+ *   overseasReprocessorName: string,
+ *   addressLine1: string,
+ *   addressLine2: string | null,
+ *   cityOrTown: string,
+ *   stateProvinceOrRegion: string | null,
+ *   postcode: string | null,
+ *   coordinates: string | null,
+ *   validFrom: Date | null
+ * }>} rows
+ * @property {number} totalItems
+ */
+
+/**
  * Organisation replacement payload with identity fields removed.
  * Identity (id, version) is passed as separate parameters to replace().
  * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'statusHistory'>>} OrganisationReplacement
@@ -41,6 +62,7 @@
  * @property {(id: string, version: number, document: Organisation) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
  * @property {() => Promise<Organisation[]>} findAll
  * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
+ * @property {(params: { page: number, pageSize: number }) => Promise<OrganisationsOverseasSitesAdminListPage>} [findPageForOverseasSitesAdminList] - Paginated ORS admin list query optimized for MongoDB-backed reads
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID

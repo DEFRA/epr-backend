@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it as base } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import {
+  buildAccreditation,
   buildOrganisation,
   buildRegistration,
   prepareOrgUpdate
@@ -46,6 +47,52 @@ describe('In-memory organisations repository', () => {
     it('returns null when no organisation matches', async () => {
       const found = await repository.findByOrgId(999999)
       expect(found).toBeNull()
+    })
+  })
+
+  describe('findAllForOverseasSitesAdminList', () => {
+    let repository
+
+    beforeEach(() => {
+      const factory = createInMemoryOrganisationsRepository([])
+      repository = factory()
+    })
+
+    it('returns orgId, registrations and accreditations for admin ORS list projection', async () => {
+      const organisation = buildOrganisation({
+        registrations: [
+          buildRegistration({
+            wasteProcessingType: 'exporter',
+            material: 'plastic',
+            overseasSites: {
+              '001': { overseasSiteId: 'site-a' }
+            }
+          })
+        ],
+        accreditations: [
+          buildAccreditation({
+            id: '507f1f77bcf86cd799439011',
+            accreditationNumber: 'ACC5000010001'
+          })
+        ]
+      })
+
+      await repository.insert(organisation)
+
+      const rows = await repository.findAllForOverseasSitesAdminList()
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0].orgId).toBe(organisation.orgId)
+      expect(rows[0].registrations).toHaveLength(1)
+      expect(rows[0].registrations[0].material).toBe('plastic')
+      expect(rows[0].registrations[0].overseasSites).toEqual({
+        '001': { overseasSiteId: 'site-a' }
+      })
+      expect(rows[0].accreditations).toHaveLength(1)
+      expect(rows[0].accreditations[0].id).toBe('507f1f77bcf86cd799439011')
+      expect(rows[0].accreditations[0].accreditationNumber).toBe(
+        'ACC5000010001'
+      )
     })
   })
 
