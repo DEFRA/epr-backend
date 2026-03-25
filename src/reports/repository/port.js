@@ -46,9 +46,12 @@
 
 /**
  * @typedef {Object} ExportActivity
- * @property {Object[]} overseasSites
+ * @property {Array<{orsId: string, siteName?: string, tonnageExported?: number}>} overseasSites
  * @property {number} totalTonnageReceivedForExporting
- * @property {number} tonnageReceivedNotExported
+ * @property {number|null} tonnageReceivedNotExported
+ * @property {number|null} tonnageRefusedAtRecepientDestination
+ * @property {number|null} tonnageStoppedDuringExport
+ * @property {number|null} tonnageRepatriated
  */
 
 /**
@@ -171,11 +174,12 @@
 
 /**
  * @typedef {Object} ReportsRepository
- * @property {(params: CreateReportParams) => Promise<string>} createReport
+ * @property {(params: CreateReportParams) => Promise<Report>} createReport
  * @property {(params: UpdateReportParams) => Promise<void>} updateReport
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(reportIds: string[]) => Promise<Map<string, ReportStatus>>} findReportStatusesByIds
  */
 
 /**

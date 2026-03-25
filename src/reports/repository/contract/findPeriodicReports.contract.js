@@ -30,7 +30,9 @@ export const testFindPeriodicReportsBehaviour = (it) => {
     })
 
     it('returns the full periodic report document', async () => {
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
 
       const [result] = await repository.findPeriodicReports({
         organisationId: DEFAULT_ORG_ID,
@@ -57,10 +59,10 @@ export const testFindPeriodicReportsBehaviour = (it) => {
     })
 
     it(`includes slots from multiple periods in a single document`, async () => {
-      const r1 = await repository.createReport(
+      const { id: r1 } = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.January })
       )
-      const r2 = await repository.createReport(
+      const { id: r2 } = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.February })
       )
 
@@ -86,6 +88,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
             [MONTHLY_PERIODS.February]: {
               currentReportId: r2,
               previousReportIds: [],
+
               startDate: DEFAULT_REPORT_START_DATE,
               endDate: DEFAULT_REPORT_END_DATE,
               dueDate: DEFAULT_REPORT_DUE_DATE
@@ -96,10 +99,10 @@ export const testFindPeriodicReportsBehaviour = (it) => {
     })
 
     it(`reflects previous report ids after re-creation for same slot`, async () => {
-      const first = await repository.createReport(
+      const { id: first } = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.January })
       )
-      const second = await repository.createReport(
+      const { id: second } = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.January })
       )
 

@@ -1,18 +1,19 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { findReportForPeriod } from '#reports/application/report-service.js'
+import { createReportForPeriod } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
   standardUserAuth,
-  withRegistrationDetails
+  withRegistrationDetails,
+  extractChangedBy
 } from './shared.js'
 
-export const reportsGetDetailPath =
+export const reportsPostPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
 
-export const reportsGetDetail = {
-  method: 'GET',
-  path: reportsGetDetailPath,
+export const reportsPost = {
+  method: 'POST',
+  path: reportsPostPath,
   options: {
     auth: standardUserAuth,
     tags: ['api'],
@@ -34,7 +35,7 @@ export const reportsGetDetail = {
       registrationId
     )
 
-    const { report } = await findReportForPeriod({
+    const createdReport = await createReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
       organisationId,
@@ -42,11 +43,12 @@ export const reportsGetDetail = {
       registration,
       year,
       cadence,
-      period
+      period,
+      changedBy: extractChangedBy(request.auth.credentials)
     })
 
     return h
-      .response(withRegistrationDetails(report, registration))
-      .code(StatusCodes.OK)
+      .response(withRegistrationDetails(createdReport, registration))
+      .code(StatusCodes.CREATED)
   }
 }

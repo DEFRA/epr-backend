@@ -12,6 +12,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { reportsGetDetailPath } from './get-detail.js'
 
 describe(`GET ${reportsGetDetailPath}`, () => {
@@ -167,9 +168,9 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(80.25)
-        expect(payload.sections.wasteReceived.suppliers).toHaveLength(2)
-        expect(payload.sections.wasteReceived.suppliers[0].supplierName).toBe(
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(80.25)
+        expect(payload.recyclingActivity.suppliers).toHaveLength(2)
+        expect(payload.recyclingActivity.suppliers[0].supplierName).toBe(
           'Grantham Waste'
         )
       })
@@ -209,11 +210,15 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteSentOn.totalTonnage).toBe(8)
-        expect(payload.sections.wasteSentOn.toReprocessors).toBe(5)
-        expect(payload.sections.wasteSentOn.toExporters).toBe(3)
-        expect(payload.sections.wasteSentOn.toOtherSites).toBe(0)
-        expect(payload.sections.wasteSentOn.destinations).toHaveLength(2)
+        expect(
+          payload.wasteSent.tonnageSentToReprocessor +
+            payload.wasteSent.tonnageSentToExporter +
+            payload.wasteSent.tonnageSentToAnotherSite
+        ).toBe(8)
+        expect(payload.wasteSent.tonnageSentToReprocessor).toBe(5)
+        expect(payload.wasteSent.tonnageSentToExporter).toBe(3)
+        expect(payload.wasteSent.tonnageSentToAnotherSite).toBe(0)
+        expect(payload.wasteSent.finalDestinations).toHaveLength(2)
       })
 
       it('excludes records outside the requested period', async () => {
@@ -254,8 +259,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(50)
-        expect(payload.sections.wasteReceived.suppliers).toHaveLength(1)
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(50)
+        expect(payload.recyclingActivity.suppliers).toHaveLength(1)
       })
 
       it('returns lastUploadedAt from most recent version', async () => {
@@ -302,10 +307,14 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.lastUploadedAt).toBeNull()
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(0)
-        expect(payload.sections.wasteReceived.suppliers).toStrictEqual([])
-        expect(payload.sections.wasteSentOn.totalTonnage).toBe(0)
-        expect(payload.sections.wasteSentOn.destinations).toStrictEqual([])
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
+        expect(payload.recyclingActivity.suppliers).toStrictEqual([])
+        expect(
+          payload.wasteSent.tonnageSentToReprocessor +
+            payload.wasteSent.tonnageSentToExporter +
+            payload.wasteSent.tonnageSentToAnotherSite
+        ).toBe(0)
+        expect(payload.wasteSent.finalDestinations).toStrictEqual([])
       })
     })
 
@@ -400,8 +409,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(80.25)
-        expect(payload.sections.wasteReceived.suppliers).toHaveLength(2)
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(80.25)
+        expect(payload.recyclingActivity.suppliers).toHaveLength(2)
       })
     })
 
@@ -497,9 +506,9 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(80.25)
-        expect(payload.sections.wasteReceived.suppliers).toHaveLength(2)
-        expect(payload.sections.wasteReceived.suppliers[0].supplierName).toBe(
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(80.25)
+        expect(payload.recyclingActivity.suppliers).toHaveLength(2)
+        expect(payload.recyclingActivity.suppliers[0].supplierName).toBe(
           'Grantham Waste'
         )
       })
@@ -548,11 +557,13 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteExported.totalTonnage).toBe(11.47)
-        expect(payload.sections.wasteExported.overseasSites).toHaveLength(2)
-        expect(payload.sections.wasteExported.overseasSites).toStrictEqual([
-          { osrId: '001', siteName: 'EuroPlast Recycling GmbH' },
-          { osrId: '096', siteName: 'RecyclePlast SA' }
+        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(
+          11.47
+        )
+        expect(payload.exportActivity.overseasSites).toHaveLength(2)
+        expect(payload.exportActivity.overseasSites).toStrictEqual([
+          { orsId: '001', siteName: 'EuroPlast Recycling GmbH' },
+          { orsId: '096', siteName: 'RecyclePlast SA' }
         ])
       })
 
@@ -594,8 +605,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(50)
-        expect(payload.sections.wasteReceived.suppliers).toHaveLength(1)
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(50)
+        expect(payload.recyclingActivity.suppliers).toHaveLength(1)
       })
 
       it('returns empty sections when no records exist', async () => {
@@ -612,12 +623,16 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.lastUploadedAt).toBeNull()
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(0)
-        expect(payload.sections.wasteReceived.suppliers).toStrictEqual([])
-        expect(payload.sections.wasteExported.totalTonnage).toBe(0)
-        expect(payload.sections.wasteExported.overseasSites).toStrictEqual([])
-        expect(payload.sections.wasteSentOn.totalTonnage).toBe(0)
-        expect(payload.sections.wasteSentOn.destinations).toStrictEqual([])
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
+        expect(payload.recyclingActivity.suppliers).toStrictEqual([])
+        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+        expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(
+          payload.wasteSent.tonnageSentToReprocessor +
+            payload.wasteSent.tonnageSentToExporter +
+            payload.wasteSent.tonnageSentToAnotherSite
+        ).toBe(0)
+        expect(payload.wasteSent.finalDestinations).toStrictEqual([])
       })
     })
 
@@ -687,8 +702,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(80.25)
-        expect(payload.sections.wasteReceived.suppliers).toStrictEqual([])
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(80.25)
+        expect(payload.recyclingActivity.suppliers).toStrictEqual([])
       })
 
       it('aggregates waste exported with overseas site details', async () => {
@@ -731,14 +746,12 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.sections.wasteExported.totalTonnage).toBe(11.5)
-        expect(payload.sections.wasteExported.overseasSites).toHaveLength(2)
-        expect(payload.sections.wasteExported.overseasSites[0].osrId).toBe(
-          '001'
+        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(
+          11.5
         )
-        expect(
-          payload.sections.wasteExported.overseasSites[0].siteName
-        ).toBeUndefined()
+        expect(payload.exportActivity.overseasSites).toHaveLength(2)
+        expect(payload.exportActivity.overseasSites[0].orsId).toBe('001')
+        expect(payload.exportActivity.overseasSites[0].siteName).toBeUndefined()
       })
 
       it('filters waste received and exported by different date fields', async () => {
@@ -771,8 +784,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const january = JSON.parse(januaryResponse.payload)
 
-        expect(january.sections.wasteReceived.totalTonnage).toBe(42)
-        expect(january.sections.wasteExported.totalTonnage).toBe(0)
+        expect(january.recyclingActivity.totalTonnageReceived).toBe(42)
+        expect(january.exportActivity.totalTonnageReceivedForExporting).toBe(0)
 
         const februaryResponse = await makeRequest(
           server,
@@ -784,8 +797,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const february = JSON.parse(februaryResponse.payload)
 
-        expect(february.sections.wasteReceived.totalTonnage).toBe(0)
-        expect(february.sections.wasteExported.totalTonnage).toBe(40)
+        expect(february.recyclingActivity.totalTonnageReceived).toBe(0)
+        expect(february.exportActivity.totalTonnageReceivedForExporting).toBe(
+          40
+        )
       })
 
       it('returns empty sections when no records exist', async () => {
@@ -805,12 +820,163 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.lastUploadedAt).toBeNull()
-        expect(payload.sections.wasteReceived.totalTonnage).toBe(0)
-        expect(payload.sections.wasteReceived.suppliers).toStrictEqual([])
-        expect(payload.sections.wasteExported.totalTonnage).toBe(0)
-        expect(payload.sections.wasteExported.overseasSites).toStrictEqual([])
-        expect(payload.sections.wasteSentOn.totalTonnage).toBe(0)
-        expect(payload.sections.wasteSentOn.destinations).toStrictEqual([])
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
+        expect(payload.recyclingActivity.suppliers).toStrictEqual([])
+        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+        expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(
+          payload.wasteSent.tonnageSentToReprocessor +
+            payload.wasteSent.tonnageSentToExporter +
+            payload.wasteSent.tonnageSentToAnotherSite
+        ).toBe(0)
+        expect(payload.wasteSent.finalDestinations).toStrictEqual([])
+      })
+    })
+
+    describe('stored report retrieval', () => {
+      const createServerWithReports = async (registrationOverrides = {}) => {
+        const registration = buildRegistration(registrationOverrides)
+        const org = buildOrganisation({ registrations: [registration] })
+
+        const organisationsRepositoryFactory =
+          createInMemoryOrganisationsRepository()
+        const organisationsRepository = organisationsRepositoryFactory()
+        await organisationsRepository.insert(org)
+
+        const wasteRecordsRepositoryFactory =
+          createInMemoryWasteRecordsRepository([])
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: organisationsRepositoryFactory,
+            wasteRecordsRepository: wasteRecordsRepositoryFactory,
+            reportsRepository: reportsRepositoryFactory
+          },
+          featureFlags: createInMemoryFeatureFlags({ reports: true })
+        })
+
+        return {
+          server,
+          organisationId: org.id,
+          registrationId: registration.id,
+          reportsRepositoryFactory
+        }
+      }
+
+      it('returns stored report with full data sections', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepositoryFactory
+        } = await createServerWithReports({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: 2026,
+          cadence: 'quarterly',
+          period: 1,
+          startDate: '2026-01-01',
+          endDate: '2026-03-31',
+          dueDate: '2026-04-20',
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'reprocessor',
+          recyclingActivity: {
+            suppliers: [
+              {
+                supplierName: 'Grantham Waste',
+                facilityType: 'Baler',
+                tonnageReceived: 42.21
+              }
+            ],
+            totalTonnageReceived: 42.21,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 5,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: [
+              {
+                recipientName: 'Lincoln recycling',
+                facilityType: 'Reprocessor',
+                tonnageSentOn: 5
+              }
+            ]
+          }
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.id).toBeDefined()
+        expect(payload.status).toBe('in_progress')
+        expect(payload.statusHistory).toStrictEqual([
+          expect.objectContaining({
+            status: 'in_progress',
+            changedAt: expect.any(String)
+          })
+        ])
+        expect(payload.material).toBe('plastic')
+        expect(payload.wasteProcessingType).toBe('reprocessor')
+        expect(payload.details.material).toBe('glass')
+        expect(payload.details.site).toBeDefined()
+        expect(payload.recyclingActivity).toStrictEqual({
+          suppliers: [
+            {
+              supplierName: 'Grantham Waste',
+              facilityType: 'Baler',
+              tonnageReceived: 42.21
+            }
+          ],
+          totalTonnageReceived: 42.21,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        })
+        expect(payload.wasteSent).toStrictEqual({
+          tonnageSentToReprocessor: 5,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: [
+            {
+              recipientName: 'Lincoln recycling',
+              facilityType: 'Reprocessor',
+              tonnageSentOn: 5
+            }
+          ]
+        })
+      })
+
+      it('returns computed data when no stored report exists', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReports({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.id).toBeUndefined()
+        expect(payload.recyclingActivity).toBeDefined()
       })
     })
 

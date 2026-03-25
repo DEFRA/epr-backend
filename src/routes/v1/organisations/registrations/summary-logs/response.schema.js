@@ -1,7 +1,10 @@
 import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
+import {
+  loadsSchema,
+  loadsByWasteRecordTypeSchema
+} from '#domain/summary-logs/loads-schema.js'
 
 const validationIssueSchema = Joi.object({
   type: Joi.string().valid('error', 'warning').optional(),
@@ -59,6 +62,7 @@ export const summaryLogResponseSchema = Joi.object({
     totalIssuesCount: Joi.number().integer().optional()
   }).optional(),
   loads: loadsSchema.optional(),
+  loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   processingType: Joi.string().optional(),
   material: Joi.string().optional(),
   accreditationNumber: Joi.string().optional()

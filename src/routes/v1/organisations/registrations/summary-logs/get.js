@@ -42,6 +42,9 @@ export const summaryLogsGet = {
       status: summaryLog.status,
       ...transformValidationResponse(summaryLog.validation),
       ...(summaryLog.loads && { loads: summaryLog.loads }),
+      ...(summaryLog.loadsByWasteRecordType && {
+        loadsByWasteRecordType: summaryLog.loadsByWasteRecordType
+      }),
       ...extractResponseMetaFields(summaryLog.meta)
     }
 
