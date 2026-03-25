@@ -33,7 +33,7 @@ export const testDeleteReportBehaviour = (it) => {
 
     it('deletes when report exists', async () => {
       const changedBy = buildDeleteParams().changedBy
-      const reportId = await repository.createReport(
+      const { id: reportId } = await repository.createReport(
         buildCreateReportParams({
           cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD

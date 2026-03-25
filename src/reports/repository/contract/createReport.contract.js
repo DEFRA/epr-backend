@@ -25,7 +25,7 @@ export const testCreateReportBehaviour = (it) => {
 
     it('creates a report with status in_progress and correct initial fields', async () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Manager' }
-      const reportId = await repository.createReport(
+      const result = await repository.createReport(
         buildCreateReportParams({
           material: 'plastic',
           siteAddress: '1 Recycling Lane',
@@ -33,10 +33,8 @@ export const testCreateReportBehaviour = (it) => {
         })
       )
 
-      const result = await repository.findReportById(reportId)
-
       expect(result).toEqual({
-        id: reportId,
+        id: expect.any(String),
         version: 1,
         schemaVersion: 1,
         status: REPORT_STATUS.IN_PROGRESS,
@@ -54,17 +52,15 @@ export const testCreateReportBehaviour = (it) => {
     })
 
     it(`does not store organisationId, registrationId, year, cadence, period on the report `, async () => {
-      const reportId = await repository.createReport(
+      const result = await repository.createReport(
         buildCreateReportParams({
           cadence: 'quarterly',
           period: QUARTERLY_PERIODS.Q2
         })
       )
 
-      const result = await repository.findReportById(reportId)
-
       expect(result).toEqual({
-        id: reportId,
+        id: expect.any(String),
         version: 1,
         schemaVersion: 1,
         status: REPORT_STATUS.IN_PROGRESS,
@@ -96,8 +92,8 @@ export const testCreateReportBehaviour = (it) => {
       const result = periodicReport.reports.monthly[MONTHLY_PERIODS.February]
 
       expect(result).toEqual({
-        currentReportId: second,
-        previousReportIds: [first],
+        currentReportId: second.id,
+        previousReportIds: [first.id],
         startDate: DEFAULT_REPORT_START_DATE,
         endDate: DEFAULT_REPORT_END_DATE,
         dueDate: DEFAULT_REPORT_DUE_DATE
@@ -139,14 +135,14 @@ export const testCreateReportBehaviour = (it) => {
     })
 
     it(`creates separate slots for different periods`, async () => {
-      const reportId1 = await repository.createReport(
+      const report1 = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.March })
       )
-      const reportId2 = await repository.createReport(
+      const report2 = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.April })
       )
 
-      expect(reportId1).not.toBe(reportId2)
+      expect(report1.id).not.toBe(report2.id)
     })
   })
 }

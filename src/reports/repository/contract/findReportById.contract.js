@@ -14,7 +14,7 @@ export const testFindReportByIdBehaviour = (it) => {
 
     it('returns the report for a known reportId', async () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
-      const reportId = await repository.createReport(
+      const { id: reportId } = await repository.createReport(
         buildCreateReportParams({ changedBy })
       )
 
