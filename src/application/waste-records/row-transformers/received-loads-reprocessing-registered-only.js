@@ -1,6 +1,7 @@
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { toYearMonth } from '#common/helpers/dates/year-month.js'
 
 const rowIdField = RECEIVED_LOADS_FIELDS.ROW_ID
 const monthField = RECEIVED_LOADS_FIELDS.MONTH_RECEIVED_FOR_REPROCESSING
@@ -27,7 +28,7 @@ export const transformReceivedLoadsRowRegisteredOnly = (rowData, rowIndex) => {
   // The Excel template stores month as a first-of-month date (e.g. '2026-03-01').
   // Strip the day portion so the persisted value reflects month granularity ('2026-03').
   if (data[monthField]) {
-    data[monthField] = data[monthField].slice(0, 7)
+    data[monthField] = toYearMonth(data[monthField])
   }
 
   return {
