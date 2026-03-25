@@ -95,7 +95,7 @@ const upsertSlot = (periodicReports, params) => {
  * @param {Map<string, Object>} reports
  * @param {Object[]} periodicReports
  * @param {Object} params
- * @returns {Promise<string>}
+ * @returns {Promise<import('./port.js').Report>}
  */
 const createReport = async (reports, periodicReports, params) => {
   const validated = validateCreateReport(params)
@@ -152,7 +152,7 @@ const createReport = async (reports, periodicReports, params) => {
     newReportId: reportId
   })
 
-  return reportId
+  return structuredClone(reports.get(reportId))
 }
 
 /**
@@ -297,12 +297,30 @@ export const createInMemoryReportsRepository = (
   const reports = initialReports
   const periodicReports = initialPeriodicReports
 
+  /**
+   * @param {Map<string, Object>} reportsStore
+   * @param {string[]} reportIds
+   * @returns {Promise<Map<string, string>>}
+   */
+  const findReportStatusesByIds = async (reportsStore, reportIds) => {
+    const result = new Map()
+    for (const id of reportIds) {
+      const report = reportsStore.get(id)
+      if (report) {
+        result.set(id, report.status)
+      }
+    }
+    return result
+  }
+
   return () => ({
     createReport: (params) => createReport(reports, periodicReports, params),
     updateReport: (params) => updateReport(reports, params),
     deleteReport: (params) => deleteReport(reports, periodicReports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) =>
-      findPeriodicReports(periodicReports, params)
+      findPeriodicReports(periodicReports, params),
+    findReportStatusesByIds: (reportIds) =>
+      findReportStatusesByIds(reports, reportIds)
   })
 }
