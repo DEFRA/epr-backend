@@ -13,7 +13,8 @@ import {
   ROW_ID_MINIMUMS
 } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformReprocessedLoadsRow } from '#application/waste-records/row-transformers/reprocessed-loads.js'
+import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   validateUkPackagingWeightProportion,
   UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES
@@ -37,7 +38,11 @@ export const REPROCESSED_LOADS = {
   rowIdField: FIELDS.ROW_ID,
   wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
   sheetName: 'Processed',
-  rowTransformer: transformReprocessedLoadsRow,
+  rowTransformer: createRowTransformer({
+    wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
+    processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+    rowIdField: FIELDS.ROW_ID
+  }),
 
   requiredHeaders: [
     FIELDS.ROW_ID,

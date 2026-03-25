@@ -19,7 +19,8 @@ import {
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformExportLoadsRow } from '#application/waste-records/row-transformers/received-loads-export.js'
+import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
@@ -100,7 +101,11 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
   sheetName: 'Exported',
-  rowTransformer: transformExportLoadsRow,
+  rowTransformer: createRowTransformer({
+    wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+    processingType: PROCESSING_TYPES.EXPORTER,
+    rowIdField: FIELDS.ROW_ID
+  }),
 
   requiredHeaders: [...WASTE_BALANCE_FIELDS, ...SUPPLEMENTARY_FIELDS],
 

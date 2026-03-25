@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformSentOnLoadsRow } from '#application/waste-records/row-transformers/sent-on-loads.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
@@ -19,10 +18,6 @@ describe('SENT_ON_LOADS (REPROCESSOR_INPUT)', () => {
 
     it('has sheetName set to Sent on', () => {
       expect(schema.sheetName).toBe('Sent on')
-    })
-
-    it('has rowTransformer set to transformSentOnLoadsRow', () => {
-      expect(schema.rowTransformer).toBe(transformSentOnLoadsRow)
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {

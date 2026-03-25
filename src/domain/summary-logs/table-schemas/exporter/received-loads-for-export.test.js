@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { RECEIVED_LOADS_FOR_EXPORT } from './received-loads-for-export.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { transformExportLoadsRow } from '#application/waste-records/row-transformers/received-loads-export.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 
@@ -19,10 +18,6 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     it('has sheetName set to Exported', () => {
       expect(schema.sheetName).toBe('Exported')
-    })
-
-    it('has rowTransformer set to transformExportLoadsRow', () => {
-      expect(schema.rowTransformer).toBe(transformExportLoadsRow)
     })
 
     it('has requiredHeaders array with expected fields', () => {
