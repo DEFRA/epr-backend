@@ -4,7 +4,7 @@
     "checkJs": true,
     "noEmit": true,
     "target": "es2024",
-    "lib": ["ES2024"],
+    "lib": ["ES2024", "ESNext.Collection"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "skipLibCheck": true,
