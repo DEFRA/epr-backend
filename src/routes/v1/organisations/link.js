@@ -63,7 +63,7 @@ export const organisationsLink = {
       ...organisation
     } = await organisationsRepository.findById(organisationId)
 
-    if (organisation?.status !== ORGANISATION_STATUS.APPROVED) {
+    if (organisation.status !== ORGANISATION_STATUS.APPROVED) {
       throw Boom.conflict('Organisation is not in an approvable state')
     }
 

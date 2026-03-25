@@ -438,7 +438,7 @@ const assertValidatingStatus = (result, summaryLogId) => {
  *
  * @param {Object} params
  * @param {ReturnType<typeof createValidationIssues>} params.issues
- * @param {string} params.processingType
+ * @param {import('#common/helpers/metrics/summary-logs.js').ProcessingType} params.processingType
  * @param {SummaryLogStatus} params.status
  * @param {number} params.validationDurationMs
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
@@ -466,7 +466,7 @@ const recordValidationMetrics = async ({
  * @param {ReturnType<typeof createValidationIssues>} params.issues
  * @param {Loads | null} params.loads
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
- * @param {ExtractedMeta} params.meta
+ * @param {ExtractedMeta | undefined} params.meta
  * @param {string} params.status
  * @param {SummaryLog} params.summaryLog
  * @param {string} params.summaryLogId
@@ -517,7 +517,7 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  *
  * @param {Object} params
  * @param {string} params.status - Summary log status after validation
- * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records
+ * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {string} params.summaryLogId
  * @param {string} params.processingType

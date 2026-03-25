@@ -163,6 +163,7 @@ export const packagingRecyclingNotesCreate = {
         ),
         organisationsRepository.findById(organisationId)
       ])
+
       const isExport =
         accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 

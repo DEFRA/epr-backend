@@ -35,12 +35,8 @@ export const getRolesForOrganisationAccess = async (
 
   const organisationById =
     await request.organisationsRepository.findById(organisationId)
-  const orgStatusIsAccessible = [ORGANISATION_STATUS.ACTIVE].includes(
-    organisationById.status
-  )
 
-  // Organisation has a status allowing it to be accessed
-  if (!orgStatusIsAccessible) {
+  if (organisationById.status !== ORGANISATION_STATUS.ACTIVE) {
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
 

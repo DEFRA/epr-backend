@@ -31,22 +31,22 @@
 /**
  * Organisation replacement payload with identity fields removed.
  * Identity (id, version) is passed as separate parameters to replace().
- * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationReplacement
+ * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'statusHistory'>>} OrganisationReplacement
  */
 
 /**
  * @typedef {Object} OrganisationsRepository
- * @property {(organisation: Organisation) => Promise<void>} insert
+ * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {(id: string, version: number, document: Organisation) => Promise<void>} replaceRaw - Direct write bypassing status history management (dev/test only)
  * @property {() => Promise<Organisation[]>} findAll
  * @property {() => Promise<OrganisationsOverseasSitesAdminListItem[]>} [findAllForOverseasSitesAdminList] - Lightweight projection for ORS admin list endpoint
  * @property {(ids: string[]) => Promise<Organisation[]>} findByIds - Find organisations by array of IDs
- * @property {(id: string, minimumVersion?: number) => Promise<Organisation|null>} findById
+ * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(filter?: { name?: string }) => Promise<Organisation[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
  * @property {(email: string) => Promise<Organisation[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
- * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration|null>} findRegistrationById
+ * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration>} findRegistrationById
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  * @property {(orgId: number) => Promise<Organisation|null>} findByOrgId - Find organisation by business orgId

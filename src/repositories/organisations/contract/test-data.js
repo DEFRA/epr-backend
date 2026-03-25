@@ -81,6 +81,7 @@ export const buildAccreditation = (overrides = {}) => {
   return accreditation
 }
 
+/** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
 export const buildOrganisation = (overrides = {}) => {
   // Build a mapping from old accreditation IDs to new ones
   // This ensures registration.accreditationId links are preserved
@@ -89,16 +90,20 @@ export const buildOrganisation = (overrides = {}) => {
     accreditationIdMap.set(acc.id, new ObjectId().toString())
   }
 
-  // Deep clone accreditations with new IDs
+  // Deep clone accreditations with new IDs and properly typed fields
   const accreditations = org1.accreditations.map((acc) => ({
     ...acc,
-    id: accreditationIdMap.get(acc.id)
+    id: accreditationIdMap.get(acc.id),
+    formSubmissionTime: new Date(acc.formSubmissionTime),
+    statusHistory: createInitialStatusHistory()
   }))
 
   // Deep clone registrations with new IDs, updating accreditationId links
   const registrations = org1.registrations.map((reg) => ({
     ...reg,
     id: new ObjectId().toString(),
+    formSubmissionTime: new Date(reg.formSubmissionTime),
+    statusHistory: createInitialStatusHistory(),
     // Update accreditationId to point to the new accreditation ID
     ...(reg.accreditationId && {
       accreditationId: accreditationIdMap.get(reg.accreditationId)
@@ -109,6 +114,8 @@ export const buildOrganisation = (overrides = {}) => {
     ...org1,
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
+    formSubmissionTime: new Date(org1.formSubmissionTime),
+    partnership: org1.partnership,
     statusHistory: createInitialStatusHistory(),
     registrations,
     accreditations,
@@ -118,6 +125,8 @@ export const buildOrganisation = (overrides = {}) => {
   initializeStatusForItems(org.registrations)
   initializeStatusForItems(org.accreditations)
 
+  // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
+  // Accreditation/Registration types require computed 'status' that only exists after read
   return org
 }
 
