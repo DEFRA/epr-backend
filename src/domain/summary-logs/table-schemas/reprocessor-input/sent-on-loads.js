@@ -1,6 +1,8 @@
 import { createSentOnLoadsSchema } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
-import { transformSentOnLoadsRow } from '#application/waste-records/row-transformers/sent-on-loads.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import {
   CLASSIFICATION_REASON,
@@ -25,7 +27,11 @@ const WASTE_BALANCE_FIELDS = [
 export const SENT_ON_LOADS = {
   ...createSentOnLoadsSchema(
     ROW_ID_MINIMUMS.SENT_ON_LOADS,
-    transformSentOnLoadsRow
+    createRowTransformer({
+      wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+      rowIdField: FIELDS.ROW_ID
+    })
   ),
 
   classifyForWasteBalance: (

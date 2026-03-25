@@ -1,7 +1,7 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { ObjectId } from 'mongodb'
 import { describe, expect, it, vi } from 'vitest'
-import { createSeedData } from './create-update'
+import { createSeedData } from './create-update.js'
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false

@@ -12,7 +12,9 @@ export const testUpdateReportBehaviour = (it) => {
     })
 
     it('updates supportingInformation', async () => {
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
 
       await repository.updateReport({
         reportId,
@@ -40,7 +42,9 @@ export const testUpdateReportBehaviour = (it) => {
     })
 
     it('increments version on every update', async () => {
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
       const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
 
       await repository.updateReport({
@@ -81,7 +85,9 @@ export const testUpdateReportBehaviour = (it) => {
 
     it('appends status history entry when status changes', async () => {
       const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
 
       await repository.updateReport({
         reportId,
@@ -114,7 +120,9 @@ export const testUpdateReportBehaviour = (it) => {
     })
 
     it('does not append status history when status is unchanged', async () => {
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
 
       await repository.updateReport({
         reportId,
@@ -142,7 +150,9 @@ export const testUpdateReportBehaviour = (it) => {
     })
 
     it('throws conflict when version does not match', async () => {
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
 
       await expect(
         repository.updateReport({
@@ -154,7 +164,9 @@ export const testUpdateReportBehaviour = (it) => {
     })
 
     it('throws when updating non-updatable fields', async () => {
-      const reportId = await repository.createReport(buildCreateReportParams())
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
 
       await expect(
         repository.updateReport({

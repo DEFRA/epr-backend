@@ -1297,6 +1297,7 @@ describe('syncFromSummaryLog', () => {
       type: WASTE_RECORD_TYPE.RECEIVED
     })
     expect(received.data.processingType).toBe('EXPORTER_REGISTERED_ONLY')
+    expect(received.data.MONTH_RECEIVED_FOR_EXPORT).toBe('2025-01')
 
     const exported = savedRecords.find(
       (r) => r.type === WASTE_RECORD_TYPE.EXPORTED
