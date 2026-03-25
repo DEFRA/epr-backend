@@ -54,11 +54,6 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: [
-          'ROW_ID',
-          'TEXT_FIELD',
-          'NUMBER_FIELD'
-        ],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
           {}
@@ -77,7 +72,6 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'DATE_FIELD'],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'DATE_FIELD'],
           {}
@@ -99,7 +93,6 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'CODE_FIELD'],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'CODE_FIELD'],
           {}
@@ -117,7 +110,6 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'EMAIL_FIELD'],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'EMAIL_FIELD'],
           {}
@@ -138,7 +130,6 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'VALUE_FIELD'],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'VALUE_FIELD'],
           {}
@@ -160,7 +151,6 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'YES_NO_FIELD'],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'YES_NO_FIELD'],
           {}
@@ -202,12 +192,6 @@ describe('createDataSyntaxValidator', () => {
           })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForInclusionInWasteBalance: [
-          'ROW_ID',
-          'VALUE_A',
-          'VALUE_B',
-          'CALCULATED_RESULT'
-        ],
         classifyForWasteBalance: buildClassifyForWasteBalance(
           ['ROW_ID', 'VALUE_A', 'VALUE_B', 'CALCULATED_RESULT'],
           {}

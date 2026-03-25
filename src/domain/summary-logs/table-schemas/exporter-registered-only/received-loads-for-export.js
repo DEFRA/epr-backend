@@ -80,12 +80,5 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: createUnboundedWeightFieldSchema()
   })
     .unknown(true)
-    .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   *
-   * Empty — registered-only operators have no waste balance.
-   */
-  fieldsRequiredForInclusionInWasteBalance: []
+    .prefs({ abortEarly: false })
 }

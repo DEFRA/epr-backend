@@ -39,7 +39,7 @@ import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/ta
 /**
  * Adapts domain table schema to the structure expected by validateTable
  *
- * Domain schemas use: unfilledValues, validationSchema, fieldsRequiredForInclusionInWasteBalance
+ * Domain schemas use: unfilledValues, validationSchema
  * This adapter extracts what validateTable needs during the migration.
  *
  * @param {Object} domainSchema - Schema from domain layer
@@ -303,7 +303,7 @@ const recordIssues = (rowIssues, issues) => {
  * @param {string} params.tableName - Name of the table being validated
  * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
  * @param {Array<{rowNumber: number, values: Array<*>}>} params.rows - Array of raw data rows
- * @param {Object} params.domainSchema - Domain table schema with unfilledValues, validationSchema, fieldsRequiredForInclusionInWasteBalance
+ * @param {Object} params.domainSchema - Domain table schema with unfilledValues, validationSchema
  * @param {Object} params.location - Table location in spreadsheet
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with outcome and issues attached

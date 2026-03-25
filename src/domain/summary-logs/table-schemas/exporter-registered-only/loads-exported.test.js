@@ -57,12 +57,6 @@ describe('LOADS_EXPORTED (EXPORTER_REGISTERED_ONLY)', () => {
       expect(typeof schema.validationSchema.validate).toBe('function')
     })
 
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('is empty (registered-only operators have no waste balance)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual([])
-      })
-    })
-
     it('treats BASEL_EXPORT_CODE as unfilled dropdown', () => {
       expect(schema.unfilledValues.BASEL_EXPORT_CODE).toContain('Choose option')
     })

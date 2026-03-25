@@ -51,12 +51,6 @@ describe('SENT_ON_LOADS (EXPORTER_REGISTERED_ONLY)', () => {
       expect(schema.validationSchema).toBeDefined()
       expect(typeof schema.validationSchema.validate).toBe('function')
     })
-
-    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      it('is empty (registered-only operators have no waste balance)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual([])
-      })
-    })
   })
 
   describe('validationSchema (VAL010)', () => {

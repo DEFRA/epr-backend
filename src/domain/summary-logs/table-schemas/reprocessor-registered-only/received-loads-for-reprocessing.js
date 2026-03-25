@@ -80,12 +80,5 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createUnboundedWeightFieldSchema()
   })
     .unknown(true)
-    .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   *
-   * Empty — registered-only operators have no waste balance.
-   */
-  fieldsRequiredForInclusionInWasteBalance: []
+    .prefs({ abortEarly: false })
 }
