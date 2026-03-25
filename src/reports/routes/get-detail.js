@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { findReportForPeriod } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
@@ -36,8 +35,6 @@ export const reportsGetDetail = {
       organisationId,
       registrationId
     )
-
-    const operatorCategory = getOperatorCategory(registration)
 
     const { report } = await findReportForPeriod({
       reportsRepository,
