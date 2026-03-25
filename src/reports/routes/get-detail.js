@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { findReportForPeriod } from '#reports/application/report-service.js'
 import {
@@ -53,7 +52,6 @@ export const reportsGetDetail = {
 
     const prnData = await getIssuedTonnage(packagingRecyclingNotesRepository, {
       accreditationId: registration.accreditationId,
-      statuses: [PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED],
       startDate: report.startDate,
       endDate: report.endDate
     })

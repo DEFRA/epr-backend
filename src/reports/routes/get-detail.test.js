@@ -1052,6 +1052,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             status: {
               currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
               currentStatusAt: IN_PERIOD,
+              issued: { at: IN_PERIOD, by: { id: 'test', name: 'test' } },
               history: [
                 {
                   status: PRN_STATUS.DRAFT,
