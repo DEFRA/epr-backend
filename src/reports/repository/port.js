@@ -174,11 +174,12 @@
 
 /**
  * @typedef {Object} ReportsRepository
- * @property {(params: CreateReportParams) => Promise<string>} createReport
+ * @property {(params: CreateReportParams) => Promise<Report>} createReport
  * @property {(params: UpdateReportParams) => Promise<void>} updateReport
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(reportIds: string[]) => Promise<Map<string, ReportStatus>>} findReportStatusesByIds
  */
 
 /**
