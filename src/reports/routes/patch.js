@@ -13,13 +13,14 @@ import {
 export const reportsPatchPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
 
+const MAX_SUPPORTING_INFO_LENGTH = 2000
+
 const payloadSchema = Joi.object({
   status: Joi.string().valid(
     REPORT_STATUS.IN_PROGRESS,
-    REPORT_STATUS.READY_TO_SUBMIT,
-    REPORT_STATUS.SUBMITTED
+    REPORT_STATUS.READY_TO_SUBMIT
   ),
-  supportingInformation: Joi.string().allow('')
+  supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH)
 })
   .min(1)
   .required()

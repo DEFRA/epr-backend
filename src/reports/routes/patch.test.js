@@ -272,6 +272,23 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
+      it('returns 422 when supporting information exceeds max length', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { supportingInformation: 'x'.repeat(2001) }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('returns 422 for invalid cadence', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithoutReport({
