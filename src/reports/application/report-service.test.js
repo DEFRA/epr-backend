@@ -2,7 +2,10 @@ import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { findReportForPeriod, createReportForPeriod } from './report-service.js'
+import {
+  fetchOrGenerateReportForPeriod,
+  createReportForPeriod
+} from './report-service.js'
 
 const buildRegistration = (overrides = {}) => ({
   id: new ObjectId().toString(),
@@ -52,13 +55,13 @@ const defaultParams = () => {
 }
 
 describe('report-service', () => {
-  describe('findReportForPeriod', () => {
+  describe('fetchOrGenerateReportForPeriod', () => {
     it('returns computed report when no stored report exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
       const params = defaultParams()
 
-      const { report } = await findReportForPeriod({
+      const { report } = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
         ...params
@@ -89,7 +92,7 @@ describe('report-service', () => {
         wasteProcessingType: 'reprocessor'
       })
 
-      const { report } = await findReportForPeriod({
+      const { report } = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
         ...params
@@ -111,7 +114,7 @@ describe('report-service', () => {
       ])()
       const reportsRepository = createInMemoryReportsRepository()()
 
-      const { report } = await findReportForPeriod({
+      const { report } = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
         ...params

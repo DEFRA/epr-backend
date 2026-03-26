@@ -18,6 +18,43 @@ function findCurrentReportId(periodicReports, year, cadence, period) {
 }
 
 /**
+ * Looks up the stored report for a period, if one exists.
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {number} year
+ * @param {string} cadence
+ * @param {number} period
+ * @returns {Promise<import('#reports/repository/port.js').Report | null>}
+ */
+export async function fetchCurrentReport(
+  reportsRepository,
+  organisationId,
+  registrationId,
+  year,
+  cadence,
+  period
+) {
+  const periodicReports = await reportsRepository.findPeriodicReports({
+    organisationId,
+    registrationId
+  })
+
+  const currentReportId = findCurrentReportId(
+    periodicReports,
+    year,
+    cadence,
+    period
+  )
+
+  if (!currentReportId) {
+    return null
+  }
+
+  return reportsRepository.findReportById(currentReportId)
+}
+
+/**
  * Resolves the tonnage-monitoring material from a registration.
  * Glass registrations use glassRecyclingProcess[0] (e.g. 'glass_re_melt').
  * @param {object} registration
@@ -106,7 +143,7 @@ function buildReportData(aggregated, registration) {
  * @param {number} params.period
  * @returns {Promise<{ report: import('#reports/repository/port.js').Report | import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail }>}
  */
-export async function findReportForPeriod({
+export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
   wasteRecordsRepository,
   organisationId,
@@ -116,20 +153,16 @@ export async function findReportForPeriod({
   cadence,
   period
 }) {
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  const storedReport = await fetchCurrentReport(
+    reportsRepository,
     organisationId,
-    registrationId
-  })
-
-  const currentReportId = findCurrentReportId(
-    periodicReports,
+    registrationId,
     year,
     cadence,
     period
   )
 
-  if (currentReportId) {
-    const storedReport = await reportsRepository.findReportById(currentReportId)
+  if (storedReport) {
     return { report: storedReport }
   }
 

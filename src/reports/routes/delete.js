@@ -1,7 +1,6 @@
-import Boom from '@hapi/boom'
-import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
+import Boom from '@hapi/boom'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -12,33 +11,21 @@ import {
   extractChangedBy
 } from './shared.js'
 
-export const reportsStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}/status'
+export const reportsDeletePath =
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
 
-const payloadSchema = Joi.object({
-  status: Joi.string()
-    .valid(
-      REPORT_STATUS.IN_PROGRESS,
-      REPORT_STATUS.READY_TO_SUBMIT,
-      REPORT_STATUS.SUBMITTED
-    )
-    .required(),
-  version: Joi.number().integer().min(1).required()
-})
-
-export const reportsStatus = {
-  method: 'POST',
-  path: reportsStatusPath,
+export const reportsDelete = {
+  method: 'DELETE',
+  path: reportsDeletePath,
   options: {
     auth: standardUserAuth,
     tags: ['api'],
     validate: {
-      params: periodParamsSchema,
-      payload: payloadSchema
+      params: periodParamsSchema
     }
   },
   /**
-   * @param {HapiRequest<{ status: ReportStatus, version: number }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -46,7 +33,6 @@ export const reportsStatus = {
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
-    const { status, version } = request.payload
 
     const report = await fetchCurrentReport(
       reportsRepository,
@@ -63,37 +49,39 @@ export const reportsStatus = {
       )
     }
 
-    if (!isValidReportTransition(report.status, status)) {
+    if (!isValidReportTransition(report.status, REPORT_STATUS.DELETED)) {
       throw Boom.badRequest(
-        `Cannot transition from '${report.status}' to '${status}'`
+        `Cannot delete a report with status '${report.status}'`
       )
     }
 
     const previous = { status: report.status, version: report.version }
 
-    await reportsRepository.updateReport({
-      reportId: report.id,
-      version,
-      fields: { status },
+    await reportsRepository.deleteReport({
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
       changedBy: extractChangedBy(request.auth.credentials)
     })
-
-    const updated = await reportsRepository.findReportById(report.id)
 
     await auditReportStatusTransition(request, {
       organisationId,
       reportId: report.id,
       previous,
-      next: { status: updated.status, version: updated.version }
+      next: {
+        status: REPORT_STATUS.DELETED,
+        version: report.version + 1
+      }
     })
 
-    return h.response(updated).code(StatusCodes.OK)
+    return h.response({}).code(StatusCodes.OK)
   }
 }
 
 /**
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { ReportStatus } from '#reports/domain/report-status.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */

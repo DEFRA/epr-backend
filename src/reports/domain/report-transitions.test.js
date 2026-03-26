@@ -5,16 +5,17 @@ import {
 } from './report-transitions.js'
 
 describe('REPORT_STATUS_TRANSITIONS', () => {
-  it('allows in_progress to ready_to_submit', () => {
-    expect(REPORT_STATUS_TRANSITIONS[REPORT_STATUS.IN_PROGRESS]).toContain(
-      REPORT_STATUS.READY_TO_SUBMIT
-    )
+  it('allows in_progress to ready_to_submit and deleted', () => {
+    const allowed = REPORT_STATUS_TRANSITIONS[REPORT_STATUS.IN_PROGRESS]
+    expect(allowed).toContain(REPORT_STATUS.READY_TO_SUBMIT)
+    expect(allowed).toContain(REPORT_STATUS.DELETED)
   })
 
-  it('allows ready_to_submit to in_progress and submitted', () => {
+  it('allows ready_to_submit to in_progress, submitted and deleted', () => {
     const allowed = REPORT_STATUS_TRANSITIONS[REPORT_STATUS.READY_TO_SUBMIT]
     expect(allowed).toContain(REPORT_STATUS.IN_PROGRESS)
     expect(allowed).toContain(REPORT_STATUS.SUBMITTED)
+    expect(allowed).toContain(REPORT_STATUS.DELETED)
   })
 
   it('allows submitted to superseded only', () => {
