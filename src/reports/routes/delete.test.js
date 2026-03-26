@@ -104,8 +104,8 @@ describe(`DELETE ${reportsDeletePath}`, () => {
       })
 
     describe('successful deletion', () => {
-      it('returns 200 when report is in_progress', async () => {
-        const { server, organisationId, registrationId } =
+      it('returns 200 and removes report from period slot', async () => {
+        const { server, organisationId, registrationId, reportsRepository } =
           await createServerWithReport({
             wasteProcessingType: 'reprocessor',
             accreditationId: undefined
@@ -118,6 +118,13 @@ describe(`DELETE ${reportsDeletePath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const periodicReports = await reportsRepository.findPeriodicReports({
+          organisationId,
+          registrationId
+        })
+        const slot = periodicReports[0]?.reports?.quarterly?.[1]
+        expect(slot.currentReportId).toBeNull()
       })
 
       it('returns 200 when report is ready_to_submit', async () => {
@@ -183,6 +190,24 @@ describe(`DELETE ${reportsDeletePath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
+      it('returns 404 when report was already deleted', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        await deleteReport(server, organisationId, registrationId)
+
+        const response = await deleteReport(
+          server,
+          organisationId,
+          registrationId
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
     })
 
