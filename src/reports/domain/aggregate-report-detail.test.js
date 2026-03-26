@@ -324,6 +324,32 @@ describe('#aggregateReportDetail', () => {
       ])
     })
 
+    it('excludes records without a recipient name from finalDestinations', () => {
+      const records = [
+        buildSentOnRecord({
+          FINAL_DESTINATION_NAME: 'Lincoln recycling',
+          FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 8
+        }),
+        buildSentOnRecord({
+          DATE_LOAD_LEFT_SITE: '2026-02-01',
+          FINAL_DESTINATION_NAME: undefined,
+          FINAL_DESTINATION_FACILITY_TYPE: undefined,
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: undefined
+        })
+      ]
+
+      const result = aggregateReportDetail(records, defaultArgs)
+
+      expect(result.wasteSent.finalDestinations).toStrictEqual([
+        {
+          recipientName: 'Lincoln recycling',
+          facilityType: 'Reprocessor',
+          tonnageSentOn: 8
+        }
+      ])
+    })
+
     it('only includes sentOn records in waste sent on totals', () => {
       const records = [
         buildSentOnRecord({
