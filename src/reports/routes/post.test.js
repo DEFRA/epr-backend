@@ -7,6 +7,8 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   buildOrganisation,
   buildRegistration
@@ -191,6 +193,63 @@ describe(`POST ${reportsPostPath}`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('includes prn issuedTonnage when creating report for accredited registration', async () => {
+      const accreditationId = new ObjectId().toString()
+      const issuedAt = new Date('2025-01-15T00:00:00.000Z')
+
+      const prn = {
+        ...buildAwaitingAcceptancePrn({
+          accreditation: {
+            id: accreditationId,
+            accreditationNumber: 'ACC-TEST-001',
+            accreditationYear: 2025,
+            material: 'glass_re_melt',
+            submittedToRegulator: 'ea',
+            siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+          },
+          tonnage: 250,
+          status: {
+            issued: {
+              at: issuedAt,
+              by: { id: 'issuer', name: 'Issuer', position: 'Manager' }
+            }
+          }
+        }),
+        id: new ObjectId().toString()
+      }
+
+      const registration = buildRegistration({
+        wasteProcessingType: 'reprocessor',
+        accreditationId
+      })
+      const org = buildOrganisation({ registrations: [registration] })
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository()
+      const organisationsRepository = organisationsRepositoryFactory()
+      await organisationsRepository.insert(org)
+
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+          reportsRepository: createInMemoryReportsRepository(),
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository([prn])
+        },
+        featureFlags: createInMemoryFeatureFlags({ reports: true })
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: makeUrl(org.id, registration.id, 2025, 'quarterly', 1),
+        ...asStandardUser({ linkedOrgId: org.id })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
+      const payload = JSON.parse(response.payload)
+      expect(payload.prn).toStrictEqual({ issuedTonnage: 250 })
     })
   })
 

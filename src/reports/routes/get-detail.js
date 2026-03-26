@@ -24,6 +24,7 @@ export const reportsGetDetail = {
     const {
       organisationsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       reportsRepository,
       params
     } = request
@@ -34,9 +35,10 @@ export const reportsGetDetail = {
       registrationId
     )
 
-    const { report } = await fetchOrGenerateReportForPeriod({
+    const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       organisationId,
       registrationId,
       registration,

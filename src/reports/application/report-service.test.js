@@ -2,6 +2,9 @@ import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod
@@ -59,11 +62,14 @@ describe('report-service', () => {
     it('returns computed report when no stored report exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
 
-      const { report } = await fetchOrGenerateReportForPeriod({
+      const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params
       })
 
@@ -75,6 +81,8 @@ describe('report-service', () => {
     it('returns stored report when one exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
@@ -92,9 +100,10 @@ describe('report-service', () => {
         wasteProcessingType: 'reprocessor'
       })
 
-      const { report } = await fetchOrGenerateReportForPeriod({
+      const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params
       })
 
@@ -113,10 +122,13 @@ describe('report-service', () => {
         }
       ])()
       const reportsRepository = createInMemoryReportsRepository()()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
 
-      const { report } = await fetchOrGenerateReportForPeriod({
+      const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params
       })
 
@@ -131,12 +143,15 @@ describe('report-service', () => {
     it('creates a report and returns the full object', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params,
         changedBy
       })
@@ -151,12 +166,15 @@ describe('report-service', () => {
     it('throws conflict when report already exists for period', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await createReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params,
         changedBy
       })
@@ -165,6 +183,7 @@ describe('report-service', () => {
         createReportForPeriod({
           reportsRepository,
           wasteRecordsRepository,
+          packagingRecyclingNotesRepository,
           ...params,
           changedBy
         })
@@ -174,6 +193,8 @@ describe('report-service', () => {
     it('throws badRequest for period that has not yet ended', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       params.year = 2099
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
@@ -182,6 +203,7 @@ describe('report-service', () => {
         createReportForPeriod({
           reportsRepository,
           wasteRecordsRepository,
+          packagingRecyclingNotesRepository,
           ...params,
           changedBy
         })
@@ -191,6 +213,8 @@ describe('report-service', () => {
     it('resolves glass material to glass recycling process', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       params.registration = buildRegistration({
         material: 'glass',
@@ -201,6 +225,7 @@ describe('report-service', () => {
       const report = await createReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params,
         changedBy
       })
@@ -211,17 +236,108 @@ describe('report-service', () => {
     it('formats site address into single-line string', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params,
         changedBy
       })
 
       expect(report.siteAddress).toBe('1 Recycling Lane, Greenville, GR1 1AA')
+    })
+
+    describe('prn', () => {
+      const IN_PERIOD = new Date('2024-01-15T12:00:00.000Z')
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      const buildIssuedPrn = (accreditationId, tonnage) =>
+        buildAwaitingAcceptancePrn({
+          accreditation: {
+            id: accreditationId,
+            accreditationNumber: 'ACC-001',
+            accreditationYear: 2024,
+            material: 'plastic',
+            submittedToRegulator: 'ea',
+            siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+          },
+          tonnage,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+            currentStatusAt: IN_PERIOD,
+            issued: { at: IN_PERIOD, by: { id: 'test', name: 'test' } }
+          }
+        })
+
+      it('is undefined for non-accredited operator', async () => {
+        const reportsRepository = createInMemoryReportsRepository()()
+        const wasteRecordsRepository = createInMemoryWasteRecordsRepository(
+          []
+        )()
+        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
+        const params = defaultParams()
+        params.registration = buildRegistration({ accreditationId: undefined })
+
+        const report = await createReportForPeriod({
+          reportsRepository,
+          wasteRecordsRepository,
+          packagingRecyclingNotesRepository: prnRepo,
+          ...params,
+          changedBy
+        })
+
+        expect(report.prn).toBeUndefined()
+      })
+
+      it('persists prn with issuedTonnage 0 when accredited and no PRNs exist', async () => {
+        const reportsRepository = createInMemoryReportsRepository()()
+        const wasteRecordsRepository = createInMemoryWasteRecordsRepository(
+          []
+        )()
+        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
+        const params = defaultParams()
+
+        const report = await createReportForPeriod({
+          reportsRepository,
+          wasteRecordsRepository,
+          packagingRecyclingNotesRepository: prnRepo,
+          ...params,
+          changedBy
+        })
+
+        expect(report.prn.issuedTonnage).toBe(0)
+      })
+
+      it('persists prn with summed issuedTonnage from PRNs in period', async () => {
+        const reportsRepository = createInMemoryReportsRepository()()
+        const wasteRecordsRepository = createInMemoryWasteRecordsRepository(
+          []
+        )()
+        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
+        const params = defaultParams()
+
+        await prnRepo.create(
+          buildIssuedPrn(params.registration.accreditationId, 30)
+        )
+        await prnRepo.create(
+          buildIssuedPrn(params.registration.accreditationId, 20)
+        )
+
+        const report = await createReportForPeriod({
+          reportsRepository,
+          wasteRecordsRepository,
+          packagingRecyclingNotesRepository: prnRepo,
+          ...params,
+          changedBy
+        })
+
+        expect(report.prn.issuedTonnage).toBe(50)
+      })
     })
   })
 })

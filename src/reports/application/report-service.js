@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 
+import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
@@ -112,40 +113,43 @@ function getValidatedPeriodInfo(cadence, year, period) {
 
 /**
  * Extracts the report-specific fields from aggregated data and registration.
- * @param {import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail} aggregated
+ * @param {import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } }} aggregated
  * @param {object} registration
  * @returns {object}
  */
 function buildReportData(aggregated, registration) {
-  const { recyclingActivity, exportActivity, wasteSent } = aggregated
+  const { recyclingActivity, exportActivity, wasteSent, prn } = aggregated
   return {
     material: resolveTonnageMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
     recyclingActivity,
+    prn,
     ...(exportActivity && { exportActivity }),
     wasteSent
   }
 }
 
 /**
- * Finds the report for a given period. Returns the stored report if one exists,
- * otherwise computes one from waste records.
+ * Finds the report for a given period with PRN tonnage. Returns the stored
+ * report if one exists, otherwise computes one from waste records.
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {object} params.wasteRecordsRepository
+ * @param {object} params.packagingRecyclingNotesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {object} params.registration
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @returns {Promise<{ report: import('#reports/repository/port.js').Report | import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail }>}
+ * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
   wasteRecordsRepository,
+  packagingRecyclingNotesRepository,
   organisationId,
   registrationId,
   registration,
@@ -163,7 +167,7 @@ export async function fetchOrGenerateReportForPeriod({
   )
 
   if (storedReport) {
-    return { report: storedReport }
+    return storedReport
   }
 
   const operatorCategory = getOperatorCategory(registration)
@@ -172,14 +176,52 @@ export async function fetchOrGenerateReportForPeriod({
     registrationId
   )
 
-  const report = aggregateReportDetail(wasteRecords, {
+  return getAggregatedReportDetail({
+    packagingRecyclingNotesRepository,
+    wasteRecords,
+    operatorCategory,
+    registration,
+    year,
+    cadence,
+    period
+  })
+}
+
+/**
+ * Aggregates waste records into a report and appends issued PRN tonnage.
+ * @param {object} params
+ * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
+ * @param {string} params.operatorCategory
+ * @param {object} params.registration
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ * @returns {Promise<import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | undefined }>}
+ */
+async function getAggregatedReportDetail({
+  packagingRecyclingNotesRepository,
+  wasteRecords,
+  operatorCategory,
+  registration,
+  year,
+  cadence,
+  period
+}) {
+  const aggregatedReportDetail = aggregateReportDetail(wasteRecords, {
     operatorCategory,
     cadence,
     year,
     period
   })
 
-  return { report }
+  const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
+    accreditationId: registration.accreditationId,
+    startDate: aggregatedReportDetail.startDate,
+    endDate: aggregatedReportDetail.endDate
+  })
+
+  return { ...aggregatedReportDetail, prn }
 }
 
 /**
@@ -189,6 +231,7 @@ export async function fetchOrGenerateReportForPeriod({
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {object} params.wasteRecordsRepository
+ * @param {object} params.packagingRecyclingNotesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {object} params.registration
@@ -201,6 +244,7 @@ export async function fetchOrGenerateReportForPeriod({
 export async function createReportForPeriod({
   reportsRepository,
   wasteRecordsRepository,
+  packagingRecyclingNotesRepository,
   organisationId,
   registrationId,
   registration,
@@ -232,10 +276,13 @@ export async function createReportForPeriod({
     registrationId
   )
 
-  const aggregated = aggregateReportDetail(wasteRecords, {
+  const aggregatedReportData = await getAggregatedReportDetail({
+    packagingRecyclingNotesRepository,
+    wasteRecords,
     operatorCategory,
-    cadence,
+    registration,
     year,
+    cadence,
     period
   })
 
@@ -249,6 +296,6 @@ export async function createReportForPeriod({
     endDate,
     dueDate,
     changedBy,
-    ...buildReportData(aggregated, registration)
+    ...buildReportData(aggregatedReportData, registration)
   })
 }
