@@ -20,6 +20,7 @@ import {
  * @param {Object} params.parsed - The parsed summary log structure from the parser
  * @param {Object} params.registration - The registration object from the organisations repository
  * @param {string} params.loggingContext - Logging context message
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @returns {Object} validation issues with any issues found
  */
 export const validateAccreditationNumber = ({

@@ -70,12 +70,5 @@ export const LOADS_EXPORTED = {
     [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema()
   })
     .unknown(true)
-    .prefs({ abortEarly: false }),
-
-  /**
-   * VAL011: Fields required for Waste Balance calculation
-   *
-   * Empty — registered-only operators have no waste balance.
-   */
-  fieldsRequiredForInclusionInWasteBalance: []
+    .prefs({ abortEarly: false })
 }

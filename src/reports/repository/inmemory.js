@@ -300,7 +300,7 @@ export const createInMemoryReportsRepository = (
   /**
    * @param {Map<string, Object>} reportsStore
    * @param {string[]} reportIds
-   * @returns {Promise<Map<string, string>>}
+   * @returns {Promise<Map<string, import('./port.js').ReportStatus>>}
    */
   const findReportStatusesByIds = async (reportsStore, reportIds) => {
     const result = new Map()

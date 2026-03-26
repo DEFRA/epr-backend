@@ -118,6 +118,10 @@ const performRemove = async (db, id) => {
   return validateOverseasSiteRead({ ...result, id: result._id.toHexString() })
 }
 
+/** @param {unknown} value */
+const nullishFilter = (value) =>
+  value == null ? { $in: [null, undefined] } : value
+
 /**
  * @param {Db} db
  * @param {object} properties
@@ -128,9 +132,6 @@ const performRemove = async (db, id) => {
  * @param {Date} [properties.validFrom]
  * @returns {Promise<OverseasSite | null>}
  */
-const nullishFilter = (value) =>
-  value == null ? { $in: [null, undefined] } : value
-
 const performFindByProperties = async (db, properties) => {
   /** @type {import('mongodb').Filter<import('mongodb').Document>} */
   const filter = {

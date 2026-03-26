@@ -13,7 +13,7 @@ import { upsertOrganisations } from './organisation-persistence.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- * @import {FormDataMigrator, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
+ * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
  */
 
 export class MigrationOrchestrator {
@@ -68,7 +68,7 @@ export class MigrationOrchestrator {
     const organisationEntries = await Promise.all(
       [...existingOrganisationsWithNewSubmissions].map(
         async (orgId) =>
-          /** @type {OrganisationMapEntry} */ ([
+          /** @type {const} */ ([
             orgId,
             await this.organisationsRepository.findById(orgId)
           ])
