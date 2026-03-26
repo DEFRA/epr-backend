@@ -25,6 +25,7 @@ export const reportsPost = {
     const {
       organisationsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       reportsRepository,
       params
     } = request
@@ -38,6 +39,7 @@ export const reportsPost = {
     const createdReport = await createReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       organisationId,
       registrationId,
       registration,

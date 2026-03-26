@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { findReportForPeriod } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
@@ -26,7 +25,6 @@ export const reportsGetDetail = {
       organisationsRepository,
       wasteRecordsRepository,
       reportsRepository,
-      packagingRecyclingNotesRepository,
       params
     } = request
     const { organisationId, registrationId, year, cadence, period } = params
@@ -36,7 +34,7 @@ export const reportsGetDetail = {
       registrationId
     )
 
-    const { report } = await findReportForPeriod({
+    const report = await findReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
       organisationId,
@@ -47,14 +45,8 @@ export const reportsGetDetail = {
       period
     })
 
-    const prnData = await getIssuedTonnage(packagingRecyclingNotesRepository, {
-      accreditationId: registration.accreditationId,
-      startDate: report.startDate,
-      endDate: report.endDate
-    })
-
     return h
-      .response({ ...withRegistrationDetails(report, registration), prnData })
+      .response(withRegistrationDetails(report, registration))
       .code(StatusCodes.OK)
   }
 }

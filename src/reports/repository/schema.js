@@ -34,11 +34,15 @@ export const userSummarySchema = Joi.object({
   position: Joi.string().optional()
 }).required()
 
+export const prnSchema = Joi.object({
+  issuedTonnage: Joi.number().min(0).required()
+}).optional()
+
 const reportDataFieldsSchema = {
   recyclingActivity: Joi.object().optional(),
   exportActivity: Joi.object().optional(),
   wasteSent: Joi.object().optional(),
-  prnData: Joi.object().optional(),
+  prn: prnSchema,
   supportingInformation: Joi.string().optional()
 }
 

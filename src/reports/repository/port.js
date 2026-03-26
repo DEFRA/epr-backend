@@ -87,7 +87,7 @@
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prnData]
+ * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
  */
@@ -144,7 +144,7 @@
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prnData]
+ * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
  */
 

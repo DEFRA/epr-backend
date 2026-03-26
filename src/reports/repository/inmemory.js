@@ -115,7 +115,7 @@ const createReport = async (reports, periodicReports, params) => {
     recyclingActivity,
     exportActivity,
     wasteSent,
-    prnData,
+    prn,
     supportingInformation
   } = validated
 
@@ -136,7 +136,7 @@ const createReport = async (reports, periodicReports, params) => {
     recyclingActivity,
     exportActivity,
     wasteSent,
-    prnData,
+    prn,
     supportingInformation
   })
 
