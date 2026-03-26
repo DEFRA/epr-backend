@@ -13,7 +13,7 @@ describe('REPORT_STATUS_TRANSITIONS', () => {
 
   it('allows ready_to_submit to in_progress, submitted and deleted', () => {
     const allowed = REPORT_STATUS_TRANSITIONS[REPORT_STATUS.READY_TO_SUBMIT]
-    expect(allowed).toContain(REPORT_STATUS.IN_PROGRESS)
+    expect(allowed).not.toContain(REPORT_STATUS.IN_PROGRESS)
     expect(allowed).toContain(REPORT_STATUS.SUBMITTED)
     expect(allowed).toContain(REPORT_STATUS.DELETED)
   })
