@@ -128,12 +128,11 @@ describe('report-service', () => {
   })
 
   describe('createReportForPeriod', () => {
-    const packagingRecyclingNotesRepository =
-      createInMemoryPackagingRecyclingNotesRepository()()
-
     it('creates a report and returns the full object', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
@@ -155,6 +154,8 @@ describe('report-service', () => {
     it('throws conflict when report already exists for period', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
@@ -180,6 +181,8 @@ describe('report-service', () => {
     it('throws badRequest for period that has not yet ended', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       params.year = 2099
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
@@ -198,6 +201,8 @@ describe('report-service', () => {
     it('resolves glass material to glass recycling process', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       params.registration = buildRegistration({
         material: 'glass',
@@ -219,6 +224,8 @@ describe('report-service', () => {
     it('formats site address into single-line string', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 

@@ -106,7 +106,7 @@ function buildReportData(aggregated, registration) {
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @returns {Promise<object>}
+ * @returns {Promise<{ report: import('#reports/repository/port.js').Report | import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail }>}
  */
 export async function findReportForPeriod({
   reportsRepository,
