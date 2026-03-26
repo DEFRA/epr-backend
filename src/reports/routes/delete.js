@@ -76,7 +76,7 @@ export const reportsDelete = {
       }
     })
 
-    return h.response({}).code(StatusCodes.OK)
+    return h.response().code(StatusCodes.NO_CONTENT)
   }
 }
 
