@@ -267,7 +267,9 @@ function aggregateWasteSentOn(wasteSentOnRecords) {
       tonnageSentToAnotherSite += tonnageSentOn
     }
 
-    finalDestinations.push({ recipientName, facilityType, tonnageSentOn })
+    if (recipientName) {
+      finalDestinations.push({ recipientName, facilityType, tonnageSentOn })
+    }
   }
 
   return {
