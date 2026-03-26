@@ -34,7 +34,7 @@ export const reportsGetDetail = {
       registrationId
     )
 
-    const { report } = await findReportForPeriod({
+    const report = await findReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
       organisationId,
