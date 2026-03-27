@@ -5,6 +5,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import * as validationPipeline from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
@@ -22,11 +23,9 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       // Act & Assert
       await expect(
-        repository.updateWasteBalanceTransactions(
-          [record],
-          accreditationId,
-          undefined
-        )
+        repository.updateWasteBalanceTransactions([record], accreditationId, {
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
       ).rejects.toThrow(`Accreditation not found: ${accreditationId}`)
     })
 
@@ -62,7 +61,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await repository.updateWasteBalanceTransactions(
         [record],
         accreditationId,
-        user
+        { user, overseasSites: ORS_VALIDATION_DISABLED }
       )
 
       // Assert
@@ -91,11 +90,9 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [],
-        accreditationId,
-        undefined
-      )
+      await repository.updateWasteBalanceTransactions([], accreditationId, {
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)
@@ -146,7 +143,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await repository.updateWasteBalanceTransactions(
         [record],
         accreditationId,
-        user
+        { user, overseasSites: ORS_VALIDATION_DISABLED }
       )
 
       // Assert
@@ -186,7 +183,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await repository.updateWasteBalanceTransactions(
         [record],
         accreditationId,
-        undefined
+        { overseasSites: ORS_VALIDATION_DISABLED }
       )
 
       // Assert
@@ -238,7 +235,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await repository.updateWasteBalanceTransactions(
         [record],
         accreditationId,
-        user
+        { user, overseasSites: ORS_VALIDATION_DISABLED }
       )
 
       // Assert
@@ -297,11 +294,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        input,
-        accreditationId,
-        user
-      )
+      await repository.updateWasteBalanceTransactions(input, accreditationId, {
+        user,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
       const balance = await repository.findByAccreditationId(accreditationId)

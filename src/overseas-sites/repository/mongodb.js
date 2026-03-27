@@ -157,6 +157,30 @@ const performFindByProperties = async (db, properties) => {
 
 /**
  * @param {Db} db
+ * @param {string[]} ids
+ * @returns {Promise<OverseasSite[]>}
+ */
+const performFindByIds = async (db, ids) => {
+  if (ids.length === 0) {
+    return []
+  }
+
+  const objectIds = ids.map((id) =>
+    ObjectId.createFromHexString(validateOverseasSiteId(id))
+  )
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ _id: { $in: objectIds } })
+    .toArray()
+
+  return docs.map((doc) =>
+    validateOverseasSiteRead({ ...doc, id: doc._id.toHexString() })
+  )
+}
+
+/**
+ * @param {Db} db
  * @param {FindAllParams} [params]
  * @returns {Promise<OverseasSite[]>}
  */
@@ -190,6 +214,7 @@ export const createOverseasSitesRepository = async (db) => {
     create: (site) => performCreate(db, site),
     findAll: (params) => performFindAll(db, params),
     findById: (id) => performFindById(db, id),
+    findByIds: (ids) => performFindByIds(db, ids),
     findByProperties: (properties) => performFindByProperties(db, properties),
     remove: (id) => performRemove(db, id),
     update: (id, updates) => performUpdate(db, id, updates)

@@ -11,6 +11,8 @@ import {
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -173,7 +175,8 @@ const calculateAndApplyUpdates = async (
   dependencies,
   validRecords,
   validatedAccreditationId,
-  findBalance
+  findBalance,
+  overseasSites
 ) => {
   const accreditation = await getAccreditation(
     dependencies.organisationsRepository,
@@ -196,7 +199,8 @@ const calculateAndApplyUpdates = async (
     calculateWasteBalanceUpdates({
       currentBalance: wasteBalance,
       wasteRecords: validRecords,
-      accreditation
+      accreditation,
+      overseasSites
     })
 
   if (newTransactions.length === 0) {
@@ -227,6 +231,7 @@ const calculateAndApplyUpdates = async (
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {any} [params.user]
+ * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
@@ -234,7 +239,8 @@ export const performUpdateWasteBalanceTransactions = async ({
   dependencies,
   findBalance,
   saveBalance,
-  user
+  user,
+  overseasSites
 }) => {
   const annotatedRecords = markExcludedRecords(wasteRecords)
 
@@ -248,7 +254,8 @@ export const performUpdateWasteBalanceTransactions = async ({
     dependencies,
     annotatedRecords,
     validatedAccreditationId,
-    findBalance
+    findBalance,
+    overseasSites
   )
 
   if (!result) {

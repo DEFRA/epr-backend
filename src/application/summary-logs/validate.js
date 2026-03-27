@@ -24,6 +24,7 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import {
   countByWasteBalanceInclusion,
@@ -239,7 +240,8 @@ const markIgnoredByDateRange = (
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: registration.accreditation ?? null
+      accreditation: registration.accreditation ?? null,
+      overseasSites: ORS_VALIDATION_DISABLED
     })
 
     if (result?.outcome === ROW_OUTCOME.IGNORED) {

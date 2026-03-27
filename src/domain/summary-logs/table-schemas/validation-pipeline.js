@@ -1,6 +1,14 @@
-import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
+import {
+  CLASSIFICATION_REASON,
+  ORS_VALIDATION_DISABLED
+} from './shared/classification-reason.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
+/**
+ * Resolved overseas sites lookup, or sentinel when ORS validation is disabled.
+ * @typedef {Record<number, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
+ */
 
 /**
  * Validation pipeline for summary log rows
@@ -45,7 +53,7 @@ import { CLASSIFICATION_REASON } from './shared/classification-reason.js'
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: Accreditation | null }} context - Classification context; accreditation is null when absent
+ * @param {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} context - Classification context; accreditation is null when absent, overseasSites is ORS_VALIDATION_DISABLED when feature is off
  * @returns {WasteBalanceClassificationResult}
  */
 
@@ -213,8 +221,10 @@ export const classifyRow = (row, tableSchema) => {
   // classifyForWasteBalance. Accreditation is null because the pipeline
   // doesn't have that context — isAccreditedAtDates treats
   // null accreditation as "within range", so subsequent checks are skipped.
+  // ORS validation is disabled because the pipeline doesn't have ORS data.
   const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
-    accreditation: null
+    accreditation: null,
+    overseasSites: ORS_VALIDATION_DISABLED
   })
   return mapWasteBalanceResult(wasteBalanceResult)
 }

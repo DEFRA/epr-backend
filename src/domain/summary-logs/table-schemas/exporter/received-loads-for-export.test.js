@@ -3,6 +3,7 @@ import { RECEIVED_LOADS_FOR_EXPORT } from './received-loads-for-export.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
+import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 
 describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   const schema = RECEIVED_LOADS_FOR_EXPORT
@@ -885,7 +886,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     describe('INCLUDED outcome - direct export (no interim site)', () => {
       it('returns INCLUDED with TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -897,7 +899,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ...completeRow,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 60.555
         }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.transactionAmount).toBe(60.56)
       })
     })
@@ -909,7 +914,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'Yes',
           TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR: 45.75
         }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.transactionAmount).toBe(45.75)
       })
@@ -919,7 +927,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('returns EXCLUDED when a required field is missing', () => {
         const row = { ...completeRow }
         delete row.DATE_OF_EXPORT
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons).toContainEqual({
           code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
@@ -928,7 +939,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
 
       it('returns EXCLUDED with all missing fields listed', () => {
-        const result = schema.classifyForWasteBalance({}, { accreditation })
+        const result = schema.classifyForWasteBalance(
+          {},
+          { accreditation, overseasSites: ORS_VALIDATION_DISABLED }
+        )
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons).toHaveLength(22)
       })
@@ -938,13 +952,19 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ...completeRow,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null
         }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
       })
 
       it('returns EXCLUDED when dropdown field has placeholder value', () => {
         const row = { ...completeRow, BAILING_WIRE_PROTOCOL: 'Choose option' }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
       })
     })
@@ -952,7 +972,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     describe('IGNORED outcome - date outside accreditation', () => {
       it('returns IGNORED when DATE_OF_EXPORT is before accreditation period', () => {
         const row = { ...completeRow, DATE_OF_EXPORT: new Date('2023-12-31') }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
         expect(result.reasons).toContainEqual({
           code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD
@@ -961,19 +984,28 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
       it('returns IGNORED when DATE_OF_EXPORT is after accreditation period', () => {
         const row = { ...completeRow, DATE_OF_EXPORT: new Date('2025-01-01') }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
       })
 
       it('returns INCLUDED when DATE_OF_EXPORT is on accreditation start boundary', () => {
         const row = { ...completeRow, DATE_OF_EXPORT: new Date('2024-01-01') }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
 
       it('returns INCLUDED when DATE_OF_EXPORT is on accreditation end boundary', () => {
         const row = { ...completeRow, DATE_OF_EXPORT: new Date('2024-12-31') }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
     })
@@ -984,7 +1016,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ...completeRow,
           WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
         }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons).toContainEqual({
           code: CLASSIFICATION_REASON.PRN_ISSUED
@@ -992,10 +1027,93 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
+    describe('EXCLUDED outcome - ORS not approved (VAL014)', () => {
+      const approvedOverseasSites = {
+        100: { validFrom: new Date('2024-01-01') }
+      }
+
+      it('returns INCLUDED when ORS is approved and validFrom is before DATE_OF_EXPORT', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: approvedOverseasSites
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+
+      it('returns INCLUDED when ORS validFrom equals DATE_OF_EXPORT', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: {
+            100: { validFrom: new Date('2024-06-15') }
+          }
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+
+      it('returns EXCLUDED when OSR_ID is not in overseasSites map', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: {
+            200: { validFrom: new Date('2024-01-01') }
+          }
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+        })
+      })
+
+      it('returns EXCLUDED when ORS has no validFrom date', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: {
+            100: { validFrom: null }
+          }
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+        })
+      })
+
+      it('returns EXCLUDED when ORS validFrom is after DATE_OF_EXPORT', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: {
+            100: { validFrom: new Date('2024-07-01') }
+          }
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+        })
+      })
+
+      it('returns EXCLUDED when overseasSites map is empty', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: {}
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+        })
+      })
+
+      it('skips ORS check when ORS validation is disabled', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+      })
+    })
+
     describe('INCLUDED outcome - undefined or null accreditation', () => {
       it('returns INCLUDED when accreditation is undefined (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: undefined
+          accreditation: undefined,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -1003,7 +1121,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
       it('returns INCLUDED when accreditation is null (accreditation check passes)', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: null
+          accreditation: null,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -1015,7 +1134,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
             validFrom: '2024-01-01',
             validTo: '2024-12-31',
             statusHistory: []
-          }
+          },
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.reasons).toEqual([])
@@ -1034,7 +1154,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: suspendedAccreditation
+          accreditation: suspendedAccreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
         expect(result.reasons).toContainEqual({
@@ -1054,7 +1175,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: reapprovedAccreditation
+          accreditation: reapprovedAccreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
@@ -1076,7 +1198,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: suspendedAccreditation
+          accreditation: suspendedAccreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
         expect(result.reasons).toContainEqual({
@@ -1101,7 +1224,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: suspendedAccreditation
+          accreditation: suspendedAccreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
         expect(result.reasons).toContainEqual({
@@ -1126,7 +1250,8 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: reapprovedAccreditation
+          accreditation: reapprovedAccreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
@@ -1134,7 +1259,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     describe('classification priority', () => {
       it('checks required fields before date range', () => {
-        const result = schema.classifyForWasteBalance({}, { accreditation })
+        const result = schema.classifyForWasteBalance(
+          {},
+          { accreditation, overseasSites: ORS_VALIDATION_DISABLED }
+        )
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.reasons[0].code).toBe(
           CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD
@@ -1147,8 +1275,26 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
           DATE_OF_EXPORT: new Date('2023-01-01'),
           WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
         }
-        const result = schema.classifyForWasteBalance(row, { accreditation })
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+
+      it('checks ORS approval before PRN', () => {
+        const row = {
+          ...completeRow,
+          WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'Yes'
+        }
+        const result = schema.classifyForWasteBalance(row, {
+          accreditation,
+          overseasSites: {}
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.reasons).toContainEqual({
+          code: CLASSIFICATION_REASON.ORS_NOT_APPROVED
+        })
       })
     })
   })

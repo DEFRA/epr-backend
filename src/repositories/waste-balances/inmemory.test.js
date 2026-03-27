@@ -1,6 +1,7 @@
 import { describe, it as base, expect, it, vi } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -48,7 +49,9 @@ describe('waste-balances repository - in-memory implementation', () => {
     const repository = createInMemoryWasteBalancesRepository([], {})()
     const record = { organisationId: 'org-1' }
     await expect(
-      repository.updateWasteBalanceTransactions([record], 'acc-1')
+      repository.updateWasteBalanceTransactions([record], 'acc-1', {
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
     ).rejects.toThrow('organisationsRepository dependency is required')
   })
 

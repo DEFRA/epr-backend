@@ -70,4 +70,19 @@ describe('createConfigFeatureFlags', () => {
     const flags = createConfigFeatureFlags(config)
     expect(flags.isRegisteredOnlyEnabled()).toBe(false)
   })
+
+  it('returns true when orsWasteBalanceValidation flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.orsWasteBalanceValidation'
+    )
+  })
+
+  it('returns false when orsWasteBalanceValidation flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(false)
+  })
 })

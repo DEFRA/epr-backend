@@ -365,6 +365,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_REGISTERED_ONLY'
+    },
+    orsWasteBalanceValidation: {
+      doc: 'Feature Flag: Validate ORS approval status during exporter waste balance classification',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_ORS_WASTE_BALANCE_VALIDATION'
     }
   },
   formSubmissionOverrides: {

@@ -34,10 +34,12 @@ import {
   CLASSIFICATION_REASON,
   checkRequiredFields
 } from '../shared/classify-helpers.js'
+import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {OverseasSitesContext} from '../validation-pipeline.js' */
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -189,7 +191,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null }} */ { accreditation }
+    /** @type {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} */ {
+      accreditation,
+      overseasSites
+    }
   ) => {
     const missingResult = checkRequiredFields(
       data,
@@ -209,6 +214,19 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       return {
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
+      }
+    }
+
+    if (overseasSites !== ORS_VALIDATION_DISABLED) {
+      const ors = overseasSites[data[FIELDS.OSR_ID]]
+      if (
+        !ors?.validFrom ||
+        new Date(ors.validFrom) > new Date(data[FIELDS.DATE_OF_EXPORT])
+      ) {
+        return {
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [{ code: CLASSIFICATION_REASON.ORS_NOT_APPROVED }]
+        }
       }
     }
 

@@ -13,6 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { createTestServer } from '#test/create-test-server.js'
@@ -547,11 +548,27 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogs: true
   })
 
+  const overseasSitesRepository = createInMemoryOverseasSitesRepository([
+    {
+      id: TEST_OVERSEAS_SITE_ID,
+      name: 'Test Overseas Site',
+      address: {
+        line1: '1 Test Road',
+        townOrCity: 'Berlin'
+      },
+      country: 'Germany',
+      validFrom: new Date(VALID_FROM),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  ])()
+
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteRecordRepository: wasteRecordsRepository,
     wasteBalancesRepository,
-    organisationsRepository
+    organisationsRepository,
+    overseasSitesRepository
   })
 
   const packagingRecyclingNotesRepositoryFactory =
@@ -622,6 +639,8 @@ const createTestSubmitterWorker = ({
  * @param {string} options.material
  * @returns {Object} Test organisation with registrations and accreditations
  */
+const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
+
 const buildComplexTestOrg = ({
   registrationId,
   accreditationId,
@@ -629,23 +648,29 @@ const buildComplexTestOrg = ({
   reprocessingType,
   material
 }) => {
+  const registration = {
+    id: registrationId,
+    registrationNumber: 'REG-123',
+    status: 'approved',
+    material,
+    wasteProcessingType: processingType,
+    reprocessingType,
+    formSubmissionTime: new Date(),
+    submittedToRegulator: 'ea',
+    validFrom: VALID_FROM,
+    validTo: VALID_TO,
+    accreditationId
+  }
+
+  if (processingType === 'exporter') {
+    registration.overseasSites = {
+      100: { overseasSiteId: TEST_OVERSEAS_SITE_ID }
+    }
+  }
+
   return buildOrganisation({
     status: 'active',
-    registrations: [
-      {
-        id: registrationId,
-        registrationNumber: 'REG-123',
-        status: 'approved',
-        material,
-        wasteProcessingType: processingType,
-        reprocessingType,
-        formSubmissionTime: new Date(),
-        submittedToRegulator: 'ea',
-        validFrom: VALID_FROM,
-        validTo: VALID_TO,
-        accreditationId
-      }
-    ],
+    registrations: [registration],
     accreditations: [
       {
         id: accreditationId,

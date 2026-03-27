@@ -42,6 +42,7 @@
  * @property {(id: string, updates: Partial<Omit<OverseasSite, 'id' | 'createdAt'>>) => Promise<OverseasSite | null>} update
  * @property {(id: string) => Promise<OverseasSite | null>} remove
  * @property {(params?: FindAllParams) => Promise<OverseasSite[]>} findAll
+ * @property {(ids: string[]) => Promise<OverseasSite[]>} findByIds
  */
 
 /**

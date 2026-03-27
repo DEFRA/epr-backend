@@ -10,6 +10,7 @@ import {
   buildVersionData,
   toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -21,13 +22,19 @@ describe('syncFromSummaryLog', () => {
   let wasteRecordRepository
   let wasteBalancesRepository
   let organisationsRepository
+  let overseasSitesRepository
 
   beforeEach(() => {
     wasteRecordRepository = createInMemoryWasteRecordsRepository()()
     wasteBalancesRepository = {
       updateWasteBalanceTransactions: vi.fn()
     }
-    organisationsRepository = {}
+    organisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} })
+    }
+    overseasSitesRepository = {
+      findByIds: vi.fn().mockResolvedValue([])
+    }
   })
 
   it('extracts, transforms, and saves waste records from summary log', async () => {
@@ -75,7 +82,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -145,7 +153,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -157,7 +166,10 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', undefined)
+    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', {
+      user: undefined,
+      overseasSites: ORS_VALIDATION_DISABLED
+    })
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -229,7 +241,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -316,7 +329,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -401,7 +415,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -496,7 +511,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -581,7 +597,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -645,7 +662,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -704,7 +722,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -767,7 +786,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -833,7 +853,9 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      overseasSitesRepository,
+      featureFlags: { isOrsWasteBalanceValidationEnabled: () => true }
     })
 
     await sync(summaryLog)
@@ -848,8 +870,154 @@ describe('syncFromSummaryLog', () => {
         })
       ]),
       'acc-1',
-      undefined
+      { user: undefined, overseasSites: {} }
     )
+  })
+
+  it('resolves overseas sites for exporter waste balance validation', async () => {
+    const fileId = 'test-file-ors'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const validFrom = new Date('2024-01-01')
+    const overseasSitesRepository = {
+      findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
+    }
+
+    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
+      overseasSites: {
+        100: { overseasSiteId: 'site-aaa' }
+      }
+    })
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      overseasSitesRepository,
+      featureFlags: { isOrsWasteBalanceValidationEnabled: () => true }
+    })
+
+    await sync(summaryLog)
+
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+      user: undefined,
+      overseasSites: { 100: { validFrom } }
+    })
+  })
+
+  it('does not resolve overseas sites when orsWasteBalanceValidation flag is off', async () => {
+    const fileId = 'test-file-ors-flag-off'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const localOverseasSitesRepository = {
+      findByIds: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'site-aaa', validFrom: new Date('2024-01-01') }
+        ])
+    }
+
+    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
+      overseasSites: {
+        100: { overseasSiteId: 'site-aaa' }
+      }
+    })
+
+    const featureFlags = { isOrsWasteBalanceValidationEnabled: () => false }
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      overseasSitesRepository: localOverseasSitesRepository,
+      featureFlags
+    })
+
+    await sync(summaryLog)
+
+    expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+      user: undefined,
+      overseasSites: ORS_VALIDATION_DISABLED
+    })
   })
 
   it('does not attempt to fetch accreditationId if organisationsRepository is not provided', async () => {
@@ -871,7 +1039,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository: undefined
+      organisationsRepository: undefined,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -903,7 +1072,8 @@ describe('syncFromSummaryLog', () => {
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     await sync(summaryLog)
@@ -1177,7 +1347,8 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      overseasSitesRepository
     })
 
     const result = await sync(summaryLog)

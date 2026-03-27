@@ -15,6 +15,8 @@ import {
   multiply
 } from '#common/helpers/decimal-utils.js'
 
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+
 /**
  * Create Transaction Object
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
@@ -95,9 +97,10 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * Calculates the target amount for a waste record based on accreditation.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @param {Object} accreditation
+ * @param {Record<number, { validFrom: Date | null }> | symbol} overseasSites
  * @returns {number}
  */
-const getTargetAmount = (record, accreditation) => {
+const getTargetAmount = (record, accreditation, overseasSites) => {
   if (record.excludedFromWasteBalance) {
     return 0
   }
@@ -112,7 +115,10 @@ const getTargetAmount = (record, accreditation) => {
   }
 
   /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} */
-  const result = schema.classifyForWasteBalance(record.data, { accreditation })
+  const result = schema.classifyForWasteBalance(record.data, {
+    accreditation,
+    overseasSites
+  })
   return result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
 }
 
@@ -126,6 +132,7 @@ const getTargetAmount = (record, accreditation) => {
  * @param {Object} params.accreditation - The accreditation details.
  * @param {string} [params.accreditation.validFrom] - ISO date string.
  * @param {string} [params.accreditation.validTo] - ISO date string.
+ * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED.
  * @returns {Object} Result containing new transactions and updated totals.
  * @property {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} newTransactions
  * @property {number} newAmount
@@ -134,7 +141,8 @@ const getTargetAmount = (record, accreditation) => {
 export const calculateWasteBalanceUpdates = ({
   currentBalance,
   wasteRecords,
-  accreditation
+  accreditation,
+  overseasSites
 }) => {
   const newTransactions = []
   let currentAmount = currentBalance.amount || 0
@@ -149,7 +157,7 @@ export const calculateWasteBalanceUpdates = ({
   )
 
   for (const record of wasteRecords) {
-    const targetAmount = getTargetAmount(record, accreditation)
+    const targetAmount = getTargetAmount(record, accreditation, overseasSites)
 
     // Calculate Already Credited Amount
     const alreadyCreditedAmount =
