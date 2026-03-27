@@ -32,6 +32,7 @@ describe('syncFromSummaryLog', () => {
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
       findAccreditationById: vi.fn().mockResolvedValue({
+        id: 'acc-default',
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       })
@@ -147,6 +148,7 @@ describe('syncFromSummaryLog', () => {
     })
 
     const accreditation = {
+      id: 'accred-123',
       validFrom: '2023-01-01',
       validTo: '2023-12-31'
     }
@@ -176,7 +178,7 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', {
+    ).toHaveBeenCalledWith(expect.any(Array), {
       user: undefined,
       accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
@@ -880,10 +882,13 @@ describe('syncFromSummaryLog', () => {
           type: WASTE_RECORD_TYPE.EXPORTED
         })
       ]),
-      'acc-1',
       {
         user: undefined,
-        accreditation: { validFrom: '2023-01-01', validTo: '2023-12-31' },
+        accreditation: {
+          id: 'acc-default',
+          validFrom: '2023-01-01',
+          validTo: '2023-12-31'
+        },
         overseasSites: {}
       }
     )
@@ -953,9 +958,13 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+    ).toHaveBeenCalledWith(expect.any(Array), {
       user: undefined,
-      accreditation: { validFrom: '2023-01-01', validTo: '2023-12-31' },
+      accreditation: {
+        id: 'acc-default',
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      },
       overseasSites: { 100: { validFrom } }
     })
   })
@@ -1030,9 +1039,13 @@ describe('syncFromSummaryLog', () => {
     expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+    ).toHaveBeenCalledWith(expect.any(Array), {
       user: undefined,
-      accreditation: { validFrom: '2023-01-01', validTo: '2023-12-31' },
+      accreditation: {
+        id: 'acc-default',
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      },
       overseasSites: ORS_VALIDATION_DISABLED
     })
   })

@@ -82,12 +82,10 @@ export const createInMemoryWasteBalancesRepository = (
     findByAccreditationIds: performFindByAccreditationIds(wasteBalanceStorage),
     updateWasteBalanceTransactions: async (
       wasteRecords,
-      accreditationId,
       { user, accreditation, overseasSites }
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId,
         accreditation,
         dependencies,
         findBalance: findBalance(wasteBalanceStorage),

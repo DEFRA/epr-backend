@@ -141,7 +141,6 @@ const resolveAccreditation = async (
 
 const updateWasteBalances = async ({
   parsedData,
-  accreditationId,
   accreditation,
   wasteBalancesRepository,
   wasteRecords,
@@ -155,10 +154,9 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
-  if (accreditationId && accreditation && shouldCalculateWasteBalance) {
+  if (accreditation && shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
-      accreditationId,
       { user, accreditation, overseasSites }
     )
   }
@@ -321,7 +319,6 @@ export const syncFromSummaryLog = (dependencies) => {
     // 10. Update waste balances if accreditation exists
     await updateWasteBalances({
       parsedData,
-      accreditationId,
       accreditation,
       wasteBalancesRepository,
       wasteRecords,

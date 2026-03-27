@@ -335,7 +335,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
     it('should return early if wasteRecords is empty', async () => {
       const result = await performUpdateWasteBalanceTransactions({
         wasteRecords: [],
-        accreditationId: 'acc-1',
         accreditation: { id: 'acc-1' },
         dependencies: {},
         findBalance: vi.fn(),
@@ -385,7 +384,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
         accreditation,
         dependencies,
         findBalance,
@@ -445,7 +443,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
         accreditation,
         dependencies,
         findBalance,
@@ -494,7 +491,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
         accreditation,
         dependencies,
         findBalance,
@@ -557,7 +553,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
         accreditation,
         dependencies,
         findBalance,
@@ -609,7 +604,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
         accreditation: { id: 'acc-1' },
         dependencies: {},
         findBalance,
@@ -637,7 +631,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
         accreditation,
         dependencies: {},
         findBalance,
@@ -682,7 +675,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
         await performUpdateWasteBalanceTransactions({
           wasteRecords,
-          accreditationId: 'acc-1',
           accreditation,
           dependencies: {},
           findBalance,
@@ -726,7 +718,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
         await performUpdateWasteBalanceTransactions({
           wasteRecords,
-          accreditationId: 'acc-1',
           accreditation,
           dependencies: {},
           findBalance,

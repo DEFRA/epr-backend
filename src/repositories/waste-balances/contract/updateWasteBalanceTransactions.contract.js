@@ -9,8 +9,8 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 
 export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
-    const accreditationId = 'acc-123'
     const accreditation = {
+      id: 'acc-123',
       validFrom: '2023-01-01',
       validTo: '2023-12-31',
       statusHistory: [
@@ -38,14 +38,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { user, accreditation, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeDefined()
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)
@@ -60,13 +60,13 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const repository = await wasteBalancesRepository()
 
       // Act
-      await repository.updateWasteBalanceTransactions([], accreditationId, {
+      await repository.updateWasteBalanceTransactions([], {
         accreditation,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeNull()
     })
 
@@ -79,7 +79,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const user = { id: 'user-1', name: 'Test User' }
 
       const existingBalance = {
-        accreditationId,
+        accreditationId: accreditation.id,
         organisationId: 'org-1',
         amount: 5,
         availableAmount: 5,
@@ -101,14 +101,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { user, accreditation, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(2)
       expect(balance.amount).toBe(15.5)
     })
@@ -131,14 +131,13 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { accreditation, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeNull()
     })
 
@@ -151,7 +150,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const user = { id: 'user-1', name: 'Test User' }
 
       const existingBalance = {
-        accreditationId,
+        accreditationId: accreditation.id,
         organisationId: 'org-1',
         amount: 5,
         availableAmount: 5,
@@ -173,14 +172,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { user, accreditation, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(15.5)
     })
@@ -225,14 +224,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
 
       // Act
-      await repository.updateWasteBalanceTransactions(input, accreditationId, {
+      await repository.updateWasteBalanceTransactions(input, {
         user,
         accreditation,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeDefined()
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)

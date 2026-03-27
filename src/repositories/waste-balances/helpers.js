@@ -197,8 +197,7 @@ const calculateAndApplyUpdates = async (
  *
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
- * @param {string} params.accreditationId
- * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation - The accreditation details
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
@@ -208,7 +207,6 @@ const calculateAndApplyUpdates = async (
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
-  accreditationId,
   accreditation,
   dependencies,
   findBalance,
@@ -222,7 +220,7 @@ export const performUpdateWasteBalanceTransactions = async ({
     return
   }
 
-  const validatedAccreditationId = validateAccreditationId(accreditationId)
+  const validatedAccreditationId = validateAccreditationId(accreditation.id)
 
   const result = await calculateAndApplyUpdates(
     annotatedRecords,
