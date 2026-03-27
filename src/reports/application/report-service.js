@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 
+import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
@@ -80,20 +81,21 @@ function getValidatedPeriodInfo(cadence, year, period) {
  * @returns {object}
  */
 function buildReportData(aggregated, registration) {
-  const { recyclingActivity, exportActivity, wasteSent } = aggregated
+  const { recyclingActivity, exportActivity, wasteSent, prn } = aggregated
   return {
     material: resolveTonnageMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
     recyclingActivity,
+    prn,
     ...(exportActivity && { exportActivity }),
     wasteSent
   }
 }
 
 /**
- * Finds the report for a given period. Returns the stored report if one exists,
- * otherwise computes one from waste records.
+ * Finds the report for a given period with PRN tonnage. Returns the stored
+ * report if one exists, otherwise computes one from waste records.
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
@@ -130,7 +132,7 @@ export async function findReportForPeriod({
 
   if (currentReportId) {
     const storedReport = await reportsRepository.findReportById(currentReportId)
-    return { report: storedReport }
+    return storedReport
   }
 
   const operatorCategory = getOperatorCategory(registration)
@@ -146,7 +148,44 @@ export async function findReportForPeriod({
     period
   })
 
-  return { report }
+  return report
+}
+
+/**
+ * Aggregates waste records into a report and appends issued PRN tonnage.
+ * @param {object} params
+ * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
+ * @param {string} params.operatorCategory
+ * @param {object} params.registration
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ * @returns {Promise<import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | undefined }>}
+ */
+async function getAggregatedReportDetail({
+  packagingRecyclingNotesRepository,
+  wasteRecords,
+  operatorCategory,
+  registration,
+  year,
+  cadence,
+  period
+}) {
+  const aggregatedReportDetail = aggregateReportDetail(wasteRecords, {
+    operatorCategory,
+    cadence,
+    year,
+    period
+  })
+
+  const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
+    accreditationId: registration.accreditationId,
+    startDate: aggregatedReportDetail.startDate,
+    endDate: aggregatedReportDetail.endDate
+  })
+
+  return { ...aggregatedReportDetail, prn }
 }
 
 /**
@@ -156,6 +195,7 @@ export async function findReportForPeriod({
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {object} params.wasteRecordsRepository
+ * @param {object} params.packagingRecyclingNotesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {object} params.registration
@@ -168,6 +208,7 @@ export async function findReportForPeriod({
 export async function createReportForPeriod({
   reportsRepository,
   wasteRecordsRepository,
+  packagingRecyclingNotesRepository,
   organisationId,
   registrationId,
   registration,
@@ -199,10 +240,13 @@ export async function createReportForPeriod({
     registrationId
   )
 
-  const aggregated = aggregateReportDetail(wasteRecords, {
+  const aggregatedReportData = await getAggregatedReportDetail({
+    packagingRecyclingNotesRepository,
+    wasteRecords,
     operatorCategory,
-    cadence,
+    registration,
     year,
+    cadence,
     period
   })
 
@@ -216,6 +260,6 @@ export async function createReportForPeriod({
     endDate,
     dueDate,
     changedBy,
-    ...buildReportData(aggregated, registration)
+    ...buildReportData(aggregatedReportData, registration)
   })
 }

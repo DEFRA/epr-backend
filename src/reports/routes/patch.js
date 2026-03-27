@@ -37,6 +37,7 @@ export const reportsPatch = {
       organisationsRepository,
       reportsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       params
     } = request
     const { organisationId, registrationId, year, cadence, period } = params
@@ -46,9 +47,10 @@ export const reportsPatch = {
       registrationId
     )
 
-    const { report } = await findReportForPeriod({
+    const report = await findReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       organisationId,
       registrationId,
       registration,

@@ -184,7 +184,7 @@ const performCreateReport = async (db, params) => {
     recyclingActivity,
     exportActivity,
     wasteSent,
-    prnData,
+    prn,
     supportingInformation
   } = validated
 
@@ -206,7 +206,7 @@ const performCreateReport = async (db, params) => {
       recyclingActivity,
       exportActivity,
       wasteSent,
-      prnData,
+      prn,
       supportingInformation
     }).filter(([, v]) => v !== undefined)
   )
