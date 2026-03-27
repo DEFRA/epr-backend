@@ -519,8 +519,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
   const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    [],
-    { organisationsRepository }
+    []
   )
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 

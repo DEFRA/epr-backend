@@ -329,7 +329,7 @@ export const syncFromSummaryLog = (dependencies) => {
       overseasSites
     })
 
-    // 10. Count created/updated records for metrics
+    // 11. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
     return calculateMetrics(wasteRecords)
   }

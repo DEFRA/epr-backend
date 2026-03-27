@@ -1037,6 +1037,63 @@ describe('syncFromSummaryLog', () => {
     })
   })
 
+  it('skips waste balance update when accreditation is not found', async () => {
+    const fileId = 'test-file-no-accred'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-missing'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    organisationsRepository.findAccreditationById.mockResolvedValue(null)
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      overseasSitesRepository
+    })
+
+    await sync(summaryLog)
+
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).not.toHaveBeenCalled()
+  })
+
   it('does not attempt to fetch accreditationId if organisationsRepository is not provided', async () => {
     const summaryLog = {
       file: { id: 'file-1', uri: 's3://bucket/key' },
