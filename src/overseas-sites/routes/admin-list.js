@@ -121,6 +121,27 @@ const buildRows = (organisations, sitesById) => {
 const buildAllPageSize = (rowCount) =>
   rowCount === 0 ? DEFAULT_PAGE_SIZE : rowCount
 
+const normaliseRegistrationNumberFilter = (value) => {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  return trimmed === '' ? undefined : trimmed
+}
+
+const filterRowsByRegistrationNumber = (rows, registrationNumber) => {
+  if (!registrationNumber) {
+    return rows
+  }
+
+  const normalisedFilter = registrationNumber.toLowerCase()
+
+  return rows.filter((row) =>
+    row.registrationNumber?.toLowerCase().includes(normalisedFilter)
+  )
+}
+
 export const adminOverseasSitesList = {
   method: 'GET',
   path: adminOverseasSitesListPath,
@@ -131,7 +152,8 @@ export const adminOverseasSitesList = {
       query: Joi.object({
         all: Joi.boolean().optional(),
         page: Joi.number().integer().min(1).optional(),
-        pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).optional()
+        pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).optional(),
+        registrationNumber: Joi.string().trim().allow('').optional()
       })
     }
   },
@@ -143,9 +165,15 @@ export const adminOverseasSitesList = {
    */
   handler: async (request, h) => {
     const { logger, organisationsRepository, overseasSitesRepository } = request
-    const all = /** @type {boolean | undefined} */ (request.query.all) === true
+    const all =
+      /** @type {boolean | undefined} */ (
+        /** @type {unknown} */ (request.query.all)
+      ) === true
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
+    const registrationNumber = normaliseRegistrationNumberFilter(
+      request.query.registrationNumber
+    )
 
     try {
       let selectedRows
@@ -155,7 +183,8 @@ export const adminOverseasSitesList = {
         const pageResult =
           await organisationsRepository.findPageForOverseasSitesAdminList({
             page,
-            pageSize
+            pageSize,
+            registrationNumber
           })
 
         selectedRows = pageResult.rows
@@ -169,7 +198,10 @@ export const adminOverseasSitesList = {
         ])
 
         const sitesById = new Map(sites.map((site) => [site.id, site]))
-        const rows = buildRows(organisations, sitesById)
+        const rows = filterRowsByRegistrationNumber(
+          buildRows(organisations, sitesById),
+          registrationNumber
+        )
         const startIndex = (page - 1) * pageSize
 
         totalItems = rows.length

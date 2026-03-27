@@ -209,7 +209,7 @@ const performFindAllForOverseasSitesAdminList = (db) => async () => {
   }))
 }
 
-const ORS_ADMIN_LIST_BASE_PIPELINE = [
+const buildOrsAdminListBasePipeline = ({ registrationNumber }) => [
   {
     $project: {
       orgId: 1,
@@ -230,6 +230,18 @@ const ORS_ADMIN_LIST_BASE_PIPELINE = [
       }
     }
   },
+  ...(registrationNumber
+    ? [
+        {
+          $match: {
+            'registration.registrationNumber': {
+              $regex: escapeRegex(registrationNumber),
+              $options: 'i'
+            }
+          }
+        }
+      ]
+    : []),
   { $unwind: '$overseasSiteMappings' },
   {
     $project: {
@@ -314,13 +326,13 @@ const ORS_ADMIN_LIST_ROW_PROJECTION = {
 
 const performFindPageForOrsAdminList =
   (db) =>
-  async ({ page, pageSize }) => {
+  async ({ page, pageSize, registrationNumber }) => {
     const skip = (page - 1) * pageSize
 
     const [result] = await db
       .collection(COLLECTION_NAME)
       .aggregate([
-        ...ORS_ADMIN_LIST_BASE_PIPELINE,
+        ...buildOrsAdminListBasePipeline({ registrationNumber }),
         {
           $facet: {
             rows: [
