@@ -215,7 +215,7 @@ export const mergeLoads = (validationResults, classificationResults) => ({
  * @param {ValidatedWasteRecord[]} params.wasteRecords - All waste records with tableName and wasteRecordType
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records only
  * @param {string} params.summaryLogId - The current summary log ID
- * @param {Object<string, { sheetName: string }>} params.tableSchemas - Table schemas keyed by table name
+ * @param {Object<string, { sheetName: string, wasteRecordType: string }>} params.tableSchemas - Table schemas keyed by table name
  * @returns {LoadsByWasteRecordType}
  */
 export const countByWasteRecordType = ({
