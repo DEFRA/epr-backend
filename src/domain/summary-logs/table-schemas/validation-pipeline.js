@@ -4,6 +4,7 @@ import {
 } from './shared/classification-reason.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {OverseasSitesContext} from './shared/classification-reason.js' */
 
 /**
  * Validation pipeline for summary log rows
@@ -48,7 +49,7 @@ import {
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: Accreditation | null, overseasSites: Record<number, { validFrom: Date | null }> | symbol }} context - Classification context; accreditation is null when absent, overseasSites is ORS_VALIDATION_DISABLED when feature is off
+ * @param {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} context - Classification context; accreditation is null when absent, overseasSites is ORS_VALIDATION_DISABLED when feature is off
  * @returns {WasteBalanceClassificationResult}
  */
 

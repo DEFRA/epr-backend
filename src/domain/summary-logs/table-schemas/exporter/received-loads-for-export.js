@@ -39,7 +39,7 @@ import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
+/** @import {OverseasSitesContext} from '../shared/classification-reason.js' */
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -191,7 +191,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: Accreditation | null, overseasSites: Record<number, Pick<OverseasSite, 'validFrom'>> | typeof ORS_VALIDATION_DISABLED }} */ {
+    /** @type {{ accreditation: Accreditation | null, overseasSites: OverseasSitesContext }} */ {
       accreditation,
       overseasSites
     }

@@ -12,3 +12,8 @@ export const CLASSIFICATION_REASON = Object.freeze({
  * @type {unique symbol}
  */
 export const ORS_VALIDATION_DISABLED = Symbol('ORS_VALIDATION_DISABLED')
+
+/**
+ * Resolved overseas sites lookup, or sentinel when ORS validation is disabled.
+ * @typedef {Record<number, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
+ */

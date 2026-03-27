@@ -130,7 +130,7 @@ const getTargetAmount = (record, accreditation, overseasSites) => {
  * @param {Object} params.accreditation - The accreditation details.
  * @param {string} [params.accreditation.validFrom] - ISO date string.
  * @param {string} [params.accreditation.validTo] - ISO date string.
- * @param {Record<number, { validFrom: Date | null }> | symbol} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED.
+ * @param {import('#domain/summary-logs/table-schemas/shared/classification-reason.js').OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED.
  * @returns {Object} Result containing new transactions and updated totals.
  * @property {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} newTransactions
  * @property {number} newAmount

@@ -51,6 +51,7 @@ export const MIN_TEMPLATE_VERSIONS = {
 }
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/shared/classification-reason.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
 /** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
 /**
@@ -62,7 +63,7 @@ export const MIN_TEMPLATE_VERSIONS = {
  * @property {string[]} requiredHeaders - Headers that must be present in the table
  * @property {Record<string, string[]>} unfilledValues - Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * @property {JoiObjectSchema} validationSchema - Joi schema for VAL010 (in-sheet validation of filled fields)
- * @property {((data: Record<string, any>, context: {accreditation: Accreditation | null, overseasSites: Record<number, { validFrom: Date | null }> | symbol}) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance (null if table does not contribute)
+ * @property {((data: Record<string, any>, context: {accreditation: Accreditation | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} classifyForWasteBalance - Classifies a row for waste balance (null if table does not contribute)
  */
 
 /**

@@ -229,7 +229,7 @@ const calculateAndApplyUpdates = async (
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {any} [params.user]
- * @param {Record<number, { validFrom: Date | null }> | symbol} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
+ * @param {import('#domain/summary-logs/table-schemas/shared/classification-reason.js').OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
