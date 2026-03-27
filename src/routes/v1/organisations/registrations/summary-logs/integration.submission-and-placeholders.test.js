@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 import { http, HttpResponse } from 'msw'
 
+import { createEmptyLoads } from '#application/summary-logs/load-counts.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -540,7 +541,17 @@ describe('Submission and placeholder tests', () => {
           unchanged: expect.objectContaining({
             valid: expect.objectContaining({ count: 1 })
           })
-        })
+        }),
+        {
+          wasteRecordType: 'processed',
+          sheetName: 'Processed',
+          ...createEmptyLoads()
+        },
+        {
+          wasteRecordType: 'sentOn',
+          sheetName: 'Sent on',
+          ...createEmptyLoads()
+        }
       ])
     })
   })
