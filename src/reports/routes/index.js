@@ -1,3 +1,4 @@
+export { reportsDelete } from './delete.js'
 export { reportsGet } from './get.js'
 export { reportsGetDetail } from './get-detail.js'
 export { reportsPatch } from './patch.js'

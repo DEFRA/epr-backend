@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { findReportForPeriod } from '#reports/application/report-service.js'
+import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -24,6 +24,7 @@ export const reportsGetDetail = {
     const {
       organisationsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       reportsRepository,
       params
     } = request
@@ -34,9 +35,10 @@ export const reportsGetDetail = {
       registrationId
     )
 
-    const report = await findReportForPeriod({
+    const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
       wasteRecordsRepository,
+      packagingRecyclingNotesRepository,
       organisationId,
       registrationId,
       registration,
