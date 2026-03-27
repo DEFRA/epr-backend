@@ -97,7 +97,7 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * Calculates the target amount for a waste record based on accreditation.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @param {Object} accreditation
- * @param {Record<number, { validFrom: Date | null }> | symbol} overseasSites
+ * @param {OverseasSitesContext} overseasSites
  * @returns {number}
  */
 const getTargetAmount = (record, accreditation, overseasSites) => {
