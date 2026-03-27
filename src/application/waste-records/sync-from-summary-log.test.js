@@ -1059,7 +1059,47 @@ describe('syncFromSummaryLog', () => {
     })
   })
 
-  it('skips waste balance update when accreditation is not found', async () => {
+  it('skips waste balance update for registered-only processing types', async () => {
+    const fileId = 'test-file-no-wb'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_REGISTERED_ONLY'
+        }
+      },
+      data: {}
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      overseasSitesRepository
+    })
+
+    await sync(summaryLog)
+
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).not.toHaveBeenCalled()
+  })
+
+  it('throws when accreditationId exists but accreditation is not found', async () => {
     const fileId = 'test-file-no-accred'
     const summaryLog = {
       file: {
@@ -1109,11 +1149,9 @@ describe('syncFromSummaryLog', () => {
       overseasSitesRepository
     })
 
-    await sync(summaryLog)
-
-    expect(
-      wasteBalancesRepository.updateWasteBalanceTransactions
-    ).not.toHaveBeenCalled()
+    await expect(sync(summaryLog)).rejects.toThrow(
+      'Accreditation not found: acc-missing'
+    )
   })
 
   it('does not update accreditationId if registration is not found', async () => {

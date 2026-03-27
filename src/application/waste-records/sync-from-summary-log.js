@@ -125,14 +125,16 @@ const resolveAccreditation = async (
   organisationId,
   accreditationId
 ) => {
-  if (!accreditationId) {
-    return undefined
-  }
-
-  return organisationsRepository.findAccreditationById(
+  const accreditation = await organisationsRepository.findAccreditationById(
     organisationId,
     accreditationId
   )
+
+  if (!accreditation) {
+    throw new Error(`Accreditation not found: ${accreditationId}`)
+  }
+
+  return accreditation
 }
 
 const updateWasteBalances = async ({
@@ -150,7 +152,7 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
-  if (accreditation && shouldCalculateWasteBalance) {
+  if (shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       { user, accreditation, overseasSites }
@@ -305,22 +307,23 @@ export const syncFromSummaryLog = (dependencies) => {
         )
       : ORS_VALIDATION_DISABLED
 
-    // 9. Resolve accreditation for waste balance calculation
-    const accreditation = await resolveAccreditation(
-      organisationsRepository,
-      summaryLog.organisationId,
-      accreditationId
-    )
+    // 9. Resolve accreditation and update waste balances
+    if (accreditationId) {
+      const accreditation = await resolveAccreditation(
+        organisationsRepository,
+        summaryLog.organisationId,
+        accreditationId
+      )
 
-    // 10. Update waste balances if accreditation exists
-    await updateWasteBalances({
-      parsedData,
-      accreditation,
-      wasteBalancesRepository,
-      wasteRecords,
-      user,
-      overseasSites
-    })
+      await updateWasteBalances({
+        parsedData,
+        accreditation,
+        wasteBalancesRepository,
+        wasteRecords,
+        user,
+        overseasSites
+      })
+    }
 
     // 11. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
