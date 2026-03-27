@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
-import { findReportForPeriod } from '#reports/application/report-service.js'
+import { fetchCurrentReport } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -32,34 +32,26 @@ export const reportsPatch = {
       payload: payloadSchema
     }
   },
+  /**
+   * @param {HapiRequest<{ supportingInformation: string }> & { reportsRepository: ReportsRepository }} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
-    const {
-      organisationsRepository,
-      reportsRepository,
-      wasteRecordsRepository,
-      packagingRecyclingNotesRepository,
-      params
-    } = request
-    const { organisationId, registrationId, year, cadence, period } = params
+    const { reportsRepository, params } = request
+    const { organisationId, registrationId, cadence } = params
+    const year = Number(params.year)
+    const period = Number(params.period)
 
-    const registration = await organisationsRepository.findRegistrationById(
-      organisationId,
-      registrationId
-    )
-
-    const report = await findReportForPeriod({
+    const report = await fetchCurrentReport(
       reportsRepository,
-      wasteRecordsRepository,
-      packagingRecyclingNotesRepository,
       organisationId,
       registrationId,
-      registration,
       year,
       cadence,
       period
-    })
+    )
 
-    if (!report.id) {
+    if (!report) {
       throw Boom.notFound(
         `No report found for ${cadence} period ${period} of ${year}`
       )
@@ -77,3 +69,8 @@ export const reportsPatch = {
     return h.response(updated).code(StatusCodes.OK)
   }
 }
+
+/**
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ */

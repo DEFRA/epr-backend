@@ -5,7 +5,10 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { findReportForPeriod, createReportForPeriod } from './report-service.js'
+import {
+  fetchOrGenerateReportForPeriod,
+  createReportForPeriod
+} from './report-service.js'
 
 const buildRegistration = (overrides = {}) => ({
   id: new ObjectId().toString(),
@@ -55,15 +58,18 @@ const defaultParams = () => {
 }
 
 describe('report-service', () => {
-  describe('findReportForPeriod', () => {
+  describe('fetchOrGenerateReportForPeriod', () => {
     it('returns computed report when no stored report exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
 
-      const report = await findReportForPeriod({
+      const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params
       })
 
@@ -75,6 +81,8 @@ describe('report-service', () => {
     it('returns stored report when one exists', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
@@ -92,9 +100,10 @@ describe('report-service', () => {
         wasteProcessingType: 'reprocessor'
       })
 
-      const report = await findReportForPeriod({
+      const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params
       })
 
@@ -113,10 +122,13 @@ describe('report-service', () => {
         }
       ])()
       const reportsRepository = createInMemoryReportsRepository()()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
 
-      const report = await findReportForPeriod({
+      const report = await fetchOrGenerateReportForPeriod({
         reportsRepository,
         wasteRecordsRepository,
+        packagingRecyclingNotesRepository,
         ...params
       })
 
