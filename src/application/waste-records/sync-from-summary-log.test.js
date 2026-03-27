@@ -30,7 +30,11 @@ describe('syncFromSummaryLog', () => {
       updateWasteBalanceTransactions: vi.fn()
     }
     organisationsRepository = {
-      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} })
+      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
+      findAccreditationById: vi.fn().mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
     }
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
@@ -142,11 +146,17 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
+    const accreditation = {
+      validFrom: '2023-01-01',
+      validTo: '2023-12-31'
+    }
+
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-1',
         accreditationId: 'accred-123'
-      })
+      }),
+      findAccreditationById: vi.fn().mockResolvedValue(accreditation)
     }
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
@@ -168,6 +178,7 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', {
       user: undefined,
+      accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
   })
@@ -870,7 +881,11 @@ describe('syncFromSummaryLog', () => {
         })
       ]),
       'acc-1',
-      { user: undefined, overseasSites: {} }
+      {
+        user: undefined,
+        accreditation: { validFrom: '2023-01-01', validTo: '2023-12-31' },
+        overseasSites: {}
+      }
     )
   })
 
@@ -940,6 +955,7 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
       user: undefined,
+      accreditation: { validFrom: '2023-01-01', validTo: '2023-12-31' },
       overseasSites: { 100: { validFrom } }
     })
   })
@@ -1016,6 +1032,7 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
       user: undefined,
+      accreditation: { validFrom: '2023-01-01', validTo: '2023-12-31' },
       overseasSites: ORS_VALIDATION_DISABLED
     })
   })

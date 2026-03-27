@@ -101,27 +101,6 @@ export const markExcludedRecords = (wasteRecords) => {
   }))
 }
 
-const getAccreditation = async (
-  organisationsRepository,
-  organisationId,
-  accreditationId
-) => {
-  if (!organisationsRepository) {
-    throw new Error('organisationsRepository dependency is required')
-  }
-
-  const accreditation = await organisationsRepository.findAccreditationById(
-    organisationId,
-    accreditationId
-  )
-
-  if (!accreditation) {
-    throw new Error(`Accreditation not found: ${accreditationId}`)
-  }
-
-  return accreditation
-}
-
 const recordAuditLogs = async (
   dependencies,
   updatedBalance,
@@ -172,18 +151,12 @@ const recordAuditLogs = async (
 }
 
 const calculateAndApplyUpdates = async (
-  dependencies,
   validRecords,
   validatedAccreditationId,
+  accreditation,
   findBalance,
   overseasSites
 ) => {
-  const accreditation = await getAccreditation(
-    dependencies.organisationsRepository,
-    validRecords[0]?.organisationId,
-    validatedAccreditationId
-  )
-
   const wasteBalance = await findOrCreateWasteBalance({
     findBalance,
     accreditationId: validatedAccreditationId,
@@ -225,8 +198,8 @@ const calculateAndApplyUpdates = async (
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.accreditationId
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation - The accreditation details
  * @param {Object} params.dependencies
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [params.dependencies.organisationsRepository]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
@@ -236,6 +209,7 @@ const calculateAndApplyUpdates = async (
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
   accreditationId,
+  accreditation,
   dependencies,
   findBalance,
   saveBalance,
@@ -251,9 +225,9 @@ export const performUpdateWasteBalanceTransactions = async ({
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const result = await calculateAndApplyUpdates(
-    dependencies,
     annotatedRecords,
     validatedAccreditationId,
+    accreditation,
     findBalance,
     overseasSites
   )

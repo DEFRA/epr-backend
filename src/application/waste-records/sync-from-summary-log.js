@@ -124,9 +124,25 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
   return undefined
 }
 
+const resolveAccreditation = async (
+  organisationsRepository,
+  organisationId,
+  accreditationId
+) => {
+  if (!organisationsRepository || !accreditationId) {
+    return undefined
+  }
+
+  return organisationsRepository.findAccreditationById(
+    organisationId,
+    accreditationId
+  )
+}
+
 const updateWasteBalances = async ({
   parsedData,
   accreditationId,
+  accreditation,
   wasteBalancesRepository,
   wasteRecords,
   user,
@@ -139,11 +155,11 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
-  if (accreditationId && shouldCalculateWasteBalance) {
+  if (accreditationId && accreditation && shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
       accreditationId,
-      { user, overseasSites }
+      { user, accreditation, overseasSites }
     )
   }
 }
@@ -295,10 +311,18 @@ export const syncFromSummaryLog = (dependencies) => {
         )
       : ORS_VALIDATION_DISABLED
 
-    // 9. Update waste balances if accreditation ID exists
+    // 9. Resolve accreditation for waste balance calculation
+    const accreditation = await resolveAccreditation(
+      organisationsRepository,
+      summaryLog.organisationId,
+      accreditationId
+    )
+
+    // 10. Update waste balances if accreditation exists
     await updateWasteBalances({
       parsedData,
       accreditationId,
+      accreditation,
       wasteBalancesRepository,
       wasteRecords,
       user,
