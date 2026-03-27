@@ -98,12 +98,8 @@
     "undici": "7.24.0"
   },
   "overrides": {
-    "@isaacs/brace-expansion": "5.0.1",
     "brace-expansion": "5.0.5",
-    "fast-xml-parser": "^5.5.7",
-    "flatted": "^3.4.2",
-    "glob": "11.1.0",
-    "handlebars": "4.7.9"
+    "fast-xml-parser": "^5.5.7"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.18",
