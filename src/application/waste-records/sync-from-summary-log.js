@@ -113,15 +113,11 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
     return summaryLog.accreditationId
   }
 
-  if (organisationsRepository) {
-    const registration = await organisationsRepository.findRegistrationById(
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
-    return registration?.accreditationId
-  }
-
-  return undefined
+  const registration = await organisationsRepository.findRegistrationById(
+    summaryLog.organisationId,
+    summaryLog.registrationId
+  )
+  return registration?.accreditationId
 }
 
 const resolveAccreditation = async (
@@ -129,7 +125,7 @@ const resolveAccreditation = async (
   organisationId,
   accreditationId
 ) => {
-  if (!organisationsRepository || !accreditationId) {
+  if (!accreditationId) {
     return undefined
   }
 
