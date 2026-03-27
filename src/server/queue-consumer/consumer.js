@@ -193,9 +193,7 @@ const createMessageHandler =
       handlerMap
     )
     if (!result) {
-      throw new Error(
-        `Unparseable command message, messageId=${message.MessageId}`
-      )
+      return message
     }
 
     const { handler, payload } = result
