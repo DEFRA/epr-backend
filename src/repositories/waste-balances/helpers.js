@@ -11,6 +11,8 @@ import {
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -229,7 +231,7 @@ const calculateAndApplyUpdates = async (
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {any} [params.user]
- * @param {import('#domain/summary-logs/table-schemas/shared/classification-reason.js').OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
+ * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,

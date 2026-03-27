@@ -39,7 +39,7 @@ import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSitesContext} from '../shared/classification-reason.js' */
+/** @import {OverseasSitesContext} from '../validation-pipeline.js' */
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).

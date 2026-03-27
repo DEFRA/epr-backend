@@ -4,7 +4,11 @@ import {
 } from './shared/classification-reason.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSitesContext} from './shared/classification-reason.js' */
+
+/**
+ * Resolved overseas sites lookup, or sentinel when ORS validation is disabled.
+ * @typedef {Record<number, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
+ */
 
 /**
  * Validation pipeline for summary log rows

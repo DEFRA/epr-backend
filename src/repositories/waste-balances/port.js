@@ -38,7 +38,7 @@
  * @typedef {Object} WasteBalancesRepository
  * @property {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} findByAccreditationId
  * @property {(accreditationIds: string[]) => Promise<import('#domain/waste-balances/model.js').WasteBalance[]>} findByAccreditationIds
- * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], accreditationId: string, options: { user?: Object, overseasSites: import('#domain/summary-logs/table-schemas/shared/classification-reason.js').OverseasSitesContext }) => Promise<void>} updateWasteBalanceTransactions
+ * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], accreditationId: string, options: { user?: Object, overseasSites: import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext }) => Promise<void>} updateWasteBalanceTransactions
  * @property {(params: DeductAvailableBalanceParams) => Promise<void>} deductAvailableBalanceForPrnCreation
  * @property {(params: DeductTotalBalanceParams) => Promise<void>} deductTotalBalanceForPrnIssue
  * @property {(params: CreditAvailableBalanceParams) => Promise<void>} creditAvailableBalanceForPrnCancellation

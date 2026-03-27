@@ -51,7 +51,7 @@ export const MIN_TEMPLATE_VERSIONS = {
 }
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/shared/classification-reason.js' */
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
 /** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
 /**
