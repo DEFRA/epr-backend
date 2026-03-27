@@ -527,21 +527,23 @@ describe('Submission and placeholder tests', () => {
       expect(payload.loads.unchanged.valid.count).toBe(1)
       expect(payload.loads.unchanged.valid.rowIds).toContain(1001)
 
-      expect(payload.loadsByWasteRecordType).toEqual([
-        expect.objectContaining({
-          wasteRecordType: 'received',
-          sheetName: 'Received',
-          added: expect.objectContaining({
-            valid: expect.objectContaining({ count: 1 })
-          }),
-          adjusted: expect.objectContaining({
-            valid: expect.objectContaining({ count: 1 })
-          }),
-          unchanged: expect.objectContaining({
-            valid: expect.objectContaining({ count: 1 })
+      expect(payload.loadsByWasteRecordType).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            wasteRecordType: 'received',
+            sheetName: 'Received',
+            added: expect.objectContaining({
+              valid: expect.objectContaining({ count: 1 })
+            }),
+            adjusted: expect.objectContaining({
+              valid: expect.objectContaining({ count: 1 })
+            }),
+            unchanged: expect.objectContaining({
+              valid: expect.objectContaining({ count: 1 })
+            })
           })
-        })
-      ])
+        ])
+      )
     })
   })
 

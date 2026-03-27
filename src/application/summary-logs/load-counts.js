@@ -233,18 +233,25 @@ export const countByWasteRecordType = ({
     (wr) => wr.wasteRecordType
   )
 
-  return Array.from(wasteRecordsGroupedByType.entries()).map(
-    ([type, records]) => ({
-      wasteRecordType: type,
-      sheetName:
-        tableSchemas[records[0].tableName]?.sheetName ?? records[0].tableName,
-      ...mergeLoads(
-        countByValidity({ wasteRecords: records, summaryLogId }),
-        countByWasteBalanceInclusion({
-          wasteRecords: wasteBalancesGroupedByType.get(type) ?? [],
-          summaryLogId
-        })
-      )
-    })
+  const expectedTypes = new Map(
+    Object.values(tableSchemas).map(({ wasteRecordType, sheetName }) => [
+      wasteRecordType,
+      sheetName
+    ])
   )
+
+  return Array.from(expectedTypes.entries()).map(([type, sheetName]) => ({
+    wasteRecordType: type,
+    sheetName,
+    ...mergeLoads(
+      countByValidity({
+        wasteRecords: wasteRecordsGroupedByType.get(type) ?? [],
+        summaryLogId
+      }),
+      countByWasteBalanceInclusion({
+        wasteRecords: wasteBalancesGroupedByType.get(type) ?? [],
+        summaryLogId
+      })
+    )
+  }))
 }

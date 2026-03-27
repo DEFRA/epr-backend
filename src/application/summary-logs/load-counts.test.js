@@ -872,17 +872,13 @@ describe('mergeLoads', () => {
 })
 
 // Happy-path coverage provided by integration.submission-and-placeholders test.
-// Only the sheetName fallback branch (unreachable via the normal pipeline) is tested here.
 describe('countByWasteRecordType', () => {
-  it('falls back to tableName when tableSchemas has no sheetName', () => {
+  it('includes all expected types from tableSchemas even when some have no waste records', () => {
     const record = {
       rowId: '1001',
       type: WASTE_RECORD_TYPE.RECEIVED,
       versions: [
-        {
-          summaryLog: { id: 'log-1' },
-          status: VERSION_STATUS.CREATED
-        }
+        { summaryLog: { id: 'log-1' }, status: VERSION_STATUS.CREATED }
       ]
     }
 
@@ -892,16 +888,82 @@ describe('countByWasteRecordType', () => {
           record,
           issues: [],
           outcome: ROW_OUTCOME.INCLUDED,
-          tableName: 'UNKNOWN_TABLE',
+          tableName: 'RECEIVED_LOADS_FOR_REPROCESSING',
           wasteRecordType: WASTE_RECORD_TYPE.RECEIVED
         }
       ],
       wasteBalanceRecords: [],
       summaryLogId: 'log-1',
-      tableSchemas: {}
+      tableSchemas: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          sheetName: 'Received'
+        },
+        SENT_ON_LOADS: {
+          wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+          sheetName: 'Sent on'
+        }
+      }
+    })
+
+    expect(result).toHaveLength(2)
+
+    const receivedSection = result.find(
+      (r) => r.wasteRecordType === WASTE_RECORD_TYPE.RECEIVED
+    )
+    const sentOnSection = result.find(
+      (r) => r.wasteRecordType === WASTE_RECORD_TYPE.SENT_ON
+    )
+
+    expect(receivedSection.sheetName).toBe('Received')
+    expect(receivedSection.added.valid.count).toBe(1)
+
+    expect(sentOnSection.sheetName).toBe('Sent on')
+    expect(sentOnSection.added.valid).toEqual({ count: 0, rowIds: [] })
+    expect(sentOnSection.adjusted.valid).toEqual({ count: 0, rowIds: [] })
+  })
+
+  it('uses sheetName from tableSchemas', () => {
+    const record = {
+      rowId: '1001',
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      versions: [
+        { summaryLog: { id: 'log-1' }, status: VERSION_STATUS.CREATED }
+      ]
+    }
+
+    const result = countByWasteRecordType({
+      wasteRecords: [
+        {
+          record,
+          issues: [],
+          outcome: ROW_OUTCOME.INCLUDED,
+          tableName: 'MY_TABLE',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED
+        }
+      ],
+      wasteBalanceRecords: [],
+      summaryLogId: 'log-1',
+      tableSchemas: {
+        MY_TABLE: {
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          sheetName: 'My Sheet Name'
+        }
+      }
     })
 
     expect(result).toHaveLength(1)
-    expect(result[0].sheetName).toBe('UNKNOWN_TABLE')
+    expect(result[0].sheetName).toBe('My Sheet Name')
+  })
+
+  it('returns empty array when tableSchemas is empty', () => {
+    const result = countByWasteRecordType({
+      wasteRecords: [],
+      wasteBalanceRecords: [],
+      summaryLogId: 'log-1',
+      tableSchemas: {}
+    })
+
+    expect(result).toEqual([])
   })
 })
