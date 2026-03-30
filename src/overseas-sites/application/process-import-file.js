@@ -88,28 +88,14 @@ export const processImportFile = async (
 
   const mappingsUpdated = Object.keys(overseasSitesMap).length
 
-  try {
-    await systemLogsRepository.insert({
-      createdAt: new Date(),
-      createdBy: user,
-      event: {
-        category: 'entity',
-        subCategory: 'overseas-sites',
-        action: 'import-completed'
-      },
-      context: {
-        organisationId: org.id,
-        registrationId: registration.id,
-        registrationNumber: metadata.registrationNumber,
-        sitesCreated,
-        mappingsUpdated
-      }
-    })
-  } catch (systemLogErr) {
-    logger.warn({
-      message: `Failed to write system log for ORS import on registration ${metadata.registrationNumber}: ${systemLogErr.message}`
-    })
-  }
+  await recordImportSystemLog(systemLogsRepository, logger, {
+    user,
+    organisationId: org.id,
+    registrationId: registration.id,
+    registrationNumber: metadata.registrationNumber,
+    sitesCreated,
+    mappingsUpdated
+  })
 
   logger.info({
     message: `Processed ORS file: ${sitesCreated} sites created, ${sites.length - sitesCreated} reused for registration ${metadata.registrationNumber}`
@@ -154,6 +140,42 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
   }
 
   return { overseasSitesMap, sitesCreated }
+}
+
+const recordImportSystemLog = async (
+  systemLogsRepository,
+  logger,
+  {
+    user,
+    organisationId,
+    registrationId,
+    registrationNumber,
+    sitesCreated,
+    mappingsUpdated
+  }
+) => {
+  try {
+    await systemLogsRepository.insert({
+      createdAt: new Date(),
+      createdBy: user,
+      event: {
+        category: 'entity',
+        subCategory: 'overseas-sites',
+        action: 'import-completed'
+      },
+      context: {
+        organisationId,
+        registrationId,
+        registrationNumber,
+        sitesCreated,
+        mappingsUpdated
+      }
+    })
+  } catch (systemLogErr) {
+    logger.warn({
+      message: `Failed to write system log for ORS import on registration ${registrationNumber}: ${systemLogErr.message}`
+    })
+  }
 }
 
 const failureResult = (registrationNumber, errors) => ({
