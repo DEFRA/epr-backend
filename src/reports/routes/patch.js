@@ -3,6 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -55,6 +56,10 @@ export const reportsPatch = {
       throw Boom.notFound(
         `No report found for ${cadence} period ${period} of ${year}`
       )
+    }
+
+    if (report.status.currentStatus === REPORT_STATUS.SUBMITTED) {
+      throw Boom.badRequest(`Cannot update a submitted report`)
     }
 
     await reportsRepository.updateReport({

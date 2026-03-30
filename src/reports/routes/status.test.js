@@ -122,7 +122,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         const payload = JSON.parse(response.payload)
-        expect(payload.status).toBe('ready_to_submit')
+        expect(payload.status.currentStatus).toBe('ready_to_submit')
       })
 
       it('increments report version', async () => {
@@ -141,6 +141,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         const payload = JSON.parse(response.payload)
         expect(payload.version).toBe(2)
+        expect(payload.status.currentStatus).toBe('ready_to_submit')
       })
 
       it('appends to status history', async () => {
@@ -158,9 +159,9 @@ describe(`POST ${reportsStatusPath}`, () => {
         )
 
         const payload = JSON.parse(response.payload)
-        expect(payload.statusHistory).toHaveLength(2)
-        expect(payload.statusHistory[0].status).toBe('in_progress')
-        expect(payload.statusHistory[1].status).toBe('ready_to_submit')
+        expect(payload.status.history).toHaveLength(2)
+        expect(payload.status.history[0].status).toBe('in_progress')
+        expect(payload.status.history[1].status).toBe('ready_to_submit')
       })
     })
 

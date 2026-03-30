@@ -35,27 +35,24 @@ describe('mergeReportingPeriods', () => {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         year: 2026,
-        version: 1,
         reports: {
           monthly: {
             1: {
               startDate: '2026-01-01',
               endDate: '2026-01-31',
               dueDate: '2026-02-20',
-              currentReportId: 'report-uuid-1',
-              previousReportIds: []
+              current: { id: 'report-uuid-1', status: 'in_progress' },
+              previousSubmissions: []
             }
           }
         }
       }
     ]
 
-    const statusMap = new Map([['report-uuid-1', 'in_progress']])
     const result = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      'monthly',
-      statusMap
+      'monthly'
     )
 
     expect(result[0].report).toEqual({
@@ -65,21 +62,22 @@ describe('mergeReportingPeriods', () => {
     expect(result[1].report).toBeNull()
   })
 
-  it('sets report to null when currentReportId is null (deleted)', () => {
+  it('sets report to null when current is null (no active draft)', () => {
     const periodicReports = [
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         year: 2026,
-        version: 1,
         reports: {
           monthly: {
             1: {
               startDate: '2026-01-01',
               endDate: '2026-01-31',
               dueDate: '2026-02-20',
-              currentReportId: null,
-              previousReportIds: ['old-report-id']
+              current: null,
+              previousSubmissions: [
+                { id: 'old-report-id', status: 'submitted' }
+              ]
             }
           }
         }
@@ -89,63 +87,61 @@ describe('mergeReportingPeriods', () => {
     const result = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      'monthly',
-      new Map()
+      'monthly'
     )
 
     expect(result[0].report).toBeNull()
   })
 
-  it('includes persisted periods not in computed set', () => {
+  it('includes persisted periods not in computed set when current is non-null', () => {
     const periodicReports = [
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         year: 2026,
-        version: 1,
         reports: {
           monthly: {
             3: {
               startDate: '2026-03-01',
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
-              currentReportId: 'report-uuid-3',
-              previousReportIds: []
+              current: { id: 'report-uuid-3', status: 'in_progress' },
+              previousSubmissions: []
             }
           }
         }
       }
     ]
 
-    const statusMap = new Map([['report-uuid-3', 'submitted']])
     const result = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      'monthly',
-      statusMap
+      'monthly'
     )
 
     expect(result).toHaveLength(3)
     const period3 = result.find((p) => p.period === 3)
-    expect(period3.report).toEqual({ id: 'report-uuid-3', status: 'submitted' })
+    expect(period3.report).toEqual({
+      id: 'report-uuid-3',
+      status: 'in_progress'
+    })
     expect(period3.startDate).toBe('2026-03-01')
   })
 
-  it('ignores persisted slots with null currentReportId not in computed set', () => {
+  it('ignores persisted slots with null current not in computed set', () => {
     const periodicReports = [
       {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         year: 2026,
-        version: 1,
         reports: {
           monthly: {
             3: {
               startDate: '2026-03-01',
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
-              currentReportId: null,
-              previousReportIds: ['old-id']
+              current: null,
+              previousSubmissions: [{ id: 'old-id', status: 'submitted' }]
             }
           }
         }
@@ -155,8 +151,7 @@ describe('mergeReportingPeriods', () => {
     const result = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      'monthly',
-      new Map()
+      'monthly'
     )
 
     expect(result).toHaveLength(2)
@@ -168,15 +163,14 @@ describe('mergeReportingPeriods', () => {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         year: 2026,
-        version: 1,
         reports: {
           quarterly: {
             1: {
               startDate: '2026-01-01',
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
-              currentReportId: 'quarterly-report',
-              previousReportIds: []
+              current: { id: 'quarterly-report', status: 'in_progress' },
+              previousSubmissions: []
             }
           }
         }
@@ -186,81 +180,11 @@ describe('mergeReportingPeriods', () => {
     const result = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      'monthly',
-      new Map()
+      'monthly'
     )
 
     expect(result).toHaveLength(2)
     expect(result[0].report).toBeNull()
-  })
-
-  it('defaults status to in_progress when reportStatusMap has no entry', () => {
-    const periodicReports = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        year: 2026,
-        version: 1,
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              currentReportId: 'report-uuid-1',
-              previousReportIds: []
-            }
-          }
-        }
-      }
-    ]
-
-    const result = mergeReportingPeriods(
-      computedPeriods,
-      periodicReports,
-      'monthly',
-      new Map()
-    )
-
-    expect(result[0].report).toEqual({
-      id: 'report-uuid-1',
-      status: 'in_progress'
-    })
-  })
-
-  it('defaults status for persisted-only periods not in computed set', () => {
-    const periodicReports = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        year: 2026,
-        version: 1,
-        reports: {
-          monthly: {
-            3: {
-              startDate: '2026-03-01',
-              endDate: '2026-03-31',
-              dueDate: '2026-04-20',
-              currentReportId: 'report-uuid-3',
-              previousReportIds: []
-            }
-          }
-        }
-      }
-    ]
-
-    const result = mergeReportingPeriods(
-      computedPeriods,
-      periodicReports,
-      'monthly',
-      new Map()
-    )
-
-    const period3 = result.find((p) => p.period === 3)
-    expect(period3.report).toEqual({
-      id: 'report-uuid-3',
-      status: 'in_progress'
-    })
   })
 
   it('sorts output by year then period', () => {
@@ -269,27 +193,24 @@ describe('mergeReportingPeriods', () => {
         organisationId: 'org-1',
         registrationId: 'reg-1',
         year: 2025,
-        version: 1,
         reports: {
           monthly: {
             12: {
               startDate: '2025-12-01',
               endDate: '2025-12-31',
               dueDate: '2026-01-20',
-              currentReportId: 'report-2025-12',
-              previousReportIds: []
+              current: { id: 'report-2025-12', status: 'in_progress' },
+              previousSubmissions: []
             }
           }
         }
       }
     ]
 
-    const statusMap = new Map([['report-2025-12', 'submitted']])
     const result = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      'monthly',
-      statusMap
+      'monthly'
     )
 
     expect(result).toHaveLength(3)

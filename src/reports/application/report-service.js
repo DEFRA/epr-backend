@@ -14,8 +14,10 @@ import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-pe
  * @returns {string|null}
  */
 function findCurrentReportId(periodicReports, year, cadence, period) {
-  const periodicReport = periodicReports.find((pr) => pr.year === year)
-  return periodicReport?.reports?.[cadence]?.[period]?.currentReportId ?? null
+  const slot = periodicReports.find((pr) => pr.year === year)?.reports?.[
+    cadence
+  ]?.[period]
+  return slot?.current?.id ?? slot?.previousSubmissions?.[0]?.id ?? null
 }
 
 /**

@@ -2,7 +2,16 @@ import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { buildCreateReportParams } from './test-data.js'
+import {
+  buildCreateReportParams,
+  DEFAULT_ORG_ID,
+  DEFAULT_REG_ID,
+  DEFAULT_REPORT_DUE_DATE,
+  DEFAULT_REPORT_END_DATE,
+  DEFAULT_REPORT_PERIOD,
+  DEFAULT_REPORT_START_DATE,
+  DEFAULT_REPORT_YEAR
+} from './test-data.js'
 
 export const testFindReportByIdBehaviour = (it) => {
   describe('findReportById', () => {
@@ -24,16 +33,29 @@ export const testFindReportByIdBehaviour = (it) => {
         id: reportId,
         version: 1,
         schemaVersion: 1,
-        status: REPORT_STATUS.IN_PROGRESS,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy,
-            changedAt: expect.any(String)
-          }
-        ],
+        submissionNumber: 1,
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: DEFAULT_REG_ID,
+        year: DEFAULT_REPORT_YEAR,
+        cadence: 'monthly',
+        period: DEFAULT_REPORT_PERIOD,
+        startDate: DEFAULT_REPORT_START_DATE,
+        endDate: DEFAULT_REPORT_END_DATE,
+        dueDate: DEFAULT_REPORT_DUE_DATE,
         material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        status: {
+          currentStatus: REPORT_STATUS.IN_PROGRESS,
+          currentStatusAt: expect.any(String),
+          created: { at: expect.any(String), by: changedBy },
+          history: [
+            {
+              status: REPORT_STATUS.IN_PROGRESS,
+              at: expect.any(String),
+              by: changedBy
+            }
+          ]
+        }
       })
     })
 

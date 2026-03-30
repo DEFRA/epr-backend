@@ -923,11 +923,11 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(payload.id).toBeDefined()
-        expect(payload.status).toBe('in_progress')
-        expect(payload.statusHistory).toStrictEqual([
+        expect(payload.status.currentStatus).toBe('in_progress')
+        expect(payload.status.history).toStrictEqual([
           expect.objectContaining({
             status: 'in_progress',
-            changedAt: expect.any(String)
+            at: expect.any(String)
           })
         ])
         expect(payload.material).toBe('plastic')

@@ -48,20 +48,10 @@ export const reportsGet = {
       registrationId
     })
 
-    const reportIds = periodicReports.flatMap((pr) =>
-      Object.values(pr.reports[cadence] ?? {})
-        .map((slot) => slot.currentReportId)
-        .filter(Boolean)
-    )
-
-    const reportStatusMap =
-      await reportsRepository.findReportStatusesByIds(reportIds)
-
     const reportingPeriods = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
-      cadence,
-      reportStatusMap
+      cadence
     )
 
     return h.response({ cadence, reportingPeriods }).code(StatusCodes.OK)

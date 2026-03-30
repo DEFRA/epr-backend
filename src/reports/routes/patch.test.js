@@ -180,6 +180,41 @@ describe(`PATCH ${reportsPatchPath}`, () => {
     })
 
     describe('error handling', () => {
+      it('returns 400 when report is submitted', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+        })
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 2,
+          status: 'submitted',
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+        })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { supportingInformation: 'too late' }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
       it('returns 422 when status is sent via PATCH', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
