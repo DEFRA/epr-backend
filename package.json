@@ -98,9 +98,7 @@
     "undici": "7.24.0"
   },
   "overrides": {
-    "brace-expansion": "5.0.5",
-    "fast-xml-parser": "^5.5.7",
-    "glob": "11.1.0"
+    "fast-xml-parser": "^5.5.7"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.18",
