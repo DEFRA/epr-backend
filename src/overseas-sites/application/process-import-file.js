@@ -10,12 +10,20 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {object} deps
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
  * @param {object} deps.logger
+ * @param {{ id: string, email: string, scope: string[] }} [deps.user]
  * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
  */
 export const processImportFile = async (
   buffer,
-  { overseasSitesRepository, organisationsRepository, logger }
+  {
+    overseasSitesRepository,
+    organisationsRepository,
+    systemLogsRepository,
+    logger,
+    user
+  }
 ) => {
   let metadata
   let sites
@@ -78,6 +86,25 @@ export const processImportFile = async (
     ])
   }
 
+  const mappingsUpdated = Object.keys(overseasSitesMap).length
+
+  await systemLogsRepository.insert({
+    createdAt: new Date(),
+    createdBy: user,
+    event: {
+      category: 'entity',
+      subCategory: 'overseas-sites',
+      action: 'import-completed'
+    },
+    context: {
+      organisationId: org.id,
+      registrationId: registration.id,
+      registrationNumber: metadata.registrationNumber,
+      sitesCreated,
+      mappingsUpdated
+    }
+  })
+
   logger.info({
     message: `Processed ORS file: ${sitesCreated} sites created, ${sites.length - sitesCreated} reused for registration ${metadata.registrationNumber}`
   })
@@ -85,7 +112,7 @@ export const processImportFile = async (
   return {
     status: ORS_FILE_RESULT_STATUS.SUCCESS,
     sitesCreated,
-    mappingsUpdated: Object.keys(overseasSitesMap).length,
+    mappingsUpdated,
     registrationNumber: metadata.registrationNumber,
     errors: []
   }
