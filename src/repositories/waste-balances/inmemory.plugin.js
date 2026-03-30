@@ -2,23 +2,13 @@ import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
 /**
- * @typedef {Object} WasteBalancesDependencies
- * @property {import('#repositories/organisations/port.js').OrganisationsRepository} [organisationsRepository]
- */
-
-/**
  * @param {Object[]} [initialWasteBalances]
- * @param {WasteBalancesDependencies} [dependencies]
  * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryWasteBalancesRepositoryPlugin(
-  initialWasteBalances,
-  dependencies
+  initialWasteBalances
 ) {
-  const factory = createInMemoryWasteBalancesRepository(
-    initialWasteBalances,
-    dependencies
-  )
+  const factory = createInMemoryWasteBalancesRepository(initialWasteBalances)
   const repository = factory()
 
   return {

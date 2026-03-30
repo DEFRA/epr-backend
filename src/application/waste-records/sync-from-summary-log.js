@@ -113,20 +113,33 @@ const resolveAccreditationId = async (summaryLog, organisationsRepository) => {
     return summaryLog.accreditationId
   }
 
-  if (organisationsRepository) {
-    const registration = await organisationsRepository.findRegistrationById(
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
-    return registration?.accreditationId
+  const registration = await organisationsRepository.findRegistrationById(
+    summaryLog.organisationId,
+    summaryLog.registrationId
+  )
+  return registration?.accreditationId
+}
+
+const resolveAccreditation = async (
+  organisationsRepository,
+  organisationId,
+  accreditationId
+) => {
+  const accreditation = await organisationsRepository.findAccreditationById(
+    organisationId,
+    accreditationId
+  )
+
+  if (!accreditation) {
+    throw new Error(`Accreditation not found: ${accreditationId}`)
   }
 
-  return undefined
+  return accreditation
 }
 
 const updateWasteBalances = async ({
   parsedData,
-  accreditationId,
+  accreditation,
   wasteBalancesRepository,
   wasteRecords,
   user,
@@ -139,11 +152,10 @@ const updateWasteBalances = async ({
     processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
     processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
-  if (accreditationId && shouldCalculateWasteBalance) {
+  if (shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
-      accreditationId,
-      { user, overseasSites }
+      { user, accreditation, overseasSites }
     )
   }
 }
@@ -295,17 +307,25 @@ export const syncFromSummaryLog = (dependencies) => {
         )
       : ORS_VALIDATION_DISABLED
 
-    // 9. Update waste balances if accreditation ID exists
-    await updateWasteBalances({
-      parsedData,
-      accreditationId,
-      wasteBalancesRepository,
-      wasteRecords,
-      user,
-      overseasSites
-    })
+    // 9. Resolve accreditation and update waste balances
+    if (accreditationId) {
+      const accreditation = await resolveAccreditation(
+        organisationsRepository,
+        summaryLog.organisationId,
+        accreditationId
+      )
 
-    // 10. Count created/updated records for metrics
+      await updateWasteBalances({
+        parsedData,
+        accreditation,
+        wasteBalancesRepository,
+        wasteRecords,
+        user,
+        overseasSites
+      })
+    }
+
+    // 11. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog
     return calculateMetrics(wasteRecords)
   }
