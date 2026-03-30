@@ -21,6 +21,27 @@ const payloadSchema = Joi.object({
   freePernTonnage: Joi.number().min(0)
 }).min(1)
 
+/**
+ * Merges user-entered PRN data with the existing prn object and computes averagePricePerTonne.
+ * @param {import('#reports/repository/port.js').PrnData | undefined} existingPrn
+ * @param {number | undefined} prnRevenue
+ * @param {number | undefined} freePernTonnage
+ * @returns {object}
+ */
+export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
+  const base = existingPrn || {}
+  const totalRevenue = prnRevenue !== undefined ? prnRevenue : base.totalRevenue
+  const freeTonnage =
+    freePernTonnage !== undefined ? freePernTonnage : base.freeTonnage
+  const issued = base.issuedTonnage || 0
+  const free = freeTonnage || 0
+  const revenue = totalRevenue || 0
+  const denominator = issued - free
+  const averagePricePerTonne = denominator > 0 ? revenue / denominator : 0
+
+  return { ...base, totalRevenue, freeTonnage, averagePricePerTonne }
+}
+
 export const reportsPatch = {
   method: 'PATCH',
   path: reportsPatchPath,
@@ -76,10 +97,18 @@ export const reportsPatch = {
       )
     }
 
+    const { prnRevenue, freePernTonnage, ...otherFields } = request.payload
+
+    const fields = { ...otherFields }
+
+    if (prnRevenue !== undefined || freePernTonnage !== undefined) {
+      fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freePernTonnage)
+    }
+
     await reportsRepository.updateReport({
       reportId: report.id,
       version: report.version,
-      fields: request.payload,
+      fields,
       changedBy: extractChangedBy(request.auth.credentials)
     })
 

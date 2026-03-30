@@ -12,7 +12,7 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
-import { reportsPatchPath } from './patch.js'
+import { reportsPatchPath, buildUpdatedPrn } from './patch.js'
 
 describe(`PATCH ${reportsPatchPath}`, () => {
   setupAuthContext()
@@ -21,7 +21,10 @@ describe(`PATCH ${reportsPatchPath}`, () => {
     `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}`
 
   describe('when feature flag is enabled', () => {
-    const createServerWithReport = async (registrationOverrides = {}) => {
+    const createServerWithReport = async (
+      registrationOverrides = {},
+      reportOverrides = {}
+    ) => {
       const registration = buildRegistration(registrationOverrides)
       const org = buildOrganisation({ registrations: [registration] })
 
@@ -42,7 +45,8 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           period: 1,
           startDate: '2025-01-01',
           endDate: '2025-03-31',
-          dueDate: '2025-04-20'
+          dueDate: '2025-04-20',
+          ...reportOverrides
         })
       )
 
@@ -182,10 +186,13 @@ describe(`PATCH ${reportsPatchPath}`, () => {
     describe('updating PRN data fields', () => {
       it('returns 200 when patching prnRevenue', async () => {
         const { server, organisationId, registrationId } =
-          await createServerWithReport({
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          })
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
 
         const response = await patchReport(
           server,
@@ -196,15 +203,18 @@ describe(`PATCH ${reportsPatchPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         const payload = JSON.parse(response.payload)
-        expect(payload.prnRevenue).toBe(1576.12)
+        expect(payload.prn.totalRevenue).toBe(1576.12)
       })
 
       it('returns 200 when patching freePernTonnage', async () => {
         const { server, organisationId, registrationId } =
-          await createServerWithReport({
-            wasteProcessingType: 'exporter',
-            accreditationId: new ObjectId().toString()
-          })
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
 
         const response = await patchReport(
           server,
@@ -215,7 +225,37 @@ describe(`PATCH ${reportsPatchPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         const payload = JSON.parse(response.payload)
-        expect(payload.freePernTonnage).toBe(5)
+        expect(payload.prn.freeTonnage).toBe(5)
+      })
+
+      it('preserves existing prn fields when patching only one field', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
+
+        await patchReport(server, organisationId, registrationId, {
+          prnRevenue: 500
+        })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          {
+            freePernTonnage: 10
+          }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.prn.totalRevenue).toBe(500)
+        expect(payload.prn.freeTonnage).toBe(10)
+        expect(payload.prn.averagePricePerTonne).toBeCloseTo(5.56, 1)
       })
 
       it('returns 422 when prnRevenue is negative', async () => {
@@ -486,5 +526,41 @@ describe(`PATCH ${reportsPatchPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
+  })
+})
+
+describe('buildUpdatedPrn', () => {
+  it('sets revenue and computes average when existing prn has issuedTonnage', () => {
+    const result = buildUpdatedPrn({ issuedTonnage: 100 }, 500, undefined)
+
+    expect(result.totalRevenue).toBe(500)
+    expect(result.issuedTonnage).toBe(100)
+    expect(result.averagePricePerTonne).toBe(5)
+  })
+
+  it('sets freeTonnage and computes average excluding free tonnage', () => {
+    const result = buildUpdatedPrn(
+      { issuedTonnage: 100, totalRevenue: 500 },
+      undefined,
+      10
+    )
+
+    expect(result.freeTonnage).toBe(10)
+    expect(result.totalRevenue).toBe(500)
+    expect(result.averagePricePerTonne).toBeCloseTo(5.56, 1)
+  })
+
+  it('returns zero average when denominator is zero', () => {
+    const result = buildUpdatedPrn({ issuedTonnage: 50 }, 500, 50)
+
+    expect(result.averagePricePerTonne).toBe(0)
+  })
+
+  it('handles undefined existing prn', () => {
+    const result = buildUpdatedPrn(undefined, 100, 5)
+
+    expect(result.totalRevenue).toBe(100)
+    expect(result.freeTonnage).toBe(5)
+    expect(result.averagePricePerTonne).toBe(0)
   })
 })
