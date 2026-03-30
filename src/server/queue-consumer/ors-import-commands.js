@@ -26,6 +26,7 @@ const userSchema = Joi.object({
  * @property {object} uploadsRepository
  * @property {object} overseasSitesRepository
  * @property {object} organisationsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
  */
 
 /** @type {import('./summary-log-commands.js').CommandHandler[]} */

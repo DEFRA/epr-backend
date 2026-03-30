@@ -88,22 +88,28 @@ export const processImportFile = async (
 
   const mappingsUpdated = Object.keys(overseasSitesMap).length
 
-  await systemLogsRepository.insert({
-    createdAt: new Date(),
-    createdBy: user,
-    event: {
-      category: 'entity',
-      subCategory: 'overseas-sites',
-      action: 'import-completed'
-    },
-    context: {
-      organisationId: org.id,
-      registrationId: registration.id,
-      registrationNumber: metadata.registrationNumber,
-      sitesCreated,
-      mappingsUpdated
-    }
-  })
+  try {
+    await systemLogsRepository.insert({
+      createdAt: new Date(),
+      createdBy: user,
+      event: {
+        category: 'entity',
+        subCategory: 'overseas-sites',
+        action: 'import-completed'
+      },
+      context: {
+        organisationId: org.id,
+        registrationId: registration.id,
+        registrationNumber: metadata.registrationNumber,
+        sitesCreated,
+        mappingsUpdated
+      }
+    })
+  } catch (systemLogErr) {
+    logger.warn({
+      message: `Failed to write system log for ORS import on registration ${metadata.registrationNumber}: ${systemLogErr.message}`
+    })
+  }
 
   logger.info({
     message: `Processed ORS file: ${sitesCreated} sites created, ${sites.length - sitesCreated} reused for registration ${metadata.registrationNumber}`

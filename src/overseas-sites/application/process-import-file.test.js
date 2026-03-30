@@ -664,6 +664,69 @@ describe('processImportFile', () => {
     expect(systemLogsRepository.insert).not.toHaveBeenCalled()
   })
 
+  it('still returns success when system log write fails', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 500001,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Test Site',
+          address: {
+            line1: '1 Test St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue({
+      id: 'org-id',
+      orgId: 500001,
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-id',
+          registrationNumber: 'EPR/AB1234CD/R1',
+          wasteProcessingType: 'exporter'
+        }
+      ]
+    })
+
+    overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
+      true
+    )
+    systemLogsRepository.insert.mockRejectedValue(
+      new Error('MongoDB connection lost')
+    )
+
+    const result = await processImportFile(buffer, deps())
+
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.SUCCESS)
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'Failed to write system log for ORS import'
+        )
+      })
+    )
+  })
+
   it('sets null validFrom when not provided', async () => {
     const buffer = Buffer.from('spreadsheet')
 
