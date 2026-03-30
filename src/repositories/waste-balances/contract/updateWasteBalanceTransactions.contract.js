@@ -9,42 +9,22 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 
 export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
-    const accreditationId = 'acc-123'
-
-    it('Should throw if accreditation is not found', async ({
-      wasteBalancesRepository,
-      organisationsRepository
-    }) => {
-      // Arrange
-      const repository = await wasteBalancesRepository()
-      organisationsRepository.findAccreditationById.mockResolvedValue(null)
-
-      const record = buildWasteRecord()
-
-      // Act & Assert
-      await expect(
-        repository.updateWasteBalanceTransactions([record], accreditationId, {
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-      ).rejects.toThrow(`Accreditation not found: ${accreditationId}`)
-    })
+    const accreditation = {
+      id: 'acc-123',
+      validFrom: '2023-01-01',
+      validTo: '2023-12-31',
+      statusHistory: [
+        { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+      ]
+    }
 
     it('Should persist calculated transactions', async ({
-      wasteBalancesRepository,
-      organisationsRepository
+      wasteBalancesRepository
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
-
-      organisationsRepository.findAccreditationById.mockResolvedValue({
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-        ]
-      })
 
       const record = buildWasteRecord({
         updatedBy: user,
@@ -58,14 +38,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { user, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeDefined()
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)
@@ -74,51 +54,32 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     })
 
     it('Should do nothing if wasteRecords is empty', async ({
-      wasteBalancesRepository,
-      organisationsRepository
+      wasteBalancesRepository
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
 
-      organisationsRepository.findAccreditationById.mockResolvedValue({
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-        ]
-      })
-
       // Act
-      await repository.updateWasteBalanceTransactions([], accreditationId, {
+      await repository.updateWasteBalanceTransactions([], {
+        accreditation,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeNull()
     })
 
     it('Should update existing balance', async ({
       wasteBalancesRepository,
-      organisationsRepository,
       insertWasteBalance
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
-      organisationsRepository.findAccreditationById.mockResolvedValue({
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-        ]
-      })
-
       const existingBalance = {
-        accreditationId,
+        accreditationId: accreditation.id,
         organisationId: 'org-1',
         amount: 5,
         availableAmount: 5,
@@ -140,33 +101,23 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { user, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(2)
       expect(balance.amount).toBe(15.5)
     })
 
     it('Should not update if no transactions generated', async ({
-      wasteBalancesRepository,
-      organisationsRepository
+      wasteBalancesRepository
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
-
-      organisationsRepository.findAccreditationById.mockResolvedValue({
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-        ]
-      })
 
       // Record outside validity period
       const record = buildWasteRecord({
@@ -180,37 +131,26 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeNull()
     })
 
     it('Should handle missing transactions array in existing balance', async ({
       wasteBalancesRepository,
-      organisationsRepository,
       insertWasteBalance
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
-      organisationsRepository.findAccreditationById.mockResolvedValue({
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-        ]
-      })
-
       const existingBalance = {
-        accreditationId,
+        accreditationId: accreditation.id,
         organisationId: 'org-1',
         amount: 5,
         availableAmount: 5,
@@ -232,34 +172,24 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       // Act
-      await repository.updateWasteBalanceTransactions(
-        [record],
-        accreditationId,
-        { user, overseasSites: ORS_VALIDATION_DISABLED }
-      )
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(15.5)
     })
 
     it('Should ignore records with outcome other than INCLUDED', async ({
-      wasteBalancesRepository,
-      organisationsRepository
+      wasteBalancesRepository
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
-
-      organisationsRepository.findAccreditationById.mockResolvedValue({
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-        ]
-      })
 
       const validRecord = buildWasteRecord({
         type: WASTE_RECORD_TYPE.EXPORTED,
@@ -294,13 +224,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
 
       // Act
-      await repository.updateWasteBalanceTransactions(input, accreditationId, {
+      await repository.updateWasteBalanceTransactions(input, {
         user,
+        accreditation,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
       // Assert
-      const balance = await repository.findByAccreditationId(accreditationId)
+      const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance).toBeDefined()
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)
