@@ -950,7 +950,7 @@ describe('syncFromSummaryLog', () => {
 
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
       overseasSites: {
-        100: { overseasSiteId: 'site-aaa' }
+        '001': { overseasSiteId: 'site-aaa' }
       }
     })
 
@@ -974,7 +974,7 @@ describe('syncFromSummaryLog', () => {
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       },
-      overseasSites: { 100: { validFrom } }
+      overseasSites: { '001': { validFrom } }
     })
   })
 
@@ -1028,7 +1028,7 @@ describe('syncFromSummaryLog', () => {
 
     organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
       overseasSites: {
-        100: { overseasSiteId: 'site-aaa' }
+        '001': { overseasSiteId: 'site-aaa' }
       }
     })
 
