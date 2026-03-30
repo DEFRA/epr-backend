@@ -121,6 +121,115 @@ const defineResponseAndAccessTests = ({ getServer }) => {
     expect(body.rows[0].orsId).toBe('002')
   })
 
+  it('filters by registrationNumber before pagination is applied', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn(),
+      findAllForOverseasSitesAdminList: vi.fn().mockResolvedValue([
+        {
+          orgId: 42,
+          registrations: [
+            {
+              material: TEST_PLASTIC_CATEGORY,
+              registrationNumber: 'REG-ALPHA-123',
+              overseasSites: {
+                '001': { overseasSiteId: 'site-1' },
+                '003': { overseasSiteId: 'site-3' }
+              }
+            },
+            {
+              material: TEST_PLASTIC_CATEGORY,
+              registrationNumber: 'REG-BETA-456',
+              overseasSites: {
+                '002': { overseasSiteId: 'site-2' }
+              }
+            }
+          ],
+          accreditations: []
+        }
+      ])
+    }
+
+    const overseasSitesRepository = {
+      findAll: vi.fn().mockResolvedValue([
+        {
+          id: 'site-1',
+          country: 'France',
+          name: 'Alpha One',
+          address: {
+            line1: '1 Rue de Test',
+            townOrCity: 'Paris'
+          }
+        },
+        {
+          id: 'site-2',
+          country: 'Germany',
+          name: 'Beta One',
+          address: {
+            line1: '2 Teststrasse',
+            townOrCity: 'Berlin'
+          }
+        },
+        {
+          id: 'site-3',
+          country: 'Spain',
+          name: 'Alpha Two',
+          address: {
+            line1: '3 Calle Mayor',
+            townOrCity: 'Madrid'
+          }
+        }
+      ])
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository,
+        overseasSitesRepository: () => overseasSitesRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${adminOverseasSitesListPath}?registrationNumber=alpha&page=2&pageSize=1`,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({
+      rows: [
+        {
+          orgId: 42,
+          registrationNumber: 'REG-ALPHA-123',
+          accreditationNumber: null,
+          orsId: '003',
+          packagingWasteCategory: TEST_PLASTIC_CATEGORY,
+          destinationCountry: 'Spain',
+          overseasReprocessorName: 'Alpha Two',
+          addressLine1: '3 Calle Mayor',
+          addressLine2: null,
+          cityOrTown: 'Madrid',
+          stateProvinceOrRegion: null,
+          postcode: null,
+          coordinates: null,
+          validFrom: null
+        }
+      ],
+      pagination: {
+        page: 2,
+        pageSize: 1,
+        totalItems: 2,
+        totalPages: 2,
+        hasNextPage: false,
+        hasPreviousPage: true
+      }
+    })
+  })
+
   it('returns an empty page when the requested page is beyond totalPages', async () => {
     const response = await getServer().inject({
       method: 'GET',
@@ -487,7 +596,7 @@ const defineProjectionSelectionTest = () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: `${adminOverseasSitesListPath}?page=1&pageSize=10`,
+      url: `${adminOverseasSitesListPath}?page=1&pageSize=10&registrationNumber=REG-123`,
       ...asServiceMaintainer()
     })
 
@@ -496,7 +605,11 @@ const defineProjectionSelectionTest = () => {
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(
       organisationsRepository.findPageForOverseasSitesAdminList
-    ).toHaveBeenCalledWith({ page: 1, pageSize: 10 })
+    ).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+      registrationNumber: 'REG-123'
+    })
     expect(
       organisationsRepository.findAllForOverseasSitesAdminList
     ).not.toHaveBeenCalled()
@@ -511,6 +624,43 @@ const defineProjectionSelectionTest = () => {
         hasNextPage: false,
         hasPreviousPage: false
       }
+    })
+  })
+
+  it('treats blank registrationNumber filters as undefined', async () => {
+    const organisationsRepository = {
+      findAll: vi.fn(),
+      findAllForOverseasSitesAdminList: vi.fn(),
+      findPageForOverseasSitesAdminList: vi.fn().mockResolvedValue({
+        rows: [],
+        totalItems: 0
+      })
+    }
+
+    const server = await createTestServer({
+      repositories: {
+        organisationsRepository: () => organisationsRepository
+      },
+      featureFlags: createInMemoryFeatureFlags({
+        overseasSites: true
+      })
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${adminOverseasSitesListPath}?registrationNumber=%20%20&page=1&pageSize=10`,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(
+      organisationsRepository.findPageForOverseasSitesAdminList
+    ).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 10,
+      registrationNumber: undefined
     })
   })
 }

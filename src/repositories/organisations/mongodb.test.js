@@ -226,6 +226,15 @@ describe('MongoDB organisations repository', () => {
                 '001': { overseasSiteId: alphaSiteId.toString() },
                 999: { overseasSiteId: new ObjectId().toString() }
               }
+            }),
+            buildRegistration({
+              id: new ObjectId().toString(),
+              material: 'steel',
+              registrationNumber: 'REG-ABC',
+              wasteProcessingType: 'exporter',
+              overseasSites: {
+                '010': { overseasSiteId: alphaSiteId.toString() }
+              }
             })
           ],
           accreditations: [
@@ -242,13 +251,103 @@ describe('MongoDB organisations repository', () => {
         pageSize: 1
       })
 
-      expect(page.totalItems).toBe(2)
+      expect(page.totalItems).toBe(3)
       expect(page.rows).toStrictEqual([
         {
           orgId: expect.any(Number),
           registrationNumber: 'REG-001',
           accreditationNumber: 'ACC-001',
           orsId: '002',
+          packagingWasteCategory: 'plastic',
+          destinationCountry: 'Germany',
+          overseasReprocessorName: 'Beta Reprocessor',
+          addressLine1: '2 Teststrasse',
+          addressLine2: null,
+          cityOrTown: 'Berlin',
+          stateProvinceOrRegion: null,
+          postcode: null,
+          coordinates: null,
+          validFrom: null
+        }
+      ])
+    })
+
+    it('filters by registrationNumber before pagination is applied', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const siteCollection = mongoClient
+        .db(DATABASE_NAME)
+        .collection('overseas-sites')
+
+      const alphaSiteId = new ObjectId()
+      const betaSiteId = new ObjectId()
+
+      await siteCollection.insertMany([
+        {
+          _id: alphaSiteId,
+          name: 'Alpha Reprocessor',
+          country: 'France',
+          address: {
+            line1: '1 Rue de Test',
+            townOrCity: 'Paris'
+          },
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z')
+        },
+        {
+          _id: betaSiteId,
+          name: 'Beta Reprocessor',
+          country: 'Germany',
+          address: {
+            line1: '2 Teststrasse',
+            townOrCity: 'Berlin'
+          },
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z')
+        }
+      ])
+
+      await repository.insert(
+        buildOrganisation({
+          registrations: [
+            buildRegistration({
+              id: new ObjectId().toString(),
+              material: 'plastic',
+              registrationNumber: 'REG-FILTER-001',
+              wasteProcessingType: 'exporter',
+              overseasSites: {
+                '001': { overseasSiteId: alphaSiteId.toString() },
+                '003': { overseasSiteId: betaSiteId.toString() }
+              }
+            }),
+            buildRegistration({
+              id: new ObjectId().toString(),
+              material: 'steel',
+              registrationNumber: 'REG-OTHER-999',
+              wasteProcessingType: 'exporter',
+              overseasSites: {
+                '002': { overseasSiteId: alphaSiteId.toString() }
+              }
+            })
+          ]
+        })
+      )
+
+      const page = await repository.findPageForOverseasSitesAdminList({
+        page: 2,
+        pageSize: 1,
+        registrationNumber: 'filter'
+      })
+
+      expect(page.totalItems).toBe(2)
+      expect(page.rows).toStrictEqual([
+        {
+          orgId: expect.any(Number),
+          registrationNumber: 'REG-FILTER-001',
+          accreditationNumber: null,
+          orsId: '003',
           packagingWasteCategory: 'plastic',
           destinationCountry: 'Germany',
           overseasReprocessorName: 'Beta Reprocessor',
