@@ -147,24 +147,39 @@ describe('field-schemas', () => {
   })
 
   describe('createThreeDigitIdSchema', () => {
-    it('accepts 1 (minimum)', () => {
+    it('zero-pads numeric 1 to "001"', () => {
       const schema = createThreeDigitIdSchema()
-      expect(schema.validate(1).error).toBeUndefined()
+      const { error, value } = schema.validate(1)
+      expect(error).toBeUndefined()
+      expect(value).toBe('001')
     })
 
-    it('accepts 999', () => {
+    it('keeps 999 as "999"', () => {
       const schema = createThreeDigitIdSchema()
-      expect(schema.validate(999).error).toBeUndefined()
+      const { error, value } = schema.validate(999)
+      expect(error).toBeUndefined()
+      expect(value).toBe('999')
     })
 
-    it('accepts 500', () => {
+    it('zero-pads numeric 99 to "099"', () => {
       const schema = createThreeDigitIdSchema()
-      expect(schema.validate(500).error).toBeUndefined()
+      const { error, value } = schema.validate(99)
+      expect(error).toBeUndefined()
+      expect(value).toBe('099')
     })
 
-    it('accepts 99', () => {
+    it('preserves string "099" as "099"', () => {
       const schema = createThreeDigitIdSchema()
-      expect(schema.validate(99).error).toBeUndefined()
+      const { error, value } = schema.validate('099')
+      expect(error).toBeUndefined()
+      expect(value).toBe('099')
+    })
+
+    it('zero-pads string "5" to "005"', () => {
+      const schema = createThreeDigitIdSchema()
+      const { error, value } = schema.validate('5')
+      expect(error).toBeUndefined()
+      expect(value).toBe('005')
     })
 
     it('rejects 0 (too low)', () => {
@@ -197,6 +212,15 @@ describe('field-schemas', () => {
     it('rejects non-integer', () => {
       const schema = createThreeDigitIdSchema()
       const { error } = schema.validate(100.5)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe(
+        'must be a number between 1 and 999'
+      )
+    })
+
+    it('rejects non-numeric string', () => {
+      const schema = createThreeDigitIdSchema()
+      const { error } = schema.validate('ABC')
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe(
         'must be a number between 1 and 999'

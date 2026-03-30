@@ -5,7 +5,7 @@ import Boom from '@hapi/boom'
 
 /**
  * Resolves overseas sites for an exporter registration into a lookup map
- * keyed by the 3-digit OSR ID (as a number).
+ * keyed by the 3-digit zero-padded OSR ID string (e.g. "099").
  *
  * Used during waste balance classification to check ORS approval status (VAL014).
  *
@@ -13,7 +13,7 @@ import Boom from '@hapi/boom'
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Promise<Record<number, { validFrom: Date | null }>>}
+ * @returns {Promise<Record<string, { validFrom: Date | null }>>}
  */
 export const resolveOverseasSites = async (
   organisationsRepository,
@@ -42,11 +42,11 @@ export const resolveOverseasSites = async (
   const sites = await overseasSitesRepository.findByIds(siteIds)
   const sitesById = new Map(sites.map((site) => [site.id, site]))
 
-  /** @type {Record<number, { validFrom: Date | null }>} */
+  /** @type {Record<string, { validFrom: Date | null }>} */
   const resolved = {}
   for (const [osrKey, { overseasSiteId }] of entries) {
     const site = sitesById.get(overseasSiteId)
-    resolved[Number(osrKey)] = { validFrom: site?.validFrom ?? null }
+    resolved[osrKey] = { validFrom: site?.validFrom ?? null }
   }
 
   return resolved

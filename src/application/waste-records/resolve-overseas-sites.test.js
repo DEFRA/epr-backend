@@ -2,13 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { resolveOverseasSites } from './resolve-overseas-sites.js'
 
 describe('resolveOverseasSites', () => {
-  it('returns resolved map keyed by numeric OSR ID', async () => {
+  it('returns resolved map keyed by zero-padded string OSR ID', async () => {
     const validFrom = new Date('2024-01-01')
     const organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         overseasSites: {
           100: { overseasSiteId: 'site-aaa' },
-          200: { overseasSiteId: 'site-bbb' }
+          '099': { overseasSiteId: 'site-bbb' }
         }
       })
     }
@@ -28,7 +28,7 @@ describe('resolveOverseasSites', () => {
 
     expect(result).toEqual({
       100: { validFrom },
-      200: { validFrom: new Date('2024-06-01') }
+      '099': { validFrom: new Date('2024-06-01') }
     })
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
       'org-1',

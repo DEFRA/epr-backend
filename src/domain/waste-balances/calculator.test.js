@@ -811,7 +811,7 @@ describe('Waste Balance Calculator', () => {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
           [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
           [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
-          [FIELDS.OSR_ID]: 100
+          [FIELDS.OSR_ID]: '100'
         }
       })
 
@@ -832,7 +832,7 @@ describe('Waste Balance Calculator', () => {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
           [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
           [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
-          [FIELDS.OSR_ID]: 100
+          [FIELDS.OSR_ID]: '100'
         }
       })
 
@@ -853,7 +853,7 @@ describe('Waste Balance Calculator', () => {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
           [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
           [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
-          [FIELDS.OSR_ID]: 100
+          [FIELDS.OSR_ID]: '100'
         }
       })
 
