@@ -39,7 +39,17 @@ export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
   const denominator = issued - free
   const averagePricePerTonne = denominator > 0 ? revenue / denominator : 0
 
-  return { ...base, totalRevenue, freeTonnage, averagePricePerTonne }
+  const updated = { ...base, averagePricePerTonne }
+
+  if (totalRevenue !== undefined) {
+    updated.totalRevenue = totalRevenue
+  }
+
+  if (freeTonnage !== undefined) {
+    updated.freeTonnage = freeTonnage
+  }
+
+  return updated
 }
 
 export const reportsPatch = {
