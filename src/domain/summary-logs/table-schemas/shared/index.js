@@ -25,6 +25,7 @@ export {
   createFirstOfMonthFieldSchema,
   createDateFieldSchema,
   createThreeDigitIdSchema,
+  toThreeDigitId,
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
   createEnumFieldSchema

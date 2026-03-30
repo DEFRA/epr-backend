@@ -32,6 +32,17 @@ const THREE_DIGIT_ID_MAX = 999
 const THREE_DIGIT_PAD = 3
 
 /**
+ * Zero-pads a numeric or string value to a 3-digit string.
+ * Used both by the Joi schema and by lookup code that receives
+ * raw Excel values (numbers) that need to match registration keys.
+ *
+ * @param {number | string} value
+ * @returns {string} Zero-padded 3-digit string (e.g. 99 → "099")
+ */
+export const toThreeDigitId = (value) =>
+  String(Number(value)).padStart(THREE_DIGIT_PAD, '0')
+
+/**
  * Default maximum length for free text string fields
  */
 const DEFAULT_MAX_STRING_LENGTH = 100
@@ -125,7 +136,7 @@ export const createThreeDigitIdSchema = () =>
       ) {
         return helpers.error('string.threeDigitId')
       }
-      return String(num).padStart(THREE_DIGIT_PAD, '0')
+      return toThreeDigitId(num)
     })
     .optional()
     .messages({
