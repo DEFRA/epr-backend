@@ -24,7 +24,7 @@ import { processImportFile } from './process-import-file.js'
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
  * @param {object} deps.logger
  * @param {import('#overseas-sites/metrics/ors-imports.js').OrsImportMetrics} deps.orsImportMetrics
- * @param {{ id: string, email: string, scope: string[] }} [deps.user]
+ * @param {{ id: string, email: string, scope: string[] }} deps.user
  */
 export const processOrsImport = async (importId, deps) => {
   const {

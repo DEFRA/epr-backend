@@ -3,7 +3,6 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { auditOverseasSiteImport } from '../auditing.js'
-import { extractUserDetails } from '#root/auditing/helpers.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -52,7 +51,11 @@ export const orsImportCreate = {
         _id: importId,
         status: ORS_IMPORT_STATUS.PREPROCESSING,
         files: [],
-        createdBy: extractUserDetails(request)
+        createdBy: {
+          id: /** @type {string} */ (request.auth.credentials.id),
+          email: /** @type {string} */ (request.auth.credentials.email),
+          scope: /** @type {string[]} */ (request.auth.credentials.scope)
+        }
       })
 
       const cdpResponse = await uploadsRepository.initiateOrsImport({
