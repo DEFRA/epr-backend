@@ -30,7 +30,12 @@ describe('syncFromSummaryLog', () => {
       updateWasteBalanceTransactions: vi.fn()
     }
     organisationsRepository = {
-      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} })
+      findRegistrationById: vi.fn().mockResolvedValue({ overseasSites: {} }),
+      findAccreditationById: vi.fn().mockResolvedValue({
+        id: 'acc-default',
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
     }
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
@@ -83,6 +88,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -142,11 +148,18 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
+    const accreditation = {
+      id: 'accred-123',
+      validFrom: '2023-01-01',
+      validTo: '2023-12-31'
+    }
+
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-1',
         accreditationId: 'accred-123'
-      })
+      }),
+      findAccreditationById: vi.fn().mockResolvedValue(accreditation)
     }
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
@@ -166,8 +179,9 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', {
+    ).toHaveBeenCalledWith(expect.any(Array), {
       user: undefined,
+      accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
   })
@@ -242,6 +256,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -330,6 +345,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -416,6 +432,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -512,6 +529,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -598,6 +616,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -663,6 +682,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -723,6 +743,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -787,6 +808,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -869,8 +891,15 @@ describe('syncFromSummaryLog', () => {
           type: WASTE_RECORD_TYPE.EXPORTED
         })
       ]),
-      'acc-1',
-      { user: undefined, overseasSites: {} }
+      {
+        user: undefined,
+        accreditation: {
+          id: 'acc-default',
+          validFrom: '2023-01-01',
+          validTo: '2023-12-31'
+        },
+        overseasSites: {}
+      }
     )
   })
 
@@ -938,8 +967,13 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+    ).toHaveBeenCalledWith(expect.any(Array), {
       user: undefined,
+      accreditation: {
+        id: 'acc-default',
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      },
       overseasSites: { 100: { validFrom } }
     })
   })
@@ -1014,39 +1048,110 @@ describe('syncFromSummaryLog', () => {
     expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'acc-1', {
+    ).toHaveBeenCalledWith(expect.any(Array), {
       user: undefined,
+      accreditation: {
+        id: 'acc-default',
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      },
       overseasSites: ORS_VALIDATION_DISABLED
     })
   })
 
-  it('does not attempt to fetch accreditationId if organisationsRepository is not provided', async () => {
+  it('skips waste balance update for registered-only processing types', async () => {
+    const fileId = 'test-file-no-wb'
     const summaryLog = {
-      file: { id: 'file-1', uri: 's3://bucket/key' },
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
       organisationId: 'org-1',
-      registrationId: 'reg-1'
-      // accreditationId is missing
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
     }
 
-    const extractor = {
-      extract: vi.fn().mockResolvedValue({
-        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
-        data: {}
-      })
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_REGISTERED_ONLY'
+        }
+      },
+      data: {}
     }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository: undefined,
+      organisationsRepository,
       overseasSitesRepository
     })
 
     await sync(summaryLog)
 
-    // If it didn't crash, it passed the check
-    expect(true).toBe(true)
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).not.toHaveBeenCalled()
+  })
+
+  it('throws when accreditationId exists but accreditation is not found', async () => {
+    const fileId = 'test-file-no-accred'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-missing'
+    }
+
+    /** @type {any} */ const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    organisationsRepository.findAccreditationById.mockResolvedValue(null)
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      overseasSitesRepository
+    })
+
+    await expect(sync(summaryLog)).rejects.toThrow(
+      'Accreditation not found: acc-missing'
+    )
   })
 
   it('does not update accreditationId if registration is not found', async () => {
@@ -1065,7 +1170,8 @@ describe('syncFromSummaryLog', () => {
     }
 
     const organisationsRepository = {
-      findRegistrationById: vi.fn().mockResolvedValue(null)
+      findRegistrationById: vi.fn().mockResolvedValue(null),
+      findAccreditationById: vi.fn()
     }
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
@@ -1127,7 +1233,9 @@ describe('syncFromSummaryLog', () => {
 
       const sync = /** @type {any} */ (syncFromSummaryLog)({
         extractor,
-        wasteRecordRepository
+        wasteRecordRepository,
+        organisationsRepository,
+        overseasSitesRepository
       })
 
       const result = await sync(summaryLog)
@@ -1214,7 +1322,9 @@ describe('syncFromSummaryLog', () => {
 
       const sync = /** @type {any} */ (syncFromSummaryLog)({
         extractor,
-        wasteRecordRepository
+        wasteRecordRepository,
+        organisationsRepository,
+        overseasSitesRepository
       })
 
       const result = await sync(summaryLog)
@@ -1296,7 +1406,9 @@ describe('syncFromSummaryLog', () => {
 
       const sync = /** @type {any} */ (syncFromSummaryLog)({
         extractor,
-        wasteRecordRepository
+        wasteRecordRepository,
+        organisationsRepository,
+        overseasSitesRepository
       })
 
       const result = await sync(summaryLog)
@@ -1348,6 +1460,7 @@ describe('syncFromSummaryLog', () => {
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
+      organisationsRepository,
       overseasSitesRepository
     })
 
@@ -1445,7 +1558,9 @@ describe('syncFromSummaryLog', () => {
 
     const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
-      wasteRecordRepository
+      wasteRecordRepository,
+      organisationsRepository,
+      overseasSitesRepository
     })
 
     const result = await sync(summaryLog)

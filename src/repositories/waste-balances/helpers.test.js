@@ -335,10 +335,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
     it('should return early if wasteRecords is empty', async () => {
       const result = await performUpdateWasteBalanceTransactions({
         wasteRecords: [],
-        accreditationId: 'acc-1',
-        dependencies: {
-          organisationsRepository: {}
-        },
+        accreditation: { id: 'acc-1' },
+        dependencies: {},
         findBalance: vi.fn(),
         saveBalance: vi.fn(),
         overseasSites: ORS_VALIDATION_DISABLED
@@ -373,9 +371,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const saveBalance = vi.fn().mockResolvedValue()
 
       const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-        },
         systemLogsRepository: {
           insert: vi.fn().mockResolvedValue()
         }
@@ -389,7 +384,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
+        accreditation,
         dependencies,
         findBalance,
         saveBalance,
@@ -438,11 +433,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
       const saveBalance = vi.fn().mockResolvedValue()
 
-      const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-        }
-      }
+      const dependencies = {}
 
       vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
         newTransactions,
@@ -452,7 +443,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
+        accreditation,
         dependencies,
         findBalance,
         saveBalance,
@@ -490,11 +481,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const saveBalance = vi.fn().mockResolvedValue()
 
       // Dependencies without systemLogsRepository
-      const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-        }
-      }
+      const dependencies = {}
 
       vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
         newTransactions,
@@ -504,7 +491,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
+        accreditation,
         dependencies,
         findBalance,
         saveBalance,
@@ -553,9 +540,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const saveBalance = vi.fn().mockResolvedValue()
 
       const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-        },
         systemLogsRepository: {
           insert: vi.fn().mockResolvedValue()
         }
@@ -569,7 +553,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
+        accreditation,
         dependencies,
         findBalance,
         saveBalance,
@@ -606,42 +590,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       )
     })
 
-    it('should throw error when organisationsRepository dependency is missing', async () => {
-      const wasteRecords = [{ id: 'rec-1', data: {} }]
-
-      await expect(
-        performUpdateWasteBalanceTransactions({
-          wasteRecords,
-          accreditationId: 'acc-1',
-          dependencies: {}, // missing organisationsRepository
-          findBalance: vi.fn(),
-          saveBalance: vi.fn(),
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-      ).rejects.toThrow('organisationsRepository dependency is required')
-    })
-
-    it('should throw error when accreditation is not found', async () => {
-      const wasteRecords = [{ id: 'rec-1', organisationId: 'org-1', data: {} }]
-
-      const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue(null) // Not found
-        }
-      }
-
-      await expect(
-        performUpdateWasteBalanceTransactions({
-          wasteRecords,
-          accreditationId: 'acc-1',
-          dependencies,
-          findBalance: vi.fn(),
-          saveBalance: vi.fn(),
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-      ).rejects.toThrow('Accreditation not found: acc-1')
-    })
-
     it('should return early if waste balance cannot be found or created', async () => {
       const wasteRecords = [
         {
@@ -654,16 +602,10 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const findBalance = vi.fn().mockResolvedValue(null)
       const saveBalance = vi.fn()
 
-      const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue({ id: 'acc-1' })
-        }
-      }
-
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
-        dependencies,
+        accreditation: { id: 'acc-1' },
+        dependencies: {},
         findBalance,
         saveBalance,
         overseasSites: ORS_VALIDATION_DISABLED
@@ -677,12 +619,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const accreditation = { id: 'acc-1' }
       const wasteBalance = { id: 'bal-1' }
 
-      const dependencies = {
-        organisationsRepository: {
-          findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-        }
-      }
-
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
       const saveBalance = vi.fn()
 
@@ -695,8 +631,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId: 'acc-1',
-        dependencies,
+        accreditation,
+        dependencies: {},
         findBalance,
         saveBalance,
         overseasSites: ORS_VALIDATION_DISABLED
@@ -728,12 +664,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           version: 1
         }
 
-        const dependencies = {
-          organisationsRepository: {
-            findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-          }
-        }
-
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 'trans-1' }],
           newAmount: 10,
@@ -745,8 +675,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
         await performUpdateWasteBalanceTransactions({
           wasteRecords,
-          accreditationId: 'acc-1',
-          dependencies,
+          accreditation,
+          dependencies: {},
           findBalance,
           saveBalance,
           overseasSites
@@ -777,12 +707,6 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           version: 1
         }
 
-        const dependencies = {
-          organisationsRepository: {
-            findAccreditationById: vi.fn().mockResolvedValue(accreditation)
-          }
-        }
-
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 'trans-1' }],
           newAmount: 10,
@@ -794,8 +718,8 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
         await performUpdateWasteBalanceTransactions({
           wasteRecords,
-          accreditationId: 'acc-1',
-          dependencies,
+          accreditation,
+          dependencies: {},
           findBalance,
           saveBalance,
           overseasSites: ORS_VALIDATION_DISABLED

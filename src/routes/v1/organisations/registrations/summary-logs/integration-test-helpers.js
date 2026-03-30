@@ -486,7 +486,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   reprocessingType = 'input',
   material = 'paper',
   organisationId = new ObjectId().toString(),
-  registrationId = new ObjectId().toString()
+  registrationId = new ObjectId().toString(),
+  featureFlagOverrides = {}
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -519,8 +520,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
   const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    [],
-    { organisationsRepository }
+    []
   )
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
@@ -545,7 +545,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   })
 
   const featureFlags = createInMemoryFeatureFlags({
-    summaryLogs: true
+    summaryLogs: true,
+    ...featureFlagOverrides
   })
 
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([
@@ -568,7 +569,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteRecordRepository: wasteRecordsRepository,
     wasteBalancesRepository,
     organisationsRepository,
-    overseasSitesRepository
+    overseasSitesRepository,
+    featureFlags
   })
 
   const packagingRecyclingNotesRepositoryFactory =

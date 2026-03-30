@@ -358,7 +358,9 @@ describe('Submission and placeholder tests', () => {
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
-        wasteRecordRepository: wasteRecordsRepository
+        wasteRecordRepository: wasteRecordsRepository,
+        organisationsRepository,
+        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
       })
 
       const submitterWorker = {

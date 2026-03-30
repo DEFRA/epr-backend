@@ -106,7 +106,6 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  * Creates a MongoDB-backed waste balances repository
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} [dependencies] - Optional dependencies
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [dependencies.organisationsRepository]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
@@ -118,12 +117,11 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     findByAccreditationIds: performFindByAccreditationIds(db),
     updateWasteBalanceTransactions: async (
       wasteRecords,
-      accreditationId,
-      { user, overseasSites }
+      { user, accreditation, overseasSites }
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
-        accreditationId,
+        accreditation,
         dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db),

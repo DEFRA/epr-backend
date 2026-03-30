@@ -1,7 +1,6 @@
-import { describe, it as base, expect, it, vi } from 'vitest'
+import { describe, it as base, expect, it } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -9,20 +8,8 @@ const extendedIt = base.extend({
     const storage = []
     await use(storage)
   },
-  // eslint-disable-next-line no-empty-pattern
-  organisationsRepository: async ({}, use) => {
-    const mock = {
-      findAccreditationById: vi.fn()
-    }
-    await use(mock)
-  },
-  wasteBalancesRepository: async (
-    { wasteBalanceStorage, organisationsRepository },
-    use
-  ) => {
-    const factory = createInMemoryWasteBalancesRepository(wasteBalanceStorage, {
-      organisationsRepository
-    })
+  wasteBalancesRepository: async ({ wasteBalanceStorage }, use) => {
+    const factory = createInMemoryWasteBalancesRepository(wasteBalanceStorage)
     await use(factory)
   },
   insertWasteBalance: async ({ wasteBalanceStorage }, use) => {
@@ -43,16 +30,6 @@ describe('waste-balances repository - in-memory implementation', () => {
     const instance = repository()
     expect(instance).toBeDefined()
     expect(instance.findByAccreditationId).toBeTypeOf('function')
-  })
-
-  it('should throw error when organisationsRepository dependency is missing', async () => {
-    const repository = createInMemoryWasteBalancesRepository([], {})()
-    const record = { organisationId: 'org-1' }
-    await expect(
-      repository.updateWasteBalanceTransactions([record], 'acc-1', {
-        overseasSites: ORS_VALIDATION_DISABLED
-      })
-    ).rejects.toThrow('organisationsRepository dependency is required')
   })
 
   it('should expose internal storage for testing', () => {

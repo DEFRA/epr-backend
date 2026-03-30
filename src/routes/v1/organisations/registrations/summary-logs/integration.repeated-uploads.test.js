@@ -247,7 +247,9 @@ describe('Repeated uploads of identical data', () => {
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: summaryLogExtractor,
-        wasteRecordRepository: wasteRecordsRepository
+        wasteRecordRepository: wasteRecordsRepository,
+        organisationsRepository,
+        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
       })
 
       const summaryLogsWorker = {
