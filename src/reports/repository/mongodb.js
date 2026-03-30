@@ -1,6 +1,4 @@
-import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   validateCreateReport,
   validateDeleteReportParams,
@@ -9,17 +7,14 @@ import {
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
-import { groupAsPeriodicReports } from './group-periodic-reports.js'
+import {
+  groupAsPeriodicReports,
+  prepareCreateReportParams,
+  STATUS_TO_SLOT
+} from '#root/reports/repository/helpers.js'
 
 const REPORTS_COLLECTION = 'reports'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-
-/** @type {Record<string, string>} */
-const STATUS_TO_SLOT = {
-  [REPORT_STATUS.IN_PROGRESS]: 'created',
-  [REPORT_STATUS.READY_TO_SUBMIT]: 'ready',
-  [REPORT_STATUS.SUBMITTED]: 'submitted'
-}
 
 /**
  * Ensures the reports collection exists with required indexes.
@@ -53,60 +48,8 @@ async function ensureCollections(db) {
  * */
 const performCreateReport = async (db, params) => {
   const validated = validateCreateReport(params)
-  const {
-    organisationId,
-    registrationId,
-    year,
-    cadence,
-    period,
-    submissionNumber,
-    startDate,
-    endDate,
-    dueDate,
-    changedBy,
-    material,
-    wasteProcessingType,
-    siteAddress,
-    recyclingActivity,
-    exportActivity,
-    wasteSent,
-    prn,
-    supportingInformation
-  } = validated
-
-  const now = new Date().toISOString()
-  const reportId = randomUUID()
-
-  const reportDoc = Object.fromEntries(
-    Object.entries({
-      id: reportId,
-      version: 1,
-      schemaVersion: 1,
-      submissionNumber,
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period,
-      startDate,
-      endDate,
-      dueDate,
-      material,
-      wasteProcessingType,
-      siteAddress,
-      recyclingActivity,
-      exportActivity,
-      wasteSent,
-      prn,
-      supportingInformation,
-      status: {
-        currentStatus: REPORT_STATUS.IN_PROGRESS,
-        currentStatusAt: now,
-        [STATUS_TO_SLOT[REPORT_STATUS.IN_PROGRESS]]: { at: now, by: changedBy },
-        history: [{ status: REPORT_STATUS.IN_PROGRESS, at: now, by: changedBy }]
-      }
-    }).filter(([, v]) => v !== undefined)
-  )
+  const { cadence, period, submissionNumber } = validated
+  const reportDoc = prepareCreateReportParams(validated)
 
   try {
     await db.collection(REPORTS_COLLECTION).insertOne(reportDoc)
@@ -119,10 +62,10 @@ const performCreateReport = async (db, params) => {
     throw error
   }
 
-  const { _id, ...report } = reportDoc
-  return /** @type {import('./port.js').Report} */ (
-    /** @type {unknown} */ (report)
-  )
+  const { _id, ...report } =
+    /** @type {import('./port.js').Report & { _id?: unknown }} */ (reportDoc)
+
+  return report
 }
 
 /**

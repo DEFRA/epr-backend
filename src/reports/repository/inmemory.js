@@ -1,44 +1,40 @@
-import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   validateCreateReport,
-  validateUpdateReport,
-  validateUpdateReportStatus,
   validateDeleteReportParams,
   validateFindPeriodicReports,
-  validateFindReportById
+  validateFindReportById,
+  validateUpdateReport,
+  validateUpdateReportStatus
 } from './validation.js'
-import { groupAsPeriodicReports } from './group-periodic-reports.js'
-
-/** @type {Record<string, string>} */
-const STATUS_TO_SLOT = {
-  [REPORT_STATUS.IN_PROGRESS]: 'created',
-  [REPORT_STATUS.READY_TO_SUBMIT]: 'ready',
-  [REPORT_STATUS.SUBMITTED]: 'submitted'
-}
+import {
+  prepareCreateReportParams,
+  STATUS_TO_SLOT,
+  groupAsPeriodicReports
+} from '#root/reports/repository/helpers.js'
 
 /**
- * Finds the non-submitted report for a given period slot.
- *
- * @param {Map<string, Object>} reports
- * @param {{ organisationId: string, registrationId: string, year: number, cadence: string, period: number, submissionNumber: number }} slot
- * @returns {Object|undefined}
+ * Finds the active (non-submitted) report matching a specific period criteria.
+ * @param {Map<string, object>} reports - A Map where values are report objects.
+ * @param {object} criteria - The unique identifiers for the report criteria.
+ * @param {string} criteria.organisationId - The ID of the organization.
+ * @param {string} criteria.registrationId - The ID of the registration.
+ * @param {number} criteria.year - The reporting year.
+ * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
+ * @param {number} criteria.period - The specific period index.
+ * @param {number} criteria.submissionNumber - The version/submission attempt number.
+ * @returns {object|undefined} The matching report object, or undefined if none found.
  */
-const findActiveBySlot = (
-  reports,
-  { organisationId, registrationId, year, cadence, period, submissionNumber }
-) =>
-  [...reports.values()].find(
+const findActiveBySlot = (reports, criteria) => {
+  const slotKeys = Object.keys(criteria)
+
+  return [...reports.values()].find(
     (r) =>
-      r.organisationId === organisationId &&
-      r.registrationId === registrationId &&
-      r.year === year &&
-      r.cadence === cadence &&
-      r.period === period &&
-      r.submissionNumber === submissionNumber &&
+      slotKeys.every((key) => r[key] === criteria[key]) &&
       r.status.currentStatus !== REPORT_STATUS.SUBMITTED
   )
+}
 
 /**
  * @param {Map<string, Object>} reports
@@ -47,79 +43,25 @@ const findActiveBySlot = (
  */
 const createReport = async (reports, params) => {
   const validated = validateCreateReport(params)
-  const {
-    organisationId,
-    registrationId,
-    year,
-    cadence,
-    period,
-    submissionNumber,
-    startDate,
-    endDate,
-    dueDate,
-    changedBy,
-    material,
-    wasteProcessingType,
-    siteAddress,
-    recyclingActivity,
-    exportActivity,
-    wasteSent,
-    prn,
-    supportingInformation
-  } = validated
 
-  const existing = findActiveBySlot(reports, {
-    organisationId,
-    registrationId,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  })
-  if (existing) {
-    throw Boom.conflict(
-      `An active report already exists for cadence ${cadence} and period ${period}`
-    )
+  const criteria = {
+    organisationId: validated.organisationId,
+    registrationId: validated.registrationId,
+    year: validated.year,
+    cadence: validated.cadence,
+    period: validated.period,
+    submissionNumber: validated.submissionNumber
   }
 
-  const now = new Date().toISOString()
-  const reportId = randomUUID()
-
-  const report = Object.fromEntries(
-    Object.entries({
-      id: reportId,
-      version: 1,
-      schemaVersion: 1,
-      submissionNumber,
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period,
-      startDate,
-      endDate,
-      dueDate,
-      material,
-      wasteProcessingType,
-      siteAddress,
-      recyclingActivity,
-      exportActivity,
-      wasteSent,
-      prn,
-      supportingInformation,
-      status: {
-        currentStatus: REPORT_STATUS.IN_PROGRESS,
-        currentStatusAt: now,
-        [STATUS_TO_SLOT[REPORT_STATUS.IN_PROGRESS]]: { at: now, by: changedBy },
-        history: [{ status: REPORT_STATUS.IN_PROGRESS, at: now, by: changedBy }]
-      }
-    }).filter(([, v]) => v !== undefined)
-  )
-
-  reports.set(reportId, report)
-  return structuredClone(
-    /** @type {import('./port.js').Report} */ (/** @type {unknown} */ (report))
-  )
+  const existing = findActiveBySlot(reports, criteria)
+  if (existing) {
+    throw Boom.conflict(
+      `An active report already exists for cadence ${validated.cadence} and period ${validated.period}`
+    )
+  }
+  const report = prepareCreateReportParams(validated)
+  reports.set(report.id, report)
+  return structuredClone(report)
 }
 
 /**
