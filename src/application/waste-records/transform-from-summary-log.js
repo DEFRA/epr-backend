@@ -72,9 +72,15 @@ const updateExistingRecord = (
   { timestamp, summaryLog }
 ) => {
   const delta = Object.fromEntries(
-    Object.entries(data).filter(
-      ([key, value]) => key !== 'ROW_ID' && existingRecord.data[key] !== value
-    )
+    Object.entries(data).filter(([key, value]) => {
+      if (key === 'ROW_ID') return false
+      const existing = existingRecord.data[key]
+      if (existing === value) return false
+      if (existing instanceof Date || value instanceof Date) {
+        return new Date(existing).getTime() !== new Date(value).getTime()
+      }
+      return true
+    })
   )
 
   if (Object.keys(delta).length === 0) {

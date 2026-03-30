@@ -36,14 +36,18 @@ const isTemplateRow = (rowIdValue) => {
 }
 
 /**
- * Prepares rows for transformation by building data objects
+ * Prepares rows for transformation by building data objects.
+ *
+ * Applies Joi schema coercion so stored data has canonical types
+ * (e.g. OSR_ID number 99 → zero-padded string "099").
  *
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
  * @param {string} rowIdField - The header name used to identify the row ID
+ * @param {import('joi').ObjectSchema} validationSchema - Joi schema for coercion
  * @returns {TransformableRow[]} Array of rows with data objects built
  */
-const prepareRows = (headers, rows, rowIdField) => {
+const prepareRows = (headers, rows, rowIdField, validationSchema) => {
   // Build header to index map, excluding EPR markers and nulls
   const headerToIndexMap = new Map()
   for (const [index, header] of headers.entries()) {
@@ -66,7 +70,8 @@ const prepareRows = (headers, rows, rowIdField) => {
       data[headerName] = values[colIndex]
     }
 
-    return [{ data }]
+    const { value } = validationSchema.validate(data)
+    return [{ data: { ...data, ...value } }]
   })
 }
 
@@ -97,7 +102,8 @@ const prepareRowsForTransformation = (parsedData) => {
       rows: prepareRows(
         tableData.headers,
         tableData.rows,
-        tableSchema.rowIdField
+        tableSchema.rowIdField,
+        tableSchema.validationSchema
       )
     }
   }

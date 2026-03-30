@@ -7,7 +7,7 @@ import {
 
 /**
  * Resolved overseas sites lookup, or sentinel when ORS validation is disabled.
- * @typedef {Record<number, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
+ * @typedef {Record<string, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
  */
 
 /**
@@ -182,7 +182,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance | null} tableSchema.classifyForWasteBalance - Waste balance classifier
- * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
+ * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], coercedData: Record<string, any> }}
  */
 export const classifyRow = (row, tableSchema) => {
   const { unfilledValues, validationSchema } = tableSchema
@@ -191,10 +191,16 @@ export const classifyRow = (row, tableSchema) => {
   const filledFields = filterToFilled(row, unfilledValues)
 
   // Step 2: VAL010 - Validate filled fields
-  const { error } = validationSchema.validate(filledFields)
+  // Capture the coerced value so downstream code gets canonical types
+  // (e.g. OSR_ID 99 → "099" after zero-padding)
+  const { error, value: coercedFields } =
+    validationSchema.validate(filledFields)
+  const coercedData = { ...row, ...coercedFields }
+
   if (error) {
     return {
       outcome: ROW_OUTCOME.REJECTED,
+      coercedData,
       issues: error.details.map((detail) => ({
         code: 'VALIDATION_ERROR',
         // For field-level validators, path[0] contains the field name
@@ -213,6 +219,7 @@ export const classifyRow = (row, tableSchema) => {
   if (!tableSchema.classifyForWasteBalance) {
     return {
       outcome: ROW_OUTCOME.EXCLUDED,
+      coercedData,
       issues: []
     }
   }
@@ -222,9 +229,9 @@ export const classifyRow = (row, tableSchema) => {
   // doesn't have that context — isAccreditedAtDates treats
   // null accreditation as "within range", so subsequent checks are skipped.
   // ORS validation is disabled because the pipeline doesn't have ORS data.
-  const wasteBalanceResult = tableSchema.classifyForWasteBalance(row, {
+  const wasteBalanceResult = tableSchema.classifyForWasteBalance(coercedData, {
     accreditation: null,
     overseasSites: ORS_VALIDATION_DISABLED
   })
-  return mapWasteBalanceResult(wasteBalanceResult)
+  return { ...mapWasteBalanceResult(wasteBalanceResult), coercedData }
 }
