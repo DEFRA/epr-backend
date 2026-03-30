@@ -42,27 +42,11 @@ export const processImportFile = async (
     return failureResult(metadata.registrationNumber, errors)
   }
 
-  const org = await organisationsRepository.findByOrgId(metadata.orgId)
-  if (!org) {
-    return failureResult(metadata.registrationNumber, [
-      {
-        field: 'orgId',
-        message: `Organisation with orgId ${metadata.orgId} not found`
-      }
-    ])
+  const resolved = await resolveRegistration(organisationsRepository, metadata)
+  if (resolved.error) {
+    return failureResult(metadata.registrationNumber, [resolved.error])
   }
-
-  const registration = org.registrations.find(
-    (r) => r.registrationNumber === metadata.registrationNumber
-  )
-  if (!registration) {
-    return failureResult(metadata.registrationNumber, [
-      {
-        field: 'registrationNumber',
-        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.orgId}`
-      }
-    ])
-  }
+  const { org, registration } = resolved
 
   const { overseasSitesMap, sitesCreated } = await findOrCreateOverseasSites(
     sites,
@@ -140,6 +124,32 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
   }
 
   return { overseasSitesMap, sitesCreated }
+}
+
+const resolveRegistration = async (organisationsRepository, metadata) => {
+  const org = await organisationsRepository.findByOrgId(metadata.orgId)
+  if (!org) {
+    return {
+      error: {
+        field: 'orgId',
+        message: `Organisation with orgId ${metadata.orgId} not found`
+      }
+    }
+  }
+
+  const registration = org.registrations.find(
+    (r) => r.registrationNumber === metadata.registrationNumber
+  )
+  if (!registration) {
+    return {
+      error: {
+        field: 'registrationNumber',
+        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.orgId}`
+      }
+    }
+  }
+
+  return { org, registration }
 }
 
 const recordImportSystemLog = async (
