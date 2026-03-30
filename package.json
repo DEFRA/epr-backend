@@ -98,7 +98,8 @@
     "undici": "7.24.0"
   },
   "overrides": {
-    "fast-xml-parser": "^5.5.7"
+    "fast-xml-parser": "^5.5.7",
+    "glob": "11.1.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.18",
