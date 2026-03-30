@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import {
   periodParamsSchema,
@@ -15,11 +16,10 @@ export const reportsPatchPath =
 const MAX_SUPPORTING_INFO_LENGTH = 2000
 
 const payloadSchema = Joi.object({
-  supportingInformation: Joi.string()
-    .allow('')
-    .max(MAX_SUPPORTING_INFO_LENGTH)
-    .required()
-})
+  supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH),
+  prnRevenue: Joi.number().min(0),
+  freePernTonnage: Joi.number().min(0)
+}).min(1)
 
 export const reportsPatch = {
   method: 'PATCH',
@@ -33,7 +33,7 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation: string }> & { reportsRepository: ReportsRepository }} request
+   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freePernTonnage?: number }> & { reportsRepository: ReportsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -54,6 +54,25 @@ export const reportsPatch = {
     if (!report) {
       throw Boom.notFound(
         `No report found for ${cadence} period ${period} of ${year}`
+      )
+    }
+
+    const hasPrnFields =
+      'prnRevenue' in request.payload || 'freePernTonnage' in request.payload
+
+    if (hasPrnFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
+      throw Boom.badRequest(
+        `Cannot update PRN data for a report with status '${report.status}'`
+      )
+    }
+
+    if (
+      'freePernTonnage' in request.payload &&
+      report.prn?.issuedTonnage !== undefined &&
+      request.payload.freePernTonnage > report.prn.issuedTonnage
+    ) {
+      throw Boom.badRequest(
+        `freePernTonnage (${request.payload.freePernTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
       )
     }
 

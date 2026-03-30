@@ -74,7 +74,9 @@ const updatableFieldsSchema = Joi.object({
     REPORT_STATUS.SUPERSEDED,
     REPORT_STATUS.DELETED
   ),
-  supportingInformation: Joi.string().allow('')
+  supportingInformation: Joi.string().allow(''),
+  prnRevenue: Joi.number().min(0),
+  freePernTonnage: Joi.number().min(0)
 })
   .min(1)
   .required()
