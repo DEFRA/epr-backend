@@ -475,17 +475,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects value below minimum (0)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 0 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects value above maximum (1000)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 1000 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects non-integer', () => {
@@ -496,9 +492,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects non-numeric string', () => {
         const { error } = validationSchema.validate({ OSR_ID: 'ABC' })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
     })
 
@@ -516,17 +510,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects value below minimum (0)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 0 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects value above maximum (1000)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1000 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
     })
 

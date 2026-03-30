@@ -129,7 +129,7 @@ export const createThreeDigitIdSchema = () =>
     })
     .optional()
     .messages({
-      'string.threeDigitId': MESSAGES.MUST_BE_3_DIGIT_NUMBER
+      'string.threeDigitId': MESSAGES.MUST_BE_3_DIGIT_ID
     })
 
 /**
