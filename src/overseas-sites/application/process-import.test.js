@@ -16,6 +16,7 @@ describe('processOrsImport', () => {
   let uploadsRepository
   let overseasSitesRepository
   let organisationsRepository
+  let systemLogsRepository
   let logger
   let orsImportMetrics
 
@@ -35,6 +36,7 @@ describe('processOrsImport', () => {
 
     overseasSitesRepository = {}
     organisationsRepository = {}
+    systemLogsRepository = { insert: vi.fn() }
 
     logger = {
       info: vi.fn(),
@@ -55,6 +57,7 @@ describe('processOrsImport', () => {
     uploadsRepository,
     overseasSitesRepository,
     organisationsRepository,
+    systemLogsRepository,
     logger,
     orsImportMetrics
   })
@@ -461,6 +464,39 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.FAILURE
     })
     expect(orsImportMetrics.recordSitesCreated).toHaveBeenCalledWith(0)
+  })
+
+  it('passes systemLogsRepository and createdBy user to processImportFile', async () => {
+    const user = {
+      id: 'user-123',
+      email: 'maintainer@defra.gov.uk',
+      scope: ['serviceMaintainer']
+    }
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      createdBy: user,
+      files: [{ fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' }]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
+    processImportFile.mockResolvedValue({
+      status: ORS_FILE_RESULT_STATUS.SUCCESS,
+      sitesCreated: 1,
+      mappingsUpdated: 1,
+      registrationNumber: 'EPR/AB1234CD/R1',
+      errors: []
+    })
+
+    await processOrsImport('import-123', deps())
+
+    expect(processImportFile).toHaveBeenCalledWith(Buffer.from('data'), {
+      overseasSitesRepository,
+      organisationsRepository,
+      systemLogsRepository,
+      logger,
+      user
+    })
   })
 
   it('sets FAILED when all files in a multi-file batch fail', async () => {

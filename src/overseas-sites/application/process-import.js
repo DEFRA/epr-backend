@@ -21,6 +21,7 @@ import { processImportFile } from './process-import-file.js'
  * @param {object} deps.uploadsRepository
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
  * @param {object} deps.logger
  * @param {import('#overseas-sites/metrics/ors-imports.js').OrsImportMetrics} deps.orsImportMetrics
  */
@@ -30,6 +31,7 @@ export const processOrsImport = async (importId, deps) => {
     uploadsRepository,
     overseasSitesRepository,
     organisationsRepository,
+    systemLogsRepository,
     logger,
     orsImportMetrics
   } = deps
@@ -55,7 +57,9 @@ export const processOrsImport = async (importId, deps) => {
         uploadsRepository,
         overseasSitesRepository,
         organisationsRepository,
-        logger
+        systemLogsRepository,
+        logger,
+        user: importDoc.createdBy
       })
 
       await orsImportsRepository.recordFileResult(importId, i, result)
@@ -85,7 +89,9 @@ const processFile = async (file, deps) => {
     uploadsRepository,
     overseasSitesRepository,
     organisationsRepository,
-    logger
+    systemLogsRepository,
+    logger,
+    user
   } = deps
 
   try {
@@ -108,7 +114,9 @@ const processFile = async (file, deps) => {
     const result = await processImportFile(buffer, {
       overseasSitesRepository,
       organisationsRepository,
-      logger
+      systemLogsRepository,
+      logger,
+      user
     })
 
     try {
