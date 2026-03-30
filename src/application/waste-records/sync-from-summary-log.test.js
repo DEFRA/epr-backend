@@ -546,7 +546,7 @@ describe('syncFromSummaryLog', () => {
     const updatedVersion = savedRecords[0].versions[1]
     expect(updatedVersion.status).toBe(VERSION_STATUS.UPDATED)
     expect(updatedVersion.data).toEqual({
-      DATE_RECEIVED_FOR_REPROCESSING: new Date('2025-01-20'),
+      DATE_RECEIVED_FOR_REPROCESSING: '2025-01-20',
       GROSS_WEIGHT: TEST_WEIGHT_250_5
     })
 

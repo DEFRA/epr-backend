@@ -372,7 +372,7 @@ const validateRows = ({
 
     return [
       {
-        data: classification.coercedData,
+        data: rowObject,
         rowId: String(rowObject[domainSchema.rowIdField]),
         outcome: classification.outcome,
         issues: rowIssues

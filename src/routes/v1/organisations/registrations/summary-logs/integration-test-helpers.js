@@ -240,10 +240,10 @@ export const createExporterRowValues = (overrides = {}) => {
     recyclablePropPct: 1,
     tonnageReceived: 850,
     interimSite: 'No',
-    interimSiteId: 1,
+    interimSiteId: 100,
     interimTonnage: 0,
     dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-    osrId: 1,
+    osrId: 100,
     exportTonnage: 100,
     exportDate: '2025-01-20T00:00:00.000Z',
     exportControls: 'Article 18 (Green list)',
@@ -666,7 +666,7 @@ const buildComplexTestOrg = ({
 
   if (processingType === 'exporter') {
     registration.overseasSites = {
-      '001': { overseasSiteId: TEST_OVERSEAS_SITE_ID }
+      100: { overseasSiteId: TEST_OVERSEAS_SITE_ID }
     }
   }
 
