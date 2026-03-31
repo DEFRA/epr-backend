@@ -93,18 +93,10 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       }
     }
 
-    const patchReport = (
-      server,
-      orgId,
-      regId,
-      payload,
-      year = 2025,
-      cadence = 'quarterly',
-      period = 1
-    ) =>
+    const patchReport = (server, orgId, regId, payload) =>
       server.inject({
         method: 'PATCH',
-        url: makeUrl(orgId, regId, year, cadence, period),
+        url: makeUrl(orgId, regId, 2025, 'quarterly', 1),
         payload,
         ...asStandardUser({ linkedOrgId: orgId })
       })
@@ -276,91 +268,41 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       it('returns 400 when freeTonnage exceeds issued tonnage', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
-        const org = buildOrganisation({ registrations: [registration] })
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
 
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20',
-            prn: { issuedTonnage: 100 }
-          })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { freeTonnage: 101 }
         )
-
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
-
-        const response = await patchReport(server, org.id, registration.id, {
-          freeTonnage: 101
-        })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
 
       it('returns 200 when freeTonnage equals issued tonnage', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
-        const org = buildOrganisation({ registrations: [registration] })
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 50 } }
+          )
 
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20',
-            prn: { issuedTonnage: 50 }
-          })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { freeTonnage: 50 }
         )
-
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
-
-        const response = await patchReport(server, org.id, registration.id, {
-          freeTonnage: 50
-        })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
       })
@@ -527,52 +469,30 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       it('returns 400 when patching tonnageRecycled on non-in_progress report', async () => {
-        const registration = buildRegistration({
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
         })
-        const org = buildOrganisation({ registrations: [registration] })
 
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        const report = await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20'
-          })
-        )
-
-        await reportsRepository.updateReport({
-          reportId: report.id,
-          version: report.version,
-          fields: { status: 'ready_to_submit' },
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
           changedBy: { id: 'user-1', name: 'Test User' }
         })
 
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
-
-        const response = await patchReport(server, org.id, registration.id, {
-          tonnageRecycled: 100
-        })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageRecycled: 100 }
+        )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
@@ -597,52 +517,30 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       it('returns 400 when patching prnRevenue on non-in_progress report', async () => {
-        const registration = buildRegistration({
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
         })
-        const org = buildOrganisation({ registrations: [registration] })
 
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        const report = await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20'
-          })
-        )
-
-        await reportsRepository.updateReport({
-          reportId: report.id,
-          version: report.version,
-          fields: { status: 'ready_to_submit' },
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
           changedBy: { id: 'user-1', name: 'Test User' }
         })
 
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
-
-        const response = await patchReport(server, org.id, registration.id, {
-          prnRevenue: 100
-        })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { prnRevenue: 100 }
+        )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
@@ -715,7 +613,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           { supportingInformation: 'notes' }
         )
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
 
       it('returns 422 when payload is empty', async () => {

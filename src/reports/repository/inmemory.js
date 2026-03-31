@@ -108,8 +108,8 @@ const updateReport = async (reports, params) => {
 
   reports.set(reportId, {
     ...existing,
-    version: existing.version + 1,
-    supportingInformation: fields.supportingInformation
+    ...fields,
+    version: existing.version + 1
   })
 }
 

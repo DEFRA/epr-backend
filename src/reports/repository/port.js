@@ -180,6 +180,14 @@
  */
 
 /**
+ * @typedef {Object} UpdateReportStatusParams
+ * @property {string} reportId
+ * @property {number} version - current version for optimistic locking
+ * @property {ReportStatus} status
+ * @property {UserSummary} [changedBy]
+ */
+
+/**
  * @typedef {Object} DeleteReportParams
  * @property {string} organisationId - MongoDB ObjectId hex string
  * @property {string} registrationId - MongoDB ObjectId hex string

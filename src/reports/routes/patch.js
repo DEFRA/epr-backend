@@ -60,22 +60,6 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
  * @param {import('#reports/repository/port.js').Report} report
  */
 function guardReportDataFields(payload, report) {
-  const hasDataFields =
-    'prnRevenue' in payload ||
-    'freeTonnage' in payload ||
-    'tonnageRecycled' in payload ||
-    'tonnageNotRecycled' in payload
-
-  if (!hasDataFields) {
-    return
-  }
-
-  if (report.status !== REPORT_STATUS.IN_PROGRESS) {
-    throw Boom.badRequest(
-      `Cannot update report data for a report with status '${report.status}'`
-    )
-  }
-
   const hasPrnFields = 'prnRevenue' in payload || 'freeTonnage' in payload
 
   if (hasPrnFields && !report.prn) {
@@ -158,8 +142,14 @@ export const reportsPatch = {
     )
 
     if (!report) {
-      throw Boom.conflict(
+      throw Boom.notFound(
         `No report found for ${cadence} period ${period} of ${year}`
+      )
+    }
+
+    if (report.status.currentStatus !== REPORT_STATUS.IN_PROGRESS) {
+      throw Boom.badRequest(
+        `Cannot update a report with status '${report.status.currentStatus}'`
       )
     }
 

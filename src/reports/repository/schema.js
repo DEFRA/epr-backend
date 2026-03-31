@@ -71,13 +71,6 @@ export const createReportSchema = Joi.object({
 })
 
 const updatableFieldsSchema = Joi.object({
-  status: Joi.string().valid(
-    REPORT_STATUS.IN_PROGRESS,
-    REPORT_STATUS.READY_TO_SUBMIT,
-    REPORT_STATUS.SUBMITTED,
-    REPORT_STATUS.SUPERSEDED,
-    REPORT_STATUS.DELETED
-  ),
   supportingInformation: Joi.string().allow(''),
   prn: prnSchema.fork('issuedTonnage', (s) => s.optional()),
   recyclingActivity: Joi.object({
