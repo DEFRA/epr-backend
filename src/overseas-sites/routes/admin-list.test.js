@@ -966,24 +966,4 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     defineAdditionalEdgeCaseTests()
     defineValidationTests()
   })
-
-  describe('when feature flag is disabled', () => {
-    it('returns 404', async () => {
-      const server = await createTestServer({
-        featureFlags: createInMemoryFeatureFlags({
-          overseasSites: false
-        })
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: adminOverseasSitesListPath,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
-  })
 })

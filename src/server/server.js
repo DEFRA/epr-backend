@@ -122,10 +122,7 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } }
   ]
 
-  /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
-  if (config.get('featureFlags.overseasSites')) {
-    plugins.push(overseasSitesRepositoryPlugin, orsImportsRepositoryPlugin)
-  }
+  plugins.push(overseasSitesRepositoryPlugin, orsImportsRepositoryPlugin)
 
   /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
   if (config.get('featureFlags.reports')) {

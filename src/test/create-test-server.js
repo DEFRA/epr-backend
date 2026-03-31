@@ -225,9 +225,7 @@ export async function createTestServer(options = {}) {
     },
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
     ...buildRepositoryPlugins(
-      options.featureFlags?.isOverseasSitesEnabled()
-        ? overseasSitesRepositoryConfigs
-        : [],
+      overseasSitesRepositoryConfigs,
       options.repositories ?? {}
     ),
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
