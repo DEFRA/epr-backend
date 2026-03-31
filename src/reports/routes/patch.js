@@ -148,7 +148,13 @@ export const reportsPatch = {
     }
 
     request.logger.info(
-      { reportId: report.id, status: report.status, version: report.version },
+      {
+        reportId: report.id,
+        status: report.status,
+        version: report.version,
+        hasPrn: !!report.prn,
+        prnKeys: report.prn ? Object.keys(report.prn) : null
+      },
       'PATCH guard: report found'
     )
 
