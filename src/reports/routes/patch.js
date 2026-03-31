@@ -23,35 +23,30 @@ const payloadSchema = Joi.object({
 
 /**
  * Merges user-entered PRN data with the existing prn object and computes averagePricePerTonne.
- * @param {import('#reports/repository/port.js').PrnData | undefined} existingPrn
- * @param {number | undefined} prnRevenue
- * @param {number | undefined} freePernTonnage
+ * @param {import('#reports/repository/port.js').PrnData } existingPrn
+ * @param {number | undefined} totalRevenue
+ * @param {number | undefined} freeTonnage
  * @returns {object}
  */
-export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
-  const base = existingPrn ?? {}
-  const totalRevenue = prnRevenue !== undefined ? prnRevenue : base.totalRevenue
-  const freeTonnage =
-    freePernTonnage !== undefined ? freePernTonnage : base.freeTonnage
-
-  const updated = { ...base }
-
-  if (totalRevenue !== undefined) {
-    updated.totalRevenue = totalRevenue
-  }
-
-  if (freeTonnage !== undefined) {
-    updated.freeTonnage = freeTonnage
+export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
+  const updated = {
+    ...existingPrn,
+    totalRevenue:
+      totalRevenue !== undefined ? totalRevenue : existingPrn.totalRevenue,
+    freeTonnage:
+      freeTonnage !== undefined ? freeTonnage : existingPrn.freeTonnage
   }
 
   if (
-    base.issuedTonnage != null &&
-    totalRevenue != null &&
-    freeTonnage != null
+    updated.issuedTonnage >= 0 &&
+    updated.totalRevenue != null &&
+    updated.freeTonnage != null
   ) {
-    const denominator = base.issuedTonnage - freeTonnage
+    const denominator = updated.issuedTonnage - updated.freeTonnage
     updated.averagePricePerTonne =
-      denominator > 0 ? totalRevenue / denominator : 0
+      denominator > 0 ? updated.totalRevenue / denominator : 0
+  } else {
+    updated.averagePricePerTonne = 0
   }
 
   return updated
@@ -99,6 +94,11 @@ export const reportsPatch = {
     if (hasPrnFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
       throw Boom.badRequest(
         `Cannot update PRN data for a report with status '${report.status}'`
+      )
+    }
+    if (hasPrnFields && !report.prn) {
+      throw Boom.badRequest(
+        'Cannot update PRN data for a report with no PRN record'
       )
     }
 
