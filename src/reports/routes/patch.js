@@ -18,23 +18,23 @@ const MAX_SUPPORTING_INFO_LENGTH = 2000
 const payloadSchema = Joi.object({
   supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH),
   prnRevenue: Joi.number().min(0),
-  freePernTonnage: Joi.number().min(0)
+  freeTonnage: Joi.number().min(0)
 }).min(1)
 
 /**
  * Merges user-entered PRN data with the existing prn object and computes averagePricePerTonne.
  * @param {import('#reports/repository/port.js').PrnData | undefined} existingPrn
  * @param {number | undefined} prnRevenue
- * @param {number | undefined} freePernTonnage
+ * @param {number | undefined} freeTonnage
  * @returns {object}
  */
-export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
+export function buildUpdatedPrn(existingPrn, prnRevenue, freeTonnage) {
   const base = existingPrn || {}
   const totalRevenue = prnRevenue !== undefined ? prnRevenue : base.totalRevenue
-  const freeTonnage =
-    freePernTonnage !== undefined ? freePernTonnage : base.freeTonnage
+  const resolvedFree =
+    freeTonnage !== undefined ? freeTonnage : base.freeTonnage
   const issued = base.issuedTonnage || 0
-  const free = freeTonnage || 0
+  const free = resolvedFree || 0
   const revenue = totalRevenue || 0
   const denominator = issued - free
   const averagePricePerTonne = denominator > 0 ? revenue / denominator : 0
@@ -45,8 +45,8 @@ export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
     updated.totalRevenue = totalRevenue
   }
 
-  if (freeTonnage !== undefined) {
-    updated.freeTonnage = freeTonnage
+  if (resolvedFree !== undefined) {
+    updated.freeTonnage = resolvedFree
   }
 
   return updated
@@ -64,7 +64,7 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freePernTonnage?: number }> & { reportsRepository: ReportsRepository }} request
+   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number }> & { reportsRepository: ReportsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -89,7 +89,7 @@ export const reportsPatch = {
     }
 
     const hasPrnFields =
-      'prnRevenue' in request.payload || 'freePernTonnage' in request.payload
+      'prnRevenue' in request.payload || 'freeTonnage' in request.payload
 
     if (hasPrnFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
       throw Boom.badRequest(
@@ -98,21 +98,21 @@ export const reportsPatch = {
     }
 
     if (
-      'freePernTonnage' in request.payload &&
+      'freeTonnage' in request.payload &&
       report.prn?.issuedTonnage !== undefined &&
-      request.payload.freePernTonnage > report.prn.issuedTonnage
+      request.payload.freeTonnage > report.prn.issuedTonnage
     ) {
       throw Boom.badRequest(
-        `freePernTonnage (${request.payload.freePernTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
+        `freeTonnage (${request.payload.freeTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
       )
     }
 
-    const { prnRevenue, freePernTonnage, ...otherFields } = request.payload
+    const { prnRevenue, freeTonnage, ...otherFields } = request.payload
 
     const fields = { ...otherFields }
 
-    if (prnRevenue !== undefined || freePernTonnage !== undefined) {
-      fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freePernTonnage)
+    if (prnRevenue !== undefined || freeTonnage !== undefined) {
+      fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freeTonnage)
     }
 
     await reportsRepository.updateReport({

@@ -206,7 +206,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(payload.prn.totalRevenue).toBe(1576.12)
       })
 
-      it('returns 200 when patching freePernTonnage', async () => {
+      it('returns 200 when patching freeTonnage', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport(
             {
@@ -220,7 +220,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           server,
           organisationId,
           registrationId,
-          { freePernTonnage: 5 }
+          { freeTonnage: 5 }
         )
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -247,7 +247,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           organisationId,
           registrationId,
           {
-            freePernTonnage: 10
+            freeTonnage: 10
           }
         )
 
@@ -275,7 +275,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
-      it('returns 400 when freePernTonnage exceeds issued tonnage', async () => {
+      it('returns 400 when freeTonnage exceeds issued tonnage', async () => {
         const registration = buildRegistration({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
@@ -314,13 +314,13 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         })
 
         const response = await patchReport(server, org.id, registration.id, {
-          freePernTonnage: 101
+          freeTonnage: 101
         })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
 
-      it('returns 200 when freePernTonnage equals issued tonnage', async () => {
+      it('returns 200 when freeTonnage equals issued tonnage', async () => {
         const registration = buildRegistration({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
@@ -359,7 +359,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         })
 
         const response = await patchReport(server, org.id, registration.id, {
-          freePernTonnage: 50
+          freeTonnage: 50
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
