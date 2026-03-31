@@ -12,6 +12,7 @@ import {
   prepareCreateReportParams,
   STATUS_TO_SLOT
 } from '#root/reports/repository/helpers.js'
+import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
 
 const REPORTS_COLLECTION = 'reports'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -39,6 +40,18 @@ async function ensureCollections(db) {
     },
     { unique: true }
   )
+  await col.createIndex(
+    { organisationId: 1, registrationId: 1, year: 1, cadence: 1, period: 1 },
+    {
+      unique: true,
+      partialFilterExpression: {
+        'status.currentStatus': {
+          $in: [REPORT_STATUS.IN_PROGRESS, REPORT_STATUS.READY_TO_SUBMIT]
+        }
+      },
+      name: 'reports_one_active_draft_per_period'
+    }
+  )
 }
 
 /**
@@ -48,7 +61,7 @@ async function ensureCollections(db) {
  * */
 const performCreateReport = async (db, params) => {
   const validated = validateCreateReport(params)
-  const { cadence, period, submissionNumber } = validated
+  const { cadence, period } = validated
   const reportDoc = prepareCreateReportParams(validated)
 
   try {
@@ -56,7 +69,7 @@ const performCreateReport = async (db, params) => {
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
       throw Boom.conflict(
-        `An active report already exists for cadence ${cadence} and period ${period} and submissionNumber ${submissionNumber}`
+        `An active report already exists for cadence ${cadence} and period ${period}`
       )
     }
     throw error

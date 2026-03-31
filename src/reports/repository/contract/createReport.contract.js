@@ -74,6 +74,24 @@ export const testCreateReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
     })
 
+    it('throws conflict when creating a second active draft for the same slot with a different submissionNumber', async () => {
+      await repository.createReport(
+        buildCreateReportParams({
+          period: MONTHLY_PERIODS.February,
+          submissionNumber: 1
+        })
+      )
+
+      await expect(
+        repository.createReport(
+          buildCreateReportParams({
+            period: MONTHLY_PERIODS.February,
+            submissionNumber: 2
+          })
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+    })
+
     it('allows creating multiple reports with different submissionNumber', async () => {
       const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
       const { id: firstId } = await repository.createReport(

@@ -23,7 +23,6 @@ import {
  * @param {number} criteria.year - The reporting year.
  * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
  * @param {number} criteria.period - The specific period index.
- * @param {number} criteria.submissionNumber - The version/submission attempt number.
  * @returns {object|undefined} The matching report object, or undefined if none found.
  */
 const findActiveBySlot = (reports, criteria) => {
@@ -49,8 +48,7 @@ const createReport = async (reports, params) => {
     registrationId: validated.registrationId,
     year: validated.year,
     cadence: validated.cadence,
-    period: validated.period,
-    submissionNumber: validated.submissionNumber
+    period: validated.period
   }
 
   const existing = findActiveBySlot(reports, criteria)
