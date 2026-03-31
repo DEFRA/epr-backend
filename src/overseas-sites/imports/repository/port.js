@@ -11,6 +11,7 @@
  * @property {string} _id
  * @property {string} status - 'preprocessing' | 'processing' | 'completed' | 'failed'
  * @property {OrsImportFile[]} files
+ * @property {{ id: string, email: string, scope: string[] }} [createdBy] - User who initiated the import
  * @property {string} createdAt - ISO 8601 date string
  * @property {string} updatedAt - ISO 8601 date string
  * @property {Date|null} expiresAt - TTL expiry date, null for completed imports

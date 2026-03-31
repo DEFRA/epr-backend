@@ -82,7 +82,7 @@ export const orsUploadCompleted = {
       }
 
       if (hasCompletedFiles(uploads)) {
-        await orsImportsWorker.importOverseasSites(id)
+        await orsImportsWorker.importOverseasSites(id, existing.createdBy)
       } else {
         await orsImportsRepository.updateStatus(id, ORS_IMPORT_STATUS.FAILED)
       }

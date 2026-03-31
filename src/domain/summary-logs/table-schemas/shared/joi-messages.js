@@ -18,7 +18,7 @@ export const MESSAGES = Object.freeze({
   MUST_BE_YES_OR_NO: 'must be Yes or No',
   MUST_CONTAIN_ONLY_PERMITTED_CHARACTERS:
     'must contain only permitted characters',
-  MUST_BE_3_DIGIT_NUMBER: 'must be a number between 1 and 999',
+  MUST_BE_3_DIGIT_ID: 'must be a 3-digit ID (001-999)',
   MUST_BE_VALID_EWC_CODE: 'must be a valid EWC code from the allowed list',
   MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD:
     'must be a valid recyclable proportion calculation method',

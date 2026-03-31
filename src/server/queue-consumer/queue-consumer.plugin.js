@@ -94,6 +94,7 @@ export const commandQueueConsumerPlugin = {
         deps.orsImportsRepository = server.app.orsImportsRepository
         deps.overseasSitesRepository = server.app.overseasSitesRepository
         deps.uploadsRepository = uploadsRepository
+        deps.systemLogsRepository = server.app.systemLogsRepository
         handlers.push(...orsImportCommandHandlers)
       }
 

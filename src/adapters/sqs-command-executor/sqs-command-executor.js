@@ -119,13 +119,15 @@ export const createSqsCommandExecutor = async (deps) => {
       }
     },
     orsImportsWorker: {
-      importOverseasSites: async (importId) => {
+      importOverseasSites: async (importId, user) => {
+        const payload = user ? { importId, user } : { importId }
+
         await sendCommandMessage(
           queueUrl,
           sqsClient,
           logger,
           ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES,
-          { importId },
+          payload,
           `importId=${importId}`
         )
       }
