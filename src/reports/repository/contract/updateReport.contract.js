@@ -112,6 +112,26 @@ export const testUpdateReportBehaviour = (it) => {
       })
     })
 
+    it('updates recyclingActivity fields', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams()
+      )
+
+      await repository.updateReport({
+        reportId,
+        version: 1,
+        fields: {
+          recyclingActivity: { tonnageRecycled: 100.5, tonnageNotRecycled: 20 }
+        }
+      })
+
+      const result = await repository.findReportById(reportId)
+      expect(result.recyclingActivity).toMatchObject({
+        tonnageRecycled: 100.5,
+        tonnageNotRecycled: 20
+      })
+    })
+
     it('throws notFound for unknown reportId', async () => {
       await expect(
         repository.updateReport({
