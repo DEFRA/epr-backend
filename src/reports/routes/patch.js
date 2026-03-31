@@ -18,7 +18,9 @@ const MAX_SUPPORTING_INFO_LENGTH = 2000
 const payloadSchema = Joi.object({
   supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH),
   prnRevenue: Joi.number().min(0),
-  freeTonnage: Joi.number().min(0)
+  freeTonnage: Joi.number().min(0),
+  tonnageRecycled: Joi.number().min(0),
+  tonnageNotRecycled: Joi.number().min(0)
 }).min(1)
 
 /**
@@ -64,7 +66,7 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number }> & { reportsRepository: ReportsRepository }} request
+   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & { reportsRepository: ReportsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -90,10 +92,16 @@ export const reportsPatch = {
 
     const hasPrnFields =
       'prnRevenue' in request.payload || 'freeTonnage' in request.payload
+    const hasTonnageFields =
+      'tonnageRecycled' in request.payload ||
+      'tonnageNotRecycled' in request.payload
 
-    if (hasPrnFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
+    if (
+      (hasPrnFields || hasTonnageFields) &&
+      report.status !== REPORT_STATUS.IN_PROGRESS
+    ) {
       throw Boom.badRequest(
-        `Cannot update PRN data for a report with status '${report.status}'`
+        `Cannot update report data for a report with status '${report.status}'`
       )
     }
 
@@ -107,12 +115,26 @@ export const reportsPatch = {
       )
     }
 
-    const { prnRevenue, freeTonnage, ...otherFields } = request.payload
+    const {
+      prnRevenue,
+      freeTonnage,
+      tonnageRecycled,
+      tonnageNotRecycled,
+      ...otherFields
+    } = request.payload
 
     const fields = { ...otherFields }
 
     if (prnRevenue !== undefined || freeTonnage !== undefined) {
       fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freeTonnage)
+    }
+
+    if (tonnageRecycled !== undefined || tonnageNotRecycled !== undefined) {
+      fields.recyclingActivity = {
+        ...(report.recyclingActivity || {}),
+        ...(tonnageRecycled !== undefined && { tonnageRecycled }),
+        ...(tonnageNotRecycled !== undefined && { tonnageNotRecycled })
+      }
     }
 
     await reportsRepository.updateReport({

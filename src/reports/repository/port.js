@@ -152,7 +152,7 @@
  * @typedef {Object} UpdateReportParams
  * @property {string} reportId
  * @property {number} version - current version for optimistic locking
- * @property {{ status?: ReportStatus, supportingInformation?: string, prn?: Partial<PrnData> }} fields
+ * @property {{ status?: ReportStatus, supportingInformation?: string, prn?: Partial<PrnData>, recyclingActivity?: Partial<RecyclingActivity> }} fields
  * @property {UserSummary} [changedBy]
  */
 

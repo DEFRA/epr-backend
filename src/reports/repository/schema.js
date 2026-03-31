@@ -80,7 +80,11 @@ const updatableFieldsSchema = Joi.object({
     totalRevenue: Joi.number().min(0),
     freeTonnage: Joi.number().min(0),
     averagePricePerTonne: Joi.number().min(0)
-  })
+  }),
+  recyclingActivity: Joi.object({
+    tonnageRecycled: Joi.number().min(0).allow(null),
+    tonnageNotRecycled: Joi.number().min(0).allow(null)
+  }).unknown(true)
 })
   .min(1)
   .required()
