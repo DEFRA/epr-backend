@@ -97,6 +97,10 @@ const performUpdateReport = async (db, params) => {
     setFields.supportingInformation = fields.supportingInformation
   }
 
+  if (fields.prn !== undefined) {
+    setFields.prn = fields.prn
+  }
+
   const { matchedCount } = await db
     .collection(REPORTS_COLLECTION)
     .updateOne(

@@ -91,6 +91,27 @@ export const testUpdateReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
+    it('updates prn fields', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams({ prn: { issuedTonnage: 100 } })
+      )
+
+      await repository.updateReport({
+        reportId,
+        version: 1,
+        fields: {
+          prn: { issuedTonnage: 100, totalRevenue: 500, freeTonnage: 10 }
+        }
+      })
+
+      const result = await repository.findReportById(reportId)
+      expect(result.prn).toMatchObject({
+        issuedTonnage: 100,
+        totalRevenue: 500,
+        freeTonnage: 10
+      })
+    })
+
     it('throws notFound for unknown reportId', async () => {
       await expect(
         repository.updateReport({
