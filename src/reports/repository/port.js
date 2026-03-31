@@ -75,9 +75,10 @@
 
 /**
  * @typedef {Object} PrnData
- * @property {number} tonnageIssued
- * @property {number} totalRevenue
- * @property {number} averagePricePerTonne
+ * @property {number} issuedTonnage
+ * @property {number} [totalRevenue]
+ * @property {number} [averagePricePerTonne]
+ * @property {number} freeTonnage
  */
 
 /**
@@ -174,7 +175,7 @@
  * @typedef {Object} UpdateReportParams
  * @property {string} reportId
  * @property {number} version - current version for optimistic locking
- * @property {{ supportingInformation?: string }} fields
+ * @property {{ supportingInformation?: string, prn?: Partial<PrnData> }} fields
  * @property {UserSummary} [changedBy]
  */
 
