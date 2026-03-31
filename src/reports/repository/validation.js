@@ -34,8 +34,6 @@ export const validateUpdateReport = (params) => {
   })
 
   if (error) {
-    // Temporary debug logging
-    console.error('validateUpdateReport FAILED:', error.message, JSON.stringify(params?.fields))
     throw Boom.badRequest(error.message)
   }
 
