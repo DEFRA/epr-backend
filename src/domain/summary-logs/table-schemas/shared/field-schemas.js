@@ -115,7 +115,7 @@ export const createFirstOfMonthFieldSchema = () =>
  *
  * Accepts YYYY-MM-DD strings and Date objects (coerced to YYYY-MM-DD).
  *
- * @returns {Joi.StringSchema} Joi string schema
+ * @returns {Joi.AnySchema} Joi schema that outputs YYYY-MM-DD strings
  */
 export const createDateFieldSchema = () =>
   Joi.any()
