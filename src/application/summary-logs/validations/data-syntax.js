@@ -72,6 +72,7 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'date.base': VALIDATION_CODE.INVALID_DATE,
   'date.min': VALIDATION_CODE.INVALID_DATE,
   'date.max': VALIDATION_CODE.INVALID_DATE,
+  'any.calendarDate': VALIDATION_CODE.INVALID_DATE,
   'string.threeDigitId': VALIDATION_CODE.INVALID_TYPE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,

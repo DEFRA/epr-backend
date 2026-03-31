@@ -20,6 +20,11 @@ const DEFAULT_MAX_WEIGHT = 1000
  */
 const DATE_MIN = new Date('2000-01-01')
 const DATE_MAX = new Date('2100-01-01')
+const CALENDAR_DATE_ERROR = 'any.calendarDate'
+const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
+
+/** @param {Date} date */
+const toCalendarDate = (date) => date.toISOString().slice(0, 10)
 
 /**
  * 3-digit ID constraints
@@ -106,16 +111,55 @@ export const createFirstOfMonthFieldSchema = () =>
     })
 
 /**
- * Creates a date field schema (2000-01-01 to 2100-01-01)
+ * Creates a calendar date field schema (2000-01-01 to 2100-01-01).
  *
- * @returns {Joi.DateSchema} Joi date schema
+ * Validates the date range but keeps the value as a YYYY-MM-DD string
+ * rather than coercing to a JavaScript Date object. This system only
+ * uses calendar dates, not timestamps.
+ *
+ * Accepts YYYY-MM-DD strings and Date objects (coerced to YYYY-MM-DD).
+ *
+ * @returns {Joi.AnySchema} Joi schema that outputs YYYY-MM-DD strings
  */
 export const createDateFieldSchema = () =>
-  Joi.date().min(DATE_MIN).max(DATE_MAX).optional().messages({
-    'date.base': MESSAGES.MUST_BE_A_VALID_DATE,
-    'date.min': MESSAGES.MUST_BE_A_VALID_DATE,
-    'date.max': MESSAGES.MUST_BE_A_VALID_DATE
-  })
+  Joi.any()
+    .custom((value, helpers) => {
+      let dateStr
+      if (value instanceof Date) {
+        dateStr = toCalendarDate(value)
+      } else if (typeof value === 'number') {
+        if (Number.isNaN(value)) {
+          return helpers.error(CALENDAR_DATE_ERROR)
+        }
+        dateStr = toCalendarDate(new Date(value))
+      } else if (typeof value === 'string') {
+        const match = CALENDAR_DATE_PATTERN.exec(value)
+        if (!match) {
+          return helpers.error(CALENDAR_DATE_ERROR)
+        }
+        dateStr = match[1]
+      } else {
+        return helpers.error(CALENDAR_DATE_ERROR)
+      }
+
+      const parsed = new Date(dateStr + 'T00:00:00.000Z')
+
+      // Reject if the parsed date doesn't round-trip to the same string
+      // (catches values like "2024-13-01" that Date silently rolls over)
+      if (toCalendarDate(parsed) !== dateStr) {
+        return helpers.error(CALENDAR_DATE_ERROR)
+      }
+
+      if (parsed < DATE_MIN || parsed > DATE_MAX) {
+        return helpers.error(CALENDAR_DATE_ERROR)
+      }
+
+      return dateStr
+    })
+    .optional()
+    .messages({
+      [CALENDAR_DATE_ERROR]: MESSAGES.MUST_BE_A_VALID_DATE
+    })
 
 /**
  * Creates a 3-digit ID field schema that coerces numbers to zero-padded

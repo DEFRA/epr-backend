@@ -92,19 +92,76 @@ describe('field-schemas', () => {
   })
 
   describe('createDateFieldSchema', () => {
-    it('accepts valid date within range', () => {
+    it('keeps YYYY-MM-DD string as-is', () => {
       const schema = createDateFieldSchema()
-      expect(schema.validate('2024-01-01').error).toBeUndefined()
+      const { error, value } = schema.validate('2024-01-01')
+      expect(error).toBeUndefined()
+      expect(value).toBe('2024-01-01')
     })
 
     it('accepts minimum boundary date', () => {
       const schema = createDateFieldSchema()
-      expect(schema.validate('2000-01-01').error).toBeUndefined()
+      const { error, value } = schema.validate('2000-01-01')
+      expect(error).toBeUndefined()
+      expect(value).toBe('2000-01-01')
     })
 
     it('accepts maximum boundary date', () => {
       const schema = createDateFieldSchema()
-      expect(schema.validate('2100-01-01').error).toBeUndefined()
+      const { error, value } = schema.validate('2100-01-01')
+      expect(error).toBeUndefined()
+      expect(value).toBe('2100-01-01')
+    })
+
+    it('coerces Date object to YYYY-MM-DD string', () => {
+      const schema = createDateFieldSchema()
+      const { error, value } = schema.validate(new Date('2024-06-15'))
+      expect(error).toBeUndefined()
+      expect(value).toBe('2024-06-15')
+    })
+
+    it('extracts date from ISO timestamp string', () => {
+      const schema = createDateFieldSchema()
+      const { error, value } = schema.validate('2024-06-15T00:00:00.000Z')
+      expect(error).toBeUndefined()
+      expect(value).toBe('2024-06-15')
+    })
+
+    it('coerces numeric epoch milliseconds to YYYY-MM-DD string', () => {
+      const schema = createDateFieldSchema()
+      // 1704067200000 = 2024-01-01T00:00:00.000Z
+      const { error, value } = schema.validate(1704067200000)
+      expect(error).toBeUndefined()
+      expect(value).toBe('2024-01-01')
+    })
+
+    it('rejects numeric epoch seconds (outside valid range as millis)', () => {
+      const schema = createDateFieldSchema()
+      // 1704067200 seconds = 1970-01-20 when interpreted as millis
+      const { error } = schema.validate(1704067200)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects NaN numeric value', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate(NaN)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects boolean value', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate(true)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects date that rolls over (e.g. Feb 30)', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate('2024-02-30')
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
     })
 
     it('rejects invalid date string', () => {
@@ -133,11 +190,6 @@ describe('field-schemas', () => {
       const { error } = schema.validate('20256-01-02')
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be a valid date')
-    })
-
-    it('accepts numeric timestamps within valid range', () => {
-      const schema = createDateFieldSchema()
-      expect(schema.validate(1704067200000).error).toBeUndefined()
     })
 
     it('is optional', () => {
