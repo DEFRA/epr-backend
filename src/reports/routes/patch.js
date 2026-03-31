@@ -63,9 +63,9 @@ function validatePrnFields(payload, report) {
     return
   }
 
-  if (report.status !== REPORT_STATUS.IN_PROGRESS) {
+  if (report.status.currentStatus !== REPORT_STATUS.IN_PROGRESS) {
     throw Boom.badRequest(
-      `Cannot update PRN data for a report with status '${report.status}'`
+      `Cannot update PRN data for a report with status '${report.status.currentStatus}'`
     )
   }
   if (!report.prn) {
@@ -116,9 +116,13 @@ export const reportsPatch = {
     )
 
     if (!report) {
-      throw Boom.notFound(
+      throw Boom.conflict(
         `No report found for ${cadence} period ${period} of ${year}`
       )
+    }
+
+    if (report.status.currentStatus === REPORT_STATUS.SUBMITTED) {
+      throw Boom.badRequest(`Cannot update a submitted report`)
     }
 
     validatePrnFields(request.payload, report)

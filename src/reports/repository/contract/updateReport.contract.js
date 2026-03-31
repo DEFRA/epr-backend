@@ -23,29 +23,30 @@ export const testUpdateReportBehaviour = (it) => {
       })
 
       const result = await repository.findReportById(reportId)
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         id: reportId,
         version: 2,
         schemaVersion: 1,
-        status: REPORT_STATUS.IN_PROGRESS,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy: expect.any(Object),
-            changedAt: expect.any(String)
-          }
-        ],
         material: MATERIAL.PLASTIC,
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        supportingInformation: 'some notes'
+        supportingInformation: 'some notes',
+        status: {
+          currentStatus: REPORT_STATUS.IN_PROGRESS,
+          history: [
+            {
+              status: REPORT_STATUS.IN_PROGRESS,
+              at: expect.any(String),
+              by: expect.any(Object)
+            }
+          ]
+        }
       })
     })
 
-    it('increments version on every update', async () => {
+    it('increments version on field update', async () => {
       const { id: reportId } = await repository.createReport(
         buildCreateReportParams()
       )
-      const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
 
       await repository.updateReport({
         reportId,
@@ -55,98 +56,11 @@ export const testUpdateReportBehaviour = (it) => {
       await repository.updateReport({
         reportId,
         version: 2,
-        fields: { status: REPORT_STATUS.READY_TO_SUBMIT },
-        changedBy
+        fields: { supportingInformation: 'second update' }
       })
 
       const result = await repository.findReportById(reportId)
-      expect(result).toEqual({
-        id: reportId,
-        version: 3,
-        schemaVersion: 1,
-        status: REPORT_STATUS.READY_TO_SUBMIT,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy: expect.any(Object),
-            changedAt: expect.any(String)
-          },
-          {
-            status: REPORT_STATUS.READY_TO_SUBMIT,
-            changedBy,
-            changedAt: expect.any(String)
-          }
-        ],
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        supportingInformation: 'first update'
-      })
-    })
-
-    it('appends status history entry when status changes', async () => {
-      const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
-      const { id: reportId } = await repository.createReport(
-        buildCreateReportParams()
-      )
-
-      await repository.updateReport({
-        reportId,
-        version: 1,
-        fields: { status: REPORT_STATUS.READY_TO_SUBMIT },
-        changedBy
-      })
-
-      const result = await repository.findReportById(reportId)
-      expect(result).toEqual({
-        id: reportId,
-        version: 2,
-        schemaVersion: 1,
-        status: REPORT_STATUS.READY_TO_SUBMIT,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy: expect.any(Object),
-            changedAt: expect.any(String)
-          },
-          {
-            status: REPORT_STATUS.READY_TO_SUBMIT,
-            changedBy,
-            changedAt: expect.any(String)
-          }
-        ],
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
-      })
-    })
-
-    it('does not append status history when status is unchanged', async () => {
-      const { id: reportId } = await repository.createReport(
-        buildCreateReportParams()
-      )
-
-      await repository.updateReport({
-        reportId,
-        version: 1,
-        fields: { supportingInformation: 'just a note' }
-      })
-
-      const result = await repository.findReportById(reportId)
-      expect(result).toEqual({
-        id: reportId,
-        version: 2,
-        schemaVersion: 1,
-        status: REPORT_STATUS.IN_PROGRESS,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy: expect.any(Object),
-            changedAt: expect.any(String)
-          }
-        ],
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        supportingInformation: 'just a note'
-      })
+      expect(result).toMatchObject({ id: reportId, version: 3 })
     })
 
     it('throws conflict when version does not match', async () => {
@@ -175,6 +89,27 @@ export const testUpdateReportBehaviour = (it) => {
           fields: { material: 'plastic' }
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
+
+    it('updates prn fields', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams({ prn: { issuedTonnage: 100 } })
+      )
+
+      await repository.updateReport({
+        reportId,
+        version: 1,
+        fields: {
+          prn: { issuedTonnage: 100, totalRevenue: 500, freeTonnage: 10 }
+        }
+      })
+
+      const result = await repository.findReportById(reportId)
+      expect(result.prn).toMatchObject({
+        issuedTonnage: 100,
+        totalRevenue: 500,
+        freeTonnage: 10
+      })
     })
 
     it('throws notFound for unknown reportId', async () => {

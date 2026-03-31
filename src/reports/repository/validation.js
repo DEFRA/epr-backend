@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import {
   createReportSchema,
   updateReportSchema,
+  updateReportStatusSchema,
   deleteReportParamsSchema,
   findPeriodicReportsSchema,
   findReportByIdSchema
@@ -29,6 +30,22 @@ export const validateCreateReport = (params) => {
  */
 export const validateUpdateReport = (params) => {
   const { error, value } = updateReportSchema.validate(params, {
+    abortEarly: false
+  })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {import('./port.js').UpdateReportStatusParams} params
+ * @returns {import('./port.js').UpdateReportStatusParams}
+ */
+export const validateUpdateReportStatus = (params) => {
+  const { error, value } = updateReportStatusSchema.validate(params, {
     abortEarly: false
   })
 
