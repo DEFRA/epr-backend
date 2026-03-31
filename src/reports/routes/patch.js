@@ -147,7 +147,16 @@ export const reportsPatch = {
       )
     }
 
+    request.logger.info(
+      { reportId: report.id, status: report.status, version: report.version },
+      'PATCH guard: report found'
+    )
+
     if (report.status.currentStatus !== REPORT_STATUS.IN_PROGRESS) {
+      request.logger.error(
+        { reportId: report.id, status: report.status },
+        'PATCH guard: status check failed'
+      )
       throw Boom.badRequest(
         `Cannot update a report with status '${report.status.currentStatus}'`
       )
