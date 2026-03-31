@@ -52,6 +52,39 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
   return updated
 }
 
+/**
+ * @param {object} payload
+ * @param {import('#reports/repository/port.js').Report} report
+ */
+function validatePrnFields(payload, report) {
+  const hasPrnFields = 'prnRevenue' in payload || 'freePernTonnage' in payload
+
+  if (!hasPrnFields) {
+    return
+  }
+
+  if (report.status !== REPORT_STATUS.IN_PROGRESS) {
+    throw Boom.badRequest(
+      `Cannot update PRN data for a report with status '${report.status}'`
+    )
+  }
+  if (!report.prn) {
+    throw Boom.badRequest(
+      'Cannot update PRN data for a report with no PRN record'
+    )
+  }
+
+  if (
+    'freePernTonnage' in payload &&
+    report.prn.issuedTonnage !== undefined &&
+    payload.freePernTonnage > report.prn.issuedTonnage
+  ) {
+    throw Boom.badRequest(
+      `freePernTonnage (${payload.freePernTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
+    )
+  }
+}
+
 export const reportsPatch = {
   method: 'PATCH',
   path: reportsPatchPath,
@@ -88,29 +121,7 @@ export const reportsPatch = {
       )
     }
 
-    const hasPrnFields =
-      'prnRevenue' in request.payload || 'freePernTonnage' in request.payload
-
-    if (hasPrnFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
-      throw Boom.badRequest(
-        `Cannot update PRN data for a report with status '${report.status}'`
-      )
-    }
-    if (hasPrnFields && !report.prn) {
-      throw Boom.badRequest(
-        'Cannot update PRN data for a report with no PRN record'
-      )
-    }
-
-    if (
-      'freePernTonnage' in request.payload &&
-      report.prn?.issuedTonnage !== undefined &&
-      request.payload.freePernTonnage > report.prn.issuedTonnage
-    ) {
-      throw Boom.badRequest(
-        `freePernTonnage (${request.payload.freePernTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
-      )
-    }
+    validatePrnFields(request.payload, report)
 
     const { prnRevenue, freePernTonnage, ...otherFields } = request.payload
 
