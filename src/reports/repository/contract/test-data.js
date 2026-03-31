@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
@@ -24,12 +25,40 @@ const buildUserSummary = (overrides = {}) => ({
  * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
  * @returns {import('../port.js').CreateReportParams}
  */
+const DEFAULT_CHANGED_BY = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+/**
+ * Creates a report and advances it to submitted via ready_to_submit.
+ * @param {import('../port.js').ReportsRepository} repository
+ * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
+ * @returns {Promise<string>} the submitted report id
+ */
+export const createAndSubmitReport = async (repository, overrides = {}) => {
+  const { id } = await repository.createReport(
+    buildCreateReportParams(overrides)
+  )
+  await repository.updateReportStatus({
+    reportId: id,
+    version: 1,
+    status: REPORT_STATUS.READY_TO_SUBMIT,
+    changedBy: DEFAULT_CHANGED_BY
+  })
+  await repository.updateReportStatus({
+    reportId: id,
+    version: 2,
+    status: REPORT_STATUS.SUBMITTED,
+    changedBy: DEFAULT_CHANGED_BY
+  })
+  return id
+}
+
 export const buildCreateReportParams = (overrides = {}) => ({
   organisationId: DEFAULT_ORG_ID,
   registrationId: DEFAULT_REG_ID,
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
   period: DEFAULT_REPORT_PERIOD,
+  submissionNumber: 1,
   startDate: DEFAULT_REPORT_START_DATE,
   endDate: DEFAULT_REPORT_END_DATE,
   dueDate: DEFAULT_REPORT_DUE_DATE,

@@ -62,18 +62,12 @@ export const createReportSchema = Joi.object({
     .valid(...Object.values(WASTE_PROCESSING_TYPE))
     .required(),
   siteAddress: Joi.string().optional(),
+  submissionNumber: Joi.number().integer().min(1).default(1),
   changedBy: userSummarySchema,
   ...reportDataFieldsSchema
 })
 
 const updatableFieldsSchema = Joi.object({
-  status: Joi.string().valid(
-    REPORT_STATUS.IN_PROGRESS,
-    REPORT_STATUS.READY_TO_SUBMIT,
-    REPORT_STATUS.SUBMITTED,
-    REPORT_STATUS.SUPERSEDED,
-    REPORT_STATUS.DELETED
-  ),
   supportingInformation: Joi.string().allow('')
 })
   .min(1)
@@ -92,7 +86,17 @@ export const deleteReportParamsSchema = Joi.object({
   year: YEAR_SCHEMA,
   cadence: cadenceSchema,
   period: periodSchema,
+  submissionNumber: Joi.number().integer().min(1).default(1),
   changedBy: userSummarySchema
+})
+
+export const updateReportStatusSchema = Joi.object({
+  reportId: Joi.string().required(),
+  version: Joi.number().integer().min(1).required(),
+  status: Joi.string()
+    .valid(...Object.values(REPORT_STATUS))
+    .required(),
+  changedBy: userSummarySchema.required()
 })
 
 export const findPeriodicReportsSchema = Joi.object({

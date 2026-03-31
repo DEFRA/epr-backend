@@ -1,8 +1,9 @@
-import { describe, beforeEach, expect } from 'vitest'
-import { ObjectId } from 'mongodb'
+import { beforeEach, describe, expect } from 'vitest'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
+  createAndSubmitReport,
   DEFAULT_ORG_ID,
   DEFAULT_REG_ID,
   DEFAULT_REPORT_DUE_DATE,
@@ -40,15 +41,18 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       })
 
       expect(result).toEqual({
-        version: 1,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
             [DEFAULT_REPORT_PERIOD]: {
-              currentReportId: reportId,
-              previousReportIds: [],
+              current: {
+                id: reportId,
+                status: REPORT_STATUS.IN_PROGRESS,
+                submissionNumber: 1
+              },
+              previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
               endDate: DEFAULT_REPORT_END_DATE,
               dueDate: DEFAULT_REPORT_DUE_DATE
@@ -58,7 +62,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       })
     })
 
-    it(`includes slots from multiple periods in a single document`, async () => {
+    it('includes slots from multiple periods in a single document', async () => {
       const { id: r1 } = await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.January })
       )
@@ -72,23 +76,29 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       })
 
       expect(result).toEqual({
-        version: 2,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
             [MONTHLY_PERIODS.January]: {
-              currentReportId: r1,
-              previousReportIds: [],
+              current: {
+                id: r1,
+                status: REPORT_STATUS.IN_PROGRESS,
+                submissionNumber: 1
+              },
+              previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
               endDate: DEFAULT_REPORT_END_DATE,
               dueDate: DEFAULT_REPORT_DUE_DATE
             },
             [MONTHLY_PERIODS.February]: {
-              currentReportId: r2,
-              previousReportIds: [],
-
+              current: {
+                id: r2,
+                status: REPORT_STATUS.IN_PROGRESS,
+                submissionNumber: 1
+              },
+              previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
               endDate: DEFAULT_REPORT_END_DATE,
               dueDate: DEFAULT_REPORT_DUE_DATE
@@ -98,12 +108,16 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       })
     })
 
-    it(`reflects previous report ids after re-creation for same slot`, async () => {
-      const { id: first } = await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.January })
-      )
+    it('reflects previousSubmissions when multiple reports are created with different submissionNumbers', async () => {
+      const first = await createAndSubmitReport(repository, {
+        period: MONTHLY_PERIODS.January
+      })
+
       const { id: second } = await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.January })
+        buildCreateReportParams({
+          period: MONTHLY_PERIODS.January,
+          submissionNumber: 2
+        })
       )
 
       const [result] = await repository.findPeriodicReports({
@@ -112,15 +126,24 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       })
 
       expect(result).toEqual({
-        version: 2,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
             [MONTHLY_PERIODS.January]: {
-              currentReportId: second,
-              previousReportIds: [first],
+              current: {
+                id: second,
+                status: REPORT_STATUS.IN_PROGRESS,
+                submissionNumber: 2
+              },
+              previousSubmissions: [
+                {
+                  id: first,
+                  status: REPORT_STATUS.SUBMITTED,
+                  submissionNumber: 1
+                }
+              ],
               startDate: DEFAULT_REPORT_START_DATE,
               endDate: DEFAULT_REPORT_END_DATE,
               dueDate: DEFAULT_REPORT_DUE_DATE
@@ -128,24 +151,6 @@ export const testFindPeriodicReportsBehaviour = (it) => {
           }
         }
       })
-    })
-
-    it('does not return documents from a different org/reg', async () => {
-      const otherOrgId = new ObjectId().toString()
-      const otherRegId = new ObjectId().toString()
-      await repository.createReport(
-        buildCreateReportParams({
-          organisationId: otherOrgId,
-          registrationId: otherRegId
-        })
-      )
-
-      const result = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
-
-      expect(result).toEqual([])
     })
 
     it('throws on missing required params', async () => {

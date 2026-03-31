@@ -4,7 +4,6 @@ import Boom from '@hapi/boom'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -49,13 +48,16 @@ export const reportsDelete = {
       )
     }
 
-    if (!isValidReportTransition(report.status, REPORT_STATUS.DELETED)) {
-      throw Boom.badRequest(
-        `Cannot delete a report with status '${report.status}'`
+    if (report.status.currentStatus === REPORT_STATUS.SUBMITTED) {
+      throw Boom.conflict(
+        `Cannot delete a submitted report for ${cadence} period ${period} of ${year}`
       )
     }
 
-    const previous = { status: report.status, version: report.version }
+    const previous = {
+      status: report.status.currentStatus,
+      version: report.version
+    }
 
     await reportsRepository.deleteReport({
       organisationId,
@@ -63,6 +65,7 @@ export const reportsDelete = {
       year,
       cadence,
       period,
+      submissionNumber: report.submissionNumber,
       changedBy: extractChangedBy(request.auth.credentials)
     })
 
@@ -71,7 +74,7 @@ export const reportsDelete = {
       reportId: report.id,
       previous,
       next: {
-        status: REPORT_STATUS.DELETED,
+        status: 'deleted',
         version: report.version + 1
       }
     })

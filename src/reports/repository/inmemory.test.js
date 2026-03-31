@@ -3,13 +3,8 @@ import { createInMemoryReportsRepository } from './inmemory.js'
 import { testReportsRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
-  reportsRepository: async (
-    { reportsStorage, periodicReportsStorage },
-    use
-  ) => {
-    await use(
-      createInMemoryReportsRepository(reportsStorage, periodicReportsStorage)
-    )
+  reportsRepository: async ({ reportsStorage }, use) => {
+    await use(createInMemoryReportsRepository(reportsStorage))
   }
 })
 

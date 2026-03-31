@@ -1,8 +1,9 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createReportsRepository } from './mongodb.js'
 import { testReportsRepositoryContract } from './port.contract.js'
+import { buildCreateReportParams } from '#root/reports/repository/contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -24,7 +25,6 @@ describe('MongoDB reports repository', () => {
   beforeEach(async ({ mongoClient }) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database.collection('reports').deleteMany({})
-    await database.collection('periodic-reports').deleteMany({})
   })
 
   it('creates a repository', ({ reportsRepository }) => {
@@ -33,5 +33,31 @@ describe('MongoDB reports repository', () => {
 
   describe('reports repository contract', () => {
     testReportsRepositoryContract(it)
+  })
+
+  describe('MongoDB-specific error handling', () => {
+    it('re-throws non-duplicate key errors during createReport', async () => {
+      const unexpectedError = new Error('Database connection lost')
+      unexpectedError.code = 'ECONNREFUSED'
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        insertOne: async () => {
+          throw unexpectedError
+        }
+      }
+
+      const factory = await createReportsRepository(mockDb)
+      const repository = factory()
+
+      const params = buildCreateReportParams()
+
+      await expect(repository.createReport(params)).rejects.toThrow(
+        'Database connection lost'
+      )
+    })
   })
 })
