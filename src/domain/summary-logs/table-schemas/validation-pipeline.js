@@ -7,7 +7,7 @@ import {
 
 /**
  * Resolved overseas sites lookup, or sentinel when ORS validation is disabled.
- * @typedef {Record<number, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
+ * @typedef {Record<string, { validFrom: Date | null }> | typeof ORS_VALIDATION_DISABLED} OverseasSitesContext
  */
 
 /**

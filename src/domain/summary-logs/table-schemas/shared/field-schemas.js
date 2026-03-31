@@ -106,16 +106,50 @@ export const createFirstOfMonthFieldSchema = () =>
     })
 
 /**
- * Creates a date field schema (2000-01-01 to 2100-01-01)
+ * Creates a calendar date field schema (2000-01-01 to 2100-01-01).
  *
- * @returns {Joi.DateSchema} Joi date schema
+ * Validates the date range but keeps the value as a YYYY-MM-DD string
+ * rather than coercing to a JavaScript Date object. This system only
+ * uses calendar dates, not timestamps.
+ *
+ * Accepts YYYY-MM-DD strings and Date objects (coerced to YYYY-MM-DD).
+ *
+ * @returns {Joi.StringSchema} Joi string schema
  */
 export const createDateFieldSchema = () =>
-  Joi.date().min(DATE_MIN).max(DATE_MAX).optional().messages({
-    'date.base': MESSAGES.MUST_BE_A_VALID_DATE,
-    'date.min': MESSAGES.MUST_BE_A_VALID_DATE,
-    'date.max': MESSAGES.MUST_BE_A_VALID_DATE
-  })
+  Joi.any()
+    .custom((value, helpers) => {
+      let dateStr
+      if (value instanceof Date) {
+        dateStr = value.toISOString().slice(0, 10)
+      } else if (typeof value === 'string') {
+        // Extract YYYY-MM-DD from full ISO timestamps or bare dates
+        dateStr = value.slice(0, 10)
+      } else {
+        return helpers.error('any.calendarDate')
+      }
+
+      const parsed = new Date(dateStr + 'T00:00:00.000Z')
+      if (isNaN(parsed.getTime())) {
+        return helpers.error('any.calendarDate')
+      }
+
+      // Reject if the parsed date doesn't round-trip to the same string
+      // (catches values like "2024-13-01" that Date silently rolls over)
+      if (parsed.toISOString().slice(0, 10) !== dateStr) {
+        return helpers.error('any.calendarDate')
+      }
+
+      if (parsed < DATE_MIN || parsed > DATE_MAX) {
+        return helpers.error('any.calendarDate')
+      }
+
+      return dateStr
+    })
+    .optional()
+    .messages({
+      'any.calendarDate': MESSAGES.MUST_BE_A_VALID_DATE
+    })
 
 /**
  * Creates a 3-digit ID field schema that coerces numbers to zero-padded
