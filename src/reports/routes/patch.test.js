@@ -93,18 +93,10 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       }
     }
 
-    const patchReport = (
-      server,
-      orgId,
-      regId,
-      payload,
-      year = 2025,
-      cadence = 'quarterly',
-      period = 1
-    ) =>
+    const patchReport = (server, orgId, regId, payload) =>
       server.inject({
         method: 'PATCH',
-        url: makeUrl(orgId, regId, year, cadence, period),
+        url: makeUrl(orgId, regId, 2025, 'quarterly', 1),
         payload,
         ...asStandardUser({ linkedOrgId: orgId })
       })
@@ -206,7 +198,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(payload.prn.totalRevenue).toBe(1576.12)
       })
 
-      it('returns 200 when patching freePernTonnage', async () => {
+      it('returns 200 when patching freeTonnage', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport(
             {
@@ -220,7 +212,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           server,
           organisationId,
           registrationId,
-          { freePernTonnage: 5 }
+          { freeTonnage: 5 }
         )
 
         expect(response.statusCode).toBe(StatusCodes.OK)
@@ -247,7 +239,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           organisationId,
           registrationId,
           {
-            freePernTonnage: 10
+            freeTonnage: 10
           }
         )
 
@@ -275,94 +267,234 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
-      it('returns 400 when freePernTonnage exceeds issued tonnage', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
-        const org = buildOrganisation({ registrations: [registration] })
+      it('returns 400 when freeTonnage exceeds issued tonnage', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
 
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20',
-            prn: { issuedTonnage: 100 }
-          })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { freeTonnage: 101 }
         )
-
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
-
-        const response = await patchReport(server, org.id, registration.id, {
-          freePernTonnage: 101
-        })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
 
-      it('returns 200 when freePernTonnage equals issued tonnage', async () => {
-        const registration = buildRegistration({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
-        const org = buildOrganisation({ registrations: [registration] })
+      it('returns 200 when freeTonnage equals issued tonnage', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 50 } }
+          )
 
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20',
-            prn: { issuedTonnage: 50 }
-          })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { freeTonnage: 50 }
         )
 
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
+        expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+    })
 
-        const response = await patchReport(server, org.id, registration.id, {
-          freePernTonnage: 50
-        })
+    describe('updating recycling activity fields', () => {
+      it('returns 200 when patching tonnageRecycled', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            },
+            {
+              recyclingActivity: {
+                totalTonnageReceived: 200,
+                suppliers: [],
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              }
+            }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageRecycled: 100.5 }
+        )
 
         expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.recyclingActivity.tonnageRecycled).toBe(100.5)
+      })
+
+      it('returns 200 when patching tonnageNotRecycled', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            },
+            {
+              recyclingActivity: {
+                totalTonnageReceived: 200,
+                suppliers: [],
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              }
+            }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotRecycled: 20 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.recyclingActivity.tonnageNotRecycled).toBe(20)
+      })
+
+      it('returns 200 when patching both tonnage fields in one request', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            },
+            {
+              recyclingActivity: {
+                totalTonnageReceived: 200,
+                suppliers: [],
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              }
+            }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageRecycled: 100, tonnageNotRecycled: 20 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.recyclingActivity.tonnageRecycled).toBe(100)
+        expect(payload.recyclingActivity.tonnageNotRecycled).toBe(20)
+      })
+
+      it('preserves existing recyclingActivity fields when patching one field', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            },
+            {
+              recyclingActivity: {
+                totalTonnageReceived: 200,
+                suppliers: [],
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              }
+            }
+          )
+
+        await patchReport(server, organisationId, registrationId, {
+          tonnageRecycled: 100
+        })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotRecycled: 20 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.recyclingActivity.tonnageRecycled).toBe(100)
+        expect(payload.recyclingActivity.tonnageNotRecycled).toBe(20)
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(200)
+      })
+
+      it('creates recyclingActivity when report has none', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageRecycled: 50 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.recyclingActivity.tonnageRecycled).toBe(50)
+      })
+
+      it('returns 422 when tonnageRecycled is negative', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageRecycled: -1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 400 when patching tonnageRecycled on non-in_progress report', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
+          changedBy: { id: 'user-1', name: 'Test User' }
+        })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageRecycled: 100 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
     })
 
@@ -385,52 +517,30 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       it('returns 400 when patching prnRevenue on non-in_progress report', async () => {
-        const registration = buildRegistration({
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
           wasteProcessingType: 'exporter',
           accreditationId: new ObjectId().toString()
         })
-        const org = buildOrganisation({ registrations: [registration] })
-
-        const organisationsRepositoryFactory =
-          createInMemoryOrganisationsRepository()
-        const organisationsRepository = organisationsRepositoryFactory()
-        await organisationsRepository.insert(org)
-
-        const reportsRepositoryFactory = createInMemoryReportsRepository()
-        const reportsRepository = reportsRepositoryFactory()
-
-        const report = await reportsRepository.createReport(
-          buildCreateReportParams({
-            organisationId: org.id,
-            registrationId: registration.id,
-            year: 2025,
-            cadence: 'quarterly',
-            period: 1,
-            startDate: '2025-01-01',
-            endDate: '2025-03-31',
-            dueDate: '2025-04-20'
-          })
-        )
 
         await reportsRepository.updateReportStatus({
-          reportId: report.id,
-          version: report.version,
+          reportId,
+          version: 1,
           status: 'ready_to_submit',
           changedBy: { id: 'user-1', name: 'Test User' }
         })
 
-        const server = await createTestServer({
-          repositories: {
-            organisationsRepository: organisationsRepositoryFactory,
-            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
-            reportsRepository: reportsRepositoryFactory
-          },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
-        })
-
-        const response = await patchReport(server, org.id, registration.id, {
-          prnRevenue: 100
-        })
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { prnRevenue: 100 }
+        )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })

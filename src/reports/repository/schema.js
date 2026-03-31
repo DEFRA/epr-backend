@@ -36,9 +36,9 @@ export const userSummarySchema = Joi.object({
 
 export const prnSchema = Joi.object({
   issuedTonnage: Joi.number().min(0).required(),
-  totalRevenue: Joi.number().min(0),
-  freeTonnage: Joi.number().min(0),
-  averagePricePerTonne: Joi.number().min(0)
+  totalRevenue: Joi.number().min(0).allow(null),
+  freeTonnage: Joi.number().min(0).allow(null),
+  averagePricePerTonne: Joi.number().min(0).allow(null)
 }).optional()
 
 const reportDataFieldsSchema = {
@@ -72,7 +72,11 @@ export const createReportSchema = Joi.object({
 
 const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
-  prn: prnSchema.fork('issuedTonnage', (s) => s.optional())
+  prn: prnSchema.fork('issuedTonnage', (s) => s.optional()),
+  recyclingActivity: Joi.object({
+    tonnageRecycled: Joi.number().min(0).allow(null),
+    tonnageNotRecycled: Joi.number().min(0).allow(null)
+  }).unknown(true)
 })
   .min(1)
   .required()

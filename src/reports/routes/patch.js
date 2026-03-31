@@ -18,7 +18,9 @@ const MAX_SUPPORTING_INFO_LENGTH = 2000
 const payloadSchema = Joi.object({
   supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH),
   prnRevenue: Joi.number().min(0),
-  freePernTonnage: Joi.number().min(0)
+  freeTonnage: Joi.number().min(0),
+  tonnageRecycled: Joi.number().min(0),
+  tonnageNotRecycled: Joi.number().min(0)
 }).min(1)
 
 /**
@@ -53,36 +55,60 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
 }
 
 /**
+ * Guards against updates to report data fields when the report is not in progress.
  * @param {object} payload
  * @param {import('#reports/repository/port.js').Report} report
  */
-function validatePrnFields(payload, report) {
-  const hasPrnFields = 'prnRevenue' in payload || 'freePernTonnage' in payload
+function guardReportDataFields(payload, report) {
+  const hasPrnFields = 'prnRevenue' in payload || 'freeTonnage' in payload
 
-  if (!hasPrnFields) {
-    return
-  }
-
-  if (report.status.currentStatus !== REPORT_STATUS.IN_PROGRESS) {
-    throw Boom.badRequest(
-      `Cannot update PRN data for a report with status '${report.status.currentStatus}'`
-    )
-  }
-  if (!report.prn) {
+  if (hasPrnFields && !report.prn) {
     throw Boom.badRequest(
       'Cannot update PRN data for a report with no PRN record'
     )
   }
 
   if (
-    'freePernTonnage' in payload &&
-    report.prn.issuedTonnage !== undefined &&
-    payload.freePernTonnage > report.prn.issuedTonnage
+    'freeTonnage' in payload &&
+    report.prn?.issuedTonnage !== undefined &&
+    payload.freeTonnage > report.prn.issuedTonnage
   ) {
     throw Boom.badRequest(
-      `freePernTonnage (${payload.freePernTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
+      `freeTonnage (${payload.freeTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
     )
   }
+}
+
+/**
+ * Builds the update fields from the PATCH payload and existing report data.
+ * @param {object} payload
+ * @param {object} report
+ * @returns {object}
+ */
+function buildUpdateFields(payload, report) {
+  const {
+    prnRevenue,
+    freeTonnage,
+    tonnageRecycled,
+    tonnageNotRecycled,
+    ...otherFields
+  } = payload
+
+  const fields = { ...otherFields }
+
+  if (prnRevenue !== undefined || freeTonnage !== undefined) {
+    fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freeTonnage)
+  }
+
+  if (tonnageRecycled !== undefined || tonnageNotRecycled !== undefined) {
+    fields.recyclingActivity = {
+      ...(report.recyclingActivity || {}),
+      ...(tonnageRecycled !== undefined && { tonnageRecycled }),
+      ...(tonnageNotRecycled !== undefined && { tonnageNotRecycled })
+    }
+  }
+
+  return fields
 }
 
 export const reportsPatch = {
@@ -97,7 +123,7 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freePernTonnage?: number }> & { reportsRepository: ReportsRepository }} request
+   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & { reportsRepository: ReportsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -121,19 +147,24 @@ export const reportsPatch = {
       )
     }
 
-    if (report.status.currentStatus === REPORT_STATUS.SUBMITTED) {
-      throw Boom.badRequest(`Cannot update a submitted report`)
+    request.logger.info(
+      { reportId: report.id, status: report.status, version: report.version },
+      'PATCH guard: report found'
+    )
+
+    if (report.status.currentStatus !== REPORT_STATUS.IN_PROGRESS) {
+      request.logger.error(
+        { reportId: report.id, status: report.status },
+        'PATCH guard: status check failed'
+      )
+      throw Boom.badRequest(
+        `Cannot update a report with status '${report.status.currentStatus}'`
+      )
     }
 
-    validatePrnFields(request.payload, report)
+    guardReportDataFields(request.payload, report)
 
-    const { prnRevenue, freePernTonnage, ...otherFields } = request.payload
-
-    const fields = { ...otherFields }
-
-    if (prnRevenue !== undefined || freePernTonnage !== undefined) {
-      fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freePernTonnage)
-    }
+    const fields = buildUpdateFields(request.payload, report)
 
     await reportsRepository.updateReport({
       reportId: report.id,
