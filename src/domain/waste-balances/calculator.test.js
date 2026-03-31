@@ -811,7 +811,7 @@ describe('Waste Balance Calculator', () => {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
           [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
           [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
-          [FIELDS.OSR_ID]: 100
+          [FIELDS.OSR_ID]: '001'
         }
       })
 
@@ -819,7 +819,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
-        overseasSites: { 200: { validFrom: new Date('2023-01-01') } }
+        overseasSites: { '002': { validFrom: new Date('2023-01-01') } }
       })
 
       expect(result.newTransactions).toHaveLength(0)
@@ -832,7 +832,7 @@ describe('Waste Balance Calculator', () => {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
           [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
           [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
-          [FIELDS.OSR_ID]: 100
+          [FIELDS.OSR_ID]: '001'
         }
       })
 
@@ -840,7 +840,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
-        overseasSites: { 100: { validFrom: new Date('2023-01-01') } }
+        overseasSites: { '001': { validFrom: new Date('2023-01-01') } }
       })
 
       expect(result.newTransactions).toHaveLength(1)
@@ -853,7 +853,7 @@ describe('Waste Balance Calculator', () => {
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
           [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
           [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0',
-          [FIELDS.OSR_ID]: 100
+          [FIELDS.OSR_ID]: '001'
         }
       })
 

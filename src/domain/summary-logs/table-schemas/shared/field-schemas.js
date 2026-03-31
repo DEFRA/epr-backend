@@ -24,10 +24,23 @@ const DATE_MAX = new Date('2100-01-01')
 /**
  * 3-digit ID constraints
  *
- * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 1-999.
+ * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 1-999,
+ * zero-padded to 3 characters (e.g. 99 → "099").
  */
 const THREE_DIGIT_ID_MIN = 1
 const THREE_DIGIT_ID_MAX = 999
+const THREE_DIGIT_PAD = 3
+
+/**
+ * Zero-pads a numeric or string value to a 3-digit string.
+ * Used both by the Joi schema and by lookup code that receives
+ * raw Excel values (numbers) that need to match registration keys.
+ *
+ * @param {number | string} value
+ * @returns {string} Zero-padded 3-digit string (e.g. 99 → "099")
+ */
+export const toThreeDigitId = (value) =>
+  String(Number(value)).padStart(THREE_DIGIT_PAD, '0')
 
 /**
  * Default maximum length for free text string fields
@@ -105,21 +118,29 @@ export const createDateFieldSchema = () =>
   })
 
 /**
- * Creates a 3-digit ID field schema (1-999)
+ * Creates a 3-digit ID field schema that coerces numbers to zero-padded
+ * strings (e.g. 99 → "099"). Excel stores these as numbers, but the
+ * registration schema uses 3-digit string keys like "099".
  *
- * @returns {Joi.NumberSchema} Joi number schema
+ * @returns {Joi.StringSchema} Joi string schema
  */
 export const createThreeDigitIdSchema = () =>
-  Joi.number()
-    .integer()
-    .min(THREE_DIGIT_ID_MIN)
-    .max(THREE_DIGIT_ID_MAX)
+  customJoi
+    .coercedString()
+    .custom((value, helpers) => {
+      const num = Number(value)
+      if (
+        !Number.isInteger(num) ||
+        num < THREE_DIGIT_ID_MIN ||
+        num > THREE_DIGIT_ID_MAX
+      ) {
+        return helpers.error('string.threeDigitId')
+      }
+      return toThreeDigitId(num)
+    })
     .optional()
     .messages({
-      'number.base': MESSAGES.MUST_BE_A_NUMBER,
-      'number.integer': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-      'number.min': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-      'number.max': MESSAGES.MUST_BE_3_DIGIT_NUMBER
+      'string.threeDigitId': MESSAGES.MUST_BE_3_DIGIT_ID
     })
 
 /**
