@@ -21,6 +21,10 @@ const DEFAULT_MAX_WEIGHT = 1000
 const DATE_MIN = new Date('2000-01-01')
 const DATE_MAX = new Date('2100-01-01')
 const CALENDAR_DATE_ERROR = 'any.calendarDate'
+const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
+
+/** @param {Date} date */
+const toCalendarDate = (date) => date.toISOString().slice(0, 10)
 
 /**
  * 3-digit ID constraints
@@ -122,22 +126,20 @@ export const createDateFieldSchema = () =>
     .custom((value, helpers) => {
       let dateStr
       if (value instanceof Date) {
-        dateStr = value.toISOString().slice(0, 10)
+        dateStr = toCalendarDate(value)
       } else if (typeof value === 'string') {
-        // Extract YYYY-MM-DD from full ISO timestamps or bare dates
-        dateStr = value.slice(0, 10)
+        const match = value.match(CALENDAR_DATE_PATTERN)
+        if (!match) return helpers.error(CALENDAR_DATE_ERROR)
+        dateStr = match[1]
       } else {
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 
       const parsed = new Date(dateStr + 'T00:00:00.000Z')
-      if (Number.isNaN(parsed.getTime())) {
-        return helpers.error(CALENDAR_DATE_ERROR)
-      }
 
       // Reject if the parsed date doesn't round-trip to the same string
       // (catches values like "2024-13-01" that Date silently rolls over)
-      if (parsed.toISOString().slice(0, 10) !== dateStr) {
+      if (toCalendarDate(parsed) !== dateStr) {
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 
