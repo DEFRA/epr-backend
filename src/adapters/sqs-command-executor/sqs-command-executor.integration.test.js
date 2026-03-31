@@ -231,6 +231,46 @@ describe('SQS command executor integration', () => {
         })
       }
     )
+
+    it(
+      'includes user context in import message when provided',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const importId = `import-user-test-${Date.now()}`
+        const user = {
+          id: 'user-123',
+          email: 'maintainer@defra.gov.uk',
+          scope: ['serviceMaintainer']
+        }
+        await executor.orsImportsWorker.importOverseasSites(importId, user)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        const response = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 5
+          })
+        )
+
+        expect(response.Messages).toHaveLength(1)
+
+        const message = JSON.parse(response.Messages[0].Body)
+        expect(message).toEqual({
+          command: 'import-overseas-sites',
+          importId,
+          user
+        })
+      }
+    )
   })
 
   describe('queue connection', () => {

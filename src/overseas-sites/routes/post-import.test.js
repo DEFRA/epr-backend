@@ -101,6 +101,26 @@ describe(`${orsImportCreatePath} route`, () => {
         expect(stored.files).toEqual([])
       })
 
+      it('stores the initiating user on the import record', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: '/v1/overseas-sites/imports',
+          ...asServiceMaintainer(),
+          payload: {
+            redirectUrl: 'https://admin.test/overseas-sites/upload'
+          }
+        })
+
+        const body = JSON.parse(response.payload)
+        const stored = await orsImportsRepository.findById(body.id)
+
+        expect(stored.createdBy).toEqual({
+          id: 'test-maintainer-id',
+          email: 'maintainer@example.com',
+          scope: ['service_maintainer']
+        })
+      })
+
       it('initiates upload via CDP Uploader', async () => {
         await server.inject({
           method: 'POST',

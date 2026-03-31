@@ -11,6 +11,12 @@ import {
 import { processOrsImport } from '#overseas-sites/application/process-import.js'
 import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
 
+const userSchema = Joi.object({
+  id: Joi.string().required(),
+  email: Joi.string().required(),
+  scope: Joi.array().items(Joi.string()).required()
+})
+
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 
 /**
@@ -20,6 +26,7 @@ import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
  * @property {object} uploadsRepository
  * @property {object} overseasSitesRepository
  * @property {object} organisationsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
  */
 
 /** @type {import('./summary-log-commands.js').CommandHandler[]} */
@@ -27,7 +34,8 @@ export const orsImportCommandHandlers = [
   {
     command: ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES,
     payloadSchema: Joi.object({
-      importId: Joi.string().required()
+      importId: Joi.string().required(),
+      user: userSchema.optional()
     }),
     execute: async (payload, /** @type {OrsImportHandlerDeps} */ deps) => {
       await processOrsImport(payload.importId, {
@@ -35,8 +43,10 @@ export const orsImportCommandHandlers = [
         uploadsRepository: deps.uploadsRepository,
         overseasSitesRepository: deps.overseasSitesRepository,
         organisationsRepository: deps.organisationsRepository,
+        systemLogsRepository: deps.systemLogsRepository,
         logger: deps.logger,
-        orsImportMetrics
+        orsImportMetrics,
+        user: payload.user
       })
     },
     onFailure: async (payload, /** @type {OrsImportHandlerDeps} */ deps) => {
