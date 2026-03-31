@@ -67,6 +67,7 @@
  * @property {number} issuedTonnage
  * @property {number} [totalRevenue]
  * @property {number} [averagePricePerTonne]
+ * @property {number} freeTonnage
  */
 
 /**

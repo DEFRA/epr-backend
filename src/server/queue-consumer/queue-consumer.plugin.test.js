@@ -38,7 +38,8 @@ describe('commandQueueConsumerPlugin', () => {
         organisationsRepository: {},
         wasteRecordsRepository: {},
         wasteBalancesRepository: {},
-        uploadsRepository: {}
+        uploadsRepository: {},
+        systemLogsRepository: {}
       }
     }
 
@@ -162,7 +163,8 @@ describe('commandQueueConsumerPlugin', () => {
         expect.objectContaining({
           orsImportsRepository: server.app.orsImportsRepository,
           overseasSitesRepository: server.app.overseasSitesRepository,
-          uploadsRepository: server.app.uploadsRepository
+          uploadsRepository: server.app.uploadsRepository,
+          systemLogsRepository: server.app.systemLogsRepository
         }),
         [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
       )

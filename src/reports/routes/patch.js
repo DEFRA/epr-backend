@@ -25,30 +25,30 @@ const payloadSchema = Joi.object({
 
 /**
  * Merges user-entered PRN data with the existing prn object and computes averagePricePerTonne.
- * @param {import('#reports/repository/port.js').PrnData | undefined} existingPrn
- * @param {number | undefined} prnRevenue
+ * @param {import('#reports/repository/port.js').PrnData } existingPrn
+ * @param {number | undefined} totalRevenue
  * @param {number | undefined} freeTonnage
  * @returns {object}
  */
-export function buildUpdatedPrn(existingPrn, prnRevenue, freeTonnage) {
-  const base = existingPrn || {}
-  const totalRevenue = prnRevenue !== undefined ? prnRevenue : base.totalRevenue
-  const resolvedFree =
-    freeTonnage !== undefined ? freeTonnage : base.freeTonnage
-  const issued = base.issuedTonnage || 0
-  const free = resolvedFree || 0
-  const revenue = totalRevenue || 0
-  const denominator = issued - free
-  const averagePricePerTonne = denominator > 0 ? revenue / denominator : 0
-
-  const updated = { ...base, averagePricePerTonne }
-
-  if (totalRevenue !== undefined) {
-    updated.totalRevenue = totalRevenue
+export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
+  const updated = {
+    ...existingPrn,
+    totalRevenue:
+      totalRevenue !== undefined ? totalRevenue : existingPrn.totalRevenue,
+    freeTonnage:
+      freeTonnage !== undefined ? freeTonnage : existingPrn.freeTonnage
   }
 
-  if (resolvedFree !== undefined) {
-    updated.freeTonnage = resolvedFree
+  if (
+    updated.issuedTonnage >= 0 &&
+    updated.totalRevenue != null &&
+    updated.freeTonnage != null
+  ) {
+    const denominator = updated.issuedTonnage - updated.freeTonnage
+    updated.averagePricePerTonne =
+      denominator > 0 ? updated.totalRevenue / denominator : 0
+  } else {
+    updated.averagePricePerTonne = 0
   }
 
   return updated
@@ -57,7 +57,7 @@ export function buildUpdatedPrn(existingPrn, prnRevenue, freeTonnage) {
 /**
  * Guards against updates to report data fields when the report is not in progress.
  * @param {object} payload
- * @param {object} report
+ * @param {import('#reports/repository/port.js').Report} report
  */
 function guardReportDataFields(payload, report) {
   const hasDataFields =
@@ -66,9 +66,21 @@ function guardReportDataFields(payload, report) {
     'tonnageRecycled' in payload ||
     'tonnageNotRecycled' in payload
 
-  if (hasDataFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
+  if (!hasDataFields) {
+    return
+  }
+
+  if (report.status !== REPORT_STATUS.IN_PROGRESS) {
     throw Boom.badRequest(
       `Cannot update report data for a report with status '${report.status}'`
+    )
+  }
+
+  const hasPrnFields = 'prnRevenue' in payload || 'freeTonnage' in payload
+
+  if (hasPrnFields && !report.prn) {
+    throw Boom.badRequest(
+      'Cannot update PRN data for a report with no PRN record'
     )
   }
 

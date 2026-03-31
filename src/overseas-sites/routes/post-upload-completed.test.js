@@ -144,11 +144,18 @@ describe(`${orsUploadCompletedPath} route`, () => {
     expect(doc.files[1].fileId).toBe('file-2')
   })
 
-  it('enqueues an import-overseas-sites command', async () => {
+  it('enqueues an import-overseas-sites command with the initiating user', async () => {
+    const createdBy = {
+      id: 'user-123',
+      email: 'maintainer@defra.gov.uk',
+      scope: ['serviceMaintainer']
+    }
+
     await orsImportsRepository.create({
       _id: importId,
       status: ORS_IMPORT_STATUS.PREPROCESSING,
-      files: []
+      files: [],
+      createdBy
     })
 
     await server.inject({
@@ -157,7 +164,10 @@ describe(`${orsUploadCompletedPath} route`, () => {
       payload: createPayload()
     })
 
-    expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(importId)
+    expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(
+      importId,
+      createdBy
+    )
   })
 
   it('does not enqueue command when file was rejected', async () => {
@@ -234,10 +244,17 @@ describe(`${orsUploadCompletedPath} route`, () => {
   })
 
   it('does not mark as failed when some files complete and others are rejected', async () => {
+    const createdBy = {
+      id: 'user-456',
+      email: 'admin@defra.gov.uk',
+      scope: ['serviceMaintainer']
+    }
+
     await orsImportsRepository.create({
       _id: importId,
       status: ORS_IMPORT_STATUS.PREPROCESSING,
-      files: []
+      files: [],
+      createdBy
     })
 
     await server.inject({
@@ -265,7 +282,10 @@ describe(`${orsUploadCompletedPath} route`, () => {
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
-    expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(importId)
+    expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(
+      importId,
+      createdBy
+    )
   })
 
   it('returns 404 when import does not exist', async () => {

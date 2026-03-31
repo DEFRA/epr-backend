@@ -11,7 +11,9 @@ const { parse } = await import('../parsers/ors-spreadsheet-parser.js')
 describe('processImportFile', () => {
   let overseasSitesRepository
   let organisationsRepository
+  let systemLogsRepository
   let logger
+  let user
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -26,17 +28,29 @@ describe('processImportFile', () => {
       replaceRegistrationOverseasSites: vi.fn()
     }
 
+    systemLogsRepository = {
+      insert: vi.fn()
+    }
+
     logger = {
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn()
+    }
+
+    user = {
+      id: 'user-123',
+      email: 'maintainer@defra.gov.uk',
+      scope: ['serviceMaintainer']
     }
   })
 
   const deps = () => ({
     overseasSitesRepository,
     organisationsRepository,
-    logger
+    systemLogsRepository,
+    logger,
+    user
   })
 
   it('creates overseas site records and replaces registration mapping', async () => {
@@ -490,6 +504,227 @@ describe('processImportFile', () => {
       '001': { overseasSiteId: 'existing-site-id' },
       '002': { overseasSiteId: 'new-site-id' }
     })
+  })
+
+  it('creates a system log entry on successful import', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 500001,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Test Site',
+          address: {
+            line1: '1 Test St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue({
+      id: 'org-id',
+      orgId: 500001,
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-id',
+          registrationNumber: 'EPR/AB1234CD/R1',
+          wasteProcessingType: 'exporter'
+        }
+      ]
+    })
+
+    overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
+      true
+    )
+
+    await processImportFile(buffer, deps())
+
+    expect(systemLogsRepository.insert).toHaveBeenCalledWith({
+      createdAt: expect.any(Date),
+      createdBy: user,
+      event: {
+        category: 'entity',
+        subCategory: 'overseas-sites',
+        action: 'import-completed'
+      },
+      context: {
+        organisationId: 'org-id',
+        registrationId: 'reg-id',
+        registrationNumber: 'EPR/AB1234CD/R1',
+        sitesCreated: 1,
+        mappingsUpdated: 1
+      }
+    })
+  })
+
+  it('does not create a system log entry when import fails', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 999999,
+        registrationNumber: 'EPR/XX0000XX/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Test Site',
+          address: {
+            line1: '1 Test St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue(null)
+
+    await processImportFile(buffer, deps())
+
+    expect(systemLogsRepository.insert).not.toHaveBeenCalled()
+  })
+
+  it('does not create a system log entry on version conflict', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 500001,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Test Site',
+          address: {
+            line1: '1 Test St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue({
+      id: 'org-id',
+      orgId: 500001,
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-id',
+          registrationNumber: 'EPR/AB1234CD/R1',
+          wasteProcessingType: 'exporter'
+        }
+      ]
+    })
+
+    overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
+      false
+    )
+
+    await processImportFile(buffer, deps())
+
+    expect(systemLogsRepository.insert).not.toHaveBeenCalled()
+  })
+
+  it('still returns success when system log write fails', async () => {
+    const buffer = Buffer.from('spreadsheet')
+
+    parse.mockResolvedValue({
+      metadata: {
+        orgId: 500001,
+        registrationNumber: 'EPR/AB1234CD/R1',
+        packagingWasteCategory: null,
+        accreditationNumber: null
+      },
+      sites: [
+        {
+          orsId: '001',
+          country: 'Germany',
+          name: 'Test Site',
+          address: {
+            line1: '1 Test St',
+            line2: null,
+            townOrCity: 'Berlin',
+            stateOrRegion: null,
+            postcode: null
+          },
+          coordinates: null,
+          validFrom: null,
+          rowNumber: 10
+        }
+      ],
+      errors: []
+    })
+
+    organisationsRepository.findByOrgId.mockResolvedValue({
+      id: 'org-id',
+      orgId: 500001,
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-id',
+          registrationNumber: 'EPR/AB1234CD/R1',
+          wasteProcessingType: 'exporter'
+        }
+      ]
+    })
+
+    overseasSitesRepository.create.mockResolvedValue({ id: 'site-id' })
+    organisationsRepository.replaceRegistrationOverseasSites.mockResolvedValue(
+      true
+    )
+    systemLogsRepository.insert.mockRejectedValue(
+      new Error('MongoDB connection lost')
+    )
+
+    const result = await processImportFile(buffer, deps())
+
+    expect(result.status).toBe(ORS_FILE_RESULT_STATUS.SUCCESS)
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'Failed to write system log for ORS import'
+        )
+      })
+    )
   })
 
   it('sets null validFrom when not provided', async () => {

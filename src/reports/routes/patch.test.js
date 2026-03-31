@@ -579,6 +579,23 @@ describe(`PATCH ${reportsPatchPath}`, () => {
     })
 
     describe('PRN data status guard', () => {
+      it('returns 400 when patching PRN fields on a report with no PRN record', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { prnRevenue: 100 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
       it('returns 400 when patching prnRevenue on non-in_progress report', async () => {
         const registration = buildRegistration({
           wasteProcessingType: 'exporter',
@@ -742,11 +759,22 @@ describe(`PATCH ${reportsPatchPath}`, () => {
 })
 
 describe('buildUpdatedPrn', () => {
-  it('sets revenue and computes average when existing prn has issuedTonnage', () => {
+  it('sets revenue and zeros average when freeTonnage is missing', () => {
     const result = buildUpdatedPrn({ issuedTonnage: 100 }, 500, undefined)
 
     expect(result.totalRevenue).toBe(500)
     expect(result.issuedTonnage).toBe(100)
+    expect(result.averagePricePerTonne).toBe(0)
+  })
+
+  it('computes average when all three values are present', () => {
+    const result = buildUpdatedPrn(
+      { issuedTonnage: 100, freeTonnage: 0 },
+      500,
+      undefined
+    )
+
+    expect(result.totalRevenue).toBe(500)
     expect(result.averagePricePerTonne).toBe(5)
   })
 
@@ -768,8 +796,8 @@ describe('buildUpdatedPrn', () => {
     expect(result.averagePricePerTonne).toBe(0)
   })
 
-  it('handles undefined existing prn', () => {
-    const result = buildUpdatedPrn(undefined, 100, 5)
+  it('zeros average when issuedTonnage is negative', () => {
+    const result = buildUpdatedPrn({ issuedTonnage: -1 }, 100, 5)
 
     expect(result.totalRevenue).toBe(100)
     expect(result.freeTonnage).toBe(5)

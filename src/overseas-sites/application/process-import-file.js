@@ -10,12 +10,20 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {object} deps
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
  * @param {object} deps.logger
+ * @param {{ id: string, email: string, scope: string[] }} deps.user
  * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
  */
 export const processImportFile = async (
   buffer,
-  { overseasSitesRepository, organisationsRepository, logger }
+  {
+    overseasSitesRepository,
+    organisationsRepository,
+    systemLogsRepository,
+    logger,
+    user
+  }
 ) => {
   let metadata
   let sites
@@ -34,27 +42,11 @@ export const processImportFile = async (
     return failureResult(metadata.registrationNumber, errors)
   }
 
-  const org = await organisationsRepository.findByOrgId(metadata.orgId)
-  if (!org) {
-    return failureResult(metadata.registrationNumber, [
-      {
-        field: 'orgId',
-        message: `Organisation with orgId ${metadata.orgId} not found`
-      }
-    ])
+  const resolved = await resolveRegistration(organisationsRepository, metadata)
+  if (resolved.error) {
+    return failureResult(metadata.registrationNumber, [resolved.error])
   }
-
-  const registration = org.registrations.find(
-    (r) => r.registrationNumber === metadata.registrationNumber
-  )
-  if (!registration) {
-    return failureResult(metadata.registrationNumber, [
-      {
-        field: 'registrationNumber',
-        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.orgId}`
-      }
-    ])
-  }
+  const { org, registration } = resolved
 
   const { overseasSitesMap, sitesCreated } = await findOrCreateOverseasSites(
     sites,
@@ -78,6 +70,17 @@ export const processImportFile = async (
     ])
   }
 
+  const mappingsUpdated = Object.keys(overseasSitesMap).length
+
+  await recordImportSystemLog(systemLogsRepository, logger, {
+    user,
+    organisationId: org.id,
+    registrationId: registration.id,
+    registrationNumber: metadata.registrationNumber,
+    sitesCreated,
+    mappingsUpdated
+  })
+
   logger.info({
     message: `Processed ORS file: ${sitesCreated} sites created, ${sites.length - sitesCreated} reused for registration ${metadata.registrationNumber}`
   })
@@ -85,7 +88,7 @@ export const processImportFile = async (
   return {
     status: ORS_FILE_RESULT_STATUS.SUCCESS,
     sitesCreated,
-    mappingsUpdated: Object.keys(overseasSitesMap).length,
+    mappingsUpdated,
     registrationNumber: metadata.registrationNumber,
     errors: []
   }
@@ -121,6 +124,68 @@ const findOrCreateOverseasSites = async (sites, overseasSitesRepository) => {
   }
 
   return { overseasSitesMap, sitesCreated }
+}
+
+const resolveRegistration = async (organisationsRepository, metadata) => {
+  const org = await organisationsRepository.findByOrgId(metadata.orgId)
+  if (!org) {
+    return {
+      error: {
+        field: 'orgId',
+        message: `Organisation with orgId ${metadata.orgId} not found`
+      }
+    }
+  }
+
+  const registration = org.registrations.find(
+    (r) => r.registrationNumber === metadata.registrationNumber
+  )
+  if (!registration) {
+    return {
+      error: {
+        field: 'registrationNumber',
+        message: `Registration ${metadata.registrationNumber} not found in organisation ${metadata.orgId}`
+      }
+    }
+  }
+
+  return { org, registration }
+}
+
+const recordImportSystemLog = async (
+  systemLogsRepository,
+  logger,
+  {
+    user,
+    organisationId,
+    registrationId,
+    registrationNumber,
+    sitesCreated,
+    mappingsUpdated
+  }
+) => {
+  try {
+    await systemLogsRepository.insert({
+      createdAt: new Date(),
+      createdBy: user,
+      event: {
+        category: 'entity',
+        subCategory: 'overseas-sites',
+        action: 'import-completed'
+      },
+      context: {
+        organisationId,
+        registrationId,
+        registrationNumber,
+        sitesCreated,
+        mappingsUpdated
+      }
+    })
+  } catch (systemLogErr) {
+    logger.warn({
+      message: `Failed to write system log for ORS import on registration ${registrationNumber}: ${systemLogErr.message}`
+    })
+  }
 }
 
 const failureResult = (registrationNumber, errors) => ({
