@@ -96,7 +96,7 @@ export const updateReportStatusSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
-  changedBy: userSummarySchema.optional()
+  changedBy: userSummarySchema.required()
 })
 
 export const findPeriodicReportsSchema = Joi.object({

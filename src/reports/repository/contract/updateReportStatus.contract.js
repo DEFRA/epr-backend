@@ -6,12 +6,13 @@ export const testUpdateReportStatusBehaviour = (it) => {
   describe('updateReportStatus', () => {
     let repository
 
+    const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
+
     beforeEach(async ({ reportsRepository }) => {
       repository = reportsRepository()
     })
 
     it('transitions in_progress → ready_to_submit, sets slot and appends history', async () => {
-      const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
       const { id: reportId } = await repository.createReport(
         buildCreateReportParams()
       )
@@ -101,7 +102,8 @@ export const testUpdateReportStatusBehaviour = (it) => {
       await repository.updateReportStatus({
         reportId,
         version: 1,
-        status: REPORT_STATUS.READY_TO_SUBMIT
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        changedBy
       })
 
       const result = await repository.findReportById(reportId)
@@ -117,7 +119,8 @@ export const testUpdateReportStatusBehaviour = (it) => {
         repository.updateReportStatus({
           reportId,
           version: 99,
-          status: REPORT_STATUS.READY_TO_SUBMIT
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          changedBy
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
     })
@@ -131,6 +134,7 @@ export const testUpdateReportStatusBehaviour = (it) => {
         repository.updateReportStatus({
           reportId,
           version: 1,
+          changedBy,
           status: 'INVALID-STATUS'
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
@@ -141,7 +145,8 @@ export const testUpdateReportStatusBehaviour = (it) => {
         repository.updateReportStatus({
           reportId: 'non-existent-id',
           version: 1,
-          status: REPORT_STATUS.READY_TO_SUBMIT
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          changedBy
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
     })

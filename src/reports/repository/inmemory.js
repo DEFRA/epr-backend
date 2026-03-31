@@ -23,6 +23,7 @@ import {
  * @param {number} criteria.year - The reporting year.
  * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
  * @param {number} criteria.period - The specific period index.
+ * @param {number} [criteria.submissionNumber] - Optional submission number; when provided narrows the match to that slot.
  * @returns {object|undefined} The matching report object, or undefined if none found.
  */
 const findActiveBySlot = (reports, criteria) => {
@@ -42,19 +43,41 @@ const findActiveBySlot = (reports, criteria) => {
  */
 const createReport = async (reports, params) => {
   const validated = validateCreateReport(params)
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  } = validated
 
-  const criteria = {
-    organisationId: validated.organisationId,
-    registrationId: validated.registrationId,
-    year: validated.year,
-    cadence: validated.cadence,
-    period: validated.period
+  // Mirror compound unique index: no active report for this exact submission slot
+  const existingSlot = findActiveBySlot(reports, {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber
+  })
+  if (existingSlot) {
+    throw Boom.conflict(
+      `An active report already exists for cadence ${cadence} and period ${period}`
+    )
   }
 
-  const existing = findActiveBySlot(reports, criteria)
-  if (existing) {
+  // Mirror partial unique index: no active draft for this period slot regardless of submissionNumber
+  const activeDraft = findActiveBySlot(reports, {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period
+  })
+  if (activeDraft) {
     throw Boom.conflict(
-      `An active report already exists for cadence ${validated.cadence} and period ${validated.period}`
+      `An active report already exists for cadence ${cadence} and period ${period}`
     )
   }
   const report = prepareCreateReportParams(validated)

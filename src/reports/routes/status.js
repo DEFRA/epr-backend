@@ -90,7 +90,9 @@ export const reportsStatus = {
       next: { status: updated.status.currentStatus, version: updated.version }
     })
 
-    return h.response(updated).code(StatusCodes.OK)
+    return h
+      .response({ status: updated.status.currentStatus })
+      .code(StatusCodes.OK)
   }
 }
 
