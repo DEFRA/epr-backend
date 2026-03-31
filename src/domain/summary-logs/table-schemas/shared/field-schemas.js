@@ -20,6 +20,7 @@ const DEFAULT_MAX_WEIGHT = 1000
  */
 const DATE_MIN = new Date('2000-01-01')
 const DATE_MAX = new Date('2100-01-01')
+const CALENDAR_DATE_ERROR = 'any.calendarDate'
 
 /**
  * 3-digit ID constraints
@@ -126,29 +127,29 @@ export const createDateFieldSchema = () =>
         // Extract YYYY-MM-DD from full ISO timestamps or bare dates
         dateStr = value.slice(0, 10)
       } else {
-        return helpers.error('any.calendarDate')
+        return helpers.error(CALENDAR_DATE_ERROR)
       }
 
       const parsed = new Date(dateStr + 'T00:00:00.000Z')
-      if (isNaN(parsed.getTime())) {
-        return helpers.error('any.calendarDate')
+      if (Number.isNaN(parsed.getTime())) {
+        return helpers.error(CALENDAR_DATE_ERROR)
       }
 
       // Reject if the parsed date doesn't round-trip to the same string
       // (catches values like "2024-13-01" that Date silently rolls over)
       if (parsed.toISOString().slice(0, 10) !== dateStr) {
-        return helpers.error('any.calendarDate')
+        return helpers.error(CALENDAR_DATE_ERROR)
       }
 
       if (parsed < DATE_MIN || parsed > DATE_MAX) {
-        return helpers.error('any.calendarDate')
+        return helpers.error(CALENDAR_DATE_ERROR)
       }
 
       return dateStr
     })
     .optional()
     .messages({
-      'any.calendarDate': MESSAGES.MUST_BE_A_VALID_DATE
+      [CALENDAR_DATE_ERROR]: MESSAGES.MUST_BE_A_VALID_DATE
     })
 
 /**
