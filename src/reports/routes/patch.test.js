@@ -503,7 +503,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           { supportingInformation: 'notes' }
         )
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
 
       it('returns 422 when payload is empty', async () => {

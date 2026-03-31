@@ -116,7 +116,7 @@ export const reportsPatch = {
     )
 
     if (!report) {
-      throw Boom.conflict(
+      throw Boom.notFound(
         `No report found for ${cadence} period ${period} of ${year}`
       )
     }
