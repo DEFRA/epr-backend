@@ -530,11 +530,22 @@ describe(`PATCH ${reportsPatchPath}`, () => {
 })
 
 describe('buildUpdatedPrn', () => {
-  it('sets revenue and computes average when existing prn has issuedTonnage', () => {
+  it('sets revenue without computing average when freeTonnage is missing', () => {
     const result = buildUpdatedPrn({ issuedTonnage: 100 }, 500, undefined)
 
     expect(result.totalRevenue).toBe(500)
     expect(result.issuedTonnage).toBe(100)
+    expect(result.averagePricePerTonne).toBeUndefined()
+  })
+
+  it('computes average when all three values are present', () => {
+    const result = buildUpdatedPrn(
+      { issuedTonnage: 100, freeTonnage: 0 },
+      500,
+      undefined
+    )
+
+    expect(result.totalRevenue).toBe(500)
     expect(result.averagePricePerTonne).toBe(5)
   })
 
