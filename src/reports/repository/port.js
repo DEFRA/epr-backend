@@ -10,10 +10,21 @@
  */
 
 /**
- * @typedef {Object} StatusHistoryEntry
- * @property {ReportStatus} status
- * @property {UserSummary} changedBy
- * @property {string} changedAt - ISO 8601 timestamp
+ * @typedef {{ at: string, by: UserSummary }} ReportOperation
+ */
+
+/**
+ * @typedef {{ status: ReportStatus, at: string, by: UserSummary }} ReportStatusHistoryItem
+ */
+
+/**
+ * @typedef {Object} ReportStatusObject
+ * @property {ReportStatus} currentStatus
+ * @property {string} currentStatusAt - ISO timestamp
+ * @property {ReportOperation} created
+ * @property {ReportOperation} [ready]
+ * @property {ReportOperation} [submitted]
+ * @property {ReportStatusHistoryItem[]} history
  */
 
 /**
@@ -79,8 +90,16 @@
  * @property {string} id
  * @property {number} version
  * @property {number} schemaVersion
- * @property {ReportStatus} status
- * @property {StatusHistoryEntry[]} statusHistory
+ * @property {number} submissionNumber
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {number} year
+ * @property {string} cadence
+ * @property {number} period
+ * @property {string} startDate
+ * @property {string} endDate
+ * @property {string} dueDate
+ * @property {ReportStatusObject} status
  * @property {string} [material]
  * @property {string} [wasteProcessingType]
  * @property {string} [siteAddress]
@@ -93,12 +112,19 @@
  */
 
 /**
+ * @typedef {Object} ReportSummary
+ * @property {string} id
+ * @property {ReportStatus} status
+ * @property {number} submissionNumber
+ */
+
+/**
  * @typedef {Object} ReportPerPeriod
  * @property {string} startDate - ISO date string
  * @property {string} endDate - ISO date string
  * @property {string} dueDate - ISO date string
- * @property {string|null} currentReportId
- * @property {string[]} previousReportIds
+ * @property {ReportSummary|null} current
+ * @property {ReportSummary[]} previousSubmissions
  */
 
 /**
@@ -111,16 +137,11 @@
  */
 
 /**
- * @typedef {ReportPerPeriodKey & { newReportId: string|null, startDate: string, endDate: string, dueDate: string }} UpsertSlotParams
- */
-
-/**
  * @typedef {Object.<string, ReportPerPeriod>} PeriodicReportSlots
  */
 
 /**
  * @typedef {Object} PeriodicReport
- * @property {number} version
  * @property {string} organisationId
  * @property {string} registrationId
  * @property {number} year
@@ -138,6 +159,7 @@
  * @property {string} endDate - ISO date string
  * @property {string} dueDate - ISO date string
  * @property {UserSummary} changedBy
+ * @property {number} submissionNumber
  * @property {string} [material]
  * @property {string} [wasteProcessingType]
  * @property {string} [siteAddress]
@@ -152,7 +174,15 @@
  * @typedef {Object} UpdateReportParams
  * @property {string} reportId
  * @property {number} version - current version for optimistic locking
- * @property {{ status?: ReportStatus, supportingInformation?: string }} fields
+ * @property {{ supportingInformation?: string }} fields
+ * @property {UserSummary} [changedBy]
+ */
+
+/**
+ * @typedef {Object} UpdateReportStatusParams
+ * @property {string} reportId
+ * @property {number} version - current version for optimistic locking
+ * @property {ReportStatus} status
  * @property {UserSummary} [changedBy]
  */
 
@@ -163,6 +193,7 @@
  * @property {number} year
  * @property {string} cadence - 'monthly' or 'quarterly'
  * @property {number} period
+ * @property {number} [submissionNumber]
  * @property {UserSummary} changedBy
  */
 
@@ -176,10 +207,10 @@
  * @typedef {Object} ReportsRepository
  * @property {(params: CreateReportParams) => Promise<Report>} createReport
  * @property {(params: UpdateReportParams) => Promise<void>} updateReport
+ * @property {(params: UpdateReportStatusParams) => Promise<void>} updateReportStatus
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(reportIds: string[]) => Promise<Map<string, ReportStatus>>} findReportStatusesByIds
  */
 
 /**

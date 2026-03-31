@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import {
-  MONTHLY_PERIODS,
-  QUARTERLY_PERIODS
-} from '#reports/domain/period-labels.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
@@ -12,7 +9,8 @@ import {
   DEFAULT_REPORT_DUE_DATE,
   DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
-  DEFAULT_REPORT_START_DATE
+  DEFAULT_REPORT_START_DATE,
+  DEFAULT_REPORT_YEAR
 } from './test-data.js'
 
 export const testCreateReportBehaviour = (it) => {
@@ -23,7 +21,7 @@ export const testCreateReportBehaviour = (it) => {
       repository = reportsRepository()
     })
 
-    it('creates a report with status in_progress and correct initial fields', async () => {
+    it('creates a report with in_progress status and correct initial fields', async () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Manager' }
       const result = await repository.createReport(
         buildCreateReportParams({
@@ -37,89 +35,84 @@ export const testCreateReportBehaviour = (it) => {
         id: expect.any(String),
         version: 1,
         schemaVersion: 1,
-        status: REPORT_STATUS.IN_PROGRESS,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy,
-            changedAt: expect.any(String)
-          }
-        ],
+        submissionNumber: 1,
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: DEFAULT_REG_ID,
+        year: DEFAULT_REPORT_YEAR,
+        cadence: 'monthly',
+        period: DEFAULT_REPORT_PERIOD,
+        startDate: DEFAULT_REPORT_START_DATE,
+        endDate: DEFAULT_REPORT_END_DATE,
+        dueDate: DEFAULT_REPORT_DUE_DATE,
         material: 'plastic',
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        siteAddress: '1 Recycling Lane'
+        siteAddress: '1 Recycling Lane',
+        status: {
+          currentStatus: REPORT_STATUS.IN_PROGRESS,
+          currentStatusAt: expect.any(String),
+          created: { at: expect.any(String), by: changedBy },
+          history: [
+            {
+              status: REPORT_STATUS.IN_PROGRESS,
+              at: expect.any(String),
+              by: changedBy
+            }
+          ]
+        }
       })
     })
 
-    it(`does not store organisationId, registrationId, year, cadence, period on the report `, async () => {
-      const result = await repository.createReport(
+    it('throws conflict when creating duplicate report for same period and submissionNumber', async () => {
+      await repository.createReport(
+        buildCreateReportParams({ period: MONTHLY_PERIODS.February })
+      )
+
+      await expect(
+        repository.createReport(
+          buildCreateReportParams({ period: MONTHLY_PERIODS.February })
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+    })
+
+    it('throws conflict when creating a second active draft for the same slot with a different submissionNumber', async () => {
+      await repository.createReport(
         buildCreateReportParams({
-          cadence: 'quarterly',
-          period: QUARTERLY_PERIODS.Q2
+          period: MONTHLY_PERIODS.February,
+          submissionNumber: 1
         })
       )
 
-      expect(result).toEqual({
-        id: expect.any(String),
+      await expect(
+        repository.createReport(
+          buildCreateReportParams({
+            period: MONTHLY_PERIODS.February,
+            submissionNumber: 2
+          })
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+    })
+
+    it('allows creating multiple reports with different submissionNumber', async () => {
+      const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
+      const { id: firstId } = await repository.createReport(
+        buildCreateReportParams({ period: MONTHLY_PERIODS.February })
+      )
+
+      await repository.updateReportStatus({
+        reportId: firstId,
         version: 1,
-        schemaVersion: 1,
-        status: REPORT_STATUS.IN_PROGRESS,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy: expect.any(Object),
-            changedAt: expect.any(String)
-          }
-        ],
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+        status: REPORT_STATUS.SUBMITTED,
+        changedBy
       })
-    })
 
-    it(`moves existing currentReportId to end of previousReportIds when re-creating for same slot)`, async () => {
-      const first = await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.February })
-      )
-      const second = await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.February })
+      const { id: secondId } = await repository.createReport(
+        buildCreateReportParams({
+          period: MONTHLY_PERIODS.February,
+          submissionNumber: 2
+        })
       )
 
-      const [periodicReport] = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
-
-      const result = periodicReport.reports.monthly[MONTHLY_PERIODS.February]
-
-      expect(result).toEqual({
-        currentReportId: second.id,
-        previousReportIds: [first.id],
-        startDate: DEFAULT_REPORT_START_DATE,
-        endDate: DEFAULT_REPORT_END_DATE,
-        dueDate: DEFAULT_REPORT_DUE_DATE
-      })
-    })
-
-    it('increments periodic report version on each createReport', async () => {
-      await repository.createReport(
-        buildCreateReportParams({ period: DEFAULT_REPORT_PERIOD })
-      )
-
-      const [result] = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
-      expect(result.version).toBe(1)
-
-      await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.February })
-      )
-
-      const [updatedResult] = await repository.findPeriodicReports({
-        organisationId: DEFAULT_ORG_ID,
-        registrationId: DEFAULT_REG_ID
-      })
-      expect(updatedResult.version).toBe(2)
+      expect(secondId).not.toBe(firstId)
     })
 
     it('throws on invalid cadence', async () => {
@@ -132,17 +125,6 @@ export const testCreateReportBehaviour = (it) => {
       await expect(
         repository.createReport({ organisationId: DEFAULT_ORG_ID })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
-    })
-
-    it(`creates separate slots for different periods`, async () => {
-      const report1 = await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.March })
-      )
-      const report2 = await repository.createReport(
-        buildCreateReportParams({ period: MONTHLY_PERIODS.April })
-      )
-
-      expect(report1.id).not.toBe(report2.id)
     })
   })
 }

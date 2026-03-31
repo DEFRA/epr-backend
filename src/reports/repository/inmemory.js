@@ -1,103 +1,47 @@
-import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   validateCreateReport,
-  validateUpdateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
-  validateFindReportById
+  validateFindReportById,
+  validateUpdateReport,
+  validateUpdateReportStatus
 } from './validation.js'
+import {
+  prepareCreateReportParams,
+  STATUS_TO_SLOT,
+  groupAsPeriodicReports
+} from '#root/reports/repository/helpers.js'
 
 /**
- * @param {Object[]} periodicReports
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {number} year
- * @returns {Object|undefined}
+ * Finds the active (non-submitted) report matching a specific period criteria.
+ * @param {Map<string, object>} reports - A Map where values are report objects.
+ * @param {object} criteria - The unique identifiers for the report criteria.
+ * @param {string} criteria.organisationId - The ID of the organization.
+ * @param {string} criteria.registrationId - The ID of the registration.
+ * @param {number} criteria.year - The reporting year.
+ * @param {string} criteria.cadence - The reporting frequency (e.g., 'MONTHLY').
+ * @param {number} criteria.period - The specific period index.
+ * @param {number} [criteria.submissionNumber] - Optional submission number; when provided narrows the match to that slot.
+ * @returns {object|undefined} The matching report object, or undefined if none found.
  */
-const findPeriodicReport = (
-  periodicReports,
-  organisationId,
-  registrationId,
-  year
-) =>
-  periodicReports.find(
-    (p) =>
-      p.organisationId === organisationId &&
-      p.registrationId === registrationId &&
-      p.year === year
+const findActiveBySlot = (reports, criteria) => {
+  const slotKeys = Object.keys(criteria)
+
+  return [...reports.values()].find(
+    (r) =>
+      slotKeys.every((key) => r[key] === criteria[key]) &&
+      r.status.currentStatus !== REPORT_STATUS.SUBMITTED
   )
-
-/**
- * @param {Object} periodicReport
- * @param {string} cadence
- * @param {number} period
- * @returns {import('./port.js').ReportPerPeriod|undefined}
- */
-const getSlot = (periodicReport, cadence, period) =>
-  periodicReport?.reports?.[cadence]?.[period]
-
-/**
- * Upserts the periodic-report slot for a new report, archiving any existing currentReportId.
- *
- * @param {Object[]} periodicReports
- * @param {import('./port.js').UpsertSlotParams} params
- * @returns {void}
- */
-const upsertSlot = (periodicReports, params) => {
-  const {
-    organisationId,
-    registrationId,
-    year,
-    cadence,
-    period,
-    newReportId,
-    startDate,
-    endDate,
-    dueDate
-  } = params
-
-  let periodicReport = findPeriodicReport(
-    periodicReports,
-    organisationId,
-    registrationId,
-    year
-  )
-  if (!periodicReport) {
-    periodicReport = {
-      version: 0,
-      organisationId,
-      registrationId,
-      year,
-      reports: {}
-    }
-    periodicReports.push(periodicReport)
-  }
-  periodicReport.version += 1
-  periodicReport.reports[cadence] ??= {}
-  periodicReport.reports[cadence][period] ??= { previousReportIds: [] }
-
-  const existing = periodicReport.reports[cadence][period]
-  periodicReport.reports[cadence][period] = {
-    ...existing,
-    startDate,
-    endDate,
-    dueDate,
-    currentReportId: newReportId,
-    previousReportIds: existing.currentReportId
-      ? [...existing.previousReportIds, existing.currentReportId]
-      : existing.previousReportIds
-  }
 }
 
 /**
  * @param {Map<string, Object>} reports
- * @param {Object[]} periodicReports
- * @param {Object} params
+ * @param {import('./port.js').CreateReportParams} params
  * @returns {Promise<import('./port.js').Report>}
  */
-const createReport = async (reports, periodicReports, params) => {
+const createReport = async (reports, params) => {
   const validated = validateCreateReport(params)
   const {
     organisationId,
@@ -105,64 +49,78 @@ const createReport = async (reports, periodicReports, params) => {
     year,
     cadence,
     period,
-    startDate,
-    endDate,
-    dueDate,
-    changedBy,
-    material,
-    wasteProcessingType,
-    siteAddress,
-    recyclingActivity,
-    exportActivity,
-    wasteSent,
-    prn,
-    supportingInformation
+    submissionNumber
   } = validated
 
-  const now = new Date().toISOString()
-  const reportId = randomUUID()
-
-  reports.set(reportId, {
-    id: reportId,
-    version: 1,
-    schemaVersion: 1,
-    status: REPORT_STATUS.IN_PROGRESS,
-    statusHistory: [
-      { status: REPORT_STATUS.IN_PROGRESS, changedBy, changedAt: now }
-    ],
-    material,
-    wasteProcessingType,
-    siteAddress,
-    recyclingActivity,
-    exportActivity,
-    wasteSent,
-    prn,
-    supportingInformation
-  })
-
-  upsertSlot(periodicReports, {
+  // Mirror compound unique index: no active report for this exact submission slot
+  const existingSlot = findActiveBySlot(reports, {
     organisationId,
     registrationId,
     year,
     cadence,
     period,
-    startDate,
-    endDate,
-    dueDate,
-    newReportId: reportId
+    submissionNumber
   })
+  if (existingSlot) {
+    throw Boom.conflict(
+      `An active report already exists for cadence ${cadence} and period ${period}`
+    )
+  }
 
-  return structuredClone(reports.get(reportId))
+  // Mirror partial unique index: no active draft for this period slot regardless of submissionNumber
+  const activeDraft = findActiveBySlot(reports, {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period
+  })
+  if (activeDraft) {
+    throw Boom.conflict(
+      `An active report already exists for cadence ${cadence} and period ${period}`
+    )
+  }
+  const report = prepareCreateReportParams(validated)
+  reports.set(report.id, report)
+  return structuredClone(report)
 }
 
 /**
  * @param {Map<string, Object>} reports
- * @param {Object} params
+ * @param {import('./port.js').UpdateReportParams} params
  * @returns {Promise<void>}
  */
 const updateReport = async (reports, params) => {
   const validated = validateUpdateReport(params)
-  const { reportId, version, fields, changedBy } = validated
+  const { reportId, version, fields } = validated
+
+  const existing = reports.get(reportId)
+
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${reportId}`)
+  }
+
+  if (existing.version !== version) {
+    throw Boom.conflict(
+      `Version conflict: expected version ${version} for report ${reportId}`
+    )
+  }
+
+  reports.set(reportId, {
+    ...existing,
+    version: existing.version + 1,
+    supportingInformation: fields.supportingInformation
+  })
+}
+
+/**
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').UpdateReportStatusParams} params
+ * @returns {Promise<void>}
+ */
+const updateReportStatus = async (reports, params) => {
+  const validated = validateUpdateReportStatus(params)
+  const { reportId, version, status, changedBy } = validated
 
   const existing = reports.get(reportId)
 
@@ -177,83 +135,64 @@ const updateReport = async (reports, params) => {
   }
 
   const now = new Date().toISOString()
+  const slot = STATUS_TO_SLOT[status]
 
   const updated = {
     ...existing,
-    ...fields,
     version: existing.version + 1,
-    statusHistory: [...existing.statusHistory]
-  }
-
-  if (fields.status && fields.status !== existing.status) {
-    updated.statusHistory.push({
-      status: fields.status,
-      changedBy,
-      changedAt: now
-    })
+    status: {
+      ...existing.status,
+      currentStatus: status,
+      currentStatusAt: now,
+      [slot]: { at: now, by: changedBy },
+      history: [...existing.status.history, { status, at: now, by: changedBy }]
+    }
   }
 
   reports.set(reportId, updated)
 }
 
 /**
+ * Hard-deletes the report identified by the given period slot and submissionNumber.
+ *
  * @param {Map<string, Object>} reports
- * @param {Object[]} periodicReports
- * @param {Object} params
+ * @param {import('./port.js').DeleteReportParams} params
  * @returns {Promise<void>}
  */
-const deleteReport = async (reports, periodicReports, params) => {
+const deleteReport = async (reports, params) => {
   const validated = validateDeleteReportParams(params)
-  const { organisationId, registrationId, year, cadence, period, changedBy } =
-    validated
-
-  const periodicReport = findPeriodicReport(
-    periodicReports,
+  const {
     organisationId,
     registrationId,
-    year
+    year,
+    cadence,
+    period,
+    submissionNumber
+  } = validated
+
+  const report = [...reports.values()].find(
+    (r) =>
+      r.organisationId === organisationId &&
+      r.registrationId === registrationId &&
+      r.year === year &&
+      r.cadence === cadence &&
+      r.period === period &&
+      r.submissionNumber === submissionNumber
   )
 
-  const slot = getSlot(periodicReport, cadence, period)
-
-  if (!slot) {
+  if (!report) {
     throw Boom.notFound(
-      `No periodic report found for cadence ${cadence} and period ${period}`
+      `No report found for cadence ${cadence} and period ${period}`
     )
   }
 
-  const { currentReportId } = slot
-
-  if (!currentReportId) {
-    throw Boom.notFound(
-      `No current report found for cadence ${cadence} and period ${period}`
-    )
-  }
-
-  const existing = reports.get(currentReportId)
-  reports.set(currentReportId, {
-    ...existing,
-    status: REPORT_STATUS.DELETED,
-    version: existing.version + 1,
-    statusHistory: [
-      ...existing.statusHistory,
-      {
-        status: REPORT_STATUS.DELETED,
-        changedBy,
-        changedAt: new Date().toISOString()
-      }
-    ]
-  })
-
-  slot.previousReportIds = [...slot.previousReportIds, currentReportId]
-  slot.currentReportId = null
-  periodicReport.version += 1
+  reports.delete(report.id)
 }
 
 /**
  * @param {Map<string, Object>} reports
  * @param {string} reportId
- * @returns {Promise<Object>}
+ * @returns {Promise<import('./port.js').Report>}
  */
 const findReportById = async (reports, reportId) => {
   const validatedId = validateFindReportById(reportId)
@@ -265,62 +204,40 @@ const findReportById = async (reports, reportId) => {
 }
 
 /**
- * @param {Object[]} periodicReports
- * @param {Object} params
- * @returns {Promise<Object[]>}
+ * @param {Map<string, Object>} reports
+ * @param {import('./port.js').FindPeriodicReportsParams} params
+ * @returns {Promise<import('./port.js').PeriodicReport[]>}
  */
-const findPeriodicReports = async (periodicReports, params) => {
+const findPeriodicReports = async (reports, params) => {
   const { organisationId, registrationId } = validateFindPeriodicReports(params)
 
-  const matching = periodicReports.filter(
-    (p) =>
-      p.organisationId === organisationId && p.registrationId === registrationId
+  const matching = [...reports.values()].filter(
+    (r) =>
+      r.organisationId === organisationId && r.registrationId === registrationId
   )
 
-  return structuredClone(matching)
+  return structuredClone(
+    groupAsPeriodicReports(organisationId, registrationId, matching)
+  )
 }
 
 /**
  * Create an in-memory reports repository.
  *
- * Both stores are used by reference so test fixtures can seed data directly.
- * reports is a Map keyed by reportId; periodicReports is an array.
+ * The store is used by reference so test fixtures can seed data directly.
  *
  * @param {Map<string, Object>} [initialReports]
- * @param {Object[]} [initialPeriodicReports=[]]
  * @returns {import('./port.js').ReportsRepositoryFactory}
  */
-export const createInMemoryReportsRepository = (
-  initialReports = new Map(),
-  initialPeriodicReports = []
-) => {
+export const createInMemoryReportsRepository = (initialReports = new Map()) => {
   const reports = initialReports
-  const periodicReports = initialPeriodicReports
-
-  /**
-   * @param {Map<string, Object>} reportsStore
-   * @param {string[]} reportIds
-   * @returns {Promise<Map<string, import('./port.js').ReportStatus>>}
-   */
-  const findReportStatusesByIds = async (reportsStore, reportIds) => {
-    const result = new Map()
-    for (const id of reportIds) {
-      const report = reportsStore.get(id)
-      if (report) {
-        result.set(id, report.status)
-      }
-    }
-    return result
-  }
 
   return () => ({
-    createReport: (params) => createReport(reports, periodicReports, params),
+    createReport: (params) => createReport(reports, params),
     updateReport: (params) => updateReport(reports, params),
-    deleteReport: (params) => deleteReport(reports, periodicReports, params),
+    updateReportStatus: (params) => updateReportStatus(reports, params),
+    deleteReport: (params) => deleteReport(reports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
-    findPeriodicReports: (params) =>
-      findPeriodicReports(periodicReports, params),
-    findReportStatusesByIds: (reportIds) =>
-      findReportStatusesByIds(reports, reportIds)
+    findPeriodicReports: (params) => findPeriodicReports(reports, params)
   })
 }

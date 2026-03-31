@@ -3,17 +3,10 @@ import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Map<string, Object>} [initialReports]
- * @param {Object[]} [initialPeriodicReports]
  * @returns {import('@hapi/hapi').Plugin<void>}
  */
-export function createInMemoryReportsRepositoryPlugin(
-  initialReports,
-  initialPeriodicReports
-) {
-  const factory = createInMemoryReportsRepository(
-    initialReports,
-    initialPeriodicReports
-  )
+export function createInMemoryReportsRepositoryPlugin(initialReports) {
+  const factory = createInMemoryReportsRepository(initialReports)
   const repository = factory()
 
   return {

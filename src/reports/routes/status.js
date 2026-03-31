@@ -63,18 +63,21 @@ export const reportsStatus = {
       )
     }
 
-    if (!isValidReportTransition(report.status, status)) {
+    if (!isValidReportTransition(report.status.currentStatus, status)) {
       throw Boom.badRequest(
-        `Cannot transition from '${report.status}' to '${status}'`
+        `Cannot transition from '${report.status.currentStatus}' to '${status}'`
       )
     }
 
-    const previous = { status: report.status, version: report.version }
+    const previous = {
+      status: report.status.currentStatus,
+      version: report.version
+    }
 
-    await reportsRepository.updateReport({
+    await reportsRepository.updateReportStatus({
       reportId: report.id,
       version,
-      fields: { status },
+      status,
       changedBy: extractChangedBy(request.auth.credentials)
     })
 
@@ -84,10 +87,12 @@ export const reportsStatus = {
       organisationId,
       reportId: report.id,
       previous,
-      next: { status: updated.status, version: updated.version }
+      next: { status: updated.status.currentStatus, version: updated.version }
     })
 
-    return h.response(updated).code(StatusCodes.OK)
+    return h
+      .response({ status: updated.status.currentStatus })
+      .code(StatusCodes.OK)
   }
 }
 
