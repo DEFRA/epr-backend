@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
-import { aggregateReportDetail } from '#reports/domain/aggregate-report-detail.js'
+import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 
 /**

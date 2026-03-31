@@ -1,0 +1,550 @@
+[
+  {
+    "_id": "69cbdfc4294166013b638193",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1000,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1000,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+      "NET_WEIGHT": 43.7495103676218,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed site-specific protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.197753384417669,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 8.6516137418131,
+      "SUPPLIER_NAME": "Reilly Group",
+      "SUPPLIER_ADDRESS": "1 Kemmer Garth",
+      "SUPPLIER_POSTCODE": "UX3 9YW",
+      "SUPPLIER_EMAIL": "Violette.Stoltenberg@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "056 3605 9169",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "641099e9-976f-4007-a7b2-22fa4d429229",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 1000,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+          "NET_WEIGHT": 43.7495103676218,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed site-specific protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.197753384417669,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 8.6516137418131,
+          "SUPPLIER_NAME": "Reilly Group",
+          "SUPPLIER_ADDRESS": "1 Kemmer Garth",
+          "SUPPLIER_POSTCODE": "UX3 9YW",
+          "SUPPLIER_EMAIL": "Violette.Stoltenberg@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "056 3605 9169",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b638194",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1001,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1001,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+      "NET_WEIGHT": 36.1375373005874,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "Actual weight (100%)",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.471746806318909,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 17.0477678097825,
+      "SUPPLIER_NAME": "Bogisich, Hegmann and Miller",
+      "SUPPLIER_ADDRESS": "653 Klocko Bank",
+      "SUPPLIER_POSTCODE": "CH77 1ZO",
+      "SUPPLIER_EMAIL": "Hershel.Rolfson@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0800 381 2820",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "42029e6e-73bf-405e-b86b-d82cf1c36a59",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 1001,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+          "NET_WEIGHT": 36.1375373005874,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "Actual weight (100%)",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.471746806318909,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 17.0477678097825,
+          "SUPPLIER_NAME": "Bogisich, Hegmann and Miller",
+          "SUPPLIER_ADDRESS": "653 Klocko Bank",
+          "SUPPLIER_POSTCODE": "CH77 1ZO",
+          "SUPPLIER_EMAIL": "Hershel.Rolfson@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0800 381 2820",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b638195",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1002,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1002,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+      "NET_WEIGHT": 24.073070462128,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.526956769397908,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 12.6854674402112,
+      "SUPPLIER_NAME": "Rippin and Sons",
+      "SUPPLIER_ADDRESS": "8 Henry Street",
+      "SUPPLIER_POSTCODE": "KR4 8WX",
+      "SUPPLIER_EMAIL": "Solon_Schiller94@gmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0112 848 0025",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "166c4978-03c5-4b6f-84b4-4e1a5330a5dd",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 1002,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+          "NET_WEIGHT": 24.073070462128,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.526956769397908,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 12.6854674402112,
+          "SUPPLIER_NAME": "Rippin and Sons",
+          "SUPPLIER_ADDRESS": "8 Henry Street",
+          "SUPPLIER_POSTCODE": "KR4 8WX",
+          "SUPPLIER_EMAIL": "Solon_Schiller94@gmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0112 848 0025",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b638196",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1003,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1003,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+      "NET_WEIGHT": 42.2675784106694,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed site-specific protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.341565545306457,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 14.4371484686237,
+      "SUPPLIER_NAME": "O'Hara - Larkin",
+      "SUPPLIER_ADDRESS": "7 Westfield Road",
+      "SUPPLIER_POSTCODE": "FW35 6JC",
+      "SUPPLIER_EMAIL": "Dwayne.Schuppe74@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0394 634 4015",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "e093f70a-ebe7-4dc5-bd7d-1360089d7b3f",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 1003,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2026-03",
+          "NET_WEIGHT": 42.2675784106694,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed site-specific protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.341565545306457,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 14.4371484686237,
+          "SUPPLIER_NAME": "O'Hara - Larkin",
+          "SUPPLIER_ADDRESS": "7 Westfield Road",
+          "SUPPLIER_POSTCODE": "FW35 6JC",
+          "SUPPLIER_EMAIL": "Dwayne.Schuppe74@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0394 634 4015",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b638197",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1004,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1004,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+      "NET_WEIGHT": 20,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.1,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 2,
+      "SUPPLIER_NAME": "O'Hara - Larkin",
+      "SUPPLIER_ADDRESS": "8 Westfield Road",
+      "SUPPLIER_POSTCODE": "FW35 6JC",
+      "SUPPLIER_EMAIL": "ewayne.Schuppe74@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": null,
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": null,
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "50e9ecab-3d7a-42ba-93ef-381ea9566938",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 1004,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+          "NET_WEIGHT": 20,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.1,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 2,
+          "SUPPLIER_NAME": "O'Hara - Larkin",
+          "SUPPLIER_ADDRESS": "8 Westfield Road",
+          "SUPPLIER_POSTCODE": "FW35 6JC",
+          "SUPPLIER_EMAIL": "ewayne.Schuppe74@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": null,
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": null,
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b638198",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1005,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1005,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+      "NET_WEIGHT": 1000,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed methodology",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": null,
+      "SUPPLIER_NAME": "SI Plan",
+      "SUPPLIER_ADDRESS": "8 Westfield Road",
+      "SUPPLIER_POSTCODE": "FW35 6JC",
+      "SUPPLIER_EMAIL": "ewayne.Schuppe74@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0394 634 4015",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "28e13c27-4998-4dcf-b023-50e7c4f9417a",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 1005,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+          "NET_WEIGHT": 1000,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed methodology",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": null,
+          "SUPPLIER_NAME": "SI Plan",
+          "SUPPLIER_ADDRESS": "8 Westfield Road",
+          "SUPPLIER_POSTCODE": "FW35 6JC",
+          "SUPPLIER_EMAIL": "ewayne.Schuppe74@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0394 634 4015",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b638199",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 5000,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5000,
+      "DATE_LOAD_LEFT_SITE": "2026-03-21",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 9.22444552912568,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+      "FINAL_DESTINATION_NAME": "Jacobs - Simonis",
+      "FINAL_DESTINATION_ADDRESS": "26 Tyrone Avenue",
+      "FINAL_DESTINATION_POSTCODE": "TH51 2AD",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "e955ca9f-76a2-4837-8f4f-91de11625d7d",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 5000,
+          "DATE_LOAD_LEFT_SITE": "2026-03-21",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 9.22444552912568,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+          "FINAL_DESTINATION_NAME": "Jacobs - Simonis",
+          "FINAL_DESTINATION_ADDRESS": "26 Tyrone Avenue",
+          "FINAL_DESTINATION_POSTCODE": "TH51 2AD",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b63819a",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 5001,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5001,
+      "DATE_LOAD_LEFT_SITE": "2026-03-15",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 5.41153498380158,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+      "FINAL_DESTINATION_NAME": "Bosco Inc",
+      "FINAL_DESTINATION_ADDRESS": "39 Ferry Road",
+      "FINAL_DESTINATION_POSTCODE": "IH26 2GS",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "30013369-f085-4fdc-a7c1-d3f15dc955a9",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 5001,
+          "DATE_LOAD_LEFT_SITE": "2026-03-15",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 5.41153498380158,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+          "FINAL_DESTINATION_NAME": "Bosco Inc",
+          "FINAL_DESTINATION_ADDRESS": "39 Ferry Road",
+          "FINAL_DESTINATION_POSTCODE": "IH26 2GS",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b63819b",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 5002,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5002,
+      "DATE_LOAD_LEFT_SITE": "2026-03-20",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 10.4994489937829,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+      "FINAL_DESTINATION_NAME": "Robel - Kuhic",
+      "FINAL_DESTINATION_ADDRESS": "8 Stanton Wood",
+      "FINAL_DESTINATION_POSTCODE": "WV8 4WY",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "37e71cf9-4a0e-46dd-8959-3f7237fee23c",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 5002,
+          "DATE_LOAD_LEFT_SITE": "2026-03-20",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 10.4994489937829,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+          "FINAL_DESTINATION_NAME": "Robel - Kuhic",
+          "FINAL_DESTINATION_ADDRESS": "8 Stanton Wood",
+          "FINAL_DESTINATION_POSTCODE": "WV8 4WY",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbdfc4294166013b63819c",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 5003,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5003,
+      "DATE_LOAD_LEFT_SITE": "2026-03-05",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 5.08945699335532,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+      "FINAL_DESTINATION_NAME": "Heller Group",
+      "FINAL_DESTINATION_ADDRESS": "573 Gutmann Park",
+      "FINAL_DESTINATION_POSTCODE": "NP1 9OT",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "d6053811-a3b4-4187-9ec0-683e90bf467e",
+        "createdAt": "2026-03-31T14:52:51.350Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "fbf87303-58f3-4801-81c1-5bfa1d58e67c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/453155fd-f2c2-4950-9d00-0668824a82c4/fbf87303-58f3-4801-81c1-5bfa1d58e67c"
+        },
+        "data": {
+          "ROW_ID": 5003,
+          "DATE_LOAD_LEFT_SITE": "2026-03-05",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 5.08945699335532,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+          "FINAL_DESTINATION_NAME": "Heller Group",
+          "FINAL_DESTINATION_ADDRESS": "573 Gutmann Park",
+          "FINAL_DESTINATION_POSTCODE": "NP1 9OT",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cc2212294166013b63ad36",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1006,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1006,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+      "NET_WEIGHT": 50,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed methodology",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.1,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 5,
+      "SUPPLIER_NAME": "Bogisich, Hegmann and Miller",
+      "SUPPLIER_ADDRESS": "654 Klocko Bank",
+      "SUPPLIER_POSTCODE": "CH77 1ZO",
+      "SUPPLIER_EMAIL": "Hershel.Rolfson@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0800 381 2820",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "f070b7d0-93c9-4d11-999d-6263a4602ac6",
+        "createdAt": "2026-03-31T19:35:45.562Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "18bde18b-5200-4e86-9aad-738a16b05db8",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/8d6ca806-b885-495d-b16f-4b2b75a3ceae/18bde18b-5200-4e86-9aad-738a16b05db8"
+        },
+        "data": {
+          "ROW_ID": 1006,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+          "NET_WEIGHT": 50,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed methodology",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.1,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 5,
+          "SUPPLIER_NAME": "Bogisich, Hegmann and Miller",
+          "SUPPLIER_ADDRESS": "654 Klocko Bank",
+          "SUPPLIER_POSTCODE": "CH77 1ZO",
+          "SUPPLIER_EMAIL": "Hershel.Rolfson@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0800 381 2820",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cc2212294166013b63ad37",
+    "registrationId": "69cbb422d3843c6ca872dbac",
+    "rowId": 1007,
+    "organisationId": "69cbb422d3843c6ca872dbab",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1007,
+      "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+      "NET_WEIGHT": 75,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.2,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 15,
+      "SUPPLIER_NAME": "Bogisich, Hegmann and Miller",
+      "SUPPLIER_ADDRESS": "654 Klocko Bank",
+      "SUPPLIER_POSTCODE": "CH77 1ZO",
+      "SUPPLIER_EMAIL": "Rolfson@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0800 381 2820",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "processingType": "REPROCESSOR_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "c965ba62-9ada-457e-8611-36cb5fb8eeb4",
+        "createdAt": "2026-03-31T19:35:45.562Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "18bde18b-5200-4e86-9aad-738a16b05db8",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb422d3843c6ca872dbab/registrations/69cbb422d3843c6ca872dbac/8d6ca806-b885-495d-b16f-4b2b75a3ceae/18bde18b-5200-4e86-9aad-738a16b05db8"
+        },
+        "data": {
+          "ROW_ID": 1007,
+          "MONTH_RECEIVED_FOR_REPROCESSING": "2025-03",
+          "NET_WEIGHT": 75,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.2,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 15,
+          "SUPPLIER_NAME": "Bogisich, Hegmann and Miller",
+          "SUPPLIER_ADDRESS": "654 Klocko Bank",
+          "SUPPLIER_POSTCODE": "CH77 1ZO",
+          "SUPPLIER_EMAIL": "Rolfson@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0800 381 2820",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "processingType": "REPROCESSOR_REGISTERED_ONLY"
+        }
+      }
+    ]
+  }
+]
