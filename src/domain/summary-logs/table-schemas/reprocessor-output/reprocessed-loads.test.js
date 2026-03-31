@@ -144,6 +144,14 @@ describe('REPROCESSED_LOADS', () => {
         expect(error).toBeUndefined()
         expect(value.DATE_LOAD_LEFT_SITE).toBe('2024-01-01')
       })
+
+      it('coerces numeric epoch millis to YYYY-MM-DD string', () => {
+        const { error, value } = validationSchema.validate({
+          DATE_LOAD_LEFT_SITE: 1704067200000
+        })
+        expect(error).toBeUndefined()
+        expect(value.DATE_LOAD_LEFT_SITE).toBe('2024-01-01')
+      })
     })
 
     describe('UK_PACKAGING_WEIGHT_PERCENTAGE validation', () => {

@@ -127,6 +127,11 @@ export const createDateFieldSchema = () =>
       let dateStr
       if (value instanceof Date) {
         dateStr = toCalendarDate(value)
+      } else if (typeof value === 'number') {
+        if (Number.isNaN(value)) {
+          return helpers.error(CALENDAR_DATE_ERROR)
+        }
+        dateStr = toCalendarDate(new Date(value))
       } else if (typeof value === 'string') {
         const match = CALENDAR_DATE_PATTERN.exec(value)
         if (!match) {

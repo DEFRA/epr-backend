@@ -127,9 +127,32 @@ describe('field-schemas', () => {
       expect(value).toBe('2024-06-15')
     })
 
-    it('rejects numeric value', () => {
+    it('coerces numeric epoch milliseconds to YYYY-MM-DD string', () => {
       const schema = createDateFieldSchema()
-      const { error } = schema.validate(1704067200000)
+      // 1704067200000 = 2024-01-01T00:00:00.000Z
+      const { error, value } = schema.validate(1704067200000)
+      expect(error).toBeUndefined()
+      expect(value).toBe('2024-01-01')
+    })
+
+    it('rejects numeric epoch seconds (outside valid range as millis)', () => {
+      const schema = createDateFieldSchema()
+      // 1704067200 seconds = 1970-01-20 when interpreted as millis
+      const { error } = schema.validate(1704067200)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects NaN numeric value', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate(NaN)
+      expect(error).toBeDefined()
+      expect(error.details[0].message).toBe('must be a valid date')
+    })
+
+    it('rejects boolean value', () => {
+      const schema = createDateFieldSchema()
+      const { error } = schema.validate(true)
       expect(error).toBeDefined()
       expect(error.details[0].message).toBe('must be a valid date')
     })
