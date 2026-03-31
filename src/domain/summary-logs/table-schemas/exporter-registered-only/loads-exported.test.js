@@ -131,9 +131,10 @@ describe('LOADS_EXPORTED (EXPORTER_REGISTERED_ONLY)', () => {
       expect(invalid.error).toBeDefined()
     })
 
-    it('validates OSR_ID as 3-digit number (1-999)', () => {
+    it('validates OSR_ID as zero-padded 3-digit string (1-999)', () => {
       const valid = validationSchema.validate({ OSR_ID: 123 })
       expect(valid.error).toBeUndefined()
+      expect(valid.value.OSR_ID).toBe('123')
 
       const tooLow = validationSchema.validate({ OSR_ID: 0 })
       expect(tooLow.error).toBeDefined()

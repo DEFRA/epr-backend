@@ -456,7 +456,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       })
     })
 
-    describe('OSR_ID validation (3-digit number)', () => {
+    describe('OSR_ID validation (zero-padded 3-digit string)', () => {
       it('accepts minimum value (1)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 1 })
         expect(error).toBeUndefined()
@@ -475,17 +475,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects value below minimum (0)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 0 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects value above maximum (1000)', () => {
         const { error } = validationSchema.validate({ OSR_ID: 1000 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects non-integer', () => {
@@ -493,14 +489,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(error).toBeDefined()
       })
 
-      it('rejects non-number', () => {
+      it('rejects non-numeric string', () => {
         const { error } = validationSchema.validate({ OSR_ID: 'ABC' })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
     })
 
-    describe('INTERIM_SITE_ID validation (3-digit number)', () => {
+    describe('INTERIM_SITE_ID validation (zero-padded 3-digit string)', () => {
       it('accepts minimum value (1)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1 })
         expect(error).toBeUndefined()
@@ -514,17 +510,13 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       it('rejects value below minimum (0)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 0 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
 
       it('rejects value above maximum (1000)', () => {
         const { error } = validationSchema.validate({ INTERIM_SITE_ID: 1000 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must be a number between 1 and 999'
-        )
+        expect(error.details[0].message).toBe('must be a 3-digit ID (001-999)')
       })
     })
 
@@ -879,7 +871,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       CUSTOMS_CODES: 'HS123',
       CONTAINER_NUMBER: 'CONT001',
       DATE_RECEIVED_BY_OSR: new Date('2024-06-20'),
-      OSR_ID: 100,
+      OSR_ID: '001',
       DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
     }
 
@@ -1029,7 +1021,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
 
     describe('EXCLUDED outcome - ORS not approved (VAL014)', () => {
       const approvedOverseasSites = {
-        100: { validFrom: new Date('2024-01-01') }
+        '001': { validFrom: new Date('2024-01-01') }
       }
 
       it('returns INCLUDED when ORS is approved and validFrom is before DATE_OF_EXPORT', () => {
@@ -1044,7 +1036,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            100: { validFrom: new Date('2024-06-15') }
+            '001': { validFrom: new Date('2024-06-15') }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1054,7 +1046,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            200: { validFrom: new Date('2024-01-01') }
+            '002': { validFrom: new Date('2024-01-01') }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
@@ -1067,7 +1059,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            100: { validFrom: null }
+            '001': { validFrom: null }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
@@ -1080,7 +1072,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
           accreditation,
           overseasSites: {
-            100: { validFrom: new Date('2024-07-01') }
+            '001': { validFrom: new Date('2024-07-01') }
           }
         })
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
