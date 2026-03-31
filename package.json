@@ -27,7 +27,7 @@
   },
   "engines": {
     "node": ">=24.14.0 <25",
-    "npm": ">=11.9.0"
+    "npm": ">=11.12.1"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
