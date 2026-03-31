@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_ID,
   DEFAULT_REG_ID,
-  DEFAULT_REPORT_DUE_DATE,
-  DEFAULT_REPORT_END_DATE,
   DEFAULT_REPORT_PERIOD,
-  DEFAULT_REPORT_START_DATE,
   DEFAULT_REPORT_YEAR
 } from './test-data.js'
 
@@ -31,84 +26,55 @@ export const testDeleteReportBehaviour = (it) => {
       repository = reportsRepository()
     })
 
-    it('deletes when report exists', async () => {
-      const changedBy = buildDeleteParams().changedBy
-      const { id: reportId } = await repository.createReport(
+    it('hard-deletes the report so findReportById throws 404', async () => {
+      const { id: reportId, submissionNumber } = await repository.createReport(
         buildCreateReportParams({
           cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD
         })
       )
 
-      await repository.deleteReport(buildDeleteParams())
+      await repository.deleteReport(buildDeleteParams({ submissionNumber }))
 
-      const result = await repository.findReportById(reportId)
-      expect(result).toEqual({
-        id: reportId,
-        version: 2,
-        schemaVersion: 1,
-        status: REPORT_STATUS.DELETED,
-        statusHistory: [
-          {
-            status: REPORT_STATUS.IN_PROGRESS,
-            changedBy: expect.any(Object),
-            changedAt: expect.any(String)
-          },
-          {
-            status: REPORT_STATUS.DELETED,
-            changedBy,
-            changedAt: expect.any(String)
-          }
-        ],
-        material: MATERIAL.PLASTIC,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      await expect(repository.findReportById(reportId)).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
       })
+    })
 
-      const [periodicReport] = await repository.findPeriodicReports({
+    it('removes the slot from findPeriodicReports after delete', async () => {
+      const { submissionNumber } = await repository.createReport(
+        buildCreateReportParams({
+          cadence: 'monthly',
+          period: DEFAULT_REPORT_PERIOD
+        })
+      )
+
+      await repository.deleteReport(buildDeleteParams({ submissionNumber }))
+
+      const result = await repository.findPeriodicReports({
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID
       })
-      const slot = periodicReport.reports.monthly[DEFAULT_REPORT_PERIOD]
-      expect(slot).toEqual({
-        currentReportId: null,
-        previousReportIds: [reportId],
-        startDate: DEFAULT_REPORT_START_DATE,
-        endDate: DEFAULT_REPORT_END_DATE,
-        dueDate: DEFAULT_REPORT_DUE_DATE
-      })
+      expect(result).toEqual([])
     })
 
     it('throws notFound on second delete', async () => {
-      await repository.createReport(
+      const { submissionNumber } = await repository.createReport(
         buildCreateReportParams({
           cadence: 'monthly',
           period: DEFAULT_REPORT_PERIOD
         })
       )
 
-      await repository.deleteReport(buildDeleteParams())
+      await repository.deleteReport(buildDeleteParams({ submissionNumber }))
 
       await expect(
-        repository.deleteReport(buildDeleteParams())
+        repository.deleteReport(buildDeleteParams({ submissionNumber }))
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
     })
 
-    it('throws not found when non existing report', async () => {
-      await repository.createReport(
-        buildCreateReportParams({
-          cadence: 'monthly',
-          period: DEFAULT_REPORT_PERIOD
-        })
-      )
-
-      await repository.deleteReport(buildDeleteParams())
-
-      await expect(
-        repository.deleteReport(buildDeleteParams())
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
-    })
-
-    it(`throws notFound when no current report for given period)`, async () => {
+    it('throws notFound when no report exists for the given period', async () => {
       await expect(
         repository.deleteReport(
           buildDeleteParams({ period: MONTHLY_PERIODS.December })

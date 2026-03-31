@@ -108,7 +108,7 @@ describe('report-service', () => {
       })
 
       expect(report.id).toBeDefined()
-      expect(report.status).toBe(REPORT_STATUS.IN_PROGRESS)
+      expect(report.status.currentStatus).toBe(REPORT_STATUS.IN_PROGRESS)
     })
 
     it('returns computed report with aggregated waste data', async () => {
@@ -157,7 +157,7 @@ describe('report-service', () => {
       })
 
       expect(report.id).toBeDefined()
-      expect(report.status).toBe(REPORT_STATUS.IN_PROGRESS)
+      expect(report.status.currentStatus).toBe(REPORT_STATUS.IN_PROGRESS)
       expect(report.material).toBe('plastic')
       expect(report.recyclingActivity).toBeDefined()
       expect(report.wasteSent).toBeDefined()

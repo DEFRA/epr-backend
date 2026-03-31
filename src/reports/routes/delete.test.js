@@ -123,8 +123,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           organisationId,
           registrationId
         })
-        const slot = periodicReports[0]?.reports?.quarterly?.[1]
-        expect(slot.currentReportId).toBeNull()
+        expect(periodicReports).toEqual([])
       })
 
       it('returns 204 when report is ready_to_submit', async () => {
@@ -139,10 +138,10 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           accreditationId: undefined
         })
 
-        await reportsRepository.updateReport({
+        await reportsRepository.updateReportStatus({
           reportId,
           version: 1,
-          fields: { status: 'ready_to_submit' },
+          status: 'ready_to_submit',
           changedBy: { id: 'test', name: 'Test', position: 'Officer' }
         })
 
@@ -157,7 +156,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
     })
 
     describe('status guard', () => {
-      it('returns 400 when report status is submitted', async () => {
+      it('returns 400 when most recent report is submitted', async () => {
         const {
           server,
           organisationId,
@@ -169,17 +168,17 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           accreditationId: undefined
         })
 
-        await reportsRepository.updateReport({
+        await reportsRepository.updateReportStatus({
           reportId,
           version: 1,
-          fields: { status: 'ready_to_submit' },
+          status: 'ready_to_submit',
           changedBy: { id: 'test', name: 'Test', position: 'Officer' }
         })
 
-        await reportsRepository.updateReport({
+        await reportsRepository.updateReportStatus({
           reportId,
           version: 2,
-          fields: { status: 'submitted' },
+          status: 'submitted',
           changedBy: { id: 'test', name: 'Test', position: 'Officer' }
         })
 
@@ -189,7 +188,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           registrationId
         )
 
-        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
 
       it('returns 404 when report was already deleted', async () => {
