@@ -54,6 +54,67 @@ export function buildUpdatedPrn(existingPrn, prnRevenue, freeTonnage) {
   return updated
 }
 
+/**
+ * Guards against updates to report data fields when the report is not in progress.
+ * @param {object} payload
+ * @param {object} report
+ */
+function guardReportDataFields(payload, report) {
+  const hasDataFields =
+    'prnRevenue' in payload ||
+    'freeTonnage' in payload ||
+    'tonnageRecycled' in payload ||
+    'tonnageNotRecycled' in payload
+
+  if (hasDataFields && report.status !== REPORT_STATUS.IN_PROGRESS) {
+    throw Boom.badRequest(
+      `Cannot update report data for a report with status '${report.status}'`
+    )
+  }
+
+  if (
+    'freeTonnage' in payload &&
+    report.prn?.issuedTonnage !== undefined &&
+    payload.freeTonnage > report.prn.issuedTonnage
+  ) {
+    throw Boom.badRequest(
+      `freeTonnage (${payload.freeTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
+    )
+  }
+}
+
+/**
+ * Builds the update fields from the PATCH payload and existing report data.
+ * @param {object} payload
+ * @param {object} report
+ * @returns {object}
+ */
+function buildUpdateFields(payload, report) {
+  const {
+    prnRevenue,
+    freeTonnage,
+    tonnageRecycled,
+    tonnageNotRecycled,
+    ...otherFields
+  } = payload
+
+  const fields = { ...otherFields }
+
+  if (prnRevenue !== undefined || freeTonnage !== undefined) {
+    fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freeTonnage)
+  }
+
+  if (tonnageRecycled !== undefined || tonnageNotRecycled !== undefined) {
+    fields.recyclingActivity = {
+      ...(report.recyclingActivity || {}),
+      ...(tonnageRecycled !== undefined && { tonnageRecycled }),
+      ...(tonnageNotRecycled !== undefined && { tonnageNotRecycled })
+    }
+  }
+
+  return fields
+}
+
 export const reportsPatch = {
   method: 'PATCH',
   path: reportsPatchPath,
@@ -90,52 +151,9 @@ export const reportsPatch = {
       )
     }
 
-    const hasPrnFields =
-      'prnRevenue' in request.payload || 'freeTonnage' in request.payload
-    const hasTonnageFields =
-      'tonnageRecycled' in request.payload ||
-      'tonnageNotRecycled' in request.payload
+    guardReportDataFields(request.payload, report)
 
-    if (
-      (hasPrnFields || hasTonnageFields) &&
-      report.status !== REPORT_STATUS.IN_PROGRESS
-    ) {
-      throw Boom.badRequest(
-        `Cannot update report data for a report with status '${report.status}'`
-      )
-    }
-
-    if (
-      'freeTonnage' in request.payload &&
-      report.prn?.issuedTonnage !== undefined &&
-      request.payload.freeTonnage > report.prn.issuedTonnage
-    ) {
-      throw Boom.badRequest(
-        `freeTonnage (${request.payload.freeTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
-      )
-    }
-
-    const {
-      prnRevenue,
-      freeTonnage,
-      tonnageRecycled,
-      tonnageNotRecycled,
-      ...otherFields
-    } = request.payload
-
-    const fields = { ...otherFields }
-
-    if (prnRevenue !== undefined || freeTonnage !== undefined) {
-      fields.prn = buildUpdatedPrn(report.prn, prnRevenue, freeTonnage)
-    }
-
-    if (tonnageRecycled !== undefined || tonnageNotRecycled !== undefined) {
-      fields.recyclingActivity = {
-        ...(report.recyclingActivity || {}),
-        ...(tonnageRecycled !== undefined && { tonnageRecycled }),
-        ...(tonnageNotRecycled !== undefined && { tonnageNotRecycled })
-      }
-    }
+    const fields = buildUpdateFields(request.payload, report)
 
     await reportsRepository.updateReport({
       reportId: report.id,
