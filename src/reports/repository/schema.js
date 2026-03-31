@@ -35,7 +35,10 @@ export const userSummarySchema = Joi.object({
 }).required()
 
 export const prnSchema = Joi.object({
-  issuedTonnage: Joi.number().min(0).required()
+  issuedTonnage: Joi.number().min(0).required(),
+  totalRevenue: Joi.number().min(0),
+  freeTonnage: Joi.number().min(0),
+  averagePricePerTonne: Joi.number().min(0)
 }).optional()
 
 const reportDataFieldsSchema = {

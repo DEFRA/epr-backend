@@ -29,17 +29,12 @@ const payloadSchema = Joi.object({
  * @returns {object}
  */
 export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
-  const base = existingPrn || {}
+  const base = existingPrn ?? {}
   const totalRevenue = prnRevenue !== undefined ? prnRevenue : base.totalRevenue
   const freeTonnage =
     freePernTonnage !== undefined ? freePernTonnage : base.freeTonnage
-  const issued = base.issuedTonnage || 0
-  const free = freeTonnage || 0
-  const revenue = totalRevenue || 0
-  const denominator = issued - free
-  const averagePricePerTonne = denominator > 0 ? revenue / denominator : 0
 
-  const updated = { ...base, averagePricePerTonne }
+  const updated = { ...base }
 
   if (totalRevenue !== undefined) {
     updated.totalRevenue = totalRevenue
@@ -47,6 +42,12 @@ export function buildUpdatedPrn(existingPrn, prnRevenue, freePernTonnage) {
 
   if (freeTonnage !== undefined) {
     updated.freeTonnage = freeTonnage
+  }
+
+  if (base.issuedTonnage != null && totalRevenue != null) {
+    const denominator = base.issuedTonnage - (freeTonnage ?? 0)
+    updated.averagePricePerTonne =
+      denominator > 0 ? totalRevenue / denominator : 0
   }
 
   return updated

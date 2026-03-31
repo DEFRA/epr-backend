@@ -561,6 +561,6 @@ describe('buildUpdatedPrn', () => {
 
     expect(result.totalRevenue).toBe(100)
     expect(result.freeTonnage).toBe(5)
-    expect(result.averagePricePerTonne).toBe(0)
+    expect(result.averagePricePerTonne).toBeUndefined()
   })
 })
