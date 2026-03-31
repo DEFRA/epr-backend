@@ -128,8 +128,10 @@ export const createDateFieldSchema = () =>
       if (value instanceof Date) {
         dateStr = toCalendarDate(value)
       } else if (typeof value === 'string') {
-        const match = value.match(CALENDAR_DATE_PATTERN)
-        if (!match) return helpers.error(CALENDAR_DATE_ERROR)
+        const match = CALENDAR_DATE_PATTERN.exec(value)
+        if (!match) {
+          return helpers.error(CALENDAR_DATE_ERROR)
+        }
         dateStr = match[1]
       } else {
         return helpers.error(CALENDAR_DATE_ERROR)
