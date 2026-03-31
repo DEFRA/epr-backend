@@ -15,6 +15,7 @@ import {
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
   createEnumFieldSchema,
+  toThreeDigitId,
   YES_NO_VALUES
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
@@ -218,7 +219,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     }
 
     if (overseasSites !== ORS_VALIDATION_DISABLED) {
-      const ors = overseasSites[data[FIELDS.OSR_ID]]
+      const ors = overseasSites[toThreeDigitId(data[FIELDS.OSR_ID])]
       if (
         !ors?.validFrom ||
         new Date(ors.validFrom) > new Date(data[FIELDS.DATE_OF_EXPORT])
