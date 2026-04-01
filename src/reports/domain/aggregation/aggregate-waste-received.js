@@ -1,20 +1,31 @@
 import {
   add,
-  isZero,
-  toNumber,
+  roundToTwoDecimalPlaces,
   toDecimal,
-  roundToTwoDecimalPlaces
+  toNumber
 } from '#common/helpers/decimal-utils.js'
-import { formatAddress, groupAndSum } from './helpers.js'
+import {
+  formatAddress,
+  groupAndSum,
+  isTonnageGreaterThanZero
+} from './helpers.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+const WASTE_RECEIVED_TYPES = new Set([
+  WASTE_RECORD_TYPE.EXPORTED,
+  WASTE_RECORD_TYPE.RECEIVED
+])
+
+const isTypeWasteReceived = (type) => WASTE_RECEIVED_TYPES.has(type)
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteReceivedRecords
  * @param {string} tonnageField
  */
 export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
-  const validEntries = wasteReceivedRecords.filter(({ data }) => {
+  const validEntries = wasteReceivedRecords.filter(({ type, data }) => {
     const tonnage = toNumber(data[tonnageField])
-    return Number.isFinite(tonnage) && !isZero(tonnage)
+    return isTypeWasteReceived(type) && isTonnageGreaterThanZero(tonnage)
   })
 
   const totalTonnageDecimal = validEntries.reduce(

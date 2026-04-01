@@ -1,4 +1,8 @@
-import { add, toDecimal } from '#common/helpers/decimal-utils.js'
+import { add, isZero, toDecimal } from '#common/helpers/decimal-utils.js'
+
+export function isTonnageGreaterThanZero(tonnage) {
+  return Number.isFinite(tonnage) && !isZero(tonnage)
+}
 
 /**
  * @param {string|null|undefined} address
