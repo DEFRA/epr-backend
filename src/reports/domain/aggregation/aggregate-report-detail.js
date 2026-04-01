@@ -3,7 +3,7 @@ import { MONTHS_PER_PERIOD } from '../cadence.js'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
-} from '../fields-by-operator-category.js'
+} from './fields-by-operator-category.js'
 import { filterRecordsByDateField } from './filter-records-by-date.js'
 import { aggregateWasteReceived } from './aggregate-waste-received.js'
 import { aggregateWasteExported } from './aggregate-waste-exported.js'

@@ -9,6 +9,7 @@ import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod
 } from './report-service.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const buildRegistration = (overrides = {}) => ({
   id: new ObjectId().toString(),
@@ -30,6 +31,7 @@ const buildWasteRecord = ({
   createdAt = '2024-01-15T00:00:00Z'
 } = {}) => ({
   id: new ObjectId().toString(),
+  type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
     SUPPLIER_NAME: 'Supplier A',
     ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Reprocessor',

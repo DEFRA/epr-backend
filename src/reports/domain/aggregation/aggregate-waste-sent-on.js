@@ -1,21 +1,26 @@
 import {
   add,
-  isZero,
-  toNumber,
+  roundToTwoDecimalPlaces,
   toDecimal,
-  roundToTwoDecimalPlaces
+  toNumber
 } from '#common/helpers/decimal-utils.js'
-import { formatAddress, groupAndSum } from './helpers.js'
+import {
+  formatAddress,
+  groupAndSum,
+  isTonnageGreaterThanZero
+} from './helpers.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * @param {Array<{data: object, tonnage: number}>} validEntries
+ * @param {Array<{data: object}>} validEntries
  */
 function sumByFacilityType(validEntries) {
   let toReprocessorDecimal = toDecimal(0)
   let toExporterDecimal = toDecimal(0)
   let toAnotherSiteDecimal = toDecimal(0)
 
-  for (const { data, tonnage } of validEntries) {
+  for (const { data } of validEntries) {
+    const tonnage = data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
     const facilityType = data.FINAL_DESTINATION_FACILITY_TYPE
 
     if (facilityType === 'Reprocessor') {
@@ -34,12 +39,12 @@ function sumByFacilityType(validEntries) {
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteSentOnRecords
  */
 export function aggregateWasteSentOn(wasteSentOnRecords) {
-  const validEntries = wasteSentOnRecords
-    .map(({ data }) => ({
-      data,
-      tonnage: toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
-    }))
-    .filter(({ tonnage }) => Number.isFinite(tonnage) && !isZero(tonnage))
+  const validEntries = wasteSentOnRecords.filter(({ type, data }) => {
+    const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
+    return (
+      type === WASTE_RECORD_TYPE.SENT_ON && isTonnageGreaterThanZero(tonnage)
+    )
+  })
 
   const { toReprocessorDecimal, toExporterDecimal, toAnotherSiteDecimal } =
     sumByFacilityType(validEntries)
@@ -63,7 +68,7 @@ export function aggregateWasteSentOn(wasteSentOnRecords) {
         data.FINAL_DESTINATION_POSTCODE
       )
     }),
-    ({ tonnage }) => tonnage
+    ({ data }) => data.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
   ).map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
     tonnageSentOn: roundToTwoDecimalPlaces(tonnageDecimal)

@@ -1,9 +1,13 @@
-import { add, toDecimal } from '#common/helpers/decimal-utils.js'
+import { add, isZero, toDecimal } from '#common/helpers/decimal-utils.js'
+
+export function isTonnageGreaterThanZero(tonnage) {
+  return Number.isFinite(tonnage) && !isZero(tonnage)
+}
 
 /**
  * @param {string|null|undefined} address
  * @param {string|null|undefined} postcode
- * @returns {string}
+ * @returns {string | null}
  */
 export function formatAddress(address, postcode) {
   if (address || postcode) {
