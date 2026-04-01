@@ -163,6 +163,41 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
+
+      it('returns 400 when attempting to transition from submitted to any status', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepository,
+          reportId
+        } = await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 1,
+          status: 'ready_to_submit',
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+        })
+        await reportsRepository.updateReportStatus({
+          reportId,
+          version: 2,
+          status: 'submitted',
+          changedBy: { id: 'test', name: 'Test', position: 'Officer' }
+        })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 3 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
     })
 
     describe('error handling', () => {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
+import { ObjectId } from 'mongodb'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
@@ -25,6 +26,28 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       const result = await repository.findPeriodicReports({
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID
+      })
+
+      expect(result).toEqual([])
+    })
+
+    it('does not return reports belonging to a different organisation', async () => {
+      await repository.createReport(buildCreateReportParams())
+
+      const result = await repository.findPeriodicReports({
+        organisationId: new ObjectId().toString(),
+        registrationId: DEFAULT_REG_ID
+      })
+
+      expect(result).toEqual([])
+    })
+
+    it('does not return reports belonging to a different registration', async () => {
+      await repository.createReport(buildCreateReportParams())
+
+      const result = await repository.findPeriodicReports({
+        organisationId: DEFAULT_ORG_ID,
+        registrationId: new ObjectId().toString()
       })
 
       expect(result).toEqual([])
