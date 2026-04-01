@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { aggregateTonnageByMaterial } from './aggregate-tonnage.js'
@@ -120,9 +120,15 @@ describe('aggregateTonnageByMaterial - Integration', () => {
   let db
 
   beforeEach(async ({ mongoClient }) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-15T10:00:00.000Z'))
     db = mongoClient.db(DATABASE_NAME)
     await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
     await db.collection(WASTE_RECORDS_COLLECTION).deleteMany({})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('aggregates exporter tonnage by material with year, month, and type', async () => {
