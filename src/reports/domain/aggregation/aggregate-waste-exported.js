@@ -1,34 +1,96 @@
-import { toNumber } from '#common/helpers/decimal-utils.js'
+import {
+  add,
+  subtract,
+  toDecimal,
+  roundToTwoDecimalPlaces,
+  toNumber
+} from '#common/helpers/decimal-utils.js'
+import { groupAndSum, isYes } from './helpers.js'
+
+const generateOverseasSiteSummary = (wasteExportedRecords) => {
+  // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
+  return groupAndSum(
+    wasteExportedRecords.filter(({ data }) => data.OSR_ID),
+    ({ data }) => data.OSR_ID,
+    ({ data }) => ({ orsId: data.OSR_ID, siteName: null, country: null }),
+    ({ data }) => toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+  ).map(({ tonnageDecimal, ...rest }) => ({
+    ...rest,
+    tonnageExported: roundToTwoDecimalPlaces(tonnageDecimal)
+  }))
+}
+
+function getTonnageRepatriated(repatriatedRecords) {
+  return roundToTwoDecimalPlaces(
+    repatriatedRecords.reduce(
+      (sum, { data }) =>
+        add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
+      toDecimal(0)
+    )
+  )
+}
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteExportedRecords
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} repatriatedRecords
+ * @param {number} totalTonnageReceived
  */
-export function aggregateWasteExported(wasteExportedRecords) {
-  let totalTonnageReceivedForExporting = 0
-  const seenOrsIds = new Set()
-  const overseasSites = []
+export function aggregateWasteExported(
+  wasteExportedRecords,
+  repatriatedRecords,
+  totalTonnageReceived
+) {
+  const totalTonnageExportedDecimal = wasteExportedRecords.reduce(
+    (sum, { data }) =>
+      add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
+    toDecimal(0)
+  )
+  const totalTonnageExported = roundToTwoDecimalPlaces(
+    totalTonnageExportedDecimal
+  )
+  const tonnageReceivedNotExported = roundToTwoDecimalPlaces(
+    subtract(toDecimal(totalTonnageReceived), totalTonnageExportedDecimal)
+  )
 
-  for (const { data } of wasteExportedRecords) {
-    const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+  const { refusedDecimal, stoppedDecimal, refusedOrStoppedDecimal } =
+    wasteExportedRecords.reduce(
+      (acc, { data }) => {
+        const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+        const refused = isYes(data.WAS_THE_WASTE_REFUSED)
+        const stopped = isYes(data.WAS_THE_WASTE_STOPPED)
+        return {
+          refusedDecimal: refused
+            ? add(acc.refusedDecimal, tonnage)
+            : acc.refusedDecimal,
+          stoppedDecimal: stopped
+            ? add(acc.stoppedDecimal, tonnage)
+            : acc.stoppedDecimal,
+          refusedOrStoppedDecimal:
+            refused || stopped
+              ? add(acc.refusedOrStoppedDecimal, tonnage)
+              : acc.refusedOrStoppedDecimal
+        }
+      },
+      {
+        refusedDecimal: toDecimal(0),
+        stoppedDecimal: toDecimal(0),
+        refusedOrStoppedDecimal: toDecimal(0)
+      }
+    )
 
-    totalTonnageReceivedForExporting += tonnage
-
-    // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
-    const orsId = data.OSR_ID
-    const siteName = data.OSR_NAME
-
-    if (orsId && !seenOrsIds.has(orsId)) {
-      seenOrsIds.add(orsId)
-      overseasSites.push({ orsId, siteName })
-    }
-  }
+  const tonnageRefusedAtDestination = roundToTwoDecimalPlaces(refusedDecimal)
+  const tonnageStoppedDuringExport = roundToTwoDecimalPlaces(stoppedDecimal)
+  const totalTonnageRefusedOrStopped = roundToTwoDecimalPlaces(
+    refusedOrStoppedDecimal
+  )
 
   return {
-    overseasSites,
-    totalTonnageReceivedForExporting,
-    tonnageReceivedNotExported: null,
-    tonnageRefusedAtRecepientDestination: null,
-    tonnageStoppedDuringExport: null,
-    tonnageRepatriated: null
+    overseasSites: generateOverseasSiteSummary(wasteExportedRecords),
+    totalTonnageExported,
+    tonnageReceivedNotExported,
+    tonnageRefusedAtDestination,
+    tonnageStoppedDuringExport,
+    totalTonnageRefusedOrStopped,
+    tonnageRepatriated: getTonnageRepatriated(repatriatedRecords)
   }
 }

@@ -1,5 +1,15 @@
 import { add, isZero, toDecimal } from '#common/helpers/decimal-utils.js'
 
+/**
+ * Returns true when a field value is 'yes' (case-insensitive, trimmed).
+ *
+ * @param {string|null|undefined} value
+ * @returns {boolean}
+ */
+export function isYes(value) {
+  return typeof value === 'string' && value.trim().toLowerCase() === 'yes'
+}
+
 export function isTonnageGreaterThanZero(tonnage) {
   return Number.isFinite(tonnage) && !isZero(tonnage)
 }

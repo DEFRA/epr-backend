@@ -1,5 +1,3 @@
-const ISO_DATE_RE = /^\d{4}-\d{2}(-\d{2})?/
-
 /**
  * Returns true when value is a string containing a valid ISO date that falls
  * within [startDate, endDate] (both inclusive, compared lexicographically).
@@ -10,11 +8,15 @@ const ISO_DATE_RE = /^\d{4}-\d{2}(-\d{2})?/
  * @returns {boolean}
  */
 export function isDateInRange(value, startDate, endDate) {
-  if (typeof value !== 'string' || !ISO_DATE_RE.test(value)) {
+  if (typeof value !== 'string') {
     return false
   }
 
   const date = value.slice(0, 10)
+  if (Number.isNaN(new Date(date).getTime())) {
+    return false
+  }
+
   return date.localeCompare(startDate) >= 0 && date.localeCompare(endDate) <= 0
 }
 

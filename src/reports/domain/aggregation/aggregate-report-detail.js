@@ -19,12 +19,13 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 
 /**
  * @typedef {Object} AggregatedExportActivity
- * @property {Array<{orsId: string, siteName: string|undefined}>} overseasSites
- * @property {number} totalTonnageReceivedForExporting
- * @property {null} tonnageReceivedNotExported
- * @property {null} tonnageRefusedAtRecepientDestination
- * @property {null} tonnageStoppedDuringExport
- * @property {null} tonnageRepatriated
+ * @property {Array<{orsId: string, siteName: string|null, country: string|null}>} overseasSites
+ * @property {number} totalTonnageExported
+ * @property {number} tonnageReceivedNotExported
+ * @property {number} tonnageRefusedAtDestination
+ * @property {number} tonnageStoppedDuringExport
+ * @property {number} totalTonnageRefusedOrStopped
+ * @property {number} tonnageRepatriated
  */
 
 /**
@@ -82,6 +83,7 @@ export function aggregateReportDetail(
 
   const wasteReceivedDateField = sectionDateFields.wasteReceived
   const wasteExportedDateField = sectionDateFields.wasteExported
+  const wasteRepatriatedDateField = sectionDateFields.wasteRepatriated
   const wasteSentOnDateField = sectionDateFields.wasteSentOn
 
   const wasteReceivedRecords = filterRecordsByDateField(
@@ -98,6 +100,13 @@ export function aggregateReportDetail(
     endDate
   )
 
+  const wasteRepatriatedRecords = filterRecordsByDateField(
+    wasteRecords,
+    wasteRepatriatedDateField,
+    startDate,
+    endDate
+  )
+
   const wasteSentOnRecords = filterRecordsByDateField(
     wasteRecords,
     wasteSentOnDateField,
@@ -110,6 +119,11 @@ export function aggregateReportDetail(
   const tonnageReceivedField =
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
 
+  const recyclingActivity = aggregateWasteReceived(
+    wasteReceivedRecords,
+    tonnageReceivedField
+  )
+
   return {
     operatorCategory,
     cadence,
@@ -118,12 +132,13 @@ export function aggregateReportDetail(
     startDate,
     endDate,
     lastUploadedAt,
-    recyclingActivity: aggregateWasteReceived(
-      wasteReceivedRecords,
-      tonnageReceivedField
-    ),
+    recyclingActivity,
     ...(wasteExportedDateField && {
-      exportActivity: aggregateWasteExported(wasteExportedRecords)
+      exportActivity: aggregateWasteExported(
+        wasteExportedRecords,
+        wasteRepatriatedRecords,
+        recyclingActivity.totalTonnageReceived
+      )
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords)
   }
