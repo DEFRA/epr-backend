@@ -703,7 +703,16 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(80.25)
-        expect(payload.recyclingActivity.suppliers).toStrictEqual([])
+        expect(payload.recyclingActivity.suppliers).toStrictEqual([
+          {
+            facilityType: null,
+            supplierAddress: null,
+            supplierEmail: null,
+            supplierName: null,
+            supplierPhone: null,
+            tonnageReceived: 80.25
+          }
+        ])
       })
 
       it('aggregates waste exported with overseas site details', async () => {

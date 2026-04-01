@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { OPERATOR_CATEGORY } from './operator-category.js'
+import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'
 
 const buildReceivedRecord = (overrides = {}) => ({
@@ -189,12 +189,18 @@ describe('#aggregateReportDetail', () => {
         {
           supplierName: 'Grantham Waste',
           facilityType: 'Baler',
-          tonnageReceived: 42.21
+          tonnageReceived: 42.21,
+          supplierAddress: null,
+          supplierPhone: null,
+          supplierEmail: null
         },
         {
           supplierName: 'SUEZ recycling',
           facilityType: 'Sorter',
-          tonnageReceived: 38.04
+          tonnageReceived: 38.04,
+          supplierAddress: null,
+          supplierPhone: null,
+          supplierEmail: null
         }
       ])
     })
@@ -314,11 +320,13 @@ describe('#aggregateReportDetail', () => {
         {
           recipientName: 'Lincoln recycling',
           facilityType: 'Reprocessor',
+          address: null,
           tonnageSentOn: 8
         },
         {
           recipientName: 'Thames exports',
           facilityType: 'Exporter',
+          address: null,
           tonnageSentOn: 2
         }
       ])
@@ -345,6 +353,7 @@ describe('#aggregateReportDetail', () => {
         {
           recipientName: 'Lincoln recycling',
           facilityType: 'Reprocessor',
+          address: null,
           tonnageSentOn: 8
         }
       ])
@@ -418,7 +427,7 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail(records, exporterArgs)
 
       expect(result.recyclingActivity.totalTonnageReceived).toBe(80.25)
-      expect(result.recyclingActivity.suppliers).toHaveLength(2)
+      expect(result.recyclingActivity.suppliers).toHaveLength(1)
     })
 
     it('returns wasteExported section with total tonnage', () => {
@@ -559,12 +568,21 @@ describe('#aggregateReportDetail', () => {
       expect(result.recyclingActivity.totalTonnageReceived).toBe(80.25)
     })
 
-    it('returns empty suppliers for wasteReceived', () => {
+    it('returns suppliers even when all fields are missing for wasteReceived', () => {
       const records = [buildAccreditedExportedRecord()]
 
       const result = aggregateReportDetail(records, accreditedExporterArgs)
 
-      expect(result.recyclingActivity.suppliers).toStrictEqual([])
+      expect(result.recyclingActivity.suppliers).toStrictEqual([
+        {
+          facilityType: null,
+          supplierAddress: null,
+          supplierEmail: null,
+          supplierName: null,
+          supplierPhone: null,
+          tonnageReceived: 50
+        }
+      ])
     })
 
     it('aggregates waste exported using DATE_OF_EXPORT', () => {

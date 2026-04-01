@@ -1,0 +1,686 @@
+[
+  {
+    "_id": "69cbb5a4294166013b6366cd",
+    "organisationId": "69cbb599570015fc114f3309",
+    "rowId": 1000,
+    "type": "received",
+    "registrationId": "69cbb599570015fc114f330a",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1000,
+      "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-01",
+      "EWC_CODE": "01 03 06",
+      "DESCRIPTION_WASTE": "Paper - AAIG EN643 grade 1.04.01 (70%)",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+      "GROSS_WEIGHT": 100,
+      "TARE_WEIGHT": 5,
+      "PALLET_WEIGHT": 5.05,
+      "NET_WEIGHT": 89.95,
+      "BAILING_WIRE_PROTOCOL": "Yes",
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "AAIG percentage",
+      "WEIGHT_OF_NON_TARGET_MATERIALS": 21,
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.75,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 51.63493125,
+      "SUPPLIER_NAME": "3 Arrows Recycling Solutions Ltd",
+      "SUPPLIER_ADDRESS": "Milton Hall",
+      "SUPPLIER_POSTCODE": "CB24 6WZ",
+      "SUPPLIER_EMAIL": "webuy@boomerang.co.uk",
+      "SUPPLIER_PHONE_NUMBER": "07985100113",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "YOUR_REFERENCE": "R123456",
+      "WEIGHBRIDGE_TICKET": "WB-78902",
+      "CARRIER_NAME": "Acetech Metals Ltd",
+      "CBD_REG_NUMBER": "CBD-123457",
+      "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "531fd0f5-0d81-420c-b9a6-1f71bbbc3dec",
+        "createdAt": "2026-03-31T11:53:05.913Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "455f46e0-01f7-47d6-93b3-421e4b79d011",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/1b53fe23-ff1f-41dd-a55b-bc3624fc1f91/455f46e0-01f7-47d6-93b3-421e4b79d011"
+        },
+        "data": {
+          "ROW_ID": 1000,
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-03-01",
+          "EWC_CODE": "01 03 06",
+          "DESCRIPTION_WASTE": "Paper - AAIG EN643 grade 1.04.01 (70%)",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+          "GROSS_WEIGHT": 100,
+          "TARE_WEIGHT": 5,
+          "PALLET_WEIGHT": 5.05,
+          "NET_WEIGHT": 89.95,
+          "BAILING_WIRE_PROTOCOL": "Yes",
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "AAIG percentage",
+          "WEIGHT_OF_NON_TARGET_MATERIALS": 21,
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.75,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 51.63493125,
+          "SUPPLIER_NAME": "3 Arrows Recycling Solutions Ltd",
+          "SUPPLIER_ADDRESS": "Milton Hall",
+          "SUPPLIER_POSTCODE": "CB24 6WZ",
+          "SUPPLIER_EMAIL": "webuy@boomerang.co.uk",
+          "SUPPLIER_PHONE_NUMBER": "07985100113",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "YOUR_REFERENCE": "R123456",
+          "WEIGHBRIDGE_TICKET": "WB-78902",
+          "CARRIER_NAME": "Acetech Metals Ltd",
+          "CBD_REG_NUMBER": "CBD-123457",
+          "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      },
+      {
+        "id": "871182f3-7e8e-4a6a-965e-dbae6dc0bdcb",
+        "createdAt": "2026-03-31T14:12:14.551Z",
+        "status": "updated",
+        "summaryLog": {
+          "id": "460a60ec-55ac-489e-83e9-121f72d785ce",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/5156a3c8-f85e-41b9-9f81-6c9c375273f7/460a60ec-55ac-489e-83e9-121f72d785ce"
+        },
+        "data": {
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-01"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbb5a4294166013b6366ce",
+    "organisationId": "69cbb599570015fc114f3309",
+    "rowId": 1001,
+    "registrationId": "69cbb599570015fc114f330a",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1001,
+      "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-01",
+      "EWC_CODE": "01 03 08",
+      "DESCRIPTION_WASTE": "Paper - AAIG EN643 grade 1.04.02 (80%)",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+      "GROSS_WEIGHT": 500,
+      "TARE_WEIGHT": 15,
+      "PALLET_WEIGHT": 10,
+      "NET_WEIGHT": 475,
+      "BAILING_WIRE_PROTOCOL": "Yes",
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "WEIGHT_OF_NON_TARGET_MATERIALS": 21,
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.75,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 339.98925,
+      "SUPPLIER_NAME": "3 Arrows Recycling Solutions Ltd",
+      "SUPPLIER_ADDRESS": "Milton Hall",
+      "SUPPLIER_POSTCODE": "CB24 6WZ",
+      "SUPPLIER_EMAIL": "Webuy@boomerang.co.uk",
+      "SUPPLIER_PHONE_NUMBER": "07985100113",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "YOUR_REFERENCE": "R123456",
+      "WEIGHBRIDGE_TICKET": "WB-78902",
+      "CARRIER_NAME": "Acetech Metals Ltd",
+      "CBD_REG_NUMBER": "CBD-123457",
+      "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "45ef5b6d-0083-4bec-84ec-daf5801a9f15",
+        "createdAt": "2026-03-31T11:53:05.913Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "455f46e0-01f7-47d6-93b3-421e4b79d011",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/1b53fe23-ff1f-41dd-a55b-bc3624fc1f91/455f46e0-01f7-47d6-93b3-421e4b79d011"
+        },
+        "data": {
+          "ROW_ID": 1001,
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-03-01",
+          "EWC_CODE": "01 03 08",
+          "DESCRIPTION_WASTE": "Paper - AAIG EN643 grade 1.04.02 (80%)",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+          "GROSS_WEIGHT": 500,
+          "TARE_WEIGHT": 15,
+          "PALLET_WEIGHT": 10,
+          "NET_WEIGHT": 475,
+          "BAILING_WIRE_PROTOCOL": "Yes",
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "WEIGHT_OF_NON_TARGET_MATERIALS": 21,
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.75,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 339.98925,
+          "SUPPLIER_NAME": "3 Arrows Recycling Solutions Ltd",
+          "SUPPLIER_ADDRESS": "Milton Hall",
+          "SUPPLIER_POSTCODE": "CB24 6WZ",
+          "SUPPLIER_EMAIL": "Webuy@boomerang.co.uk",
+          "SUPPLIER_PHONE_NUMBER": "07985100113",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "YOUR_REFERENCE": "R123456",
+          "WEIGHBRIDGE_TICKET": "WB-78902",
+          "CARRIER_NAME": "Acetech Metals Ltd",
+          "CBD_REG_NUMBER": "CBD-123457",
+          "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      },
+      {
+        "id": "b2bd32b6-ce37-4872-a184-356ba0956420",
+        "createdAt": "2026-03-31T14:12:14.551Z",
+        "status": "updated",
+        "summaryLog": {
+          "id": "460a60ec-55ac-489e-83e9-121f72d785ce",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/5156a3c8-f85e-41b9-9f81-6c9c375273f7/460a60ec-55ac-489e-83e9-121f72d785ce"
+        },
+        "data": {
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-01"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbb5a4294166013b6366cf",
+    "organisationId": "69cbb599570015fc114f3309",
+    "rowId": 1002,
+    "registrationId": "69cbb599570015fc114f330a",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1002,
+      "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-01",
+      "EWC_CODE": null,
+      "DESCRIPTION_WASTE": "Paper - AAIG EN643 grade 1.04.02 (80%)",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+      "GROSS_WEIGHT": 500,
+      "TARE_WEIGHT": 15,
+      "PALLET_WEIGHT": 10,
+      "NET_WEIGHT": 475,
+      "BAILING_WIRE_PROTOCOL": "Yes",
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "WEIGHT_OF_NON_TARGET_MATERIALS": 21,
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.75,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 339.98925,
+      "SUPPLIER_NAME": null,
+      "SUPPLIER_ADDRESS": "Milton Hall",
+      "SUPPLIER_POSTCODE": "CB24 6WZ",
+      "SUPPLIER_EMAIL": "Webuy@boomerang.co.uk",
+      "SUPPLIER_PHONE_NUMBER": "07985100113",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "YOUR_REFERENCE": "R123456",
+      "WEIGHBRIDGE_TICKET": "WB-78902",
+      "CARRIER_NAME": "Acetech Metals Ltd",
+      "CBD_REG_NUMBER": "CBD-123457",
+      "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "c02e269e-5a77-4eb4-8e22-7c44d869831d",
+        "createdAt": "2026-03-31T11:53:05.913Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "455f46e0-01f7-47d6-93b3-421e4b79d011",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/1b53fe23-ff1f-41dd-a55b-bc3624fc1f91/455f46e0-01f7-47d6-93b3-421e4b79d011"
+        },
+        "data": {
+          "ROW_ID": 1002,
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-03-01",
+          "EWC_CODE": null,
+          "DESCRIPTION_WASTE": "Paper - AAIG EN643 grade 1.04.02 (80%)",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+          "GROSS_WEIGHT": 500,
+          "TARE_WEIGHT": 15,
+          "PALLET_WEIGHT": 10,
+          "NET_WEIGHT": 475,
+          "BAILING_WIRE_PROTOCOL": "Yes",
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "WEIGHT_OF_NON_TARGET_MATERIALS": 21,
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.75,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 339.98925,
+          "SUPPLIER_NAME": null,
+          "SUPPLIER_ADDRESS": "Milton Hall",
+          "SUPPLIER_POSTCODE": "CB24 6WZ",
+          "SUPPLIER_EMAIL": "Webuy@boomerang.co.uk",
+          "SUPPLIER_PHONE_NUMBER": "07985100113",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "YOUR_REFERENCE": "R123456",
+          "WEIGHBRIDGE_TICKET": "WB-78902",
+          "CARRIER_NAME": "Acetech Metals Ltd",
+          "CBD_REG_NUMBER": "CBD-123457",
+          "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      },
+      {
+        "id": "13d5f495-dc64-4aa6-9e18-ddf1a4564135",
+        "createdAt": "2026-03-31T14:12:14.551Z",
+        "status": "updated",
+        "summaryLog": {
+          "id": "460a60ec-55ac-489e-83e9-121f72d785ce",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/5156a3c8-f85e-41b9-9f81-6c9c375273f7/460a60ec-55ac-489e-83e9-121f72d785ce"
+        },
+        "data": {
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-01"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbb97b294166013b6369ab",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 4000,
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "processed",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 4000,
+      "DATE_LOAD_LEFT_SITE": "2026-01-01",
+      "PRODUCT_DESCRIPTION": "Plastic pellets",
+      "END_OF_WASTE_STANDARDS": "Yes",
+      "PRODUCT_TONNAGE": null,
+      "WEIGHBRIDGE_TICKET_NUMBER": null,
+      "HAULIER_NAME": null,
+      "HAULIER_VEHICLE_REGISTRATION_NUMBER": null,
+      "CUSTOMER_NAME": null,
+      "CUSTOMER_INVOICE_REFERENCE": null,
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "7af1ae5f-bcc0-4dcd-a6ce-00e4594ce166",
+        "createdAt": "2026-03-31T12:09:28.617Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "76832c8d-6576-45fa-9cb9-a0e344d90281",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/a1ca5131-f786-4988-b6b2-dc062045a1ad/76832c8d-6576-45fa-9cb9-a0e344d90281"
+        },
+        "data": {
+          "ROW_ID": 4000,
+          "DATE_LOAD_LEFT_SITE": "2026-01-01",
+          "PRODUCT_DESCRIPTION": "Plastic pellets",
+          "END_OF_WASTE_STANDARDS": "Yes",
+          "PRODUCT_TONNAGE": null,
+          "WEIGHBRIDGE_TICKET_NUMBER": null,
+          "HAULIER_NAME": null,
+          "HAULIER_VEHICLE_REGISTRATION_NUMBER": null,
+          "CUSTOMER_NAME": null,
+          "CUSTOMER_INVOICE_REFERENCE": null,
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbb97b294166013b6369ac",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 5000,
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5000,
+      "DATE_LOAD_LEFT_SITE": "2026-01-01",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 50,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+      "FINAL_DESTINATION_NAME": "High Low Limited",
+      "FINAL_DESTINATION_ADDRESS": "345 High Low Street",
+      "FINAL_DESTINATION_POSTCODE": "SO11 7ME",
+      "FINAL_DESTINATION_EMAIL": "info@highlow.co.uk",
+      "FINAL_DESTINATION_PHONE": 1234567890,
+      "YOUR_REFERENCE": "W123456",
+      "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+      "EWC_CODE": "01 03 10*",
+      "WEIGHBRIDGE_TICKET": "WB-78901",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "c821b520-0c14-485a-b3e7-ea1747567735",
+        "createdAt": "2026-03-31T12:09:28.617Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "76832c8d-6576-45fa-9cb9-a0e344d90281",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/a1ca5131-f786-4988-b6b2-dc062045a1ad/76832c8d-6576-45fa-9cb9-a0e344d90281"
+        },
+        "data": {
+          "ROW_ID": 5000,
+          "DATE_LOAD_LEFT_SITE": "2026-01-01",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 50,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+          "FINAL_DESTINATION_NAME": "High Low Limited",
+          "FINAL_DESTINATION_ADDRESS": "345 High Low Street",
+          "FINAL_DESTINATION_POSTCODE": "SO11 7ME",
+          "FINAL_DESTINATION_EMAIL": "info@highlow.co.uk",
+          "FINAL_DESTINATION_PHONE": 1234567890,
+          "YOUR_REFERENCE": "W123456",
+          "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+          "EWC_CODE": "01 03 10*",
+          "WEIGHBRIDGE_TICKET": "WB-78901",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbbb05294166013b636a68",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 5001,
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5001,
+      "DATE_LOAD_LEFT_SITE": "2026-01-31",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 50,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Other",
+      "FINAL_DESTINATION_NAME": "Board laboratories",
+      "FINAL_DESTINATION_ADDRESS": null,
+      "FINAL_DESTINATION_POSTCODE": null,
+      "FINAL_DESTINATION_EMAIL": null,
+      "FINAL_DESTINATION_PHONE": null,
+      "YOUR_REFERENCE": "W123457",
+      "DESCRIPTION_WASTE": "Paper - unsorted mixed paper or board (unusable materials removed) ",
+      "EWC_CODE": "01 04 09",
+      "WEIGHBRIDGE_TICKET": "WB-78902",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "e5f51973-d9bd-4f76-8156-6ba35f78623d",
+        "createdAt": "2026-03-31T12:16:02.816Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "b3b74b11-b09c-41a0-bfcc-9a5c74c532e4",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/94ad64a8-0e7d-4f51-9d67-cc05b354770f/b3b74b11-b09c-41a0-bfcc-9a5c74c532e4"
+        },
+        "data": {
+          "ROW_ID": 5001,
+          "DATE_LOAD_LEFT_SITE": "2026-01-31",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 50,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Other",
+          "FINAL_DESTINATION_NAME": "Board laboratories",
+          "FINAL_DESTINATION_ADDRESS": null,
+          "FINAL_DESTINATION_POSTCODE": null,
+          "FINAL_DESTINATION_EMAIL": null,
+          "FINAL_DESTINATION_PHONE": null,
+          "YOUR_REFERENCE": "W123457",
+          "DESCRIPTION_WASTE": "Paper - unsorted mixed paper or board (unusable materials removed) ",
+          "EWC_CODE": "01 04 09",
+          "WEIGHBRIDGE_TICKET": "WB-78902",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbbb05294166013b636a69",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 5002,
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "sentOn",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5002,
+      "DATE_LOAD_LEFT_SITE": "2026-01-30",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 1000,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+      "FINAL_DESTINATION_NAME": "HighLow Limited",
+      "FINAL_DESTINATION_ADDRESS": "11 high street",
+      "FINAL_DESTINATION_POSTCODE": "G59NS",
+      "FINAL_DESTINATION_EMAIL": "info@highlow.co.uk",
+      "FINAL_DESTINATION_PHONE": 1234567890,
+      "YOUR_REFERENCE": "W123456",
+      "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+      "EWC_CODE": "01 03 10*",
+      "WEIGHBRIDGE_TICKET": "WB-78901",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "ebfd70c6-1377-4389-815b-90fe45915aa8",
+        "createdAt": "2026-03-31T12:16:02.816Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "b3b74b11-b09c-41a0-bfcc-9a5c74c532e4",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/94ad64a8-0e7d-4f51-9d67-cc05b354770f/b3b74b11-b09c-41a0-bfcc-9a5c74c532e4"
+        },
+        "data": {
+          "ROW_ID": 5002,
+          "DATE_LOAD_LEFT_SITE": "2026-02-01",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 1000,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+          "FINAL_DESTINATION_NAME": "HighLow Limited",
+          "FINAL_DESTINATION_ADDRESS": "11 high street",
+          "FINAL_DESTINATION_POSTCODE": "G59NS",
+          "FINAL_DESTINATION_EMAIL": "info@highlow.co.uk",
+          "FINAL_DESTINATION_PHONE": 1234567890,
+          "YOUR_REFERENCE": "W123456",
+          "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+          "EWC_CODE": "01 03 10*",
+          "WEIGHBRIDGE_TICKET": "WB-78901",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      },
+      {
+        "id": "bc84737e-25d5-4e99-b96c-aa51134043f5",
+        "createdAt": "2026-03-31T14:13:26.893Z",
+        "status": "updated",
+        "summaryLog": {
+          "id": "04d5a7bb-5d7c-4737-9956-2829279c2b7e",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/eec868db-f572-4869-906d-0dcf487eb7c1/04d5a7bb-5d7c-4737-9956-2829279c2b7e"
+        },
+        "data": {
+          "DATE_LOAD_LEFT_SITE": "2026-01-30"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cbc779294166013b636e81",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 1003,
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "received",
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1003,
+      "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-31",
+      "EWC_CODE": "01 03 05*",
+      "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "Yes",
+      "GROSS_WEIGHT": null,
+      "TARE_WEIGHT": 0,
+      "PALLET_WEIGHT": 0,
+      "NET_WEIGHT": null,
+      "BAILING_WIRE_PROTOCOL": "No",
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed methodology",
+      "WEIGHT_OF_NON_TARGET_MATERIALS": 0,
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.1,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": null,
+      "SUPPLIER_NAME": "Shipping yard ltd",
+      "SUPPLIER_ADDRESS": "Milton Keynes",
+      "SUPPLIER_POSTCODE": "G59ND",
+      "SUPPLIER_EMAIL": "shipping@ship.co.uk",
+      "SUPPLIER_PHONE_NUMBER": null,
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": null,
+      "YOUR_REFERENCE": "R123456",
+      "WEIGHBRIDGE_TICKET": "WB-78902",
+      "CARRIER_NAME": "Acetech Metals Ltd",
+      "CBD_REG_NUMBER": "CBD-123457",
+      "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "b8e62e8a-14f4-45b1-af98-6839911cab17",
+        "createdAt": "2026-03-31T13:09:10.769Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "39459364-2b6b-46c0-bc03-8225b58e4e1c",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/f410f7b1-9160-4ac2-b788-c5234b362834/39459364-2b6b-46c0-bc03-8225b58e4e1c"
+        },
+        "data": {
+          "ROW_ID": 1003,
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-03-31",
+          "EWC_CODE": "01 03 05*",
+          "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "Yes",
+          "GROSS_WEIGHT": null,
+          "TARE_WEIGHT": 0,
+          "PALLET_WEIGHT": 0,
+          "NET_WEIGHT": null,
+          "BAILING_WIRE_PROTOCOL": "No",
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed methodology",
+          "WEIGHT_OF_NON_TARGET_MATERIALS": 0,
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.1,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": null,
+          "SUPPLIER_NAME": "Shipping yard ltd",
+          "SUPPLIER_ADDRESS": "Milton Keynes",
+          "SUPPLIER_POSTCODE": "G59ND",
+          "SUPPLIER_EMAIL": "shipping@ship.co.uk",
+          "SUPPLIER_PHONE_NUMBER": null,
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": null,
+          "YOUR_REFERENCE": "R123456",
+          "WEIGHBRIDGE_TICKET": "WB-78902",
+          "CARRIER_NAME": "Acetech Metals Ltd",
+          "CBD_REG_NUMBER": "CBD-123457",
+          "CARRIER_VEHICLE_REGISTRATION_NUMBER": "AB12CDE",
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      },
+      {
+        "id": "fe88edbd-d6a0-4f04-97c2-2ca6bc200d14",
+        "createdAt": "2026-03-31T14:12:14.551Z",
+        "status": "updated",
+        "summaryLog": {
+          "id": "460a60ec-55ac-489e-83e9-121f72d785ce",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/5156a3c8-f85e-41b9-9f81-6c9c375273f7/460a60ec-55ac-489e-83e9-121f72d785ce"
+        },
+        "data": {
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-31"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cc228c294166013b63ade8",
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "received",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 1004,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1004,
+      "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-31",
+      "EWC_CODE": "01 03 05*",
+      "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+      "GROSS_WEIGHT": 100,
+      "TARE_WEIGHT": 15,
+      "PALLET_WEIGHT": 10,
+      "NET_WEIGHT": 75,
+      "BAILING_WIRE_PROTOCOL": "No",
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "WEIGHT_OF_NON_TARGET_MATERIALS": 10,
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.2,
+      "TONNAGE_RECEIVED_FOR_RECYCLING": 13,
+      "SUPPLIER_NAME": "3 Arrows Recycling Solutions Ltd",
+      "SUPPLIER_ADDRESS": "Hall",
+      "SUPPLIER_POSTCODE": "CB24 6WZ",
+      "SUPPLIER_EMAIL": "Webuy@boomerang.co.uk",
+      "SUPPLIER_PHONE_NUMBER": "07985100113",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "YOUR_REFERENCE": null,
+      "WEIGHBRIDGE_TICKET": null,
+      "CARRIER_NAME": null,
+      "CBD_REG_NUMBER": null,
+      "CARRIER_VEHICLE_REGISTRATION_NUMBER": null,
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "d6e94b3e-91f6-431f-a1bd-40e6070645e8",
+        "createdAt": "2026-03-31T19:37:45.709Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "a8721bcb-8d55-44ea-9d5b-d0a4776e9aad",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/cd3f1fdd-43a2-4cc2-be52-062ce89ff5e2/a8721bcb-8d55-44ea-9d5b-d0a4776e9aad"
+        },
+        "data": {
+          "ROW_ID": 1004,
+          "DATE_RECEIVED_FOR_REPROCESSING": "2026-01-31",
+          "EWC_CODE": "01 03 05*",
+          "DESCRIPTION_WASTE": "Paper - sorted mixed paper or board ",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+          "GROSS_WEIGHT": 100,
+          "TARE_WEIGHT": 15,
+          "PALLET_WEIGHT": 10,
+          "NET_WEIGHT": 75,
+          "BAILING_WIRE_PROTOCOL": "No",
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "WEIGHT_OF_NON_TARGET_MATERIALS": 10,
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.2,
+          "TONNAGE_RECEIVED_FOR_RECYCLING": 13,
+          "SUPPLIER_NAME": "3 Arrows Recycling Solutions Ltd",
+          "SUPPLIER_ADDRESS": "Hall",
+          "SUPPLIER_POSTCODE": "CB24 6WZ",
+          "SUPPLIER_EMAIL": "Webuy@boomerang.co.uk",
+          "SUPPLIER_PHONE_NUMBER": "07985100113",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "YOUR_REFERENCE": null,
+          "WEIGHBRIDGE_TICKET": null,
+          "CARRIER_NAME": null,
+          "CBD_REG_NUMBER": null,
+          "CARRIER_VEHICLE_REGISTRATION_NUMBER": null,
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      }
+    ]
+  },
+  {
+    "_id": "69cc228c294166013b63ade9",
+    "organisationId": "69cbb599570015fc114f3309",
+    "type": "sentOn",
+    "registrationId": "69cbb599570015fc114f330a",
+    "rowId": 5003,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 5003,
+      "DATE_LOAD_LEFT_SITE": "2026-01-30",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 100,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+      "FINAL_DESTINATION_NAME": "HighLow Limited",
+      "FINAL_DESTINATION_ADDRESS": "12 high street",
+      "FINAL_DESTINATION_POSTCODE": "G59NS",
+      "FINAL_DESTINATION_EMAIL": null,
+      "FINAL_DESTINATION_PHONE": null,
+      "YOUR_REFERENCE": null,
+      "DESCRIPTION_WASTE": null,
+      "EWC_CODE": null,
+      "WEIGHBRIDGE_TICKET": null,
+      "processingType": "REPROCESSOR_INPUT"
+    },
+    "versions": [
+      {
+        "id": "ee7c7167-ecff-417d-8dc6-b535ac0d6ee9",
+        "createdAt": "2026-03-31T19:37:45.709Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "a8721bcb-8d55-44ea-9d5b-d0a4776e9aad",
+          "uri": "s3://re-ex-summary-logs//organisations/69cbb599570015fc114f3309/registrations/69cbb599570015fc114f330a/cd3f1fdd-43a2-4cc2-be52-062ce89ff5e2/a8721bcb-8d55-44ea-9d5b-d0a4776e9aad"
+        },
+        "data": {
+          "ROW_ID": 5003,
+          "DATE_LOAD_LEFT_SITE": "2026-01-30",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 100,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Reprocessor",
+          "FINAL_DESTINATION_NAME": "HighLow Limited",
+          "FINAL_DESTINATION_ADDRESS": "12 high street",
+          "FINAL_DESTINATION_POSTCODE": "G59NS",
+          "FINAL_DESTINATION_EMAIL": null,
+          "FINAL_DESTINATION_PHONE": null,
+          "YOUR_REFERENCE": null,
+          "DESCRIPTION_WASTE": null,
+          "EWC_CODE": null,
+          "WEIGHBRIDGE_TICKET": null,
+          "processingType": "REPROCESSOR_INPUT"
+        }
+      }
+    ]
+  }
+]
