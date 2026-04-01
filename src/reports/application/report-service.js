@@ -115,7 +115,7 @@ function getValidatedPeriodInfo(cadence, year, period) {
 
 /**
  * Extracts the report-specific fields from aggregated data and registration.
- * @param {import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } }} aggregated
+ * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } }} aggregated
  * @param {object} registration
  * @returns {object}
  */
@@ -146,7 +146,7 @@ function buildReportData(aggregated, registration) {
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail>}
+ * @returns {Promise<import('#reports/repository/port.js').Report | import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail>}
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
@@ -199,7 +199,7 @@ export async function fetchOrGenerateReportForPeriod({
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @returns {Promise<import('#reports/domain/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | undefined }>}
+ * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | undefined }>}
  */
 async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,

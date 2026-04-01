@@ -12,7 +12,7 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * @param {Array<{data: object, tonnage: number}>} validEntries
+ * @param {Array<{data: object}>} validEntries
  */
 function sumByFacilityType(validEntries) {
   let toReprocessorDecimal = toDecimal(0)

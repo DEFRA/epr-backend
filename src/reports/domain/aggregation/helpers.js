@@ -7,7 +7,7 @@ export function isTonnageGreaterThanZero(tonnage) {
 /**
  * @param {string|null|undefined} address
  * @param {string|null|undefined} postcode
- * @returns {string}
+ * @returns {string | null}
  */
 export function formatAddress(address, postcode) {
   if (address || postcode) {
