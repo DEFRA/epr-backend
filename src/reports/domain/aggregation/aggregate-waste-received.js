@@ -16,7 +16,7 @@ const WASTE_RECEIVED_TYPES = new Set([
   WASTE_RECORD_TYPE.RECEIVED
 ])
 
-const isTypeWasteReceived = (type) => WASTE_RECEIVED_TYPES.has(type)
+const isWasteReceivedType = (type) => WASTE_RECEIVED_TYPES.has(type)
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteReceivedRecords
@@ -25,7 +25,7 @@ const isTypeWasteReceived = (type) => WASTE_RECEIVED_TYPES.has(type)
 export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
   const validEntries = wasteReceivedRecords.filter(({ type, data }) => {
     const tonnage = toNumber(data[tonnageField])
-    return isTypeWasteReceived(type) && isTonnageGreaterThanZero(tonnage)
+    return isWasteReceivedType(type) && isTonnageGreaterThanZero(tonnage)
   })
 
   const totalTonnageDecimal = validEntries.reduce(
