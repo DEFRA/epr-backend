@@ -28,7 +28,8 @@ const buildRegistration = (overrides = {}) => ({
 
 const buildWasteRecord = ({
   data = {},
-  createdAt = '2024-01-15T00:00:00Z'
+  createdAt = '2024-01-15T00:00:00Z',
+  summaryLogId = 'sl-1'
 } = {}) => ({
   id: new ObjectId().toString(),
   type: WASTE_RECORD_TYPE.RECEIVED,
@@ -43,8 +44,17 @@ const buildWasteRecord = ({
     DATE_LOAD_LEFT_SITE: '2024-01-12',
     ...data
   },
-  versions: [{ createdAt }]
+  versions: [{ createdAt, summaryLog: { id: summaryLogId } }]
 })
+
+const buildWasteRecordsRepository = (params) =>
+  createInMemoryWasteRecordsRepository([
+    {
+      ...buildWasteRecord(),
+      organisationId: params.organisationId,
+      registrationId: params.registrationId
+    }
+  ])()
 
 const defaultParams = () => {
   const organisationId = new ObjectId().toString()
@@ -99,7 +109,11 @@ describe('report-service', () => {
         dueDate: '2024-02-15',
         changedBy,
         material: 'plastic',
-        wasteProcessingType: 'reprocessor'
+        wasteProcessingType: 'reprocessor',
+        source: {
+          summaryLogId: 'sl-1',
+          lastUploadedAt: '2026-04-01T21:22:28.351Z'
+        }
       })
 
       const report = await fetchOrGenerateReportForPeriod({
@@ -144,10 +158,10 @@ describe('report-service', () => {
   describe('createReportForPeriod', () => {
     it('creates a report and returns the full object', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const params = defaultParams()
+      const wasteRecordsRepository = buildWasteRecordsRepository(params)
       const packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
-      const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
@@ -167,10 +181,10 @@ describe('report-service', () => {
 
     it('throws conflict when report already exists for period', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const params = defaultParams()
+      const wasteRecordsRepository = buildWasteRecordsRepository(params)
       const packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
-      const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       await createReportForPeriod({
@@ -214,14 +228,14 @@ describe('report-service', () => {
 
     it('resolves glass material to glass recycling process', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository()()
       const params = defaultParams()
       params.registration = buildRegistration({
         material: 'glass',
         glassRecyclingProcess: ['glass_re_melt']
       })
+      const wasteRecordsRepository = buildWasteRecordsRepository(params)
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
@@ -237,10 +251,10 @@ describe('report-service', () => {
 
     it('formats site address into single-line string', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const params = defaultParams()
+      const wasteRecordsRepository = buildWasteRecordsRepository(params)
       const packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
-      const params = defaultParams()
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
 
       const report = await createReportForPeriod({
@@ -278,12 +292,10 @@ describe('report-service', () => {
 
       it('is undefined for non-accredited operator', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
-        const wasteRecordsRepository = createInMemoryWasteRecordsRepository(
-          []
-        )()
-        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
         const params = defaultParams()
         params.registration = buildRegistration({ accreditationId: undefined })
+        const wasteRecordsRepository = buildWasteRecordsRepository(params)
+        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
 
         const report = await createReportForPeriod({
           reportsRepository,
@@ -298,11 +310,9 @@ describe('report-service', () => {
 
       it('persists prn with issuedTonnage 0 when accredited and no PRNs exist', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
-        const wasteRecordsRepository = createInMemoryWasteRecordsRepository(
-          []
-        )()
-        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
         const params = defaultParams()
+        const wasteRecordsRepository = buildWasteRecordsRepository(params)
+        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
 
         const report = await createReportForPeriod({
           reportsRepository,
@@ -317,11 +327,9 @@ describe('report-service', () => {
 
       it('persists prn with summed issuedTonnage from PRNs in period', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
-        const wasteRecordsRepository = createInMemoryWasteRecordsRepository(
-          []
-        )()
-        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
         const params = defaultParams()
+        const wasteRecordsRepository = buildWasteRecordsRepository(params)
+        const prnRepo = createInMemoryPackagingRecyclingNotesRepository()()
 
         await prnRepo.create(
           buildIssuedPrn(params.registration.accreditationId, 30)

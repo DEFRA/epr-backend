@@ -44,7 +44,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @property {number} period
  * @property {string} startDate
  * @property {string} endDate
- * @property {string|null} lastUploadedAt
+ * @property {{ summaryLogId: string|null, lastUploadedAt: string|null }} source
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
@@ -61,6 +61,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
+ * @param {Map<string, {siteName: string|null, country: string|null}>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(
@@ -114,7 +115,7 @@ export function aggregateReportDetail(
     endDate
   )
 
-  const lastUploadedAt = findLastUploadedAt(wasteRecords)
+  const { lastUploadedAt, summaryLogId } = findLastUpload(wasteRecords)
 
   const tonnageReceivedField =
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
@@ -131,7 +132,7 @@ export function aggregateReportDetail(
     period,
     startDate,
     endDate,
-    lastUploadedAt,
+    source: { summaryLogId, lastUploadedAt },
     recyclingActivity,
     ...(wasteExportedDateField && {
       exportActivity: aggregateWasteExported(
@@ -147,18 +148,20 @@ export function aggregateReportDetail(
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
- * @returns {string | null}
+ * @returns {{ lastUploadedAt: string | null, summaryLogId: string | null }}
  */
-function findLastUploadedAt(wasteRecords) {
-  let latest = null
+function findLastUpload(wasteRecords) {
+  let lastUploadedAt = null
+  let summaryLogId = null
 
   for (const wasteRecord of wasteRecords) {
     for (const wasteRecordVersion of wasteRecord.versions) {
-      if (!latest || wasteRecordVersion.createdAt > latest) {
-        latest = wasteRecordVersion.createdAt
+      if (!lastUploadedAt || wasteRecordVersion.createdAt > lastUploadedAt) {
+        lastUploadedAt = wasteRecordVersion.createdAt
+        summaryLogId = wasteRecordVersion.summaryLog?.id ?? null
       }
     }
   }
 
-  return latest
+  return { lastUploadedAt, summaryLogId }
 }

@@ -121,11 +121,13 @@ function getValidatedPeriodInfo(cadence, year, period) {
  * @returns {object}
  */
 function buildReportData(aggregated, registration) {
-  const { recyclingActivity, exportActivity, wasteSent, prn } = aggregated
+  const { recyclingActivity, exportActivity, wasteSent, prn, source } =
+    aggregated
   return {
     material: resolveTonnageMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
+    source,
     recyclingActivity,
     prn,
     ...(exportActivity && { exportActivity }),

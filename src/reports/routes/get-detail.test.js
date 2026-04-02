@@ -289,8 +289,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeDefined()
-        expect(payload.lastUploadedAt).not.toBeNull()
+        expect(payload.source.lastUploadedAt).toBeDefined()
+        expect(payload.source.lastUploadedAt).not.toBeNull()
       })
 
       it('returns empty sections when no records exist', async () => {
@@ -306,7 +306,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.source.lastUploadedAt).toBeNull()
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(
@@ -630,7 +630,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.source.lastUploadedAt).toBeNull()
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(payload.exportActivity.totalTonnageExported).toBe(0)
@@ -832,7 +832,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.source.lastUploadedAt).toBeNull()
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(payload.exportActivity.totalTonnageExported).toBe(0)
@@ -924,6 +924,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 tonnageSentOn: 5
               }
             ]
+          },
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2026-04-01T21:22:28.351Z'
           }
         })
 

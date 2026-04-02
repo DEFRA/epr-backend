@@ -79,11 +79,12 @@ describe('#aggregateReportDetail', () => {
     })
   })
 
-  describe('lastUploadedAt', () => {
+  describe('lastUploadedAt and source', () => {
     it('returns null when no waste records match', () => {
       const result = aggregateReportDetail([], defaultArgs)
 
-      expect(result.lastUploadedAt).toBeNull()
+      expect(result.source.summaryLogId).toBeNull()
+      expect(result.source.lastUploadedAt).toBeNull()
     })
 
     it('uses the latest waste record version timestamp when multiple records exist', () => {
@@ -105,7 +106,8 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, defaultArgs)
 
-      expect(result.lastUploadedAt).toBe('2026-02-15T15:09:00.000Z')
+      expect(result.source.lastUploadedAt).toBe('2026-02-15T15:09:00.000Z')
+      expect(result.source.summaryLogId).toBe('sl-2')
     })
 
     it('uses the latest waste record version timestamp across received and sentOn records', () => {
@@ -124,7 +126,8 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, defaultArgs)
 
-      expect(result.lastUploadedAt).toBe('2026-03-01T12:00:00.000Z')
+      expect(result.source.lastUploadedAt).toBe('2026-03-01T12:00:00.000Z')
+      expect(result.source.summaryLogId).toBe('sl-3')
     })
   })
 

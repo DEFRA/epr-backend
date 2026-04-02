@@ -20,7 +20,10 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
       period: 1,
       startDate: '2026-01-01',
       endDate: '2026-01-31',
-      lastUploadedAt: '2026-04-02T11:31:06.440Z',
+      source: {
+        lastUploadedAt: '2026-04-02T11:31:06.440Z',
+        summaryLogId: 'dccebb57-da7a-4d50-9f17-2984f6c9fb22'
+      },
       recyclingActivity: {
         suppliers: [
           {
@@ -97,7 +100,10 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
       period: 2,
       startDate: '2026-02-01',
       endDate: '2026-02-28',
-      lastUploadedAt: '2026-04-02T11:31:06.440Z',
+      source: {
+        lastUploadedAt: '2026-04-02T11:31:06.440Z',
+        summaryLogId: 'dccebb57-da7a-4d50-9f17-2984f6c9fb22'
+      },
       recyclingActivity: {
         suppliers: [],
         totalTonnageReceived: 0,
@@ -139,7 +145,10 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
       period: 1,
       startDate: '2026-01-01',
       endDate: '2026-03-31',
-      lastUploadedAt: '2026-04-02T12:11:42.889Z',
+      source: {
+        lastUploadedAt: '2026-04-02T12:11:42.889Z',
+        summaryLogId: '98c1e68c-05c6-4b1d-bdca-59727d302c1b'
+      },
       recyclingActivity: {
         suppliers: [
           {

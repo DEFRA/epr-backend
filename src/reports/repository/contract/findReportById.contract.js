@@ -39,6 +39,10 @@ export const testFindReportByIdBehaviour = (it) => {
         year: DEFAULT_REPORT_YEAR,
         cadence: 'monthly',
         period: DEFAULT_REPORT_PERIOD,
+        source: {
+          lastUploadedAt: expect.any(String),
+          summaryLogId: expect.any(String)
+        },
         startDate: DEFAULT_REPORT_START_DATE,
         endDate: DEFAULT_REPORT_END_DATE,
         dueDate: DEFAULT_REPORT_DUE_DATE,

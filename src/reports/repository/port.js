@@ -169,6 +169,7 @@
  * @property {WasteSent} [wasteSent]
  * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
+ * @property {{ summaryLogId: string, lastUploadedAt: string | null }} source
  */
 
 /**
