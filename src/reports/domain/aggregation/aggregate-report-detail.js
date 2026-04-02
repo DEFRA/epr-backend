@@ -65,7 +65,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  */
 export function aggregateReportDetail(
   wasteRecords,
-  { operatorCategory, cadence, year, period }
+  { operatorCategory, cadence, year, period, orsDetailsMap }
 ) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
 
@@ -137,7 +137,8 @@ export function aggregateReportDetail(
       exportActivity: aggregateWasteExported(
         wasteExportedRecords,
         wasteRepatriatedRecords,
-        recyclingActivity.totalTonnageReceived
+        recyclingActivity.totalTonnageReceived,
+        orsDetailsMap
       )
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords)

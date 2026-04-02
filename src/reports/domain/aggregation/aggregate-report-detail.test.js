@@ -471,6 +471,82 @@ describe('#aggregateReportDetail', () => {
       ])
     })
 
+    it('populates siteName and country from orsDetailsMap', () => {
+      const records = [
+        buildExportedRecord({
+          OSR_ID: '001',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          OSR_ID: '096',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+        })
+      ]
+      const orsDetailsMap = new Map([
+        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
+        ['096', { siteName: 'RecyclePlast SA', country: 'France' }]
+      ])
+
+      const result = aggregateReportDetail(records, {
+        ...exporterArgs,
+        orsDetailsMap
+      })
+
+      expect(result.exportActivity.overseasSites).toStrictEqual([
+        {
+          orsId: '001',
+          siteName: 'EuroPlast GmbH',
+          country: 'Germany',
+          tonnageExported: 5
+        },
+        {
+          orsId: '096',
+          siteName: 'RecyclePlast SA',
+          country: 'France',
+          tonnageExported: 3
+        }
+      ])
+    })
+
+    it('resolves siteName and country when OSR_ID is a number', () => {
+      const records = [
+        buildExportedRecord({
+          OSR_ID: 124,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          OSR_ID: 99,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+        })
+      ]
+      const orsDetailsMap = new Map([
+        ['124', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
+        ['099', { siteName: 'RecyclePlast SA', country: 'France' }]
+      ])
+
+      const result = aggregateReportDetail(records, {
+        ...exporterArgs,
+        orsDetailsMap
+      })
+
+      expect(result.exportActivity.overseasSites).toStrictEqual([
+        {
+          orsId: 124,
+          siteName: 'EuroPlast GmbH',
+          country: 'Germany',
+          tonnageExported: 5
+        },
+        {
+          orsId: 99,
+          siteName: 'RecyclePlast SA',
+          country: 'France',
+          tonnageExported: 3
+        }
+      ])
+    })
+
     it('deduplicates overseas sites by OSR_ID', () => {
       const records = [
         buildExportedRecord({
@@ -748,6 +824,32 @@ describe('#aggregateReportDetail', () => {
       expect(result.exportActivity.overseasSites).toStrictEqual([
         { orsId: '001', siteName: null, country: null, tonnageExported: 48 },
         { orsId: '096', siteName: null, country: null, tonnageExported: 48 }
+      ])
+    })
+
+    it('populates siteName and country from orsDetailsMap for accredited exporter', () => {
+      const records = [
+        buildAccreditedExportedRecord({
+          OSR_ID: '001',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48
+        })
+      ]
+      const orsDetailsMap = new Map([
+        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }]
+      ])
+
+      const result = aggregateReportDetail(records, {
+        ...accreditedExporterArgs,
+        orsDetailsMap
+      })
+
+      expect(result.exportActivity.overseasSites).toStrictEqual([
+        {
+          orsId: '001',
+          siteName: 'EuroPlast GmbH',
+          country: 'Germany',
+          tonnageExported: 48
+        }
       ])
     })
   })
