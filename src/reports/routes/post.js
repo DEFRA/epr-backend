@@ -27,6 +27,7 @@ export const reportsPost = {
       wasteRecordsRepository,
       packagingRecyclingNotesRepository,
       reportsRepository,
+      overseasSitesRepository,
       params
     } = request
     const { organisationId, registrationId, year, cadence, period } = params
@@ -40,6 +41,7 @@ export const reportsPost = {
       reportsRepository,
       wasteRecordsRepository,
       packagingRecyclingNotesRepository,
+      overseasSitesRepository,
       organisationId,
       registrationId,
       registration,

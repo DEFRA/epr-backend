@@ -44,6 +44,10 @@ export const testCreateReportBehaviour = (it) => {
         startDate: DEFAULT_REPORT_START_DATE,
         endDate: DEFAULT_REPORT_END_DATE,
         dueDate: DEFAULT_REPORT_DUE_DATE,
+        source: {
+          lastUploadedAt: expect.any(String),
+          summaryLogId: expect.any(String)
+        },
         material: 'plastic',
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         siteAddress: '1 Recycling Lane',

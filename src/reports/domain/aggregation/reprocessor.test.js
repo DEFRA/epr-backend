@@ -1,6 +1,6 @@
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
-import wasteRecordsRegisteredOnly from './test-data/reprocessor_registered_only.json'
-import wasteRecordsAccredited from './test-data/reprocessor_on_input_accredited.json'
+import wasteRecordsRegisteredOnly from './test-data/reprocessor-registered-only.json'
+import wasteRecordsAccredited from './test-data/reprocessor-on-input-accredited.json'
 
 describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 2026', () => {
   it('aggregates in-period records into the full report detail', () => {
@@ -18,7 +18,6 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
       period: 1,
       startDate: '2026-01-01',
       endDate: '2026-03-31',
-      lastUploadedAt: '2026-03-31T19:35:45.562Z',
       recyclingActivity: {
         suppliers: [
           {
@@ -88,6 +87,10 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
             tonnageSentOn: 5.09
           }
         ]
+      },
+      source: {
+        lastUploadedAt: '2026-03-31T19:35:45.562Z',
+        summaryLogId: '18bde18b-5200-4e86-9aad-738a16b05db8'
       }
     })
   })
@@ -109,7 +112,10 @@ describe('#aggregateReportDetail — REPROCESSOR accredited monthly January 2026
       period: 1,
       startDate: '2026-01-01',
       endDate: '2026-01-31',
-      lastUploadedAt: '2026-03-31T19:37:45.709Z',
+      source: {
+        lastUploadedAt: '2026-03-31T19:37:45.709Z',
+        summaryLogId: 'a8721bcb-8d55-44ea-9d5b-d0a4776e9aad'
+      },
       recyclingActivity: {
         suppliers: [
           {

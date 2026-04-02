@@ -245,7 +245,11 @@ describe(`GET ${reportsGetPath}`, () => {
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           material: 'plastic',
-          wasteProcessingType: 'exporter'
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          }
         })
 
         const response = await makeRequest(
@@ -284,7 +288,11 @@ describe(`GET ${reportsGetPath}`, () => {
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           material: 'plastic',
-          wasteProcessingType: 'exporter'
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          }
         })
 
         await reportsRepository.deleteReport({
@@ -329,7 +337,11 @@ describe(`GET ${reportsGetPath}`, () => {
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           material: 'plastic',
-          wasteProcessingType: 'exporter'
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          }
         })
 
         const response = await makeRequest(
@@ -368,7 +380,11 @@ describe(`GET ${reportsGetPath}`, () => {
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
           material: 'plastic',
-          wasteProcessingType: 'exporter'
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          }
         })
 
         const response = await makeRequest(

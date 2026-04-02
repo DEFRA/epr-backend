@@ -289,8 +289,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeDefined()
-        expect(payload.lastUploadedAt).not.toBeNull()
+        expect(payload.source.lastUploadedAt).toBeDefined()
+        expect(payload.source.lastUploadedAt).not.toBeNull()
       })
 
       it('returns empty sections when no records exist', async () => {
@@ -306,7 +306,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.source.lastUploadedAt).toBeNull()
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(
@@ -557,13 +557,21 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(
-          11.47
-        )
+        expect(payload.exportActivity.totalTonnageExported).toBe(11.47)
         expect(payload.exportActivity.overseasSites).toHaveLength(2)
         expect(payload.exportActivity.overseasSites).toStrictEqual([
-          { orsId: '001', siteName: 'EuroPlast Recycling GmbH' },
-          { orsId: '096', siteName: 'RecyclePlast SA' }
+          {
+            country: null,
+            orsId: '001',
+            siteName: null,
+            tonnageExported: 8.47
+          },
+          {
+            country: null,
+            orsId: '096',
+            siteName: null,
+            tonnageExported: 3
+          }
         ])
       })
 
@@ -622,10 +630,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.source.lastUploadedAt).toBeNull()
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
-        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+        expect(payload.exportActivity.totalTonnageExported).toBe(0)
         expect(payload.exportActivity.overseasSites).toStrictEqual([])
         expect(
           payload.wasteSent.tonnageSentToReprocessor +
@@ -755,12 +763,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(
-          11.5
-        )
+        expect(payload.exportActivity.totalTonnageExported).toBe(11.5)
         expect(payload.exportActivity.overseasSites).toHaveLength(2)
         expect(payload.exportActivity.overseasSites[0].orsId).toBe('001')
-        expect(payload.exportActivity.overseasSites[0].siteName).toBeUndefined()
+        expect(payload.exportActivity.overseasSites[0].siteName).toBeNull()
       })
 
       it('filters waste received and exported by different date fields', async () => {
@@ -794,7 +800,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const january = JSON.parse(januaryResponse.payload)
 
         expect(january.recyclingActivity.totalTonnageReceived).toBe(42)
-        expect(january.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+        expect(january.exportActivity.totalTonnageExported).toBe(0)
 
         const februaryResponse = await makeRequest(
           server,
@@ -807,9 +813,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const february = JSON.parse(februaryResponse.payload)
 
         expect(february.recyclingActivity.totalTonnageReceived).toBe(0)
-        expect(february.exportActivity.totalTonnageReceivedForExporting).toBe(
-          40
-        )
+        expect(february.exportActivity.totalTonnageExported).toBe(40)
       })
 
       it('returns empty sections when no records exist', async () => {
@@ -828,10 +832,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
         const payload = JSON.parse(response.payload)
 
-        expect(payload.lastUploadedAt).toBeNull()
+        expect(payload.source.lastUploadedAt).toBeNull()
         expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
-        expect(payload.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+        expect(payload.exportActivity.totalTonnageExported).toBe(0)
         expect(payload.exportActivity.overseasSites).toStrictEqual([])
         expect(
           payload.wasteSent.tonnageSentToReprocessor +
@@ -920,6 +924,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 tonnageSentOn: 5
               }
             ]
+          },
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2026-04-01T21:22:28.351Z'
           }
         })
 

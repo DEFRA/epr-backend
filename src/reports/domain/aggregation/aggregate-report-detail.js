@@ -19,12 +19,13 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 
 /**
  * @typedef {Object} AggregatedExportActivity
- * @property {Array<{orsId: string, siteName: string|undefined}>} overseasSites
- * @property {number} totalTonnageReceivedForExporting
- * @property {null} tonnageReceivedNotExported
- * @property {null} tonnageRefusedAtRecepientDestination
- * @property {null} tonnageStoppedDuringExport
- * @property {null} tonnageRepatriated
+ * @property {Array<{orsId: string, siteName: string|null, country: string|null}>} overseasSites
+ * @property {number} totalTonnageExported
+ * @property {number} tonnageReceivedNotExported
+ * @property {number} tonnageRefusedAtDestination
+ * @property {number} tonnageStoppedDuringExport
+ * @property {number} totalTonnageRefusedOrStopped
+ * @property {number} tonnageRepatriated
  */
 
 /**
@@ -43,7 +44,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @property {number} period
  * @property {string} startDate
  * @property {string} endDate
- * @property {string|null} lastUploadedAt
+ * @property {{ summaryLogId: string|null, lastUploadedAt: string|null }} source
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
@@ -60,11 +61,12 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
+ * @param {Map<string, {siteName: string|null, country: string|null}>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(
   wasteRecords,
-  { operatorCategory, cadence, year, period }
+  { operatorCategory, cadence, year, period, orsDetailsMap }
 ) {
   const monthsPerPeriod = MONTHS_PER_PERIOD[cadence]
 
@@ -82,6 +84,7 @@ export function aggregateReportDetail(
 
   const wasteReceivedDateField = sectionDateFields.wasteReceived
   const wasteExportedDateField = sectionDateFields.wasteExported
+  const wasteRepatriatedDateField = sectionDateFields.wasteRepatriated
   const wasteSentOnDateField = sectionDateFields.wasteSentOn
 
   const wasteReceivedRecords = filterRecordsByDateField(
@@ -98,6 +101,13 @@ export function aggregateReportDetail(
     endDate
   )
 
+  const wasteRepatriatedRecords = filterRecordsByDateField(
+    wasteRecords,
+    wasteRepatriatedDateField,
+    startDate,
+    endDate
+  )
+
   const wasteSentOnRecords = filterRecordsByDateField(
     wasteRecords,
     wasteSentOnDateField,
@@ -105,10 +115,15 @@ export function aggregateReportDetail(
     endDate
   )
 
-  const lastUploadedAt = findLastUploadedAt(wasteRecords)
+  const { lastUploadedAt, summaryLogId } = findLastUpload(wasteRecords)
 
   const tonnageReceivedField =
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
+
+  const recyclingActivity = aggregateWasteReceived(
+    wasteReceivedRecords,
+    tonnageReceivedField
+  )
 
   return {
     operatorCategory,
@@ -117,13 +132,15 @@ export function aggregateReportDetail(
     period,
     startDate,
     endDate,
-    lastUploadedAt,
-    recyclingActivity: aggregateWasteReceived(
-      wasteReceivedRecords,
-      tonnageReceivedField
-    ),
+    source: { summaryLogId, lastUploadedAt },
+    recyclingActivity,
     ...(wasteExportedDateField && {
-      exportActivity: aggregateWasteExported(wasteExportedRecords)
+      exportActivity: aggregateWasteExported(
+        wasteExportedRecords,
+        wasteRepatriatedRecords,
+        recyclingActivity.totalTonnageReceived,
+        orsDetailsMap
+      )
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords)
   }
@@ -131,18 +148,20 @@ export function aggregateReportDetail(
 
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
- * @returns {string | null}
+ * @returns {{ lastUploadedAt: string | null, summaryLogId: string | null }}
  */
-function findLastUploadedAt(wasteRecords) {
-  let latest = null
+function findLastUpload(wasteRecords) {
+  let lastUploadedAt = null
+  let summaryLogId = null
 
   for (const wasteRecord of wasteRecords) {
     for (const wasteRecordVersion of wasteRecord.versions) {
-      if (!latest || wasteRecordVersion.createdAt > latest) {
-        latest = wasteRecordVersion.createdAt
+      if (!lastUploadedAt || wasteRecordVersion.createdAt > lastUploadedAt) {
+        lastUploadedAt = wasteRecordVersion.createdAt
+        summaryLogId = wasteRecordVersion.summaryLog.id
       }
     }
   }
 
-  return latest
+  return { lastUploadedAt, summaryLogId }
 }

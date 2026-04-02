@@ -4,6 +4,7 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
+import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 
 /**
  * Finds the current report ID for a specific period slot within periodic reports.
@@ -120,11 +121,13 @@ function getValidatedPeriodInfo(cadence, year, period) {
  * @returns {object}
  */
 function buildReportData(aggregated, registration) {
-  const { recyclingActivity, exportActivity, wasteSent, prn } = aggregated
+  const { recyclingActivity, exportActivity, wasteSent, prn, source } =
+    aggregated
   return {
     material: resolveTonnageMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
+    source,
     recyclingActivity,
     prn,
     ...(exportActivity && { exportActivity }),
@@ -140,6 +143,7 @@ function buildReportData(aggregated, registration) {
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {object} params.wasteRecordsRepository
  * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {object} params.registration
@@ -152,6 +156,7 @@ export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
   wasteRecordsRepository,
   packagingRecyclingNotesRepository,
+  overseasSitesRepository,
   organisationId,
   registrationId,
   registration,
@@ -180,6 +185,7 @@ export async function fetchOrGenerateReportForPeriod({
 
   return getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
+    overseasSitesRepository,
     wasteRecords,
     operatorCategory,
     registration,
@@ -193,6 +199,7 @@ export async function fetchOrGenerateReportForPeriod({
  * Aggregates waste records into a report and appends issued PRN tonnage.
  * @param {object} params
  * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.operatorCategory
  * @param {object} params.registration
@@ -203,6 +210,7 @@ export async function fetchOrGenerateReportForPeriod({
  */
 async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,
+  overseasSitesRepository,
   wasteRecords,
   operatorCategory,
   registration,
@@ -210,11 +218,17 @@ async function getAggregatedReportDetail({
   cadence,
   period
 }) {
+  const orsDetailsMap = await getOrsDetailsMap(
+    overseasSitesRepository,
+    registration.overseasSites
+  )
+
   const aggregatedReportDetail = aggregateReportDetail(wasteRecords, {
     operatorCategory,
     cadence,
     year,
-    period
+    period,
+    orsDetailsMap
   })
 
   const prn = await getIssuedTonnage(packagingRecyclingNotesRepository, {
@@ -234,6 +248,7 @@ async function getAggregatedReportDetail({
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {object} params.wasteRecordsRepository
  * @param {object} params.packagingRecyclingNotesRepository
+ * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} params.overseasSitesRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
  * @param {object} params.registration
@@ -247,6 +262,7 @@ export async function createReportForPeriod({
   reportsRepository,
   wasteRecordsRepository,
   packagingRecyclingNotesRepository,
+  overseasSitesRepository,
   organisationId,
   registrationId,
   registration,
@@ -280,6 +296,7 @@ export async function createReportForPeriod({
 
   const aggregatedReportData = await getAggregatedReportDetail({
     packagingRecyclingNotesRepository,
+    overseasSitesRepository,
     wasteRecords,
     operatorCategory,
     registration,

@@ -65,5 +65,6 @@ export const buildCreateReportParams = (overrides = {}) => ({
   material: MATERIAL.PLASTIC,
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   changedBy: buildUserSummary(),
+  source: { summaryLogId: 'sl-1', lastUploadedAt: '2026-04-01T21:22:28.351Z' },
   ...overrides
 })

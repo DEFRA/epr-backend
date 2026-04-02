@@ -42,6 +42,10 @@ export const prnSchema = Joi.object({
 }).optional()
 
 const reportDataFieldsSchema = {
+  source: Joi.object({
+    summaryLogId: Joi.string().allow(null),
+    lastUploadedAt: Joi.string().isoDate().allow(null)
+  }).required(),
   recyclingActivity: Joi.object().optional(),
   exportActivity: Joi.object().optional(),
   wasteSent: Joi.object().optional(),

@@ -57,10 +57,10 @@
 
 /**
  * @typedef {Object} ExportActivity
- * @property {Array<{orsId: string, siteName?: string, tonnageExported?: number}>} overseasSites
- * @property {number} totalTonnageReceivedForExporting
- * @property {number|null} tonnageReceivedNotExported
- * @property {number|null} tonnageRefusedAtRecepientDestination
+ * @property {Array<{orsId: string, siteName: string|null, country: string|null, tonnageExported?: number}>} overseasSites
+ * @property {number} totalTonnageExported
+ * @property {number} tonnageReceivedNotExported
+ * @property {number|null} tonnageRefusedAtDestination
  * @property {number|null} tonnageStoppedDuringExport
  * @property {number|null} tonnageRepatriated
  */
@@ -169,6 +169,7 @@
  * @property {WasteSent} [wasteSent]
  * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
+ * @property {{ summaryLogId: string, lastUploadedAt: string | null }} source
  */
 
 /**

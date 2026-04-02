@@ -79,11 +79,12 @@ describe('#aggregateReportDetail', () => {
     })
   })
 
-  describe('lastUploadedAt', () => {
+  describe('lastUploadedAt and source', () => {
     it('returns null when no waste records match', () => {
       const result = aggregateReportDetail([], defaultArgs)
 
-      expect(result.lastUploadedAt).toBeNull()
+      expect(result.source.summaryLogId).toBeNull()
+      expect(result.source.lastUploadedAt).toBeNull()
     })
 
     it('uses the latest waste record version timestamp when multiple records exist', () => {
@@ -105,7 +106,8 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, defaultArgs)
 
-      expect(result.lastUploadedAt).toBe('2026-02-15T15:09:00.000Z')
+      expect(result.source.lastUploadedAt).toBe('2026-02-15T15:09:00.000Z')
+      expect(result.source.summaryLogId).toBe('sl-2')
     })
 
     it('uses the latest waste record version timestamp across received and sentOn records', () => {
@@ -124,7 +126,8 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, defaultArgs)
 
-      expect(result.lastUploadedAt).toBe('2026-03-01T12:00:00.000Z')
+      expect(result.source.lastUploadedAt).toBe('2026-03-01T12:00:00.000Z')
+      expect(result.source.summaryLogId).toBe('sl-3')
     })
   })
 
@@ -447,7 +450,7 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, exporterArgs)
 
-      expect(result.exportActivity.totalTonnageReceivedForExporting).toBe(11.47)
+      expect(result.exportActivity.totalTonnageExported).toBe(11.47)
     })
 
     it('extracts overseas sites from exported records', () => {
@@ -466,8 +469,84 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail(records, exporterArgs)
 
       expect(result.exportActivity.overseasSites).toStrictEqual([
-        { orsId: '001', siteName: 'EuroPlast Recycling GmbH' },
-        { orsId: '096', siteName: 'RecyclePlast SA' }
+        { orsId: '001', siteName: null, country: null, tonnageExported: 5 },
+        { orsId: '096', siteName: null, country: null, tonnageExported: 5 }
+      ])
+    })
+
+    it('populates siteName and country from orsDetailsMap', () => {
+      const records = [
+        buildExportedRecord({
+          OSR_ID: '001',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          OSR_ID: '096',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+        })
+      ]
+      const orsDetailsMap = new Map([
+        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
+        ['096', { siteName: 'RecyclePlast SA', country: 'France' }]
+      ])
+
+      const result = aggregateReportDetail(records, {
+        ...exporterArgs,
+        orsDetailsMap
+      })
+
+      expect(result.exportActivity.overseasSites).toStrictEqual([
+        {
+          orsId: '001',
+          siteName: 'EuroPlast GmbH',
+          country: 'Germany',
+          tonnageExported: 5
+        },
+        {
+          orsId: '096',
+          siteName: 'RecyclePlast SA',
+          country: 'France',
+          tonnageExported: 3
+        }
+      ])
+    })
+
+    it('resolves siteName and country when OSR_ID is a number', () => {
+      const records = [
+        buildExportedRecord({
+          OSR_ID: 124,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          OSR_ID: 99,
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+        })
+      ]
+      const orsDetailsMap = new Map([
+        ['124', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
+        ['099', { siteName: 'RecyclePlast SA', country: 'France' }]
+      ])
+
+      const result = aggregateReportDetail(records, {
+        ...exporterArgs,
+        orsDetailsMap
+      })
+
+      expect(result.exportActivity.overseasSites).toStrictEqual([
+        {
+          orsId: 124,
+          siteName: 'EuroPlast GmbH',
+          country: 'Germany',
+          tonnageExported: 5
+        },
+        {
+          orsId: 99,
+          siteName: 'RecyclePlast SA',
+          country: 'France',
+          tonnageExported: 3
+        }
       ])
     })
 
@@ -497,8 +576,116 @@ describe('#aggregateReportDetail', () => {
     it('returns empty wasteExported when no exported records match', () => {
       const result = aggregateReportDetail([], exporterArgs)
 
-      expect(result.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+      expect(result.exportActivity.totalTonnageExported).toBe(0)
       expect(result.exportActivity.overseasSites).toStrictEqual([])
+      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(0)
+      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(0)
+      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(0)
+      expect(result.exportActivity.tonnageRepatriated).toBe(0)
+    })
+
+    it('sums tonnage refused at recipient destination', () => {
+      const records = [
+        buildExportedRecord({
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5,
+          WAS_THE_WASTE_REFUSED: 'Yes'
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3,
+          WAS_THE_WASTE_REFUSED: 'No'
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(5)
+      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(0)
+      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(5)
+    })
+
+    it('sums tonnage stopped during export', () => {
+      const records = [
+        buildExportedRecord({
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 4,
+          WAS_THE_WASTE_STOPPED: 'Yes'
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-10',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6,
+          WAS_THE_WASTE_STOPPED: 'No'
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(4)
+      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(0)
+      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(4)
+    })
+
+    it('counts tonnage in both refused and stopped when both are Yes, but only once in total', () => {
+      const records = [
+        buildExportedRecord({
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 7,
+          WAS_THE_WASTE_REFUSED: 'Yes',
+          WAS_THE_WASTE_STOPPED: 'Yes'
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(7)
+      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(7)
+      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(7)
+    })
+
+    it('sums tonnage repatriated by DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED in period', () => {
+      const records = [
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2025-10-01',
+          DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: '2026-01-10',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 8
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-01-15',
+          DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: '2026-02-05',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.exportActivity.tonnageRepatriated).toBe(11)
+    })
+
+    it('excludes tonnage repatriated when DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED is outside period', () => {
+      const records = [
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-01-15',
+          DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: '2026-04-01',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.exportActivity.tonnageRepatriated).toBe(0)
+    })
+
+    it('returns zero for refused, stopped and repatriated when flags are absent', () => {
+      const records = [
+        buildExportedRecord({
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5
+        })
+      ]
+
+      const result = aggregateReportDetail(records, exporterArgs)
+
+      expect(result.exportActivity.tonnageRefusedAtDestination).toBe(0)
+      expect(result.exportActivity.tonnageStoppedDuringExport).toBe(0)
+      expect(result.exportActivity.totalTonnageRefusedOrStopped).toBe(0)
+      expect(result.exportActivity.tonnageRepatriated).toBe(0)
     })
 
     it('excludes exported records outside the period', () => {
@@ -515,7 +702,7 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, exporterArgs)
 
-      expect(result.exportActivity.totalTonnageReceivedForExporting).toBe(5)
+      expect(result.exportActivity.totalTonnageExported).toBe(5)
     })
 
     it('does not include wasteExported for reprocessor categories', () => {
@@ -599,7 +786,7 @@ describe('#aggregateReportDetail', () => {
 
       const result = aggregateReportDetail(records, accreditedExporterArgs)
 
-      expect(result.exportActivity.totalTonnageReceivedForExporting).toBe(11.5)
+      expect(result.exportActivity.totalTonnageExported).toBe(11.5)
     })
 
     it('filters wasteReceived and wasteExported by different date fields', () => {
@@ -618,12 +805,12 @@ describe('#aggregateReportDetail', () => {
       })
 
       expect(january.recyclingActivity.totalTonnageReceived).toBe(42)
-      expect(january.exportActivity.totalTonnageReceivedForExporting).toBe(0)
+      expect(january.exportActivity.totalTonnageExported).toBe(0)
 
       const february = aggregateReportDetail(records, accreditedExporterArgs)
 
       expect(february.recyclingActivity.totalTonnageReceived).toBe(0)
-      expect(february.exportActivity.totalTonnageReceivedForExporting).toBe(40)
+      expect(february.exportActivity.totalTonnageExported).toBe(40)
     })
 
     it('returns overseas sites with orsId only when OSR_NAME is absent', () => {
@@ -638,8 +825,34 @@ describe('#aggregateReportDetail', () => {
       const result = aggregateReportDetail(records, accreditedExporterArgs)
 
       expect(result.exportActivity.overseasSites).toStrictEqual([
-        { orsId: '001', siteName: undefined },
-        { orsId: '096', siteName: undefined }
+        { orsId: '001', siteName: null, country: null, tonnageExported: 48 },
+        { orsId: '096', siteName: null, country: null, tonnageExported: 48 }
+      ])
+    })
+
+    it('populates siteName and country from orsDetailsMap for accredited exporter', () => {
+      const records = [
+        buildAccreditedExportedRecord({
+          OSR_ID: '001',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48
+        })
+      ]
+      const orsDetailsMap = new Map([
+        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }]
+      ])
+
+      const result = aggregateReportDetail(records, {
+        ...accreditedExporterArgs,
+        orsDetailsMap
+      })
+
+      expect(result.exportActivity.overseasSites).toStrictEqual([
+        {
+          orsId: '001',
+          siteName: 'EuroPlast GmbH',
+          country: 'Germany',
+          tonnageExported: 48
+        }
       ])
     })
   })

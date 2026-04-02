@@ -32,7 +32,21 @@ describe(`POST ${reportsPostPath}`, () => {
       await organisationsRepository.insert(org)
 
       const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository([])
+        createInMemoryWasteRecordsRepository([
+          {
+            id: new ObjectId().toString(),
+            organisationId: org.id,
+            registrationId: registration.id,
+            type: 'received',
+            data: {},
+            versions: [
+              {
+                createdAt: '2024-01-15T00:00:00.000Z',
+                summaryLog: { id: 'sl-1' }
+              }
+            ]
+          }
+        ])
       const reportsRepositoryFactory = createInMemoryReportsRepository()
 
       const server = await createTestServer({
@@ -233,7 +247,21 @@ describe(`POST ${reportsPostPath}`, () => {
       const server = await createTestServer({
         repositories: {
           organisationsRepository: organisationsRepositoryFactory,
-          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+          wasteRecordsRepository: createInMemoryWasteRecordsRepository([
+            {
+              id: new ObjectId().toString(),
+              organisationId: org.id,
+              registrationId: registration.id,
+              type: 'received',
+              data: {},
+              versions: [
+                {
+                  createdAt: '2024-01-15T00:00:00.000Z',
+                  summaryLog: { id: 'sl-1' }
+                }
+              ]
+            }
+          ]),
           reportsRepository: createInMemoryReportsRepository(),
           packagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository([prn])
