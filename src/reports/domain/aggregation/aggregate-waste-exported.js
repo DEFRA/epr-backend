@@ -6,6 +6,7 @@ import {
   toNumber
 } from '#common/helpers/decimal-utils.js'
 import { groupAndSum, isYes } from './helpers.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const generateOverseasSiteSummary = (wasteExportedRecords) => {
   // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
@@ -22,11 +23,13 @@ const generateOverseasSiteSummary = (wasteExportedRecords) => {
 
 function getTonnageRepatriated(repatriatedRecords) {
   return roundToTwoDecimalPlaces(
-    repatriatedRecords.reduce(
-      (sum, { data }) =>
-        add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
-      toDecimal(0)
-    )
+    repatriatedRecords
+      .filter(({ type }) => type === WASTE_RECORD_TYPE.EXPORTED)
+      .reduce(
+        (sum, { data }) =>
+          add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
+        toDecimal(0)
+      )
   )
 }
 
@@ -40,7 +43,11 @@ export function aggregateWasteExported(
   repatriatedRecords,
   totalTonnageReceived
 ) {
-  const totalTonnageExportedDecimal = wasteExportedRecords.reduce(
+  const exportedRecords = wasteExportedRecords.filter(
+    ({ type }) => type === WASTE_RECORD_TYPE.EXPORTED
+  )
+
+  const totalTonnageExportedDecimal = exportedRecords.reduce(
     (sum, { data }) =>
       add(sum, toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)),
     toDecimal(0)
@@ -53,7 +60,7 @@ export function aggregateWasteExported(
   )
 
   const { refusedDecimal, stoppedDecimal, refusedOrStoppedDecimal } =
-    wasteExportedRecords.reduce(
+    exportedRecords.reduce(
       (acc, { data }) => {
         const tonnage = toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
         const refused = isYes(data.WAS_THE_WASTE_REFUSED)
@@ -85,7 +92,7 @@ export function aggregateWasteExported(
   )
 
   return {
-    overseasSites: generateOverseasSiteSummary(wasteExportedRecords),
+    overseasSites: generateOverseasSiteSummary(exportedRecords),
     totalTonnageExported,
     tonnageReceivedNotExported,
     tonnageRefusedAtDestination,
