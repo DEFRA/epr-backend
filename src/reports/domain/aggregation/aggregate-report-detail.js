@@ -158,7 +158,7 @@ function findLastUpload(wasteRecords) {
     for (const wasteRecordVersion of wasteRecord.versions) {
       if (!lastUploadedAt || wasteRecordVersion.createdAt > lastUploadedAt) {
         lastUploadedAt = wasteRecordVersion.createdAt
-        summaryLogId = wasteRecordVersion.summaryLog?.id ?? null
+        summaryLogId = wasteRecordVersion.summaryLog.id
       }
     }
   }
