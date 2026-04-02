@@ -11,9 +11,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isOverseasSitesEnabled() {
-    return flags.overseasSites ?? false
-  },
   isReportsEnabled() {
     return flags.reports ?? false
   },
