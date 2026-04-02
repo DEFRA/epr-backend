@@ -9,10 +9,14 @@
  * @returns {Promise<Map<string, { siteName: string|null, country: string|null }>>}
  */
 export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
-  if (!overseasSitesRepository) return new Map()
+  if (!overseasSitesRepository) {
+    return new Map()
+  }
 
   const entries = Object.entries(overseasSites ?? {})
-  if (entries.length === 0) return new Map()
+  if (entries.length === 0) {
+    return new Map()
+  }
 
   const siteIds = entries.map(([, { overseasSiteId }]) => overseasSiteId)
   const sites = await overseasSitesRepository.findByIds(siteIds)
