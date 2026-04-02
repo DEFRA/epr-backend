@@ -1,0 +1,574 @@
+[
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a5a"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "received",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 1000,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1000,
+      "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+      "SUPPLIER_NAME": "Daniel Group",
+      "SUPPLIER_ADDRESS": "572 Metz Mount",
+      "SUPPLIER_POSTCODE": "UQ9 2FT",
+      "SUPPLIER_EMAIL": "Alayna_Mann@gmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0800 668 4671",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "NET_WEIGHT": 25.7352322823774,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.520456534548018,
+      "TONNAGE_RECEIVED_FOR_EXPORT": 13.3940698094744,
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "4ca5d19a-8bcb-4087-90ec-3384eb8974b7",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 1000,
+          "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+          "SUPPLIER_NAME": "Daniel Group",
+          "SUPPLIER_ADDRESS": "572 Metz Mount",
+          "SUPPLIER_POSTCODE": "UQ9 2FT",
+          "SUPPLIER_EMAIL": "Alayna_Mann@gmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0800 668 4671",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "NET_WEIGHT": 25.7352322823774,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.520456534548018,
+          "TONNAGE_RECEIVED_FOR_EXPORT": 13.3940698094744,
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a5b"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "received",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 1001,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1001,
+      "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+      "SUPPLIER_NAME": "Ryan Inc",
+      "SUPPLIER_ADDRESS": "9 Howe Court",
+      "SUPPLIER_POSTCODE": "ND52 8TP",
+      "SUPPLIER_EMAIL": "Mandy90@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "0800 023911",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+      "NET_WEIGHT": 29.2723732407094,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed site-specific protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.727473591924922,
+      "TONNAGE_RECEIVED_FOR_EXPORT": 21.2948785055858,
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "263bc7e3-4a76-4659-99ea-9f47ebff9c77",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 1001,
+          "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+          "SUPPLIER_NAME": "Ryan Inc",
+          "SUPPLIER_ADDRESS": "9 Howe Court",
+          "SUPPLIER_POSTCODE": "ND52 8TP",
+          "SUPPLIER_EMAIL": "Mandy90@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "0800 023911",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Sorting",
+          "NET_WEIGHT": 29.2723732407094,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "S&I plan agreed site-specific protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.727473591924922,
+          "TONNAGE_RECEIVED_FOR_EXPORT": 21.2948785055858,
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a5c"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "received",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 1002,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1002,
+      "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+      "SUPPLIER_NAME": "Padberg, Howell and O'Kon",
+      "SUPPLIER_ADDRESS": "756 Dietrich Paddock",
+      "SUPPLIER_POSTCODE": "GC1 6UO",
+      "SUPPLIER_EMAIL": "Raymond.Maggio@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "014007 26249",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "NET_WEIGHT": 48.3130794519009,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "AAIG percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.407893013216114,
+      "TONNAGE_RECEIVED_FOR_EXPORT": 19.7065675553854,
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "ac6ad7b8-60d0-4909-b3a6-334fe5e90f39",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 1002,
+          "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+          "SUPPLIER_NAME": "Padberg, Howell and O'Kon",
+          "SUPPLIER_ADDRESS": "756 Dietrich Paddock",
+          "SUPPLIER_POSTCODE": "GC1 6UO",
+          "SUPPLIER_EMAIL": "Raymond.Maggio@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "014007 26249",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "NET_WEIGHT": 48.3130794519009,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "AAIG percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.407893013216114,
+          "TONNAGE_RECEIVED_FOR_EXPORT": 19.7065675553854,
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a5d"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "received",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 1003,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 1003,
+      "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+      "SUPPLIER_NAME": "Bauch LLC",
+      "SUPPLIER_ADDRESS": "9 Highfield Road",
+      "SUPPLIER_POSTCODE": "CY2 3DC",
+      "SUPPLIER_EMAIL": "Wendell.Bergstrom@hotmail.com",
+      "SUPPLIER_PHONE_NUMBER": "013063 13700",
+      "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+      "NET_WEIGHT": 44.4633204027802,
+      "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+      "RECYCLABLE_PROPORTION_PERCENTAGE": 0.66779598652682,
+      "TONNAGE_RECEIVED_FOR_EXPORT": 29.6924269126327,
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "e0396fdf-33a3-490f-8647-08435ba868ae",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 1003,
+          "MONTH_RECEIVED_FOR_EXPORT": "2026-03",
+          "SUPPLIER_NAME": "Bauch LLC",
+          "SUPPLIER_ADDRESS": "9 Highfield Road",
+          "SUPPLIER_POSTCODE": "CY2 3DC",
+          "SUPPLIER_EMAIL": "Wendell.Bergstrom@hotmail.com",
+          "SUPPLIER_PHONE_NUMBER": "013063 13700",
+          "ACTIVITIES_CARRIED_OUT_BY_SUPPLIER": "Baling",
+          "NET_WEIGHT": 44.4633204027802,
+          "HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION": "National protocol percentage",
+          "RECYCLABLE_PROPORTION_PERCENTAGE": 0.66779598652682,
+          "TONNAGE_RECEIVED_FOR_EXPORT": 29.6924269126327,
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a5e"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "exported",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 2000,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 2000,
+      "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 2.98765862355949,
+      "DATE_OF_EXPORT": "2026-03-20",
+      "OSR_ID": 565,
+      "BASEL_EXPORT_CODE": "A4160",
+      "WAS_THE_WASTE_REFUSED": "No",
+      "WAS_THE_WASTE_STOPPED": "Yes",
+      "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-02-25",
+      "OSR_NAME": "Schuster - Bradtke Limited",
+      "OSR_COUNTRY": "Kuwait-KW",
+      "CUSTOMS_CODES": 3802368154,
+      "CONTAINER_NUMBER": "C4645749",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "43c1e01c-330a-4c0e-b0cf-2e915466541f",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 2000,
+          "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 2.98765862355949,
+          "DATE_OF_EXPORT": "2026-03-20",
+          "OSR_ID": 565,
+          "BASEL_EXPORT_CODE": "A4160",
+          "WAS_THE_WASTE_REFUSED": "No",
+          "WAS_THE_WASTE_STOPPED": "Yes",
+          "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-02-25",
+          "OSR_NAME": "Schuster - Bradtke Limited",
+          "OSR_COUNTRY": "Kuwait-KW",
+          "CUSTOMS_CODES": 3802368154,
+          "CONTAINER_NUMBER": "C4645749",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a5f"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "exported",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 2001,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 2001,
+      "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 3.01970319120574,
+      "DATE_OF_EXPORT": "2026-03-14",
+      "OSR_ID": 297,
+      "BASEL_EXPORT_CODE": "A4140",
+      "WAS_THE_WASTE_REFUSED": "Yes",
+      "WAS_THE_WASTE_STOPPED": "Yes",
+      "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-02-22",
+      "OSR_NAME": "Kiehn, Hoeger and Herman Limited",
+      "OSR_COUNTRY": "Eswatini-SZ",
+      "CUSTOMS_CODES": 3467931586,
+      "CONTAINER_NUMBER": "N5272561",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "d6cf9e5f-c5ff-45d2-9238-69fed7e441d8",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 2001,
+          "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 3.01970319120574,
+          "DATE_OF_EXPORT": "2026-03-14",
+          "OSR_ID": 297,
+          "BASEL_EXPORT_CODE": "A4140",
+          "WAS_THE_WASTE_REFUSED": "Yes",
+          "WAS_THE_WASTE_STOPPED": "Yes",
+          "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-02-22",
+          "OSR_NAME": "Kiehn, Hoeger and Herman Limited",
+          "OSR_COUNTRY": "Eswatini-SZ",
+          "CUSTOMS_CODES": 3467931586,
+          "CONTAINER_NUMBER": "N5272561",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a60"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "exported",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 2002,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 2002,
+      "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 1.25733080660023,
+      "DATE_OF_EXPORT": "2026-03-21",
+      "OSR_ID": 893,
+      "BASEL_EXPORT_CODE": "B3026",
+      "WAS_THE_WASTE_REFUSED": "Yes",
+      "WAS_THE_WASTE_STOPPED": "No",
+      "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-02-25",
+      "OSR_NAME": "Wilkinson and Sons Limited",
+      "OSR_COUNTRY": "Luxembourg-LU",
+      "CUSTOMS_CODES": 3984840652,
+      "CONTAINER_NUMBER": "D3721762",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "8771722f-5829-4d34-a2b7-01d1b4453265",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 2002,
+          "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 1.25733080660023,
+          "DATE_OF_EXPORT": "2026-03-21",
+          "OSR_ID": 893,
+          "BASEL_EXPORT_CODE": "B3026",
+          "WAS_THE_WASTE_REFUSED": "Yes",
+          "WAS_THE_WASTE_STOPPED": "No",
+          "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-02-25",
+          "OSR_NAME": "Wilkinson and Sons Limited",
+          "OSR_COUNTRY": "Luxembourg-LU",
+          "CUSTOMS_CODES": 3984840652,
+          "CONTAINER_NUMBER": "D3721762",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a61"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "exported",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 2003,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 2003,
+      "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 3.06748069371189,
+      "DATE_OF_EXPORT": "2026-03-04",
+      "OSR_ID": 143,
+      "BASEL_EXPORT_CODE": "B1200",
+      "WAS_THE_WASTE_REFUSED": "Yes",
+      "WAS_THE_WASTE_STOPPED": "No",
+      "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-03-08",
+      "OSR_NAME": "Hackett - Murray Limited",
+      "OSR_COUNTRY": "Uruguay-UY",
+      "CUSTOMS_CODES": 3975237161,
+      "CONTAINER_NUMBER": "C2596709",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "dc87055e-b66d-45b0-918a-89d3dd245319",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 2003,
+          "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 3.06748069371189,
+          "DATE_OF_EXPORT": "2026-03-04",
+          "OSR_ID": 143,
+          "BASEL_EXPORT_CODE": "B1200",
+          "WAS_THE_WASTE_REFUSED": "Yes",
+          "WAS_THE_WASTE_STOPPED": "No",
+          "DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED": "2026-03-08",
+          "OSR_NAME": "Hackett - Murray Limited",
+          "OSR_COUNTRY": "Uruguay-UY",
+          "CUSTOMS_CODES": 3975237161,
+          "CONTAINER_NUMBER": "C2596709",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a62"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "sentOn",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 4000,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 4000,
+      "DATE_LOAD_LEFT_SITE": "2026-03-06",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 14.254595954115,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+      "FINAL_DESTINATION_NAME": "Boyer - Huels",
+      "FINAL_DESTINATION_ADDRESS": "419 Jones Row",
+      "FINAL_DESTINATION_POSTCODE": "GJ1 6MK",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "b37ab528-4527-49f9-98d7-92c06ed6065b",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 4000,
+          "DATE_LOAD_LEFT_SITE": "2026-03-06",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 14.254595954115,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+          "FINAL_DESTINATION_NAME": "Boyer - Huels",
+          "FINAL_DESTINATION_ADDRESS": "419 Jones Row",
+          "FINAL_DESTINATION_POSTCODE": "GJ1 6MK",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a63"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "sentOn",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 4001,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 4001,
+      "DATE_LOAD_LEFT_SITE": "2026-03-23",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 15.3739032928893,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+      "FINAL_DESTINATION_NAME": "Robel - Dicki",
+      "FINAL_DESTINATION_ADDRESS": "45 New Street",
+      "FINAL_DESTINATION_POSTCODE": "LR54 0IG",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "926b4630-79a1-407b-8446-a8756495d43f",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 4001,
+          "DATE_LOAD_LEFT_SITE": "2026-03-23",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 15.3739032928893,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+          "FINAL_DESTINATION_NAME": "Robel - Dicki",
+          "FINAL_DESTINATION_ADDRESS": "45 New Street",
+          "FINAL_DESTINATION_POSTCODE": "LR54 0IG",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a64"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "sentOn",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 4002,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 4002,
+      "DATE_LOAD_LEFT_SITE": "2026-03-23",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 8.43894901133155,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+      "FINAL_DESTINATION_NAME": "Torphy, Becker and Schmeler",
+      "FINAL_DESTINATION_ADDRESS": "37 Schmidt Lane",
+      "FINAL_DESTINATION_POSTCODE": "DL6 2CB",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "aa6767d5-6103-46a8-ac61-3849905bebc2",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 4002,
+          "DATE_LOAD_LEFT_SITE": "2026-03-23",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 8.43894901133155,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+          "FINAL_DESTINATION_NAME": "Torphy, Becker and Schmeler",
+          "FINAL_DESTINATION_ADDRESS": "37 Schmidt Lane",
+          "FINAL_DESTINATION_POSTCODE": "DL6 2CB",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "69ce5d01d44bd0eea0171a65"
+    },
+    "registrationId": "69ce5cf6cc96950ca933a0c9",
+    "type": "sentOn",
+    "organisationId": "69ce5cf6cc96950ca933a0c8",
+    "rowId": 4003,
+    "schemaVersion": 1,
+    "data": {
+      "ROW_ID": 4003,
+      "DATE_LOAD_LEFT_SITE": "2026-03-11",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 10.9634046085805,
+      "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+      "FINAL_DESTINATION_NAME": "Schmitt - Nolan",
+      "FINAL_DESTINATION_ADDRESS": "8 Stacy Approach",
+      "FINAL_DESTINATION_POSTCODE": "JS5 0GH",
+      "processingType": "EXPORTER_REGISTERED_ONLY"
+    },
+    "versions": [
+      {
+        "id": "3cec8ec4-6baf-44ae-970f-c0dd7bcb7b3c",
+        "createdAt": "2026-04-02T12:11:42.889Z",
+        "status": "created",
+        "summaryLog": {
+          "id": "98c1e68c-05c6-4b1d-bdca-59727d302c1b",
+          "uri": "s3://re-ex-summary-logs//organisations/69ce5cf6cc96950ca933a0c8/registrations/69ce5cf6cc96950ca933a0c9/41e32d20-9a65-45f6-9360-7864d66a3c99/98c1e68c-05c6-4b1d-bdca-59727d302c1b"
+        },
+        "data": {
+          "ROW_ID": 4003,
+          "DATE_LOAD_LEFT_SITE": "2026-03-11",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON": 10.9634046085805,
+          "FINAL_DESTINATION_FACILITY_TYPE": "Exporter",
+          "FINAL_DESTINATION_NAME": "Schmitt - Nolan",
+          "FINAL_DESTINATION_ADDRESS": "8 Stacy Approach",
+          "FINAL_DESTINATION_POSTCODE": "JS5 0GH",
+          "processingType": "EXPORTER_REGISTERED_ONLY"
+        }
+      }
+    ]
+  }
+]
