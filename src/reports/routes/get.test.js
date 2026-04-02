@@ -259,6 +259,7 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january.report).toBeDefined()
         expect(january.report.id).toBeDefined()
         expect(january.report.status).toBe('in_progress')
+        expect(january.report.submissionNumber).toBe(1)
       })
 
       it('handles deleted report (null currentReportId)', async () => {

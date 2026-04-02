@@ -41,7 +41,11 @@ describe('mergeReportingPeriods', () => {
               startDate: '2026-01-01',
               endDate: '2026-01-31',
               dueDate: '2026-02-20',
-              current: { id: 'report-uuid-1', status: 'in_progress' },
+              current: {
+                id: 'report-uuid-1',
+                status: 'in_progress',
+                submissionNumber: 1
+              },
               previousSubmissions: []
             }
           }
@@ -57,9 +61,47 @@ describe('mergeReportingPeriods', () => {
 
     expect(result[0].report).toEqual({
       id: 'report-uuid-1',
-      status: 'in_progress'
+      status: 'in_progress',
+      submissionNumber: 1
     })
     expect(result[1].report).toBeNull()
+  })
+
+  it('exposes report with submitted status when current report is submitted', () => {
+    const periodicReports = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2026,
+        reports: {
+          monthly: {
+            1: {
+              startDate: '2026-01-01',
+              endDate: '2026-01-31',
+              dueDate: '2026-02-20',
+              current: {
+                id: 'report-uuid-1',
+                status: 'submitted',
+                submissionNumber: 1
+              },
+              previousSubmissions: []
+            }
+          }
+        }
+      }
+    ]
+
+    const result = mergeReportingPeriods(
+      computedPeriods,
+      periodicReports,
+      'monthly'
+    )
+
+    expect(result[0].report).toEqual({
+      id: 'report-uuid-1',
+      status: 'submitted',
+      submissionNumber: 1
+    })
   })
 
   it('sets report to null when current is null (no active draft)', () => {
@@ -105,7 +147,11 @@ describe('mergeReportingPeriods', () => {
               startDate: '2026-03-01',
               endDate: '2026-03-31',
               dueDate: '2026-04-20',
-              current: { id: 'report-uuid-3', status: 'in_progress' },
+              current: {
+                id: 'report-uuid-3',
+                status: 'in_progress',
+                submissionNumber: 1
+              },
               previousSubmissions: []
             }
           }
@@ -123,7 +169,8 @@ describe('mergeReportingPeriods', () => {
     const period3 = result.find((p) => p.period === 3)
     expect(period3.report).toEqual({
       id: 'report-uuid-3',
-      status: 'in_progress'
+      status: 'in_progress',
+      submissionNumber: 1
     })
     expect(period3.startDate).toBe('2026-03-01')
   })

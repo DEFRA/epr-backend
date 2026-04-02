@@ -82,6 +82,19 @@ export const testDeleteReportBehaviour = (it) => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
     })
 
+    it('throws notFound when submissionNumber does not match', async () => {
+      await repository.createReport(
+        buildCreateReportParams({
+          cadence: 'monthly',
+          period: DEFAULT_REPORT_PERIOD
+        })
+      )
+
+      await expect(
+        repository.deleteReport(buildDeleteParams({ submissionNumber: 999 }))
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
+    })
+
     it('throws badRequest on missing required params', async () => {
       await expect(
         repository.deleteReport({ organisationId: DEFAULT_ORG_ID })
