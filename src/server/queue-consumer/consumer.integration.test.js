@@ -293,6 +293,204 @@ describe('SQS command queue consumer integration', () => {
         expect(dlqResponse.Messages ?? []).toHaveLength(0)
       }
     )
+
+    it(
+      'acknowledges message with invalid payload without retrying',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
+        )
+
+        // Send invalid message (missing summaryLogId)
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              badField: 'test'
+            })
+          })
+        )
+
+        const consumer = await createConsumer(sqsClient)
+
+        consumer.start()
+
+        // Wait for the validation error to be logged
+        await vi.waitFor(
+          () => {
+            expect(logger.error).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining('Invalid command message')
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        // Handler should never have been called — message was rejected at
+        // schema validation, before reaching the command handler
+        expect(mockValidator).not.toHaveBeenCalled()
+
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        // Message should be deleted from main queue (acknowledged immediately)
+        const mainResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(mainResponse.Messages ?? []).toHaveLength(0)
+
+        // Message should NOT be on DLQ — it was acknowledged, not retried
+        const dlqResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: dlqUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(dlqResponse.Messages ?? []).toHaveLength(0)
+      }
+    )
+
+    it(
+      'acknowledges message with unknown command without retrying',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
+        )
+
+        // Send message with unknown command type
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'unknown',
+              summaryLogId: 'log-123'
+            })
+          })
+        )
+
+        const consumer = await createConsumer(sqsClient)
+
+        consumer.start()
+
+        await vi.waitFor(
+          () => {
+            expect(logger.error).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining(
+                  'must be one of [validate, submit]'
+                )
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        expect(mockValidator).not.toHaveBeenCalled()
+
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        const mainResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(mainResponse.Messages ?? []).toHaveLength(0)
+
+        const dlqResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: dlqUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(dlqResponse.Messages ?? []).toHaveLength(0)
+      }
+    )
+
+    it(
+      'acknowledges unparseable JSON without retrying',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+        const { QueueUrl: dlqUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
+        )
+
+        // Send completely garbled message body
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: 'not valid json {{{}'
+          })
+        )
+
+        const consumer = await createConsumer(sqsClient)
+
+        consumer.start()
+
+        await vi.waitFor(
+          () => {
+            expect(logger.error).toHaveBeenCalledWith(
+              expect.objectContaining({
+                message: expect.stringContaining(
+                  'Failed to parse SQS message body'
+                )
+              })
+            )
+          },
+          { timeout: 10000 }
+        )
+
+        await stopConsumerAndWait(consumer)
+
+        expect(mockValidator).not.toHaveBeenCalled()
+
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        const mainResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(mainResponse.Messages ?? []).toHaveLength(0)
+
+        const dlqResponse = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: dlqUrl,
+            WaitTimeSeconds: 2
+          })
+        )
+        expect(dlqResponse.Messages ?? []).toHaveLength(0)
+      }
+    )
   })
 
   describe('transient vs permanent errors', () => {
