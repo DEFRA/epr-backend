@@ -682,6 +682,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               data: {
                 DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
                 DATE_OF_EXPORT: '2026-02-20',
+                DATE_RECEIVED_BY_OSR: '2026-02-20',
                 TONNAGE_RECEIVED_FOR_EXPORT: 50.25,
                 TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48,
                 OSR_ID: '001'
@@ -692,6 +693,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               data: {
                 DATE_RECEIVED_FOR_EXPORT: '2026-02-10',
                 DATE_OF_EXPORT: '2026-02-25',
+                DATE_RECEIVED_BY_OSR: '2026-02-25',
                 TONNAGE_RECEIVED_FOR_EXPORT: 30,
                 TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 28,
                 OSR_ID: '096'
@@ -735,6 +737,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               data: {
                 DATE_RECEIVED_FOR_EXPORT: '2026-02-01',
                 DATE_OF_EXPORT: '2026-02-15',
+                DATE_RECEIVED_BY_OSR: '2026-02-15',
                 TONNAGE_RECEIVED_FOR_EXPORT: 50,
                 TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 5,
                 OSR_ID: '001'
@@ -745,6 +748,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               data: {
                 DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
                 DATE_OF_EXPORT: '2026-02-20',
+                DATE_RECEIVED_BY_OSR: '2026-02-20',
                 TONNAGE_RECEIVED_FOR_EXPORT: 30,
                 TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 6.5,
                 OSR_ID: '096'
@@ -781,6 +785,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               data: {
                 DATE_RECEIVED_FOR_EXPORT: '2026-01-15',
                 DATE_OF_EXPORT: '2026-02-10',
+                DATE_RECEIVED_BY_OSR: '2026-02-10',
                 TONNAGE_RECEIVED_FOR_EXPORT: 42,
                 TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 40,
                 OSR_ID: '001'

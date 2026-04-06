@@ -58,7 +58,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
       exportActivity: {
         overseasSites: [
           { orsId: 512, siteName: null, country: null, tonnageExported: 23.41 },
-          { orsId: 124, siteName: null, country: null, tonnageExported: 65.62 }
+          { orsId: 124, siteName: null, country: null, tonnageExported: 15.62 }
         ],
         totalTonnageExported: 89.03,
         tonnageReceivedNotExported: 57.67,
@@ -111,7 +111,9 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [],
+        overseasSites: [
+          { orsId: 124, siteName: null, country: null, tonnageExported: 50 }
+        ],
         totalTonnageExported: 0,
         tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 0,

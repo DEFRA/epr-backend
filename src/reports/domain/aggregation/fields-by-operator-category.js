@@ -12,12 +12,14 @@ export const SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
   EXPORTER: {
     wasteReceived: 'DATE_RECEIVED_FOR_EXPORT',
     wasteExported: 'DATE_OF_EXPORT',
+    overseasSites: 'DATE_RECEIVED_BY_OSR',
     wasteRepatriated: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
     wasteSentOn: 'DATE_LOAD_LEFT_SITE'
   },
   EXPORTER_REGISTERED_ONLY: {
     wasteReceived: 'MONTH_RECEIVED_FOR_EXPORT',
     wasteExported: 'DATE_OF_EXPORT',
+    overseasSites: 'DATE_OF_EXPORT',
     wasteRepatriated: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
     wasteSentOn: 'DATE_LOAD_LEFT_SITE'
   },

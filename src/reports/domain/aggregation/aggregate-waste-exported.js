@@ -13,7 +13,10 @@ const ZERO = '0'
 
 const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, ZERO)
 
-const generateOverseasSiteSummary = (wasteExportedRecords, orsDetailsMap) => {
+export const generateOverseasSiteSummary = (
+  wasteExportedRecords,
+  orsDetailsMap = new Map()
+) => {
   // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
   return groupAndSum(
     wasteExportedRecords.filter(({ data }) => data.OSR_ID),
@@ -49,13 +52,11 @@ function getTonnageRepatriated(repatriatedRecords) {
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteExportedRecords
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} repatriatedRecords
  * @param {number} totalTonnageReceived
- * @param {Map<string, { siteName: string|null, country: string|null }>} [orsDetailsMap]
  */
 export function aggregateWasteExported(
   wasteExportedRecords,
   repatriatedRecords,
-  totalTonnageReceived,
-  orsDetailsMap = new Map()
+  totalTonnageReceived
 ) {
   const exportedRecords = wasteExportedRecords.filter(
     ({ type }) => type === WASTE_RECORD_TYPE.EXPORTED
@@ -106,7 +107,6 @@ export function aggregateWasteExported(
   )
 
   return {
-    overseasSites: generateOverseasSiteSummary(exportedRecords, orsDetailsMap),
     totalTonnageExported,
     tonnageReceivedNotExported,
     tonnageRefusedAtDestination,

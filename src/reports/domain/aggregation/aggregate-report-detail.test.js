@@ -725,6 +725,7 @@ describe('#aggregateReportDetail', () => {
       data: {
         DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
         DATE_OF_EXPORT: '2026-02-20',
+        DATE_RECEIVED_BY_OSR: '2026-02-20',
         TONNAGE_RECEIVED_FOR_EXPORT: 50,
         TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 48,
         OSR_ID: '001',
@@ -811,6 +812,31 @@ describe('#aggregateReportDetail', () => {
 
       expect(february.recyclingActivity.totalTonnageReceived).toBe(0)
       expect(february.exportActivity.totalTonnageExported).toBe(40)
+    })
+
+    it('filters overseas sites by DATE_RECEIVED_BY_OSR, not DATE_OF_EXPORT', () => {
+      const records = [
+        buildAccreditedExportedRecord({
+          DATE_OF_EXPORT: '2026-01-25',
+          DATE_RECEIVED_BY_OSR: '2026-02-03',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10,
+          OSR_ID: '001'
+        })
+      ]
+
+      // January report: export happened here, but OSR didn't receive until February
+      const january = aggregateReportDetail(records, {
+        ...accreditedExporterArgs,
+        period: 1
+      })
+
+      expect(january.exportActivity.overseasSites).toStrictEqual([])
+
+      // February report: OSR received the waste this month
+      const february = aggregateReportDetail(records, accreditedExporterArgs)
+
+      expect(february.exportActivity.overseasSites).toHaveLength(1)
+      expect(february.exportActivity.overseasSites[0].orsId).toBe('001')
     })
 
     it('returns overseas sites with orsId only when OSR_NAME is absent', () => {

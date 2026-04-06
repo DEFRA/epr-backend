@@ -6,7 +6,10 @@ import {
 } from './fields-by-operator-category.js'
 import { filterRecordsByDateField } from './filter-records-by-date.js'
 import { aggregateWasteReceived } from './aggregate-waste-received.js'
-import { aggregateWasteExported } from './aggregate-waste-exported.js'
+import {
+  aggregateWasteExported,
+  generateOverseasSiteSummary
+} from './aggregate-waste-exported.js'
 import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 
 /**
@@ -79,41 +82,8 @@ export function aggregateReportDetail(
   const startDate = formatDateISO(year, startMonth, 1)
   const endDate = formatDateISO(year, startMonth + monthsPerPeriod, 0)
 
-  const sectionDateFields =
-    SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
-
-  const wasteReceivedDateField = sectionDateFields.wasteReceived
-  const wasteExportedDateField = sectionDateFields.wasteExported
-  const wasteRepatriatedDateField = sectionDateFields.wasteRepatriated
-  const wasteSentOnDateField = sectionDateFields.wasteSentOn
-
-  const wasteReceivedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteReceivedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteExportedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteExportedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteRepatriatedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteRepatriatedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteSentOnRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteSentOnDateField,
-    startDate,
-    endDate
-  )
+  const { wasteExportedDateField, ...recordsBySection } =
+    filterRecordsBySection(wasteRecords, operatorCategory, startDate, endDate)
 
   const { lastUploadedAt, summaryLogId } = findLastUpload(wasteRecords)
 
@@ -121,7 +91,7 @@ export function aggregateReportDetail(
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
 
   const recyclingActivity = aggregateWasteReceived(
-    wasteReceivedRecords,
+    recordsBySection.wasteReceived,
     tonnageReceivedField
   )
 
@@ -135,14 +105,41 @@ export function aggregateReportDetail(
     source: { summaryLogId, lastUploadedAt },
     recyclingActivity,
     ...(wasteExportedDateField && {
-      exportActivity: aggregateWasteExported(
-        wasteExportedRecords,
-        wasteRepatriatedRecords,
-        recyclingActivity.totalTonnageReceived,
-        orsDetailsMap
-      )
+      exportActivity: {
+        overseasSites: generateOverseasSiteSummary(
+          recordsBySection.overseasSites,
+          orsDetailsMap
+        ),
+        ...aggregateWasteExported(
+          recordsBySection.wasteExported,
+          recordsBySection.wasteRepatriated,
+          recyclingActivity.totalTonnageReceived
+        )
+      }
     }),
-    wasteSent: aggregateWasteSentOn(wasteSentOnRecords)
+    wasteSent: aggregateWasteSentOn(recordsBySection.wasteSentOn)
+  }
+}
+
+function filterRecordsBySection(
+  wasteRecords,
+  operatorCategory,
+  startDate,
+  endDate
+) {
+  const sectionDateFields =
+    SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
+
+  const filter = (dateField) =>
+    filterRecordsByDateField(wasteRecords, dateField, startDate, endDate)
+
+  return {
+    wasteReceived: filter(sectionDateFields.wasteReceived),
+    wasteExported: filter(sectionDateFields.wasteExported),
+    wasteExportedDateField: sectionDateFields.wasteExported,
+    overseasSites: filter(sectionDateFields.overseasSites),
+    wasteRepatriated: filter(sectionDateFields.wasteRepatriated),
+    wasteSentOn: filter(sectionDateFields.wasteSentOn)
   }
 }
 
