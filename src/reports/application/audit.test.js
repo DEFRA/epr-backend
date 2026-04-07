@@ -7,7 +7,7 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
-const { auditReportStatusTransition, auditReportCreate, auditReportUpdate } =
+const { auditReportStatusTransition, auditReportCreate } =
   await import('./audit.js')
 
 const createMockRequest = () => ({
@@ -103,36 +103,6 @@ describe('auditReportCreate', () => {
       createdAt: new Date('2025-06-01T12:00:00.000Z'),
       createdBy: user,
       event: { category: 'reports', subCategory: 'report', action: 'create' },
-      context: params
-    })
-  })
-})
-
-describe('auditReportUpdate', () => {
-  const params = {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    reportId: 'rep-1',
-    fields: { supportingInformation: 'some notes' }
-  }
-
-  it('sends CDP audit event', async () => {
-    await auditReportUpdate(createMockRequest(), params)
-
-    expect(mockAudit).toHaveBeenCalledWith({
-      event: { category: 'reports', subCategory: 'report', action: 'update' },
-      context: params,
-      user
-    })
-  })
-
-  it('records system log', async () => {
-    await auditReportUpdate(createMockRequest(), params)
-
-    expect(mockInsert).toHaveBeenCalledWith({
-      createdAt: new Date('2025-06-01T12:00:00.000Z'),
-      createdBy: user,
-      event: { category: 'reports', subCategory: 'report', action: 'update' },
       context: params
     })
   })

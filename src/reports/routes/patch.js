@@ -4,7 +4,6 @@ import { StatusCodes } from 'http-status-codes'
 
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
-import { auditReportUpdate } from '#reports/application/audit.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -124,7 +123,7 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
+   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & { reportsRepository: ReportsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -176,13 +175,6 @@ export const reportsPatch = {
 
     const updated = await reportsRepository.findReportById(report.id)
 
-    await auditReportUpdate(request, {
-      organisationId,
-      registrationId,
-      reportId: report.id,
-      fields
-    })
-
     return h.response(updated).code(StatusCodes.OK)
   }
 }
@@ -190,5 +182,4 @@ export const reportsPatch = {
 /**
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
