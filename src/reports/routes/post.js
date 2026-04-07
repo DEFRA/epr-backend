@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { auditReportCreate } from '#reports/application/audit.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -49,6 +50,15 @@ export const reportsPost = {
       cadence,
       period,
       changedBy: extractChangedBy(request.auth.credentials)
+    })
+
+    await auditReportCreate(request, {
+      organisationId,
+      registrationId,
+      reportId: createdReport.id,
+      year,
+      cadence,
+      period
     })
 
     return h

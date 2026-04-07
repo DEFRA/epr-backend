@@ -14,6 +14,11 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { reportsPostPath } from './post.js'
+import * as reportAudit from '#reports/application/audit.js'
+
+vi.mock('#reports/application/audit.js', () => ({
+  auditReportCreate: vi.fn().mockResolvedValue(undefined)
+}))
 
 describe(`POST ${reportsPostPath}`, () => {
   setupAuthContext()
@@ -207,6 +212,31 @@ describe(`POST ${reportsPostPath}`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    describe('auditing', () => {
+      beforeEach(() => vi.clearAllMocks())
+
+      it('calls auditReportCreate with correct params on success', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(server, organisationId, registrationId)
+
+        expect(reportAudit.auditReportCreate).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            organisationId,
+            registrationId,
+            reportId: expect.any(String),
+            year: 2025,
+            cadence: 'quarterly',
+            period: 1
+          }
+        )
+      })
     })
 
     it('includes prn issuedTonnage when creating report for accredited registration', async () => {

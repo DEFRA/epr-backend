@@ -37,3 +37,39 @@ export async function auditReportStatusTransition(request, params) {
 
   await recordSystemLog(request, payload)
 }
+
+/**
+ * Audits a report creation via CDP audit and system logs.
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {object} params
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {string} params.reportId
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ */
+export async function auditReportCreate(request, params) {
+  const { organisationId, registrationId, reportId, year, cadence, period } =
+    params
+
+  const payload = {
+    event: {
+      category: 'reports',
+      subCategory: 'report',
+      action: 'create'
+    },
+    context: {
+      organisationId,
+      registrationId,
+      reportId,
+      year,
+      cadence,
+      period
+    },
+    user: extractUserDetails(request)
+  }
+
+  safeAudit(payload)
+  await recordSystemLog(request, payload)
+}

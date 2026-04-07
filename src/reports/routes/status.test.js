@@ -13,6 +13,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { reportsStatusPath } from './status.js'
+import * as reportAudit from '#reports/application/audit.js'
+
+vi.mock('#reports/application/audit.js', () => ({
+  auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
+}))
 
 describe(`POST ${reportsStatusPath}`, () => {
   setupAuthContext()
@@ -124,6 +129,33 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(JSON.parse(response.payload)).toEqual({
           status: 'ready_to_submit'
         })
+      })
+    })
+
+    describe('auditing', () => {
+      beforeEach(() => vi.clearAllMocks())
+
+      it('calls auditReportStatusTransition with correct params on successful transition', async () => {
+        const { server, organisationId, registrationId, reportId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        await postStatus(server, organisationId, registrationId, {
+          status: 'ready_to_submit',
+          version: 1
+        })
+
+        expect(reportAudit.auditReportStatusTransition).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            organisationId,
+            reportId,
+            previous: { status: 'in_progress', version: 1 },
+            next: { status: 'ready_to_submit', version: 2 }
+          }
+        )
       })
     })
 
