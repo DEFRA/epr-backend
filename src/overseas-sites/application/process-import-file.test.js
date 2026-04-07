@@ -214,14 +214,11 @@ describe('processImportFile', () => {
       }
     ])
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        err: validationError,
-        message: expect.stringContaining(
-          "Missing required 'ORS ID Log' worksheet"
-        )
-      })
-    )
+    expect(logger.warn).toHaveBeenCalledWith({
+      err: validationError,
+      message:
+        "Invalid ORS spreadsheet structure: Missing required 'ORS ID Log' worksheet"
+    })
     expect(logger.error).not.toHaveBeenCalled()
   })
 
