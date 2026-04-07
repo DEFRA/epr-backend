@@ -13,6 +13,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { reportsPatchPath, buildUpdatedPrn } from './patch.js'
+import * as reportAudit from '#reports/application/audit.js'
+
+vi.mock('#reports/application/audit.js', () => ({
+  auditReportUpdate: vi.fn().mockResolvedValue(undefined)
+}))
 
 describe(`PATCH ${reportsPatchPath}`, () => {
   setupAuthContext()
@@ -495,6 +500,32 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+    })
+
+    describe('auditing', () => {
+      beforeEach(() => vi.clearAllMocks())
+
+      it('calls auditReportUpdate with correct params on success', async () => {
+        const { server, organisationId, registrationId, reportId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        await patchReport(server, organisationId, registrationId, {
+          supportingInformation: 'test notes'
+        })
+
+        expect(reportAudit.auditReportUpdate).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            organisationId,
+            registrationId,
+            reportId,
+            fields: { supportingInformation: 'test notes' }
+          }
+        )
       })
     })
 
