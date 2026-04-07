@@ -795,7 +795,7 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     describe('unrecognized issuer handling', () => {
-      test('throws bad request error for unrecognized issuer when defraIdAuth is true', async () => {
+      test('throws bad request error for unrecognized issuer', async () => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
         const unknownIssuer = 'https://unknown-issuer.example.com'
