@@ -195,12 +195,13 @@ describe('processImportFile', () => {
     )
   })
 
-  it('returns failure when spreadsheet structure is invalid', async () => {
+  it('returns failure and logs a warning when spreadsheet structure is invalid', async () => {
     const buffer = Buffer.from('no-worksheet')
 
-    parse.mockRejectedValue(
-      new SpreadsheetValidationError("Missing required 'ORS ID Log' worksheet")
+    const validationError = new SpreadsheetValidationError(
+      "Missing required 'ORS ID Log' worksheet"
     )
+    parse.mockRejectedValue(validationError)
 
     const result = await processImportFile(buffer, deps())
 
@@ -212,6 +213,16 @@ describe('processImportFile', () => {
         message: "Missing required 'ORS ID Log' worksheet"
       }
     ])
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: validationError,
+        message: expect.stringContaining(
+          "Missing required 'ORS ID Log' worksheet"
+        )
+      })
+    )
+    expect(logger.error).not.toHaveBeenCalled()
   })
 
   it('returns failure when organisation is not found', async () => {
