@@ -1,3 +1,5 @@
+import { StatusCodes } from 'http-status-codes'
+
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -135,14 +137,25 @@ const processFile = async (file, deps) => {
 
     return result
   } catch (err) {
-    logger.error({
+    const isUserDataValidationError =
+      err.isBoom && err.output?.statusCode === StatusCodes.UNPROCESSABLE_ENTITY
+
+    const logEntry = {
       err,
-      message: `Unexpected error processing file ${file.fileName}`,
+      message: isUserDataValidationError
+        ? `Invalid ORS data in file ${file.fileName}: ${err.message}`
+        : `Unexpected error processing file ${file.fileName}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
-    })
+    }
+
+    if (isUserDataValidationError) {
+      logger.warn(logEntry)
+    } else {
+      logger.error(logEntry)
+    }
 
     return {
       status: ORS_FILE_RESULT_STATUS.FAILURE,
