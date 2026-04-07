@@ -124,7 +124,7 @@ export const reportsPatch = {
     }
   },
   /**
-   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & { reportsRepository: ReportsRepository }} request
+   * @param {HapiRequest<{ supportingInformation?: string, prnRevenue?: number, freeTonnage?: number, tonnageRecycled?: number, tonnageNotRecycled?: number }> & { reportsRepository: ReportsRepository, systemLogsRepository: SystemLogsRepository }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -190,4 +190,5 @@ export const reportsPatch = {
 /**
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
