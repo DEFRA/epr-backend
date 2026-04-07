@@ -584,6 +584,9 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('A4').value = '__EPR_META_TEMPLATE_VERSION'
       worksheet.getCell('B4').value = 5
 
+      worksheet.getCell('A5').value = '__EPR_META_ACCREDITATION_NUMBER'
+      worksheet.getCell('B5').value = 'ACC-2025-001'
+
       worksheet.getCell('A6').value =
         '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
       // Waste balance fields (Section 1)
@@ -741,14 +744,26 @@ describe('Submission and placeholder tests', () => {
       uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
+      const accreditationId = new ObjectId().toString()
       const testOrg = buildOrganisation({
         registrations: [
           {
             id: registrationId,
+            accreditationId,
             registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ],
+        accreditations: [
+          {
+            id: accreditationId,
+            accreditationNumber: 'ACC-2025-001',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea'
           }

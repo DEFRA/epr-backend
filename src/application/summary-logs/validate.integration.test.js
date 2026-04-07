@@ -152,12 +152,17 @@ describe('SummaryLogsValidator integration', () => {
       TEMPLATE_VERSION: {
         value: 5,
         location: { sheet: 'Cover', row: 4, column: 'B' }
+      },
+      ACCREDITATION_NUMBER: {
+        value: 'ACC-123',
+        location: { sheet: 'Cover', row: 5, column: 'B' }
       }
     }
 
     const { updated } = await runValidation({
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
+      accreditationNumber: 'ACC-123',
       metadata
     })
 
@@ -190,16 +195,23 @@ describe('SummaryLogsValidator integration', () => {
       {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
+        accreditationNumber: 'ACC-123',
         spreadsheetType: 'REPROCESSOR_INPUT'
       },
       {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
+        accreditationNumber: 'ACC-456',
         spreadsheetType: 'EXPORTER'
       }
     ])(
       'when $spreadsheetType type matches $registrationType registration',
-      ({ registrationType, registrationWRN, spreadsheetType }) => {
+      ({
+        registrationType,
+        registrationWRN,
+        accreditationNumber,
+        spreadsheetType
+      }) => {
         it('should validate successfully', async () => {
           const metadata = {
             REGISTRATION_NUMBER: {
@@ -217,12 +229,17 @@ describe('SummaryLogsValidator integration', () => {
             TEMPLATE_VERSION: {
               value: 5,
               location: { sheet: 'Cover', row: 4, column: 'B' }
+            },
+            ACCREDITATION_NUMBER: {
+              value: accreditationNumber,
+              location: { sheet: 'Cover', row: 5, column: 'B' }
             }
           }
 
           const { updated } = await runValidation({
             registrationType,
             registrationWRN,
+            accreditationNumber,
             metadata
           })
 
@@ -459,13 +476,13 @@ describe('SummaryLogsValidator integration', () => {
       )
     })
 
-    it('should validate successfully when registration has no accreditation and spreadsheet is blank', async () => {
+    it('should validate successfully when registration has no accreditation and uses registered-only template', async () => {
       const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
         metadata: {
           TEMPLATE_VERSION: {
-            value: '5.0',
+            value: '2.1',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION_NUMBER: {
@@ -473,7 +490,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'EXPORTER',
+            value: 'EXPORTER_REGISTERED_ONLY',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
@@ -545,34 +562,11 @@ describe('SummaryLogsValidator integration', () => {
       }
     }
 
-    // START: registered-only feature flag — delete this block when flag is removed
-    const registeredOnlyFeatureFlags = {
-      isRegisteredOnlyEnabled: () => true
-    }
-
-    it('should reject with feature flag disabled', async () => {
-      const { updated } = await runValidation({
-        registrationType: 'reprocessor',
-        registrationWRN: 'REG-789',
-        metadata: registeredOnlyMetadata,
-        featureFlags: { isRegisteredOnlyEnabled: () => false }
-      })
-
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-      expect(updated.summaryLog.validation.issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
-        ])
-      )
-    })
-    // END: registered-only feature flag
-
     it('should validate successfully', async () => {
       const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-789',
-        metadata: registeredOnlyMetadata,
-        featureFlags: registeredOnlyFeatureFlags
+        metadata: registeredOnlyMetadata
       })
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
@@ -647,8 +641,7 @@ describe('SummaryLogsValidator integration', () => {
               }
             ]
           }
-        },
-        featureFlags: registeredOnlyFeatureFlags
+        }
       })
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
@@ -682,34 +675,11 @@ describe('SummaryLogsValidator integration', () => {
       }
     }
 
-    // START: registered-only feature flag — delete this block when flag is removed
-    const registeredOnlyFeatureFlags = {
-      isRegisteredOnlyEnabled: () => true
-    }
-
-    it('should reject with feature flag disabled', async () => {
-      const { updated } = await runValidation({
-        registrationType: 'exporter',
-        registrationWRN: 'REG-EXP-789',
-        metadata: registeredOnlyMetadata,
-        featureFlags: { isRegisteredOnlyEnabled: () => false }
-      })
-
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-      expect(updated.summaryLog.validation.issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
-        ])
-      )
-    })
-    // END: registered-only feature flag
-
     it('should validate successfully', async () => {
       const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'REG-EXP-789',
-        metadata: registeredOnlyMetadata,
-        featureFlags: registeredOnlyFeatureFlags
+        metadata: registeredOnlyMetadata
       })
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
