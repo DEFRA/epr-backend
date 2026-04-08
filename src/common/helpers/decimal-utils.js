@@ -153,3 +153,13 @@ export function greaterThan(a, b) {
 export function isZero(value) {
   return toDecimal(value).isZero()
 }
+
+/**
+ * Check if a value is negative.
+ *
+ * @param {DecimalValue} value - Value to check
+ * @returns {boolean} True if value is less than zero
+ */
+export function isNegative(value) {
+  return toDecimal(value).isNegative()
+}
