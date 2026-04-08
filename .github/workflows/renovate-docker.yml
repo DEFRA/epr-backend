@@ -14,17 +14,6 @@ jobs:
   renovate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: DEFRA/epr-re-ex-service/.github/actions/renovate-docker@main
         with:
-          node-version: 24
-          cache: npm
-
-      - uses: renovatebot/github-action@v46.1.8
-        with:
-          renovate-version: 43.108.1
-          mount-docker-socket: false
           token: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          RENOVATE_REPOSITORIES: ${{ github.repository }}
