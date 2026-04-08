@@ -55,11 +55,12 @@ export const reportsPost = {
     await auditReportCreate(request, {
       organisationId,
       registrationId,
-      reportId: createdReport.id,
-      createdAt: createdReport.status.created.at,
       year,
       cadence,
-      period
+      period,
+      submissionNumber: createdReport.submissionNumber,
+      reportId: createdReport.id,
+      createdAt: createdReport.status.created.at
     })
 
     return h

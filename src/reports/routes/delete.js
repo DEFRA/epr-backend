@@ -68,6 +68,11 @@ export const reportsDelete = {
 
     await auditReportDelete(request, {
       organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber: previous.submissionNumber,
       reportId: report.id,
       previous
     })

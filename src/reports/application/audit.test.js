@@ -42,6 +42,11 @@ afterEach(() => {
 describe('auditReportStatusTransition', () => {
   const params = {
     organisationId: 'org-1',
+    registrationId: 'reg-1',
+    year: 2025,
+    cadence: 'quarterly',
+    period: 1,
+    submissionNumber: 'sub-1',
     reportId: 'rep-1',
     previous: {
       id: 'rep-1',
@@ -88,6 +93,11 @@ describe('auditReportStatusTransition', () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
       organisationId: 'org-1',
+      registrationId: 'reg-1',
+      year: 2025,
+      cadence: 'quarterly',
+      period: 1,
+      submissionNumber: 'sub-1',
       reportId: 'rep-1',
       previous: {
         id: 'rep-1',
@@ -114,6 +124,11 @@ describe('auditReportStatusTransition', () => {
         },
         context: {
           organisationId: 'org-1',
+          registrationId: 'reg-1',
+          year: 2025,
+          cadence: 'quarterly',
+          period: 1,
+          submissionNumber: 'sub-1',
           reportId: 'rep-1',
           previous: { status: 'in_progress' },
           next: { status: 'ready_to_submit' }
@@ -137,6 +152,11 @@ describe('auditReportStatusTransition', () => {
 describe('auditReportDelete', () => {
   const params = {
     organisationId: 'org-1',
+    registrationId: 'reg-1',
+    year: 2025,
+    cadence: 'quarterly',
+    period: 1,
+    submissionNumber: 'sub-1',
     reportId: 'rep-1',
     previous: {
       id: 'rep-1',
@@ -179,6 +199,11 @@ describe('auditReportDelete', () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
       organisationId: 'org-1',
+      registrationId: 'reg-1',
+      year: 2025,
+      cadence: 'quarterly',
+      period: 1,
+      submissionNumber: 'sub-1',
       reportId: 'rep-1',
       previous: {
         id: 'rep-1',
@@ -199,6 +224,11 @@ describe('auditReportDelete', () => {
         },
         context: {
           organisationId: 'org-1',
+          registrationId: 'reg-1',
+          year: 2025,
+          cadence: 'quarterly',
+          period: 1,
+          submissionNumber: 'sub-1',
           reportId: 'rep-1',
           previous: { status: 'in_progress' }
         }
@@ -222,11 +252,12 @@ describe('auditReportCreate', () => {
   const params = {
     organisationId: 'org-1',
     registrationId: 'reg-1',
-    reportId: 'rep-1',
-    createdAt: '2025-06-01T10:00:00.000Z',
     year: 2025,
     cadence: 'quarterly',
-    period: 1
+    period: 1,
+    submissionNumber: 'sub-1',
+    reportId: 'rep-1',
+    createdAt: '2025-06-01T10:00:00.000Z'
   }
 
   it('sends CDP audit event', async () => {
