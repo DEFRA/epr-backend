@@ -8,7 +8,7 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
-const { auditReportStatusTransition, auditReportCreate } =
+const { auditReportStatusTransition, auditReportCreate, auditReportDelete } =
   await import('./audit.js')
 
 const createMockRequest = () => ({
@@ -127,6 +127,90 @@ describe('auditReportStatusTransition', () => {
           category: 'waste-reporting',
           subCategory: 'reports',
           action: 'status-transition'
+        },
+        context: oversizedParams
+      })
+    )
+  })
+})
+
+describe('auditReportDelete', () => {
+  const params = {
+    organisationId: 'org-1',
+    reportId: 'rep-1',
+    previous: {
+      id: 'rep-1',
+      version: 1,
+      status: { currentStatus: 'in_progress' }
+    }
+  }
+
+  it('sends CDP audit event with action: delete', async () => {
+    await auditReportDelete(createMockRequest(), params)
+
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'delete'
+      },
+      context: params,
+      user
+    })
+  })
+
+  it('records system log', async () => {
+    await auditReportDelete(createMockRequest(), params)
+
+    expect(mockInsert).toHaveBeenCalledWith({
+      createdAt: new Date('2025-06-01T12:00:00.000Z'),
+      createdBy: user,
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'delete'
+      },
+      context: params
+    })
+  })
+
+  it('strips previous to { status } in CDP audit event when payload is oversized', async () => {
+    const { randomBytes } = await import('crypto')
+    const veryLongString = randomBytes(1e6).toString('hex')
+    const oversizedParams = {
+      organisationId: 'org-1',
+      reportId: 'rep-1',
+      previous: {
+        id: 'rep-1',
+        version: 1,
+        status: { currentStatus: 'in_progress' },
+        veryLongString
+      }
+    }
+
+    await auditReportDelete(createMockRequest(), oversizedParams)
+
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: {
+          category: 'waste-reporting',
+          subCategory: 'reports',
+          action: 'delete'
+        },
+        context: {
+          organisationId: 'org-1',
+          reportId: 'rep-1',
+          previous: { status: 'in_progress' }
+        }
+      })
+    )
+
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: {
+          category: 'waste-reporting',
+          subCategory: 'reports',
+          action: 'delete'
         },
         context: oversizedParams
       })

@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import Boom from '@hapi/boom'
-import { auditReportStatusTransition } from '#reports/application/audit.js'
+import { auditReportDelete } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
@@ -66,7 +66,7 @@ export const reportsDelete = {
       changedBy: extractChangedBy(request.auth.credentials)
     })
 
-    await auditReportStatusTransition(request, {
+    await auditReportDelete(request, {
       organisationId,
       reportId: report.id,
       previous

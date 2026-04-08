@@ -15,7 +15,7 @@ const AUDIT_SUB_CATEGORY = 'reports'
  * @param {string} params.organisationId
  * @param {string} params.reportId
  * @param {object} params.previous
- * @param {object} [params.next]
+ * @param {object} params.next
  */
 export async function auditReportStatusTransition(request, params) {
   const { organisationId, reportId, previous, next } = params
@@ -28,12 +28,7 @@ export async function auditReportStatusTransition(request, params) {
       subCategory: AUDIT_SUB_CATEGORY,
       action: 'status-transition'
     },
-    context: {
-      organisationId,
-      reportId,
-      previous,
-      ...(next !== undefined && { next })
-    },
+    context: { organisationId, reportId, previous, next },
     user
   }
 
@@ -45,14 +40,50 @@ export async function auditReportStatusTransition(request, params) {
           organisationId,
           reportId,
           previous: { status: previous.status.currentStatus },
-          ...(next !== undefined && {
-            next: { status: next.status.currentStatus }
-          })
+          next: { status: next.status.currentStatus }
         }
       }
 
   safeAudit(safeAuditingPayload)
 
+  await recordSystemLog(request, payload)
+}
+
+/**
+ * Audits a report deletion via CDP audit and system logs.
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {object} params
+ * @param {string} params.organisationId
+ * @param {string} params.reportId
+ * @param {object} params.previous
+ */
+export async function auditReportDelete(request, params) {
+  const { organisationId, reportId, previous } = params
+
+  const user = extractUserDetails(request)
+
+  const payload = {
+    event: {
+      category: AUDIT_CATEGORY,
+      subCategory: AUDIT_SUB_CATEGORY,
+      action: 'delete'
+    },
+    context: { organisationId, reportId, previous },
+    user
+  }
+
+  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
+    ? payload
+    : {
+        ...payload,
+        context: {
+          organisationId,
+          reportId,
+          previous: { status: previous.status.currentStatus }
+        }
+      }
+
+  safeAudit(safeAuditingPayload)
   await recordSystemLog(request, payload)
 }
 
