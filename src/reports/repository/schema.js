@@ -34,9 +34,18 @@ export const userSummarySchema = Joi.object({
   position: Joi.string().optional()
 }).required()
 
+const TWO_DP_FACTOR = 100
+
+export const maxTwoDecimalPlaces = (value, helpers) => {
+  if (Math.round(value * TWO_DP_FACTOR) !== value * TWO_DP_FACTOR) {
+    return helpers.error('number.maxDecimalPlaces')
+  }
+  return value
+}
+
 export const prnSchema = Joi.object({
   issuedTonnage: Joi.number().min(0).required(),
-  totalRevenue: Joi.number().min(0).allow(null),
+  totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
   freeTonnage: Joi.number().min(0).allow(null),
   averagePricePerTonne: Joi.number().min(0).allow(null)
 }).optional()
