@@ -177,8 +177,11 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           {
             organisationId,
             reportId,
-            previous: { status: 'in_progress', version: 1 },
-            next: { status: 'deleted', version: 2 }
+            previous: expect.objectContaining({
+              id: reportId,
+              version: 1,
+              status: expect.objectContaining({ currentStatus: 'in_progress' })
+            })
           }
         )
       })

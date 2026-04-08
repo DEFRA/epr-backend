@@ -54,10 +54,7 @@ export const reportsDelete = {
       )
     }
 
-    const previous = {
-      status: report.status.currentStatus,
-      version: report.version
-    }
+    const previous = await reportsRepository.findReportById(report.id)
 
     await reportsRepository.deleteReport({
       organisationId,
@@ -72,11 +69,7 @@ export const reportsDelete = {
     await auditReportStatusTransition(request, {
       organisationId,
       reportId: report.id,
-      previous,
-      next: {
-        status: 'deleted',
-        version: report.version + 1
-      }
+      previous
     })
 
     return h.response().code(StatusCodes.NO_CONTENT)
