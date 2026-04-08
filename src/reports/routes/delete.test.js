@@ -176,6 +176,11 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           expect.any(Object),
           {
             organisationId,
+            registrationId,
+            year: 2025,
+            cadence: 'quarterly',
+            period: 1,
+            submissionNumber: expect.anything(),
             reportId,
             previous: expect.objectContaining({
               id: reportId,
