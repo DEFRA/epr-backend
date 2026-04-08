@@ -33,6 +33,10 @@ export const processImportFile = async (
     ;({ metadata, sites, errors } = await parse(buffer))
   } catch (err) {
     if (err instanceof SpreadsheetValidationError) {
+      logger.warn({
+        err,
+        message: `Invalid ORS spreadsheet structure: ${err.message}`
+      })
       return failureResult(null, [{ field: 'file', message: err.message }])
     }
     throw err
