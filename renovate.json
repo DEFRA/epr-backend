@@ -10,7 +10,8 @@
         "defradigital/node",
         "defradigital/node-development"
       ],
-      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-node(?<build>\\d+\\.\\d+\\.\\d+)$"
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-node(?<build>\\d+\\.\\d+\\.\\d+)$",
+      "groupName": "defra node base images"
     }
   ]
 }
