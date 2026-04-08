@@ -3,7 +3,7 @@
   "minimumReleaseAge": "3 days",
   "recreateWhen": "always",
   "commitMessagePrefix": "Renovate:",
-  "enabledManagers": ["dockerfile", "github-actions"],
+  "enabledManagers": ["dockerfile"],
   "packageRules": [
     {
       "matchPackageNames": [
