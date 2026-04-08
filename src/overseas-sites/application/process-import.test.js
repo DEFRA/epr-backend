@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import Boom from '@hapi/boom'
 
 import { processOrsImport } from './process-import.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
@@ -458,6 +459,7 @@ describe('processOrsImport', () => {
     )
 
     expect(logger.error).toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
 
     expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
       'import-123',
@@ -471,6 +473,56 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.FAILURE
     })
     expect(orsImportMetrics.recordSitesCreated).toHaveBeenCalledWith(0)
+  })
+
+  it('logs Boom 422 data validation errors as warnings, not errors', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.PREPROCESSING,
+      files: [
+        { fileId: 'f1', fileName: 'bad-date.xlsx', s3Uri: 's3://bucket/f1' }
+      ]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('data'))
+
+    processImportFile.mockRejectedValue(
+      Boom.badData(
+        'Invalid overseas site data: "validFrom" must be a valid date'
+      )
+    )
+
+    await processOrsImport('import-123', deps())
+
+    expect(orsImportsRepository.recordFileResult).toHaveBeenCalledWith(
+      'import-123',
+      0,
+      {
+        status: ORS_FILE_RESULT_STATUS.FAILURE,
+        sitesCreated: 0,
+        mappingsUpdated: 0,
+        registrationNumber: null,
+        errors: [
+          {
+            field: 'file',
+            message:
+              'Invalid overseas site data: "validFrom" must be a valid date'
+          }
+        ]
+      }
+    )
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('bad-date.xlsx')
+      })
+    )
+    expect(logger.error).not.toHaveBeenCalled()
+
+    expect(orsImportsRepository.updateStatus).toHaveBeenCalledWith(
+      'import-123',
+      ORS_IMPORT_STATUS.FAILED
+    )
   })
 
   it('passes systemLogsRepository and user from deps to processImportFile', async () => {

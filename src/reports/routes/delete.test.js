@@ -13,6 +13,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
 import { reportsDeletePath } from './delete.js'
+import * as reportAudit from '#reports/application/audit.js'
+
+vi.mock('#reports/application/audit.js', () => ({
+  auditReportDelete: vi.fn().mockResolvedValue(undefined)
+}))
 
 describe(`DELETE ${reportsDeletePath}`, () => {
   setupAuthContext()
@@ -152,6 +157,33 @@ describe(`DELETE ${reportsDeletePath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+      })
+    })
+
+    describe('auditing', () => {
+      beforeEach(() => vi.clearAllMocks())
+
+      it('calls auditReportDelete with correct params on successful delete', async () => {
+        const { server, organisationId, registrationId, reportId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        await deleteReport(server, organisationId, registrationId)
+
+        expect(reportAudit.auditReportDelete).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            organisationId,
+            reportId,
+            previous: expect.objectContaining({
+              id: reportId,
+              version: 1,
+              status: expect.objectContaining({ currentStatus: 'in_progress' })
+            })
+          }
+        )
       })
     })
 

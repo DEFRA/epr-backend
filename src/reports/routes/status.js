@@ -69,10 +69,7 @@ export const reportsStatus = {
       )
     }
 
-    const previous = {
-      status: report.status.currentStatus,
-      version: report.version
-    }
+    const previous = await reportsRepository.findReportById(report.id)
 
     await reportsRepository.updateReportStatus({
       reportId: report.id,
@@ -87,7 +84,7 @@ export const reportsStatus = {
       organisationId,
       reportId: report.id,
       previous,
-      next: { status: updated.status.currentStatus, version: updated.version }
+      next: updated
     })
 
     return h
