@@ -16,7 +16,7 @@ import { reportsDeletePath } from './delete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 vi.mock('#reports/application/audit.js', () => ({
-  auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
+  auditReportDelete: vi.fn().mockResolvedValue(undefined)
 }))
 
 describe(`DELETE ${reportsDeletePath}`, () => {
@@ -163,7 +163,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
     describe('auditing', () => {
       beforeEach(() => vi.clearAllMocks())
 
-      it('calls auditReportStatusTransition with correct params on successful delete', async () => {
+      it('calls auditReportDelete with correct params on successful delete', async () => {
         const { server, organisationId, registrationId, reportId } =
           await createServerWithReport({
             wasteProcessingType: 'reprocessor',
@@ -172,13 +172,16 @@ describe(`DELETE ${reportsDeletePath}`, () => {
 
         await deleteReport(server, organisationId, registrationId)
 
-        expect(reportAudit.auditReportStatusTransition).toHaveBeenCalledWith(
+        expect(reportAudit.auditReportDelete).toHaveBeenCalledWith(
           expect.any(Object),
           {
             organisationId,
             reportId,
-            previous: { status: 'in_progress', version: 1 },
-            next: { status: 'deleted', version: 2 }
+            previous: expect.objectContaining({
+              id: reportId,
+              version: 1,
+              status: expect.objectContaining({ currentStatus: 'in_progress' })
+            })
           }
         )
       })

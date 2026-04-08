@@ -152,8 +152,18 @@ describe(`POST ${reportsStatusPath}`, () => {
           {
             organisationId,
             reportId,
-            previous: { status: 'in_progress', version: 1 },
-            next: { status: 'ready_to_submit', version: 2 }
+            previous: expect.objectContaining({
+              id: reportId,
+              version: 1,
+              status: expect.objectContaining({ currentStatus: 'in_progress' })
+            }),
+            next: expect.objectContaining({
+              id: reportId,
+              version: 2,
+              status: expect.objectContaining({
+                currentStatus: 'ready_to_submit'
+              })
+            })
           }
         )
       })

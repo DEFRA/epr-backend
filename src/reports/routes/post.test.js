@@ -231,6 +231,7 @@ describe(`POST ${reportsPostPath}`, () => {
             organisationId,
             registrationId,
             reportId: expect.any(String),
+            createdAt: expect.any(String),
             year: 2025,
             cadence: 'quarterly',
             period: 1

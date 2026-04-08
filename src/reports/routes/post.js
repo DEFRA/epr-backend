@@ -56,6 +56,7 @@ export const reportsPost = {
       organisationId,
       registrationId,
       reportId: createdReport.id,
+      createdAt: createdReport.status.created.at,
       year,
       cadence,
       period
