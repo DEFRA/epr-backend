@@ -34,7 +34,8 @@ export const userSummarySchema = Joi.object({
   position: Joi.string().optional()
 }).required()
 
-const TWO_DP_FACTOR = 100
+const TWO_DECIMAL_PLACES = 2
+const TWO_DP_FACTOR = 10 ** TWO_DECIMAL_PLACES
 
 export const maxTwoDecimalPlaces = (value, helpers) => {
   if (Math.round(value * TWO_DP_FACTOR) !== value * TWO_DP_FACTOR) {
