@@ -513,7 +513,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
       })
 
-      it('aggregates waste exported with overseas site details', async () => {
+      it('routes exported records to unapprovedOverseasSites when overseas-sites repo is unavailable', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',
@@ -714,7 +714,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         ])
       })
 
-      it('aggregates waste exported with overseas site details', async () => {
+      it('routes exported records to unapprovedOverseasSites when overseas-sites repo is unavailable', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',

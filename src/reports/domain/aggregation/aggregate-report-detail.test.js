@@ -545,16 +545,27 @@ describe('#aggregateReportDetail', () => {
       const records = [
         buildExportedRecord({
           OSR_ID: '001',
-          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 10
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 1.01
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-02-01',
+          OSR_ID: '002',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 2.02
         }),
         buildExportedRecord({
           DATE_OF_EXPORT: '2026-02-10',
+          OSR_ID: '998',
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 3.03
+        }),
+        buildExportedRecord({
+          DATE_OF_EXPORT: '2026-03-01',
           OSR_ID: '999',
-          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 15
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 4.04
         })
       ]
       const orsDetailsMap = new Map([
-        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }]
+        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
+        ['002', { siteName: 'RecyclePlast SA', country: 'France' }]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -572,9 +583,12 @@ describe('#aggregateReportDetail', () => {
           0
         )
 
-      expect(approvedTotal + unapprovedTotal).toBe(
-        result.exportActivity.totalTonnageExported
+      expect(approvedTotal + unapprovedTotal).toBeCloseTo(
+        result.exportActivity.totalTonnageExported,
+        2
       )
+      expect(result.exportActivity.overseasSites).toHaveLength(2)
+      expect(result.exportActivity.unapprovedOverseasSites).toHaveLength(2)
     })
 
     it('populates siteName and country from orsDetailsMap', () => {
