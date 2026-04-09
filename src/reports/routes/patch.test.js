@@ -313,28 +313,25 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
-      it.each([10.123, 0.001, 5.999])(
-        'returns 422 when free-tonnage is %s (more than 2 decimal places)',
-        async (freeTonnage) => {
-          const { server, organisationId, registrationId } =
-            await createServerWithReport(
-              {
-                wasteProcessingType: 'exporter',
-                accreditationId: new ObjectId().toString()
-              },
-              { prn: { issuedTonnage: 100 } }
-            )
-
-          const response = await patchReport(
-            server,
-            organisationId,
-            registrationId,
-            { freeTonnage }
+      it('returns 422 when free-tonnage is not a whole number', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
           )
 
-          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-        }
-      )
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { freeTonnage: 10.5 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
 
       it('returns 400 when freeTonnage exceeds issued tonnage', async () => {
         const { server, organisationId, registrationId } =

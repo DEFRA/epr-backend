@@ -19,7 +19,7 @@ const MAX_SUPPORTING_INFO_LENGTH = 2000
 const payloadSchema = Joi.object({
   supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH),
   prnRevenue: Joi.number().min(0).custom(maxTwoDecimalPlaces),
-  freeTonnage: Joi.number().min(0).custom(maxTwoDecimalPlaces),
+  freeTonnage: Joi.number().integer().min(0),
   tonnageRecycled: Joi.number().min(0).custom(maxTwoDecimalPlaces),
   tonnageNotRecycled: Joi.number().min(0).custom(maxTwoDecimalPlaces)
 }).min(1)
