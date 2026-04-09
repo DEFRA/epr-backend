@@ -90,7 +90,8 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
             tonnageSentOn: 37
           }
         ]
-      }
+      },
+      diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
   })
 })
@@ -135,7 +136,8 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
         tonnageSentToExporter: 0,
         tonnageSentToAnotherSite: 0,
         finalDestinations: []
-      }
+      },
+      diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
   })
 })
@@ -243,7 +245,8 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
             tonnageSentOn: 10.96
           }
         ]
-      }
+      },
+      diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
   })
 })
