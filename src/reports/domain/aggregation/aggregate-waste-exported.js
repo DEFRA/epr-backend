@@ -3,7 +3,8 @@ import {
   subtract,
   toDecimal,
   roundToTwoDecimalPlaces,
-  toNumber
+  toNumber,
+  isNegative
 } from '#common/helpers/decimal-utils.js'
 import { groupAndSum, isYes } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -45,6 +46,19 @@ function getTonnageRepatriated(repatriatedRecords) {
   )
 }
 
+function calculateTonnageNotExported(
+  totalTonnageReceived,
+  totalTonnageExportedDecimal
+) {
+  const receivedMinusExported = subtract(
+    toDecimal(totalTonnageReceived),
+    totalTonnageExportedDecimal
+  )
+  return roundToTwoDecimalPlaces(
+    isNegative(receivedMinusExported) ? toDecimal(0) : receivedMinusExported
+  )
+}
+
 /**
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteExportedRecords
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} repatriatedRecords
@@ -69,10 +83,6 @@ export function aggregateWasteExported(
   const totalTonnageExported = roundToTwoDecimalPlaces(
     totalTonnageExportedDecimal
   )
-  const tonnageReceivedNotExported = roundToTwoDecimalPlaces(
-    subtract(toDecimal(totalTonnageReceived), totalTonnageExportedDecimal)
-  )
-
   const { refusedDecimal, stoppedDecimal, refusedOrStoppedDecimal } =
     exportedRecords.reduce(
       (acc, { data }) => {
@@ -108,7 +118,10 @@ export function aggregateWasteExported(
   return {
     overseasSites: generateOverseasSiteSummary(exportedRecords, orsDetailsMap),
     totalTonnageExported,
-    tonnageReceivedNotExported,
+    tonnageReceivedNotExported: calculateTonnageNotExported(
+      totalTonnageReceived,
+      totalTonnageExportedDecimal
+    ),
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,
     totalTonnageRefusedOrStopped,
