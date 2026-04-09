@@ -911,6 +911,9 @@ describe('#aggregateReportDetail', () => {
   })
 
   describe('registered-only to accredited transition (ADR 0030, Finding 3)', () => {
+    // This is test is to illustrate the findings in ADR.
+    // Rather than documenting the behaviour we want it demonstrates the problem
+    // we are faced with until this can be addressed.
     it('silently excludes registered-only records when aggregating as accredited reprocessor', () => {
       const registeredOnlyRecord = buildReceivedRecord({
         MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
