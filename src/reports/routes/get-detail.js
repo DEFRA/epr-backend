@@ -49,6 +49,22 @@ export const reportsGetDetail = {
       period
     })
 
+    if (
+      'diagnostics' in report &&
+      report.diagnostics.wasteReceivedRecordsExcluded > 0
+    ) {
+      request.logger.warn(
+        {
+          organisationId,
+          registrationId,
+          operatorCategory: report.operatorCategory,
+          wasteReceivedRecordsExcluded:
+            report.diagnostics.wasteReceivedRecordsExcluded
+        },
+        'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)'
+      )
+    }
+
     return h
       .response(withRegistrationDetails(report, registration))
       .code(StatusCodes.OK)

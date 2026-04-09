@@ -48,6 +48,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
+ * @property {{ wasteReceivedRecordsExcluded: number }} diagnostics
  */
 
 /**
