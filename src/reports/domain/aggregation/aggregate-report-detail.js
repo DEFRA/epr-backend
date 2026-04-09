@@ -126,9 +126,10 @@ export function aggregateReportDetail(
   )
 
   // Count received records excluded because they lack the expected date field.
-  // This happens after a registered-only → accredited transition: historical
-  // records have MONTH_RECEIVED_FOR_* but the accredited category looks up
-  // DATE_RECEIVED_FOR_*. See ADR 0030, Finding 3.
+  // This could potentially happen after a registered-only organisation becomes
+  // accredited (or vice versa): historical records have MONTH_RECEIVED_FOR_*
+  // but the accredited category looks up DATE_RECEIVED_FOR_*. See ADR 0030,
+  // Finding 3.
   const wasteReceivedRecordsExcluded = wasteRecords.filter(
     (r) =>
       r.type === 'received' &&
