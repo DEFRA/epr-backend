@@ -82,6 +82,11 @@ export const reportsStatus = {
 
     await auditReportStatusTransition(request, {
       organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber: previous.submissionNumber,
       reportId: report.id,
       previous,
       next: updated

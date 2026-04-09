@@ -13,12 +13,27 @@ const AUDIT_SUB_CATEGORY = 'reports'
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
  * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ * @param {string} params.submissionNumber
  * @param {string} params.reportId
  * @param {object} params.previous
  * @param {object} params.next
  */
 export async function auditReportStatusTransition(request, params) {
-  const { organisationId, reportId, previous, next } = params
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    previous,
+    next
+  } = params
 
   const user = extractUserDetails(request)
 
@@ -28,7 +43,17 @@ export async function auditReportStatusTransition(request, params) {
       subCategory: AUDIT_SUB_CATEGORY,
       action: 'status-transition'
     },
-    context: { organisationId, reportId, previous, next },
+    context: {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber,
+      reportId,
+      previous,
+      next
+    },
     user
   }
 
@@ -38,6 +63,11 @@ export async function auditReportStatusTransition(request, params) {
         ...payload,
         context: {
           organisationId,
+          registrationId,
+          year,
+          cadence,
+          period,
+          submissionNumber,
           reportId,
           previous: { status: previous.status.currentStatus },
           next: { status: next.status.currentStatus }
@@ -54,11 +84,25 @@ export async function auditReportStatusTransition(request, params) {
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
  * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {number} params.year
+ * @param {string} params.cadence
+ * @param {number} params.period
+ * @param {string} params.submissionNumber
  * @param {string} params.reportId
  * @param {object} params.previous
  */
 export async function auditReportDelete(request, params) {
-  const { organisationId, reportId, previous } = params
+  const {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    previous
+  } = params
 
   const user = extractUserDetails(request)
 
@@ -68,7 +112,16 @@ export async function auditReportDelete(request, params) {
       subCategory: AUDIT_SUB_CATEGORY,
       action: 'delete'
     },
-    context: { organisationId, reportId, previous },
+    context: {
+      organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber,
+      reportId,
+      previous
+    },
     user
   }
 
@@ -78,6 +131,11 @@ export async function auditReportDelete(request, params) {
         ...payload,
         context: {
           organisationId,
+          registrationId,
+          year,
+          cadence,
+          period,
+          submissionNumber,
           reportId,
           previous: { status: previous.status.currentStatus }
         }
@@ -93,21 +151,23 @@ export async function auditReportDelete(request, params) {
  * @param {object} params
  * @param {string} params.organisationId
  * @param {string} params.registrationId
- * @param {string} params.reportId
- * @param {string} params.createdAt
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
+ * @param {string} params.submissionNumber
+ * @param {string} params.reportId
+ * @param {string} params.createdAt
  */
 export async function auditReportCreate(request, params) {
   const {
     organisationId,
     registrationId,
-    reportId,
-    createdAt,
     year,
     cadence,
-    period
+    period,
+    submissionNumber,
+    reportId,
+    createdAt
   } = params
 
   const payload = {
@@ -119,11 +179,12 @@ export async function auditReportCreate(request, params) {
     context: {
       organisationId,
       registrationId,
-      reportId,
-      createdAt,
       year,
       cadence,
-      period
+      period,
+      submissionNumber,
+      reportId,
+      createdAt
     },
     user: extractUserDetails(request)
   }
