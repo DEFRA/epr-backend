@@ -47,7 +47,7 @@ export const maxTwoDecimalPlaces = (value, helpers) => {
 export const prnSchema = Joi.object({
   issuedTonnage: Joi.number().min(0).required(),
   totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  freeTonnage: Joi.number().min(0).allow(null),
+  freeTonnage: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
   averagePricePerTonne: Joi.number().min(0).allow(null)
 }).optional()
 
@@ -88,8 +88,14 @@ const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
   prn: prnSchema.fork('issuedTonnage', (s) => s.optional()),
   recyclingActivity: Joi.object({
-    tonnageRecycled: Joi.number().min(0).allow(null),
-    tonnageNotRecycled: Joi.number().min(0).allow(null)
+    tonnageRecycled: Joi.number()
+      .min(0)
+      .allow(null)
+      .custom(maxTwoDecimalPlaces),
+    tonnageNotRecycled: Joi.number()
+      .min(0)
+      .allow(null)
+      .custom(maxTwoDecimalPlaces)
   }).unknown(true)
 })
   .min(1)
