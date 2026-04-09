@@ -250,7 +250,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(payload.prn.averagePricePerTonne).toBeCloseTo(5.56, 1)
       })
 
-      it.each([1576.12, 1576.1, 1576, 0])(
+      it.each([1576.12, 1576.1, 1576, 0, 0.07])(
         'returns 200 when prn-revenue is %s',
         async (prnRevenue) => {
           const { server, organisationId, registrationId } =

@@ -199,6 +199,42 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     })
 
+    it('returns 400 when accredited registration uses quarterly cadence', async () => {
+      const { server, organisationId, registrationId } = await createServer({
+        wasteProcessingType: 'reprocessor',
+        accreditationId: new ObjectId().toString()
+      })
+
+      const response = await makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2025,
+        'quarterly',
+        1
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+    })
+
+    it('returns 400 when registered-only registration uses monthly cadence', async () => {
+      const { server, organisationId, registrationId } = await createServer({
+        wasteProcessingType: 'reprocessor',
+        accreditationId: undefined
+      })
+
+      const response = await makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2025,
+        'monthly',
+        1
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+    })
+
     it('returns 422 for invalid cadence', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
@@ -303,7 +339,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: makeUrl(org.id, registration.id, 2025, 'quarterly', 1),
+        url: makeUrl(org.id, registration.id, 2025, 'monthly', 1),
         ...asStandardUser({ linkedOrgId: org.id })
       })
 
