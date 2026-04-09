@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -17,7 +18,7 @@ const MAX_SUPPORTING_INFO_LENGTH = 2000
 
 const payloadSchema = Joi.object({
   supportingInformation: Joi.string().allow('').max(MAX_SUPPORTING_INFO_LENGTH),
-  prnRevenue: Joi.number().min(0),
+  prnRevenue: Joi.number().min(0).custom(maxTwoDecimalPlaces),
   freeTonnage: Joi.number().min(0),
   tonnageRecycled: Joi.number().min(0),
   tonnageNotRecycled: Joi.number().min(0)

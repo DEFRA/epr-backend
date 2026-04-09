@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js'
 import Joi from 'joi'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -34,9 +35,18 @@ export const userSummarySchema = Joi.object({
   position: Joi.string().optional()
 }).required()
 
+const TWO_DECIMAL_PLACES = 2
+
+export const maxTwoDecimalPlaces = (value, helpers) => {
+  if (new Decimal(value).decimalPlaces() > TWO_DECIMAL_PLACES) {
+    return helpers.error('number.maxDecimalPlaces')
+  }
+  return value
+}
+
 export const prnSchema = Joi.object({
   issuedTonnage: Joi.number().min(0).required(),
-  totalRevenue: Joi.number().min(0).allow(null),
+  totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
   freeTonnage: Joi.number().min(0).allow(null),
   averagePricePerTonne: Joi.number().min(0).allow(null)
 }).optional()

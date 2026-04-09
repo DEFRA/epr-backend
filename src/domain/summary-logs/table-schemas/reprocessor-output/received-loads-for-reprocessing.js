@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
+import { DROPDOWN_PLACEHOLDER, createDateFieldSchema } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
@@ -72,5 +72,9 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
    */
-  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
+  validationSchema: Joi.object({
+    [FIELDS.DATE_RECEIVED_FOR_REPROCESSING]: createDateFieldSchema()
+  })
+    .unknown(true)
+    .prefs({ abortEarly: false })
 }
