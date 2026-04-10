@@ -143,7 +143,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 42.21,
                 SUPPLIER_NAME: 'Grantham Waste',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -152,7 +152,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-02',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 38.04,
                 SUPPLIER_NAME: 'SUEZ recycling',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -231,7 +231,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 50,
                 SUPPLIER_NAME: 'In period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -240,7 +240,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-04-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-04',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 100,
                 SUPPLIER_NAME: 'Out of period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -273,7 +273,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 50,
                 SUPPLIER_NAME: 'Test',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -481,7 +481,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-01',
                 TONNAGE_RECEIVED_FOR_EXPORT: 50.25,
                 SUPPLIER_NAME: 'Grantham Waste',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -490,7 +490,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-02',
                 TONNAGE_RECEIVED_FOR_EXPORT: 30,
                 SUPPLIER_NAME: 'SUEZ recycling',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -575,7 +575,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-01',
                 TONNAGE_RECEIVED_FOR_EXPORT: 50,
                 SUPPLIER_NAME: 'In period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -584,7 +584,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-04-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-04',
                 TONNAGE_RECEIVED_FOR_EXPORT: 100,
                 SUPPLIER_NAME: 'Out of period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'

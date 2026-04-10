@@ -42,4 +42,37 @@ describe('#isDateInRange', () => {
       expect(isDateInRange('2026-01-01', start, end)).toBe(false)
     })
   })
+
+  describe('month-format dates (YYYY-MM)', () => {
+    it('returns true for first month of range', () => {
+      expect(isDateInRange('2025-01', start, end)).toBe(true)
+    })
+
+    it('returns true for middle month of range', () => {
+      expect(isDateInRange('2025-06', start, end)).toBe(true)
+    })
+
+    it('returns true for last month of range', () => {
+      expect(isDateInRange('2025-12', start, end)).toBe(true)
+    })
+
+    it('returns false for month before range', () => {
+      expect(isDateInRange('2024-12', start, end)).toBe(false)
+    })
+
+    it('returns false for month after range', () => {
+      expect(isDateInRange('2026-01', start, end)).toBe(false)
+    })
+
+    it('handles quarterly boundaries correctly', () => {
+      const q1Start = '2026-01-01'
+      const q1End = '2026-03-31'
+
+      expect(isDateInRange('2026-01', q1Start, q1End)).toBe(true)
+      expect(isDateInRange('2026-02', q1Start, q1End)).toBe(true)
+      expect(isDateInRange('2026-03', q1Start, q1End)).toBe(true)
+      expect(isDateInRange('2025-12', q1Start, q1End)).toBe(false)
+      expect(isDateInRange('2026-04', q1Start, q1End)).toBe(false)
+    })
+  })
 })

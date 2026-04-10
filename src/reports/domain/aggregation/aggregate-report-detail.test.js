@@ -7,7 +7,7 @@ import { aggregateReportDetail } from './aggregate-report-detail.js'
 const buildReceivedRecord = (overrides = {}) => ({
   type: WASTE_RECORD_TYPE.RECEIVED,
   data: {
-    MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+    MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
     TONNAGE_RECEIVED_FOR_RECYCLING: 50,
     SUPPLIER_NAME: 'Grantham Waste',
     ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
@@ -92,7 +92,7 @@ describe('#aggregateReportDetail', () => {
         buildReceivedRecord(),
         {
           ...buildReceivedRecord({
-            MONTH_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+            MONTH_RECEIVED_FOR_REPROCESSING: '2026-02',
             TONNAGE_RECEIVED_FOR_RECYCLING: 30
           }),
           versions: [
@@ -145,7 +145,7 @@ describe('#aggregateReportDetail', () => {
           TONNAGE_RECEIVED_FOR_RECYCLING: 42.21
         }),
         buildReceivedRecord({
-          MONTH_RECEIVED_FOR_REPROCESSING: '2026-03-01',
+          MONTH_RECEIVED_FOR_REPROCESSING: '2026-03',
           TONNAGE_RECEIVED_FOR_RECYCLING: 38.04
         })
       ]
@@ -161,7 +161,7 @@ describe('#aggregateReportDetail', () => {
           TONNAGE_RECEIVED_FOR_RECYCLING: 50
         }),
         buildReceivedRecord({
-          MONTH_RECEIVED_FOR_REPROCESSING: '2026-04-01',
+          MONTH_RECEIVED_FOR_REPROCESSING: '2026-04',
           TONNAGE_RECEIVED_FOR_RECYCLING: 100
         })
       ]
@@ -179,7 +179,7 @@ describe('#aggregateReportDetail', () => {
           TONNAGE_RECEIVED_FOR_RECYCLING: 42.21
         }),
         buildReceivedRecord({
-          MONTH_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+          MONTH_RECEIVED_FOR_REPROCESSING: '2026-02',
           SUPPLIER_NAME: 'SUEZ recycling',
           ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter',
           TONNAGE_RECEIVED_FOR_RECYCLING: 38.04
@@ -412,7 +412,7 @@ describe('#aggregateReportDetail', () => {
     const buildExporterReceivedRecord = (overrides = {}) => ({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
-        MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+        MONTH_RECEIVED_FOR_EXPORT: '2026-01',
         TONNAGE_RECEIVED_FOR_EXPORT: 50,
         SUPPLIER_NAME: 'Grantham Waste',
         ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler',
@@ -447,7 +447,7 @@ describe('#aggregateReportDetail', () => {
       const records = [
         buildExporterReceivedRecord({ TONNAGE_RECEIVED_FOR_EXPORT: 42.21 }),
         buildExporterReceivedRecord({
-          MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
+          MONTH_RECEIVED_FOR_EXPORT: '2026-02',
           TONNAGE_RECEIVED_FOR_EXPORT: 38.04
         })
       ]
@@ -1160,7 +1160,7 @@ describe('#aggregateReportDetail', () => {
           TONNAGE_RECEIVED_FOR_RECYCLING: 'not a number'
         }),
         buildReceivedRecord({
-          MONTH_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+          MONTH_RECEIVED_FOR_REPROCESSING: '2026-02',
           TONNAGE_RECEIVED_FOR_RECYCLING: 50
         })
       ]

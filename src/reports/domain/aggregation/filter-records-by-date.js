@@ -1,3 +1,5 @@
+import { YEAR_MONTH_LENGTH } from '#common/helpers/dates/year-month.js'
+
 /**
  * Returns true when value is a string containing a valid ISO date that falls
  * within [startDate, endDate] (both inclusive, compared lexicographically).
@@ -17,7 +19,11 @@ export function isDateInRange(value, startDate, endDate) {
     return false
   }
 
-  return date.localeCompare(startDate) >= 0 && date.localeCompare(endDate) <= 0
+  const normalised = date.length === YEAR_MONTH_LENGTH ? `${date}-01` : date
+  return (
+    normalised.localeCompare(startDate) >= 0 &&
+    normalised.localeCompare(endDate) <= 0
+  )
 }
 
 /**
