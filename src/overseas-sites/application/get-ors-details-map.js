@@ -6,7 +6,7 @@
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
- * @returns {Promise<Map<string, { siteName: string|null, country: string|null }>>}
+ * @returns {Promise<Map<string, { siteName: string|null, country: string|null, validFrom: string|null }>>}
  */
 export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
   if (!overseasSitesRepository) {
@@ -27,7 +27,11 @@ export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
       const site = sitesById.get(overseasSiteId)
       return [
         orsKey,
-        { siteName: site?.name ?? null, country: site?.country ?? null }
+        {
+          siteName: site?.name ?? null,
+          country: site?.country ?? null,
+          validFrom: site?.validFrom ?? null
+        }
       ]
     })
   )
