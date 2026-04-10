@@ -2,6 +2,10 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -42,7 +46,7 @@ export const reportsStatus = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { reportsRepository, params } = request
+    const { reportsRepository, params, logger } = request
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
@@ -90,6 +94,14 @@ export const reportsStatus = {
       reportId: report.id,
       previous,
       next: updated
+    })
+
+    logger.info({
+      message: `Report ${report.id} status changed: ${previous.status.currentStatus} → ${status}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+      }
     })
 
     return h
