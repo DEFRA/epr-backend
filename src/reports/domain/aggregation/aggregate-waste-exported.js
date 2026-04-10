@@ -8,6 +8,7 @@ import { groupAndSum, isYes } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isDateInRange } from './filter-records-by-date.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
+import { OPERATOR_CATEGORY } from '../operator-category.js'
 
 const ORS_ID_DIGITS = 3
 const ZERO = '0'
@@ -19,8 +20,6 @@ const summariseTonnage = (grouped) =>
     ...rest,
     tonnageExported: roundToTwoDecimalPlaces(tonnageDecimal)
   }))
-
-const REGISTERED_ONLY = 'EXPORTER_REGISTERED_ONLY'
 
 const generateOverseasSiteSummaries = (
   wasteExportedRecords,
@@ -38,7 +37,7 @@ const generateOverseasSiteSummaries = (
   }
 
   const isApproved = ({ data }) => {
-    if (operatorCategory === REGISTERED_ONLY) {
+    if (operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY) {
       return false
     }
     const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
