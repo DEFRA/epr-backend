@@ -653,13 +653,13 @@ describe('#aggregateReportDetail', () => {
 
       expect(result.exportActivity.overseasSites).toStrictEqual([
         {
-          orsId: 124,
+          orsId: '124',
           siteName: 'EuroPlast GmbH',
           country: 'Germany',
           tonnageExported: 5
         },
         {
-          orsId: 99,
+          orsId: '099',
           siteName: 'RecyclePlast SA',
           country: 'France',
           tonnageExported: 3

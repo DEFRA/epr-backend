@@ -36,11 +36,12 @@ const generateOverseasSiteSummaries = (wasteExportedRecords, orsDetailsMap) => {
   const overseasSites = summariseTonnage(
     groupAndSum(
       recordsWithOrsId.filter(hasApprovedSite),
-      ({ data }) => data.OSR_ID,
+      ({ data }) => zeroPadOrsId(data.OSR_ID),
       ({ data }) => {
-        const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
+        const orsId = zeroPadOrsId(data.OSR_ID)
+        const details = orsDetailsMap.get(orsId)
         return {
-          orsId: data.OSR_ID,
+          orsId,
           siteName: details.siteName,
           country: details.country
         }
@@ -52,8 +53,8 @@ const generateOverseasSiteSummaries = (wasteExportedRecords, orsDetailsMap) => {
   const unapprovedOverseasSites = summariseTonnage(
     groupAndSum(
       recordsWithOrsId.filter((record) => !hasApprovedSite(record)),
-      ({ data }) => data.OSR_ID,
-      ({ data }) => ({ orsId: data.OSR_ID }),
+      ({ data }) => zeroPadOrsId(data.OSR_ID),
+      ({ data }) => ({ orsId: zeroPadOrsId(data.OSR_ID) }),
       getTonnage
     )
   )

@@ -43,6 +43,19 @@ export const testFindReportByIdBehaviour = (it) => {
           lastUploadedAt: expect.any(String),
           summaryLogId: expect.any(String)
         },
+        prn: null,
+        recyclingActivity: {
+          suppliers: [],
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: []
+        },
         startDate: DEFAULT_REPORT_START_DATE,
         endDate: DEFAULT_REPORT_END_DATE,
         dueDate: DEFAULT_REPORT_DUE_DATE,

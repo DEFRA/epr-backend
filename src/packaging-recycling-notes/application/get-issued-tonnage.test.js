@@ -70,22 +70,22 @@ async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
 }
 
 describe('getIssuedTonnage', () => {
-  it('returns undefined when accreditationId is absent', async () => {
+  it('returns null when accreditationId is absent', async () => {
     const result = await getIssuedTonnage(createRepo(), {
       ...defaultParams,
       accreditationId: undefined
     })
 
-    expect(result).toBeUndefined()
+    expect(result).toBeNull()
   })
 
-  it('returns undefined when accreditationId is null', async () => {
+  it('returns null when accreditationId is null', async () => {
     const result = await getIssuedTonnage(createRepo(), {
       ...defaultParams,
       accreditationId: null
     })
 
-    expect(result).toBeUndefined()
+    expect(result).toBeNull()
   })
 
   it('returns issuedTonnage for qualifying PRNs', async () => {
