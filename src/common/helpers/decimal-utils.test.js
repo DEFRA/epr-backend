@@ -1,17 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import Decimal from 'decimal.js'
 import { Decimal128 } from 'mongodb'
 import {
-  toDecimal,
-  toNumber,
-  roundToTwoDecimalPlaces,
-  add,
-  subtract,
-  equals,
   abs,
+  add,
+  equals,
   greaterThan,
   isZero,
-  isNegative
+  roundToTwoDecimalPlaces,
+  subtract,
+  toDecimal,
+  toNumber
 } from '#common/helpers/decimal-utils.js'
 
 describe('decimal-utils', () => {
@@ -368,28 +367,6 @@ describe('decimal-utils', () => {
     it('should handle result of addition to zero', () => {
       const result = add(5, -5)
       expect(isZero(result)).toBe(true)
-    })
-  })
-
-  describe('isNegative', () => {
-    it('should return true for a negative number', () => {
-      expect(isNegative(-1)).toBe(true)
-    })
-
-    it('should return true for a negative string', () => {
-      expect(isNegative('-0.01')).toBe(true)
-    })
-
-    it('should return true for a negative Decimal', () => {
-      expect(isNegative(new Decimal(-42.5))).toBe(true)
-    })
-
-    it('should return false for zero', () => {
-      expect(isNegative(0)).toBe(false)
-    })
-
-    it('should return false for a positive number', () => {
-      expect(isNegative(1)).toBe(false)
     })
   })
 

@@ -1,13 +1,12 @@
 import {
   add,
-  subtract,
   toDecimal,
   roundToTwoDecimalPlaces,
-  toNumber,
-  isNegative
+  toNumber
 } from '#common/helpers/decimal-utils.js'
 import { groupAndSum, isYes } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { isDateInRange } from './filter-records-by-date.js'
 
 const ORS_ID_DIGITS = 3
 const ZERO = '0'
@@ -74,31 +73,40 @@ function getTonnageRepatriated(repatriatedRecords) {
   )
 }
 
-function calculateTonnageNotExported(
-  totalTonnageReceived,
-  totalTonnageExportedDecimal
+function calculateTonnageReceivedNotExported(
+  wasteReceivedRecords,
+  startDate,
+  endDate
 ) {
-  const receivedMinusExported = subtract(
-    toDecimal(totalTonnageReceived),
-    totalTonnageExportedDecimal
-  )
   return roundToTwoDecimalPlaces(
-    isNegative(receivedMinusExported) ? toDecimal(0) : receivedMinusExported
+    wasteReceivedRecords
+      .filter(
+        ({ data }) => !isDateInRange(data.DATE_OF_EXPORT, startDate, endDate)
+      )
+      .reduce(
+        (sum, { data }) => add(sum, toNumber(data.TONNAGE_RECEIVED_FOR_EXPORT)),
+        toDecimal(0)
+      )
   )
 }
 
 /**
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteExportedRecords
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} repatriatedRecords
- * @param {number} totalTonnageReceived
- * @param {Map<string, { siteName: string|null, country: string|null }>} [orsDetailsMap]
+ * @param {object} params
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteExportedRecords
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.repatriatedRecords
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteReceivedRecords
+ * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
+ * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
+ * @param {Map<string, { siteName: string|null, country: string|null }>} [params.orsDetailsMap]
  */
-export function aggregateWasteExported(
+export function aggregateWasteExported({
   wasteExportedRecords,
   repatriatedRecords,
-  totalTonnageReceived,
+  wasteReceivedRecords,
+  startDate,
+  endDate,
   orsDetailsMap = new Map()
-) {
+}) {
   const exportedRecords = wasteExportedRecords.filter(
     ({ type }) => type === WASTE_RECORD_TYPE.EXPORTED
   )
@@ -150,9 +158,10 @@ export function aggregateWasteExported(
     overseasSites,
     unapprovedOverseasSites,
     totalTonnageExported,
-    tonnageReceivedNotExported: calculateTonnageNotExported(
-      totalTonnageReceived,
-      totalTonnageExportedDecimal
+    tonnageReceivedNotExported: calculateTonnageReceivedNotExported(
+      wasteReceivedRecords,
+      startDate,
+      endDate
     ),
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,
