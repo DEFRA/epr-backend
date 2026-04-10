@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { getOrsDetailsMap } from './get-ors-details-map.js'
 
 describe('getOrsDetailsMap', () => {
-  it('returns a map keyed by ORS key with siteName and country', async () => {
+  it('returns a map keyed by ORS key with siteName, country, and validFrom', async () => {
     const overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([
         {
@@ -85,7 +85,7 @@ describe('getOrsDetailsMap', () => {
     expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
   })
 
-  it('sets siteName and country to null when site is not found', async () => {
+  it('sets siteName, country, and validFrom to null when site is not found', async () => {
     const overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
     }
@@ -105,7 +105,7 @@ describe('getOrsDetailsMap', () => {
     })
   })
 
-  it('sets siteName and country to null when site fields are absent', async () => {
+  it('sets siteName, country, and validFrom to null when site fields are absent', async () => {
     const overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa' }])
     }

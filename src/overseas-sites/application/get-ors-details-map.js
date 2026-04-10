@@ -1,8 +1,8 @@
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 
 /**
- * Builds a map from ORS key (e.g. "120") to site name and country,
- * looked up from the overseas-sites repository.
+ * Builds a map from ORS key (e.g. "120") to site name, country, and
+ * valid-from date, looked up from the overseas-sites repository.
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
