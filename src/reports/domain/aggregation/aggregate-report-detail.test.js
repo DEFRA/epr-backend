@@ -475,7 +475,7 @@ describe('#aggregateReportDetail', () => {
       ])
     })
 
-    it('splits approved and unapproved ORS entries by whether a siteName is resolved', () => {
+    it('splits resolved and unresolved ORS entries by whether a siteName is resolved', () => {
       const records = [
         buildExportedRecord({
           OSR_ID: '001',
@@ -493,8 +493,15 @@ describe('#aggregateReportDetail', () => {
         })
       ]
       const orsDetailsMap = new Map([
-        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
-        ['096', { siteName: null, country: null }]
+        [
+          '001',
+          {
+            siteName: 'EuroPlast GmbH',
+            country: 'Germany',
+            validFrom: new Date('2025-01-01')
+          }
+        ],
+        ['096', { siteName: null, country: null, validFrom: null }]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -507,7 +514,8 @@ describe('#aggregateReportDetail', () => {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
           country: 'Germany',
-          tonnageExported: 5
+          tonnageExported: 5,
+          approved: false
         }
       ])
       expect(result.exportActivity.unapprovedOverseasSites).toStrictEqual([
@@ -564,8 +572,22 @@ describe('#aggregateReportDetail', () => {
         })
       ]
       const orsDetailsMap = new Map([
-        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
-        ['002', { siteName: 'RecyclePlast SA', country: 'France' }]
+        [
+          '001',
+          {
+            siteName: 'EuroPlast GmbH',
+            country: 'Germany',
+            validFrom: new Date('2025-01-01')
+          }
+        ],
+        [
+          '002',
+          {
+            siteName: 'RecyclePlast SA',
+            country: 'France',
+            validFrom: new Date('2025-01-01')
+          }
+        ]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -604,8 +626,22 @@ describe('#aggregateReportDetail', () => {
         })
       ]
       const orsDetailsMap = new Map([
-        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
-        ['096', { siteName: 'RecyclePlast SA', country: 'France' }]
+        [
+          '001',
+          {
+            siteName: 'EuroPlast GmbH',
+            country: 'Germany',
+            validFrom: new Date('2025-01-01')
+          }
+        ],
+        [
+          '096',
+          {
+            siteName: 'RecyclePlast SA',
+            country: 'France',
+            validFrom: new Date('2025-01-01')
+          }
+        ]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -618,13 +654,15 @@ describe('#aggregateReportDetail', () => {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
           country: 'Germany',
-          tonnageExported: 5
+          tonnageExported: 5,
+          approved: false
         },
         {
           orsId: '096',
           siteName: 'RecyclePlast SA',
           country: 'France',
-          tonnageExported: 3
+          tonnageExported: 3,
+          approved: false
         }
       ])
     })
@@ -642,8 +680,22 @@ describe('#aggregateReportDetail', () => {
         })
       ]
       const orsDetailsMap = new Map([
-        ['124', { siteName: 'EuroPlast GmbH', country: 'Germany' }],
-        ['099', { siteName: 'RecyclePlast SA', country: 'France' }]
+        [
+          '124',
+          {
+            siteName: 'EuroPlast GmbH',
+            country: 'Germany',
+            validFrom: new Date('2025-01-01')
+          }
+        ],
+        [
+          '099',
+          {
+            siteName: 'RecyclePlast SA',
+            country: 'France',
+            validFrom: new Date('2025-01-01')
+          }
+        ]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -656,18 +708,20 @@ describe('#aggregateReportDetail', () => {
           orsId: '124',
           siteName: 'EuroPlast GmbH',
           country: 'Germany',
-          tonnageExported: 5
+          tonnageExported: 5,
+          approved: false
         },
         {
           orsId: '099',
           siteName: 'RecyclePlast SA',
           country: 'France',
-          tonnageExported: 3
+          tonnageExported: 3,
+          approved: false
         }
       ])
     })
 
-    it('deduplicates overseas sites by OSR_ID', () => {
+    it('deduplicates overseas sites by OSR_ID and approval status', () => {
       const records = [
         buildExportedRecord({
           OSR_NAME: 'EuroPlast Recycling GmbH',
@@ -685,8 +739,22 @@ describe('#aggregateReportDetail', () => {
         })
       ]
       const orsDetailsMap = new Map([
-        ['001', { siteName: 'EuroPlast Recycling GmbH', country: 'Germany' }],
-        ['096', { siteName: 'RecyclePlast SA', country: 'France' }]
+        [
+          '001',
+          {
+            siteName: 'EuroPlast Recycling GmbH',
+            country: 'Germany',
+            validFrom: new Date('2025-01-01')
+          }
+        ],
+        [
+          '096',
+          {
+            siteName: 'RecyclePlast SA',
+            country: 'France',
+            validFrom: new Date('2025-01-01')
+          }
+        ]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -965,7 +1033,14 @@ describe('#aggregateReportDetail', () => {
         })
       ]
       const orsDetailsMap = new Map([
-        ['001', { siteName: 'EuroPlast GmbH', country: 'Germany' }]
+        [
+          '001',
+          {
+            siteName: 'EuroPlast GmbH',
+            country: 'Germany',
+            validFrom: new Date('2025-01-01')
+          }
+        ]
       ])
 
       const result = aggregateReportDetail(records, {
@@ -978,7 +1053,8 @@ describe('#aggregateReportDetail', () => {
           orsId: '001',
           siteName: 'EuroPlast GmbH',
           country: 'Germany',
-          tonnageExported: 48
+          tonnageExported: 48,
+          approved: true
         }
       ])
     })
