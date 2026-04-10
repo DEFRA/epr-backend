@@ -250,6 +250,52 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(payload.prn.averagePricePerTonne).toBeCloseTo(5.56, 1)
       })
 
+      it.each([1576.12, 1576.1, 1576, 0, 0.07])(
+        'returns 200 when prn-revenue is %s',
+        async (prnRevenue) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport(
+              {
+                wasteProcessingType: 'exporter',
+                accreditationId: new ObjectId().toString()
+              },
+              { prn: { issuedTonnage: 100 } }
+            )
+
+          const response = await patchReport(
+            server,
+            organisationId,
+            registrationId,
+            { prnRevenue }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.OK)
+        }
+      )
+
+      it.each([1576.123, 0.001, 99.999])(
+        'returns 422 when prn-revenue is %s (more than 2 decimal places)',
+        async (prnRevenue) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport(
+              {
+                wasteProcessingType: 'exporter',
+                accreditationId: new ObjectId().toString()
+              },
+              { prn: { issuedTonnage: 100 } }
+            )
+
+          const response = await patchReport(
+            server,
+            organisationId,
+            registrationId,
+            { prnRevenue }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        }
+      )
+
       it('returns 422 when prnRevenue is negative', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
@@ -262,6 +308,26 @@ describe(`PATCH ${reportsPatchPath}`, () => {
           organisationId,
           registrationId,
           { prnRevenue: -1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when free-tonnage is not a whole number', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { freeTonnage: 10.5 }
         )
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -450,6 +516,46 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         const payload = JSON.parse(response.payload)
         expect(payload.recyclingActivity.tonnageRecycled).toBe(50)
       })
+
+      it.each([100.123, 0.001, 20.999])(
+        'returns 422 when tonnage-recycled is %s (more than 2 decimal places)',
+        async (tonnageRecycled) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport({
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            })
+
+          const response = await patchReport(
+            server,
+            organisationId,
+            registrationId,
+            { tonnageRecycled }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        }
+      )
+
+      it.each([20.123, 0.001, 5.999])(
+        'returns 422 when tonnage-not-recycled is %s (more than 2 decimal places)',
+        async (tonnageNotRecycled) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport({
+              wasteProcessingType: 'reprocessor',
+              accreditationId: undefined
+            })
+
+          const response = await patchReport(
+            server,
+            organisationId,
+            registrationId,
+            { tonnageNotRecycled }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        }
+      )
 
       it('returns 422 when tonnageRecycled is negative', async () => {
         const { server, organisationId, registrationId } =

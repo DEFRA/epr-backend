@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
+import { aggregateWasteExported } from '#root/reports/domain/aggregation/aggregate-waste-exported.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import wasteRecordsAccredited from './test-data/exporter-accredited.json'
 import wasteRecordsRegisteredOnly from './test-data/exporter-reg-only.json'
+
+const buildExportedRecord = (tonnage) => ({
+  type: WASTE_RECORD_TYPE.EXPORTED,
+  data: {
+    TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
+    WAS_THE_WASTE_REFUSED: 'No',
+    WAS_THE_WASTE_STOPPED: 'No'
+  }
+})
 
 describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', () => {
   it('aggregates in-period records into the full report detail', () => {
@@ -56,9 +67,10 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [
-          { orsId: 512, siteName: null, country: null, tonnageExported: 23.41 },
-          { orsId: 124, siteName: null, country: null, tonnageExported: 65.62 }
+        overseasSites: [],
+        unapprovedOverseasSites: [
+          { orsId: 512, tonnageExported: 23.41 },
+          { orsId: 124, tonnageExported: 65.62 }
         ],
         totalTonnageExported: 89.03,
         tonnageReceivedNotExported: 57.67,
@@ -112,6 +124,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
       },
       exportActivity: {
         overseasSites: [],
+        unapprovedOverseasSites: [],
         totalTonnageExported: 0,
         tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 0,
@@ -189,11 +202,12 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [
-          { orsId: 565, siteName: null, country: null, tonnageExported: 2.99 },
-          { orsId: 297, siteName: null, country: null, tonnageExported: 3.02 },
-          { orsId: 893, siteName: null, country: null, tonnageExported: 1.26 },
-          { orsId: 143, siteName: null, country: null, tonnageExported: 3.07 }
+        overseasSites: [],
+        unapprovedOverseasSites: [
+          { orsId: 565, tonnageExported: 2.99 },
+          { orsId: 297, tonnageExported: 3.02 },
+          { orsId: 893, tonnageExported: 1.26 },
+          { orsId: 143, tonnageExported: 3.07 }
         ],
         totalTonnageExported: 10.33,
         tonnageReceivedNotExported: 73.76,
@@ -234,5 +248,25 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
         ]
       }
     })
+  })
+})
+
+describe('#aggregateWasteExported — tonnageReceivedNotExported', () => {
+  it('returns zero when exported tonnage exceeds received tonnage', () => {
+    const result = aggregateWasteExported([buildExportedRecord(80)], [], 50)
+
+    expect(result.tonnageReceivedNotExported).toBe(0)
+  })
+
+  it('returns zero when exported tonnage equals received tonnage', () => {
+    const result = aggregateWasteExported([buildExportedRecord(50)], [], 50)
+
+    expect(result.tonnageReceivedNotExported).toBe(0)
+  })
+
+  it('returns the difference when received tonnage exceeds exported tonnage', () => {
+    const result = aggregateWasteExported([buildExportedRecord(30)], [], 50)
+
+    expect(result.tonnageReceivedNotExported).toBe(20)
   })
 })

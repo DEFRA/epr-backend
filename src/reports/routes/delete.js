@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import Boom from '@hapi/boom'
-import { auditReportStatusTransition } from '#reports/application/audit.js'
+import { auditReportDelete } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
@@ -54,10 +54,7 @@ export const reportsDelete = {
       )
     }
 
-    const previous = {
-      status: report.status.currentStatus,
-      version: report.version
-    }
+    const previous = await reportsRepository.findReportById(report.id)
 
     await reportsRepository.deleteReport({
       organisationId,
@@ -69,14 +66,15 @@ export const reportsDelete = {
       changedBy: extractChangedBy(request.auth.credentials)
     })
 
-    await auditReportStatusTransition(request, {
+    await auditReportDelete(request, {
       organisationId,
+      registrationId,
+      year,
+      cadence,
+      period,
+      submissionNumber: previous.submissionNumber,
       reportId: report.id,
-      previous,
-      next: {
-        status: 'deleted',
-        version: report.version + 1
-      }
+      previous
     })
 
     return h.response().code(StatusCodes.NO_CONTENT)

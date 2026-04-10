@@ -109,5 +109,36 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
       const { error } = validationSchema.validate({ UNKNOWN_FIELD: 'value' })
       expect(error).toBeUndefined()
     })
+
+    describe('DATE_RECEIVED_FOR_REPROCESSING', () => {
+      it('accepts a valid ISO date string', () => {
+        const { error } = validationSchema.validate({
+          DATE_RECEIVED_FOR_REPROCESSING: '2026-01-21'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts a Date object and coerces to YYYY-MM-DD', () => {
+        const { error, value } = validationSchema.validate({
+          DATE_RECEIVED_FOR_REPROCESSING: new Date('2026-01-21')
+        })
+        expect(error).toBeUndefined()
+        expect(value.DATE_RECEIVED_FOR_REPROCESSING).toBe('2026-01-21')
+      })
+
+      it('rejects a non-ISO date string (M/D/YYYY)', () => {
+        const { error } = validationSchema.validate({
+          DATE_RECEIVED_FOR_REPROCESSING: '1/21/2026'
+        })
+        expect(error).toBeDefined()
+      })
+
+      it('rejects an invalid date string', () => {
+        const { error } = validationSchema.validate({
+          DATE_RECEIVED_FOR_REPROCESSING: 'not-a-date'
+        })
+        expect(error).toBeDefined()
+      })
+    })
   })
 })
