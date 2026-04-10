@@ -17,7 +17,11 @@ export function isDateInRange(value, startDate, endDate) {
     return false
   }
 
-  return date.localeCompare(startDate) >= 0 && date.localeCompare(endDate) <= 0
+  const normalised = date.length === 7 ? `${date}-01` : date
+  return (
+    normalised.localeCompare(startDate) >= 0 &&
+    normalised.localeCompare(endDate) <= 0
+  )
 }
 
 /**
