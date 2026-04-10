@@ -136,12 +136,14 @@ export function aggregateReportDetail(
     source: { summaryLogId, lastUploadedAt },
     recyclingActivity,
     ...(wasteExportedDateField && {
-      exportActivity: aggregateWasteExported(
+      exportActivity: aggregateWasteExported({
         wasteExportedRecords,
-        wasteRepatriatedRecords,
-        recyclingActivity.totalTonnageReceived,
+        repatriatedRecords: wasteRepatriatedRecords,
+        wasteReceivedRecords,
+        startDate,
+        endDate,
         orsDetailsMap
-      )
+      })
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords)
   }

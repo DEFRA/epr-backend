@@ -982,6 +982,74 @@ describe('#aggregateReportDetail', () => {
         }
       ])
     })
+
+    describe('tonnageReceivedNotExported', () => {
+      it('excludes records whose DATE_OF_EXPORT falls within the same period', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+            DATE_OF_EXPORT: '2026-02-20',
+            TONNAGE_RECEIVED_FOR_EXPORT: 50
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity.tonnageReceivedNotExported).toBe(0)
+      })
+
+      it('includes records whose DATE_OF_EXPORT is after the period', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+            DATE_OF_EXPORT: '2026-03-10',
+            TONNAGE_RECEIVED_FOR_EXPORT: 37.5
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity.tonnageReceivedNotExported).toBe(37.5)
+      })
+
+      it('includes records with no DATE_OF_EXPORT', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+            DATE_OF_EXPORT: null,
+            TONNAGE_RECEIVED_FOR_EXPORT: 25
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity.tonnageReceivedNotExported).toBe(25)
+      })
+
+      it('sums only records not exported within the period', () => {
+        const records = [
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-05',
+            DATE_OF_EXPORT: '2026-02-20',
+            TONNAGE_RECEIVED_FOR_EXPORT: 30
+          }),
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-10',
+            DATE_OF_EXPORT: '2026-03-05',
+            TONNAGE_RECEIVED_FOR_EXPORT: 20
+          }),
+          buildAccreditedExportedRecord({
+            DATE_RECEIVED_FOR_EXPORT: '2026-02-15',
+            DATE_OF_EXPORT: null,
+            TONNAGE_RECEIVED_FOR_EXPORT: 10
+          })
+        ]
+
+        const result = aggregateReportDetail(records, accreditedExporterArgs)
+
+        expect(result.exportActivity.tonnageReceivedNotExported).toBe(30)
+      })
+    })
   })
 
   describe('unvalidated data (registered-only validation is placeholder)', () => {
