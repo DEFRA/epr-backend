@@ -206,7 +206,7 @@ export async function fetchOrGenerateReportForPeriod({
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | undefined }>}
+ * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
   packagingRecyclingNotesRepository,

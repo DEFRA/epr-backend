@@ -103,7 +103,7 @@ function buildUpdateFields(payload, report) {
 
   if (tonnageRecycled !== undefined || tonnageNotRecycled !== undefined) {
     fields.recyclingActivity = {
-      ...(report.recyclingActivity || {}),
+      ...report.recyclingActivity,
       ...(tonnageRecycled !== undefined && { tonnageRecycled }),
       ...(tonnageNotRecycled !== undefined && { tonnageNotRecycled })
     }

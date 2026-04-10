@@ -48,6 +48,19 @@ export const testCreateReportBehaviour = (it) => {
           lastUploadedAt: expect.any(String),
           summaryLogId: expect.any(String)
         },
+        prn: null,
+        recyclingActivity: {
+          suppliers: [],
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: []
+        },
         material: 'plastic',
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         siteAddress: '1 Recycling Lane',

@@ -14,12 +14,12 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
  *
  * @param {import('../repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {GetIssuedTonnageParams} params
- * @returns {Promise<{ issuedTonnage: number } | undefined>}
+ * @returns {Promise<{ issuedTonnage: number } | null>}
  */
 export async function getIssuedTonnage(prnRepository, params) {
   const { accreditationId, startDate, endDate } = params
   if (!accreditationId) {
-    return undefined
+    return null
   }
   const start = new Date(startDate + 'T00:00:00.000Z')
   const end = new Date(endDate + 'T23:59:59.999Z')

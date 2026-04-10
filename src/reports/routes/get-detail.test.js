@@ -919,6 +919,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               }
             ]
           },
+          prn: null,
           source: {
             summaryLogId: 'sl-1',
             lastUploadedAt: '2026-04-01T21:22:28.351Z'

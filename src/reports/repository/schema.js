@@ -51,15 +51,73 @@ export const prnSchema = Joi.object({
   averagePricePerTonne: Joi.number().min(0).allow(null)
 }).optional()
 
+const supplierSchema = Joi.object({
+  supplierName: Joi.string().allow(null).optional(),
+  facilityType: Joi.string().allow(null).optional(),
+  supplierAddress: Joi.string().allow(null).optional(),
+  supplierPhone: Joi.string().allow(null).optional(),
+  supplierEmail: Joi.string().allow(null).optional(),
+  tonnageReceived: Joi.number().min(0).required()
+})
+
+const recyclingActivitySchema = Joi.object({
+  suppliers: Joi.array().items(supplierSchema).required(),
+  totalTonnageReceived: Joi.number().min(0).required(),
+  tonnageRecycled: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
+  tonnageNotRecycled: Joi.number()
+    .min(0)
+    .allow(null)
+    .custom(maxTwoDecimalPlaces)
+}).required()
+
+const overseasSiteSchema = Joi.object({
+  orsId: Joi.string().required(),
+  siteName: Joi.string().allow(null).required(),
+  country: Joi.string().allow(null).required(),
+  tonnageExported: Joi.number().min(0).required()
+})
+
+const unapprovedOverseasSiteSchema = Joi.object({
+  orsId: Joi.string().required(),
+  tonnageExported: Joi.number().min(0).required()
+})
+
+const exportActivitySchema = Joi.object({
+  overseasSites: Joi.array().items(overseasSiteSchema).required(),
+  unapprovedOverseasSites: Joi.array()
+    .items(unapprovedOverseasSiteSchema)
+    .required(),
+  totalTonnageExported: Joi.number().min(0).required(),
+  tonnageReceivedNotExported: Joi.number().min(0).required(),
+  tonnageRefusedAtDestination: Joi.number().min(0).required(),
+  tonnageStoppedDuringExport: Joi.number().min(0).required(),
+  totalTonnageRefusedOrStopped: Joi.number().min(0).required(),
+  tonnageRepatriated: Joi.number().min(0).required()
+}).optional()
+
+const finalDestinationSchema = Joi.object({
+  recipientName: Joi.string().allow(null).optional(),
+  facilityType: Joi.string().allow(null).optional(),
+  address: Joi.string().allow(null).optional(),
+  tonnageSentOn: Joi.number().min(0).required()
+})
+
+const wasteSentSchema = Joi.object({
+  tonnageSentToReprocessor: Joi.number().min(0).required(),
+  tonnageSentToExporter: Joi.number().min(0).required(),
+  tonnageSentToAnotherSite: Joi.number().min(0).required(),
+  finalDestinations: Joi.array().items(finalDestinationSchema).required()
+}).required()
+
 const reportDataFieldsSchema = {
   source: Joi.object({
     summaryLogId: Joi.string().allow(null),
     lastUploadedAt: Joi.string().isoDate().allow(null)
   }).required(),
-  recyclingActivity: Joi.object().optional(),
-  exportActivity: Joi.object().optional(),
-  wasteSent: Joi.object().optional(),
-  prn: prnSchema,
+  recyclingActivity: recyclingActivitySchema,
+  exportActivity: exportActivitySchema,
+  wasteSent: wasteSentSchema,
+  prn: prnSchema.allow(null).required(),
   supportingInformation: Joi.string().optional()
 }
 
