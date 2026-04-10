@@ -19,7 +19,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 
 /**
  * @typedef {Object} AggregatedExportActivity
- * @property {Array<{orsId: string, siteName: string, country: string|null, tonnageExported: number}>} overseasSites
+ * @property {Array<{orsId: string, siteName: string, country: string|null, tonnageExported: number, approved: boolean}>} overseasSites
  * @property {Array<{orsId: string, tonnageExported: number}>} unapprovedOverseasSites
  * @property {number} totalTonnageExported
  * @property {number} tonnageReceivedNotExported
@@ -62,7 +62,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
- * @param {Map<string, {siteName: string|null, country: string|null}>} [options.orsDetailsMap]
+ * @param {Map<string, {siteName: string|null, country: string|null, validFrom: Date|null}>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(
@@ -142,7 +142,8 @@ export function aggregateReportDetail(
         wasteReceivedRecords,
         startDate,
         endDate,
-        orsDetailsMap
+        orsDetailsMap,
+        operatorCategory
       })
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords)

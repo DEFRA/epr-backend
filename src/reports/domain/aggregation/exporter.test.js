@@ -5,12 +5,32 @@ import wasteRecordsAccredited from './test-data/exporter-accredited.json'
 import wasteRecordsRegisteredOnly from './test-data/exporter-reg-only.json'
 
 describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', () => {
-  it('aggregates in-period records into the full report detail', () => {
+  const orsDetailsMap = new Map([
+    [
+      '512',
+      {
+        siteName: 'EuroPaper GmbH',
+        country: 'DE',
+        validFrom: new Date('2026-01-15')
+      }
+    ],
+    [
+      '124',
+      {
+        siteName: 'RecycleFrance SA',
+        country: 'FR',
+        validFrom: new Date('2026-01-25')
+      }
+    ]
+  ])
+
+  it('aggregates in-period records with per-row approval status', () => {
     const result = aggregateReportDetail(wasteRecordsAccredited, {
       operatorCategory: 'EXPORTER',
       cadence: 'monthly',
       year: 2026,
-      period: 1
+      period: 1,
+      orsDetailsMap
     })
 
     expect(result).toEqual({
@@ -56,11 +76,30 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [],
-        unapprovedOverseasSites: [
-          { orsId: '512', tonnageExported: 23.41 },
-          { orsId: '124', tonnageExported: 65.62 }
+        overseasSites: [
+          {
+            orsId: '512',
+            siteName: 'EuroPaper GmbH',
+            country: 'DE',
+            tonnageExported: 23.41,
+            approved: true
+          },
+          {
+            orsId: '124',
+            siteName: 'RecycleFrance SA',
+            country: 'FR',
+            tonnageExported: 15.62,
+            approved: false
+          },
+          {
+            orsId: '124',
+            siteName: 'RecycleFrance SA',
+            country: 'FR',
+            tonnageExported: 50,
+            approved: true
+          }
         ],
+        unapprovedOverseasSites: [],
         totalTonnageExported: 89.03,
         tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 50,
@@ -132,12 +171,32 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
 })
 
 describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026', () => {
-  it('aggregates in-period records into the full report detail', () => {
+  const orsDetailsMap = new Map([
+    [
+      '565',
+      {
+        siteName: 'RegSite Alpha',
+        country: 'NL',
+        validFrom: new Date('2025-01-01')
+      }
+    ],
+    [
+      '297',
+      {
+        siteName: 'RegSite Beta',
+        country: 'BE',
+        validFrom: new Date('2025-06-01')
+      }
+    ]
+  ])
+
+  it('aggregates in-period records with approved always false for registered-only', () => {
     const result = aggregateReportDetail(wasteRecordsRegisteredOnly, {
       operatorCategory: 'EXPORTER_REGISTERED_ONLY',
       cadence: 'quarterly',
       year: 2026,
-      period: 1
+      period: 1,
+      orsDetailsMap
     })
 
     expect(result).toEqual({
@@ -191,10 +250,23 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [],
+        overseasSites: [
+          {
+            orsId: '565',
+            siteName: 'RegSite Alpha',
+            country: 'NL',
+            tonnageExported: 2.99,
+            approved: false
+          },
+          {
+            orsId: '297',
+            siteName: 'RegSite Beta',
+            country: 'BE',
+            tonnageExported: 3.02,
+            approved: false
+          }
+        ],
         unapprovedOverseasSites: [
-          { orsId: '565', tonnageExported: 2.99 },
-          { orsId: '297', tonnageExported: 3.02 },
           { orsId: '893', tonnageExported: 1.26 },
           { orsId: '143', tonnageExported: 3.07 }
         ],
