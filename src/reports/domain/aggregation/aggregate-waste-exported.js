@@ -98,7 +98,7 @@ function calculateTonnageReceivedNotExported(
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
- * @param {Map<string, { siteName: string|null, country: string|null, validFrom: string|null }>} [params.orsDetailsMap]
+ * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
  */
 export function aggregateWasteExported({
   wasteExportedRecords,

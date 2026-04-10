@@ -62,7 +62,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @param {string} options.cadence - Cadence key ('monthly' or 'quarterly')
  * @param {number} options.year
  * @param {number} options.period
- * @param {Map<string, {siteName: string|null, country: string|null, validFrom: string|null}>} [options.orsDetailsMap]
+ * @param {Map<string, {siteName: string|null, country: string|null, validFrom: Date|null}>} [options.orsDetailsMap]
  * @returns {AggregatedReportDetail}
  */
 export function aggregateReportDetail(

@@ -9,13 +9,13 @@ describe('getOrsDetailsMap', () => {
           id: 'site-aaa',
           name: 'EuroPlast GmbH',
           country: 'Germany',
-          validFrom: '2025-01-15'
+          validFrom: new Date('2025-01-15')
         },
         {
           id: 'site-bbb',
           name: 'RecyclePlast SA',
           country: 'France',
-          validFrom: '2024-06-01'
+          validFrom: new Date('2024-06-01')
         }
       ])
     }
@@ -33,12 +33,12 @@ describe('getOrsDetailsMap', () => {
     expect(result.get('ORS_1')).toStrictEqual({
       siteName: 'EuroPlast GmbH',
       country: 'Germany',
-      validFrom: '2025-01-15'
+      validFrom: new Date('2025-01-15')
     })
     expect(result.get('ORS_2')).toStrictEqual({
       siteName: 'RecyclePlast SA',
       country: 'France',
-      validFrom: '2024-06-01'
+      validFrom: new Date('2024-06-01')
     })
     expect(overseasSitesRepository.findByIds).toHaveBeenCalledWith([
       'site-aaa',
