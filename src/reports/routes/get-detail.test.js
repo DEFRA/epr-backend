@@ -513,7 +513,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
       })
 
-      it('aggregates waste exported with overseas site details', async () => {
+      it('routes exported records to unapprovedOverseasSites when overseas-sites repo is unavailable', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',
@@ -558,20 +558,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.exportActivity.totalTonnageExported).toBe(11.47)
-        expect(payload.exportActivity.overseasSites).toHaveLength(2)
-        expect(payload.exportActivity.overseasSites).toStrictEqual([
-          {
-            country: null,
-            orsId: '001',
-            siteName: null,
-            tonnageExported: 8.47
-          },
-          {
-            country: null,
-            orsId: '096',
-            siteName: null,
-            tonnageExported: 3
-          }
+        expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([
+          { orsId: '001', tonnageExported: 8.47 },
+          { orsId: '096', tonnageExported: 3 }
         ])
       })
 
@@ -635,6 +625,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(payload.exportActivity.totalTonnageExported).toBe(0)
         expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([])
         expect(
           payload.wasteSent.tonnageSentToReprocessor +
             payload.wasteSent.tonnageSentToExporter +
@@ -723,7 +714,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         ])
       })
 
-      it('aggregates waste exported with overseas site details', async () => {
+      it('routes exported records to unapprovedOverseasSites when overseas-sites repo is unavailable', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',
@@ -764,9 +755,11 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.exportActivity.totalTonnageExported).toBe(11.5)
-        expect(payload.exportActivity.overseasSites).toHaveLength(2)
-        expect(payload.exportActivity.overseasSites[0].orsId).toBe('001')
-        expect(payload.exportActivity.overseasSites[0].siteName).toBeNull()
+        expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([
+          { orsId: '001', tonnageExported: 5 },
+          { orsId: '096', tonnageExported: 6.5 }
+        ])
       })
 
       it('filters waste received and exported by different date fields', async () => {
@@ -837,6 +830,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(payload.exportActivity.totalTonnageExported).toBe(0)
         expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([])
         expect(
           payload.wasteSent.tonnageSentToReprocessor +
             payload.wasteSent.tonnageSentToExporter +
