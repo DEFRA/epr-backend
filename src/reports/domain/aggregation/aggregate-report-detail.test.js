@@ -208,6 +208,31 @@ describe('#aggregateReportDetail', () => {
       ])
     })
 
+    it('coerces a numeric SUPPLIER_PHONE_NUMBER to a string', () => {
+      const records = [
+        buildReceivedRecord({
+          SUPPLIER_PHONE_NUMBER: 1234567890,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 10
+        })
+      ]
+
+      const result = aggregateReportDetail(records, defaultArgs)
+
+      expect(result.recyclingActivity.suppliers[0].supplierPhone).toBe(
+        '1234567890'
+      )
+    })
+
+    it('sets supplierPhone to null when SUPPLIER_PHONE_NUMBER is absent', () => {
+      const records = [
+        buildReceivedRecord({ TONNAGE_RECEIVED_FOR_RECYCLING: 10 })
+      ]
+
+      const result = aggregateReportDetail(records, defaultArgs)
+
+      expect(result.recyclingActivity.suppliers[0].supplierPhone).toBeNull()
+    })
+
     it('only includes received records in waste received totals', () => {
       const records = [
         buildReceivedRecord({ TONNAGE_RECEIVED_FOR_RECYCLING: 50 }),
