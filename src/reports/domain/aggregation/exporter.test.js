@@ -67,9 +67,10 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [
-          { orsId: 512, siteName: null, country: null, tonnageExported: 23.41 },
-          { orsId: 124, siteName: null, country: null, tonnageExported: 65.62 }
+        overseasSites: [],
+        unapprovedOverseasSites: [
+          { orsId: 512, tonnageExported: 23.41 },
+          { orsId: 124, tonnageExported: 65.62 }
         ],
         totalTonnageExported: 89.03,
         tonnageReceivedNotExported: 57.67,
@@ -123,6 +124,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
       },
       exportActivity: {
         overseasSites: [],
+        unapprovedOverseasSites: [],
         totalTonnageExported: 0,
         tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 0,
@@ -200,11 +202,12 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
         tonnageNotRecycled: null
       },
       exportActivity: {
-        overseasSites: [
-          { orsId: 565, siteName: null, country: null, tonnageExported: 2.99 },
-          { orsId: 297, siteName: null, country: null, tonnageExported: 3.02 },
-          { orsId: 893, siteName: null, country: null, tonnageExported: 1.26 },
-          { orsId: 143, siteName: null, country: null, tonnageExported: 3.07 }
+        overseasSites: [],
+        unapprovedOverseasSites: [
+          { orsId: 565, tonnageExported: 2.99 },
+          { orsId: 297, tonnageExported: 3.02 },
+          { orsId: 893, tonnageExported: 1.26 },
+          { orsId: 143, tonnageExported: 3.07 }
         ],
         totalTonnageExported: 10.33,
         tonnageReceivedNotExported: 73.76,

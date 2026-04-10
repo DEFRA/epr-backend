@@ -14,24 +14,52 @@ const ZERO = '0'
 
 const zeroPadOrsId = (orsId) => String(orsId).padStart(ORS_ID_DIGITS, ZERO)
 
-const generateOverseasSiteSummary = (wasteExportedRecords, orsDetailsMap) => {
-  // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
-  return groupAndSum(
-    wasteExportedRecords.filter(({ data }) => data.OSR_ID),
-    ({ data }) => data.OSR_ID,
-    ({ data }) => {
-      const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
-      return {
-        orsId: data.OSR_ID,
-        siteName: details?.siteName ?? null,
-        country: details?.country ?? null
-      }
-    },
-    ({ data }) => toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
-  ).map(({ tonnageDecimal, ...rest }) => ({
+const summariseTonnage = (grouped) =>
+  grouped.map(({ tonnageDecimal, ...rest }) => ({
     ...rest,
     tonnageExported: roundToTwoDecimalPlaces(tonnageDecimal)
   }))
+
+const generateOverseasSiteSummaries = (wasteExportedRecords, orsDetailsMap) => {
+  // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
+  const recordsWithOrsId = wasteExportedRecords.filter(
+    ({ data }) => data.OSR_ID
+  )
+
+  const hasApprovedSite = ({ data }) => {
+    const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
+    return Boolean(details?.siteName)
+  }
+
+  const getTonnage = ({ data }) =>
+    toNumber(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
+
+  const overseasSites = summariseTonnage(
+    groupAndSum(
+      recordsWithOrsId.filter(hasApprovedSite),
+      ({ data }) => data.OSR_ID,
+      ({ data }) => {
+        const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
+        return {
+          orsId: data.OSR_ID,
+          siteName: details.siteName,
+          country: details.country
+        }
+      },
+      getTonnage
+    )
+  )
+
+  const unapprovedOverseasSites = summariseTonnage(
+    groupAndSum(
+      recordsWithOrsId.filter((record) => !hasApprovedSite(record)),
+      ({ data }) => data.OSR_ID,
+      ({ data }) => ({ orsId: data.OSR_ID }),
+      getTonnage
+    )
+  )
+
+  return { overseasSites, unapprovedOverseasSites }
 }
 
 function getTonnageRepatriated(repatriatedRecords) {
@@ -115,8 +143,12 @@ export function aggregateWasteExported(
     refusedOrStoppedDecimal
   )
 
+  const { overseasSites, unapprovedOverseasSites } =
+    generateOverseasSiteSummaries(exportedRecords, orsDetailsMap)
+
   return {
-    overseasSites: generateOverseasSiteSummary(exportedRecords, orsDetailsMap),
+    overseasSites,
+    unapprovedOverseasSites,
     totalTonnageExported,
     tonnageReceivedNotExported: calculateTonnageNotExported(
       totalTonnageReceived,

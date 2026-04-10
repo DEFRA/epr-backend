@@ -19,7 +19,8 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
 
 /**
  * @typedef {Object} AggregatedExportActivity
- * @property {Array<{orsId: string, siteName: string|null, country: string|null}>} overseasSites
+ * @property {Array<{orsId: string, siteName: string, country: string|null, tonnageExported: number}>} overseasSites
+ * @property {Array<{orsId: string, tonnageExported: number}>} unapprovedOverseasSites
  * @property {number} totalTonnageExported
  * @property {number} tonnageReceivedNotExported
  * @property {number} tonnageRefusedAtDestination
