@@ -13,6 +13,10 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { reportsPostPath } from './post.js'
 import * as reportAudit from '#reports/application/audit.js'
 
@@ -248,6 +252,43 @@ describe(`POST ${reportsPostPath}`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    describe('error handling', () => {
+      beforeEach(() => vi.clearAllMocks())
+
+      it('logs error details when an unexpected error occurs', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const unexpectedError = new Error('unexpected failure')
+        reportAudit.auditReportCreate.mockRejectedValueOnce(unexpectedError)
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+        expect(server.loggerMocks.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            err: unexpectedError,
+            message: `Failure on ${reportsPostPath}`,
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.SERVER,
+              action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+            },
+            http: {
+              response: {
+                status_code: StatusCodes.INTERNAL_SERVER_ERROR
+              }
+            }
+          })
+        )
+      })
     })
 
     describe('auditing', () => {
