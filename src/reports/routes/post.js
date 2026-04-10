@@ -1,7 +1,9 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import { auditReportCreate } from '#reports/application/audit.js'
+import { CADENCE } from '#reports/domain/cadence.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -37,6 +39,16 @@ export const reportsPost = {
       organisationId,
       registrationId
     )
+
+    const expectedCadence = registration.accreditationId
+      ? CADENCE.monthly
+      : CADENCE.quarterly
+
+    if (cadence !== expectedCadence) {
+      throw Boom.badRequest(
+        `Cadence '${cadence}' does not match registration type — expected '${expectedCadence}'`
+      )
+    }
 
     const createdReport = await createReportForPeriod({
       reportsRepository,
