@@ -7,6 +7,8 @@ import {
 import { groupAndSum, isYes } from './helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { isDateInRange } from './filter-records-by-date.js'
+import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
+import { OPERATOR_CATEGORY } from '../operator-category.js'
 
 const ORS_ID_DIGITS = 3
 const ZERO = '0'
@@ -19,15 +21,27 @@ const summariseTonnage = (grouped) =>
     tonnageExported: roundToTwoDecimalPlaces(tonnageDecimal)
   }))
 
-const generateOverseasSiteSummaries = (wasteExportedRecords, orsDetailsMap) => {
+const generateOverseasSiteSummaries = (
+  wasteExportedRecords,
+  orsDetailsMap,
+  operatorCategory
+) => {
   // OSR_ID is wrongly named, it should be ORS_ID but its a significant amount of work to correct that.
   const recordsWithOrsId = wasteExportedRecords.filter(
     ({ data }) => data.OSR_ID
   )
 
-  const hasApprovedSite = ({ data }) => {
+  const isResolvedSite = ({ data }) => {
     const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
     return Boolean(details?.siteName)
+  }
+
+  const isApproved = ({ data }) => {
+    if (operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY) {
+      return false
+    }
+    const details = orsDetailsMap.get(zeroPadOrsId(data.OSR_ID))
+    return isOrsApprovedAtDate(details?.validFrom, data.DATE_OF_EXPORT)
   }
 
   const getTonnage = ({ data }) =>
@@ -35,15 +49,19 @@ const generateOverseasSiteSummaries = (wasteExportedRecords, orsDetailsMap) => {
 
   const overseasSites = summariseTonnage(
     groupAndSum(
-      recordsWithOrsId.filter(hasApprovedSite),
-      ({ data }) => zeroPadOrsId(data.OSR_ID),
+      recordsWithOrsId.filter(isResolvedSite),
+      ({ data }) => {
+        const approved = isApproved({ data })
+        return `${zeroPadOrsId(data.OSR_ID)}:${approved}`
+      },
       ({ data }) => {
         const orsId = zeroPadOrsId(data.OSR_ID)
         const details = orsDetailsMap.get(orsId)
         return {
           orsId,
           siteName: details.siteName,
-          country: details.country
+          country: details.country,
+          approved: isApproved({ data })
         }
       },
       getTonnage
@@ -52,7 +70,7 @@ const generateOverseasSiteSummaries = (wasteExportedRecords, orsDetailsMap) => {
 
   const unapprovedOverseasSites = summariseTonnage(
     groupAndSum(
-      recordsWithOrsId.filter((record) => !hasApprovedSite(record)),
+      recordsWithOrsId.filter((record) => !isResolvedSite(record)),
       ({ data }) => zeroPadOrsId(data.OSR_ID),
       ({ data }) => ({ orsId: zeroPadOrsId(data.OSR_ID) }),
       getTonnage
@@ -98,7 +116,8 @@ function calculateTonnageReceivedNotExported(
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteReceivedRecords
  * @param {string} params.startDate - ISO date string (YYYY-MM-DD)
  * @param {string} params.endDate - ISO date string (YYYY-MM-DD)
- * @param {Map<string, { siteName: string|null, country: string|null }>} [params.orsDetailsMap]
+ * @param {Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>} [params.orsDetailsMap]
+ * @param {string} params.operatorCategory
  */
 export function aggregateWasteExported({
   wasteExportedRecords,
@@ -106,7 +125,8 @@ export function aggregateWasteExported({
   wasteReceivedRecords,
   startDate,
   endDate,
-  orsDetailsMap = new Map()
+  orsDetailsMap = new Map(),
+  operatorCategory
 }) {
   const exportedRecords = wasteExportedRecords.filter(
     ({ type }) => type === WASTE_RECORD_TYPE.EXPORTED
@@ -153,7 +173,11 @@ export function aggregateWasteExported({
   )
 
   const { overseasSites, unapprovedOverseasSites } =
-    generateOverseasSiteSummaries(exportedRecords, orsDetailsMap)
+    generateOverseasSiteSummaries(
+      exportedRecords,
+      orsDetailsMap,
+      operatorCategory
+    )
 
   return {
     overseasSites,

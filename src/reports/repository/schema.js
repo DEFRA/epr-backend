@@ -74,7 +74,8 @@ const overseasSiteSchema = Joi.object({
   orsId: Joi.string().required(),
   siteName: Joi.string().allow(null).required(),
   country: Joi.string().allow(null).required(),
-  tonnageExported: Joi.number().min(0).required()
+  tonnageExported: Joi.number().min(0).required(),
+  approved: Joi.boolean().required()
 })
 
 const unapprovedOverseasSiteSchema = Joi.object({
