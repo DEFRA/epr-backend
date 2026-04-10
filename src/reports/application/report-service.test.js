@@ -239,6 +239,25 @@ describe('report-service', () => {
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
+    it('throws badData when no summary log has been uploaded for the registration', async () => {
+      const reportsRepository = createInMemoryReportsRepository()()
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository([])()
+      const packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository()()
+      const params = defaultParams()
+      const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }
+
+      await expect(
+        createReportForPeriod({
+          reportsRepository,
+          wasteRecordsRepository,
+          packagingRecyclingNotesRepository,
+          ...params,
+          changedBy
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 422 } })
+    })
+
     it('resolves glass material to glass recycling process', async () => {
       const reportsRepository = createInMemoryReportsRepository()()
       const params = defaultParams()

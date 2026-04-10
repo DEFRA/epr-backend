@@ -143,5 +143,15 @@ export const testCreateReportBehaviour = (it) => {
         repository.createReport({ organisationId: DEFAULT_ORG_ID })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
+
+    it('throws badRequest when source.summaryLogId is null', async () => {
+      await expect(
+        repository.createReport(
+          buildCreateReportParams({
+            source: { summaryLogId: null, lastUploadedAt: null }
+          })
+        )
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
   })
 }

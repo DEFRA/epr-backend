@@ -305,6 +305,12 @@ export async function createReportForPeriod({
     period
   })
 
+  if (aggregatedReportData.source.summaryLogId === null) {
+    throw Boom.badData(
+      'Cannot create report: no summary log has been uploaded for this registration'
+    )
+  }
+
   return reportsRepository.createReport({
     organisationId,
     registrationId,

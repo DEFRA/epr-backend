@@ -112,8 +112,8 @@ const wasteSentSchema = Joi.object({
 
 const reportDataFieldsSchema = {
   source: Joi.object({
-    summaryLogId: Joi.string().allow(null),
-    lastUploadedAt: Joi.string().isoDate().allow(null)
+    summaryLogId: Joi.string(),
+    lastUploadedAt: Joi.string().isoDate()
   }).required(),
   recyclingActivity: recyclingActivitySchema,
   exportActivity: exportActivitySchema,
