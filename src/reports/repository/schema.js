@@ -1,5 +1,5 @@
-import Decimal from 'decimal.js'
 import Joi from 'joi'
+import { toDecimal } from '#common/helpers/decimal-utils.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
@@ -38,7 +38,7 @@ export const userSummarySchema = Joi.object({
 const TWO_DECIMAL_PLACES = 2
 
 export const maxTwoDecimalPlaces = (value, helpers) => {
-  if (new Decimal(value).decimalPlaces() > TWO_DECIMAL_PLACES) {
+  if (toDecimal(value).decimalPlaces() > TWO_DECIMAL_PLACES) {
     return helpers.error('number.maxDecimalPlaces')
   }
   return value

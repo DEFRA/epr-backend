@@ -51,8 +51,8 @@
  * @typedef {Object} RecyclingActivity
  * @property {Supplier[]} suppliers
  * @property {number} totalTonnageReceived
- * @property {number} tonnageRecycled
- * @property {number} tonnageNotRecycled
+ * @property {number | null} tonnageRecycled
+ * @property {number | null} tonnageNotRecycled
  */
 
 /**
@@ -168,7 +168,7 @@
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prn]
+ * @property {PrnData | null} [prn]
  * @property {string} [supportingInformation]
  * @property {{ summaryLogId: string, lastUploadedAt: string | null }} source
  */
