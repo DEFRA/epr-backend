@@ -17,7 +17,7 @@ const AUDIT_SUB_CATEGORY = 'reports'
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @param {string} params.submissionNumber
+ * @param {number} params.submissionNumber
  * @param {string} params.reportId
  * @param {object} params.previous
  * @param {object} params.next
@@ -88,7 +88,7 @@ export async function auditReportStatusTransition(request, params) {
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @param {string} params.submissionNumber
+ * @param {number} params.submissionNumber
  * @param {string} params.reportId
  * @param {object} params.previous
  */
@@ -154,7 +154,7 @@ export async function auditReportDelete(request, params) {
  * @param {number} params.year
  * @param {string} params.cadence
  * @param {number} params.period
- * @param {string} params.submissionNumber
+ * @param {number} params.submissionNumber
  * @param {string} params.reportId
  * @param {string} params.createdAt
  */
