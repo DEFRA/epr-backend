@@ -17,9 +17,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isReportsEnabled() {
     return flags.reports ?? false
   },
-  isRegisteredOnlyEnabled() {
-    return flags.registeredOnly ?? false
-  },
   isOrsWasteBalanceValidationEnabled() {
     return flags.orsWasteBalanceValidation ?? false
   }

@@ -360,12 +360,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_REPORTS'
     },
-    registeredOnly: {
-      doc: 'Feature Flag: Enable registered only summary log uploads',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REGISTERED_ONLY'
-    },
     orsWasteBalanceValidation: {
       doc: 'Feature Flag: Validate ORS approval status during exporter waste balance classification',
       format: Boolean,

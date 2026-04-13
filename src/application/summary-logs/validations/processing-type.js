@@ -19,29 +19,10 @@ const VALID_WASTE_PROCESSING_TYPES = [
   ...new Set(Object.values(PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE))
 ]
 
-/**
- * Waste processing types that have a registered-only template counterpart
- * e.g. 'reprocessor' has REPROCESSOR_REGISTERED_ONLY
- */
-const WASTE_TYPES_WITH_REGISTERED_ONLY = new Set(
-  [...REGISTERED_ONLY_PROCESSING_TYPES].map(
-    (pt) => PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE[pt]
-  )
-)
-
 const isRegisteredOnlyMismatch = ({
-  featureFlags,
-  wasteProcessingType,
   spreadsheetProcessingType,
   registration
 }) => {
-  if (
-    !featureFlags?.isRegisteredOnlyEnabled() ||
-    !WASTE_TYPES_WITH_REGISTERED_ONLY.has(wasteProcessingType)
-  ) {
-    return false
-  }
-
   const isRegisteredOnlyTemplate = REGISTERED_ONLY_PROCESSING_TYPES.has(
     spreadsheetProcessingType
   )
@@ -67,8 +48,7 @@ const isReprocessingTypeMismatch = (
 export const validateProcessingType = ({
   parsed,
   registration,
-  loggingContext,
-  featureFlags
+  loggingContext
 }) => {
   const issues = createValidationIssues()
 
@@ -114,8 +94,6 @@ export const validateProcessingType = ({
 
   if (
     isRegisteredOnlyMismatch({
-      featureFlags,
-      wasteProcessingType,
       spreadsheetProcessingType,
       registration
     })
