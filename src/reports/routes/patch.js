@@ -112,10 +112,7 @@ function buildUpdateFields(payload, report) {
   }
 
   if (tonnageNotExported !== undefined) {
-    fields.exportActivity = {
-      ...report.exportActivity,
-      tonnageReceivedNotExported: tonnageNotExported
-    }
+    fields.exportActivity = { tonnageReceivedNotExported: tonnageNotExported }
   }
 
   return fields
