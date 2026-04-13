@@ -98,10 +98,8 @@
     "undici": "7.24.0"
   },
   "overrides": {
-    "@hapi/content": "6.0.1",
     "fast-xml-parser": "^5.5.7",
-    "glob": "11.1.0",
-    "lodash": "4.18.1"
+    "glob": "11.1.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.18",
