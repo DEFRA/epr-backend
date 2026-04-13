@@ -51,8 +51,10 @@ const extractCascadeKeys = (organisation) => {
  * clear and the filter to apply. A null filter short-circuits the step and
  * yields a count of 0 (used when the org has no data in that collection).
  *
- * Order is downstream-to-root so nothing points at a parent that has already
- * been deleted, though deleteMany semantics make the order idempotent anyway.
+ * Steps are executed in parallel by runCascade. Order within this array is
+ * kept downstream-to-root purely for readability; the filters are independent
+ * (each derived from keys already extracted from the organisation document)
+ * so there are no ordering constraints between steps.
  *
  * @param {string} orgId
  * @param {{ accreditationIds: string[], overseasSiteIds: string[] }} keys
@@ -102,21 +104,24 @@ const buildCascadeSteps = (orgId, { accreditationIds, overseasSiteIds }) => [
 ]
 
 /**
+ * Executes cascade steps in parallel. deleteMany is idempotent and each
+ * step's filter is independent of the others, so Promise.all is safe and
+ * meaningfully faster when journey tests batch cleanup across many orgs.
+ *
  * @param {Db} db
  * @param {ReturnType<typeof buildCascadeSteps>} steps
  */
 const runCascade = async (db, steps) => {
-  /** @type {Record<string, number>} */
-  const counts = {}
-  for (const { label, collection, filter } of steps) {
-    if (filter === null) {
-      counts[label] = 0
-      continue
-    }
-    const result = await db.collection(collection).deleteMany(filter)
-    counts[label] = result.deletedCount
-  }
-  return counts
+  const entries = await Promise.all(
+    steps.map(async ({ label, collection, filter }) => {
+      if (filter === null) {
+        return /** @type {[string, number]} */ ([label, 0])
+      }
+      const result = await db.collection(collection).deleteMany(filter)
+      return /** @type {[string, number]} */ ([label, result.deletedCount])
+    })
+  )
+  return Object.fromEntries(entries)
 }
 
 /**
