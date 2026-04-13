@@ -17,14 +17,12 @@ import { validateMaterialType } from './material-type.js'
  * @param {Object} params.parsed - The parsed summary log data
  * @param {Object} params.registration - The registration from the database
  * @param {string} params.loggingContext - Context string for logging
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @returns {Object} Validation issues object
  */
 export const validateMetaBusiness = ({
   parsed,
   registration,
-  loggingContext,
-  featureFlags
+  loggingContext
 }) => {
   const issues = createValidationIssues()
 
@@ -34,9 +32,7 @@ export const validateMetaBusiness = ({
     validateAccreditationNumber,
     validateMaterialType
   ]) {
-    issues.merge(
-      validate({ parsed, registration, loggingContext, featureFlags })
-    )
+    issues.merge(validate({ parsed, registration, loggingContext }))
   }
 
   return issues

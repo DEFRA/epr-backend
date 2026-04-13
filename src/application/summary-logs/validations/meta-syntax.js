@@ -44,12 +44,11 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags] - Feature flags for controlling accepted processing types
  * @param {Object} [params.registration] - Unused, for signature compatibility
  * @param {string} [params.loggingContext] - Unused, for signature compatibility
  * @returns {Object} validation issues with any issues found
  */
-export const validateMetaSyntax = ({ parsed, featureFlags }) => {
+export const validateMetaSyntax = ({ parsed }) => {
   const issues = createValidationIssues()
 
   const metaValues = {}
@@ -61,7 +60,6 @@ export const validateMetaSyntax = ({ parsed, featureFlags }) => {
   }
 
   const schema = createMetaSchema({
-    registeredOnlyEnabled: featureFlags?.isRegisteredOnlyEnabled(),
     minTemplateVersions: MIN_TEMPLATE_VERSIONS
   })
 

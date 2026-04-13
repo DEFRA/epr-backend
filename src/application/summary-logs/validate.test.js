@@ -54,6 +54,7 @@ const buildMeta = (overrides = {}) => ({
   PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
   TEMPLATE_VERSION: { value: 5 },
   MATERIAL: { value: 'Aluminium' },
+  ACCREDITATION_NUMBER: { value: 'ACC12345' },
   ...overrides
 })
 
@@ -176,20 +177,7 @@ describe('SummaryLogsValidator', () => {
   beforeEach(async () => {
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: {
-            value: 'REG12345'
-          },
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT'
-          },
-          TEMPLATE_VERSION: {
-            value: 5
-          },
-          MATERIAL: {
-            value: 'Aluminium'
-          }
-        },
+        meta: buildMeta(),
         data: {}
       })
     }
@@ -204,6 +192,7 @@ describe('SummaryLogsValidator', () => {
         validFrom: '2025-01-01T00:00:00.000Z',
         validTo: '2025-12-31T23:59:59.999Z',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01T00:00:00.000Z',
           validTo: '2025-12-31T23:59:59.999Z',
           statusHistory: [
@@ -358,7 +347,8 @@ describe('SummaryLogsValidator', () => {
           REGISTRATION_NUMBER: 'REG12345',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
           TEMPLATE_VERSION: 5,
-          MATERIAL: 'Aluminium'
+          MATERIAL: 'Aluminium',
+          ACCREDITATION_NUMBER: 'ACC12345'
         }
       })
     )
@@ -423,7 +413,8 @@ describe('SummaryLogsValidator', () => {
           REGISTRATION_NUMBER: 'REG99999',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
           TEMPLATE_VERSION: 5,
-          MATERIAL: 'Aluminium'
+          MATERIAL: 'Aluminium',
+          ACCREDITATION_NUMBER: 'ACC12345'
         }
       })
     )
@@ -933,6 +924,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -986,6 +978,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1051,6 +1044,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1143,6 +1137,7 @@ describe('SummaryLogsValidator', () => {
         wasteProcessingType: 'exporter',
         material: 'paper',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1251,6 +1246,7 @@ describe('SummaryLogsValidator', () => {
         wasteProcessingType: 'exporter',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1331,6 +1327,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1381,6 +1378,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1439,6 +1437,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1529,6 +1528,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1602,6 +1602,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1667,6 +1668,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1705,6 +1707,7 @@ describe('SummaryLogsValidator', () => {
         wasteProcessingType: 'exporter',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [
@@ -1811,6 +1814,7 @@ describe('SummaryLogsValidator', () => {
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
           validTo: '2025-12-31',
           statusHistory: [

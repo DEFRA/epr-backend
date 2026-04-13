@@ -241,7 +241,7 @@ const markIgnoredByDateRange = (
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: registration.accreditation ?? null,
+      accreditation: registration.accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -258,8 +258,7 @@ const performValidationChecks = async ({
   summaryLogExtractor,
   organisationsRepository,
   wasteRecordsRepository,
-  validateDataSyntax,
-  featureFlags
+  validateDataSyntax
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
@@ -274,7 +273,7 @@ const performValidationChecks = async ({
 
     meta = extractMetaValues(parsed.meta)
 
-    issues.merge(validateMetaSyntax({ parsed, featureFlags }))
+    issues.merge(validateMetaSyntax({ parsed }))
 
     if (issues.isFatal()) {
       return { issues, wasteRecords, meta }
@@ -291,8 +290,7 @@ const performValidationChecks = async ({
       validateMetaBusiness({
         parsed,
         registration,
-        loggingContext,
-        featureFlags
+        loggingContext
       })
     )
 
@@ -561,8 +559,7 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
-  summaryLogExtractor,
-  featureFlags
+  summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
 
@@ -593,8 +590,7 @@ export const createSummaryLogsValidator = ({
       summaryLogExtractor,
       organisationsRepository,
       wasteRecordsRepository,
-      validateDataSyntax,
-      featureFlags
+      validateDataSyntax
     })
     const validationDurationMs = Date.now() - validationStart
 

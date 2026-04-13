@@ -85,21 +85,6 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isReportsEnabled()).toBe(false)
   })
 
-  it('returns true when registeredOnly flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ registeredOnly: true })
-    expect(flags.isRegisteredOnlyEnabled()).toBe(true)
-  })
-
-  it('returns false when registeredOnly flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ registeredOnly: false })
-    expect(flags.isRegisteredOnlyEnabled()).toBe(false)
-  })
-
-  it('returns false when registeredOnly flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isRegisteredOnlyEnabled()).toBe(false)
-  })
-
   it('returns true when orsWasteBalanceValidation flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({
       orsWasteBalanceValidation: true

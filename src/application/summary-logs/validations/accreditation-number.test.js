@@ -310,7 +310,7 @@ describe('validateAccreditationNumber', () => {
   })
 
   it.each(['REPROCESSOR_REGISTERED_ONLY', 'EXPORTER_REGISTERED_ONLY'])(
-    'skips validation when template is %s and feature flag is enabled',
+    'skips validation when template is %s',
     (processingType) => {
       const registration = {
         id: 'reg-123'
@@ -324,8 +324,7 @@ describe('validateAccreditationNumber', () => {
       const issues = validateAccreditationNumber({
         parsed,
         registration,
-        loggingContext: 'test-msg',
-        featureFlags: { isRegisteredOnlyEnabled: () => true }
+        loggingContext: 'test-msg'
       })
 
       expect(issues.isFatal()).toBe(false)
@@ -353,8 +352,7 @@ describe('validateAccreditationNumber', () => {
       const issues = validateAccreditationNumber({
         parsed,
         registration,
-        loggingContext: 'test-msg',
-        featureFlags: { isRegisteredOnlyEnabled: () => true }
+        loggingContext: 'test-msg'
       })
 
       expect(issues.isFatal()).toBe(false)
@@ -363,7 +361,7 @@ describe('validateAccreditationNumber', () => {
     }
   )
 
-  it('does not skip validation for accredited template when feature flag is enabled', () => {
+  it('does not skip validation for accredited template', () => {
     const registration = {
       id: 'reg-123',
       accreditation: {
@@ -381,41 +379,12 @@ describe('validateAccreditationNumber', () => {
     const issues = validateAccreditationNumber({
       parsed,
       registration,
-      loggingContext: 'test-msg',
-      featureFlags: { isRegisteredOnlyEnabled: () => true }
+      loggingContext: 'test-msg'
     })
 
     expect(issues.isFatal()).toBe(false)
     expect(issues.getAllIssues()).toHaveLength(0)
     expect(mockLoggerInfo).toHaveBeenCalled()
-  })
-
-  it('does not skip validation for registered-only template when feature flag is disabled', () => {
-    const registration = {
-      id: 'reg-123',
-      accreditation: {
-        id: 'acc-123',
-        accreditationNumber: '12345678'
-      }
-    }
-    const parsed = {
-      meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' },
-        ACCREDITATION_NUMBER: { value: undefined }
-      }
-    }
-
-    const issues = validateAccreditationNumber({
-      parsed,
-      registration,
-      loggingContext: 'test-msg',
-      featureFlags: { isRegisteredOnlyEnabled: () => false }
-    })
-
-    expect(issues.isFatal()).toBe(true)
-    expect(issues.getAllIssues()[0]).toMatchObject({
-      message: 'Invalid summary log: missing accreditation number'
-    })
   })
 
   it('coerces numeric spreadsheet value to string before comparing', () => {

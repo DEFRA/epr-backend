@@ -320,82 +320,6 @@ describe('validateMetaSyntax', () => {
   })
 
   describe('registered-only processing types', () => {
-    // START: registered-only feature flag — delete this block when flag is removed
-    const registeredOnlyFeatureFlags = {
-      isRegisteredOnlyEnabled: () => true
-    }
-
-    it('rejects REPROCESSOR_REGISTERED_ONLY when feature flag is disabled', () => {
-      const parsed = {
-        meta: {
-          ...createValidMeta(),
-          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
-        }
-      }
-
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: { isRegisteredOnlyEnabled: () => false }
-      })
-
-      expect(result.isValid()).toBe(false)
-
-      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('PROCESSING_TYPE')
-      expect(fatals[0].message).toContain('must be one of')
-      expect(fatals[0].message).not.toContain('REPROCESSOR_REGISTERED_ONLY')
-    })
-
-    it('rejects REPROCESSOR_REGISTERED_ONLY when no feature flags provided', () => {
-      const parsed = {
-        meta: {
-          ...createValidMeta(),
-          PROCESSING_TYPE: { value: 'REPROCESSOR_REGISTERED_ONLY' }
-        }
-      }
-
-      const result = validateMetaSyntax({ parsed })
-
-      expect(result.isValid()).toBe(false)
-    })
-
-    it('rejects EXPORTER_REGISTERED_ONLY when feature flag is disabled', () => {
-      const parsed = {
-        meta: {
-          ...createValidMeta(),
-          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
-        }
-      }
-
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: { isRegisteredOnlyEnabled: () => false }
-      })
-
-      expect(result.isValid()).toBe(false)
-
-      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('PROCESSING_TYPE')
-      expect(fatals[0].message).toContain('must be one of')
-      expect(fatals[0].message).not.toContain('EXPORTER_REGISTERED_ONLY')
-    })
-
-    it('rejects EXPORTER_REGISTERED_ONLY when no feature flags provided', () => {
-      const parsed = {
-        meta: {
-          ...createValidMeta(),
-          PROCESSING_TYPE: { value: 'EXPORTER_REGISTERED_ONLY' }
-        }
-      }
-
-      const result = validateMetaSyntax({ parsed })
-
-      expect(result.isValid()).toBe(false)
-    })
-    // END: registered-only feature flag
-
     it('accepts REPROCESSOR_REGISTERED_ONLY', () => {
       const parsed = {
         meta: {
@@ -405,10 +329,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: registeredOnlyFeatureFlags
-      })
+      const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(true)
     })
@@ -422,10 +343,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: registeredOnlyFeatureFlags
-      })
+      const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(true)
     })
@@ -439,10 +357,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: registeredOnlyFeatureFlags
-      })
+      const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(false)
       expect(result.isFatal()).toBe(true)
@@ -462,10 +377,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: registeredOnlyFeatureFlags
-      })
+      const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(true)
     })
@@ -479,10 +391,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: registeredOnlyFeatureFlags
-      })
+      const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(true)
     })
@@ -496,10 +405,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({
-        parsed,
-        featureFlags: registeredOnlyFeatureFlags
-      })
+      const result = validateMetaSyntax({ parsed })
 
       expect(result.isValid()).toBe(false)
       expect(result.isFatal()).toBe(true)
