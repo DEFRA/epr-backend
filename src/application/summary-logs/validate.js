@@ -2,7 +2,8 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   VALIDATION_CATEGORY,
-  VALIDATION_CODE
+  VALIDATION_CODE,
+  VALIDATION_SEVERITY
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
@@ -653,15 +654,14 @@ export const createSummaryLogsValidator = ({
  * the summary log document exceeding MongoDB's 16 MiB BSON limit.
  * @see https://eaflood.atlassian.net/browse/PAE-1244
  *
+ * Fatal issues are always preserved — they determine the summary log status
+ * and are required by the frontend to render specific error messages.
+ * Non-fatal issues fill the remaining capacity.
+ *
  * @param {ValidationIssue[]} allIssues - All validation issues
  * @returns {{ cappedIssues: ValidationIssue[], totalIssuesCount: number }}
  */
-const capIssuesForStorage = (allIssues) => {
-  const shouldTruncate = allIssues.length > MAX_VALIDATION_ISSUES
-  const issues = shouldTruncate
-    ? allIssues.slice(0, MAX_VALIDATION_ISSUES)
-    : allIssues
-
+const truncateActualValues = (issues) => {
   for (const issue of issues) {
     if (
       typeof issue.context?.actual === 'string' &&
@@ -671,9 +671,32 @@ const capIssuesForStorage = (allIssues) => {
         issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
     }
   }
+}
+
+const capIssuesForStorage = (allIssues) => {
+  let cappedIssues
+
+  if (allIssues.length <= MAX_VALIDATION_ISSUES) {
+    cappedIssues = allIssues
+  } else {
+    const fatal = allIssues.filter(
+      (issue) => issue.severity === VALIDATION_SEVERITY.FATAL
+    )
+    const nonFatal = allIssues.filter(
+      (issue) => issue.severity !== VALIDATION_SEVERITY.FATAL
+    )
+    const cappedFatal = fatal.slice(0, MAX_VALIDATION_ISSUES)
+    const nonFatalSlots = Math.max(
+      0,
+      MAX_VALIDATION_ISSUES - cappedFatal.length
+    )
+    cappedIssues = [...cappedFatal, ...nonFatal.slice(0, nonFatalSlots)]
+  }
+
+  truncateActualValues(cappedIssues)
 
   return {
-    cappedIssues: issues,
+    cappedIssues,
     totalIssuesCount: allIssues.length
   }
 }
