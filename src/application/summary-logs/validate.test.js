@@ -1963,5 +1963,74 @@ describe('SummaryLogsValidator', () => {
         updateCall.validation.issues.length
       )
     })
+
+    it('preserves fatal issues when truncating past MAX_VALIDATION_ISSUES', async () => {
+      // Create 10 rows with only ROW_ID filled — each produces ~13
+      // error-level FIELD_REQUIRED issues (one per missing waste balance
+      // field), for a total well over MAX_VALIDATION_ISSUES.
+      const excludedRows = Array.from({ length: 10 }, (_, i) => ({
+        ROW_ID: 10000 + i,
+        DATE_RECEIVED_FOR_REPROCESSING: null,
+        EWC_CODE: null,
+        DESCRIPTION_WASTE: null,
+        WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: null,
+        GROSS_WEIGHT: null,
+        TARE_WEIGHT: null,
+        PALLET_WEIGHT: null,
+        NET_WEIGHT: null,
+        BAILING_WIRE_PROTOCOL: null,
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: null,
+        WEIGHT_OF_NON_TARGET_MATERIALS: null,
+        RECYCLABLE_PROPORTION_PERCENTAGE: null,
+        TONNAGE_RECEIVED_FOR_RECYCLING: null,
+        SUPPLIER_NAME: null,
+        SUPPLIER_ADDRESS: null,
+        SUPPLIER_POSTCODE: null,
+        SUPPLIER_EMAIL: null,
+        SUPPLIER_PHONE_NUMBER: null,
+        ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: null,
+        YOUR_REFERENCE: null,
+        WEIGHBRIDGE_TICKET: null,
+        CARRIER_NAME: null,
+        CBD_REG_NUMBER: null,
+        CARRIER_VEHICLE_REGISTRATION_NUMBER: null
+      }))
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: excludedRows
+            })
+          }
+        })
+      )
+
+      // An existing waste record whose ROW_ID is NOT in the current upload
+      // triggers a fatal SEQUENTIAL_ROW_REMOVED error during data-business
+      // validation — appended AFTER the 130+ non-fatal data-syntax issues.
+      wasteRecordsRepository.findByRegistration.mockResolvedValue([
+        buildExistingWasteRecord(buildReceivedLoadRow({ ROW_ID: 99999 }))
+      ])
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      const { issues, totalIssuesCount } = updateCall.validation
+
+      // The fatal issue must survive truncation
+      const fatalIssues = issues.filter((i) => i.severity === 'fatal')
+      expect(fatalIssues).toHaveLength(1)
+      expect(fatalIssues[0].code).toBe('SEQUENTIAL_ROW_REMOVED')
+
+      // Total stored issues are capped
+      expect(issues.length).toBeLessThanOrEqual(MAX_VALIDATION_ISSUES)
+
+      // totalIssuesCount reflects the real pre-cap count
+      expect(totalIssuesCount).toBeGreaterThan(MAX_VALIDATION_ISSUES)
+
+      // Status should be invalid (the fatal was detected pre-cap)
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    })
   })
 })
