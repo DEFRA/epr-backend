@@ -53,6 +53,18 @@ const performFindByAccreditationIds = (db) => async (accreditationIds) => {
   })
 }
 
+const performDeleteByAccreditationIds = (db) => async (accreditationIds) => {
+  if (accreditationIds.length === 0) {
+    return 0
+  }
+
+  const result = await db
+    .collection(WASTE_BALANCE_COLLECTION_NAME)
+    .deleteMany({ accreditationId: { $in: accreditationIds } })
+
+  return result.deletedCount
+}
+
 /**
  * Find a waste balance by accreditation ID.
  *
@@ -156,6 +168,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
-    }
+    },
+    deleteByAccreditationIds: performDeleteByAccreditationIds(db)
   })
 }

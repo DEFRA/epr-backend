@@ -43,6 +43,7 @@
  * @property {(params: DeductTotalBalanceParams) => Promise<void>} deductTotalBalanceForPrnIssue
  * @property {(params: CreditAvailableBalanceParams) => Promise<void>} creditAvailableBalanceForPrnCancellation
  * @property {(params: CreditFullBalanceParams) => Promise<void>} creditFullBalanceForIssuedPrnCancellation
+ * @property {(accreditationIds: string[]) => Promise<number>} deleteByAccreditationIds
  */
 
 /**

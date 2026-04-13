@@ -185,6 +185,21 @@ const performUpdateStatus =
   }
 
 /**
+ * @param {Storage} storage
+ * @returns {(organisationId: string) => Promise<number>}
+ */
+const performDeleteByOrganisationId = (storage) => async (organisationId) => {
+  let deletedCount = 0
+  for (const [id, prn] of storage.entries()) {
+    if (prn.organisation?.id === organisationId) {
+      storage.delete(id)
+      deletedCount++
+    }
+  }
+  return deletedCount
+}
+
+/**
  * @param {PackagingRecyclingNote[]} [initialData]
  * @param {Organisation['id'][]} [excludeOrganisationIds]
  */
@@ -202,6 +217,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
 
   return () => ({
     create: performCreate(storage),
+    deleteByOrganisationId: performDeleteByOrganisationId(storage),
     findByAccreditation: performFindByAccreditation(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),

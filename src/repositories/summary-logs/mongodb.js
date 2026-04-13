@@ -278,6 +278,13 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 }
 
+const deleteByOrganisationId = (db) => async (organisationId) => {
+  /** @type {any} */
+  const filter = { organisationId }
+  const result = await db.collection(COLLECTION_NAME).deleteMany(filter)
+  return result.deletedCount
+}
+
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
 const getDownloadUrl =
@@ -329,6 +336,7 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
       db,
       s3Config.s3Client,
       s3Config.preSignedUrlExpiry
-    )
+    ),
+    deleteByOrganisationId: deleteByOrganisationId(db)
   })
 }

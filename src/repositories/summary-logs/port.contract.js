@@ -7,6 +7,7 @@ import { testTransitionToSubmittingExclusive } from './contract/transition-to-su
 import { testExpiresAtBehaviour } from './contract/expires-at.contract.js'
 import { testFindAllSummaryLogStatsByRegistrationId } from './contract/find-all-stats.contract.js'
 import { testGetDownloadUrlBehaviour } from './contract/get-download-url.contract.js'
+import { testDeleteByOrganisationIdBehaviour } from './contract/delete-by-organisation-id.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -19,5 +20,6 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testExpiresAtBehaviour(repositoryFactory)
     testFindAllSummaryLogStatsByRegistrationId(repositoryFactory)
     testGetDownloadUrlBehaviour(repositoryFactory)
+    testDeleteByOrganisationIdBehaviour(repositoryFactory)
   })
 }

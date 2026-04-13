@@ -149,6 +149,16 @@ const performAppendVersions =
     await db.collection(COLLECTION_NAME).bulkWrite(bulkOps, { ordered: false })
   }
 
+const performDeleteByOrganisationId = (db) => async (organisationId) => {
+  const validatedOrgId = validateOrganisationId(organisationId)
+
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .deleteMany({ organisationId: validatedOrgId })
+
+  return result.deletedCount
+}
+
 /**
  * Creates a MongoDB-backed waste records repository
  * @param {import('mongodb').Db} db - MongoDB database instance
@@ -160,7 +170,8 @@ export const createWasteRecordsRepository = async (db) => {
   return () => {
     return {
       findByRegistration: performFindByRegistration(db),
-      appendVersions: performAppendVersions(db)
+      appendVersions: performAppendVersions(db),
+      deleteByOrganisationId: performDeleteByOrganisationId(db)
     }
   }
 }

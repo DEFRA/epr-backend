@@ -217,6 +217,21 @@ const performDeleteReport = async (db, params) => {
 }
 
 /**
+ * Hard-deletes all reports belonging to the given organisation.
+ *
+ * @param {import('mongodb').Db} db
+ * @param {string} organisationId
+ * @returns {Promise<number>} number of deleted reports
+ */
+const performDeleteByOrganisationId = async (db, organisationId) => {
+  const result = await db
+    .collection(REPORTS_COLLECTION)
+    .deleteMany({ organisationId })
+
+  return result.deletedCount
+}
+
+/**
  * @param {import('mongodb').Db} db
  * @param {import('./port.js').FindPeriodicReportsParams} params
  * @returns {Promise<import('./port.js').PeriodicReport[]>}
@@ -263,6 +278,8 @@ export const createReportsRepository = async (db) => {
     updateReport: (params) => performUpdateReport(db, params),
     updateReportStatus: (params) => performUpdateReportStatus(db, params),
     deleteReport: (params) => performDeleteReport(db, params),
+    deleteByOrganisationId: (organisationId) =>
+      performDeleteByOrganisationId(db, organisationId),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findReportById: (reportId) => performFindReportById(db, reportId)
   })
