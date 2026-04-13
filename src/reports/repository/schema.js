@@ -89,7 +89,7 @@ const exportActivitySchema = Joi.object({
     .items(unapprovedOverseasSiteSchema)
     .required(),
   totalTonnageExported: Joi.number().min(0).required(),
-  tonnageReceivedNotExported: Joi.number().min(0).required(),
+  tonnageReceivedNotExported: Joi.number().min(0).allow(null),
   tonnageRefusedAtDestination: Joi.number().min(0).required(),
   tonnageStoppedDuringExport: Joi.number().min(0).required(),
   totalTonnageRefusedOrStopped: Joi.number().min(0).required(),
@@ -152,6 +152,12 @@ const updatableFieldsSchema = Joi.object({
       .allow(null)
       .custom(maxTwoDecimalPlaces),
     tonnageNotRecycled: Joi.number()
+      .min(0)
+      .allow(null)
+      .custom(maxTwoDecimalPlaces)
+  }).unknown(true),
+  exportActivity: Joi.object({
+    tonnageReceivedNotExported: Joi.number()
       .min(0)
       .allow(null)
       .custom(maxTwoDecimalPlaces)

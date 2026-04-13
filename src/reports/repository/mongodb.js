@@ -105,6 +105,10 @@ const performUpdateReport = async (db, params) => {
     setFields.recyclingActivity = fields.recyclingActivity
   }
 
+  if (fields.exportActivity !== undefined) {
+    setFields.exportActivity = fields.exportActivity
+  }
+
   const { matchedCount } = await db
     .collection(REPORTS_COLLECTION)
     .updateOne(
