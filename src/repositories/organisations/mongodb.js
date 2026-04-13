@@ -324,6 +324,18 @@ const performFindByOrgId = (db) => async (orgId) => {
   return mapDocumentWithCurrentStatuses(doc)
 }
 
+const performDeleteById = (db) => async (id) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+    return 0
+  }
+
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .deleteOne({ _id: ObjectId.createFromHexString(id) })
+
+  return result.deletedCount
+}
+
 const performReplaceRegistrationOverseasSites =
   (db) => async (id, version, registrationId, entries) => {
     const result = await db.collection(COLLECTION_NAME).updateOne(
@@ -426,7 +438,8 @@ export const createOrganisationsRepository = async (
 
       findByOrgId: performFindByOrgId(db),
       replaceRegistrationOverseasSites:
-        performReplaceRegistrationOverseasSites(db)
+        performReplaceRegistrationOverseasSites(db),
+      deleteById: performDeleteById(db)
     }
   }
 }

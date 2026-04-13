@@ -190,6 +190,24 @@ const deleteReport = async (reports, params) => {
 }
 
 /**
+ * Hard-deletes all reports belonging to the given organisation.
+ *
+ * @param {Map<string, Object>} reports
+ * @param {string} organisationId
+ * @returns {Promise<number>} number of deleted reports
+ */
+const deleteByOrganisationId = async (reports, organisationId) => {
+  let count = 0
+  for (const [id, report] of reports) {
+    if (report.organisationId === organisationId) {
+      reports.delete(id)
+      count++
+    }
+  }
+  return count
+}
+
+/**
  * @param {Map<string, Object>} reports
  * @param {string} reportId
  * @returns {Promise<import('./port.js').Report>}
@@ -237,6 +255,8 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     updateReport: (params) => updateReport(reports, params),
     updateReportStatus: (params) => updateReportStatus(reports, params),
     deleteReport: (params) => deleteReport(reports, params),
+    deleteByOrganisationId: (organisationId) =>
+      deleteByOrganisationId(reports, organisationId),
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params)
   })

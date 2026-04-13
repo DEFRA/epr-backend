@@ -73,6 +73,7 @@
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  * @property {(orgId: number) => Promise<Organisation|null>} findByOrgId - Find organisation by business orgId
  * @property {(id: string, version: number, registrationId: string, entries: Record<string, {overseasSiteId: string}>) => Promise<boolean>} replaceRegistrationOverseasSites - Replace a registration's overseasSites map with the given entries
+ * @property {(id: string) => Promise<number>} deleteById - Delete organisation by ID; returns count of deleted documents (0 if not found). Idempotent.
  */
 
 /**

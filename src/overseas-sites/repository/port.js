@@ -43,6 +43,7 @@
  * @property {(id: string) => Promise<OverseasSite | null>} remove
  * @property {(params?: FindAllParams) => Promise<OverseasSite[]>} findAll
  * @property {(ids: string[]) => Promise<OverseasSite[]>} findByIds
+ * @property {(ids: string[]) => Promise<number>} deleteByIds
  */
 
 /**
