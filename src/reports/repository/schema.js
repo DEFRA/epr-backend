@@ -161,7 +161,7 @@ const updatableFieldsSchema = Joi.object({
       .min(0)
       .allow(null)
       .custom(maxTwoDecimalPlaces)
-  }).unknown(true)
+  })
 })
   .min(1)
   .required()

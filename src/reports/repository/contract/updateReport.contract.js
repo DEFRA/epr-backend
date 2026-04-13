@@ -121,7 +121,12 @@ export const testUpdateReportBehaviour = (it) => {
         reportId,
         version: 1,
         fields: {
-          recyclingActivity: { tonnageRecycled: 100.5, tonnageNotRecycled: 20 }
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: 100.5,
+            tonnageNotRecycled: 20
+          }
         }
       })
 

@@ -106,7 +106,9 @@ const performUpdateReport = async (db, params) => {
   }
 
   if (fields.exportActivity !== undefined) {
-    setFields.exportActivity = fields.exportActivity
+    for (const [key, value] of Object.entries(fields.exportActivity)) {
+      setFields[`exportActivity.${key}`] = value
+    }
   }
 
   const { matchedCount } = await db

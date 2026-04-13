@@ -106,11 +106,14 @@ const updateReport = async (reports, params) => {
     )
   }
 
-  reports.set(reportId, {
-    ...existing,
-    ...fields,
-    version: existing.version + 1
-  })
+  const updated = { ...existing, ...fields, version: existing.version + 1 }
+  if (fields.exportActivity !== undefined) {
+    updated.exportActivity = {
+      ...existing.exportActivity,
+      ...fields.exportActivity
+    }
+  }
+  reports.set(reportId, updated)
 }
 
 /**
