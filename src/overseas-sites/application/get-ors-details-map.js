@@ -9,10 +9,6 @@
  * @returns {Promise<Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>>}
  */
 export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
-  if (!overseasSitesRepository) {
-    return new Map()
-  }
-
   const entries = Object.entries(overseasSites ?? {})
   if (entries.length === 0) {
     return new Map()
