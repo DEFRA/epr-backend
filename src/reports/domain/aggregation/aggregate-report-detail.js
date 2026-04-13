@@ -86,36 +86,13 @@ export function aggregateReportDetail(
 
   const wasteReceivedDateField = sectionDateFields.wasteReceived
   const wasteExportedDateField = sectionDateFields.wasteExported
-  const wasteRepatriatedDateField = sectionDateFields.wasteRepatriated
-  const wasteSentOnDateField = sectionDateFields.wasteSentOn
 
-  const wasteReceivedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteReceivedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteExportedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteExportedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteRepatriatedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteRepatriatedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteSentOnRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteSentOnDateField,
-    startDate,
-    endDate
-  )
+  const {
+    wasteReceivedRecords,
+    wasteExportedRecords,
+    wasteRepatriatedRecords,
+    wasteSentOnRecords
+  } = sliceRecordsByPeriod(wasteRecords, sectionDateFields, startDate, endDate)
 
   const { lastUploadedAt, summaryLogId } = findLastUpload(wasteRecords)
 
@@ -162,6 +139,49 @@ export function aggregateReportDetail(
     }),
     wasteSent: aggregateWasteSentOn(wasteSentOnRecords),
     diagnostics: { wasteReceivedRecordsExcluded }
+  }
+}
+
+/**
+ * Slices waste records into per-section record sets, each filtered to those
+ * whose section date field falls within [startDate, endDate].
+ *
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
+ * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
+ * @param {string} startDate
+ * @param {string} endDate
+ */
+function sliceRecordsByPeriod(
+  wasteRecords,
+  sectionDateFields,
+  startDate,
+  endDate
+) {
+  return {
+    wasteReceivedRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteReceived,
+      startDate,
+      endDate
+    ),
+    wasteExportedRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteExported,
+      startDate,
+      endDate
+    ),
+    wasteRepatriatedRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteRepatriated,
+      startDate,
+      endDate
+    ),
+    wasteSentOnRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteSentOn,
+      startDate,
+      endDate
+    )
   }
 }
 
