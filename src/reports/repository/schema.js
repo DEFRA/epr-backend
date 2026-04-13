@@ -146,6 +146,12 @@ export const createReportSchema = Joi.object({
 const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
   prn: prnSchema.fork('issuedTonnage', (s) => s.optional()),
+  exportActivity: Joi.object({
+    tonnageReceivedNotExported: Joi.number()
+      .min(0)
+      .allow(null)
+      .custom(maxTwoDecimalPlaces)
+  }),
   recyclingActivity: Joi.object({
     tonnageRecycled: Joi.number()
       .min(0)
@@ -155,13 +161,7 @@ const updatableFieldsSchema = Joi.object({
       .min(0)
       .allow(null)
       .custom(maxTwoDecimalPlaces)
-  }).unknown(true),
-  exportActivity: Joi.object({
-    tonnageReceivedNotExported: Joi.number()
-      .min(0)
-      .allow(null)
-      .custom(maxTwoDecimalPlaces)
-  })
+  }).unknown(true)
 })
   .min(1)
   .required()
