@@ -3,7 +3,6 @@
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
  * @property {() => boolean} isCopyFormFilesToS3Enabled
- * @property {() => boolean} isOverseasSitesEnabled
  * @property {() => boolean} isReportsEnabled
  * @property {() => boolean} isOrsWasteBalanceValidationEnabled
  */

@@ -32,9 +32,7 @@ describe(`${overseasSitesListPath} route`, () => {
         repositories: {
           overseasSitesRepository: () => overseasSitesRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          overseasSites: true
-        })
+        featureFlags: createInMemoryFeatureFlags({})
       })
     })
 

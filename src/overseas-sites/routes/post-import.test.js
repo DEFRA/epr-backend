@@ -46,9 +46,7 @@ describe(`${orsImportCreatePath} route`, () => {
           orsImportsRepository: () => orsImportsRepository,
           uploadsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          overseasSites: true
-        })
+        featureFlags: createInMemoryFeatureFlags({})
       })
     })
 
