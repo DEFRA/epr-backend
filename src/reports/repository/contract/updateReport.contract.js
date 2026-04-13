@@ -141,5 +141,55 @@ export const testUpdateReportBehaviour = (it) => {
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
     })
+
+    describe('rejects values with more than two decimal places', () => {
+      it('throws for prn.totalRevenue', async () => {
+        const { id: reportId } = await repository.createReport(
+          buildCreateReportParams({ prn: { issuedTonnage: 100 } })
+        )
+
+        for (const totalRevenue of [100.123, 0.001, 99.999]) {
+          await expect(
+            repository.updateReport({
+              reportId,
+              version: 1,
+              fields: { prn: { totalRevenue } }
+            })
+          ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+        }
+      })
+
+      it('throws for recyclingActivity.tonnageRecycled', async () => {
+        const { id: reportId } = await repository.createReport(
+          buildCreateReportParams()
+        )
+
+        for (const tonnageRecycled of [100.123, 0.001, 99.999]) {
+          await expect(
+            repository.updateReport({
+              reportId,
+              version: 1,
+              fields: { recyclingActivity: { tonnageRecycled } }
+            })
+          ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+        }
+      })
+
+      it('throws for recyclingActivity.tonnageNotRecycled', async () => {
+        const { id: reportId } = await repository.createReport(
+          buildCreateReportParams()
+        )
+
+        for (const tonnageNotRecycled of [100.123, 0.001, 99.999]) {
+          await expect(
+            repository.updateReport({
+              reportId,
+              version: 1,
+              fields: { recyclingActivity: { tonnageNotRecycled } }
+            })
+          ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+        }
+      })
+    })
   })
 }

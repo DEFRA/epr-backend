@@ -116,7 +116,7 @@ function getValidatedPeriodInfo(cadence, year, period) {
 
 /**
  * Extracts the report-specific fields from aggregated data and registration.
- * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } }} aggregated
+ * @param {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn?: { issuedTonnage: number } | null }} aggregated
  * @param {object} registration
  * @returns {object}
  */
