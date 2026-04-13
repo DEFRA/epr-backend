@@ -4,44 +4,41 @@ import { createFormSubmissionsRepository } from '#repositories/form-submissions/
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
-export const runFormsDataMigration = async (server, options = {}) => {
+export const runFormsDataMigration = async (server) => {
   try {
-    const featureFlagsInstance = options.featureFlags || server.featureFlags
     logger.info({
-      message: `Starting form data migration. Feature flag enabled: ${featureFlagsInstance.isFormsDataMigrationEnabled()}`
+      message: 'Starting form data migration'
     })
 
-    if (featureFlagsInstance.isFormsDataMigrationEnabled()) {
-      const lock = await server.locker.lock('forms-data-migration')
-      if (!lock) {
-        logger.info({
-          message: 'Unable to obtain lock, skipping running form data migration'
-        })
-        return
-      }
-      try {
-        const formSubmissionsRepository = (
-          await createFormSubmissionsRepository(server.db, logger)
-        )()
-        const organisationsRepository = (
-          await createOrganisationsRepository(server.db)
-        )()
-        const systemLogsRepository = (
-          await createSystemLogsRepository(server.db)
-        )(logger)
+    const lock = await server.locker.lock('forms-data-migration')
+    if (!lock) {
+      logger.info({
+        message: 'Unable to obtain lock, skipping running form data migration'
+      })
+      return
+    }
+    try {
+      const formSubmissionsRepository = (
+        await createFormSubmissionsRepository(server.db, logger)
+      )()
+      const organisationsRepository = (
+        await createOrganisationsRepository(server.db)
+      )()
+      const systemLogsRepository = (
+        await createSystemLogsRepository(server.db)
+      )(logger)
 
-        const formsDataMigration = createFormDataMigrator(
-          formSubmissionsRepository,
-          organisationsRepository,
-          systemLogsRepository
-        )
+      const formsDataMigration = createFormDataMigrator(
+        formSubmissionsRepository,
+        organisationsRepository,
+        systemLogsRepository
+      )
 
-        await formsDataMigration.migrate()
+      await formsDataMigration.migrate()
 
-        logger.info({ message: `Form data migration completed successfully` })
-      } finally {
-        await lock.free()
-      }
+      logger.info({ message: 'Form data migration completed successfully' })
+    } finally {
+      await lock.free()
     }
   } catch (error) {
     logger.error(error, 'Failed to run form data migration')
