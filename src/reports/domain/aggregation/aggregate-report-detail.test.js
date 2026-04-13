@@ -1206,6 +1206,73 @@ describe('#aggregateReportDetail', () => {
     })
   })
 
+  describe('registered-only to accredited transition (ADR 0030, Finding 3)', () => {
+    // This is test is to illustrate the findings in ADR.
+    // Rather than documenting the behaviour we want it demonstrates the problem
+    // we are faced with until this can be addressed.
+    it('silently excludes registered-only records when aggregating as accredited reprocessor', () => {
+      const registeredOnlyRecord = buildReceivedRecord({
+        MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+        TONNAGE_RECEIVED_FOR_RECYCLING: 75
+      })
+
+      const result = aggregateReportDetail([registeredOnlyRecord], {
+        operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
+        cadence: 'monthly',
+        year: 2026,
+        period: 1
+      })
+
+      // The record has MONTH_RECEIVED_FOR_REPROCESSING but the accredited
+      // category looks up DATE_RECEIVED_FOR_REPROCESSING — the field is
+      // absent, so the record is silently excluded. This is the data loss
+      // path documented in ADR 0030.
+      expect(result.recyclingActivity.totalTonnageReceived).toBe(0)
+      expect(result.recyclingActivity.suppliers).toStrictEqual([])
+      expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(1)
+    })
+
+    it('silently excludes registered-only records when aggregating as accredited exporter', () => {
+      const registeredOnlyRecord = {
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
+          TONNAGE_RECEIVED_FOR_EXPORT: 40,
+          SUPPLIER_NAME: 'Coastline Waste',
+          ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
+        },
+        versions: [
+          {
+            createdAt: '2026-03-01T10:00:00.000Z',
+            summaryLog: { id: 'sl-1' }
+          }
+        ]
+      }
+
+      const result = aggregateReportDetail([registeredOnlyRecord], {
+        operatorCategory: OPERATOR_CATEGORY.EXPORTER,
+        cadence: 'monthly',
+        year: 2026,
+        period: 2
+      })
+
+      expect(result.recyclingActivity.totalTonnageReceived).toBe(0)
+      expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(1)
+    })
+
+    it('reports zero excluded records when all records have the expected date field', () => {
+      const accreditedRecord = buildReceivedRecord({
+        MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+        TONNAGE_RECEIVED_FOR_RECYCLING: 50
+      })
+
+      const result = aggregateReportDetail([accreditedRecord], defaultArgs)
+
+      expect(result.recyclingActivity.totalTonnageReceived).toBe(50)
+      expect(result.diagnostics.wasteReceivedRecordsExcluded).toBe(0)
+    })
+  })
+
   describe('validation', () => {
     it('throws TypeError for unknown cadence', () => {
       expect(() =>

@@ -49,6 +49,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
+ * @property {{ wasteReceivedRecordsExcluded: number }} diagnostics
  */
 
 /**
@@ -126,6 +127,19 @@ export function aggregateReportDetail(
     tonnageReceivedField
   )
 
+  // Count received records excluded because they lack the expected date field.
+  // This could potentially happen after a registered-only organisation becomes
+  // accredited (or vice versa): historical registered-only records have MONTH_RECEIVED_FOR_*
+  // but the accredited category looks up DATE_RECEIVED_FOR_*. See ADR 0030,
+  // Finding 3. Only wasteReceived needs this check — all other sections use
+  // the same date field name regardless of operator category.
+  const wasteReceivedRecordsExcluded = wasteRecords.filter(
+    (r) =>
+      r.type === 'received' &&
+      wasteReceivedDateField &&
+      r.data[wasteReceivedDateField] == null
+  ).length
+
   return {
     operatorCategory,
     cadence,
@@ -146,7 +160,8 @@ export function aggregateReportDetail(
         operatorCategory
       })
     }),
-    wasteSent: aggregateWasteSentOn(wasteSentOnRecords)
+    wasteSent: aggregateWasteSentOn(wasteSentOnRecords),
+    diagnostics: { wasteReceivedRecordsExcluded }
   }
 }
 

@@ -66,7 +66,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber?: string;
- *  status: 'created'|'rejected'|'archived';
+ *  status: 'created'|'rejected'|'cancelled';
  *  validFrom?: string;
  *  validTo?: string
  * }} AccreditationOther
