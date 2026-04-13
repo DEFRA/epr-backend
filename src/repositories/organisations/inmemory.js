@@ -324,6 +324,24 @@ const performFindRegistrationById =
     return structuredClone(registration)
   }
 
+const performDeleteById = (storage, staleCache) => async (id) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+    return 0
+  }
+
+  const index = storage.findIndex((o) => o._id === id)
+  if (index === -1) {
+    return 0
+  }
+
+  storage.splice(index, 1)
+  // Delete is immediately visible (no lag simulation for deletes) —
+  // re-sync staleCache from storage so subsequent reads see the delete.
+  staleCache.length = 0
+  staleCache.push(...structuredClone(storage))
+  return 1
+}
+
 const performFindAccreditationById =
   (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -402,6 +420,7 @@ export const createInMemoryOrganisationsRepository = (
       ),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
+      deleteById: performDeleteById(storage, staleCache),
       // Test-only method to access internal storage (not part of the port interface)
       _getStorageForTesting: () => storage
     }

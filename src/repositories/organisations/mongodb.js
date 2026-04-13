@@ -324,6 +324,57 @@ const performFindByOrgId = (db) => async (orgId) => {
   return mapDocumentWithCurrentStatuses(doc)
 }
 
+const performFindRegistrationById =
+  (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
+    const org = await findById(organisationId, minimumOrgVersion)
+    const registration = org.registrations?.find((r) => r.id === registrationId)
+
+    if (!registration) {
+      throw Boom.notFound(`Registration with id ${registrationId} not found`)
+    }
+
+    // Hydrate with accreditation if accreditationId exists
+    if (registration.accreditationId) {
+      const accreditation = org.accreditations?.find(
+        (a) => a.id === registration.accreditationId
+      )
+      if (accreditation) {
+        return {
+          ...registration,
+          accreditation
+        }
+      }
+    }
+
+    return registration
+  }
+
+const performFindAccreditationById =
+  (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
+    const org = await findById(organisationId, minimumOrgVersion)
+    const accreditation = org.accreditations?.find(
+      (a) => a.id === accreditationId
+    )
+
+    if (!accreditation) {
+      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
+    }
+
+    return accreditation
+  }
+
+const performDeleteById = (db) => async (id) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+    return 0
+  }
+
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .deleteOne({ _id: ObjectId.createFromHexString(id) })
+
+  return result.deletedCount
+}
+
 const performReplaceRegistrationOverseasSites =
   (db) => async (id, version, registrationId, entries) => {
     const result = await db.collection(COLLECTION_NAME).updateOne(
@@ -372,61 +423,12 @@ export const createOrganisationsRepository = async (
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
-
-      async findRegistrationById(
-        organisationId,
-        registrationId,
-        minimumOrgVersion
-      ) {
-        const org = await findById(organisationId, minimumOrgVersion)
-        const registration = org.registrations?.find(
-          (r) => r.id === registrationId
-        )
-
-        if (!registration) {
-          throw Boom.notFound(
-            `Registration with id ${registrationId} not found`
-          )
-        }
-
-        // Hydrate with accreditation if accreditationId exists
-        if (registration.accreditationId) {
-          const accreditation = org.accreditations?.find(
-            (a) => a.id === registration.accreditationId
-          )
-          if (accreditation) {
-            return {
-              ...registration,
-              accreditation
-            }
-          }
-        }
-
-        return registration
-      },
-
-      async findAccreditationById(
-        organisationId,
-        accreditationId,
-        minimumOrgVersion
-      ) {
-        const org = await findById(organisationId, minimumOrgVersion)
-        const accreditation = org.accreditations?.find(
-          (a) => a.id === accreditationId
-        )
-
-        if (!accreditation) {
-          throw Boom.notFound(
-            `Accreditation with id ${accreditationId} not found`
-          )
-        }
-
-        return accreditation
-      },
-
+      findRegistrationById: performFindRegistrationById(findById),
+      findAccreditationById: performFindAccreditationById(findById),
       findByOrgId: performFindByOrgId(db),
       replaceRegistrationOverseasSites:
-        performReplaceRegistrationOverseasSites(db)
+        performReplaceRegistrationOverseasSites(db),
+      deleteById: performDeleteById(db)
     }
   }
 }
