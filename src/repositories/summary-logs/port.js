@@ -43,7 +43,6 @@
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: string) => Promise<DownloadUrlResult>} getDownloadUrl
- * @property {(organisationId: string) => Promise<number>} deleteByOrganisationId
  */
 
 /**

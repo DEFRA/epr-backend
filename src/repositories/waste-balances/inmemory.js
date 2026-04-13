@@ -63,25 +63,6 @@ const performFindByAccreditationIds =
     return balances.map((balance) => structuredClone(balance))
   }
 
-const performDeleteByAccreditationIds =
-  (wasteBalanceStorage) => async (accreditationIds) => {
-    if (accreditationIds.length === 0) {
-      return 0
-    }
-
-    const idsToDelete = new Set(accreditationIds)
-    let deletedCount = 0
-
-    for (let i = wasteBalanceStorage.length - 1; i >= 0; i--) {
-      if (idsToDelete.has(wasteBalanceStorage[i].accreditationId)) {
-        wasteBalanceStorage.splice(i, 1)
-        deletedCount++
-      }
-    }
-
-    return deletedCount
-  }
-
 /**
  * Create an in-memory waste balances repository.
  * Ensures data isolation by deep-cloning on read.
@@ -141,8 +122,6 @@ export const createInMemoryWasteBalancesRepository = (
         saveBalance: saveBalance(wasteBalanceStorage)
       })
     },
-    deleteByAccreditationIds:
-      performDeleteByAccreditationIds(wasteBalanceStorage),
     // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage
   })

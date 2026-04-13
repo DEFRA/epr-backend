@@ -1,6 +1,5 @@
 import { testCreateBehaviour } from './contract/create.contract.js'
 import { testDataIsolation } from './contract/data-isolation.contract.js'
-import { testDeleteByOrganisationIdBehaviour } from './contract/delete-by-organisation-id.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindByStatusBehaviour } from './contract/find-by-status.contract.js'
 import { testUpdateStatusBehaviour } from './contract/update-status.contract.js'
@@ -12,7 +11,6 @@ export const testPackagingRecyclingNotesRepositoryContract = (
   describe('packaging recycling notes repository contract', () => {
     testCreateBehaviour(repositoryFactory)
     testDataIsolation(repositoryFactory)
-    testDeleteByOrganisationIdBehaviour(repositoryFactory)
     testFindBehaviour(repositoryFactory)
     testFindByStatusBehaviour(repositoryFactory)
     testUpdateStatusBehaviour(repositoryFactory)

@@ -300,17 +300,6 @@ const performUpdateStatus = async (
 
 /**
  * @param {Db} db
- * @returns {(organisationId: string) => Promise<number>}
- */
-const performDeleteByOrganisationId = (db) => async (organisationId) => {
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .deleteMany({ 'organisation.id': organisationId })
-  return result.deletedCount
-}
-
-/**
- * @param {Db} db
  * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
@@ -322,7 +311,6 @@ export const createPackagingRecyclingNotesRepository = async (
 
   return () => ({
     create: (prn) => performCreate(db, prn),
-    deleteByOrganisationId: performDeleteByOrganisationId(db),
     findByAccreditation: (accreditationId) =>
       performFindByAccreditation(db, accreditationId),
     findById: (id) => performFindById(db, id),

@@ -44,7 +44,6 @@ export class PrnNumberConflictError extends Error {
  * @property {(accreditationId: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
- * @property {(organisationId: string) => Promise<number>} deleteByOrganisationId
  */
 
 /**

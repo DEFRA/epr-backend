@@ -230,19 +230,6 @@ const transitionToSubmittingExclusive =
     }
   }
 
-const deleteByOrganisationId =
-  (storage, staleCache) => async (organisationId) => {
-    let deletedCount = 0
-    for (const [id, doc] of storage) {
-      if (doc.summaryLog.organisationId === organisationId) {
-        storage.delete(id)
-        staleCache.delete(id)
-        deletedCount++
-      }
-    }
-    return deletedCount
-  }
-
 /**
  * Create an in-memory summary logs repository.
  * Simulates eventual consistency by maintaining separate storage and staleCache.
@@ -265,7 +252,6 @@ export const createInMemorySummaryLogsRepository = () => {
       storage,
       staleCache
     ),
-    getDownloadUrl: getDownloadUrl(staleCache),
-    deleteByOrganisationId: deleteByOrganisationId(storage, staleCache)
+    getDownloadUrl: getDownloadUrl(staleCache)
   })
 }

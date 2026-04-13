@@ -14,6 +14,7 @@
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
     "#glass-migration/*": "./src/glass-migration/*",
+    "#non-prod-data-reset/*": "./src/non-prod-data-reset/*",
     "#overseas-sites/*": "./src/overseas-sites/*",
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",

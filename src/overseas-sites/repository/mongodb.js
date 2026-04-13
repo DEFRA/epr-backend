@@ -181,25 +181,6 @@ const performFindByIds = async (db, ids) => {
 
 /**
  * @param {Db} db
- * @param {string[]} ids
- * @returns {Promise<number>}
- */
-const performDeleteByIds = async (db, ids) => {
-  if (ids.length === 0) {
-    return 0
-  }
-
-  const objectIds = ids.map((id) => ObjectId.createFromHexString(id))
-
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .deleteMany({ _id: { $in: objectIds } })
-
-  return result.deletedCount
-}
-
-/**
- * @param {Db} db
  * @param {FindAllParams} [params]
  * @returns {Promise<OverseasSite[]>}
  */
@@ -231,7 +212,6 @@ export const createOverseasSitesRepository = async (db) => {
 
   return () => ({
     create: (site) => performCreate(db, site),
-    deleteByIds: (ids) => performDeleteByIds(db, ids),
     findAll: (params) => performFindAll(db, params),
     findById: (id) => performFindById(db, id),
     findByIds: (ids) => performFindByIds(db, ids),

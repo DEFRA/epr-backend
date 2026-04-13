@@ -12,7 +12,6 @@ import { testFindAccreditationByIdBehaviour } from './contract/find-accreditatio
 import { testRegAccApprovalValidation } from './contract/reg-acc-approval.contract.js'
 import { testOrgStatusTransitionBehaviour } from './contract/org-status.contract.js'
 import { testRegAccStatusTransitionBehaviour } from './contract/reg-acc-status-transition.contract.js'
-import { testDeleteByIdBehaviour } from './contract/delete-by-id.contract.js'
 
 export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testInsertBehaviour(repositoryFactory)
@@ -29,5 +28,4 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testRegAccApprovalValidation(repositoryFactory)
   testOrgStatusTransitionBehaviour(repositoryFactory)
   testRegAccStatusTransitionBehaviour(repositoryFactory)
-  testDeleteByIdBehaviour(repositoryFactory)
 }

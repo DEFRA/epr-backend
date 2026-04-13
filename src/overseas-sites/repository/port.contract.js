@@ -1,6 +1,5 @@
 import { testCreateBehaviour } from './contract/create.contract.js'
 import { testDataIsolation } from './contract/data-isolation.contract.js'
-import { testDeleteByIdsBehaviour } from './contract/delete-by-ids.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindByIdsBehaviour } from './contract/find-by-ids.contract.js'
 import { testFindByPropertiesBehaviour } from './contract/find-by-properties.contract.js'
@@ -12,7 +11,6 @@ export const testOverseasSitesRepositoryContract = (repositoryFactory) => {
   describe('overseas sites repository contract', () => {
     testCreateBehaviour(repositoryFactory)
     testDataIsolation(repositoryFactory)
-    testDeleteByIdsBehaviour(repositoryFactory)
     testFindBehaviour(repositoryFactory)
     testFindByIdsBehaviour(repositoryFactory)
     testFindByPropertiesBehaviour(repositoryFactory)

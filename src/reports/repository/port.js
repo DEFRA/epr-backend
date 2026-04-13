@@ -212,7 +212,6 @@
  * @property {(params: UpdateReportParams) => Promise<void>} updateReport
  * @property {(params: UpdateReportStatusParams) => Promise<void>} updateReportStatus
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
- * @property {(organisationId: string) => Promise<number>} deleteByOrganisationId
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
  */

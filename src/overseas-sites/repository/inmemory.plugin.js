@@ -66,23 +66,6 @@ const performRemove = (storage) => async (id) => {
 }
 
 /**
- * @param {Storage} storage
- * @returns {(ids: string[]) => Promise<number>}
- */
-const performDeleteByIds = (storage) => async (ids) => {
-  if (ids.length === 0) {
-    return 0
-  }
-  let count = 0
-  for (const id of ids) {
-    if (storage.delete(id)) {
-      count += 1
-    }
-  }
-  return count
-}
-
-/**
  * @param {*} a
  * @param {*} b
  */
@@ -177,7 +160,6 @@ export function createInMemoryOverseasSitesRepository(initialData = []) {
 
   return () => ({
     create: performCreate(storage),
-    deleteByIds: performDeleteByIds(storage),
     findAll: performFindAll(storage),
     findById: performFindById(storage),
     findByIds: performFindByIds(storage),

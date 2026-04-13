@@ -76,20 +76,6 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       )
     },
 
-    async deleteByOrganisationId(organisationId) {
-      const validatedOrgId = validateOrganisationId(organisationId)
-
-      let deletedCount = 0
-      for (let i = storage.length - 1; i >= 0; i--) {
-        if (storage[i].organisationId === validatedOrgId) {
-          storage.splice(i, 1)
-          deletedCount++
-        }
-      }
-
-      return deletedCount
-    },
-
     async appendVersions(organisationId, registrationId, wasteRecordVersions) {
       const validatedOrgId = validateOrganisationId(organisationId)
       const validatedRegId = validateRegistrationId(registrationId)
