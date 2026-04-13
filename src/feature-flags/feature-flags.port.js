@@ -5,7 +5,6 @@
  * @property {() => boolean} isCopyFormFilesToS3Enabled
  * @property {() => boolean} isOverseasSitesEnabled
  * @property {() => boolean} isReportsEnabled
- * @property {() => boolean} isRegisteredOnlyEnabled
  * @property {() => boolean} isOrsWasteBalanceValidationEnabled
  */
 

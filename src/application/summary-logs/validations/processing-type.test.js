@@ -12,9 +12,6 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-const registeredOnlyEnabled = { isRegisteredOnlyEnabled: () => true }
-const registeredOnlyDisabled = { isRegisteredOnlyEnabled: () => false }
-
 describe('validateProcessingType', () => {
   afterEach(() => {
     vi.resetAllMocks()
@@ -122,8 +119,7 @@ describe('validateProcessingType', () => {
       const result = validateProcessingType({
         parsed,
         registration,
-        loggingContext: 'test',
-        featureFlags: registeredOnlyEnabled
+        loggingContext: 'test'
       })
 
       expect(result.isValid()).toBe(true)
@@ -157,8 +153,7 @@ describe('validateProcessingType', () => {
       const result = validateProcessingType({
         parsed,
         registration,
-        loggingContext: 'test',
-        featureFlags: registeredOnlyEnabled
+        loggingContext: 'test'
       })
 
       expect(result.isValid()).toBe(false)
@@ -197,8 +192,7 @@ describe('validateProcessingType', () => {
       const result = validateProcessingType({
         parsed,
         registration,
-        loggingContext: 'test',
-        featureFlags: registeredOnlyEnabled
+        loggingContext: 'test'
       })
 
       expect(result.isValid()).toBe(false)
@@ -235,8 +229,7 @@ describe('validateProcessingType', () => {
       const result = validateProcessingType({
         parsed,
         registration,
-        loggingContext: 'test',
-        featureFlags: registeredOnlyEnabled
+        loggingContext: 'test'
       })
 
       expect(result.isValid()).toBe(false)
@@ -248,47 +241,6 @@ describe('validateProcessingType', () => {
       expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     }
   )
-
-  it('skips accredited-vs-registered-only check when feature flag is disabled', () => {
-    const parsed = {
-      meta: {
-        PROCESSING_TYPE: { value: 'EXPORTER' }
-      }
-    }
-    const registration = {
-      wasteProcessingType: 'exporter'
-      // No accreditation — registered-only
-    }
-
-    const result = validateProcessingType({
-      parsed,
-      registration,
-      loggingContext: 'test',
-      featureFlags: registeredOnlyDisabled
-    })
-
-    expect(result.isValid()).toBe(true)
-  })
-
-  it('skips accredited-vs-registered-only check when featureFlags is not provided', () => {
-    const parsed = {
-      meta: {
-        PROCESSING_TYPE: { value: 'EXPORTER' }
-      }
-    }
-    const registration = {
-      wasteProcessingType: 'exporter'
-      // No accreditation — registered-only
-    }
-
-    const result = validateProcessingType({
-      parsed,
-      registration,
-      loggingContext: 'test'
-    })
-
-    expect(result.isValid()).toBe(true)
-  })
 
   it('categorizes type mismatch as fatal business error', () => {
     const parsed = {

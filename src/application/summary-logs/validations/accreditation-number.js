@@ -20,24 +20,20 @@ import {
  * @param {Object} params.parsed - The parsed summary log structure from the parser
  * @param {Object} params.registration - The registration object from the organisations repository
  * @param {string} params.loggingContext - Logging context message
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.featureFlags]
  * @returns {Object} validation issues with any issues found
  */
 export const validateAccreditationNumber = ({
   parsed,
   registration,
-  loggingContext,
-  featureFlags
+  loggingContext
 }) => {
   const issues = createValidationIssues()
 
   // Registered-only templates have no accreditation field — nothing to validate
-  if (featureFlags?.isRegisteredOnlyEnabled()) {
-    const processingType =
-      parsed.meta[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]?.value
-    if (REGISTERED_ONLY_PROCESSING_TYPES.has(processingType)) {
-      return issues
-    }
+  const processingType =
+    parsed.meta[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]?.value
+  if (REGISTERED_ONLY_PROCESSING_TYPES.has(processingType)) {
+    return issues
   }
 
   const accreditationNumber = registration.accreditation?.accreditationNumber
