@@ -113,6 +113,19 @@ describe('report-service', () => {
         source: {
           summaryLogId: 'sl-1',
           lastUploadedAt: '2026-04-01T21:22:28.351Z'
+        },
+        prn: null,
+        recyclingActivity: {
+          suppliers: [],
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
+          finalDestinations: []
         }
       })
 
@@ -290,7 +303,7 @@ describe('report-service', () => {
           }
         })
 
-      it('is undefined for non-accredited operator', async () => {
+      it('is null for non-accredited operator', async () => {
         const reportsRepository = createInMemoryReportsRepository()()
         const params = defaultParams()
         params.registration = buildRegistration({ accreditationId: undefined })
@@ -305,7 +318,7 @@ describe('report-service', () => {
           changedBy
         })
 
-        expect(report.prn).toBeUndefined()
+        expect(report.prn).toBeNull()
       })
 
       it('persists prn with issuedTonnage 0 when accredited and no PRNs exist', async () => {

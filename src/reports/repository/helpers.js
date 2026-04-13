@@ -85,7 +85,9 @@ export const prepareCreateReportParams = (validatedParams) => {
   const { changedBy, ...reportCreateParams } = validatedParams
 
   const providedReportParams = Object.fromEntries(
-    Object.entries(reportCreateParams).filter(([_, value]) => value != null)
+    Object.entries(reportCreateParams).filter(
+      ([_, value]) => value !== undefined
+    )
   )
   const now = new Date().toISOString()
   const reportId = randomUUID()

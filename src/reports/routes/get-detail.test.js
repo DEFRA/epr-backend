@@ -143,7 +143,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 42.21,
                 SUPPLIER_NAME: 'Grantham Waste',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -152,7 +152,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-02',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 38.04,
                 SUPPLIER_NAME: 'SUEZ recycling',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -231,7 +231,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 50,
                 SUPPLIER_NAME: 'In period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -240,7 +240,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-04-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-04',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 100,
                 SUPPLIER_NAME: 'Out of period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -273,7 +273,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01',
                 TONNAGE_RECEIVED_FOR_RECYCLING: 50,
                 SUPPLIER_NAME: 'Test',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -481,7 +481,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-01',
                 TONNAGE_RECEIVED_FOR_EXPORT: 50.25,
                 SUPPLIER_NAME: 'Grantham Waste',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -490,7 +490,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-02-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-02',
                 TONNAGE_RECEIVED_FOR_EXPORT: 30,
                 SUPPLIER_NAME: 'SUEZ recycling',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -513,7 +513,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         )
       })
 
-      it('aggregates waste exported with overseas site details', async () => {
+      it('routes exported records to unapprovedOverseasSites when overseas-sites repo is unavailable', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',
@@ -558,20 +558,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.exportActivity.totalTonnageExported).toBe(11.47)
-        expect(payload.exportActivity.overseasSites).toHaveLength(2)
-        expect(payload.exportActivity.overseasSites).toStrictEqual([
-          {
-            country: null,
-            orsId: '001',
-            siteName: null,
-            tonnageExported: 8.47
-          },
-          {
-            country: null,
-            orsId: '096',
-            siteName: null,
-            tonnageExported: 3
-          }
+        expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([
+          { orsId: '001', tonnageExported: 8.47 },
+          { orsId: '096', tonnageExported: 3 }
         ])
       })
 
@@ -585,7 +575,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-01-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-01',
                 TONNAGE_RECEIVED_FOR_EXPORT: 50,
                 SUPPLIER_NAME: 'In period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
@@ -594,7 +584,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             {
               type: WASTE_RECORD_TYPE.RECEIVED,
               data: {
-                MONTH_RECEIVED_FOR_EXPORT: '2026-04-01',
+                MONTH_RECEIVED_FOR_EXPORT: '2026-04',
                 TONNAGE_RECEIVED_FOR_EXPORT: 100,
                 SUPPLIER_NAME: 'Out of period',
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorter'
@@ -635,6 +625,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(payload.exportActivity.totalTonnageExported).toBe(0)
         expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([])
         expect(
           payload.wasteSent.tonnageSentToReprocessor +
             payload.wasteSent.tonnageSentToExporter +
@@ -723,7 +714,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         ])
       })
 
-      it('aggregates waste exported with overseas site details', async () => {
+      it('routes exported records to unapprovedOverseasSites when overseas-sites repo is unavailable', async () => {
         const { server, organisationId, registrationId } = await createServer(
           {
             wasteProcessingType: 'exporter',
@@ -764,9 +755,11 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         expect(payload.exportActivity.totalTonnageExported).toBe(11.5)
-        expect(payload.exportActivity.overseasSites).toHaveLength(2)
-        expect(payload.exportActivity.overseasSites[0].orsId).toBe('001')
-        expect(payload.exportActivity.overseasSites[0].siteName).toBeNull()
+        expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([
+          { orsId: '001', tonnageExported: 5 },
+          { orsId: '096', tonnageExported: 6.5 }
+        ])
       })
 
       it('filters waste received and exported by different date fields', async () => {
@@ -837,6 +830,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.recyclingActivity.suppliers).toStrictEqual([])
         expect(payload.exportActivity.totalTonnageExported).toBe(0)
         expect(payload.exportActivity.overseasSites).toStrictEqual([])
+        expect(payload.exportActivity.unapprovedOverseasSites).toStrictEqual([])
         expect(
           payload.wasteSent.tonnageSentToReprocessor +
             payload.wasteSent.tonnageSentToExporter +
@@ -961,6 +955,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
               }
             ]
           },
+          prn: null,
           source: {
             summaryLogId: 'sl-1',
             lastUploadedAt: '2026-04-01T21:22:28.351Z'

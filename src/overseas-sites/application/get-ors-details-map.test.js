@@ -2,11 +2,21 @@ import { describe, it, expect, vi } from 'vitest'
 import { getOrsDetailsMap } from './get-ors-details-map.js'
 
 describe('getOrsDetailsMap', () => {
-  it('returns a map keyed by ORS key with siteName and country', async () => {
+  it('returns a map keyed by ORS key with siteName, country, and validFrom', async () => {
     const overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([
-        { id: 'site-aaa', name: 'EuroPlast GmbH', country: 'Germany' },
-        { id: 'site-bbb', name: 'RecyclePlast SA', country: 'France' }
+        {
+          id: 'site-aaa',
+          name: 'EuroPlast GmbH',
+          country: 'Germany',
+          validFrom: new Date('2025-01-15')
+        },
+        {
+          id: 'site-bbb',
+          name: 'RecyclePlast SA',
+          country: 'France',
+          validFrom: new Date('2024-06-01')
+        }
       ])
     }
     const overseasSites = {
@@ -22,11 +32,13 @@ describe('getOrsDetailsMap', () => {
     expect(result).toBeInstanceOf(Map)
     expect(result.get('ORS_1')).toStrictEqual({
       siteName: 'EuroPlast GmbH',
-      country: 'Germany'
+      country: 'Germany',
+      validFrom: new Date('2025-01-15')
     })
     expect(result.get('ORS_2')).toStrictEqual({
       siteName: 'RecyclePlast SA',
-      country: 'France'
+      country: 'France',
+      validFrom: new Date('2024-06-01')
     })
     expect(overseasSitesRepository.findByIds).toHaveBeenCalledWith([
       'site-aaa',
@@ -73,7 +85,7 @@ describe('getOrsDetailsMap', () => {
     expect(overseasSitesRepository.findByIds).not.toHaveBeenCalled()
   })
 
-  it('sets siteName and country to null when site is not found', async () => {
+  it('sets siteName, country, and validFrom to null when site is not found', async () => {
     const overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
     }
@@ -86,10 +98,14 @@ describe('getOrsDetailsMap', () => {
       overseasSites
     )
 
-    expect(result.get('ORS_1')).toStrictEqual({ siteName: null, country: null })
+    expect(result.get('ORS_1')).toStrictEqual({
+      siteName: null,
+      country: null,
+      validFrom: null
+    })
   })
 
-  it('sets siteName and country to null when site fields are absent', async () => {
+  it('sets siteName, country, and validFrom to null when site fields are absent', async () => {
     const overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa' }])
     }
@@ -102,6 +118,10 @@ describe('getOrsDetailsMap', () => {
       overseasSites
     )
 
-    expect(result.get('ORS_1')).toStrictEqual({ siteName: null, country: null })
+    expect(result.get('ORS_1')).toStrictEqual({
+      siteName: null,
+      country: null,
+      validFrom: null
+    })
   })
 })

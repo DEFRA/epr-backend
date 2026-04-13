@@ -1,5 +1,5 @@
-import Decimal from 'decimal.js'
 import Joi from 'joi'
+import { toDecimal } from '#common/helpers/decimal-utils.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
@@ -38,7 +38,7 @@ export const userSummarySchema = Joi.object({
 const TWO_DECIMAL_PLACES = 2
 
 export const maxTwoDecimalPlaces = (value, helpers) => {
-  if (new Decimal(value).decimalPlaces() > TWO_DECIMAL_PLACES) {
+  if (toDecimal(value).decimalPlaces() > TWO_DECIMAL_PLACES) {
     return helpers.error('number.maxDecimalPlaces')
   }
   return value
@@ -47,19 +47,78 @@ export const maxTwoDecimalPlaces = (value, helpers) => {
 export const prnSchema = Joi.object({
   issuedTonnage: Joi.number().min(0).required(),
   totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  freeTonnage: Joi.number().min(0).allow(null),
+  freeTonnage: Joi.number().integer().min(0).allow(null),
   averagePricePerTonne: Joi.number().min(0).allow(null)
 }).optional()
+
+const supplierSchema = Joi.object({
+  supplierName: Joi.string().allow(null).optional(),
+  facilityType: Joi.string().allow(null).optional(),
+  supplierAddress: Joi.string().allow(null).optional(),
+  supplierPhone: Joi.string().allow(null).optional(),
+  supplierEmail: Joi.string().allow(null).optional(),
+  tonnageReceived: Joi.number().min(0).required()
+})
+
+const recyclingActivitySchema = Joi.object({
+  suppliers: Joi.array().items(supplierSchema).required(),
+  totalTonnageReceived: Joi.number().min(0).required(),
+  tonnageRecycled: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
+  tonnageNotRecycled: Joi.number()
+    .min(0)
+    .allow(null)
+    .custom(maxTwoDecimalPlaces)
+}).required()
+
+const overseasSiteSchema = Joi.object({
+  orsId: Joi.string().required(),
+  siteName: Joi.string().allow(null).required(),
+  country: Joi.string().allow(null).required(),
+  tonnageExported: Joi.number().min(0).required(),
+  approved: Joi.boolean().required()
+})
+
+const unapprovedOverseasSiteSchema = Joi.object({
+  orsId: Joi.string().required(),
+  tonnageExported: Joi.number().min(0).required()
+})
+
+const exportActivitySchema = Joi.object({
+  overseasSites: Joi.array().items(overseasSiteSchema).required(),
+  unapprovedOverseasSites: Joi.array()
+    .items(unapprovedOverseasSiteSchema)
+    .required(),
+  totalTonnageExported: Joi.number().min(0).required(),
+  tonnageReceivedNotExported: Joi.number().min(0).required(),
+  tonnageRefusedAtDestination: Joi.number().min(0).required(),
+  tonnageStoppedDuringExport: Joi.number().min(0).required(),
+  totalTonnageRefusedOrStopped: Joi.number().min(0).required(),
+  tonnageRepatriated: Joi.number().min(0).required()
+}).optional()
+
+const finalDestinationSchema = Joi.object({
+  recipientName: Joi.string().allow(null).optional(),
+  facilityType: Joi.string().allow(null).optional(),
+  address: Joi.string().allow(null).optional(),
+  tonnageSentOn: Joi.number().min(0).required()
+})
+
+const wasteSentSchema = Joi.object({
+  tonnageSentToReprocessor: Joi.number().min(0).required(),
+  tonnageSentToExporter: Joi.number().min(0).required(),
+  tonnageSentToAnotherSite: Joi.number().min(0).required(),
+  finalDestinations: Joi.array().items(finalDestinationSchema).required()
+}).required()
 
 const reportDataFieldsSchema = {
   source: Joi.object({
     summaryLogId: Joi.string().allow(null),
     lastUploadedAt: Joi.string().isoDate().allow(null)
   }).required(),
-  recyclingActivity: Joi.object().optional(),
-  exportActivity: Joi.object().optional(),
-  wasteSent: Joi.object().optional(),
-  prn: prnSchema,
+  recyclingActivity: recyclingActivitySchema,
+  exportActivity: exportActivitySchema,
+  wasteSent: wasteSentSchema,
+  prn: prnSchema.allow(null).required(),
   supportingInformation: Joi.string().optional()
 }
 
@@ -88,8 +147,14 @@ const updatableFieldsSchema = Joi.object({
   supportingInformation: Joi.string().allow(''),
   prn: prnSchema.fork('issuedTonnage', (s) => s.optional()),
   recyclingActivity: Joi.object({
-    tonnageRecycled: Joi.number().min(0).allow(null),
-    tonnageNotRecycled: Joi.number().min(0).allow(null)
+    tonnageRecycled: Joi.number()
+      .min(0)
+      .allow(null)
+      .custom(maxTwoDecimalPlaces),
+    tonnageNotRecycled: Joi.number()
+      .min(0)
+      .allow(null)
+      .custom(maxTwoDecimalPlaces)
   }).unknown(true)
 })
   .min(1)

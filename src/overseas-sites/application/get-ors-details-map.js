@@ -1,12 +1,12 @@
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 
 /**
- * Builds a map from ORS key (e.g. "120") to site name and country,
- * looked up from the overseas-sites repository.
+ * Builds a map from ORS key (e.g. "120") to site name, country, and
+ * valid-from date, looked up from the overseas-sites repository.
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
- * @returns {Promise<Map<string, { siteName: string|null, country: string|null }>>}
+ * @returns {Promise<Map<string, { siteName: string|null, country: string|null, validFrom: Date|null }>>}
  */
 export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
   if (!overseasSitesRepository) {
@@ -27,7 +27,11 @@ export async function getOrsDetailsMap(overseasSitesRepository, overseasSites) {
       const site = sitesById.get(overseasSiteId)
       return [
         orsKey,
-        { siteName: site?.name ?? null, country: site?.country ?? null }
+        {
+          siteName: site?.name ?? null,
+          country: site?.country ?? null,
+          validFrom: site?.validFrom ?? null
+        }
       ]
     })
   )

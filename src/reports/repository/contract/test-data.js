@@ -66,5 +66,18 @@ export const buildCreateReportParams = (overrides = {}) => ({
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   changedBy: buildUserSummary(),
   source: { summaryLogId: 'sl-1', lastUploadedAt: '2026-04-01T21:22:28.351Z' },
+  prn: null,
+  recyclingActivity: {
+    suppliers: [],
+    totalTonnageReceived: 0,
+    tonnageRecycled: null,
+    tonnageNotRecycled: null
+  },
+  wasteSent: {
+    tonnageSentToReprocessor: 0,
+    tonnageSentToExporter: 0,
+    tonnageSentToAnotherSite: 0,
+    finalDestinations: []
+  },
   ...overrides
 })

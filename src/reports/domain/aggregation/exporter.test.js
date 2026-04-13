@@ -1,27 +1,36 @@
 import { describe, expect, it } from 'vitest'
 
 import { aggregateReportDetail } from '#root/reports/domain/aggregation/aggregate-report-detail.js'
-import { aggregateWasteExported } from '#root/reports/domain/aggregation/aggregate-waste-exported.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import wasteRecordsAccredited from './test-data/exporter-accredited.json'
 import wasteRecordsRegisteredOnly from './test-data/exporter-reg-only.json'
 
-const buildExportedRecord = (tonnage) => ({
-  type: WASTE_RECORD_TYPE.EXPORTED,
-  data: {
-    TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
-    WAS_THE_WASTE_REFUSED: 'No',
-    WAS_THE_WASTE_STOPPED: 'No'
-  }
-})
-
 describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', () => {
-  it('aggregates in-period records into the full report detail', () => {
+  const orsDetailsMap = new Map([
+    [
+      '512',
+      {
+        siteName: 'EuroPaper GmbH',
+        country: 'DE',
+        validFrom: new Date('2026-01-15')
+      }
+    ],
+    [
+      '124',
+      {
+        siteName: 'RecycleFrance SA',
+        country: 'FR',
+        validFrom: new Date('2026-01-25')
+      }
+    ]
+  ])
+
+  it('aggregates in-period records with per-row approval status', () => {
     const result = aggregateReportDetail(wasteRecordsAccredited, {
       operatorCategory: 'EXPORTER',
       cadence: 'monthly',
       year: 2026,
-      period: 1
+      period: 1,
+      orsDetailsMap
     })
 
     expect(result).toEqual({
@@ -68,11 +77,31 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly January 2026', 
       },
       exportActivity: {
         overseasSites: [
-          { orsId: 512, siteName: null, country: null, tonnageExported: 23.41 },
-          { orsId: 124, siteName: null, country: null, tonnageExported: 65.62 }
+          {
+            orsId: '512',
+            siteName: 'EuroPaper GmbH',
+            country: 'DE',
+            tonnageExported: 23.41,
+            approved: true
+          },
+          {
+            orsId: '124',
+            siteName: 'RecycleFrance SA',
+            country: 'FR',
+            tonnageExported: 15.62,
+            approved: false
+          },
+          {
+            orsId: '124',
+            siteName: 'RecycleFrance SA',
+            country: 'FR',
+            tonnageExported: 50,
+            approved: true
+          }
         ],
+        unapprovedOverseasSites: [],
         totalTonnageExported: 89.03,
-        tonnageReceivedNotExported: 57.67,
+        tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 50,
         tonnageStoppedDuringExport: 50,
         totalTonnageRefusedOrStopped: 50,
@@ -124,6 +153,7 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
       },
       exportActivity: {
         overseasSites: [],
+        unapprovedOverseasSites: [],
         totalTonnageExported: 0,
         tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 0,
@@ -143,12 +173,32 @@ describe('#aggregateReportDetail — EXPORTER accredited monthly February 2026',
 })
 
 describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026', () => {
-  it('aggregates in-period records into the full report detail', () => {
+  const orsDetailsMap = new Map([
+    [
+      '565',
+      {
+        siteName: 'RegSite Alpha',
+        country: 'NL',
+        validFrom: new Date('2025-01-01')
+      }
+    ],
+    [
+      '297',
+      {
+        siteName: 'RegSite Beta',
+        country: 'BE',
+        validFrom: new Date('2025-06-01')
+      }
+    ]
+  ])
+
+  it('aggregates in-period records with approved always false for registered-only', () => {
     const result = aggregateReportDetail(wasteRecordsRegisteredOnly, {
       operatorCategory: 'EXPORTER_REGISTERED_ONLY',
       cadence: 'quarterly',
       year: 2026,
-      period: 1
+      period: 1,
+      orsDetailsMap
     })
 
     expect(result).toEqual({
@@ -203,13 +253,27 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
       },
       exportActivity: {
         overseasSites: [
-          { orsId: 565, siteName: null, country: null, tonnageExported: 2.99 },
-          { orsId: 297, siteName: null, country: null, tonnageExported: 3.02 },
-          { orsId: 893, siteName: null, country: null, tonnageExported: 1.26 },
-          { orsId: 143, siteName: null, country: null, tonnageExported: 3.07 }
+          {
+            orsId: '565',
+            siteName: 'RegSite Alpha',
+            country: 'NL',
+            tonnageExported: 2.99,
+            approved: false
+          },
+          {
+            orsId: '297',
+            siteName: 'RegSite Beta',
+            country: 'BE',
+            tonnageExported: 3.02,
+            approved: false
+          }
+        ],
+        unapprovedOverseasSites: [
+          { orsId: '893', tonnageExported: 1.26 },
+          { orsId: '143', tonnageExported: 3.07 }
         ],
         totalTonnageExported: 10.33,
-        tonnageReceivedNotExported: 73.76,
+        tonnageReceivedNotExported: 84.09,
         tonnageRefusedAtDestination: 7.34,
         tonnageStoppedDuringExport: 6.01,
         totalTonnageRefusedOrStopped: 10.33,
@@ -248,25 +312,5 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
       },
       diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
-  })
-})
-
-describe('#aggregateWasteExported — tonnageReceivedNotExported', () => {
-  it('returns zero when exported tonnage exceeds received tonnage', () => {
-    const result = aggregateWasteExported([buildExportedRecord(80)], [], 50)
-
-    expect(result.tonnageReceivedNotExported).toBe(0)
-  })
-
-  it('returns zero when exported tonnage equals received tonnage', () => {
-    const result = aggregateWasteExported([buildExportedRecord(50)], [], 50)
-
-    expect(result.tonnageReceivedNotExported).toBe(0)
-  })
-
-  it('returns the difference when received tonnage exceeds exported tonnage', () => {
-    const result = aggregateWasteExported([buildExportedRecord(30)], [], 50)
-
-    expect(result.tonnageReceivedNotExported).toBe(20)
   })
 })

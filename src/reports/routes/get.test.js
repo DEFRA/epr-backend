@@ -249,6 +249,19 @@ describe(`GET ${reportsGetPath}`, () => {
           source: {
             summaryLogId: 'sl-1',
             lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
           }
         })
 
@@ -292,6 +305,19 @@ describe(`GET ${reportsGetPath}`, () => {
           source: {
             summaryLogId: 'sl-1',
             lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
           }
         })
 
@@ -341,6 +367,19 @@ describe(`GET ${reportsGetPath}`, () => {
           source: {
             summaryLogId: 'sl-1',
             lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
           }
         })
 
@@ -384,6 +423,19 @@ describe(`GET ${reportsGetPath}`, () => {
           source: {
             summaryLogId: 'sl-1',
             lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
           }
         })
 

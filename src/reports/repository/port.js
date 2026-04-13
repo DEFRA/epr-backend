@@ -51,13 +51,14 @@
  * @typedef {Object} RecyclingActivity
  * @property {Supplier[]} suppliers
  * @property {number} totalTonnageReceived
- * @property {number} tonnageRecycled
- * @property {number} tonnageNotRecycled
+ * @property {number | null} tonnageRecycled
+ * @property {number | null} tonnageNotRecycled
  */
 
 /**
  * @typedef {Object} ExportActivity
- * @property {Array<{orsId: string, siteName: string|null, country: string|null, tonnageExported?: number}>} overseasSites
+ * @property {Array<{orsId: string, siteName: string, country: string|null, tonnageExported?: number}>} overseasSites
+ * @property {Array<{orsId: string, tonnageExported: number}>} unapprovedOverseasSites
  * @property {number} totalTonnageExported
  * @property {number} tonnageReceivedNotExported
  * @property {number|null} tonnageRefusedAtDestination
@@ -167,7 +168,7 @@
  * @property {RecyclingActivity} [recyclingActivity]
  * @property {ExportActivity} [exportActivity]
  * @property {WasteSent} [wasteSent]
- * @property {PrnData} [prn]
+ * @property {PrnData | null} [prn]
  * @property {string} [supportingInformation]
  * @property {{ summaryLogId: string, lastUploadedAt: string | null }} source
  */
