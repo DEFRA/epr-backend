@@ -21,7 +21,8 @@ const payloadSchema = Joi.object({
   prnRevenue: Joi.number().min(0).custom(maxTwoDecimalPlaces),
   freeTonnage: Joi.number().integer().min(0),
   tonnageRecycled: Joi.number().min(0).custom(maxTwoDecimalPlaces),
-  tonnageNotRecycled: Joi.number().min(0).custom(maxTwoDecimalPlaces)
+  tonnageNotRecycled: Joi.number().min(0).custom(maxTwoDecimalPlaces),
+  tonnageNotExported: Joi.number().min(0).custom(maxTwoDecimalPlaces)
 }).min(1)
 
 /**
@@ -92,6 +93,7 @@ function buildUpdateFields(payload, report) {
     freeTonnage,
     tonnageRecycled,
     tonnageNotRecycled,
+    tonnageNotExported,
     ...otherFields
   } = payload
 
@@ -106,6 +108,13 @@ function buildUpdateFields(payload, report) {
       ...report.recyclingActivity,
       ...(tonnageRecycled !== undefined && { tonnageRecycled }),
       ...(tonnageNotRecycled !== undefined && { tonnageNotRecycled })
+    }
+  }
+
+  if (tonnageNotExported !== undefined) {
+    fields.exportActivity = {
+      ...report.exportActivity,
+      tonnageReceivedNotExported: tonnageNotExported
     }
   }
 

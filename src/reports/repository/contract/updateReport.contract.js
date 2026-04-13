@@ -132,6 +132,34 @@ export const testUpdateReportBehaviour = (it) => {
       })
     })
 
+    it('updates exportActivity fields', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams({
+          exportActivity: {
+            overseasSites: [],
+            unapprovedOverseasSites: [],
+            totalTonnageExported: 0,
+            tonnageReceivedNotExported: null,
+            tonnageRefusedAtDestination: 0,
+            tonnageStoppedDuringExport: 0,
+            totalTonnageRefusedOrStopped: 0,
+            tonnageRepatriated: 0
+          }
+        })
+      )
+
+      await repository.updateReport({
+        reportId,
+        version: 1,
+        fields: {
+          exportActivity: { tonnageReceivedNotExported: 15.5 }
+        }
+      })
+
+      const result = await repository.findReportById(reportId)
+      expect(result.exportActivity.tonnageReceivedNotExported).toBe(15.5)
+    })
+
     it('throws notFound for unknown reportId', async () => {
       await expect(
         repository.updateReport({

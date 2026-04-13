@@ -604,6 +604,112 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
     })
 
+    describe('updating export activity fields', () => {
+      it('returns 200 when patching tonnageNotExported', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: undefined
+            },
+            {
+              exportActivity: {
+                overseasSites: [],
+                unapprovedOverseasSites: [],
+                totalTonnageExported: 0,
+                tonnageReceivedNotExported: null,
+                tonnageRefusedAtDestination: 0,
+                tonnageStoppedDuringExport: 0,
+                totalTonnageRefusedOrStopped: 0,
+                tonnageRepatriated: 0
+              }
+            }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotExported: 15.5 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.exportActivity.tonnageReceivedNotExported).toBe(15.5)
+      })
+
+      it('preserves existing exportActivity fields when patching tonnageNotExported', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: undefined
+            },
+            {
+              exportActivity: {
+                overseasSites: [],
+                unapprovedOverseasSites: [],
+                totalTonnageExported: 20,
+                tonnageReceivedNotExported: null,
+                tonnageRefusedAtDestination: 0,
+                tonnageStoppedDuringExport: 0,
+                totalTonnageRefusedOrStopped: 0,
+                tonnageRepatriated: 0
+              }
+            }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotExported: 10 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.exportActivity.tonnageReceivedNotExported).toBe(10)
+        expect(payload.exportActivity.totalTonnageExported).toBe(20)
+      })
+
+      it('returns 422 when tonnageNotExported is negative', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'exporter',
+            accreditationId: undefined
+          })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotExported: -1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it.each([10.123, 0.001, 5.999])(
+        'returns 422 when tonnageNotExported is %s (more than 2 decimal places)',
+        async (tonnageNotExported) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport({
+              wasteProcessingType: 'exporter',
+              accreditationId: undefined
+            })
+
+          const response = await patchReport(
+            server,
+            organisationId,
+            registrationId,
+            { tonnageNotExported }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        }
+      )
+    })
+
     describe('PRN data status guard', () => {
       it('returns 400 when patching PRN fields on a report with no PRN record', async () => {
         const { server, organisationId, registrationId } =
