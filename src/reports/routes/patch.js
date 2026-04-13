@@ -5,6 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -60,8 +61,9 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
  * Guards against updates to report data fields when the report is not in progress.
  * @param {object} payload
  * @param {import('#reports/repository/port.js').Report} report
+ * @param {object} registration
  */
-function guardReportDataFields(payload, report) {
+function guardReportDataFields(payload, report, registration) {
   const hasPrnFields = 'prnRevenue' in payload || 'freeTonnage' in payload
 
   if (hasPrnFields && !report.prn) {
@@ -78,6 +80,17 @@ function guardReportDataFields(payload, report) {
     throw Boom.badRequest(
       `freeTonnage (${payload.freeTonnage}) must not exceed total issued tonnage (${report.prn.issuedTonnage})`
     )
+  }
+
+  if ('tonnageNotExported' in payload) {
+    const isRegisteredOnlyExporter =
+      registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER &&
+      !registration.accreditationId
+    if (!isRegisteredOnlyExporter) {
+      throw Boom.badRequest(
+        'tonnageNotExported can only be set for registered-only exporters'
+      )
+    }
   }
 }
 
@@ -134,19 +147,25 @@ export const reportsPatch = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { reportsRepository, params } = request
+    const { organisationsRepository, reportsRepository, params } = request
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
 
-    const report = await fetchCurrentReport(
-      reportsRepository,
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period
-    )
+    const [registration, report] = await Promise.all([
+      organisationsRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      ),
+      fetchCurrentReport(
+        reportsRepository,
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period
+      )
+    ])
 
     if (!report) {
       throw Boom.notFound(
@@ -169,7 +188,7 @@ export const reportsPatch = {
       )
     }
 
-    guardReportDataFields(request.payload, report)
+    guardReportDataFields(request.payload, report, registration)
 
     const fields = buildUpdateFields(request.payload, report)
 

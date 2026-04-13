@@ -672,6 +672,43 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         expect(payload.exportActivity.totalTonnageExported).toBe(20)
       })
 
+      it('returns 400 when patching tonnageNotExported for an accredited exporter', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            { prn: { issuedTonnage: 100 } }
+          )
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotExported: 10 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
+      it('returns 400 when patching tonnageNotExported for a reprocessor', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await patchReport(
+          server,
+          organisationId,
+          registrationId,
+          { tonnageNotExported: 10 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
       it('returns 422 when tonnageNotExported is negative', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport({
