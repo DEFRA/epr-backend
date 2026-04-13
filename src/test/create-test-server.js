@@ -117,10 +117,7 @@ const repositoryConfigs = [
   {
     name: 'reportsRepository',
     createDefault: createInMemoryReportsRepositoryPlugin
-  }
-]
-
-const overseasSitesRepositoryConfigs = [
+  },
   {
     name: 'overseasSitesRepository',
     createDefault: createInMemoryOverseasSitesRepositoryPlugin
@@ -224,12 +221,6 @@ export async function createTestServer(options = {}) {
       options: { config, featureFlags: options.featureFlags }
     },
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
-    ...buildRepositoryPlugins(
-      options.featureFlags?.isOverseasSitesEnabled()
-        ? overseasSitesRepositoryConfigs
-        : [],
-      options.repositories ?? {}
-    ),
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     router
   ]

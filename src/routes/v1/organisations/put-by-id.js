@@ -22,10 +22,6 @@ async function validateOverseasSiteReferences(
   overseasSitesRepository,
   registrations
 ) {
-  if (!overseasSitesRepository) {
-    return
-  }
-
   const allSiteIds = new Set()
 
   for (const reg of registrations ?? []) {

@@ -30,20 +30,6 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
 
-  it('returns true when overseasSites flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isOverseasSitesEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.overseasSites')
-  })
-
-  it('returns false when overseasSites flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isOverseasSitesEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.overseasSites')
-  })
-
   it('returns true when reports flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
@@ -56,19 +42,6 @@ describe('createConfigFeatureFlags', () => {
     const flags = createConfigFeatureFlags(config)
     expect(flags.isReportsEnabled()).toBe(false)
     expect(config.get).toHaveBeenCalledWith('featureFlags.reports')
-  })
-
-  it('should return true when registeredOnly flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isRegisteredOnlyEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.registeredOnly')
-  })
-
-  it('should return false when registeredOnly flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isRegisteredOnlyEnabled()).toBe(false)
   })
 
   it('returns true when orsWasteBalanceValidation flag is enabled', () => {

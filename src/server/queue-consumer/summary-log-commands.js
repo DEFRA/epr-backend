@@ -58,16 +58,14 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor,
-        featureFlags
+        summaryLogExtractor
       } = deps
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor,
-        featureFlags
+        summaryLogExtractor
       })
 
       await validateSummaryLog(payload.summaryLogId)

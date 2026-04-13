@@ -32,11 +32,6 @@ const router = {
           ? Object.values(devRoutes)
           : []
 
-        const overseasSitesRoutesBehindFeatureFlag =
-          featureFlags.isOverseasSitesEnabled()
-            ? Object.values(overseasSitesRoutes)
-            : []
-
         const reportsBehindFeatureFlag = featureFlags.isReportsEnabled()
           ? Object.values(reportsRoutes)
           : []
@@ -62,7 +57,7 @@ const router = {
           packagingRecyclingNotesReject,
           ...summaryLogUploadsReportRoutes,
           adminPackagingRecyclingNotesList,
-          ...overseasSitesRoutesBehindFeatureFlag,
+          ...Object.values(overseasSitesRoutes),
           ...reportsBehindFeatureFlag
         ])
       })

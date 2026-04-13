@@ -273,7 +273,7 @@ describe('#aggregateReportDetail — EXPORTER_REGISTERED_ONLY quarterly Q1 2026'
           { orsId: '143', tonnageExported: 3.07 }
         ],
         totalTonnageExported: 10.33,
-        tonnageReceivedNotExported: 84.09,
+        tonnageReceivedNotExported: 0,
         tonnageRefusedAtDestination: 7.34,
         tonnageStoppedDuringExport: 6.01,
         totalTonnageRefusedOrStopped: 10.33,

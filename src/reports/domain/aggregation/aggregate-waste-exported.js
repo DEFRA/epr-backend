@@ -183,11 +183,14 @@ export function aggregateWasteExported({
     overseasSites,
     unapprovedOverseasSites,
     totalTonnageExported,
-    tonnageReceivedNotExported: calculateTonnageReceivedNotExported(
-      wasteReceivedRecords,
-      startDate,
-      endDate
-    ),
+    tonnageReceivedNotExported:
+      operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
+        ? 0
+        : calculateTonnageReceivedNotExported(
+            wasteReceivedRecords,
+            startDate,
+            endDate
+          ),
     tonnageRefusedAtDestination,
     tonnageStoppedDuringExport,
     totalTonnageRefusedOrStopped,

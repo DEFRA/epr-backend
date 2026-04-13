@@ -929,6 +929,12 @@ describe('#aggregateReportDetail', () => {
 
       expect(result.exportActivity).toBeUndefined()
     })
+
+    it('reports tonnageReceivedNotExported as zero', () => {
+      const result = aggregateReportDetail([], exporterArgs)
+
+      expect(result.exportActivity.tonnageReceivedNotExported).toBe(0)
+    })
   })
 
   describe('accredited exporter', () => {
