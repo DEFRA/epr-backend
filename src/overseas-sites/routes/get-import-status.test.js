@@ -33,9 +33,7 @@ describe(`${orsImportStatusPath} route`, () => {
         repositories: {
           orsImportsRepository: () => orsImportsRepository
         },
-        featureFlags: createInMemoryFeatureFlags({
-          overseasSites: true
-        })
+        featureFlags: createInMemoryFeatureFlags({})
       })
     })
 

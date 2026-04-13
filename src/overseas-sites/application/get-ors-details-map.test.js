@@ -46,15 +46,6 @@ describe('getOrsDetailsMap', () => {
     ])
   })
 
-  it('returns an empty Map when overseasSitesRepository is undefined (feature flag off)', async () => {
-    const result = await getOrsDetailsMap(undefined, {
-      124: { overseasSiteId: 'site-aaa' }
-    })
-
-    expect(result).toBeInstanceOf(Map)
-    expect(result.size).toBe(0)
-  })
-
   it('returns an empty Map when overseasSites is undefined', async () => {
     const overseasSitesRepository = { findByIds: vi.fn() }
 

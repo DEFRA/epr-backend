@@ -186,9 +186,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await server.inject({
@@ -283,9 +281,7 @@ const defineResponseAndAccessTests = ({ getServer }) => {
           findAll: vi.fn().mockResolvedValue([])
         })
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await emptyServer.inject({
@@ -443,9 +439,7 @@ const defineMappingEdgeCaseTests = ({ getServer }) => {
         organisationsRepository: () => malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await malformedServer.inject({
@@ -503,9 +497,7 @@ const defineProjectionSelectionTest = () => {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await server.inject({
@@ -589,9 +581,7 @@ const defineProjectionSelectionTest = () => {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await server.inject({
@@ -641,9 +631,7 @@ const defineProjectionSelectionTest = () => {
       repositories: {
         organisationsRepository: () => organisationsRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await server.inject({
@@ -675,9 +663,7 @@ const defineValidationTests = () => {
     `${adminOverseasSitesListPath}?all=maybe`
   ])('returns 400 for invalid query %s', async (url) => {
     const server = await createTestServer({
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await server.inject({
@@ -708,9 +694,7 @@ const defineMissingOverseasSiteMappingsTest = () => {
         organisationsRepository: () => malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await malformedServer.inject({
@@ -762,9 +746,7 @@ const defineMissingMaterialAndOrgIdTest = () => {
         organisationsRepository: () => organisationsRepository,
         overseasSitesRepository: () => overseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await server.inject({
@@ -821,9 +803,7 @@ const defineMissingRegistrationsPropertyTest = () => {
         organisationsRepository: () => malformedOrganisationsRepository,
         overseasSitesRepository: () => emptyOverseasSitesRepository
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
 
     const response = await malformedServer.inject({
@@ -919,9 +899,7 @@ const setupFeatureFlagEnabledScenario = async () => {
       organisationsRepository: organisationsRepositoryFactory,
       overseasSitesRepository: () => overseasSitesRepository
     },
-    featureFlags: createInMemoryFeatureFlags({
-      overseasSites: true
-    })
+    featureFlags: createInMemoryFeatureFlags({})
   })
 
   return {
@@ -965,25 +943,5 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     })
     defineAdditionalEdgeCaseTests()
     defineValidationTests()
-  })
-
-  describe('when feature flag is disabled', () => {
-    it('returns 404', async () => {
-      const server = await createTestServer({
-        featureFlags: createInMemoryFeatureFlags({
-          overseasSites: false
-        })
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: adminOverseasSitesListPath,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
   })
 })

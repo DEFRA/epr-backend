@@ -119,13 +119,10 @@ function getProductionPlugins(config) {
     mongoSystemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
-    { plugin: sqsCommandExecutorPlugin, options: { config } }
+    { plugin: sqsCommandExecutorPlugin, options: { config } },
+    overseasSitesRepositoryPlugin,
+    orsImportsRepositoryPlugin
   ]
-
-  /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
-  if (config.get('featureFlags.overseasSites')) {
-    plugins.push(overseasSitesRepositoryPlugin, orsImportsRepositoryPlugin)
-  }
 
   /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
   if (config.get('featureFlags.reports')) {

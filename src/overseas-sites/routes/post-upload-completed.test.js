@@ -71,9 +71,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
       workers: {
         orsImportsWorker
       },
-      featureFlags: createInMemoryFeatureFlags({
-        overseasSites: true
-      })
+      featureFlags: createInMemoryFeatureFlags({})
     })
   })
 
@@ -360,7 +358,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
           orsImportsRepository: () => failingRepository
         },
         workers: { orsImportsWorker },
-        featureFlags: createInMemoryFeatureFlags({ overseasSites: true })
+        featureFlags: createInMemoryFeatureFlags({})
       })
 
       const response = await failServer.inject({
