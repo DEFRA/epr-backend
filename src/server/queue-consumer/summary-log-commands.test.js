@@ -76,6 +76,7 @@ describe('summaryLogCommandHandlers', () => {
         await handler.execute({ summaryLogId: 'log-123' }, deps)
 
         expect(createSummaryLogsValidator).toHaveBeenCalledWith({
+          logger: deps.logger,
           summaryLogsRepository: deps.summaryLogsRepository,
           organisationsRepository: deps.organisationsRepository,
           wasteRecordsRepository: deps.wasteRecordsRepository,
