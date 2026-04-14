@@ -1,7 +1,13 @@
 import { describe, expect, vi, beforeEach } from 'vitest'
 import { GetQueueUrlCommand, ReceiveMessageCommand } from '@aws-sdk/client-sqs'
+import { getTraceId } from '@defra/hapi-tracing'
 import { it } from '#vite/fixtures/sqs.js'
 import { createSqsCommandExecutor } from './sqs-command-executor.js'
+
+vi.mock(import('@defra/hapi-tracing'), () => ({
+  getTraceId: vi.fn(() => null),
+  tracing: { plugin: {} }
+}))
 
 const TEST_TIMEOUT = 30000
 
@@ -303,6 +309,84 @@ describe('SQS command executor integration', () => {
             logger
           })
         ).rejects.toThrow()
+      }
+    )
+  })
+
+  describe('trace context propagation', () => {
+    it(
+      'includes context.traceId in message when trace ID is available',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        getTraceId.mockReturnValue('trace-abc-123')
+
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const summaryLogId = `trace-test-${Date.now()}`
+        await executor.summaryLogsWorker.validate(summaryLogId)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        const response = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 5
+          })
+        )
+
+        expect(response.Messages).toHaveLength(1)
+
+        const message = JSON.parse(response.Messages[0].Body)
+        expect(message).toEqual({
+          command: 'validate',
+          summaryLogId,
+          context: { traceId: 'trace-abc-123' }
+        })
+
+        getTraceId.mockReturnValue(null)
+      }
+    )
+
+    it(
+      'omits context when no trace ID is available',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        getTraceId.mockReturnValue(null)
+
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const summaryLogId = `no-trace-test-${Date.now()}`
+        await executor.summaryLogsWorker.validate(summaryLogId)
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
+        )
+
+        const response = await sqsClient.send(
+          new ReceiveMessageCommand({
+            QueueUrl: queueUrl,
+            WaitTimeSeconds: 5
+          })
+        )
+
+        expect(response.Messages).toHaveLength(1)
+
+        const message = JSON.parse(response.Messages[0].Body)
+        expect(message).toEqual({
+          command: 'validate',
+          summaryLogId
+        })
+        expect(message).not.toHaveProperty('context')
       }
     )
   })
