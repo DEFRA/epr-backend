@@ -185,7 +185,7 @@ export function aggregateWasteExported({
     totalTonnageExported,
     tonnageReceivedNotExported:
       operatorCategory === OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
-        ? 0
+        ? null
         : calculateTonnageReceivedNotExported(
             wasteReceivedRecords,
             startDate,
