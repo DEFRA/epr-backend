@@ -136,8 +136,7 @@ const runCascade = async (db, steps) => {
  * providing runtime defence beyond the router-level route gate.
  *
  * As a final safety net, deleteByOrgId refuses to run when isProduction is
- * true and logs an error. This guards against a misconfiguration where
- * FEATURE_FLAG_DEV_ENDPOINTS is accidentally set in a production environment.
+ * true and logs an error.
  *
  * @param {Db} db
  * @param {{ isProduction?: boolean }} [options]
@@ -148,7 +147,7 @@ export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
     if (isProduction) {
       logger.error(
         { orgId },
-        'Refusing to run non-prod cascade delete in production environment; FEATURE_FLAG_DEV_ENDPOINTS must not be enabled in production.'
+        'Refusing to run non-prod cascade delete in production environment.'
       )
       throw new Error('Non-prod data reset is disabled in production.')
     }
