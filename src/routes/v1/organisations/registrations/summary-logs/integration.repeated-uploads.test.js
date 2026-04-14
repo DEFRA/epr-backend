@@ -242,7 +242,8 @@ describe('Repeated uploads of identical data', () => {
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        logger: mockLogger
       })
 
       const syncWasteRecords = syncFromSummaryLog({

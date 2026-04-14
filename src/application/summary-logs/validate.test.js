@@ -142,13 +142,11 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
 const mockLoggerError = vi.fn()
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    warn: (...args) => mockLoggerWarn(...args),
-    error: (...args) => mockLoggerError(...args)
-  }
-}))
+const logger = {
+  info: (...args) => mockLoggerInfo(...args),
+  warn: (...args) => mockLoggerWarn(...args),
+  error: (...args) => mockLoggerError(...args)
+}
 
 const mockRecordStatusTransition = vi.fn()
 const mockRecordValidationDuration = vi.fn()
@@ -234,6 +232,7 @@ describe('SummaryLogsValidator', () => {
     }
 
     validateSummaryLog = createSummaryLogsValidator({
+      logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
@@ -656,6 +655,7 @@ describe('SummaryLogsValidator', () => {
     }
 
     const brokenValidate = createSummaryLogsValidator({
+      logger,
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),

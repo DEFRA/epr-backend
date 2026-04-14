@@ -381,7 +381,8 @@ describe('Advanced validation scenarios', () => {
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        logger: mockLogger
       })
       const featureFlags = createInMemoryFeatureFlags()
 
@@ -559,7 +560,8 @@ describe('Advanced validation scenarios', () => {
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        logger: mockLogger
       })
       const featureFlags = createInMemoryFeatureFlags()
 
