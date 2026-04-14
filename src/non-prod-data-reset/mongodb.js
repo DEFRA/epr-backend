@@ -146,7 +146,7 @@ export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
   async deleteByOrgId(orgId) {
     if (isProduction) {
       logger.error(
-        { orgId },
+        { event: { reference: orgId } },
         'Refusing to run non-prod cascade delete in production environment.'
       )
       throw new Error('Non-prod data reset is disabled in production.')

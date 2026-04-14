@@ -330,12 +330,6 @@ const baseConfig = {
     }
   },
   featureFlags: {
-    formsDataMigration: {
-      doc: 'Feature Flag: Runs forms data migration on startup',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_FORMS_DATA_MIGRATION'
-    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
