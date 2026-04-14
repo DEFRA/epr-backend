@@ -1,4 +1,5 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
+import { getTraceId } from '@defra/hapi-tracing'
 
 import {
   LOGGING_EVENT_ACTIONS,
@@ -38,6 +39,19 @@ const extractUser = (request) => {
 }
 
 /**
+ * Builds the message context object containing observability data.
+ * Separated from domain payload so consumers can strip it before dispatch.
+ * @returns {{ traceId: string } | undefined}
+ */
+const buildContext = () => {
+  const traceId = getTraceId()
+  if (!traceId) {
+    return undefined
+  }
+  return { traceId }
+}
+
+/**
  * Sends a command message to the SQS queue.
  * @param {string} queueUrl
  * @param {SQSClient} sqsClient
@@ -54,7 +68,8 @@ const sendCommandMessage = async (
   payload,
   description
 ) => {
-  const messageBody = { command, ...payload }
+  const context = buildContext()
+  const messageBody = { command, ...payload, ...(context && { context }) }
 
   await sqsClient.send(
     new SendMessageCommand({
