@@ -30,6 +30,7 @@ import { loggerOptions } from './logger-options.js'
  * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} debug
  * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} trace
  * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} fatal
+ * @property {(bindings: Record<string, unknown>) => TypedLogger} child
  */
 
 /**

@@ -55,6 +55,7 @@ export const summaryLogCommandHandlers = [
     }),
     execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       const {
+        logger,
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
@@ -62,6 +63,7 @@ export const summaryLogCommandHandlers = [
       } = deps
 
       const validateSummaryLog = createSummaryLogsValidator({
+        logger,
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,

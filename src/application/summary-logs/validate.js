@@ -5,7 +5,6 @@ import {
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -53,7 +52,8 @@ export const MAX_ACTUAL_LENGTH = 200
 const extractSummaryLog = async ({
   summaryLogExtractor,
   summaryLog,
-  loggingContext
+  loggingContext,
+  logger
 }) => {
   const parsed = await summaryLogExtractor.extract(summaryLog)
 
@@ -115,7 +115,8 @@ const fetchRegistration = async ({
   organisationsRepository,
   organisationId,
   registrationId,
-  loggingContext
+  loggingContext,
+  logger
 }) => {
   const registration = await organisationsRepository.findRegistrationById(
     organisationId,
@@ -200,7 +201,7 @@ const extractMetaValues = (parsedMeta) => {
   )
 }
 
-const handleValidationFailure = (error, issues, loggingContext) => {
+const handleValidationFailure = (error, issues, loggingContext, logger) => {
   if (error instanceof SpreadsheetValidationError) {
     logger.warn({
       err: error,
@@ -256,6 +257,7 @@ const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
   loggingContext,
+  logger,
   summaryLogExtractor,
   organisationsRepository,
   wasteRecordsRepository,
@@ -269,7 +271,8 @@ const performValidationChecks = async ({
     const parsed = await extractSummaryLog({
       summaryLogExtractor,
       summaryLog,
-      loggingContext
+      loggingContext,
+      logger
     })
 
     meta = extractMetaValues(parsed.meta)
@@ -284,7 +287,8 @@ const performValidationChecks = async ({
       organisationsRepository,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      loggingContext
+      loggingContext,
+      logger
     })
 
     issues.merge(
@@ -321,7 +325,7 @@ const performValidationChecks = async ({
 
     issues.merge(dataResult.issues)
   } catch (error) {
-    handleValidationFailure(error, issues, loggingContext)
+    handleValidationFailure(error, issues, loggingContext, logger)
   }
 
   return { issues, wasteRecords, meta }
@@ -557,6 +561,7 @@ const classifyLoads = ({
 }
 
 export const createSummaryLogsValidator = ({
+  logger,
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
@@ -588,6 +593,7 @@ export const createSummaryLogsValidator = ({
       summaryLogId,
       summaryLog,
       loggingContext,
+      logger,
       summaryLogExtractor,
       organisationsRepository,
       wasteRecordsRepository,

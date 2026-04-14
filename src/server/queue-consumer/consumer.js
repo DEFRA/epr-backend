@@ -57,7 +57,7 @@ const buildSchemas = (handlers) => {
  * @param {TypedLogger} logger
  * @param {import('joi').ObjectSchema} envelopeSchema
  * @param {Map<string, CommandHandler>} handlerMap
- * @returns {{ handler: CommandHandler, payload: object } | null}
+ * @returns {{ handler: CommandHandler, payload: object, context?: { traceId: string } } | null}
  */
 const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
   let parsed
@@ -91,7 +91,7 @@ const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
     return null
   }
 
-  const { command, ...rest } = parsed
+  const { command, context, ...rest } = parsed
   const handler = /** @type {CommandHandler} */ (handlerMap.get(command))
 
   // Pass 2: validate payload against handler's schema
@@ -109,7 +109,7 @@ const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
     return null
   }
 
-  return { handler, payload }
+  return { handler, payload, context }
 }
 
 /**
@@ -138,7 +138,6 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
  * @param {ConsumerDependencies} params.deps
- * @param {TypedLogger} params.logger
  */
 const handleCommandError = async ({
   err,
@@ -146,9 +145,9 @@ const handleCommandError = async ({
   payload,
   message,
   maxReceiveCount,
-  deps,
-  logger
+  deps
 }) => {
+  const { logger } = deps
   const isPermanent = err instanceof PermanentError
   const receiveCount = Number(message.Attributes?.ApproximateReceiveCount ?? 0)
   const isFinalTransientAttempt =
@@ -198,9 +197,19 @@ const createMessageHandler =
       )
     }
 
-    const { handler, payload } = result
+    const { handler, payload, context } = result
 
-    logger.info({
+    const commandLogger = context?.traceId
+      ? /** @type {TypedLogger} */ (
+          logger.child({ trace: { id: context.traceId } })
+        )
+      : logger
+
+    const commandDeps = context?.traceId
+      ? { ...deps, logger: commandLogger }
+      : deps
+
+    commandLogger.info({
       message: `Processing command: ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -209,9 +218,9 @@ const createMessageHandler =
     })
 
     try {
-      await handler.execute(payload, deps)
+      await handler.execute(payload, commandDeps)
 
-      logger.info({
+      commandLogger.info({
         message: `Command completed: ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -227,8 +236,7 @@ const createMessageHandler =
         payload,
         message,
         maxReceiveCount,
-        deps,
-        logger
+        deps: commandDeps
       })
 
       // handleCommandError returns (rather than throwing) for permanent errors,
@@ -236,6 +244,78 @@ const createMessageHandler =
       return message
     }
   }
+
+/**
+ * Attaches error, processing_error, and timeout_error listeners to the consumer.
+ * @template {ConsumerDependencies} D
+ * @param {Consumer} consumer
+ * @param {D} deps
+ * @param {TypedLogger} logger
+ * @param {import('joi').ObjectSchema} envelopeSchema
+ * @param {Map<string, CommandHandler>} handlerMap
+ */
+const attachEventHandlers = (
+  consumer,
+  deps,
+  logger,
+  envelopeSchema,
+  handlerMap
+) => {
+  consumer.on('error', (err) => {
+    logger.error({
+      err,
+      message: 'SQS consumer error',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILURE
+      }
+    })
+  })
+
+  consumer.on('processing_error', (err) => {
+    logger.error({
+      err,
+      message: 'SQS message processing error',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+  })
+
+  consumer.on('timeout_error', async (err, message) => {
+    const result = parseCommandMessage(
+      message,
+      logger,
+      envelopeSchema,
+      handlerMap
+    )
+
+    const timeoutLogger = result?.context?.traceId
+      ? /** @type {TypedLogger} */ (
+          logger.child({ trace: { id: result.context.traceId } })
+        )
+      : logger
+
+    timeoutLogger.error({
+      err,
+      message: result
+        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
+        : `Command timed out for messageId=${message.MessageId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    if (result) {
+      const timeoutDeps = result.context?.traceId
+        ? { ...deps, logger: timeoutLogger }
+        : deps
+      await result.handler.onFailure(result.payload, timeoutDeps)
+    }
+  })
+}
 
 /**
  * Creates the SQS command queue consumer.
@@ -286,51 +366,7 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
     attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 
-  consumer.on('error', (err) => {
-    logger.error({
-      err,
-      message: 'SQS consumer error',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILURE
-      }
-    })
-  })
-
-  consumer.on('processing_error', (err) => {
-    logger.error({
-      err,
-      message: 'SQS message processing error',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-  })
-
-  consumer.on('timeout_error', async (err, message) => {
-    const result = parseCommandMessage(
-      message,
-      logger,
-      envelopeSchema,
-      handlerMap
-    )
-
-    logger.error({
-      err,
-      message: result
-        ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
-        : `Command timed out for messageId=${message.MessageId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-
-    if (result) {
-      await result.handler.onFailure(result.payload, deps)
-    }
-  })
+  attachEventHandlers(consumer, deps, logger, envelopeSchema, handlerMap)
 
   return consumer
 }
