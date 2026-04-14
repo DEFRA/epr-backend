@@ -241,6 +241,7 @@ const markIgnoredByDateRange = (
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
+      // @ts-expect-error meta-business validation guarantees accreditation exists for non-registered-only types
       accreditation: registration.accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
@@ -643,6 +644,19 @@ export const createSummaryLogsValidator = ({
   }
 }
 
+/** @param {ValidationIssue[]} issues */
+const truncateActualValues = (issues) => {
+  for (const issue of issues) {
+    if (
+      typeof issue.context?.actual === 'string' &&
+      issue.context.actual.length > MAX_ACTUAL_LENGTH
+    ) {
+      issue.context.actual =
+        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
+    }
+  }
+}
+
 /**
  * Caps the issues array and truncates long actual values for MongoDB storage.
  *
@@ -657,18 +671,6 @@ export const createSummaryLogsValidator = ({
  * @param {ValidationIssue[]} allIssues - All validation issues
  * @returns {{ cappedIssues: ValidationIssue[], totalIssuesCount: number }}
  */
-const truncateActualValues = (issues) => {
-  for (const issue of issues) {
-    if (
-      typeof issue.context?.actual === 'string' &&
-      issue.context.actual.length > MAX_ACTUAL_LENGTH
-    ) {
-      issue.context.actual =
-        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-    }
-  }
-}
-
 const capIssuesForStorage = (allIssues) => {
   let cappedIssues
 
