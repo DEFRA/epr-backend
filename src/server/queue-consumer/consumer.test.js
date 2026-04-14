@@ -740,7 +740,21 @@ describe('createCommandQueueConsumer', () => {
         )
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Summary log submitted: summaryLogId=log-123'
+            message: 'Summary log submission started: summaryLogId=log-123',
+            event: expect.objectContaining({
+              category: 'server',
+              action: 'start_success'
+            })
+          })
+        )
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Summary log submitted: summaryLogId=log-123, created=0, updated=0',
+            event: expect.objectContaining({
+              category: 'server',
+              action: 'process_success'
+            })
           })
         )
       })
