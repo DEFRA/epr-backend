@@ -462,7 +462,8 @@ export const createTestInfrastructure = async (
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    summaryLogExtractor
+    summaryLogExtractor,
+    logger: mockLogger
   })
 
   const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -541,7 +542,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
-    summaryLogExtractor: dynamicExtractor
+    summaryLogExtractor: dynamicExtractor,
+    logger: mockLogger
   })
 
   const featureFlags = createInMemoryFeatureFlags({
