@@ -248,54 +248,21 @@ const createMessageHandler =
   }
 
 /**
- * Creates the SQS command queue consumer.
- *
- * `deps` must include the consumer's own dependencies (sqsClient, queueName,
- * logger) **plus** whatever the registered handlers require. The consumer
- * passes the entire bag through to handler.execute() and handler.onFailure().
- *
+ * Attaches error, processing_error, and timeout_error listeners to the consumer.
  * @template {ConsumerDependencies} D
+ * @param {Consumer} consumer
  * @param {D} deps
- * @param {CommandHandler[]} handlers - Registered command handlers
- * @returns {Promise<Consumer>}
+ * @param {TypedLogger} logger
+ * @param {import('joi').ObjectSchema} envelopeSchema
+ * @param {Map<string, CommandHandler>} handlerMap
  */
-export const createCommandQueueConsumer = async (deps, handlers) => {
-  if (!handlers.length) {
-    throw new Error('At least one command handler must be registered')
-  }
-
-  const { sqsClient, queueName, logger } = deps
-
-  const queueUrl = await resolveQueueUrl(sqsClient, queueName)
-
-  logger.info({
-    message: `Resolved queue URL: ${queueUrl} for queueName=${queueName}`
-  })
-
-  const maxReceiveCount = await getMaxReceiveCount(sqsClient, queueUrl)
-
-  if (maxReceiveCount === null) {
-    logger.warn({
-      message: `No redrive policy configured for queueName=${queueName}; transient errors on final retry will not be marked as failed`
-    })
-  } else {
-    logger.info({
-      message: `Queue redrive policy: maxReceiveCount=${maxReceiveCount} for queueName=${queueName}`
-    })
-  }
-
-  const { envelopeSchema, handlerMap } = buildSchemas(handlers)
-
-  const consumer = Consumer.create({
-    queueUrl,
-    sqs: sqsClient,
-    handleMessage: /** @type {*} */ (
-      createMessageHandler(deps, maxReceiveCount, envelopeSchema, handlerMap)
-    ),
-    handleMessageTimeout: COMMAND_TIMEOUT_MS,
-    attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
-  })
-
+const attachEventHandlers = (
+  consumer,
+  deps,
+  logger,
+  envelopeSchema,
+  handlerMap
+) => {
   consumer.on('error', (err) => {
     logger.error({
       err,
@@ -350,6 +317,58 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
       await result.handler.onFailure(result.payload, timeoutDeps)
     }
   })
+}
+
+/**
+ * Creates the SQS command queue consumer.
+ *
+ * `deps` must include the consumer's own dependencies (sqsClient, queueName,
+ * logger) **plus** whatever the registered handlers require. The consumer
+ * passes the entire bag through to handler.execute() and handler.onFailure().
+ *
+ * @template {ConsumerDependencies} D
+ * @param {D} deps
+ * @param {CommandHandler[]} handlers - Registered command handlers
+ * @returns {Promise<Consumer>}
+ */
+export const createCommandQueueConsumer = async (deps, handlers) => {
+  if (!handlers.length) {
+    throw new Error('At least one command handler must be registered')
+  }
+
+  const { sqsClient, queueName, logger } = deps
+
+  const queueUrl = await resolveQueueUrl(sqsClient, queueName)
+
+  logger.info({
+    message: `Resolved queue URL: ${queueUrl} for queueName=${queueName}`
+  })
+
+  const maxReceiveCount = await getMaxReceiveCount(sqsClient, queueUrl)
+
+  if (maxReceiveCount === null) {
+    logger.warn({
+      message: `No redrive policy configured for queueName=${queueName}; transient errors on final retry will not be marked as failed`
+    })
+  } else {
+    logger.info({
+      message: `Queue redrive policy: maxReceiveCount=${maxReceiveCount} for queueName=${queueName}`
+    })
+  }
+
+  const { envelopeSchema, handlerMap } = buildSchemas(handlers)
+
+  const consumer = Consumer.create({
+    queueUrl,
+    sqs: sqsClient,
+    handleMessage: /** @type {*} */ (
+      createMessageHandler(deps, maxReceiveCount, envelopeSchema, handlerMap)
+    ),
+    handleMessageTimeout: COMMAND_TIMEOUT_MS,
+    attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
+  })
+
+  attachEventHandlers(consumer, deps, logger, envelopeSchema, handlerMap)
 
   return consumer
 }
