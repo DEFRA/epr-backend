@@ -138,7 +138,6 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
  * @param {ConsumerDependencies} params.deps
- * @param {TypedLogger} params.logger
  */
 const handleCommandError = async ({
   err,
@@ -146,9 +145,9 @@ const handleCommandError = async ({
   payload,
   message,
   maxReceiveCount,
-  deps,
-  logger
+  deps
 }) => {
+  const { logger } = deps
   const isPermanent = err instanceof PermanentError
   const receiveCount = Number(message.Attributes?.ApproximateReceiveCount ?? 0)
   const isFinalTransientAttempt =
@@ -237,8 +236,7 @@ const createMessageHandler =
         payload,
         message,
         maxReceiveCount,
-        deps: commandDeps,
-        logger: commandLogger
+        deps: commandDeps
       })
 
       // handleCommandError returns (rather than throwing) for permanent errors,
