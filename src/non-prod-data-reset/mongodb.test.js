@@ -28,7 +28,9 @@ import {
 } from '#repositories/waste-records/contract/test-data.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 
+import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
+import { nonProdDataResetPlugin } from './mongodb.plugin.js'
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example')
@@ -98,6 +100,16 @@ const it = mongoIt.extend({
 
   reset: async ({ database }, use) => {
     await use(createNonProdDataReset(database))
+  },
+
+  // Snapshot config.cdpEnvironment for the duration of a test and expose a
+  // setter. Restores the previous value on teardown so the `config` singleton
+  // doesn't leak state between tests.
+  // eslint-disable-next-line no-empty-pattern
+  setCdpEnvironment: async ({}, use) => {
+    const previous = config.get('cdpEnvironment')
+    await use((value) => config.set('cdpEnvironment', value))
+    config.set('cdpEnvironment', previous)
   }
 })
 
@@ -371,19 +383,20 @@ describe('non-prod data reset (mongo)', () => {
       )
     })
 
-    it('refuses to run in production and leaves data untouched', async ({
+    it('refuses via the plugin when the CDP environment is prod', async ({
       database,
-      repositories
+      repositories,
+      setCdpEnvironment
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, seeded)
+      setCdpEnvironment('prod')
 
-      const productionReset = createNonProdDataReset(database, {
-        isProduction: true
-      })
+      const server = { app: {}, logger: mockLogger, ext: () => {} }
+      nonProdDataResetPlugin.register(server, { db: database })
 
       await expect(
-        productionReset.deleteByOrgId(seeded.organisationId)
+        server.app.nonProdDataReset.deleteByOrgId(seeded.organisationId)
       ).rejects.toThrow('Non-prod data reset is disabled in production.')
 
       expect(
