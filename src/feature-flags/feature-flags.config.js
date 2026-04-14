@@ -2,9 +2,6 @@
  * @returns {import('./feature-flags.port.js').FeatureFlags}
  */
 export const createConfigFeatureFlags = (config) => ({
-  isFormsDataMigrationEnabled() {
-    return config.get('featureFlags.formsDataMigration')
-  },
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
   },
