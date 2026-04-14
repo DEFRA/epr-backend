@@ -4,6 +4,8 @@ import { StatusCodes } from 'http-status-codes'
 
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
+import { isReportComplete } from '#reports/domain/is-report-complete.js'
+import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import {
@@ -42,20 +44,26 @@ export const reportsStatus = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { reportsRepository, params } = request
+    const { organisationsRepository, reportsRepository, params } = request
     const { organisationId, registrationId, cadence } = params
     const year = Number(params.year)
     const period = Number(params.period)
     const { status, version } = request.payload
 
-    const report = await fetchCurrentReport(
-      reportsRepository,
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period
-    )
+    const [registration, report] = await Promise.all([
+      organisationsRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      ),
+      fetchCurrentReport(
+        reportsRepository,
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period
+      )
+    ])
 
     if (!report) {
       throw Boom.notFound(
@@ -66,6 +74,12 @@ export const reportsStatus = {
     if (!isValidReportTransition(report.status.currentStatus, status)) {
       throw Boom.badRequest(
         `Cannot transition from '${report.status.currentStatus}' to '${status}'`
+      )
+    }
+
+    if (!isReportComplete(report, getOperatorCategory(registration))) {
+      throw Boom.badRequest(
+        `Report is incomplete; all required manual-entry fields must be populated before transitioning to '${status}'`
       )
     }
 

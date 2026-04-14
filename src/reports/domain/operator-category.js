@@ -1,6 +1,10 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
+ * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
+ */
+
+/**
  * Operator categories for reporting.
  *
  * Combines wasteProcessingType (exporter/reprocessor) with accreditation
@@ -19,6 +23,10 @@ export const OPERATOR_CATEGORY = Object.freeze({
   REPROCESSOR_REGISTERED_ONLY: 'REPROCESSOR_REGISTERED_ONLY'
 })
 
+/**
+ * @typedef {keyof typeof OPERATOR_CATEGORY} OperatorCategory
+ */
+
 const OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE = Object.freeze({
   [WASTE_PROCESSING_TYPE.EXPORTER]: {
     accredited: OPERATOR_CATEGORY.EXPORTER,
@@ -34,11 +42,13 @@ const OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE = Object.freeze({
  * Derives the operator category from a registration.
  *
  * @param {{ wasteProcessingType: string, accreditationId?: string }} registration
- * @returns {string} One of OPERATOR_CATEGORY values
+ * @returns {OperatorCategory}
  */
 export function getOperatorCategory(registration) {
   const category =
-    OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE[registration.wasteProcessingType]
+    OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE[
+      /** @type {WasteProcessingTypeValue} */ (registration.wasteProcessingType)
+    ]
 
   if (!category) {
     throw new TypeError(

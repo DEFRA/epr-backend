@@ -1,10 +1,15 @@
 import { REPORT_STATUS } from './report-status.js'
 
 /**
+ * @import { ReportStatus } from './report-status.js'
+ */
+
+/**
  * Allowed status transitions for reports.
  * Each key maps to the list of statuses it can transition to.
  * Delete is a separate hard-delete operation, not a status transition.
- * @type {Record<string, string[]>}
+ *
+ * @type {Record<ReportStatus, ReportStatus[]>}
  */
 export const REPORT_STATUS_TRANSITIONS = Object.freeze({
   [REPORT_STATUS.IN_PROGRESS]: [REPORT_STATUS.READY_TO_SUBMIT],
@@ -14,14 +19,9 @@ export const REPORT_STATUS_TRANSITIONS = Object.freeze({
 
 /**
  * Checks whether a status transition is valid.
- * @param {string} currentStatus
- * @param {string} newStatus
+ * @param {ReportStatus} currentStatus
+ * @param {ReportStatus} newStatus
  * @returns {boolean}
  */
-export function isValidReportTransition(currentStatus, newStatus) {
-  const allowed = REPORT_STATUS_TRANSITIONS[currentStatus]
-  if (!allowed) {
-    return false
-  }
-  return allowed.includes(newStatus)
-}
+export const isValidReportTransition = (currentStatus, newStatus) =>
+  REPORT_STATUS_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false
