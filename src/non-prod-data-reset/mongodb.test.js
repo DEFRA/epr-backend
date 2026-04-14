@@ -28,7 +28,9 @@ import {
 } from '#repositories/waste-records/contract/test-data.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 
+import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'
+import { nonProdDataResetPlugin } from './mongodb.plugin.js'
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example')
@@ -371,31 +373,71 @@ describe('non-prod data reset (mongo)', () => {
       )
     })
 
-    it('refuses to run in production and leaves data untouched', async ({
+    it('cascades deletes via the plugin in a non-prod CDP environment even when NODE_ENV is production', async ({
       database,
       repositories
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, seeded)
 
-      const productionReset = createNonProdDataReset(database, {
-        isProduction: true
-      })
+      // Simulates CDP: NODE_ENV=production is set on every CDP environment
+      // including test, so config.isProduction is true. The plugin must not
+      // use that as its safety gate; it must check cdpEnvironment instead.
+      const previousIsProduction = config.get('isProduction')
+      const previousCdpEnvironment = config.get('cdpEnvironment')
+      config.set('isProduction', true)
+      config.set('cdpEnvironment', 'test')
 
-      await expect(
-        productionReset.deleteByOrgId(seeded.organisationId)
-      ).rejects.toThrow('Non-prod data reset is disabled in production.')
+      const server = { app: {}, logger: mockLogger, ext: () => {} }
+      try {
+        nonProdDataResetPlugin.register(server, { db: database })
+        const counts = await server.app.nonProdDataReset.deleteByOrgId(
+          seeded.organisationId
+        )
 
-      expect(
-        await database.collection('epr-organisations').countDocuments({
-          _id: ObjectId.createFromHexString(seeded.organisationId)
-        })
-      ).toBe(1)
-      expect(
-        await database
-          .collection('packaging-recycling-notes')
-          .countDocuments({ 'organisation.id': seeded.organisationId })
-      ).toBe(1)
+        expect(counts['epr-organisations']).toBe(1)
+        expect(
+          await database.collection('epr-organisations').countDocuments({
+            _id: ObjectId.createFromHexString(seeded.organisationId)
+          })
+        ).toBe(0)
+      } finally {
+        config.set('isProduction', previousIsProduction)
+        config.set('cdpEnvironment', previousCdpEnvironment)
+      }
+    })
+
+    it('refuses via the plugin when the CDP environment is prod', async ({
+      database,
+      repositories
+    }) => {
+      const seeded = await seedOrganisationWithOverseasSites(repositories)
+      await seedDownstreamForOrganisation(repositories, seeded)
+
+      const previousCdpEnvironment = config.get('cdpEnvironment')
+      config.set('cdpEnvironment', 'prod')
+
+      const server = { app: {}, logger: mockLogger, ext: () => {} }
+      try {
+        nonProdDataResetPlugin.register(server, { db: database })
+
+        await expect(
+          server.app.nonProdDataReset.deleteByOrgId(seeded.organisationId)
+        ).rejects.toThrow('Non-prod data reset is disabled in production.')
+
+        expect(
+          await database.collection('epr-organisations').countDocuments({
+            _id: ObjectId.createFromHexString(seeded.organisationId)
+          })
+        ).toBe(1)
+        expect(
+          await database
+            .collection('packaging-recycling-notes')
+            .countDocuments({ 'organisation.id': seeded.organisationId })
+        ).toBe(1)
+      } finally {
+        config.set('cdpEnvironment', previousCdpEnvironment)
+      }
     })
 
     it('handles an organisation document missing accreditations and registrations entirely', async ({
