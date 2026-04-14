@@ -93,6 +93,10 @@ export const reportsPost = {
         .response(withRegistrationDetails(createdReport, registration))
         .code(StatusCodes.CREATED)
     } catch (error) {
+      if (error.isBoom) {
+        throw error
+      }
+
       logger.error({
         err: error,
         message: `Failure on ${reportsPostPath}`,
@@ -107,7 +111,7 @@ export const reportsPost = {
         }
       })
 
-      throw error
+      throw Boom.badImplementation(`Failure on ${reportsPostPath}`)
     }
   }
 }
