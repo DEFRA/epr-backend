@@ -930,10 +930,10 @@ describe('#aggregateReportDetail', () => {
       expect(result.exportActivity).toBeUndefined()
     })
 
-    it('reports tonnageReceivedNotExported as zero', () => {
+    it('reports tonnageReceivedNotExported as null', () => {
       const result = aggregateReportDetail([], exporterArgs)
 
-      expect(result.exportActivity.tonnageReceivedNotExported).toBe(0)
+      expect(result.exportActivity.tonnageReceivedNotExported).toBeNull()
     })
   })
 
