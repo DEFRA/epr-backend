@@ -371,6 +371,33 @@ describe('non-prod data reset (mongo)', () => {
       )
     })
 
+    it('refuses to run in production and leaves data untouched', async ({
+      database,
+      repositories
+    }) => {
+      const seeded = await seedOrganisationWithOverseasSites(repositories)
+      await seedDownstreamForOrganisation(repositories, seeded)
+
+      const productionReset = createNonProdDataReset(database, {
+        isProduction: true
+      })
+
+      await expect(
+        productionReset.deleteByOrgId(seeded.organisationId)
+      ).rejects.toThrow('Non-prod data reset is disabled in production.')
+
+      expect(
+        await database.collection('epr-organisations').countDocuments({
+          _id: ObjectId.createFromHexString(seeded.organisationId)
+        })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('packaging-recycling-notes')
+          .countDocuments({ 'organisation.id': seeded.organisationId })
+      ).toBe(1)
+    })
+
     it('handles an organisation document missing accreditations and registrations entirely', async ({
       database,
       reset

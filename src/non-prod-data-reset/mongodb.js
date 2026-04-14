@@ -1,5 +1,7 @@
 import { ObjectId } from 'mongodb'
 
+import { logger } from '#common/helpers/logging/logger.js'
+
 /** @import { Db } from 'mongodb' */
 
 /**
@@ -133,11 +135,23 @@ const runCascade = async (db, steps) => {
  * means the capability does not exist on the request object in production,
  * providing runtime defence beyond the router-level route gate.
  *
+ * As a final safety net, deleteByOrgId refuses to run when isProduction is
+ * true and logs an error. This guards against a misconfiguration where
+ * FEATURE_FLAG_DEV_ENDPOINTS is accidentally set in a production environment.
+ *
  * @param {Db} db
+ * @param {{ isProduction?: boolean }} [options]
  * @returns {NonProdDataReset}
  */
-export const createNonProdDataReset = (db) => ({
+export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
   async deleteByOrgId(orgId) {
+    if (isProduction) {
+      logger.error(
+        { orgId },
+        'Refusing to run non-prod cascade delete in production environment; FEATURE_FLAG_DEV_ENDPOINTS must not be enabled in production.'
+      )
+      throw new Error('Non-prod data reset is disabled in production.')
+    }
     const organisation = await findOrganisationForCleanup(db, orgId)
     const keys = extractCascadeKeys(organisation)
     return runCascade(db, buildCascadeSteps(orgId, keys))
