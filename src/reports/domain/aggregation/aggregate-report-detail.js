@@ -1,4 +1,5 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MONTHS_PER_PERIOD } from '../cadence.js'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
@@ -112,9 +113,10 @@ export function aggregateReportDetail(
   // the same date field name regardless of operator category.
   const wasteReceivedRecordsExcluded = wasteRecords.filter(
     (r) =>
-      r.type === 'received' &&
+      r.type === WASTE_RECORD_TYPE.RECEIVED &&
       wasteReceivedDateField &&
-      r.data[wasteReceivedDateField] == null
+      (r.data[wasteReceivedDateField] === null ||
+        r.data[wasteReceivedDateField] === undefined)
   ).length
 
   return {
@@ -148,8 +150,8 @@ export function aggregateReportDetail(
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
- * @param {string} startDate
- * @param {string} endDate
+ * @param {string} startDate - ISO date string (YYYY-MM-DD)
+ * @param {string} endDate - ISO date string (YYYY-MM-DD)
  */
 function sliceRecordsByPeriod(
   wasteRecords,
