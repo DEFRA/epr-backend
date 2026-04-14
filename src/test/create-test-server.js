@@ -21,6 +21,7 @@ import { getConfig } from '#root/config.js'
 
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
+import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -128,6 +129,13 @@ const repositoryConfigs = [
   }
 ]
 
+const devEndpointsRepositoryConfigs = [
+  {
+    name: 'nonProdDataReset',
+    createDefault: createInMemoryNonProdDataResetPlugin
+  }
+]
+
 /**
  * Builds repository plugins from config, applying any overrides.
  * @param {Array<{name: string, createDefault: Function}>} configs - Repository configurations
@@ -221,6 +229,12 @@ export async function createTestServer(options = {}) {
       options: { config, featureFlags: options.featureFlags }
     },
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
+    ...buildRepositoryPlugins(
+      options.featureFlags?.isDevEndpointsEnabled()
+        ? devEndpointsRepositoryConfigs
+        : [],
+      options.repositories ?? {}
+    ),
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     router
   ]
