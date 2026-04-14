@@ -49,9 +49,14 @@ export const reportsGetDetail = {
       period
     })
 
-    const wasteReceivedRecordsExcluded =
-      report.diagnostics?.wasteReceivedRecordsExcluded ?? 0
-    if (wasteReceivedRecordsExcluded > 0) {
+    // The 'diagnostics' in report check acts as a type discriminator:
+    // fetchOrGenerateReportForPeriod returns Report | AggregatedReportDetail,
+    // and only AggregatedReportDetail carries diagnostics (and operatorCategory).
+    if (
+      'diagnostics' in report &&
+      report.diagnostics.wasteReceivedRecordsExcluded > 0
+    ) {
+      const { wasteReceivedRecordsExcluded } = report.diagnostics
       request.logger.warn(
         {
           organisationId,
