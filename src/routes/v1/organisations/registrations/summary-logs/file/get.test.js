@@ -1,6 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -90,6 +94,30 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
           organisationId,
           registrationId
         }
+      )
+    })
+
+    it('logs the download with structured event data', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
+        })
+      )
+
+      await makeRequest(server)
+
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `Summary log file downloaded for summaryLogId: ${summaryLogId}, organisationId: ${organisationId}, registrationId: ${registrationId}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          }
+        })
       )
     })
   })
