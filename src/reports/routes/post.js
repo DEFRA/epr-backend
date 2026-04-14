@@ -9,14 +9,30 @@ import { createReportForPeriod } from '#reports/application/report-service.js'
 import { auditReportCreate } from '#reports/application/audit.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import {
+  extractChangedBy,
   periodParamsSchema,
   standardUserAuth,
-  withRegistrationDetails,
-  extractChangedBy
+  withRegistrationDetails
 } from './shared.js'
 
 export const reportsPostPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
+
+const logUnexpectedError = (logger, error) => {
+  logger.error({
+    err: error,
+    message: `Failure on ${reportsPostPath}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    },
+    http: {
+      response: {
+        status_code: StatusCodes.INTERNAL_SERVER_ERROR
+      }
+    }
+  })
+}
 
 export const reportsPost = {
   method: 'POST',
@@ -93,21 +109,13 @@ export const reportsPost = {
         .response(withRegistrationDetails(createdReport, registration))
         .code(StatusCodes.CREATED)
     } catch (error) {
-      logger.error({
-        err: error,
-        message: `Failure on ${reportsPostPath}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-        },
-        http: {
-          response: {
-            status_code: StatusCodes.INTERNAL_SERVER_ERROR
-          }
-        }
-      })
+      if (error.isBoom) {
+        throw error
+      }
 
-      throw error
+      logUnexpectedError(logger, error)
+
+      throw Boom.badImplementation(`Failure on ${reportsPostPath}`)
     }
   }
 }
