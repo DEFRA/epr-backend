@@ -57,7 +57,7 @@ const buildSchemas = (handlers) => {
  * @param {TypedLogger} logger
  * @param {import('joi').ObjectSchema} envelopeSchema
  * @param {Map<string, CommandHandler>} handlerMap
- * @returns {{ handler: CommandHandler, payload: object } | null}
+ * @returns {{ handler: CommandHandler, payload: object, context?: { traceId: string } } | null}
  */
 const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
   let parsed
@@ -91,7 +91,7 @@ const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
     return null
   }
 
-  const { command, ...rest } = parsed
+  const { command, context, ...rest } = parsed
   const handler = /** @type {CommandHandler} */ (handlerMap.get(command))
 
   // Pass 2: validate payload against handler's schema
@@ -109,7 +109,7 @@ const parseCommandMessage = (message, logger, envelopeSchema, handlerMap) => {
     return null
   }
 
-  return { handler, payload }
+  return { handler, payload, context }
 }
 
 /**
@@ -198,9 +198,19 @@ const createMessageHandler =
       )
     }
 
-    const { handler, payload } = result
+    const { handler, payload, context } = result
 
-    logger.info({
+    const commandLogger = context?.traceId
+      ? /** @type {TypedLogger} */ (
+          logger.child({ trace: { id: context.traceId } })
+        )
+      : logger
+
+    const commandDeps = context?.traceId
+      ? { ...deps, logger: commandLogger }
+      : deps
+
+    commandLogger.info({
       message: `Processing command: ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -209,9 +219,9 @@ const createMessageHandler =
     })
 
     try {
-      await handler.execute(payload, deps)
+      await handler.execute(payload, commandDeps)
 
-      logger.info({
+      commandLogger.info({
         message: `Command completed: ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -227,8 +237,8 @@ const createMessageHandler =
         payload,
         message,
         maxReceiveCount,
-        deps,
-        logger
+        deps: commandDeps,
+        logger: commandLogger
       })
 
       // handleCommandError returns (rather than throwing) for permanent errors,
@@ -316,7 +326,13 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
       handlerMap
     )
 
-    logger.error({
+    const timeoutLogger = result?.context?.traceId
+      ? /** @type {TypedLogger} */ (
+          logger.child({ trace: { id: result.context.traceId } })
+        )
+      : logger
+
+    timeoutLogger.error({
       err,
       message: result
         ? `Command timed out: ${result.handler.command} for ${result.handler.describe(result.payload)} messageId=${message.MessageId}`
@@ -328,7 +344,10 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
     })
 
     if (result) {
-      await result.handler.onFailure(result.payload, deps)
+      const timeoutDeps = result.context?.traceId
+        ? { ...deps, logger: timeoutLogger }
+        : deps
+      await result.handler.onFailure(result.payload, timeoutDeps)
     }
   })
 
