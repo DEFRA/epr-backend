@@ -289,6 +289,24 @@ describe(`POST ${reportsPostPath}`, () => {
           })
         )
       })
+
+      it('does not log when an expected Boom error is thrown', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(server, organisationId, registrationId)
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(server.loggerMocks.error).not.toHaveBeenCalled()
+        expect(server.loggerMocks.warn).not.toHaveBeenCalled()
+      })
     })
 
     describe('auditing', () => {
