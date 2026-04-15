@@ -840,6 +840,42 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       })
     })
 
+    describe('diagnostics warning (ADR 0030)', () => {
+      it('logs warning when waste records are excluded due to date field mismatch', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'reprocessor',
+            accreditationId: new ObjectId().toString()
+          },
+          [
+            {
+              type: WASTE_RECORD_TYPE.RECEIVED,
+              data: {
+                MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+                TONNAGE_RECEIVED_FOR_RECYCLING: 75,
+                SUPPLIER_NAME: 'Pre-transition Waste',
+                ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
+              }
+            }
+          ]
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2026,
+          'quarterly',
+          1
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.diagnostics.wasteReceivedRecordsExcluded).toBe(1)
+        expect(payload.recyclingActivity.totalTonnageReceived).toBe(0)
+      })
+    })
+
     describe('stored report retrieval', () => {
       const createServerWithReports = async (registrationOverrides = {}) => {
         const registration = buildRegistration(registrationOverrides)
