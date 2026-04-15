@@ -1,4 +1,5 @@
 import { formatDateISO } from '#common/helpers/date-formatter.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MONTHS_PER_PERIOD } from '../cadence.js'
 import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
@@ -49,6 +50,7 @@ import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
  * @property {AggregatedRecyclingActivity} recyclingActivity
  * @property {AggregatedExportActivity} [exportActivity]
  * @property {AggregatedWasteSent} wasteSent
+ * @property {{ wasteReceivedRecordsExcluded: number }} diagnostics
  */
 
 /**
@@ -85,36 +87,13 @@ export function aggregateReportDetail(
 
   const wasteReceivedDateField = sectionDateFields.wasteReceived
   const wasteExportedDateField = sectionDateFields.wasteExported
-  const wasteRepatriatedDateField = sectionDateFields.wasteRepatriated
-  const wasteSentOnDateField = sectionDateFields.wasteSentOn
 
-  const wasteReceivedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteReceivedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteExportedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteExportedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteRepatriatedRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteRepatriatedDateField,
-    startDate,
-    endDate
-  )
-
-  const wasteSentOnRecords = filterRecordsByDateField(
-    wasteRecords,
-    wasteSentOnDateField,
-    startDate,
-    endDate
-  )
+  const {
+    wasteReceivedRecords,
+    wasteExportedRecords,
+    wasteRepatriatedRecords,
+    wasteSentOnRecords
+  } = sliceRecordsByPeriod(wasteRecords, sectionDateFields, startDate, endDate)
 
   const { lastUploadedAt, summaryLogId } = findLastUpload(wasteRecords)
 
@@ -125,6 +104,20 @@ export function aggregateReportDetail(
     wasteReceivedRecords,
     tonnageReceivedField
   )
+
+  // Count received records excluded because they lack the expected date field.
+  // This could potentially happen after a registered-only organisation becomes
+  // accredited (or vice versa): historical registered-only records have MONTH_RECEIVED_FOR_*
+  // but the accredited category looks up DATE_RECEIVED_FOR_*. See ADR 0030,
+  // Finding 3. Only wasteReceived needs this check — all other sections use
+  // the same date field name regardless of operator category.
+  const wasteReceivedRecordsExcluded = wasteRecords.filter(
+    (r) =>
+      r.type === WASTE_RECORD_TYPE.RECEIVED &&
+      wasteReceivedDateField &&
+      (r.data[wasteReceivedDateField] === null ||
+        r.data[wasteReceivedDateField] === undefined)
+  ).length
 
   return {
     operatorCategory,
@@ -146,7 +139,51 @@ export function aggregateReportDetail(
         operatorCategory
       })
     }),
-    wasteSent: aggregateWasteSentOn(wasteSentOnRecords)
+    wasteSent: aggregateWasteSentOn(wasteSentOnRecords),
+    diagnostics: { wasteReceivedRecordsExcluded }
+  }
+}
+
+/**
+ * Slices waste records into per-section record sets, each filtered to those
+ * whose section date field falls within [startDate, endDate].
+ *
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
+ * @param {{ wasteReceived?: string, wasteExported?: string, wasteRepatriated?: string, wasteSentOn?: string }} sectionDateFields
+ * @param {string} startDate - ISO date string (YYYY-MM-DD)
+ * @param {string} endDate - ISO date string (YYYY-MM-DD)
+ */
+function sliceRecordsByPeriod(
+  wasteRecords,
+  sectionDateFields,
+  startDate,
+  endDate
+) {
+  return {
+    wasteReceivedRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteReceived,
+      startDate,
+      endDate
+    ),
+    wasteExportedRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteExported,
+      startDate,
+      endDate
+    ),
+    wasteRepatriatedRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteRepatriated,
+      startDate,
+      endDate
+    ),
+    wasteSentOnRecords: filterRecordsByDateField(
+      wasteRecords,
+      sectionDateFields.wasteSentOn,
+      startDate,
+      endDate
+    )
   }
 }
 

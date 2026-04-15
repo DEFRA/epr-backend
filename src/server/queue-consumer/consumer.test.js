@@ -665,7 +665,8 @@ describe('createCommandQueueConsumer', () => {
           version: 1,
           summaryLog: {
             status: SUMMARY_LOG_STATUS.SUBMITTING,
-            meta: {}
+            meta: {},
+            file: { id: 'file-456', name: 'test-file.xlsx' }
           }
         })
         summaryLogsRepository.update.mockResolvedValue(undefined)
@@ -968,7 +969,8 @@ describe('createCommandQueueConsumer', () => {
           version: 1,
           summaryLog: {
             status: SUMMARY_LOG_STATUS.SUBMITTING,
-            meta: {}
+            meta: {},
+            file: { id: 'file-456', name: 'test-file.xlsx' }
           }
         })
         summaryLogsRepository.update.mockResolvedValue(undefined)
@@ -991,7 +993,22 @@ describe('createCommandQueueConsumer', () => {
         )
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Summary log submitted: summaryLogId=log-123'
+            message:
+              'Summary log submission started: summaryLogId=log-123, fileId=file-456, filename=test-file.xlsx',
+            event: expect.objectContaining({
+              category: 'server',
+              action: 'start_success'
+            })
+          })
+        )
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Summary log submitted: summaryLogId=log-123, fileId=file-456, filename=test-file.xlsx, created=0, updated=0',
+            event: expect.objectContaining({
+              category: 'server',
+              action: 'process_success'
+            })
           })
         )
       })
@@ -1078,7 +1095,11 @@ describe('createCommandQueueConsumer', () => {
 
           summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+            summaryLog: {
+              status: SUMMARY_LOG_STATUS.SUBMITTING,
+              meta: {},
+              file: { id: 'file-456', name: 'test-file.xlsx' }
+            }
           })
 
           const message = {
@@ -1101,7 +1122,11 @@ describe('createCommandQueueConsumer', () => {
 
           summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+            summaryLog: {
+              status: SUMMARY_LOG_STATUS.SUBMITTING,
+              meta: {},
+              file: { id: 'file-456', name: 'test-file.xlsx' }
+            }
           })
 
           const message = {
@@ -1127,7 +1152,11 @@ describe('createCommandQueueConsumer', () => {
 
           summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+            summaryLog: {
+              status: SUMMARY_LOG_STATUS.SUBMITTING,
+              meta: {},
+              file: { id: 'file-456', name: 'test-file.xlsx' }
+            }
           })
 
           const message = {

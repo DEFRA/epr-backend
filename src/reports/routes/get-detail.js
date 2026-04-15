@@ -49,6 +49,25 @@ export const reportsGetDetail = {
       period
     })
 
+    // The 'diagnostics' in report check acts as a type discriminator:
+    // fetchOrGenerateReportForPeriod returns Report | AggregatedReportDetail,
+    // and only AggregatedReportDetail carries diagnostics (and operatorCategory).
+    if (
+      'diagnostics' in report &&
+      report.diagnostics.wasteReceivedRecordsExcluded > 0
+    ) {
+      const { wasteReceivedRecordsExcluded } = report.diagnostics
+      request.logger.warn(
+        {
+          organisationId,
+          registrationId,
+          operatorCategory: report.operatorCategory,
+          wasteReceivedRecordsExcluded
+        },
+        'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)'
+      )
+    }
+
     return h
       .response(withRegistrationDetails(report, registration))
       .code(StatusCodes.OK)
