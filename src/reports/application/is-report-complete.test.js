@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { isReportComplete } from './is-report-complete.js'
-import { OPERATOR_CATEGORY } from './operator-category.js'
+import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
- * @import { OperatorCategory } from './operator-category.js'
+ * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @typedef {Record<string, any>} SparseReport
  */
 
