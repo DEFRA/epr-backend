@@ -1,5 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { getDefaultStatus } from '#domain/summary-logs/status.js'
 import { extractResponseMetaFields } from '#domain/summary-logs/extract-response-meta-fields.js'
 import { transformValidationResponse } from './transform-validation-response.js'
@@ -27,7 +31,7 @@ export const summaryLogsGet = {
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, params } = request
+    const { summaryLogsRepository, params, logger } = request
     const { summaryLogId } = params
 
     const result = await summaryLogsRepository.findById(summaryLogId)
@@ -47,6 +51,15 @@ export const summaryLogsGet = {
       }),
       ...extractResponseMetaFields(summaryLog.meta)
     }
+
+    logger.info({
+      message: `Summary log status retrieved: summaryLogId=${summaryLogId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+        reference: summaryLogId
+      }
+    })
 
     return h.response(response).code(StatusCodes.OK)
   }
