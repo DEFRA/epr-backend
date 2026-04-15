@@ -1,5 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -51,6 +55,29 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.PREPROCESSING)
+    })
+  })
+
+  describe('logging', () => {
+    it('logs a structured info event when a summary log is found', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validated({ organisationId, registrationId })
+      )
+
+      await makeRequest(server)
+
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `Summary log status retrieved: summaryLogId=${summaryLogId}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
+        })
+      )
     })
   })
 
