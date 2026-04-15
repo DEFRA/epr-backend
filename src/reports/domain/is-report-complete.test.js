@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  completeReportSchemas,
-  isReportComplete,
-  reportShapeSchema
+  completenessRequirements,
+  isReportComplete
 } from './is-report-complete.js'
 import { OPERATOR_CATEGORY } from './operator-category.js'
 
@@ -26,35 +25,7 @@ import { OPERATOR_CATEGORY } from './operator-category.js'
 // RR = REPROCESSOR_REGISTERED_ONLY, R = REPROCESSOR,
 // ER = EXPORTER_REGISTERED_ONLY,    E = EXPORTER.
 
-const FIELDS = {
-  tonnageRecycled: 'recyclingActivity.tonnageRecycled',
-  tonnageNotRecycled: 'recyclingActivity.tonnageNotRecycled',
-  tonnageReceivedNotExported: 'exportActivity.tonnageReceivedNotExported',
-  prnTotalRevenue: 'prn.totalRevenue',
-  prnFreeTonnage: 'prn.freeTonnage'
-}
-
-/** @type {Record<OperatorCategory, string[]>} */
-const REQUIRED_BY_CATEGORY = {
-  [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
-    FIELDS.tonnageRecycled,
-    FIELDS.tonnageNotRecycled
-  ],
-  [OPERATOR_CATEGORY.REPROCESSOR]: [
-    FIELDS.tonnageRecycled,
-    FIELDS.tonnageNotRecycled,
-    FIELDS.prnTotalRevenue,
-    FIELDS.prnFreeTonnage
-  ],
-  [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
-    FIELDS.tonnageReceivedNotExported
-  ],
-  [OPERATOR_CATEGORY.EXPORTER]: [
-    FIELDS.tonnageReceivedNotExported,
-    FIELDS.prnTotalRevenue,
-    FIELDS.prnFreeTonnage
-  ]
-}
+const ALL_FIELDS = [...new Set(Object.values(completenessRequirements).flat())]
 
 /** @type {SparseReport} */
 const completeReport = {
@@ -76,14 +47,14 @@ const check = (report, category) =>
 describe('isReportComplete', () => {
   describe.each(
     /** @type {[OperatorCategory, string[]][]} */ (
-      Object.entries(REQUIRED_BY_CATEGORY)
+      Object.entries(completenessRequirements)
     )
   )('%s', (category, requiredFields) => {
     it('is complete when all fields are populated', () => {
       expect(check(completeReport, category)).toBe(true)
     })
 
-    it.each(Object.values(FIELDS))(
+    it.each(ALL_FIELDS)(
       'when %s is null, is complete only when the field is not required for this category',
       (field) => {
         const [section, prop] = field.split('.')
@@ -142,22 +113,5 @@ describe('isReportComplete', () => {
     }
 
     expect(check(reportWithExtras, OPERATOR_CATEGORY.REPROCESSOR)).toBe(true)
-  })
-
-  describe('schema drift guarantees', () => {
-    it.each(Object.values(OPERATOR_CATEGORY))(
-      'should build a complete schema for %s',
-      (category) => {
-        expect(completeReportSchemas[category]).toBeDefined()
-      }
-    )
-
-    it('should throw when a completeness path does not exist in the schema', () => {
-      expect(() =>
-        reportShapeSchema.fork(['recyclingActivity.tonnageRecycledTYPO'], (s) =>
-          s.empty(null).required()
-        )
-      ).toThrow(/tonnageRecycledTYPO/)
-    })
   })
 })

@@ -36,7 +36,7 @@ export const reportShapeSchema = Joi.object({
 const makeRequired = (s) => s.empty(null).required()
 
 /** @type {Record<OperatorCategory, string[]>} */
-const completenessRequirements = Object.freeze({
+export const completenessRequirements = Object.freeze({
   [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
     'recyclingActivity.tonnageRecycled',
     'recyclingActivity.tonnageNotRecycled'
@@ -44,30 +44,34 @@ const completenessRequirements = Object.freeze({
   [OPERATOR_CATEGORY.REPROCESSOR]: [
     'recyclingActivity.tonnageRecycled',
     'recyclingActivity.tonnageNotRecycled',
-    'prn',
     'prn.totalRevenue',
     'prn.freeTonnage'
   ],
   [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
-    'exportActivity',
     'exportActivity.tonnageReceivedNotExported'
   ],
   [OPERATOR_CATEGORY.EXPORTER]: [
-    'exportActivity',
     'exportActivity.tonnageReceivedNotExported',
-    'prn',
     'prn.totalRevenue',
     'prn.freeTonnage'
   ]
 })
 
+// If any leaf under a section is required, the section itself must be
+// non-null -- otherwise Joi's .allow(null) on the parent short-circuits
+// validation of the children.
+const withParentSections = (/** @type {string[]} */ fields) => [
+  ...new Set(fields.map((f) => f.split('.')[0])),
+  ...fields
+]
+
 export const completeReportSchemas =
   /** @type {Record<OperatorCategory, Joi.ObjectSchema>} */ (
     Object.freeze(
       Object.fromEntries(
-        Object.entries(completenessRequirements).map(([category, paths]) => [
+        Object.entries(completenessRequirements).map(([category, fields]) => [
           category,
-          reportShapeSchema.fork(paths, makeRequired)
+          reportShapeSchema.fork(withParentSections(fields), makeRequired)
         ])
       )
     )
