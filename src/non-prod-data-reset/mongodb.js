@@ -12,6 +12,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 
 const COLLECTIONS = {
   ORGANISATIONS: 'epr-organisations',
+  ORGANISATION: 'organisation',
   PACKAGING_RECYCLING_NOTES: 'packaging-recycling-notes',
   WASTE_BALANCES: 'waste-balances',
   REPORTS: 'reports',
@@ -27,7 +28,8 @@ const EMPTY_COUNTS = Object.freeze({
   'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
-  'epr-organisations': 0
+  'epr-organisations': 0,
+  organisation: 0
 })
 
 const toObjectId = (id) => ObjectId.createFromHexString(id)
@@ -41,7 +43,7 @@ const toObjectId = (id) => ObjectId.createFromHexString(id)
  * @param {number} orgId
  */
 const findOrganisationForCleanup = async (db, orgId) =>
-  db.collection(COLLECTIONS.ORGANISATIONS).findOne({ orgId: Number(orgId) })
+  db.collection(COLLECTIONS.ORGANISATIONS).findOne({ orgId })
 
 const extractCascadeKeys = (organisation) => {
   const accreditationIds = (organisation.accreditations ?? []).map((a) => a.id)
@@ -61,10 +63,17 @@ const extractCascadeKeys = (organisation) => {
  * (each derived from keys already extracted from the organisation document)
  * so there are no ordering constraints between steps.
  *
+ * Two different id shapes drive the filters. Most collections store the
+ * epr-organisations _id hex on the document, so they join against mongoIdHex.
+ * The 'organisation' collection (written by the journey-test apply path) is
+ * keyed by the numeric orgId, so its filter joins against orgId directly.
+ *
+ * @param {number} orgId
  * @param {string} mongoIdHex
  * @param {{ accreditationIds: string[], overseasSiteIds: string[] }} keys
  */
 const buildCascadeSteps = (
+  orgId,
   mongoIdHex,
   { accreditationIds, overseasSiteIds }
 ) => [
@@ -108,6 +117,11 @@ const buildCascadeSteps = (
     label: 'epr-organisations',
     collection: COLLECTIONS.ORGANISATIONS,
     filter: { _id: toObjectId(mongoIdHex) }
+  },
+  {
+    label: 'organisation',
+    collection: COLLECTIONS.ORGANISATION,
+    filter: { orgId }
   }
 ]
 
@@ -163,6 +177,6 @@ export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
     }
     const mongoIdHex = organisation._id.toHexString()
     const keys = extractCascadeKeys(organisation)
-    return runCascade(db, buildCascadeSteps(mongoIdHex, keys))
+    return runCascade(db, buildCascadeSteps(orgId, mongoIdHex, keys))
   }
 })
