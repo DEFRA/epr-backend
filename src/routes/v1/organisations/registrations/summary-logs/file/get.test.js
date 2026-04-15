@@ -115,7 +115,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
           message: `Summary log file downloaded for summaryLogId: ${summaryLogId}, organisationId: ${organisationId}, registrationId: ${registrationId}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
           }
         })
       )
