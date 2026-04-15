@@ -58,11 +58,17 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     )
   }
 
+  const {
+    file: { id: fileId, name: filename }
+  } = summaryLog
+
+  const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
+
   const processingType =
     summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 
   logger.info({
-    message: `Summary log submission started: summaryLogId=${summaryLogId}`,
+    message: `Summary log submission started: ${loggingContext}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -98,7 +104,7 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   })
 
   logger.info({
-    message: `Summary log submitted: summaryLogId=${summaryLogId}, created=${created}, updated=${updated}`,
+    message: `Summary log submitted: ${loggingContext}, created=${created}, updated=${updated}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
