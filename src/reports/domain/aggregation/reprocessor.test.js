@@ -91,7 +91,8 @@ describe('#aggregateReportDetail — REPROCESSOR_REGISTERED_ONLY quarterly Q1 20
       source: {
         lastUploadedAt: '2026-03-31T19:35:45.562Z',
         summaryLogId: '18bde18b-5200-4e86-9aad-738a16b05db8'
-      }
+      },
+      diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
   })
 })
@@ -185,7 +186,8 @@ describe('#aggregateReportDetail — REPROCESSOR accredited monthly January 2026
             tonnageSentOn: 100
           }
         ]
-      }
+      },
+      diagnostics: { wasteReceivedRecordsExcluded: 0 }
     })
   })
 })
