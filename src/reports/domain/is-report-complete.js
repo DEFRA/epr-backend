@@ -11,71 +11,59 @@ import { OPERATOR_CATEGORY } from './operator-category.js'
  * @import { Report } from '#reports/repository/port.js'
  */
 
-export const reportShapeSchema = Joi.object({
+const recyclingBlock = Joi.object({
   recyclingActivity: Joi.object({
-    tonnageRecycled: recyclingActivitySchema.extract('tonnageRecycled'),
-    tonnageNotRecycled: recyclingActivitySchema.extract('tonnageNotRecycled')
+    tonnageRecycled: recyclingActivitySchema
+      .extract('tonnageRecycled')
+      .empty(null)
+      .required(),
+    tonnageNotRecycled: recyclingActivitySchema
+      .extract('tonnageNotRecycled')
+      .empty(null)
+      .required()
   })
     .unknown(true)
-    .allow(null),
-  exportActivity: Joi.object({
-    tonnageReceivedNotExported: exportActivitySchema.extract(
-      'tonnageReceivedNotExported'
-    )
-  })
-    .unknown(true)
-    .allow(null),
-  prn: Joi.object({
-    totalRevenue: prnSchema.extract('totalRevenue'),
-    freeTonnage: prnSchema.extract('freeTonnage')
-  })
-    .unknown(true)
-    .allow(null)
-}).unknown(true)
-
-const makeRequired = (s) => s.empty(null).required()
-
-/** @type {Record<OperatorCategory, string[]>} */
-export const completenessRequirements = Object.freeze({
-  [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
-    'recyclingActivity.tonnageRecycled',
-    'recyclingActivity.tonnageNotRecycled'
-  ],
-  [OPERATOR_CATEGORY.REPROCESSOR]: [
-    'recyclingActivity.tonnageRecycled',
-    'recyclingActivity.tonnageNotRecycled',
-    'prn.totalRevenue',
-    'prn.freeTonnage'
-  ],
-  [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
-    'exportActivity.tonnageReceivedNotExported'
-  ],
-  [OPERATOR_CATEGORY.EXPORTER]: [
-    'exportActivity.tonnageReceivedNotExported',
-    'prn.totalRevenue',
-    'prn.freeTonnage'
-  ]
+    .empty(null)
+    .required()
 })
 
-// If any leaf under a section is required, the section itself must be
-// non-null -- otherwise Joi's .allow(null) on the parent short-circuits
-// validation of the children.
-const withParentSections = (/** @type {string[]} */ fields) => [
-  ...new Set(fields.map((f) => f.split('.')[0])),
-  ...fields
-]
+const exportBlock = Joi.object({
+  exportActivity: Joi.object({
+    tonnageReceivedNotExported: exportActivitySchema
+      .extract('tonnageReceivedNotExported')
+      .empty(null)
+      .required()
+  })
+    .unknown(true)
+    .empty(null)
+    .required()
+})
 
-export const completeReportSchemas =
-  /** @type {Record<OperatorCategory, Joi.ObjectSchema>} */ (
-    Object.freeze(
-      Object.fromEntries(
-        Object.entries(completenessRequirements).map(([category, fields]) => [
-          category,
-          reportShapeSchema.fork(withParentSections(fields), makeRequired)
-        ])
-      )
-    )
-  )
+const prnBlock = Joi.object({
+  prn: Joi.object({
+    totalRevenue: prnSchema.extract('totalRevenue').empty(null).required(),
+    freeTonnage: prnSchema.extract('freeTonnage').empty(null).required()
+  })
+    .unknown(true)
+    .empty(null)
+    .required()
+})
+
+const baseReportSchema = Joi.object().unknown(true)
+
+/** @type {Record<OperatorCategory, Joi.ObjectSchema>} */
+export const completeReportSchemas = Object.freeze({
+  [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]:
+    baseReportSchema.concat(recyclingBlock),
+  [OPERATOR_CATEGORY.REPROCESSOR]: baseReportSchema
+    .concat(recyclingBlock)
+    .concat(prnBlock),
+  [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]:
+    baseReportSchema.concat(exportBlock),
+  [OPERATOR_CATEGORY.EXPORTER]: baseReportSchema
+    .concat(exportBlock)
+    .concat(prnBlock)
+})
 
 /**
  * @param {Report} report
