@@ -1,6 +1,6 @@
+import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { describe, expect, it } from 'vitest'
 import { isReportComplete } from './is-report-complete.js'
-import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -33,6 +33,31 @@ const check = (report, category) =>
   )
 
 describe('isReportComplete', () => {
+  it('should throw for unknown operator category', () => {
+    expect(() => check({}, 'UNKNOWN')).toThrow()
+  })
+
+  it('should ignore unrelated fields on real reports', () => {
+    /** @type {SparseReport} */
+    const reportWithExtras = {
+      recyclingActivity: {
+        tonnageRecycled: 100,
+        tonnageNotRecycled: 10,
+        suppliers: [{ supplierName: 'Acme' }],
+        totalTonnageReceived: 500
+      },
+      exportActivity: {
+        tonnageReceivedNotExported: 5,
+        tonnageRefusedAtDestination: 2
+      },
+      prn: { totalRevenue: 1000, freeTonnage: 0, issuedTonnage: 50 },
+      source: { summaryLogId: 'abc', lastUploadedAt: null },
+      supportingInformation: 'notes'
+    }
+
+    expect(check(reportWithExtras, OPERATOR_CATEGORY.REPROCESSOR)).toBe(true)
+  })
+
   describe('REPROCESSOR_REGISTERED_ONLY', () => {
     const category = OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
 
@@ -221,30 +246,5 @@ describe('isReportComplete', () => {
 
       expect(check(incomplete, category)).toBe(false)
     })
-  })
-
-  it('should throw for unknown operator category', () => {
-    expect(() => check({}, 'UNKNOWN')).toThrow()
-  })
-
-  it('should ignore unrelated fields on real reports', () => {
-    /** @type {SparseReport} */
-    const reportWithExtras = {
-      recyclingActivity: {
-        tonnageRecycled: 100,
-        tonnageNotRecycled: 10,
-        suppliers: [{ supplierName: 'Acme' }],
-        totalTonnageReceived: 500
-      },
-      exportActivity: {
-        tonnageReceivedNotExported: 5,
-        tonnageRefusedAtDestination: 2
-      },
-      prn: { totalRevenue: 1000, freeTonnage: 0, issuedTonnage: 50 },
-      source: { summaryLogId: 'abc', lastUploadedAt: null },
-      supportingInformation: 'notes'
-    }
-
-    expect(check(reportWithExtras, OPERATOR_CATEGORY.REPROCESSOR)).toBe(true)
   })
 })
