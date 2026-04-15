@@ -1,42 +1,77 @@
+import {
+  exportActivitySchema,
+  prnSchema,
+  recyclingActivitySchema
+} from '#reports/repository/schema.js'
+import Joi from 'joi'
 import { OPERATOR_CATEGORY } from './operator-category.js'
 
 /**
  * @import { OperatorCategory } from './operator-category.js'
  * @import { Report } from '#reports/repository/port.js'
- * @typedef {(report: Report) => unknown} FieldAccessor
  */
 
-/** @type {FieldAccessor} */
-const tonnageRecycled = (r) => r.recyclingActivity?.tonnageRecycled
-/** @type {FieldAccessor} */
-const tonnageNotRecycled = (r) => r.recyclingActivity?.tonnageNotRecycled
-/** @type {FieldAccessor} */
-const tonnageReceivedNotExported = (r) =>
-  r.exportActivity?.tonnageReceivedNotExported
-/** @type {FieldAccessor} */
-const prnTotalRevenue = (r) => r.prn?.totalRevenue
-/** @type {FieldAccessor} */
-const prnFreeTonnage = (r) => r.prn?.freeTonnage
+export const reportShapeSchema = Joi.object({
+  recyclingActivity: Joi.object({
+    tonnageRecycled: recyclingActivitySchema.extract('tonnageRecycled'),
+    tonnageNotRecycled: recyclingActivitySchema.extract('tonnageNotRecycled')
+  })
+    .unknown(true)
+    .allow(null),
+  exportActivity: Joi.object({
+    tonnageReceivedNotExported: exportActivitySchema.extract(
+      'tonnageReceivedNotExported'
+    )
+  })
+    .unknown(true)
+    .allow(null),
+  prn: Joi.object({
+    totalRevenue: prnSchema.extract('totalRevenue'),
+    freeTonnage: prnSchema.extract('freeTonnage')
+  })
+    .unknown(true)
+    .allow(null)
+}).unknown(true)
 
-/** @type {Record<OperatorCategory, FieldAccessor[]>} */
-const REQUIRED_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
+const makeRequired = (s) => s.empty(null).required()
+
+/** @type {Record<OperatorCategory, string[]>} */
+const completenessRequirements = Object.freeze({
   [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: [
-    tonnageRecycled,
-    tonnageNotRecycled
+    'recyclingActivity.tonnageRecycled',
+    'recyclingActivity.tonnageNotRecycled'
   ],
   [OPERATOR_CATEGORY.REPROCESSOR]: [
-    tonnageRecycled,
-    tonnageNotRecycled,
-    prnTotalRevenue,
-    prnFreeTonnage
+    'recyclingActivity.tonnageRecycled',
+    'recyclingActivity.tonnageNotRecycled',
+    'prn',
+    'prn.totalRevenue',
+    'prn.freeTonnage'
   ],
-  [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [tonnageReceivedNotExported],
+  [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: [
+    'exportActivity',
+    'exportActivity.tonnageReceivedNotExported'
+  ],
   [OPERATOR_CATEGORY.EXPORTER]: [
-    tonnageReceivedNotExported,
-    prnTotalRevenue,
-    prnFreeTonnage
+    'exportActivity',
+    'exportActivity.tonnageReceivedNotExported',
+    'prn',
+    'prn.totalRevenue',
+    'prn.freeTonnage'
   ]
 })
+
+export const completeReportSchemas =
+  /** @type {Record<OperatorCategory, Joi.ObjectSchema>} */ (
+    Object.freeze(
+      Object.fromEntries(
+        Object.entries(completenessRequirements).map(([category, paths]) => [
+          category,
+          reportShapeSchema.fork(paths, makeRequired)
+        ])
+      )
+    )
+  )
 
 /**
  * @param {Report} report
@@ -44,14 +79,11 @@ const REQUIRED_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
  * @returns {boolean}
  */
 export const isReportComplete = (report, operatorCategory) => {
-  const required = REQUIRED_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
+  const schema = completeReportSchemas[operatorCategory]
 
-  if (!required) {
+  if (!schema) {
     throw new TypeError(`Unknown operator category: ${operatorCategory}`)
   }
 
-  return required.every((get) => {
-    const value = get(report)
-    return value !== null && value !== undefined
-  })
+  return !schema.validate(report).error
 }

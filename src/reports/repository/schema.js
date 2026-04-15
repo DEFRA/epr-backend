@@ -60,7 +60,7 @@ const supplierSchema = Joi.object({
   tonnageReceived: Joi.number().min(0).required()
 })
 
-const recyclingActivitySchema = Joi.object({
+export const recyclingActivitySchema = Joi.object({
   suppliers: Joi.array().items(supplierSchema).required(),
   totalTonnageReceived: Joi.number().min(0).required(),
   tonnageRecycled: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
@@ -83,7 +83,7 @@ const unapprovedOverseasSiteSchema = Joi.object({
   tonnageExported: Joi.number().min(0).required()
 })
 
-const exportActivitySchema = Joi.object({
+export const exportActivitySchema = Joi.object({
   overseasSites: Joi.array().items(overseasSiteSchema).required(),
   unapprovedOverseasSites: Joi.array()
     .items(unapprovedOverseasSiteSchema)
