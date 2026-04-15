@@ -13,13 +13,15 @@ import Joi from 'joi'
 
 export const devOrganisationsDeleteByIdPath = '/v1/dev/organisations/{id}'
 
+const POSITIVE_INTEGER_MESSAGE = '{#label} must be a positive integer'
+
 const params = Joi.object({
   id: Joi.number().integer().positive().required()
 }).messages({
   'any.required': '{#label} is required',
-  'number.base': '{#label} must be a positive integer',
-  'number.integer': '{#label} must be a positive integer',
-  'number.positive': '{#label} must be a positive integer'
+  'number.base': POSITIVE_INTEGER_MESSAGE,
+  'number.integer': POSITIVE_INTEGER_MESSAGE,
+  'number.positive': POSITIVE_INTEGER_MESSAGE
 })
 
 export const devOrganisationsDeleteById = {
