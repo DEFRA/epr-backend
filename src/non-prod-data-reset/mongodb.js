@@ -6,7 +6,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 
 /**
  * @typedef {{
- *   deleteByOrgId: (orgId: string) => Promise<Record<string, number>>
+ *   deleteByOrgId: (orgId: number) => Promise<Record<string, number>>
  * }} NonProdDataReset
  */
 
@@ -20,27 +20,30 @@ const COLLECTIONS = {
   OVERSEAS_SITES: 'overseas-sites'
 }
 
-const isValidObjectIdHex = (id) => /^[0-9a-fA-F]{24}$/.test(id)
+const EMPTY_COUNTS = Object.freeze({
+  'packaging-recycling-notes': 0,
+  'waste-balances': 0,
+  reports: 0,
+  'waste-records': 0,
+  'summary-logs': 0,
+  'overseas-sites': 0,
+  'epr-organisations': 0
+})
 
 const toObjectId = (id) => ObjectId.createFromHexString(id)
 
 /**
+ * Looks up the organisation by its numeric orgId (the stable identifier used
+ * by journey tests and upstream systems), not the Mongo _id. Shape validation
+ * for the incoming id lives at the route layer.
+ *
  * @param {Db} db
- * @param {string} orgId
+ * @param {number} orgId
  */
-const findOrganisationForCleanup = async (db, orgId) => {
-  if (!isValidObjectIdHex(orgId)) {
-    return null
-  }
-  return db
-    .collection(COLLECTIONS.ORGANISATIONS)
-    .findOne({ _id: toObjectId(orgId) })
-}
+const findOrganisationForCleanup = async (db, orgId) =>
+  db.collection(COLLECTIONS.ORGANISATIONS).findOne({ orgId: Number(orgId) })
 
 const extractCascadeKeys = (organisation) => {
-  if (!organisation) {
-    return { accreditationIds: [], overseasSiteIds: [] }
-  }
   const accreditationIds = (organisation.accreditations ?? []).map((a) => a.id)
   const overseasSiteIds = (organisation.registrations ?? []).flatMap((reg) =>
     Object.values(reg.overseasSites ?? {}).map((entry) => entry.overseasSiteId)
@@ -58,14 +61,17 @@ const extractCascadeKeys = (organisation) => {
  * (each derived from keys already extracted from the organisation document)
  * so there are no ordering constraints between steps.
  *
- * @param {string} orgId
+ * @param {string} mongoIdHex
  * @param {{ accreditationIds: string[], overseasSiteIds: string[] }} keys
  */
-const buildCascadeSteps = (orgId, { accreditationIds, overseasSiteIds }) => [
+const buildCascadeSteps = (
+  mongoIdHex,
+  { accreditationIds, overseasSiteIds }
+) => [
   {
     label: 'packaging-recycling-notes',
     collection: COLLECTIONS.PACKAGING_RECYCLING_NOTES,
-    filter: { 'organisation.id': orgId }
+    filter: { 'organisation.id': mongoIdHex }
   },
   {
     label: 'waste-balances',
@@ -78,17 +84,17 @@ const buildCascadeSteps = (orgId, { accreditationIds, overseasSiteIds }) => [
   {
     label: 'reports',
     collection: COLLECTIONS.REPORTS,
-    filter: { organisationId: orgId }
+    filter: { organisationId: mongoIdHex }
   },
   {
     label: 'waste-records',
     collection: COLLECTIONS.WASTE_RECORDS,
-    filter: { organisationId: orgId }
+    filter: { organisationId: mongoIdHex }
   },
   {
     label: 'summary-logs',
     collection: COLLECTIONS.SUMMARY_LOGS,
-    filter: { organisationId: orgId }
+    filter: { organisationId: mongoIdHex }
   },
   {
     label: 'overseas-sites',
@@ -101,7 +107,7 @@ const buildCascadeSteps = (orgId, { accreditationIds, overseasSiteIds }) => [
   {
     label: 'epr-organisations',
     collection: COLLECTIONS.ORGANISATIONS,
-    filter: isValidObjectIdHex(orgId) ? { _id: toObjectId(orgId) } : null
+    filter: { _id: toObjectId(mongoIdHex) }
   }
 ]
 
@@ -146,13 +152,17 @@ export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
   async deleteByOrgId(orgId) {
     if (isProduction) {
       logger.error(
-        { event: { reference: orgId } },
+        { event: { reference: String(orgId) } },
         'Refusing to run non-prod cascade delete in production environment.'
       )
       throw new Error('Non-prod data reset is disabled in production.')
     }
     const organisation = await findOrganisationForCleanup(db, orgId)
+    if (!organisation) {
+      return { ...EMPTY_COUNTS }
+    }
+    const mongoIdHex = organisation._id.toHexString()
     const keys = extractCascadeKeys(organisation)
-    return runCascade(db, buildCascadeSteps(orgId, keys))
+    return runCascade(db, buildCascadeSteps(mongoIdHex, keys))
   }
 })
