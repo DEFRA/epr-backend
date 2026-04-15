@@ -353,7 +353,8 @@ describe('Submission and placeholder tests', () => {
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor: validationExtractor
+        summaryLogExtractor: validationExtractor,
+        logger: mockLogger
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -803,7 +804,8 @@ describe('Submission and placeholder tests', () => {
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        logger: mockLogger
       })
       const featureFlags = createInMemoryFeatureFlags()
 

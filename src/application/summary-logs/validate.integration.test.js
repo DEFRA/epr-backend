@@ -112,6 +112,7 @@ describe('SummaryLogsValidator integration', () => {
     const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
     const validateSummaryLog = createSummaryLogsValidator({
+      logger,
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,

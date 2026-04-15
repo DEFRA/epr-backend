@@ -61,7 +61,13 @@ describe('createCommandQueueConsumer', () => {
     logger = {
       info: vi.fn(),
       error: vi.fn(),
-      warn: vi.fn()
+      warn: vi.fn(),
+      child: vi.fn(() => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        child: vi.fn()
+      }))
     }
 
     summaryLogsRepository = {
@@ -362,6 +368,69 @@ describe('createCommandQueueConsumer', () => {
         })
       )
     })
+
+    it('creates child logger for timeout_error when context.traceId is present', async () => {
+      const childLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        child: vi.fn()
+      }
+      logger.child.mockReturnValue(childLogger)
+
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+      })
+
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'validate',
+          summaryLogId: 'summary-123',
+          context: { traceId: 'trace-abc-123' }
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.child).toHaveBeenCalledWith({
+        trace: { id: 'trace-abc-123' }
+      })
+      expect(childLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Command timed out: validate')
+        })
+      )
+    })
+
+    it('uses global logger for timeout_error when context is absent', async () => {
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+      })
+
+      await createConsumer()
+      const error = new Error('Timeout')
+      const message = {
+        MessageId: 'msg-123',
+        Body: JSON.stringify({
+          command: 'validate',
+          summaryLogId: 'summary-123'
+        })
+      }
+
+      await eventHandlers.timeout_error(error, message)
+
+      expect(logger.child).not.toHaveBeenCalled()
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Command timed out: validate')
+        })
+      )
+    })
   })
 
   describe('message handling', () => {
@@ -473,6 +542,189 @@ describe('createCommandQueueConsumer', () => {
           expect.objectContaining({
             message:
               'Invalid command message for messageId=msg-123: "command" must be one of [validate, submit]'
+          })
+        )
+      })
+    })
+
+    describe('trace context', () => {
+      it('creates child logger with trace ID when context.traceId is present', async () => {
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
+        logger.child.mockReturnValue(childLogger)
+
+        const mockValidator = vi.fn()
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'validate',
+            summaryLogId: 'log-123',
+            context: { traceId: 'trace-abc-123' }
+          })
+        }
+
+        await handleMessage(message)
+
+        expect(logger.child).toHaveBeenCalledWith({
+          trace: { id: 'trace-abc-123' }
+        })
+        expect(childLogger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Processing command: validate')
+          })
+        )
+        expect(childLogger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Command completed: validate')
+          })
+        )
+      })
+
+      it('uses global logger when context is absent', async () => {
+        const mockValidator = vi.fn()
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'validate',
+            summaryLogId: 'log-123'
+          })
+        }
+
+        await handleMessage(message)
+
+        expect(logger.child).not.toHaveBeenCalled()
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Processing command: validate')
+          })
+        )
+      })
+
+      it('uses global logger when context.traceId is absent', async () => {
+        const mockValidator = vi.fn()
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'validate',
+            summaryLogId: 'log-123',
+            context: {}
+          })
+        }
+
+        await handleMessage(message)
+
+        expect(logger.child).not.toHaveBeenCalled()
+      })
+
+      it('strips context from payload before passing to handler', async () => {
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
+        logger.child.mockReturnValue(childLogger)
+
+        const mockValidator = vi.fn()
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'validate',
+            summaryLogId: 'log-123',
+            context: { traceId: 'trace-abc-123' }
+          })
+        }
+
+        await handleMessage(message)
+
+        expect(mockValidator).toHaveBeenCalledWith('log-123')
+      })
+
+      it('passes child logger through deps to handler.execute', async () => {
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
+        logger.child.mockReturnValue(childLogger)
+
+        summaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog: {
+            status: SUMMARY_LOG_STATUS.SUBMITTING,
+            meta: {},
+            file: { id: 'file-456', name: 'test-file.xlsx' }
+          }
+        })
+        summaryLogsRepository.update.mockResolvedValue(undefined)
+
+        const message = {
+          MessageId: 'msg-123',
+          Body: JSON.stringify({
+            command: 'submit',
+            summaryLogId: 'log-123',
+            context: { traceId: 'trace-abc-123' }
+          })
+        }
+
+        await handleMessage(message)
+
+        // Submit handler calls summaryLogsRepository.update which uses logger from deps.
+        // The child logger should be in the deps passed through.
+        expect(childLogger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Command completed: submit')
+          })
+        )
+      })
+
+      it('passes child logger through deps to handleCommandError on failure', async () => {
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
+        logger.child.mockReturnValue(childLogger)
+
+        const transientError = new Error('Database timeout')
+        const mockValidator = vi.fn().mockRejectedValue(transientError)
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        const message = {
+          MessageId: 'msg-123',
+          Attributes: { ApproximateReceiveCount: '1' },
+          Body: JSON.stringify({
+            command: 'validate',
+            summaryLogId: 'log-123',
+            context: { traceId: 'trace-abc-123' }
+          })
+        }
+
+        await expect(handleMessage(message)).rejects.toThrow('Database timeout')
+
+        expect(childLogger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Command failed')
+          })
+        )
+        // Global logger should NOT get the command error
+        expect(logger.error).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('Command failed')
           })
         )
       })
@@ -717,7 +969,8 @@ describe('createCommandQueueConsumer', () => {
           version: 1,
           summaryLog: {
             status: SUMMARY_LOG_STATUS.SUBMITTING,
-            meta: {}
+            meta: {},
+            file: { id: 'file-456', name: 'test-file.xlsx' }
           }
         })
         summaryLogsRepository.update.mockResolvedValue(undefined)
@@ -740,7 +993,22 @@ describe('createCommandQueueConsumer', () => {
         )
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'Summary log submitted: summaryLogId=log-123'
+            message:
+              'Summary log submission started: summaryLogId=log-123, fileId=file-456, filename=test-file.xlsx',
+            event: expect.objectContaining({
+              category: 'server',
+              action: 'start_success'
+            })
+          })
+        )
+        expect(logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Summary log submitted: summaryLogId=log-123, fileId=file-456, filename=test-file.xlsx, created=0, updated=0',
+            event: expect.objectContaining({
+              category: 'server',
+              action: 'process_success'
+            })
           })
         )
       })
@@ -827,7 +1095,11 @@ describe('createCommandQueueConsumer', () => {
 
           summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+            summaryLog: {
+              status: SUMMARY_LOG_STATUS.SUBMITTING,
+              meta: {},
+              file: { id: 'file-456', name: 'test-file.xlsx' }
+            }
           })
 
           const message = {
@@ -850,7 +1122,11 @@ describe('createCommandQueueConsumer', () => {
 
           summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+            summaryLog: {
+              status: SUMMARY_LOG_STATUS.SUBMITTING,
+              meta: {},
+              file: { id: 'file-456', name: 'test-file.xlsx' }
+            }
           })
 
           const message = {
@@ -876,7 +1152,11 @@ describe('createCommandQueueConsumer', () => {
 
           summaryLogsRepository.findById.mockResolvedValue({
             version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING, meta: {} }
+            summaryLog: {
+              status: SUMMARY_LOG_STATUS.SUBMITTING,
+              meta: {},
+              file: { id: 'file-456', name: 'test-file.xlsx' }
+            }
           })
 
           const message = {

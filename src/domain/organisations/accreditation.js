@@ -1,4 +1,4 @@
-/** @import {User} from '#domain/organisations/model.js' */
+/** @import {RegAccStatus, User} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -57,7 +57,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: string;
- *  status: 'approved'|'suspended';
+ *  status: Extract<RegAccStatus, 'approved'|'suspended'>;
  *  validFrom: string;
  *  validTo: string
  * }} AccreditationApproved
@@ -66,7 +66,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber?: string;
- *  status: 'created'|'rejected'|'archived';
+ *  status: Extract<RegAccStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
  * }} AccreditationOther

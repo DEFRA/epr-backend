@@ -7,6 +7,7 @@ import {
 import { it } from '#vite/fixtures/sqs.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
+import { createSqsCommandExecutor } from '#adapters/sqs-command-executor/sqs-command-executor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
@@ -14,6 +15,14 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
+
+// Force the producer to emit envelope context so these tests exercise the
+// real message shape consumers see in production. Without this, getTraceId()
+// returns undefined outside a Hapi request and the producer omits context,
+// which is how the PAE-1340 envelope regression slipped past CI.
+vi.mock('@defra/hapi-tracing', () => ({
+  getTraceId: vi.fn(() => 'trace-integration-test')
+}))
 
 const TEST_TIMEOUT = 60000
 
@@ -60,8 +69,13 @@ describe('SQS command queue consumer integration', () => {
     logger = {
       info: vi.fn(),
       error: vi.fn(),
-      warn: vi.fn()
+      warn: vi.fn(),
+      child: vi.fn()
     }
+    // The consumer wraps the logger in a trace-bound child when the envelope
+    // carries a traceId (PAE-1340). Returning `this` keeps every assertion
+    // looking at a single logger object.
+    logger.child.mockReturnValue(logger)
 
     summaryLogsRepository = {
       findById: vi.fn().mockResolvedValue(null),
@@ -95,6 +109,17 @@ describe('SQS command queue consumer integration', () => {
       },
       summaryLogCommandHandlers
     )
+
+  // Build the real producer so tests exercise the same envelope shape the
+  // consumer receives in production. Hand-crafting JSON.stringify payloads
+  // lets the producer and consumer drift silently, which is exactly what
+  // happened with PAE-1340.
+  const createExecutor = (sqsClient) =>
+    createSqsCommandExecutor({
+      sqsClient,
+      queueName: sqsClient.queueName,
+      logger
+    })
 
   describe('queue connection', () => {
     it(
@@ -143,21 +168,12 @@ describe('SQS command queue consumer integration', () => {
         const mockValidator = vi.fn().mockResolvedValue(undefined)
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
-        )
+        const executor = await createExecutor(sqsClient)
 
-        // Send a validate command
+        // Send a validate command through the real producer so the envelope
+        // (command + payload + context) matches the production message shape.
         const summaryLogId = `validate-test-${Date.now()}`
-        await sqsClient.send(
-          new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify({
-              command: 'validate',
-              summaryLogId
-            })
-          })
-        )
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         const consumer = await createConsumer(sqsClient)
 
@@ -179,27 +195,18 @@ describe('SQS command queue consumer integration', () => {
       'calls submitSummaryLog when submit command received',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
-        )
+        const executor = await createExecutor(sqsClient)
 
-        // Send a submit command with user context
+        // Send a submit command through the real producer with a stubbed
+        // Hapi request so extractUser projects the user onto the payload.
         const summaryLogId = `submit-test-${Date.now()}`
         const user = {
           id: 'user-123',
           email: 'test@example.com',
           scope: ['operator']
         }
-        await sqsClient.send(
-          new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify({
-              command: 'submit',
-              summaryLogId,
-              user
-            })
-          })
-        )
+        const request = { auth: { credentials: user } }
+        await executor.summaryLogsWorker.submit(summaryLogId, request)
 
         const consumer = await createConsumer(sqsClient)
 
@@ -242,16 +249,10 @@ describe('SQS command queue consumer integration', () => {
           new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
         )
 
+        const executor = await createExecutor(sqsClient)
+
         const summaryLogId = `delete-on-success-${Date.now()}`
-        await sqsClient.send(
-          new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify({
-              command: 'validate',
-              summaryLogId
-            })
-          })
-        )
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         const consumer = await createConsumer(sqsClient)
 
@@ -431,16 +432,10 @@ describe('SQS command queue consumer integration', () => {
           new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
         )
 
+        const executor = await createExecutor(sqsClient)
+
         const summaryLogId = `permanent-test-${Date.now()}`
-        await sqsClient.send(
-          new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify({
-              command: 'validate',
-              summaryLogId
-            })
-          })
-        )
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         const consumer = await createConsumer(sqsClient)
 
@@ -494,23 +489,14 @@ describe('SQS command queue consumer integration', () => {
           summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
         })
 
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
-        )
         const { QueueUrl: dlqUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
         )
 
+        const executor = await createExecutor(sqsClient)
+
         const summaryLogId = `transient-test-${Date.now()}`
-        await sqsClient.send(
-          new SendMessageCommand({
-            QueueUrl: queueUrl,
-            MessageBody: JSON.stringify({
-              command: 'validate',
-              summaryLogId
-            })
-          })
-        )
+        await executor.summaryLogsWorker.validate(summaryLogId)
 
         const consumer = await createConsumer(sqsClient)
 
