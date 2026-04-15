@@ -7,18 +7,21 @@ import Joi from 'joi'
 /**
  * @typedef {HapiRequest & {
  *   nonProdDataReset: NonProdDataReset
- *   params: { id: string }
+ *   params: { id: number }
  * }} DeleteByIdRequest
  */
 
 export const devOrganisationsDeleteByIdPath = '/v1/dev/organisations/{id}'
 
+const POSITIVE_INTEGER_MESSAGE = '{#label} must be a positive integer'
+
 const params = Joi.object({
-  id: Joi.string().trim().min(1).required()
+  id: Joi.number().integer().positive().required()
 }).messages({
   'any.required': '{#label} is required',
-  'string.empty': '{#label} cannot be empty',
-  'string.min': '{#label} cannot be empty'
+  'number.base': POSITIVE_INTEGER_MESSAGE,
+  'number.integer': POSITIVE_INTEGER_MESSAGE,
+  'number.positive': POSITIVE_INTEGER_MESSAGE
 })
 
 export const devOrganisationsDeleteById = {

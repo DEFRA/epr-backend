@@ -2,7 +2,6 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
-import { ObjectId } from 'mongodb'
 import { describe, it, expect, beforeEach } from 'vitest'
 
 describe('DELETE /v1/dev/organisations/{id}', () => {
@@ -17,7 +16,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'DELETE',
-        url: `/v1/dev/organisations/${new ObjectId().toString()}`
+        url: '/v1/dev/organisations/506544'
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -49,28 +48,44 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       })
     })
 
-    it('returns 422 when id is whitespace-only', async () => {
+    it('returns 422 when id is non-numeric', async () => {
       const response = await server.inject({
         method: 'DELETE',
-        url: '/v1/dev/organisations/%20%20%20'
+        url: '/v1/dev/organisations/not-a-number'
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toBe('"id" cannot be empty')
+    })
+
+    it('returns 422 when id is a Mongo ObjectId hex string', async () => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: '/v1/dev/organisations/507f1f77bcf86cd799439011'
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 422 when id is zero or negative', async () => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: '/v1/dev/organisations/0'
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
     it('does not require authentication', async () => {
       const response = await server.inject({
         method: 'DELETE',
-        url: `/v1/dev/organisations/${new ObjectId().toString()}`
+        url: '/v1/dev/organisations/506544'
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     it('returns 200 with the counts surfaced by the reset module', async () => {
-      const orgId = new ObjectId().toString()
+      const orgId = 506544
 
       const response = await server.inject({
         method: 'DELETE',
@@ -84,8 +99,8 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       })
     })
 
-    it('passes the path id through to the reset module', async () => {
-      const orgId = new ObjectId().toString()
+    it('passes the numeric path id through to the reset module', async () => {
+      const orgId = 506544
       const received = []
       const nonProdDataReset = {
         deleteByOrgId: async (id) => {
