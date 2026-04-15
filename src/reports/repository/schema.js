@@ -1,11 +1,11 @@
-import Joi from 'joi'
 import { toDecimal } from '#common/helpers/decimal-utils.js'
-import { CADENCE } from '#reports/domain/cadence.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import Joi from 'joi'
 
 const START_YEAR = 2024
 const MAX_YEAR = 2100
@@ -44,11 +44,28 @@ export const maxTwoDecimalPlaces = (value, helpers) => {
   return value
 }
 
+// manual-entry fields are populated by the user via the reporting journey.
+export const prnManualFields = {
+  totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
+  freeTonnage: Joi.number().integer().min(0).allow(null)
+}
+
+export const recyclingManualFields = {
+  tonnageRecycled: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
+  tonnageNotRecycled: Joi.number()
+    .min(0)
+    .allow(null)
+    .custom(maxTwoDecimalPlaces)
+}
+
+export const exportManualFields = {
+  tonnageReceivedNotExported: Joi.number().min(0).allow(null)
+}
+
 export const prnSchema = Joi.object({
   issuedTonnage: Joi.number().min(0).required(),
-  totalRevenue: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  freeTonnage: Joi.number().integer().min(0).allow(null),
-  averagePricePerTonne: Joi.number().min(0).allow(null)
+  averagePricePerTonne: Joi.number().min(0).allow(null),
+  ...prnManualFields
 }).optional()
 
 const supplierSchema = Joi.object({
@@ -63,11 +80,7 @@ const supplierSchema = Joi.object({
 export const recyclingActivitySchema = Joi.object({
   suppliers: Joi.array().items(supplierSchema).required(),
   totalTonnageReceived: Joi.number().min(0).required(),
-  tonnageRecycled: Joi.number().min(0).allow(null).custom(maxTwoDecimalPlaces),
-  tonnageNotRecycled: Joi.number()
-    .min(0)
-    .allow(null)
-    .custom(maxTwoDecimalPlaces)
+  ...recyclingManualFields
 }).required()
 
 const overseasSiteSchema = Joi.object({
@@ -89,11 +102,11 @@ export const exportActivitySchema = Joi.object({
     .items(unapprovedOverseasSiteSchema)
     .required(),
   totalTonnageExported: Joi.number().min(0).required(),
-  tonnageReceivedNotExported: Joi.number().min(0).allow(null),
   tonnageRefusedAtDestination: Joi.number().min(0).required(),
   tonnageStoppedDuringExport: Joi.number().min(0).required(),
   totalTonnageRefusedOrStopped: Joi.number().min(0).required(),
-  tonnageRepatriated: Joi.number().min(0).required()
+  tonnageRepatriated: Joi.number().min(0).required(),
+  ...exportManualFields
 }).optional()
 
 const finalDestinationSchema = Joi.object({
