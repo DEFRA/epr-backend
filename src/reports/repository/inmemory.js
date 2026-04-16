@@ -15,6 +15,19 @@ import {
 } from '#root/reports/repository/helpers.js'
 
 /**
+ * @import {
+ *   CreateReportParams,
+ *   DeleteReportParams,
+ *   FindPeriodicReportsParams,
+ *   PeriodicReport,
+ *   Report,
+ *   ReportsRepositoryFactory,
+ *   UpdateReportParams,
+ *   UpdateReportStatusParams
+ * } from './port.js'
+ */
+
+/**
  * Finds the active (non-submitted) report matching a specific period criteria.
  * @param {Map<string, object>} reports - A Map where values are report objects.
  * @param {object} criteria - The unique identifiers for the report criteria.
@@ -38,8 +51,8 @@ const findActiveBySlot = (reports, criteria) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {import('./port.js').CreateReportParams} params
- * @returns {Promise<import('./port.js').Report>}
+ * @param {CreateReportParams} params
+ * @returns {Promise<Report>}
  */
 const createReport = async (reports, params) => {
   const validated = validateCreateReport(params)
@@ -87,7 +100,7 @@ const createReport = async (reports, params) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {import('./port.js').UpdateReportParams} params
+ * @param {UpdateReportParams} params
  * @returns {Promise<void>}
  */
 const updateReport = async (reports, params) => {
@@ -118,8 +131,8 @@ const updateReport = async (reports, params) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {import('./port.js').UpdateReportStatusParams} params
- * @returns {Promise<void>}
+ * @param {UpdateReportStatusParams} params
+ * @returns {Promise<Report>}
  */
 const updateReportStatus = async (reports, params) => {
   const validated = validateUpdateReportStatus(params)
@@ -153,13 +166,14 @@ const updateReportStatus = async (reports, params) => {
   }
 
   reports.set(reportId, updated)
+  return structuredClone(updated)
 }
 
 /**
  * Hard-deletes the report identified by the given period slot and submissionNumber.
  *
  * @param {Map<string, Object>} reports
- * @param {import('./port.js').DeleteReportParams} params
+ * @param {DeleteReportParams} params
  * @returns {Promise<void>}
  */
 const deleteReport = async (reports, params) => {
@@ -195,7 +209,7 @@ const deleteReport = async (reports, params) => {
 /**
  * @param {Map<string, Object>} reports
  * @param {string} reportId
- * @returns {Promise<import('./port.js').Report>}
+ * @returns {Promise<Report>}
  */
 const findReportById = async (reports, reportId) => {
   const validatedId = validateFindReportById(reportId)
@@ -208,8 +222,8 @@ const findReportById = async (reports, reportId) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {import('./port.js').FindPeriodicReportsParams} params
- * @returns {Promise<import('./port.js').PeriodicReport[]>}
+ * @param {FindPeriodicReportsParams} params
+ * @returns {Promise<PeriodicReport[]>}
  */
 const findPeriodicReports = async (reports, params) => {
   const { organisationId, registrationId } = validateFindPeriodicReports(params)
@@ -230,7 +244,7 @@ const findPeriodicReports = async (reports, params) => {
  * The store is used by reference so test fixtures can seed data directly.
  *
  * @param {Map<string, Object>} [initialReports]
- * @returns {import('./port.js').ReportsRepositoryFactory}
+ * @returns {ReportsRepositoryFactory}
  */
 export const createInMemoryReportsRepository = (initialReports = new Map()) => {
   const reports = initialReports

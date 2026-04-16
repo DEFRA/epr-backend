@@ -14,6 +14,20 @@ import {
 } from '#root/reports/repository/helpers.js'
 import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
 
+/**
+ * @import {
+ *   CreateReportParams,
+ *   DeleteReportParams,
+ *   FindPeriodicReportsParams,
+ *   PeriodicReport,
+ *   Report,
+ *   ReportsRepositoryFactory,
+ *   UpdateReportParams,
+ *   UpdateReportStatusParams
+ * } from './port.js'
+ * @import { Db } from 'mongodb'
+ */
+
 const REPORTS_COLLECTION = 'reports'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
@@ -21,7 +35,7 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
  * Ensures the reports collection exists with required indexes.
  * Safe to call multiple times — MongoDB createIndex is idempotent.
  *
- * @param {import('mongodb').Db} db
+ * @param {Db} db
  * @returns {Promise<void>}
  */
 async function ensureCollections(db) {
@@ -55,9 +69,9 @@ async function ensureCollections(db) {
 }
 
 /**
- * @param {import('mongodb').Db} db
- * @param {import('./port.js').CreateReportParams} params
- * @returns {Promise<import('./port.js').Report>}
+ * @param {Db} db
+ * @param {CreateReportParams} params
+ * @returns {Promise<Report>}
  * */
 const performCreateReport = async (db, params) => {
   const validated = validateCreateReport(params)
@@ -75,15 +89,16 @@ const performCreateReport = async (db, params) => {
     throw error
   }
 
-  const { _id, ...report } =
-    /** @type {import('./port.js').Report & { _id?: unknown }} */ (reportDoc)
+  const { _id, ...report } = /** @type {Report & { _id?: unknown }} */ (
+    reportDoc
+  )
 
   return report
 }
 
 /**
- * @param {import('mongodb').Db} db
- * @param {import('./port.js').UpdateReportParams} params
+ * @param {Db} db
+ * @param {UpdateReportParams} params
  * @returns {Promise<void>}
  */
 const performUpdateReport = async (db, params) => {
@@ -132,9 +147,9 @@ const performUpdateReport = async (db, params) => {
 }
 
 /**
- * @param {import('mongodb').Db} db
- * @param {import('./port.js').UpdateReportStatusParams} params
- * @returns {Promise<void>}
+ * @param {Db} db
+ * @param {UpdateReportStatusParams} params
+ * @returns {Promise<Report>}
  */
 const performUpdateReportStatus = async (db, params) => {
   const validated = validateUpdateReportStatus(params)
@@ -143,7 +158,7 @@ const performUpdateReportStatus = async (db, params) => {
   const now = new Date().toISOString()
   const slot = STATUS_TO_SLOT[status]
 
-  const { matchedCount } = await db.collection(REPORTS_COLLECTION).updateOne(
+  const doc = await db.collection(REPORTS_COLLECTION).findOneAndUpdate(
     { id: reportId, version },
     {
       $set: {
@@ -155,26 +170,29 @@ const performUpdateReportStatus = async (db, params) => {
         'status.history': { status, at: now, by: changedBy }
       }),
       $inc: { version: 1 }
-    }
+    },
+    { returnDocument: 'after', projection: { _id: 0 } }
   )
 
-  if (matchedCount === 0) {
-    const doc = await db
+  if (!doc) {
+    const existing = await db
       .collection(REPORTS_COLLECTION)
       .findOne({ id: reportId }, { projection: { _id: 0, version: 1 } })
-    if (!doc) {
+    if (!existing) {
       throw Boom.notFound(`Report not found: ${reportId}`)
     }
     throw Boom.conflict(
       `Version conflict: expected version ${version} for report ${reportId}`
     )
   }
+
+  return /** @type {Report} */ (doc)
 }
 
 /**
- * @param {import('mongodb').Db} db
+ * @param {Db} db
  * @param {string} reportId
- * @returns {Promise<import('./port.js').Report>}
+ * @returns {Promise<Report>}
  */
 const performFindReportById = async (db, reportId) => {
   const validatedId = validateFindReportById(reportId)
@@ -185,14 +203,14 @@ const performFindReportById = async (db, reportId) => {
     throw Boom.notFound(`Report not found: ${reportId}`)
   }
   const { _id, ...report } = doc
-  return /** @type {import('./port.js').Report} */ (report)
+  return /** @type {Report} */ (report)
 }
 
 /**
  * Hard-deletes the report identified by the given period slot and submissionNumber.
  *
- * @param {import('mongodb').Db} db
- * @param {import('./port.js').DeleteReportParams} params
+ * @param {Db} db
+ * @param {DeleteReportParams} params
  * @returns {Promise<void>}
  */
 const performDeleteReport = async (db, params) => {
@@ -223,9 +241,9 @@ const performDeleteReport = async (db, params) => {
 }
 
 /**
- * @param {import('mongodb').Db} db
- * @param {import('./port.js').FindPeriodicReportsParams} params
- * @returns {Promise<import('./port.js').PeriodicReport[]>}
+ * @param {Db} db
+ * @param {FindPeriodicReportsParams} params
+ * @returns {Promise<PeriodicReport[]>}
  */
 const performFindPeriodicReports = async (db, params) => {
   const { organisationId, registrationId } = validateFindPeriodicReports(params)
@@ -258,8 +276,8 @@ const performFindPeriodicReports = async (db, params) => {
 /**
  * Creates a MongoDB-backed reports repository.
  *
- * @param {import('mongodb').Db} db
- * @returns {Promise<import('./port.js').ReportsRepositoryFactory>}
+ * @param {Db} db
+ * @returns {Promise<ReportsRepositoryFactory>}
  */
 export const createReportsRepository = async (db) => {
   await ensureCollections(db)

@@ -17,14 +17,13 @@ export const testUpdateReportStatusBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      await repository.updateReportStatus({
+      const result = await repository.updateReportStatus({
         reportId,
         version: 1,
         status: REPORT_STATUS.READY_TO_SUBMIT,
         changedBy
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result).toMatchObject({
         id: reportId,
         version: 2,
@@ -59,14 +58,13 @@ export const testUpdateReportStatusBehaviour = (it) => {
         status: REPORT_STATUS.READY_TO_SUBMIT,
         changedBy
       })
-      await repository.updateReportStatus({
+      const result = await repository.updateReportStatus({
         reportId,
         version: 2,
         status: REPORT_STATUS.SUBMITTED,
         changedBy
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result).toMatchObject({
         id: reportId,
         version: 3,
@@ -99,14 +97,13 @@ export const testUpdateReportStatusBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      await repository.updateReportStatus({
+      const result = await repository.updateReportStatus({
         reportId,
         version: 1,
         status: REPORT_STATUS.READY_TO_SUBMIT,
         changedBy
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result.version).toBe(2)
     })
 
