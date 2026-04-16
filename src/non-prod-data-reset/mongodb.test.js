@@ -40,6 +40,9 @@ const DATABASE_NAME = 'epr-backend'
 
 const COLLECTIONS = [
   'epr-organisations',
+  'organisation',
+  'registration',
+  'accreditation',
   'packaging-recycling-notes',
   'waste-balances',
   'reports',
@@ -196,6 +199,34 @@ const seedDownstreamForOrganisation = async (
   )
 }
 
+// The 'organisation' collection is written by the journey-test apply path and
+// keyed by the numeric orgId, so the cascade step filters by orgId directly.
+// No real adapter exists in this repo, so we raw-insert here.
+const seedOrganisationCollection = async (database, orgId) => {
+  await database.collection('organisation').insertOne({
+    _id: new ObjectId(),
+    orgId,
+    orgName: 'Target',
+    email: 'test@example.com'
+  })
+}
+
+// The 'registration' and 'accreditation' staging collections are written by
+// the forms-submission-data migration path and keyed by orgId. No real adapter
+// exists in the cascade module, so we raw-insert here.
+const seedStagingCollections = async (database, orgId) => {
+  await database.collection('registration').insertOne({
+    _id: new ObjectId(),
+    orgId,
+    referenceNumber: `REG-${orgId}`
+  })
+  await database.collection('accreditation').insertOne({
+    _id: new ObjectId(),
+    orgId,
+    referenceNumber: `ACC-${orgId}`
+  })
+}
+
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
   'waste-balances': 0,
@@ -203,7 +234,10 @@ const EMPTY_COUNTS = {
   'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
-  'epr-organisations': 0
+  registration: 0,
+  accreditation: 0,
+  'epr-organisations': 0,
+  organisation: 0
 }
 
 describe('non-prod data reset (mongo)', () => {
@@ -215,6 +249,8 @@ describe('non-prod data reset (mongo)', () => {
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, seeded)
+      await seedOrganisationCollection(database, seeded.organisation.orgId)
+      await seedStagingCollections(database, seeded.organisation.orgId)
       // A second PRN so the deleteMany semantics get exercised.
       await repositories.prns.create(
         buildDraftPrn({
@@ -226,7 +262,7 @@ describe('non-prod data reset (mongo)', () => {
         })
       )
 
-      const counts = await reset.deleteByOrgId(seeded.organisationId)
+      const counts = await reset.deleteByOrgId(seeded.organisation.orgId)
 
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
@@ -235,7 +271,10 @@ describe('non-prod data reset (mongo)', () => {
         'waste-records': 1,
         'summary-logs': 1,
         'overseas-sites': 2,
-        'epr-organisations': 1
+        registration: 1,
+        accreditation: 1,
+        'epr-organisations': 1,
+        organisation: 1
       })
 
       for (const name of COLLECTIONS) {
@@ -253,11 +292,15 @@ describe('non-prod data reset (mongo)', () => {
     }) => {
       const target = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, target)
+      await seedOrganisationCollection(database, target.organisation.orgId)
+      await seedStagingCollections(database, target.organisation.orgId)
 
       const other = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, other)
+      await seedOrganisationCollection(database, other.organisation.orgId)
+      await seedStagingCollections(database, other.organisation.orgId)
 
-      await reset.deleteByOrgId(target.organisationId)
+      await reset.deleteByOrgId(target.organisation.orgId)
 
       expect(
         await database
@@ -299,20 +342,32 @@ describe('non-prod data reset (mongo)', () => {
           _id: ObjectId.createFromHexString(other.organisationId)
         })
       ).toBe(1)
+      expect(
+        await database
+          .collection('registration')
+          .countDocuments({ orgId: other.organisation.orgId })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('accreditation')
+          .countDocuments({ orgId: other.organisation.orgId })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('organisation')
+          .countDocuments({ orgId: other.organisation.orgId })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('organisation')
+          .countDocuments({ orgId: target.organisation.orgId })
+      ).toBe(0)
     })
 
     it('returns all-zero counts when the organisation does not exist', async ({
       reset
     }) => {
-      const counts = await reset.deleteByOrgId(new ObjectId().toHexString())
-
-      expect(counts).toEqual(EMPTY_COUNTS)
-    })
-
-    it('returns all-zero counts when the id is not a valid object id', async ({
-      reset
-    }) => {
-      const counts = await reset.deleteByOrgId('not-an-object-id')
+      const counts = await reset.deleteByOrgId(999999)
 
       expect(counts).toEqual(EMPTY_COUNTS)
     })
@@ -324,11 +379,11 @@ describe('non-prod data reset (mongo)', () => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, seeded)
 
-      const first = await reset.deleteByOrgId(seeded.organisationId)
+      const first = await reset.deleteByOrgId(seeded.organisation.orgId)
       expect(first['epr-organisations']).toBe(1)
       expect(first['packaging-recycling-notes']).toBe(1)
 
-      const second = await reset.deleteByOrgId(seeded.organisationId)
+      const second = await reset.deleteByOrgId(seeded.organisation.orgId)
       expect(second).toEqual(EMPTY_COUNTS)
     })
 
@@ -339,9 +394,10 @@ describe('non-prod data reset (mongo)', () => {
       // Raw insert: we are deliberately constructing a malformed org doc to
       // exercise the cascade's empty-accreditations branch, which bypasses
       // adapter-level validation.
-      const orgId = new ObjectId()
+      const orgId = 600001
       await database.collection('epr-organisations').insertOne({
-        _id: orgId,
+        _id: new ObjectId(),
+        orgId,
         accreditations: [],
         registrations: []
       })
@@ -351,7 +407,7 @@ describe('non-prod data reset (mongo)', () => {
         accreditationId: new ObjectId().toHexString()
       })
 
-      const counts = await reset.deleteByOrgId(orgId.toHexString())
+      const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['waste-balances']).toBe(0)
       expect(await database.collection('waste-balances').countDocuments()).toBe(
@@ -363,9 +419,10 @@ describe('non-prod data reset (mongo)', () => {
       database,
       reset
     }) => {
-      const orgId = new ObjectId()
+      const orgId = 600002
       await database.collection('epr-organisations').insertOne({
-        _id: orgId,
+        _id: new ObjectId(),
+        orgId,
         accreditations: [],
         registrations: [{ id: new ObjectId().toHexString() }]
       })
@@ -375,7 +432,7 @@ describe('non-prod data reset (mongo)', () => {
         name: 'Orphan'
       })
 
-      const counts = await reset.deleteByOrgId(orgId.toHexString())
+      const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['overseas-sites']).toBe(0)
       expect(await database.collection('overseas-sites').countDocuments()).toBe(
@@ -396,7 +453,7 @@ describe('non-prod data reset (mongo)', () => {
       nonProdDataResetPlugin.register(server, { db: database })
 
       await expect(
-        server.app.nonProdDataReset.deleteByOrgId(seeded.organisationId)
+        server.app.nonProdDataReset.deleteByOrgId(seeded.organisation.orgId)
       ).rejects.toThrow('Non-prod data reset is disabled in production.')
 
       expect(
@@ -415,14 +472,14 @@ describe('non-prod data reset (mongo)', () => {
       database,
       reset
     }) => {
-      // Raw insert of a skeletal org doc with only _id, to cover the
-      // `?? []` fallbacks in extractCascadeKeys for both accreditations
-      // and registrations. The unique index on `orgId` allows at most one
-      // such null-orgId document at a time, which is fine for this branch.
-      const orgId = new ObjectId()
-      await database.collection('epr-organisations').insertOne({ _id: orgId })
+      // Raw insert of a skeletal org doc missing accreditations and
+      // registrations, to cover the `?? []` fallbacks in extractCascadeKeys.
+      const orgId = 600003
+      await database
+        .collection('epr-organisations')
+        .insertOne({ _id: new ObjectId(), orgId })
 
-      const counts = await reset.deleteByOrgId(orgId.toHexString())
+      const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['epr-organisations']).toBe(1)
       expect(counts['waste-balances']).toBe(0)
