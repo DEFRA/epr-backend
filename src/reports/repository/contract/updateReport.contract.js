@@ -16,13 +16,12 @@ export const testUpdateReportBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      await repository.updateReport({
+      const result = await repository.updateReport({
         reportId,
         version: 1,
         fields: { supportingInformation: 'some notes' }
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result).toMatchObject({
         id: reportId,
         version: 2,
@@ -53,13 +52,12 @@ export const testUpdateReportBehaviour = (it) => {
         version: 1,
         fields: { supportingInformation: 'first update' }
       })
-      await repository.updateReport({
+      const result = await repository.updateReport({
         reportId,
         version: 2,
         fields: { supportingInformation: 'second update' }
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result).toMatchObject({ id: reportId, version: 3 })
     })
 
@@ -96,7 +94,7 @@ export const testUpdateReportBehaviour = (it) => {
         buildCreateReportParams({ prn: { issuedTonnage: 100 } })
       )
 
-      await repository.updateReport({
+      const result = await repository.updateReport({
         reportId,
         version: 1,
         fields: {
@@ -104,7 +102,6 @@ export const testUpdateReportBehaviour = (it) => {
         }
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result.prn).toMatchObject({
         issuedTonnage: 100,
         totalRevenue: 500,
@@ -117,7 +114,7 @@ export const testUpdateReportBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      await repository.updateReport({
+      const result = await repository.updateReport({
         reportId,
         version: 1,
         fields: {
@@ -130,7 +127,6 @@ export const testUpdateReportBehaviour = (it) => {
         }
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result.recyclingActivity).toMatchObject({
         tonnageRecycled: 100.5,
         tonnageNotRecycled: 20
@@ -153,7 +149,7 @@ export const testUpdateReportBehaviour = (it) => {
         })
       )
 
-      await repository.updateReport({
+      const result = await repository.updateReport({
         reportId,
         version: 1,
         fields: {
@@ -161,7 +157,6 @@ export const testUpdateReportBehaviour = (it) => {
         }
       })
 
-      const result = await repository.findReportById(reportId)
       expect(result.exportActivity.tonnageReceivedNotExported).toBe(15.5)
     })
 

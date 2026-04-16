@@ -99,7 +99,7 @@ const performCreateReport = async (db, params) => {
 /**
  * @param {Db} db
  * @param {UpdateReportParams} params
- * @returns {Promise<void>}
+ * @returns {Promise<Report>}
  */
 const performUpdateReport = async (db, params) => {
   const validated = validateUpdateReport(params)
@@ -126,24 +126,27 @@ const performUpdateReport = async (db, params) => {
     }
   }
 
-  const { matchedCount } = await db
+  const doc = await db
     .collection(REPORTS_COLLECTION)
-    .updateOne(
+    .findOneAndUpdate(
       { id: reportId, version },
-      { $set: setFields, $inc: { version: 1 } }
+      { $set: setFields, $inc: { version: 1 } },
+      { returnDocument: 'after', projection: { _id: 0 } }
     )
 
-  if (matchedCount === 0) {
-    const doc = await db
+  if (!doc) {
+    const existing = await db
       .collection(REPORTS_COLLECTION)
       .findOne({ id: reportId }, { projection: { _id: 0, version: 1 } })
-    if (!doc) {
+    if (!existing) {
       throw Boom.notFound(`Report not found: ${reportId}`)
     }
     throw Boom.conflict(
       `Version conflict: expected version ${version} for report ${reportId}`
     )
   }
+
+  return /** @type {Report} */ (doc)
 }
 
 /**

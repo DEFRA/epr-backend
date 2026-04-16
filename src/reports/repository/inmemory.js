@@ -101,7 +101,7 @@ const createReport = async (reports, params) => {
 /**
  * @param {Map<string, Object>} reports
  * @param {UpdateReportParams} params
- * @returns {Promise<void>}
+ * @returns {Promise<Report>}
  */
 const updateReport = async (reports, params) => {
   const validated = validateUpdateReport(params)
@@ -127,6 +127,7 @@ const updateReport = async (reports, params) => {
     }
   }
   reports.set(reportId, updated)
+  return structuredClone(updated)
 }
 
 /**
