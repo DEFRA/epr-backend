@@ -1,6 +1,6 @@
-import { describe, beforeEach, expect } from 'vitest'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { beforeEach, describe, expect } from 'vitest'
 import { buildCreateReportParams } from './test-data.js'
 
 export const testUpdateReportBehaviour = (it) => {
@@ -52,6 +52,7 @@ export const testUpdateReportBehaviour = (it) => {
         version: 1,
         fields: { supportingInformation: 'first update' }
       })
+
       const result = await repository.updateReport({
         reportId,
         version: 2,

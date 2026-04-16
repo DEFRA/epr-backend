@@ -1,5 +1,5 @@
-import { describe, beforeEach, expect } from 'vitest'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { beforeEach, describe, expect } from 'vitest'
 import { buildCreateReportParams } from './test-data.js'
 
 export const testUpdateReportStatusBehaviour = (it) => {
@@ -58,6 +58,7 @@ export const testUpdateReportStatusBehaviour = (it) => {
         status: REPORT_STATUS.READY_TO_SUBMIT,
         changedBy
       })
+
       const result = await repository.updateReportStatus({
         reportId,
         version: 2,
