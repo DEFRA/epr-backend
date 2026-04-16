@@ -27,6 +27,11 @@ const ORG_NAME_FIELD = 'Org name'
 const ORGANISATION_ID_FIELD = 'Organisation ID'
 const SYSTEM_REFERENCE_FIELD = 'System Reference'
 
+const APP_CONTACT_NAME = 'App contact name'
+const APP_CONTACT_EMAIL = 'App contact email address'
+const APP_CONTACT_TELEPHONE = 'App contact telephone number'
+const APP_CONTACT_JOB_TITLE = 'App contact job title'
+
 const AP_NAME = 'AP name'
 const AP_EMAIL = 'AP email address'
 const AP_TELEPHONE = 'AP telephone number'
@@ -69,6 +74,14 @@ export const REGISTRATION = {
     title: 'Site capacity for aluminium recycling',
     fields: {
       TIMESCALE: TIMESCALE_ALUMINIUM
+    }
+  },
+  APPLICATION_CONTACT: {
+    fields: {
+      NAME: APP_CONTACT_NAME,
+      EMAIL: APP_CONTACT_EMAIL,
+      TELEPHONE_NUMBER: APP_CONTACT_TELEPHONE,
+      JOB_TITLE: APP_CONTACT_JOB_TITLE
     }
   },
   SUBMITTER_DETAILS: {
