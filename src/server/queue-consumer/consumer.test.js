@@ -1,7 +1,8 @@
 import { Consumer } from 'sqs-consumer'
 import {
   GetQueueUrlCommand,
-  GetQueueAttributesCommand
+  GetQueueAttributesCommand,
+  ChangeMessageVisibilityCommand
 } from '@aws-sdk/client-sqs'
 
 import { createCommandQueueConsumer } from './consumer.js'
@@ -16,7 +17,8 @@ import {
 vi.mock('sqs-consumer')
 vi.mock('@aws-sdk/client-sqs', () => ({
   GetQueueUrlCommand: vi.fn(),
-  GetQueueAttributesCommand: vi.fn()
+  GetQueueAttributesCommand: vi.fn(),
+  ChangeMessageVisibilityCommand: vi.fn()
 }))
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
@@ -93,6 +95,13 @@ describe('createCommandQueueConsumer', () => {
       this.QueueName = params.QueueName
     })
     vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
+    vi.mocked(ChangeMessageVisibilityCommand).mockImplementation(
+      function (params) {
+        this.QueueUrl = params.QueueUrl
+        this.ReceiptHandle = params.ReceiptHandle
+        this.VisibilityTimeout = params.VisibilityTimeout
+      }
+    )
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
@@ -258,13 +267,13 @@ describe('createCommandQueueConsumer', () => {
       })
     })
 
-    it('logs error on processing_error event', async () => {
+    it('logs warning on processing_error event', async () => {
       await createConsumer()
       const error = new Error('Processing failed')
 
       eventHandlers.processing_error(error)
 
-      expect(logger.error).toHaveBeenCalledWith({
+      expect(logger.warn).toHaveBeenCalledWith({
         err: error,
         message: 'SQS message processing error',
         event: {
@@ -706,6 +715,7 @@ describe('createCommandQueueConsumer', () => {
 
         const message = {
           MessageId: 'msg-123',
+          ReceiptHandle: 'receipt-123',
           Attributes: { ApproximateReceiveCount: '1' },
           Body: JSON.stringify({
             command: 'validate',
@@ -716,13 +726,13 @@ describe('createCommandQueueConsumer', () => {
 
         await expect(handleMessage(message)).rejects.toThrow('Database timeout')
 
-        expect(childLogger.error).toHaveBeenCalledWith(
+        expect(childLogger.warn).toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining('Command failed')
           })
         )
         // Global logger should NOT get the command error
-        expect(logger.error).not.toHaveBeenCalledWith(
+        expect(logger.warn).not.toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining('Command failed')
           })
@@ -877,6 +887,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
@@ -897,6 +908,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
@@ -917,6 +929,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Body: JSON.stringify({
               command: 'validate',
               summaryLogId: 'log-123'
@@ -941,6 +954,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
               command: 'validate',
@@ -957,6 +971,163 @@ describe('createCommandQueueConsumer', () => {
             1,
             expect.objectContaining({
               status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            })
+          )
+        })
+
+        it('logs non-final transient errors as warnings', async () => {
+          const transientError = new Error('Database timeout')
+          const mockValidator = vi.fn().mockRejectedValue(transientError)
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.warn).toHaveBeenCalledWith(
+            expect.objectContaining({
+              err: transientError,
+              message: expect.stringContaining(
+                'Command failed (transient, will retry)'
+              )
+            })
+          )
+        })
+
+        it('resets visibility timeout on non-final transient error for immediate retry', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(sqsClient.send).toHaveBeenCalledWith(
+            expect.objectContaining({
+              QueueUrl: 'http://localhost:4566/000000000000/test-queue',
+              ReceiptHandle: 'receipt-123',
+              VisibilityTimeout: 0
+            })
+          )
+        })
+
+        it('logs warning when visibility timeout reset fails', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          const resetError = new Error('SQS reset failed')
+          sqsClient.send.mockImplementation((command) => {
+            if (command instanceof GetQueueAttributesCommand) {
+              return Promise.resolve({
+                Attributes: {
+                  RedrivePolicy: JSON.stringify({ maxReceiveCount: '2' })
+                }
+              })
+            }
+            if (command instanceof ChangeMessageVisibilityCommand) {
+              return Promise.reject(resetError)
+            }
+            return Promise.resolve({
+              QueueUrl: 'http://localhost:4566/000000000000/test-queue'
+            })
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.warn).toHaveBeenCalledWith({
+            err: resetError,
+            message: 'Failed to reset visibility timeout for messageId=msg-123'
+          })
+        })
+
+        it('logs final transient attempt as error', async () => {
+          const transientError = new Error('Database timeout')
+          const mockValidator = vi.fn().mockRejectedValue(transientError)
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '2' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              err: transientError,
+              message: expect.stringContaining(
+                'Command failed (transient, final attempt)'
+              )
+            })
+          )
+        })
+
+        it('does not reset visibility timeout on final attempt', async () => {
+          const mockValidator = vi
+            .fn()
+            .mockRejectedValue(new Error('Database timeout'))
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '2' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(sqsClient.send).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+              VisibilityTimeout: 0
             })
           )
         })
@@ -1104,6 +1275,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
@@ -1131,6 +1303,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
@@ -1161,6 +1334,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
               command: 'submit',

@@ -2,6 +2,8 @@ import { describe, expect, vi, beforeEach } from 'vitest'
 import {
   SendMessageCommand,
   GetQueueUrlCommand,
+  GetQueueAttributesCommand,
+  CreateQueueCommand,
   ReceiveMessageCommand
 } from '@aws-sdk/client-sqs'
 import { it } from '#vite/fixtures/sqs.js'
@@ -538,6 +540,102 @@ describe('SQS command queue consumer integration', () => {
           },
           { timeout: 15000, interval: 500 }
         )
+
+        await stopConsumerAndWait(consumer)
+      }
+    )
+  })
+
+  describe('visibility timeout reset', () => {
+    it(
+      'retries a transient error faster than the queue visibility timeout',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const mockValidator = vi
+          .fn()
+          .mockRejectedValue(new Error('Database timeout'))
+        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+        summaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+        })
+
+        // Create a queue with a long visibility timeout (30s) so the only
+        // way the retry arrives within 10s is via resetVisibilityTimeout.
+        const longTimeoutQueueName = `epr_backend_commands_vis_${Date.now()}`
+        const longTimeoutDlqName = `${longTimeoutQueueName}_dlq`
+
+        const dlqResult = await sqsClient.send(
+          new CreateQueueCommand({ QueueName: longTimeoutDlqName })
+        )
+
+        const dlqAttributes = await sqsClient.send(
+          new GetQueueAttributesCommand({
+            QueueUrl: dlqResult.QueueUrl,
+            AttributeNames: ['QueueArn']
+          })
+        )
+        const dlqArn = dlqAttributes.Attributes.QueueArn
+
+        await sqsClient.send(
+          new CreateQueueCommand({
+            QueueName: longTimeoutQueueName,
+            Attributes: {
+              VisibilityTimeout: '30',
+              RedrivePolicy: JSON.stringify({
+                deadLetterTargetArn: dlqArn,
+                maxReceiveCount: '3'
+              })
+            }
+          })
+        )
+
+        const { QueueUrl: queueUrl } = await sqsClient.send(
+          new GetQueueUrlCommand({ QueueName: longTimeoutQueueName })
+        )
+
+        // Send a validate command directly (not via the executor, since the
+        // executor resolves the queue name from sqsClient.queueName)
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({
+              command: 'validate',
+              summaryLogId: `vis-test-${Date.now()}`,
+              context: { traceId: 'trace-vis-test' }
+            })
+          })
+        )
+
+        const consumer = await createCommandQueueConsumer(
+          {
+            sqsClient,
+            queueName: longTimeoutQueueName,
+            logger,
+            summaryLogsRepository,
+            organisationsRepository,
+            wasteRecordsRepository,
+            wasteBalancesRepository,
+            summaryLogExtractor
+          },
+          summaryLogCommandHandlers
+        )
+
+        consumer.start()
+        const startTime = Date.now()
+
+        // Wait for the second attempt — proves the visibility timeout was
+        // reset to 0, because otherwise SQS would hold the message for 30s.
+        await vi.waitFor(
+          () => {
+            expect(mockValidator.mock.calls.length).toBeGreaterThanOrEqual(2)
+          },
+          { timeout: 10000 }
+        )
+
+        const elapsed = Date.now() - startTime
+        expect(elapsed).toBeLessThan(10000)
 
         await stopConsumerAndWait(consumer)
       }
