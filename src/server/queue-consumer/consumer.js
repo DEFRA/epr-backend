@@ -175,7 +175,10 @@ const handleCommandError = async ({
     return
   }
 
-  if (!isFinalTransientAttempt) {
+  // ReceiptHandle is always present on messages from ReceiveMessage in
+  // practice, but the SDK types it as optional. Guard rather than assert,
+  // so we fall back to normal SQS retry timing if it's ever absent.
+  if (!isFinalTransientAttempt && message.ReceiptHandle) {
     try {
       await resetVisibilityTimeout(sqsClient, queueUrl, message.ReceiptHandle)
     } catch (resetErr) {
