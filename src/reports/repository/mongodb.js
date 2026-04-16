@@ -25,11 +25,18 @@ import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
- * @import { Db } from 'mongodb'
+ * @import { Collection, Db } from 'mongodb'
  */
 
 const REPORTS_COLLECTION = 'reports'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+
+/**
+ * @param {Db} db
+ * @returns {Collection<Report>}
+ */
+const reportsCollection = (db) =>
+  /** @type {Collection<Report>} */ (db.collection(REPORTS_COLLECTION))
 
 /**
  * Ensures the reports collection exists with required indexes.
@@ -39,7 +46,7 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
  * @returns {Promise<void>}
  */
 async function ensureCollections(db) {
-  const col = db.collection(REPORTS_COLLECTION)
+  const col = reportsCollection(db)
 
   await col.createIndex({ id: 1 }, { unique: true })
   await col.createIndex({ organisationId: 1, registrationId: 1 })
@@ -76,10 +83,10 @@ async function ensureCollections(db) {
 const performCreateReport = async (db, params) => {
   const validated = validateCreateReport(params)
   const { cadence, period } = validated
-  const reportDoc = prepareCreateReportParams(validated)
+  const report = prepareCreateReportParams(validated)
 
   try {
-    await db.collection(REPORTS_COLLECTION).insertOne(reportDoc)
+    await reportsCollection(db).insertOne({ ...report })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
       throw Boom.conflict(
@@ -88,10 +95,6 @@ const performCreateReport = async (db, params) => {
     }
     throw error
   }
-
-  const { _id, ...report } = /** @type {Report & { _id?: unknown }} */ (
-    reportDoc
-  )
 
   return report
 }
@@ -126,18 +129,17 @@ const performUpdateReport = async (db, params) => {
     }
   }
 
-  const doc = await db
-    .collection(REPORTS_COLLECTION)
-    .findOneAndUpdate(
-      { id: reportId, version },
-      { $set: setFields, $inc: { version: 1 } },
-      { returnDocument: 'after', projection: { _id: 0 } }
-    )
+  const doc = await reportsCollection(db).findOneAndUpdate(
+    { id: reportId, version },
+    { $set: setFields, $inc: { version: 1 } },
+    { returnDocument: 'after', projection: { _id: 0 } }
+  )
 
   if (!doc) {
-    const existing = await db
-      .collection(REPORTS_COLLECTION)
-      .findOne({ id: reportId }, { projection: { _id: 0, version: 1 } })
+    const existing = await reportsCollection(db).findOne(
+      { id: reportId },
+      { projection: { _id: 0, version: 1 } }
+    )
     if (!existing) {
       throw Boom.notFound(`Report not found: ${reportId}`)
     }
@@ -146,7 +148,8 @@ const performUpdateReport = async (db, params) => {
     )
   }
 
-  return /** @type {Report} */ (doc)
+  const { _id, ...report } = doc
+  return report
 }
 
 /**
@@ -161,7 +164,7 @@ const performUpdateReportStatus = async (db, params) => {
   const now = new Date().toISOString()
   const slot = STATUS_TO_SLOT[status]
 
-  const doc = await db.collection(REPORTS_COLLECTION).findOneAndUpdate(
+  const doc = await reportsCollection(db).findOneAndUpdate(
     { id: reportId, version },
     {
       $set: {
@@ -178,9 +181,10 @@ const performUpdateReportStatus = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await db
-      .collection(REPORTS_COLLECTION)
-      .findOne({ id: reportId }, { projection: { _id: 0, version: 1 } })
+    const existing = await reportsCollection(db).findOne(
+      { id: reportId },
+      { projection: { _id: 0, version: 1 } }
+    )
     if (!existing) {
       throw Boom.notFound(`Report not found: ${reportId}`)
     }
@@ -189,7 +193,8 @@ const performUpdateReportStatus = async (db, params) => {
     )
   }
 
-  return /** @type {Report} */ (doc)
+  const { _id, ...report } = doc
+  return report
 }
 
 /**
@@ -199,14 +204,12 @@ const performUpdateReportStatus = async (db, params) => {
  */
 const performFindReportById = async (db, reportId) => {
   const validatedId = validateFindReportById(reportId)
-  const doc = await db
-    .collection(REPORTS_COLLECTION)
-    .findOne({ id: validatedId })
+  const doc = await reportsCollection(db).findOne({ id: validatedId })
   if (!doc) {
     throw Boom.notFound(`Report not found: ${reportId}`)
   }
   const { _id, ...report } = doc
-  return /** @type {Report} */ (report)
+  return report
 }
 
 /**
@@ -227,7 +230,7 @@ const performDeleteReport = async (db, params) => {
     submissionNumber
   } = validated
 
-  const result = await db.collection(REPORTS_COLLECTION).findOneAndDelete({
+  const result = await reportsCollection(db).findOneAndDelete({
     organisationId,
     registrationId,
     year,
@@ -251,8 +254,7 @@ const performDeleteReport = async (db, params) => {
 const performFindPeriodicReports = async (db, params) => {
   const { organisationId, registrationId } = validateFindPeriodicReports(params)
 
-  const docs = await db
-    .collection(REPORTS_COLLECTION)
+  const docs = await reportsCollection(db)
     .find(
       { organisationId, registrationId },
       {
