@@ -1,0 +1,67 @@
+import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
+import {
+  exportManualFields,
+  prnManualFields,
+  recyclingManualFields
+} from '#reports/repository/schema.js'
+import Joi from 'joi'
+
+/**
+ * @import { OperatorCategory } from '#reports/domain/operator-category.js'
+ * @import { Report } from '#reports/repository/port.js'
+ */
+
+const required = (/** @type {Record<string, Joi.Schema>} */ fields) =>
+  Object.fromEntries(
+    Object.entries(fields).map(([key, schema]) => [
+      key,
+      schema.empty(null).required()
+    ])
+  )
+
+const recyclingBlock = Joi.object({
+  recyclingActivity: Joi.object(required(recyclingManualFields))
+    .unknown(true)
+    .empty(null)
+    .required()
+})
+
+const exportBlock = Joi.object({
+  exportActivity: Joi.object(required(exportManualFields))
+    .unknown(true)
+    .empty(null)
+    .required()
+})
+
+const prnBlock = Joi.object({
+  prn: Joi.object(required(prnManualFields))
+    .unknown(true)
+    .empty(null)
+    .required()
+})
+
+const compose = (/** @type {Joi.ObjectSchema[]} */ ...blocks) =>
+  blocks.reduce((acc, block) => acc.concat(block), Joi.object().unknown(true))
+
+/** @type {Record<OperatorCategory, Joi.ObjectSchema>} */
+export const completeReportSchemas = Object.freeze({
+  [OPERATOR_CATEGORY.EXPORTER]: compose(exportBlock, prnBlock),
+  [OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY]: compose(exportBlock),
+  [OPERATOR_CATEGORY.REPROCESSOR]: compose(recyclingBlock, prnBlock),
+  [OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY]: compose(recyclingBlock)
+})
+
+/**
+ * @param {Report} report
+ * @param {OperatorCategory} operatorCategory
+ * @returns {boolean}
+ */
+export const isReportComplete = (report, operatorCategory) => {
+  const schema = completeReportSchemas[operatorCategory]
+
+  if (!schema) {
+    throw new TypeError(`Unknown operator category: ${operatorCategory}`)
+  }
+
+  return !schema.validate(report).error
+}

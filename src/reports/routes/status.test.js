@@ -26,7 +26,39 @@ describe(`POST ${reportsStatusPath}`, () => {
     `/v1/organisations/${orgId}/registrations/${regId}/reports/${year}/${cadence}/${period}/status`
 
   describe('when feature flag is enabled', () => {
-    const createServerWithReport = async (registrationOverrides = {}) => {
+    // Defaults to a report whose manual-entry fields are populated enough
+    // for any operator category to pass the completeness check. Tests that
+    // want to exercise the incomplete case pass `reportOverrides` that
+    // null out the relevant fields.
+    const COMPLETE_MANUAL_FIELDS = {
+      recyclingActivity: {
+        suppliers: [],
+        totalTonnageReceived: 0,
+        tonnageRecycled: 100,
+        tonnageNotRecycled: 10
+      },
+      exportActivity: {
+        overseasSites: [],
+        unapprovedOverseasSites: [],
+        totalTonnageExported: 0,
+        tonnageReceivedNotExported: 0,
+        tonnageRefusedAtDestination: 0,
+        tonnageStoppedDuringExport: 0,
+        totalTonnageRefusedOrStopped: 0,
+        tonnageRepatriated: 0
+      },
+      prn: {
+        issuedTonnage: 100,
+        totalRevenue: 1000,
+        freeTonnage: 0,
+        averagePricePerTonne: 10
+      }
+    }
+
+    const createServerWithReport = async (
+      registrationOverrides = {},
+      reportOverrides = {}
+    ) => {
       const registration = buildRegistration(registrationOverrides)
       const org = buildOrganisation({ registrations: [registration] })
 
@@ -47,7 +79,9 @@ describe(`POST ${reportsStatusPath}`, () => {
           period: 1,
           startDate: '2025-01-01',
           endDate: '2025-03-31',
-          dueDate: '2025-04-20'
+          dueDate: '2025-04-20',
+          ...COMPLETE_MANUAL_FIELDS,
+          ...reportOverrides
         })
       )
 
@@ -190,6 +224,74 @@ describe(`POST ${reportsStatusPath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+    })
+
+    describe('completeness guard', () => {
+      it('returns 400 when transitioning a reprocessor report to ready_to_submit with tonnageRecycled null', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+            {
+              recyclingActivity: {
+                suppliers: [],
+                totalTonnageReceived: 0,
+                tonnageRecycled: null,
+                tonnageNotRecycled: 10
+              }
+            }
+          )
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(JSON.parse(response.payload).message).toMatch(/incomplete/i)
+      })
+
+      it('returns 400 when transitioning an accredited reprocessor report to ready_to_submit with prn.totalRevenue null', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport(
+            { wasteProcessingType: 'reprocessor' }, // accreditationId set by buildRegistration default
+            {
+              prn: {
+                issuedTonnage: 100,
+                totalRevenue: null,
+                freeTonnage: 0,
+                averagePricePerTonne: null
+              }
+            }
+          )
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+
+      it('allows transition to ready_to_submit when all required fields for the operator category are populated', async () => {
+        const { server, organisationId, registrationId } =
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 1 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
       })
     })
 
