@@ -294,6 +294,9 @@ const attachEventHandlers = (
     })
   })
 
+  // Most errors are already logged with full context in handleCommandError.
+  // This handler catches errors that bypass it (e.g. unparseable messages)
+  // and provides a fallback log for those cases.
   consumer.on('processing_error', (err) => {
     logger.warn({
       err,
