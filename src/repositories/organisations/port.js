@@ -22,7 +22,7 @@
  *   registrationNumber?: string,
  *   accreditationId?: string,
  *   accreditationNumber?: string,
- *   accreditation?: { accreditationNumber?: string },
+ *   accreditation?: { accreditationNumber?: string } | null,
  *   overseasSites?: Record<string, { overseasSiteId: string }>
  * }>} [registrations]
  * @property {Array<{ id?: string, accreditationNumber?: string }>} [accreditations]

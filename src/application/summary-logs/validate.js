@@ -242,7 +242,6 @@ const markIgnoredByDateRange = (
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      // @ts-expect-error meta-business validation guarantees accreditation exists for non-registered-only types
       accreditation: registration.accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })

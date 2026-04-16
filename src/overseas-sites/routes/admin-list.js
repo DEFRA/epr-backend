@@ -88,7 +88,7 @@ const mapMappingToRow = (
 }
 
 /**
- * @param {Array<{orgId?: number, registrations?: Array<{material?: string, registrationNumber?: string, accreditationId?: string, accreditationNumber?: string, accreditation?: {accreditationNumber?: string}, overseasSites?: Record<string, {overseasSiteId: string}>}>, accreditations?: Array<{id?: string, accreditationNumber?: string}>}>} organisations
+ * @param {Array<import('#repositories/organisations/port.js').OrganisationsOverseasSitesAdminListItem>} organisations
  * @param {Map<string, OverseasSite>} sitesById
  */
 const buildRows = (organisations, sitesById) => {
