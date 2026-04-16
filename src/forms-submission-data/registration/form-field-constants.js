@@ -27,10 +27,15 @@ const ORG_NAME_FIELD = 'Org name'
 const ORGANISATION_ID_FIELD = 'Organisation ID'
 const SYSTEM_REFERENCE_FIELD = 'System Reference'
 
-const APP_CONTACT_NAME = 'App contact name'
-const APP_CONTACT_EMAIL = 'App contact email address'
-const APP_CONTACT_TELEPHONE = 'App contact telephone number'
-const APP_CONTACT_JOB_TITLE = 'App contact job title'
+const AP_NAME = 'AP name'
+const AP_EMAIL = 'AP email address'
+const AP_TELEPHONE = 'AP telephone number'
+const AP_JOB_TITLE = 'AP role'
+
+const SUBMITTER_NAME = 'Submitter name'
+const SUBMITTER_EMAIL = 'Submitter email address'
+const SUBMITTER_TELEPHONE = 'Submitter telephone number'
+const SUBMITTER_JOB_TITLE = 'Submitter job title'
 
 export const REGISTRATION = {
   HAVE_ORGANISATION_ID: {
@@ -68,10 +73,10 @@ export const REGISTRATION = {
   },
   SUBMITTER_DETAILS: {
     fields: {
-      NAME: APP_CONTACT_NAME,
-      EMAIL: APP_CONTACT_EMAIL,
-      TELEPHONE_NUMBER: APP_CONTACT_TELEPHONE,
-      JOB_TITLE: APP_CONTACT_JOB_TITLE
+      NAME: SUBMITTER_NAME,
+      EMAIL: SUBMITTER_EMAIL,
+      TELEPHONE_NUMBER: SUBMITTER_TELEPHONE,
+      JOB_TITLE: SUBMITTER_JOB_TITLE
     }
   },
   SITE_DETAILS: {
@@ -89,10 +94,10 @@ export const REGISTRATION = {
   PLANT_EQUIPMENT_DETAILS: 'Plant and equipment',
   APPROVED_PERSON: {
     fields: {
-      NAME: APP_CONTACT_NAME,
-      EMAIL: APP_CONTACT_EMAIL,
-      TELEPHONE_NUMBER: APP_CONTACT_TELEPHONE,
-      JOB_TITLE: APP_CONTACT_JOB_TITLE
+      NAME: AP_NAME,
+      EMAIL: AP_EMAIL,
+      TELEPHONE_NUMBER: AP_TELEPHONE,
+      JOB_TITLE: AP_JOB_TITLE
     }
   },
   ENV_PERMIT_DETAILS: {
