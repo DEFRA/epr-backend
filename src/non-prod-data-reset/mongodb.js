@@ -13,6 +13,8 @@ import { logger } from '#common/helpers/logging/logger.js'
 const COLLECTIONS = {
   ORGANISATIONS: 'epr-organisations',
   ORGANISATION: 'organisation',
+  REGISTRATION: 'registration',
+  ACCREDITATION: 'accreditation',
   PACKAGING_RECYCLING_NOTES: 'packaging-recycling-notes',
   WASTE_BALANCES: 'waste-balances',
   REPORTS: 'reports',
@@ -28,6 +30,8 @@ const EMPTY_COUNTS = Object.freeze({
   'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
+  registration: 0,
+  accreditation: 0,
   'epr-organisations': 0,
   organisation: 0
 })
@@ -112,6 +116,16 @@ const buildCascadeSteps = (
       overseasSiteIds.length === 0
         ? null
         : { _id: { $in: overseasSiteIds.map(toObjectId) } }
+  },
+  {
+    label: 'registration',
+    collection: COLLECTIONS.REGISTRATION,
+    filter: { orgId }
+  },
+  {
+    label: 'accreditation',
+    collection: COLLECTIONS.ACCREDITATION,
+    filter: { orgId }
   },
   {
     label: 'epr-organisations',

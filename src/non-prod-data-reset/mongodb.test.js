@@ -41,6 +41,8 @@ const DATABASE_NAME = 'epr-backend'
 const COLLECTIONS = [
   'epr-organisations',
   'organisation',
+  'registration',
+  'accreditation',
   'packaging-recycling-notes',
   'waste-balances',
   'reports',
@@ -209,6 +211,22 @@ const seedOrganisationCollection = async (database, orgId) => {
   })
 }
 
+// The 'registration' and 'accreditation' staging collections are written by
+// the forms-submission-data migration path and keyed by orgId. No real adapter
+// exists in the cascade module, so we raw-insert here.
+const seedStagingCollections = async (database, orgId) => {
+  await database.collection('registration').insertOne({
+    _id: new ObjectId(),
+    orgId,
+    referenceNumber: `REG-${orgId}`
+  })
+  await database.collection('accreditation').insertOne({
+    _id: new ObjectId(),
+    orgId,
+    referenceNumber: `ACC-${orgId}`
+  })
+}
+
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
   'waste-balances': 0,
@@ -216,6 +234,8 @@ const EMPTY_COUNTS = {
   'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
+  registration: 0,
+  accreditation: 0,
   'epr-organisations': 0,
   organisation: 0
 }
@@ -230,6 +250,7 @@ describe('non-prod data reset (mongo)', () => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, seeded)
       await seedOrganisationCollection(database, seeded.organisation.orgId)
+      await seedStagingCollections(database, seeded.organisation.orgId)
       // A second PRN so the deleteMany semantics get exercised.
       await repositories.prns.create(
         buildDraftPrn({
@@ -250,6 +271,8 @@ describe('non-prod data reset (mongo)', () => {
         'waste-records': 1,
         'summary-logs': 1,
         'overseas-sites': 2,
+        registration: 1,
+        accreditation: 1,
         'epr-organisations': 1,
         organisation: 1
       })
@@ -270,10 +293,12 @@ describe('non-prod data reset (mongo)', () => {
       const target = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, target)
       await seedOrganisationCollection(database, target.organisation.orgId)
+      await seedStagingCollections(database, target.organisation.orgId)
 
       const other = await seedOrganisationWithOverseasSites(repositories)
       await seedDownstreamForOrganisation(repositories, other)
       await seedOrganisationCollection(database, other.organisation.orgId)
+      await seedStagingCollections(database, other.organisation.orgId)
 
       await reset.deleteByOrgId(target.organisation.orgId)
 
@@ -316,6 +341,16 @@ describe('non-prod data reset (mongo)', () => {
         await database.collection('epr-organisations').countDocuments({
           _id: ObjectId.createFromHexString(other.organisationId)
         })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('registration')
+          .countDocuments({ orgId: other.organisation.orgId })
+      ).toBe(1)
+      expect(
+        await database
+          .collection('accreditation')
+          .countDocuments({ orgId: other.organisation.orgId })
       ).toBe(1)
       expect(
         await database
