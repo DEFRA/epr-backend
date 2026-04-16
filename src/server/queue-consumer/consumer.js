@@ -175,7 +175,7 @@ const handleCommandError = async ({
     return
   }
 
-  if (!isFinalTransientAttempt && message.ReceiptHandle) {
+  if (!isFinalTransientAttempt) {
     try {
       await resetVisibilityTimeout(sqsClient, queueUrl, message.ReceiptHandle)
     } catch (resetErr) {
