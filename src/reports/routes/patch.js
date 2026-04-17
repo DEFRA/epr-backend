@@ -192,14 +192,12 @@ export const reportsPatch = {
 
     const fields = buildUpdateFields(request.payload, report)
 
-    await reportsRepository.updateReport({
+    const updated = await reportsRepository.updateReport({
       reportId: report.id,
       version: report.version,
       fields,
       changedBy: extractChangedBy(request.auth.credentials)
     })
-
-    const updated = await reportsRepository.findReportById(report.id)
 
     return h.response(updated).code(StatusCodes.OK)
   }
