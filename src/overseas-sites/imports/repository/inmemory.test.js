@@ -102,6 +102,45 @@ describe('In-memory ORS imports repository', () => {
       const after = await repository.findById('import-1')
       expect(after.expiresAt).toBeNull()
     })
+
+    it('refuses to transition from COMPLETED to FAILED', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.COMPLETED,
+        files: []
+      })
+
+      await repository.updateStatus('import-1', ORS_IMPORT_STATUS.FAILED)
+
+      const after = await repository.findById('import-1')
+      expect(after.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
+    })
+
+    it('refuses to transition from FAILED to COMPLETED', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.FAILED,
+        files: []
+      })
+
+      await repository.updateStatus('import-1', ORS_IMPORT_STATUS.COMPLETED)
+
+      const after = await repository.findById('import-1')
+      expect(after.status).toBe(ORS_IMPORT_STATUS.FAILED)
+    })
+
+    it('refuses to transition away from COMPLETED even back to PROCESSING', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.COMPLETED,
+        files: []
+      })
+
+      await repository.updateStatus('import-1', ORS_IMPORT_STATUS.PROCESSING)
+
+      const after = await repository.findById('import-1')
+      expect(after.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
+    })
   })
 
   describe('recordFileResult', () => {

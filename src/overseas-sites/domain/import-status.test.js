@@ -2,7 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 import {
   ORS_IMPORT_STATUS,
-  calculateOrsImportExpiresAt
+  calculateOrsImportExpiresAt,
+  isOrsImportStatusTerminal
 } from './import-status.js'
 
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24
@@ -48,5 +49,25 @@ describe('calculateOrsImportExpiresAt', () => {
     expect(() => calculateOrsImportExpiresAt('banana')).toThrow(
       'Unknown ORS import status for TTL calculation: banana'
     )
+  })
+})
+
+describe('isOrsImportStatusTerminal', () => {
+  it('returns true for COMPLETED', () => {
+    expect(isOrsImportStatusTerminal(ORS_IMPORT_STATUS.COMPLETED)).toBe(true)
+  })
+
+  it('returns true for FAILED', () => {
+    expect(isOrsImportStatusTerminal(ORS_IMPORT_STATUS.FAILED)).toBe(true)
+  })
+
+  it('returns false for PREPROCESSING', () => {
+    expect(isOrsImportStatusTerminal(ORS_IMPORT_STATUS.PREPROCESSING)).toBe(
+      false
+    )
+  })
+
+  it('returns false for PROCESSING', () => {
+    expect(isOrsImportStatusTerminal(ORS_IMPORT_STATUS.PROCESSING)).toBe(false)
   })
 })

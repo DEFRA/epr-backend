@@ -552,6 +552,40 @@ describe('processOrsImport', () => {
     })
   })
 
+  it('bails out without processing when import is already COMPLETED', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.COMPLETED,
+      files: [{ fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' }]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+
+    await processOrsImport('import-123', deps())
+
+    expect(uploadsRepository.findByLocation).not.toHaveBeenCalled()
+    expect(processImportFile).not.toHaveBeenCalled()
+    expect(orsImportsRepository.updateStatus).not.toHaveBeenCalled()
+    expect(orsImportsRepository.recordFileResult).not.toHaveBeenCalled()
+    expect(orsImportMetrics.timedImport).not.toHaveBeenCalled()
+  })
+
+  it('bails out without processing when import is already FAILED', async () => {
+    const importDoc = {
+      _id: 'import-123',
+      status: ORS_IMPORT_STATUS.FAILED,
+      files: [{ fileId: 'f1', fileName: 'sites.xlsx', s3Uri: 's3://bucket/f1' }]
+    }
+    orsImportsRepository.findById.mockResolvedValue(importDoc)
+
+    await processOrsImport('import-123', deps())
+
+    expect(uploadsRepository.findByLocation).not.toHaveBeenCalled()
+    expect(processImportFile).not.toHaveBeenCalled()
+    expect(orsImportsRepository.updateStatus).not.toHaveBeenCalled()
+    expect(orsImportsRepository.recordFileResult).not.toHaveBeenCalled()
+    expect(orsImportMetrics.timedImport).not.toHaveBeenCalled()
+  })
+
   it('sets FAILED when all files in a multi-file batch fail', async () => {
     const importDoc = {
       _id: 'import-123',

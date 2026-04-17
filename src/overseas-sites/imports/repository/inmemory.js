@@ -1,5 +1,8 @@
 import { registerRepository } from '#plugins/register-repository.js'
-import { calculateOrsImportExpiresAt } from '../../domain/import-status.js'
+import {
+  calculateOrsImportExpiresAt,
+  isOrsImportStatusTerminal
+} from '../../domain/import-status.js'
 
 /** @import { OrsImport, OrsImportsRepositoryFactory } from './port.js' */
 
@@ -33,7 +36,7 @@ export function createInMemoryOrsImportsRepository() {
 
     async updateStatus(id, status) {
       const doc = storage.get(id)
-      if (doc) {
+      if (doc && !isOrsImportStatusTerminal(doc.status)) {
         doc.status = status
         doc.expiresAt = calculateOrsImportExpiresAt(status)
         doc.updatedAt = new Date().toISOString()

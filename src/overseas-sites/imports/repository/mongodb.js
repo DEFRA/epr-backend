@@ -1,7 +1,10 @@
 /** @import { Db } from 'mongodb' */
 /** @import { OrsImport, OrsImportsRepositoryFactory } from './port.js' */
 
-import { calculateOrsImportExpiresAt } from '../../domain/import-status.js'
+import {
+  ORS_IMPORT_TERMINAL_STATUSES,
+  calculateOrsImportExpiresAt
+} from '../../domain/import-status.js'
 
 const COLLECTION_NAME = 'ors-imports'
 
@@ -46,7 +49,7 @@ export const createOrsImportsRepository = async (db) => {
     async updateStatus(id, status) {
       const expiresAt = calculateOrsImportExpiresAt(status)
       await collection.updateOne(
-        { _id: id },
+        { _id: id, status: { $nin: ORS_IMPORT_TERMINAL_STATUSES } },
         {
           $set: {
             status,

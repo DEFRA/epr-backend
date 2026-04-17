@@ -154,6 +154,39 @@ describe('MongoDB ORS imports repository', () => {
     expect(found.expiresAt).toBeNull()
   })
 
+  it('refuses to transition from COMPLETED to FAILED', async ({
+    repository
+  }) => {
+    await repository.create({
+      _id: 'import-forward-1',
+      status: ORS_IMPORT_STATUS.COMPLETED,
+      files: []
+    })
+
+    await repository.updateStatus('import-forward-1', ORS_IMPORT_STATUS.FAILED)
+
+    const found = await repository.findById('import-forward-1')
+    expect(found.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
+  })
+
+  it('refuses to transition from FAILED to COMPLETED', async ({
+    repository
+  }) => {
+    await repository.create({
+      _id: 'import-forward-2',
+      status: ORS_IMPORT_STATUS.FAILED,
+      files: []
+    })
+
+    await repository.updateStatus(
+      'import-forward-2',
+      ORS_IMPORT_STATUS.COMPLETED
+    )
+
+    const found = await repository.findById('import-forward-2')
+    expect(found.status).toBe(ORS_IMPORT_STATUS.FAILED)
+  })
+
   it('records a file result by index', async ({ repository }) => {
     await repository.create({
       _id: 'import-test-3',

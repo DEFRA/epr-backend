@@ -6,7 +6,8 @@ import {
 } from '#common/enums/index.js'
 import {
   ORS_FILE_RESULT_STATUS,
-  ORS_IMPORT_STATUS
+  ORS_IMPORT_STATUS,
+  isOrsImportStatusTerminal
 } from '../domain/import-status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { processImportFile } from './process-import-file.js'
@@ -43,6 +44,17 @@ export const processOrsImport = async (importId, deps) => {
   const importDoc = await orsImportsRepository.findById(importId)
   if (!importDoc) {
     throw new PermanentError(`ORS import ${importId} not found`)
+  }
+
+  if (isOrsImportStatusTerminal(importDoc.status)) {
+    logger.info({
+      message: `ORS import ${importId} already in terminal status ${importDoc.status}; skipping duplicate command`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
+    })
+    return
   }
 
   await orsImportMetrics.timedImport(async () => {
