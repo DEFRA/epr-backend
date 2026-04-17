@@ -243,6 +243,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
 
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)
+    item.accreditation = item.accreditation ?? null
   }
 
   for (const item of rest.accreditations) {
