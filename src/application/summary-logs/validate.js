@@ -1,3 +1,4 @@
+import { isNil } from '#common/helpers/is-nil.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -514,7 +515,7 @@ const persistValidationResult = async ({
 const filterWasteBalanceRecords = (wasteRecords, processingType) =>
   wasteRecords?.filter((wr) => {
     const schema = findSchemaForProcessingType(processingType, wr.record.type)
-    return schema?.classifyForWasteBalance != null
+    return !isNil(schema?.classifyForWasteBalance)
   }) ?? []
 
 /**

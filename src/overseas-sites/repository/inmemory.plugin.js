@@ -1,3 +1,4 @@
+import { isNil } from '#common/helpers/is-nil.js'
 import { registerRepository } from '#plugins/register-repository.js'
 import { ObjectId } from 'mongodb'
 import { validateOverseasSiteInsert } from './validation.js'
@@ -70,7 +71,7 @@ const performRemove = (storage) => async (id) => {
  * @param {*} b
  */
 const nullishEqual = (a, b) => {
-  if (a == null && b == null) {
+  if (isNil(a) && isNil(b)) {
     return true
   }
   return a === b
@@ -81,10 +82,10 @@ const nullishEqual = (a, b) => {
  * @param {*} b
  */
 const dateEqual = (a, b) => {
-  if (a == null && b == null) {
+  if (isNil(a) && isNil(b)) {
     return true
   }
-  if (a == null || b == null) {
+  if (isNil(a) || isNil(b)) {
     return false
   }
   return new Date(a).getTime() === new Date(b).getTime()

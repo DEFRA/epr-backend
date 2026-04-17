@@ -1,3 +1,5 @@
+import { isNil } from '#common/helpers/is-nil.js'
+
 /**
  * @typedef {Object} AggregateTonnageParams
  * @property {Date} startDate
@@ -15,7 +17,7 @@
  * @returns {number}
  */
 export function aggregateIssuedTonnage(prns, { startDate, endDate }) {
-  const isInPeriod = (at) => at != null && at >= startDate && at <= endDate
+  const isInPeriod = (at) => !isNil(at) && at >= startDate && at <= endDate
 
   return prns
     .filter((prn) => isInPeriod(prn.status.issued?.at))

@@ -1,3 +1,4 @@
+import { isNil } from '#common/helpers/is-nil.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   VALIDATION_CATEGORY,
@@ -33,10 +34,9 @@ export const validateRegistrationNumber = ({
     SUMMARY_LOG_META_FIELDS.REGISTRATION_NUMBER
   )
   const rawRegistrationValue = registrationField?.value
-  const spreadsheetRegistrationNumber =
-    rawRegistrationValue == null
-      ? rawRegistrationValue
-      : String(rawRegistrationValue).trim()
+  const spreadsheetRegistrationNumber = isNil(rawRegistrationValue)
+    ? rawRegistrationValue
+    : String(rawRegistrationValue).trim()
 
   const location = buildMetaFieldLocation(
     registrationField,

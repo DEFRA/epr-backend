@@ -1,3 +1,4 @@
+import { isNil } from '#common/helpers/is-nil.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   VALIDATION_CATEGORY,
@@ -42,10 +43,9 @@ export const validateAccreditationNumber = ({
     SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER
   )
   const rawAccreditationValue = accreditationField?.value
-  const spreadsheetAccreditationNumber =
-    rawAccreditationValue == null
-      ? rawAccreditationValue
-      : String(rawAccreditationValue).trim()
+  const spreadsheetAccreditationNumber = isNil(rawAccreditationValue)
+    ? rawAccreditationValue
+    : String(rawAccreditationValue).trim()
 
   const location = buildMetaFieldLocation(
     accreditationField,
