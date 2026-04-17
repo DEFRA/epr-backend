@@ -51,13 +51,23 @@ export const orsImportCommandHandlers = [
     },
     onFailure: async (payload, /** @type {OrsImportHandlerDeps} */ deps) => {
       try {
-        await deps.orsImportsRepository.updateStatus(
+        const updated = await deps.orsImportsRepository.updateStatus(
           payload.importId,
           ORS_IMPORT_STATUS.FAILED
         )
-        await orsImportMetrics.recordStatusTransition({
-          status: ORS_IMPORT_STATUS.FAILED
-        })
+        if (updated) {
+          await orsImportMetrics.recordStatusTransition({
+            status: ORS_IMPORT_STATUS.FAILED
+          })
+        } else {
+          deps.logger.info({
+            message: `ORS import ${payload.importId} is already in a terminal status; not marking as failed`,
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.SERVER,
+              action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+            }
+          })
+        }
       } catch (err) {
         deps.logger.error({
           err,

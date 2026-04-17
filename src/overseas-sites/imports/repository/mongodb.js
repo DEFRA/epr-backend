@@ -2,8 +2,8 @@
 /** @import { OrsImport, OrsImportsRepositoryFactory } from './port.js' */
 
 import {
-  ORS_IMPORT_TERMINAL_STATUSES,
-  calculateOrsImportExpiresAt
+  calculateOrsImportExpiresAt,
+  ORS_IMPORT_TERMINAL_STATUSES
 } from '../../domain/import-status.js'
 
 const COLLECTION_NAME = 'ors-imports'
@@ -48,7 +48,7 @@ export const createOrsImportsRepository = async (db) => {
 
     async updateStatus(id, status) {
       const expiresAt = calculateOrsImportExpiresAt(status)
-      await collection.updateOne(
+      const result = await collection.updateOne(
         { _id: id, status: { $nin: ORS_IMPORT_TERMINAL_STATUSES } },
         {
           $set: {
@@ -58,6 +58,7 @@ export const createOrsImportsRepository = async (db) => {
           }
         }
       )
+      return result.matchedCount > 0
     },
 
     async recordFileResult(id, fileIndex, result) {

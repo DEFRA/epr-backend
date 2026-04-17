@@ -36,11 +36,13 @@ export function createInMemoryOrsImportsRepository() {
 
     async updateStatus(id, status) {
       const doc = storage.get(id)
-      if (doc && !isOrsImportStatusTerminal(doc.status)) {
-        doc.status = status
-        doc.expiresAt = calculateOrsImportExpiresAt(status)
-        doc.updatedAt = new Date().toISOString()
+      if (!doc || isOrsImportStatusTerminal(doc.status)) {
+        return false
       }
+      doc.status = status
+      doc.expiresAt = calculateOrsImportExpiresAt(status)
+      doc.updatedAt = new Date().toISOString()
+      return true
     },
 
     async addFiles(id, files) {

@@ -64,6 +64,10 @@ export const calculateOrsImportExpiresAt = (status) => {
 export const isOrsImportStatusTerminal = (status) =>
   VALID_ORS_IMPORT_TRANSITIONS[status]?.length === 0
 
+/**
+ * Concrete list of terminal statuses for use as a MongoDB `$nin` filter value.
+ * Kept in sync with `isOrsImportStatusTerminal` by derivation.
+ */
 export const ORS_IMPORT_TERMINAL_STATUSES = Object.freeze(
   Object.values(ORS_IMPORT_STATUS).filter(isOrsImportStatusTerminal)
 )

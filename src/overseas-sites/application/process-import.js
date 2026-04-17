@@ -90,8 +90,21 @@ export const processOrsImport = async (importId, deps) => {
     const finalStatus = allFailed
       ? ORS_IMPORT_STATUS.FAILED
       : ORS_IMPORT_STATUS.COMPLETED
-    await orsImportsRepository.updateStatus(importId, finalStatus)
-    await orsImportMetrics.recordStatusTransition({ status: finalStatus })
+    const updated = await orsImportsRepository.updateStatus(
+      importId,
+      finalStatus
+    )
+    if (updated) {
+      await orsImportMetrics.recordStatusTransition({ status: finalStatus })
+    } else {
+      logger.info({
+        message: `ORS import ${importId} final status write blocked; another worker has already reached a terminal status`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+        }
+      })
+    }
   })
 }
 
