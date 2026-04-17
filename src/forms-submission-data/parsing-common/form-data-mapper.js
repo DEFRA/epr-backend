@@ -1,3 +1,4 @@
+import { isNil } from '#common/helpers/is-nil.js'
 import {
   BUSINESS_TYPE,
   GLASS_RECYCLING_PROCESS,
@@ -285,7 +286,7 @@ export function mapWastePermitType(value) {
 }
 
 export function convertToNumber(value, fieldName = 'value') {
-  if (value == null) {
+  if (isNil(value)) {
     return undefined
   }
 

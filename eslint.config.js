@@ -60,6 +60,7 @@ export default [
   },
   {
     rules: {
+      eqeqeq: ['error', 'always'],
       'no-unused-vars': [
         'error',
         {

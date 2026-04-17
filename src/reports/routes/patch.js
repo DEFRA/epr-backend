@@ -2,6 +2,8 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
+import { isNil } from '#common/helpers/is-nil.js'
+
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
@@ -44,8 +46,8 @@ export function buildUpdatedPrn(existingPrn, totalRevenue, freeTonnage) {
 
   if (
     updated.issuedTonnage >= 0 &&
-    updated.totalRevenue != null &&
-    updated.freeTonnage != null
+    !isNil(updated.totalRevenue) &&
+    !isNil(updated.freeTonnage)
   ) {
     const denominator = updated.issuedTonnage - updated.freeTonnage
     updated.averagePricePerTonne =
