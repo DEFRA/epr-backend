@@ -30,7 +30,7 @@ Swagger documentation is available by running this application locally and navig
 
 _The application runs at `https://epr-backend.{env}.cdp-int.defra.cloud`, where `{env}` is one of `dev|test|prod`_
 
-## Docker
+## Docker test
 
 ### Running with Docker Compose
 
