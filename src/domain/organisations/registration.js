@@ -32,7 +32,7 @@
 
 /**
  * @typedef {{ id: string } & {
- *  accreditation?: Accreditation;
+ *  accreditation: Accreditation | null;
  *  accreditationId?: string;
  *  approvedPersons: User[]
  *  formSubmissionTime: Date;

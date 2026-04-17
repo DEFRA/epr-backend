@@ -75,7 +75,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('returns registration without accreditation field when accreditationId is undefined', async () => {
+    it('returns registration with accreditation set to null when accreditationId is undefined', async () => {
       const registration = buildRegistration({
         material: 'plastic',
         wasteProcessingType: 'exporter',
@@ -93,10 +93,10 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         registration.id
       )
 
-      expect(result.accreditation).toBeUndefined()
+      expect(result.accreditation).toBeNull()
     })
 
-    it('returns registration without accreditation field when accreditationId does not match any accreditation', async () => {
+    it('returns registration with accreditation set to null when accreditationId does not match any accreditation', async () => {
       const registration = buildRegistration({
         cbduNumber: 'CBDU333333',
         accreditationId: new ObjectId().toString()
@@ -113,7 +113,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         registration.id
       )
 
-      expect(result.accreditation).toBeUndefined()
+      expect(result.accreditation).toBeNull()
     })
 
     it('throws 404 when organisation does not exist', async () => {
