@@ -1,4 +1,5 @@
 import { mapRegulator } from './form-data-mapper.js'
+import { isNil } from '#common/helpers/is-nil.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
@@ -24,7 +25,7 @@ export function extractRepeaters(
   const repeaterName = repeaterPage.repeat.options.name
   const repeaterData = rawFormSubmissionObject?.data?.repeaters?.[repeaterName]
 
-  if (repeaterData == null) {
+  if (isNil(repeaterData)) {
     return []
   }
 
@@ -37,13 +38,13 @@ export function extractRepeaters(
   const componentMap = new Map(
     repeaterPage.components.flatMap((component) => {
       const outputName = fieldMapping[component.shortDescription]
-      return outputName == null ? [] : [[component.name, outputName]]
+      return isNil(outputName) ? [] : [[component.name, outputName]]
     })
   )
 
   return repeaterData.map((item) =>
     [...componentMap]
-      .filter(([componentName]) => item[componentName] != null)
+      .filter(([componentName]) => !isNil(item[componentName]))
       .reduce((result, [componentName, outputName]) => {
         result[outputName] = item[componentName]
         return result

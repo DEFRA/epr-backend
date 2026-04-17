@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 
+import { isNil } from '#common/helpers/is-nil.js'
 import {
   validateOverseasSiteId,
   validateOverseasSiteInsert,
@@ -120,7 +121,7 @@ const performRemove = async (db, id) => {
 
 /** @param {unknown} value */
 const nullishFilter = (value) =>
-  value == null ? { $in: [null, undefined] } : value
+  isNil(value) ? { $in: [null, undefined] } : value
 
 /**
  * @param {Db} db

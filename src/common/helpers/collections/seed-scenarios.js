@@ -10,6 +10,7 @@
 import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
 
+import { isNil } from '#common/helpers/is-nil.js'
 import {
   REPROCESSING_TYPE,
   ORGANISATION_STATUS,
@@ -182,7 +183,7 @@ async function buildApprovedOrgForSeed(
   const linkedAccreditationIds = new Set(
     approvedRegistrations
       .map((r) => r.accreditationId)
-      .filter((id) => id != null)
+      .filter((id) => !isNil(id))
   )
 
   const approvedAccreditations = createApprovedAccreditations(
