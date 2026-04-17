@@ -3,8 +3,7 @@ import { Consumer } from 'sqs-consumer'
 
 import {
   resolveQueueUrl,
-  getMaxReceiveCount,
-  resetVisibilityTimeout
+  getMaxReceiveCount
 } from '#common/helpers/sqs/sqs-client.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -138,7 +137,6 @@ const getFailureLabel = (isPermanent, isFinalTransientAttempt) => {
  * @param {object} params.payload
  * @param {import('@aws-sdk/client-sqs').Message} params.message
  * @param {number|null} params.maxReceiveCount
- * @param {string} params.queueUrl
  * @param {ConsumerDependencies} params.deps
  */
 const handleCommandError = async ({
@@ -147,10 +145,9 @@ const handleCommandError = async ({
   payload,
   message,
   maxReceiveCount,
-  queueUrl,
   deps
 }) => {
-  const { logger, sqsClient } = deps
+  const { logger } = deps
   const isPermanent = err instanceof PermanentError
   const receiveCount = Number(message.Attributes?.ApproximateReceiveCount ?? 0)
   const isFinalTransientAttempt =
@@ -175,20 +172,8 @@ const handleCommandError = async ({
     return
   }
 
-  // ReceiptHandle is always present on messages from ReceiveMessage in
-  // practice, but the SDK types it as optional. Guard rather than assert,
-  // so we fall back to normal SQS retry timing if it's ever absent.
-  if (!isFinalTransientAttempt && message.ReceiptHandle) {
-    try {
-      await resetVisibilityTimeout(sqsClient, queueUrl, message.ReceiptHandle)
-    } catch (resetErr) {
-      logger.warn({
-        err: resetErr,
-        message: `Failed to reset visibility timeout for messageId=${message.MessageId}`
-      })
-    }
-  }
-
+  // Visibility reset is handled by sqs-consumer's terminateVisibilityTimeout
+  // option, which applies to all handler errors (including unparseable messages)
   throw err
 }
 
@@ -196,14 +181,12 @@ const handleCommandError = async ({
  * Creates the message handler for the SQS consumer.
  * @param {ConsumerDependencies} deps
  * @param {number|null} maxReceiveCount
- * @param {string} queueUrl
  * @param {import('joi').ObjectSchema} envelopeSchema
  * @param {Map<string, CommandHandler>} handlerMap
  * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<import('@aws-sdk/client-sqs').Message | void>}
  */
 const createMessageHandler =
-  (deps, maxReceiveCount, queueUrl, envelopeSchema, handlerMap) =>
-  async (message) => {
+  (deps, maxReceiveCount, envelopeSchema, handlerMap) => async (message) => {
     const { logger } = deps
 
     const result = parseCommandMessage(
@@ -257,7 +240,6 @@ const createMessageHandler =
         payload,
         message,
         maxReceiveCount,
-        queueUrl,
         deps: commandDeps
       })
 
@@ -385,15 +367,10 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
     queueUrl,
     sqs: sqsClient,
     handleMessage: /** @type {*} */ (
-      createMessageHandler(
-        deps,
-        maxReceiveCount,
-        queueUrl,
-        envelopeSchema,
-        handlerMap
-      )
+      createMessageHandler(deps, maxReceiveCount, envelopeSchema, handlerMap)
     ),
     handleMessageTimeout: COMMAND_TIMEOUT_MS,
+    terminateVisibilityTimeout: 1,
     attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 

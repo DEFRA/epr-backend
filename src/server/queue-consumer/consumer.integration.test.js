@@ -562,7 +562,7 @@ describe('SQS command queue consumer integration', () => {
         })
 
         // Create a queue with a long visibility timeout (30s) so the only
-        // way the retry arrives within 10s is via resetVisibilityTimeout.
+        // way the retry arrives within 10s is via terminateVisibilityTimeout.
         const longTimeoutQueueName = `epr_backend_commands_vis_${Date.now()}`
         const longTimeoutDlqName = `${longTimeoutQueueName}_dlq`
 
