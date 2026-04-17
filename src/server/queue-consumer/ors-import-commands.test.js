@@ -82,6 +82,8 @@ describe('orsImportCommandHandlers', () => {
 
     describe('onFailure', () => {
       it('marks ORS import as failed', async () => {
+        deps.orsImportsRepository.updateStatus.mockResolvedValue(true)
+
         await handler.onFailure({ importId: 'import-123' }, deps)
 
         expect(deps.orsImportsRepository.updateStatus).toHaveBeenCalledWith(
@@ -90,12 +92,34 @@ describe('orsImportCommandHandlers', () => {
         )
       })
 
-      it('records failed status transition metric', async () => {
+      it('records failed status transition metric when update succeeded', async () => {
+        deps.orsImportsRepository.updateStatus.mockResolvedValue(true)
+
         await handler.onFailure({ importId: 'import-123' }, deps)
 
         expect(orsImportMetrics.recordStatusTransition).toHaveBeenCalledWith({
           status: 'failed'
         })
+      })
+
+      it('does not record status metric when update was blocked by terminal status', async () => {
+        deps.orsImportsRepository.updateStatus.mockResolvedValue(false)
+
+        await handler.onFailure({ importId: 'import-123' }, deps)
+
+        expect(orsImportMetrics.recordStatusTransition).not.toHaveBeenCalled()
+      })
+
+      it('logs when update was blocked by terminal status', async () => {
+        deps.orsImportsRepository.updateStatus.mockResolvedValue(false)
+
+        await handler.onFailure({ importId: 'import-123' }, deps)
+
+        expect(deps.logger.info).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('import-123')
+          })
+        )
       })
 
       it('logs error when marking as failed throws', async () => {
