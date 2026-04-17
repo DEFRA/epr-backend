@@ -69,22 +69,30 @@ describe('In-memory ORS imports repository', () => {
   })
 
   describe('updateStatus', () => {
-    it('does nothing when updating status of nonexistent import', async () => {
-      await repository.updateStatus('nonexistent', ORS_IMPORT_STATUS.PROCESSING)
+    it('returns false when updating status of nonexistent import', async () => {
+      const result = await repository.updateStatus(
+        'nonexistent',
+        ORS_IMPORT_STATUS.PROCESSING
+      )
 
+      expect(result).toBe(false)
       const found = await repository.findById('nonexistent')
       expect(found).toBeNull()
     })
 
-    it('updates the status', async () => {
+    it('updates the status and returns true', async () => {
       await repository.create({
         _id: 'import-1',
         status: ORS_IMPORT_STATUS.PREPROCESSING,
         files: []
       })
 
-      await repository.updateStatus('import-1', ORS_IMPORT_STATUS.PROCESSING)
+      const result = await repository.updateStatus(
+        'import-1',
+        ORS_IMPORT_STATUS.PROCESSING
+      )
 
+      expect(result).toBe(true)
       const after = await repository.findById('import-1')
       expect(after.status).toBe(ORS_IMPORT_STATUS.PROCESSING)
       expect(after.updatedAt).toBeDefined()
@@ -101,6 +109,53 @@ describe('In-memory ORS imports repository', () => {
 
       const after = await repository.findById('import-1')
       expect(after.expiresAt).toBeNull()
+    })
+
+    it('refuses to transition from COMPLETED to FAILED and returns false', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.COMPLETED,
+        files: []
+      })
+
+      const result = await repository.updateStatus(
+        'import-1',
+        ORS_IMPORT_STATUS.FAILED
+      )
+
+      expect(result).toBe(false)
+      const after = await repository.findById('import-1')
+      expect(after.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
+    })
+
+    it('refuses to transition from FAILED to COMPLETED and returns false', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.FAILED,
+        files: []
+      })
+
+      const result = await repository.updateStatus(
+        'import-1',
+        ORS_IMPORT_STATUS.COMPLETED
+      )
+
+      expect(result).toBe(false)
+      const after = await repository.findById('import-1')
+      expect(after.status).toBe(ORS_IMPORT_STATUS.FAILED)
+    })
+
+    it('refuses to transition away from COMPLETED even back to PROCESSING', async () => {
+      await repository.create({
+        _id: 'import-1',
+        status: ORS_IMPORT_STATUS.COMPLETED,
+        files: []
+      })
+
+      await repository.updateStatus('import-1', ORS_IMPORT_STATUS.PROCESSING)
+
+      const after = await repository.findById('import-1')
+      expect(after.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
     })
   })
 

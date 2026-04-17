@@ -22,7 +22,7 @@
  * @property {(importDoc: Omit<OrsImport, 'createdAt' | 'updatedAt' | 'expiresAt'>) => Promise<OrsImport>} create
  * @property {(id: string) => Promise<OrsImport|null>} findById
  * @property {(id: string, files: OrsImportFile[]) => Promise<void>} addFiles
- * @property {(id: string, status: string) => Promise<void>} updateStatus
+ * @property {(id: string, status: string) => Promise<boolean>} updateStatus
  * @property {(id: string, fileIndex: number, result: object) => Promise<void>} recordFileResult
  */
 

@@ -49,17 +49,32 @@ describe('MongoDB ORS imports repository', () => {
     expect(found).toBeNull()
   })
 
-  it('updates the status', async ({ repository }) => {
+  it('updates the status and returns true', async ({ repository }) => {
     await repository.create({
       _id: 'import-test-2',
       status: ORS_IMPORT_STATUS.PREPROCESSING,
       files: []
     })
 
-    await repository.updateStatus('import-test-2', ORS_IMPORT_STATUS.PROCESSING)
+    const result = await repository.updateStatus(
+      'import-test-2',
+      ORS_IMPORT_STATUS.PROCESSING
+    )
 
+    expect(result).toBe(true)
     const found = await repository.findById('import-test-2')
     expect(found.status).toBe(ORS_IMPORT_STATUS.PROCESSING)
+  })
+
+  it('returns false when updating a nonexistent import', async ({
+    repository
+  }) => {
+    const result = await repository.updateStatus(
+      'nonexistent',
+      ORS_IMPORT_STATUS.PROCESSING
+    )
+
+    expect(result).toBe(false)
   })
 
   it('appends files to the import', async ({ repository }) => {
@@ -152,6 +167,44 @@ describe('MongoDB ORS imports repository', () => {
 
     const found = await repository.findById('import-ttl-3')
     expect(found.expiresAt).toBeNull()
+  })
+
+  it('refuses to transition from COMPLETED to FAILED and returns false', async ({
+    repository
+  }) => {
+    await repository.create({
+      _id: 'import-forward-1',
+      status: ORS_IMPORT_STATUS.COMPLETED,
+      files: []
+    })
+
+    const result = await repository.updateStatus(
+      'import-forward-1',
+      ORS_IMPORT_STATUS.FAILED
+    )
+
+    expect(result).toBe(false)
+    const found = await repository.findById('import-forward-1')
+    expect(found.status).toBe(ORS_IMPORT_STATUS.COMPLETED)
+  })
+
+  it('refuses to transition from FAILED to COMPLETED and returns false', async ({
+    repository
+  }) => {
+    await repository.create({
+      _id: 'import-forward-2',
+      status: ORS_IMPORT_STATUS.FAILED,
+      files: []
+    })
+
+    const result = await repository.updateStatus(
+      'import-forward-2',
+      ORS_IMPORT_STATUS.COMPLETED
+    )
+
+    expect(result).toBe(false)
+    const found = await repository.findById('import-forward-2')
+    expect(found.status).toBe(ORS_IMPORT_STATUS.FAILED)
   })
 
   it('records a file result by index', async ({ repository }) => {
