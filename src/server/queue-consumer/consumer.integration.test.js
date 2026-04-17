@@ -626,7 +626,7 @@ describe('SQS command queue consumer integration', () => {
         const startTime = Date.now()
 
         // Wait for the second attempt — proves the visibility timeout was
-        // reset to 0, because otherwise SQS would hold the message for 30s.
+        // reset to 1s, because otherwise SQS would hold the message for 30s.
         await vi.waitFor(
           () => {
             expect(mockValidator.mock.calls.length).toBeGreaterThanOrEqual(2)

@@ -1024,7 +1024,7 @@ describe('createCommandQueueConsumer', () => {
             expect.objectContaining({
               QueueUrl: 'http://localhost:4566/000000000000/test-queue',
               ReceiptHandle: 'receipt-123',
-              VisibilityTimeout: 0
+              VisibilityTimeout: 1
             })
           )
         })
@@ -1127,7 +1127,7 @@ describe('createCommandQueueConsumer', () => {
 
           expect(sqsClient.send).not.toHaveBeenCalledWith(
             expect.objectContaining({
-              VisibilityTimeout: 0
+              VisibilityTimeout: 1
             })
           )
         })

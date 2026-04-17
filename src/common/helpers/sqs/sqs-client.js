@@ -59,8 +59,8 @@ export async function getMaxReceiveCount(sqsClient, queueUrl) {
 }
 
 /**
- * Resets the visibility timeout of a message so it becomes immediately
- * available for redelivery.
+ * Reduces the visibility timeout of a message so it becomes quickly
+ * available for redelivery (1 s delay to allow transient issues to clear).
  * @see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html#terminating-message-visibility-timeout
  * @param {SQSClientType} sqsClient
  * @param {string} queueUrl
@@ -76,7 +76,7 @@ export async function resetVisibilityTimeout(
     new ChangeMessageVisibilityCommand({
       QueueUrl: queueUrl,
       ReceiptHandle: receiptHandle,
-      VisibilityTimeout: 0
+      VisibilityTimeout: 1
     })
   )
 }
