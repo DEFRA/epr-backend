@@ -83,16 +83,12 @@ export const reportsStatus = {
       )
     }
 
-    const previous = await reportsRepository.findReportById(report.id)
-
-    await reportsRepository.updateReportStatus({
+    const updated = await reportsRepository.updateReportStatus({
       reportId: report.id,
       version,
       status,
       changedBy: extractChangedBy(request.auth.credentials)
     })
-
-    const updated = await reportsRepository.findReportById(report.id)
 
     await auditReportStatusTransition(request, {
       organisationId,
@@ -100,9 +96,9 @@ export const reportsStatus = {
       year,
       cadence,
       period,
-      submissionNumber: previous.submissionNumber,
+      submissionNumber: report.submissionNumber,
       reportId: report.id,
-      previous,
+      previous: report,
       next: updated
     })
 

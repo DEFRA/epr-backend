@@ -209,8 +209,8 @@
 /**
  * @typedef {Object} ReportsRepository
  * @property {(params: CreateReportParams) => Promise<Report>} createReport
- * @property {(params: UpdateReportParams) => Promise<void>} updateReport
- * @property {(params: UpdateReportStatusParams) => Promise<void>} updateReportStatus
+ * @property {(params: UpdateReportParams) => Promise<Report>} updateReport
+ * @property {(params: UpdateReportStatusParams) => Promise<Report>} updateReportStatus
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
