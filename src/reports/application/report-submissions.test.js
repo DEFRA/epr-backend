@@ -258,6 +258,25 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(result.reportSubmissions[0].material).toBe('Glass-remelt')
   })
 
+  it('returns empty string for accreditationNumber when accreditation has null accreditationNumber', async () => {
+    const org = buildOrg({
+      accreditations: [{ id: 'acc-1', accreditationNumber: null }],
+      registrations: [
+        buildRegistrationMock({
+          status: 'approved',
+          accreditationId: 'acc-1'
+        })
+      ]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    expect(result.reportSubmissions[0].accreditationNumber).toBe('')
+  })
+
   it('formats accreditationNumber as empty for registered only operator', async () => {
     const org = buildOrg({
       registrations: [
