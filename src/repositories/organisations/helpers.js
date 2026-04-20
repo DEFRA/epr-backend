@@ -372,7 +372,17 @@ const buildOrsAdminListBasePipeline = ({ registrationNumber }) => [
         {
           $match: {
             $expr: {
-              $eq: [{ $toString: '$_id' }, '$$overseasSiteId']
+              $eq: [
+                '$_id',
+                {
+                  $convert: {
+                    input: '$$overseasSiteId',
+                    to: 'objectId',
+                    onError: null,
+                    onNull: null
+                  }
+                }
+              ]
             }
           }
         }
