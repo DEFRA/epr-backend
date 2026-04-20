@@ -16,7 +16,7 @@ process.env.PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL =
 // Roles
 process.env.SERVICE_MAINTAINER_EMAILS = '["me@example.com", "you@example.com"]'
 
-// AWS - LocalStack test credentials
+// AWS - test credentials
 process.env.AWS_ACCESS_KEY_ID = 'test'
 process.env.AWS_SECRET_ACCESS_KEY = 'test'
 process.env.AWS_REGION = 'eu-west-2' // matches config.js default
