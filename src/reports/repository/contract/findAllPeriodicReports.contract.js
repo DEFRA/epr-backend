@@ -129,5 +129,36 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         ])
       )
     })
+
+    it('returns separate documents for the same org/registration across different years', async () => {
+      const NEXT_YEAR = DEFAULT_REPORT_YEAR + 1
+
+      await repository.createReport(
+        buildCreateReportParams({ period: MONTHLY_PERIODS.January })
+      )
+      await repository.createReport(
+        buildCreateReportParams({
+          period: MONTHLY_PERIODS.January,
+          year: NEXT_YEAR,
+          startDate: `${NEXT_YEAR}-01-01T00:00:00.000Z`,
+          endDate: `${NEXT_YEAR}-01-31T00:00:00.000Z`,
+          dueDate: `${NEXT_YEAR}-02-15T00:00:00.000Z`
+        })
+      )
+
+      const result = await repository.findAllPeriodicReports()
+
+      expect(result).toHaveLength(2)
+      expect(result.map((r) => r.year)).toEqual(
+        expect.arrayContaining([DEFAULT_REPORT_YEAR, NEXT_YEAR])
+      )
+      result.forEach((doc) => {
+        expect(doc.organisationId).toBe(DEFAULT_ORG_ID)
+        expect(doc.registrationId).toBe(DEFAULT_REG_ID)
+        expect(Object.keys(doc.reports.monthly)).toContain(
+          String(MONTHLY_PERIODS.January)
+        )
+      })
+    })
   })
 }
