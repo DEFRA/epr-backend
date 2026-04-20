@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildAccreditation,
@@ -31,8 +30,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     organisationsRepository = organisationsRepositoryFactory()
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
-      featureFlags: createInMemoryFeatureFlags({ reports: true })
+      repositories: { organisationsRepository: organisationsRepositoryFactory }
     })
   })
 
@@ -86,7 +84,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(result.companyName).toBe(org.companyDetails.name)
   })
 
-  it('returns registrations with id, registrationNumber, and status only', async () => {
+  it('returns registrations with the expected fields', async () => {
     const registration = buildRegistration({
       registrationNumber: 'RERE0001'
     })
@@ -106,8 +104,9 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(Object.keys(reg).sort()).toEqual([
       'id',
       'material',
+      'processingType',
       'registrationNumber',
-      'reports',
+      'site',
       'status'
     ])
     expect(reg.id).toBe(registration.id)
@@ -115,7 +114,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(reg.status).toBe('created')
   })
 
-  it('does not leak any other registration fields beyond id, registrationNumber, status, and accreditation', async () => {
+  it('does not leak any other registration fields', async () => {
     const org = buildOrganisation()
     await organisationsRepository.insert(org)
 
@@ -130,14 +129,101 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const allowedKeys = new Set([
       'id',
       'material',
+      'processingType',
       'registrationNumber',
+      'site',
       'status',
-      'accreditation',
-      'reports'
+      'accreditation'
     ])
     for (const reg of result.registrations) {
       expect(Object.keys(reg).every((k) => allowedKeys.has(k))).toBe(true)
     }
+  })
+
+  it('returns processingType of "reprocessor - input" for a reprocessor with reprocessingType input', async () => {
+    const registration = buildRegistration({
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input'
+    })
+    const org = buildOrganisation({ registrations: [registration] })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.registrations[0].processingType).toBe('reprocessor - input')
+  })
+
+  it('returns processingType of "reprocessor - output" for a reprocessor with reprocessingType output', async () => {
+    const registration = buildRegistration({
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'output'
+    })
+    const org = buildOrganisation({ registrations: [registration] })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.registrations[0].processingType).toBe('reprocessor - output')
+  })
+
+  it('returns processingType of "exporter" for an exporter', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+    const org = buildOrganisation({ registrations: [registration] })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.registrations[0].processingType).toBe('exporter')
+  })
+
+  it('returns site address line1 for a reprocessor', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'reprocessor' })
+    const org = buildOrganisation({ registrations: [registration] })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.registrations[0].site).toBe(registration.site.address.line1)
+  })
+
+  it('returns null site for an exporter', async () => {
+    const registration = buildRegistration({ wasteProcessingType: 'exporter' })
+    const org = buildOrganisation({ registrations: [registration] })
+    await organisationsRepository.insert(org)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: makePath(org.id),
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+    expect(result.registrations[0].site).toBeNull()
   })
 
   it('includes linked accreditation with id, accreditationNumber, and status', async () => {
@@ -169,50 +255,6 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(reg.accreditation.id).toBe(accreditation.id)
     expect(reg.accreditation.accreditationNumber).toBe('ACC0001')
     expect(reg.accreditation.status).toBe('created')
-  })
-
-  it('includes reports from the calendar endpoint on each registration', async () => {
-    const org = buildOrganisation()
-    await organisationsRepository.insert(org)
-
-    const response = await server.inject({
-      method: 'GET',
-      url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    const result = JSON.parse(response.payload)
-    for (const reg of result.registrations) {
-      expect(reg).toHaveProperty('reports')
-      expect(reg.reports).toHaveProperty('cadence')
-      expect(reg.reports).toHaveProperty('reportingPeriods')
-      expect(Array.isArray(reg.reports.reportingPeriods)).toBe(true)
-    }
-  })
-
-  it('sets reports to null when the calendar endpoint returns non-200', async () => {
-    const registration = buildRegistration()
-    const org = buildOrganisation({ registrations: [registration] })
-    await organisationsRepository.insert(org)
-
-    // Disable the reports feature flag so the calendar route is not registered
-    const serverWithoutReports = await createTestServer({
-      repositories: {
-        organisationsRepository: createInMemoryOrganisationsRepository([org])
-      },
-      featureFlags: createInMemoryFeatureFlags({ reports: false })
-    })
-
-    const response = await serverWithoutReports.inject({
-      method: 'GET',
-      url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    const result = JSON.parse(response.payload)
-    expect(result.registrations[0].reports).toBeNull()
   })
 
   it('does not include accreditation on registration when none is linked', async () => {

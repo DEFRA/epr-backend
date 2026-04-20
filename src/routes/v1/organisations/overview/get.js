@@ -1,7 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { reportsGetPath } from '#reports/routes/get.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -39,43 +38,35 @@ export const organisationsOverviewGet = {
       organisation.accreditations.map((acc) => [acc.id, acc])
     )
 
-    const registrations = await Promise.all(
-      organisation.registrations.map(async (reg) => {
-        const linkedAccreditation = reg.accreditationId
-          ? accreditationsById.get(reg.accreditationId)
-          : undefined
+    const registrations = organisation.registrations.map((reg) => {
+      const linkedAccreditation = reg.accreditationId
+        ? accreditationsById.get(reg.accreditationId)
+        : undefined
 
-        const calendarUrl = reportsGetPath
-          .replace('{organisationId}', organisationId)
-          .replace('{registrationId}', reg.id)
+      const isExporter = reg.wasteProcessingType === 'exporter'
 
-        const calendarResponse = await request.server.inject({
-          method: 'GET',
-          url: calendarUrl,
-          auth: request.auth
+      const processingType = isExporter
+        ? 'exporter'
+        : reg.reprocessingType
+          ? `reprocessor - ${reg.reprocessingType}`
+          : 'reprocessor'
+
+      return {
+        id: reg.id,
+        registrationNumber: reg.registrationNumber,
+        status: reg.status,
+        material: reg.material,
+        processingType,
+        site: isExporter ? null : reg.site?.address?.line1,
+        ...(linkedAccreditation && {
+          accreditation: {
+            id: linkedAccreditation.id,
+            accreditationNumber: linkedAccreditation.accreditationNumber,
+            status: linkedAccreditation.status
+          }
         })
-
-        const reports =
-          calendarResponse.statusCode === StatusCodes.OK
-            ? JSON.parse(calendarResponse.payload)
-            : null
-
-        return {
-          id: reg.id,
-          registrationNumber: reg.registrationNumber,
-          status: reg.status,
-          material: reg.material,
-          ...(linkedAccreditation && {
-            accreditation: {
-              id: linkedAccreditation.id,
-              accreditationNumber: linkedAccreditation.accreditationNumber,
-              status: linkedAccreditation.status
-            }
-          }),
-          reports
-        }
-      })
-    )
+      }
+    })
 
     return h
       .response({
