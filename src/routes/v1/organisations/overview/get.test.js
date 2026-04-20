@@ -195,7 +195,9 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
   })
 
   it('returns site address line1 for a reprocessor', async () => {
-    const registration = buildRegistration({ wasteProcessingType: 'reprocessor' })
+    const registration = buildRegistration({
+      wasteProcessingType: 'reprocessor'
+    })
     const org = buildOrganisation({ registrations: [registration] })
     await organisationsRepository.insert(org)
 
