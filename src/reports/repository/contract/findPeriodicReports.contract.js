@@ -5,6 +5,7 @@ import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
+  DEFAULT_CHANGED_BY,
   DEFAULT_ORG_ID,
   DEFAULT_REG_ID,
   DEFAULT_REPORT_DUE_DATE,
@@ -73,7 +74,9 @@ export const testFindPeriodicReportsBehaviour = (it) => {
               current: {
                 id: reportId,
                 status: REPORT_STATUS.IN_PROGRESS,
-                submissionNumber: 1
+                submissionNumber: 1,
+                submittedAt: null,
+                submittedBy: null
               },
               previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
@@ -108,7 +111,9 @@ export const testFindPeriodicReportsBehaviour = (it) => {
               current: {
                 id: r1,
                 status: REPORT_STATUS.IN_PROGRESS,
-                submissionNumber: 1
+                submissionNumber: 1,
+                submittedAt: null,
+                submittedBy: null
               },
               previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
@@ -119,7 +124,9 @@ export const testFindPeriodicReportsBehaviour = (it) => {
               current: {
                 id: r2,
                 status: REPORT_STATUS.IN_PROGRESS,
-                submissionNumber: 1
+                submissionNumber: 1,
+                submittedAt: null,
+                submittedBy: null
               },
               previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
@@ -158,13 +165,17 @@ export const testFindPeriodicReportsBehaviour = (it) => {
               current: {
                 id: second,
                 status: REPORT_STATUS.IN_PROGRESS,
-                submissionNumber: 2
+                submissionNumber: 2,
+                submittedAt: null,
+                submittedBy: null
               },
               previousSubmissions: [
                 {
                   id: first,
                   status: REPORT_STATUS.SUBMITTED,
-                  submissionNumber: 1
+                  submissionNumber: 1,
+                  submittedAt: expect.any(String),
+                  submittedBy: DEFAULT_CHANGED_BY
                 }
               ],
               startDate: DEFAULT_REPORT_START_DATE,

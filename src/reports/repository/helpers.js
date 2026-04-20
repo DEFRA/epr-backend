@@ -45,7 +45,9 @@ export const groupAsPeriodicReports = (
   const toSubmission = ({ id, submissionNumber, status }) => ({
     id,
     status: status.currentStatus,
-    submissionNumber
+    submissionNumber,
+    submittedAt: status.submitted?.at ?? null,
+    submittedBy: status.submitted?.by ?? null
   })
 
   const buildPeriodSummary = (periodDocs) => {

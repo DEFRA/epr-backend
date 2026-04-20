@@ -25,7 +25,11 @@ const buildUserSummary = (overrides = {}) => ({
  * @param {Partial<import('../port.js').CreateReportParams>} [overrides]
  * @returns {import('../port.js').CreateReportParams}
  */
-const DEFAULT_CHANGED_BY = { id: 'user-1', name: 'Alice', position: 'Officer' }
+export const DEFAULT_CHANGED_BY = {
+  id: 'user-1',
+  name: 'Alice',
+  position: 'Officer'
+}
 
 /**
  * Creates a report and advances it to submitted via ready_to_submit.
