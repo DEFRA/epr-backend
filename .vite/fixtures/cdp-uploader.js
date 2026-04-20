@@ -13,16 +13,14 @@ import {
 import { test as baseTest } from 'vitest'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const LOCALSTACK_READY_HOOKS_DIR = path.resolve(
-  __dirname,
-  'cdp-uploader/localstack'
-)
+const FLOCI_INIT_DIR = path.resolve(__dirname, 'cdp-uploader/floci')
 
-const LOCALSTACK_IMAGE = 'localstack/localstack:3.0.2'
+const FLOCI_IMAGE = 'hectorvent/floci:1.5.3'
+const AWS_CLI_IMAGE = 'amazon/aws-cli:2.17.43'
 const REDIS_IMAGE = 'redis:7.2.11-alpine3.21'
-const CDP_UPLOADER_IMAGE = 'defradigital/cdp-uploader:latest'
+const CDP_UPLOADER_IMAGE = 'defradigital/cdp-uploader:1.15.0'
 
-const LOCALSTACK_PORT = 4566
+const FLOCI_PORT = 4566
 const REDIS_PORT = 6379
 const CDP_UPLOADER_PORT = 7337
 
@@ -65,84 +63,101 @@ const cdpUploaderStackFixture = {
   // Depends on callbackReceiver to ensure correct initialisation order
   cdpUploaderStack: [
     async ({ callbackReceiver: _ }, use) => {
-      // Create shared network for containers to communicate
       const network = await new Network().start()
 
-      // Start LocalStack, Redis, and CDP Uploader all in parallel.
+      const [flociContainer, redisContainer] = await Promise.all([
+        new GenericContainer(FLOCI_IMAGE)
+          .withExposedPorts(FLOCI_PORT)
+          .withEnvironment({
+            FLOCI_HOSTNAME: 'floci',
+            FLOCI_DEFAULT_REGION: REGION,
+            AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
+            AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
+          })
+          .withNetwork(network)
+          .withNetworkAliases('floci')
+          .withStartupTimeout(90000)
+          .start(),
+
+        new GenericContainer(REDIS_IMAGE)
+          .withExposedPorts(REDIS_PORT)
+          .withStartupTimeout(30000)
+          .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
+          .withNetwork(network)
+          .withNetworkAliases('redis')
+          .start()
+      ])
+
+      // Separate one-shot init container seeds buckets/queues and exits.
+      // Matches the compose pattern used by epr-re-ex-service and the
+      // journey-test stacks. Init container self-waits for Floci via
+      // `aws sqs list-queues` in init.sh.
+      const flociInitContainer = await new GenericContainer(AWS_CLI_IMAGE)
+        .withEntrypoint(['/bin/sh'])
+        .withCommand(['/setup/init.sh'])
+        .withCopyDirectoriesToContainer([
+          { source: FLOCI_INIT_DIR, target: '/setup', mode: 0o555 }
+        ])
+        .withEnvironment({
+          AWS_ENDPOINT_URL: 'http://floci:4566',
+          AWS_REGION: REGION,
+          AWS_DEFAULT_REGION: REGION,
+          AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
+          AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
+        })
+        .withNetwork(network)
+        .withWaitStrategy(
+          Wait.forLogMessage(/\[floci-init\] Done/).withStartupTimeout(120000)
+        )
+        .start()
+      await flociInitContainer.stop()
 
       // NOTE: CDP Uploader is AMD64-only. On ARM Macs, port forwarding is broken
       // due to Rosetta emulation issues with testcontainers. We use SocatContainer
       // as a proxy to work around this. On x86, SocatContainer is unnecessary but
       // harmless, and keeping the setup consistent across architectures is simpler.
-      const [localstackContainer, redisContainer, cdpUploaderContainer] =
-        await Promise.all([
-          new GenericContainer(LOCALSTACK_IMAGE)
-            .withExposedPorts(LOCALSTACK_PORT)
-            .withEnvironment({
-              SERVICES: 's3,sqs',
-              DEFAULT_REGION: REGION,
-              AWS_REGION: REGION,
-              AWS_DEFAULT_REGION: REGION,
-              AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
-              AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
-            })
-            .withCopyDirectoriesToContainer([
-              {
-                source: LOCALSTACK_READY_HOOKS_DIR,
-                target: '/etc/localstack/init/ready.d',
-                mode: 0o555
-              }
-            ])
-            .withWaitStrategy(
-              Wait.forSuccessfulCommand(
-                'test -f /tmp/READY'
-              ).withStartupTimeout(90000)
-            )
-            .withNetwork(network)
-            .withNetworkAliases('localstack')
-            .start(),
-
-          new GenericContainer(REDIS_IMAGE)
-            .withExposedPorts(REDIS_PORT)
-            .withStartupTimeout(30000)
-            .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
-            .withNetwork(network)
-            .withNetworkAliases('redis')
-            .start(),
-
-          new GenericContainer(CDP_UPLOADER_IMAGE)
-            .withStartupTimeout(120000)
-            .withEnvironment({
-              AWS_REGION: REGION,
-              AWS_DEFAULT_REGION: REGION,
-              AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
-              AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey,
-              CONSUMER_BUCKETS: 're-ex-summary-logs,re-ex-overseas-sites',
-              MOCK_VIRUS_RESULT_DELAY: '1',
-              MOCK_VIRUS_SCAN_ENABLED: 'true',
-              NODE_ENV: 'development',
-              PORT: String(CDP_UPLOADER_PORT),
-              REDIS_HOST: 'redis',
-              S3_ENDPOINT: 'http://localstack:4566',
-              SQS_ENDPOINT: 'http://localstack:4566',
-              USE_SINGLE_INSTANCE_CACHE: 'true'
-            })
-            // Enable host.docker.internal on Linux (already available on Docker Desktop)
-            .withExtraHosts([
-              { host: 'host.docker.internal', ipAddress: 'host-gateway' }
-            ])
-            .withWaitStrategy(
-              Wait.forLogMessage(
-                /Server started successfully/
-              ).withStartupTimeout(120000)
-            )
-            .withNetwork(network)
-            .withNetworkAliases('cdp-uploader')
-            .start()
+      const cdpUploaderContainer = await new GenericContainer(
+        CDP_UPLOADER_IMAGE
+      )
+        .withStartupTimeout(120000)
+        .withEnvironment({
+          AWS_REGION: REGION,
+          AWS_DEFAULT_REGION: REGION,
+          AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
+          AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey,
+          CONSUMER_BUCKETS: 're-ex-summary-logs,re-ex-overseas-sites',
+          MOCK_VIRUS_RESULT_DELAY: '1',
+          MOCK_VIRUS_SCAN_ENABLED: 'true',
+          NODE_ENV: 'development',
+          PORT: String(CDP_UPLOADER_PORT),
+          REDIS_HOST: 'redis',
+          S3_ENDPOINT: 'http://floci:4566',
+          SQS_ENDPOINT: 'http://floci:4566',
+          // Floci requires path-form queue URLs (/<account>/<name>) for ReceiveMessage;
+          // cdp-uploader defaults to bare queue names that Floci rejects.
+          SQS_SCAN_RESULTS: 'http://floci:4566/000000000000/cdp-clamav-results',
+          SQS_SCAN_RESULTS_CALLBACK:
+            'http://floci:4566/000000000000/cdp-uploader-scan-results-callback.fifo',
+          SQS_DOWNLOAD_REQUESTS:
+            'http://floci:4566/000000000000/cdp-uploader-download-requests',
+          SQS_MOCK_CLAMAV: 'http://floci:4566/000000000000/mock-clamav',
+          USE_SINGLE_INSTANCE_CACHE: 'true'
+        })
+        // Enable host.docker.internal on Linux (already available on Docker Desktop)
+        .withExtraHosts([
+          { host: 'host.docker.internal', ipAddress: 'host-gateway' }
         ])
+        .withWaitStrategy(
+          Wait.forLogMessage(/Server started successfully/).withStartupTimeout(
+            120000
+          )
+        )
+        .withNetwork(network)
+        .withNetworkAliases('cdp-uploader')
+        .start()
 
-      const localstackPort = localstackContainer.getMappedPort(LOCALSTACK_PORT)
-      const localstackEndpoint = `http://127.0.0.1:${localstackPort}`
+      const flociPort = flociContainer.getMappedPort(FLOCI_PORT)
+      const flociEndpoint = `http://127.0.0.1:${flociPort}`
 
       const redisPort = redisContainer.getMappedPort(REDIS_PORT)
       const redisHost = '127.0.0.1'
@@ -162,8 +177,8 @@ const cdpUploaderStackFixture = {
 
       await use({
         network,
-        localstack: {
-          endpoint: localstackEndpoint,
+        floci: {
+          endpoint: flociEndpoint,
           region: REGION,
           credentials: CREDENTIALS
         },
@@ -180,7 +195,7 @@ const cdpUploaderStackFixture = {
       // Cleanup in reverse order
       await socatContainer.stop()
       await cdpUploaderContainer.stop()
-      await Promise.all([localstackContainer.stop(), redisContainer.stop()])
+      await Promise.all([flociContainer.stop(), redisContainer.stop()])
       await network.stop()
     },
     { scope: 'file' }
@@ -195,10 +210,10 @@ const extendedFixtures = {
 
   s3Client: async ({ cdpUploaderStack }, use) => {
     const client = createS3Client({
-      region: cdpUploaderStack.localstack.region,
-      endpoint: cdpUploaderStack.localstack.endpoint,
+      region: cdpUploaderStack.floci.region,
+      endpoint: cdpUploaderStack.floci.endpoint,
       forcePathStyle: true,
-      credentials: cdpUploaderStack.localstack.credentials
+      credentials: cdpUploaderStack.floci.credentials
     })
 
     await use(client)
