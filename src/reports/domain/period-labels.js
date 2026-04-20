@@ -1,3 +1,32 @@
+const MONTH_ABBREVIATIONS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
+]
+
+/**
+ * Formats a reporting period as a human-readable label.
+ * @param {string} cadence - 'monthly' or 'quarterly'
+ * @param {number} period - 1-based period number
+ * @param {number} year
+ * @returns {string} e.g. 'Jan 2026', 'Q1 2026'
+ */
+export function formatPeriodLabel(cadence, period, year) {
+  if (cadence === 'monthly') {
+    return `${MONTH_ABBREVIATIONS[period - 1]} ${year}`
+  }
+  return `Q${period} ${year}`
+}
+
 /**
  * Map month name to period number.
  * @type {Record<string, number>}

@@ -45,7 +45,9 @@ export const groupAsPeriodicReports = (
   const toSubmission = ({ id, submissionNumber, status }) => ({
     id,
     status: status.currentStatus,
-    submissionNumber
+    submissionNumber,
+    submittedAt: status.submitted?.at ?? null,
+    submittedBy: status.submitted?.by ?? null
   })
 
   const buildPeriodSummary = (periodDocs) => {
@@ -74,6 +76,25 @@ export const groupAsPeriodicReports = (
         groupTransform(cadenceDocs, (doc) => doc.period, buildPeriodSummary)
     )
   }))
+}
+
+/**
+ * Groups raw reports and transforms them into periodic reports.
+ * @param {import('./port.js').Report[]} reports
+ * @returns {import('./port.js').PeriodicReport[]}
+ */
+export const transformToPeriodicReports = (reports) => {
+  const grouped = reports.reduce((acc, report) => {
+    const key = `${report.organisationId}::${report.registrationId}`
+    acc[key] ??= []
+    acc[key].push(report)
+    return acc
+  }, {})
+
+  return Object.values(grouped).flatMap((group) => {
+    const { organisationId, registrationId } = group[0]
+    return groupAsPeriodicReports(organisationId, registrationId, group)
+  })
 }
 
 /** @type {import('./port.js').Report} */
