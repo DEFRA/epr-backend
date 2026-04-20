@@ -14,7 +14,7 @@ export const reportsGet = {
   method: 'GET',
   path: reportsGetPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser]),
+    auth: getAuthConfig([ROLES.standardUser, ROLES.serviceMaintainer]),
     tags: ['api'],
     validate: {
       params: Joi.object({
