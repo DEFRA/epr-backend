@@ -1,5 +1,6 @@
 export { summaryLogsCreate } from './post.js'
 export { summaryLogsGet } from './get.js'
+export { summaryLogsList } from './list/get.js'
 export { summaryLogsUploadCompleted } from './upload-completed/post.js'
 export { summaryLogsSubmit } from './submit/post.js'
 export { summaryLogFile } from './file/get.js'
