@@ -90,8 +90,9 @@ const cdpUploaderStackFixture = {
 
       // Separate one-shot init container seeds buckets/queues and exits.
       // Matches the compose pattern used by epr-re-ex-service and the
-      // journey-test stacks. Init container self-waits for Floci via
-      // `aws sqs list-queues` in init.sh.
+      // journey-test stacks. Floci itself has no wait strategy: readiness
+      // is gated by this init container, which self-polls Floci via
+      // `aws sqs list-queues` in init.sh before it seeds anything.
       const flociInitContainer = await new GenericContainer(AWS_CLI_IMAGE)
         .withEntrypoint(['/bin/sh'])
         .withCommand(['/setup/init.sh'])
