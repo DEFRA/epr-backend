@@ -118,6 +118,8 @@
  * @property {string} id
  * @property {ReportStatus} status
  * @property {number} submissionNumber
+ * @property {string|null} submittedAt - ISO timestamp of submission, or null if not submitted
+ * @property {UserSummary|null} submittedBy - User who submitted, or null if not submitted
  */
 
 /**
@@ -213,6 +215,7 @@
  * @property {(params: UpdateReportStatusParams) => Promise<Report>} updateReportStatus
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
  */
 
