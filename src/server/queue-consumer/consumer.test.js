@@ -203,6 +203,7 @@ describe('createCommandQueueConsumer', () => {
         sqs: sqsClient,
         handleMessage: expect.any(Function),
         handleMessageTimeout: 300000,
+        terminateVisibilityTimeout: 1,
         attributeNames: ['ApproximateReceiveCount']
       })
     })
@@ -258,13 +259,13 @@ describe('createCommandQueueConsumer', () => {
       })
     })
 
-    it('logs error on processing_error event', async () => {
+    it('logs warning on processing_error event', async () => {
       await createConsumer()
       const error = new Error('Processing failed')
 
       eventHandlers.processing_error(error)
 
-      expect(logger.error).toHaveBeenCalledWith({
+      expect(logger.warn).toHaveBeenCalledWith({
         err: error,
         message: 'SQS message processing error',
         event: {
@@ -706,6 +707,7 @@ describe('createCommandQueueConsumer', () => {
 
         const message = {
           MessageId: 'msg-123',
+          ReceiptHandle: 'receipt-123',
           Attributes: { ApproximateReceiveCount: '1' },
           Body: JSON.stringify({
             command: 'validate',
@@ -716,13 +718,13 @@ describe('createCommandQueueConsumer', () => {
 
         await expect(handleMessage(message)).rejects.toThrow('Database timeout')
 
-        expect(childLogger.error).toHaveBeenCalledWith(
+        expect(childLogger.warn).toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining('Command failed')
           })
         )
         // Global logger should NOT get the command error
-        expect(logger.error).not.toHaveBeenCalledWith(
+        expect(logger.warn).not.toHaveBeenCalledWith(
           expect.objectContaining({
             message: expect.stringContaining('Command failed')
           })
@@ -877,6 +879,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
@@ -897,6 +900,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'validate',
@@ -917,6 +921,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Body: JSON.stringify({
               command: 'validate',
               summaryLogId: 'log-123'
@@ -941,6 +946,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
               command: 'validate',
@@ -957,6 +963,65 @@ describe('createCommandQueueConsumer', () => {
             1,
             expect.objectContaining({
               status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+            })
+          )
+        })
+
+        it('logs non-final transient errors as warnings', async () => {
+          const transientError = new Error('Database timeout')
+          const mockValidator = vi.fn().mockRejectedValue(transientError)
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '1' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.warn).toHaveBeenCalledWith(
+            expect.objectContaining({
+              err: transientError,
+              message: expect.stringContaining(
+                'Command failed (transient, will retry)'
+              )
+            })
+          )
+        })
+
+        it('logs final transient attempt as error', async () => {
+          const transientError = new Error('Database timeout')
+          const mockValidator = vi.fn().mockRejectedValue(transientError)
+          vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          summaryLogsRepository.findById.mockResolvedValue({
+            version: 1,
+            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
+          })
+
+          const message = {
+            MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
+            Attributes: { ApproximateReceiveCount: '2' },
+            Body: JSON.stringify({
+              command: 'validate',
+              summaryLogId: 'log-123'
+            })
+          }
+
+          await handleMessage(message).catch(() => {})
+
+          expect(logger.error).toHaveBeenCalledWith(
+            expect.objectContaining({
+              err: transientError,
+              message: expect.stringContaining(
+                'Command failed (transient, final attempt)'
+              )
             })
           )
         })
@@ -1104,6 +1169,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
@@ -1131,6 +1197,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
@@ -1161,6 +1228,7 @@ describe('createCommandQueueConsumer', () => {
 
           const message = {
             MessageId: 'msg-123',
+            ReceiptHandle: 'receipt-123',
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
               command: 'submit',

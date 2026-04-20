@@ -153,8 +153,9 @@ const handleCommandError = async ({
   const isFinalTransientAttempt =
     !isPermanent && maxReceiveCount !== null && receiveCount >= maxReceiveCount
   const isTerminal = isPermanent || isFinalTransientAttempt
+  const logLevel = isTerminal ? 'error' : 'warn'
 
-  logger.error({
+  logger[logLevel]({
     err,
     message: `Command failed (${getFailureLabel(isPermanent, isFinalTransientAttempt)}): ${handler.command} for ${handler.describe(payload)} messageId=${message.MessageId}`,
     event: {
@@ -170,6 +171,9 @@ const handleCommandError = async ({
   if (isPermanent) {
     return
   }
+
+  // Visibility reset is handled by sqs-consumer's terminateVisibilityTimeout
+  // option, which applies to all handler errors (including unparseable messages)
   throw err
 }
 
@@ -272,8 +276,11 @@ const attachEventHandlers = (
     })
   })
 
+  // Most errors are already logged with full context in handleCommandError.
+  // This handler catches errors that bypass it (e.g. unparseable messages)
+  // and provides a fallback log for those cases.
   consumer.on('processing_error', (err) => {
-    logger.error({
+    logger.warn({
       err,
       message: 'SQS message processing error',
       event: {
@@ -363,6 +370,7 @@ export const createCommandQueueConsumer = async (deps, handlers) => {
       createMessageHandler(deps, maxReceiveCount, envelopeSchema, handlerMap)
     ),
     handleMessageTimeout: COMMAND_TIMEOUT_MS,
+    terminateVisibilityTimeout: 1,
     attributeNames: /** @type {*} */ (['ApproximateReceiveCount'])
   })
 
