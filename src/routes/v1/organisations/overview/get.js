@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -43,13 +44,14 @@ export const organisationsOverviewGet = {
         ? accreditationsById.get(reg.accreditationId)
         : undefined
 
-      const isExporter = reg.wasteProcessingType === 'exporter'
+      const isExporter =
+        reg.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
       const processingType = isExporter
-        ? 'exporter'
+        ? WASTE_PROCESSING_TYPE.EXPORTER
         : reg.reprocessingType
-          ? `reprocessor - ${reg.reprocessingType}`
-          : 'reprocessor'
+          ? `${WASTE_PROCESSING_TYPE.REPROCESSOR} - ${reg.reprocessingType}`
+          : WASTE_PROCESSING_TYPE.REPROCESSOR
 
       return {
         id: reg.id,
