@@ -108,34 +108,15 @@ function buildRow(
   }
 }
 
-/**
- * Generates a flat list of report submission rows across all approved/suspended
- * registrations for all organisations.
- *
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
- * @returns {Promise<{ reportSubmissions: ReportSubmissionsRow[], generatedAt: string }>}
- */
-export async function generateReportSubmissions(
+async function buildSubmissionRows(
   organisationsRepository,
-  reportsRepository
+  currentYear,
+  reportsByKey
 ) {
-  const currentYear = new Date().getUTCFullYear()
+  const registrations = await getRegistrations(organisationsRepository)
+
   /** @type {ReportSubmissionsRow[]} */
-  const rows = []
-
-  const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
-  /** @type {Map<string, import('#reports/repository/port.js').PeriodicReport[]>} */
-  const reportsByKey = new Map(
-    allPeriodicReports.map((pr) => [
-      `${pr.organisationId}::${pr.registrationId}`,
-      [pr]
-    ])
-  )
-
-  for (const { org, registration } of await getRegistrations(
-    organisationsRepository
-  )) {
+  return registrations.flatMap(({ org, registration }) => {
     const cadence = registration.accreditationId
       ? CADENCE.monthly
       : CADENCE.quarterly
@@ -150,21 +131,47 @@ export async function generateReportSubmissions(
     )
     const accreditationNumber = resolveAccreditationNumber(registration, org)
 
-    for (const mergedPeriod of merged) {
+    return merged.map((mergedPeriod) => {
       const report = mergedPeriod.report
-      rows.push(
-        buildRow(
-          org,
-          registration,
-          cadence,
-          mergedPeriod,
-          accreditationNumber,
-          report?.submittedAt?.slice(0, 10) ?? '',
-          report?.submittedBy?.name ?? ''
-        )
+      return buildRow(
+        org,
+        registration,
+        cadence,
+        mergedPeriod,
+        accreditationNumber,
+        report?.submittedAt?.slice(0, 10) ?? '',
+        report?.submittedBy?.name ?? ''
       )
-    }
-  }
+    })
+  })
+}
 
+/**
+ * Generates a flat list of report submission rows across all approved/suspended
+ * registrations for all organisations.
+ *
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
+ * @returns {Promise<{ reportSubmissions: ReportSubmissionsRow[], generatedAt: string }>}
+ */
+export async function generateReportSubmissions(
+  organisationsRepository,
+  reportsRepository
+) {
+  const currentYear = new Date().getUTCFullYear()
+
+  const allPeriodicReports = await reportsRepository.findAllPeriodicReports()
+  /** @type {Map<string, import('#reports/repository/port.js').PeriodicReport[]>} */
+  const reportsByRegistration = allPeriodicReports.reduce((map, pr) => {
+    const key = `${pr.organisationId}::${pr.registrationId}`
+    const existing = map.get(key) ?? []
+    return map.set(key, [...existing, pr])
+  }, new Map())
+
+  const rows = await buildSubmissionRows(
+    organisationsRepository,
+    currentYear,
+    reportsByRegistration
+  )
   return { reportSubmissions: rows, generatedAt: new Date().toISOString() }
 }

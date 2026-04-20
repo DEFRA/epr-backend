@@ -102,6 +102,42 @@ describe('generateReportSubmissions (integration)', () => {
       ]
     })
   })
+
+  it('includes submitted reports from all years when the same org/registration spans multiple years', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2025,
+      cadence: 'monthly',
+      period: 1
+    })
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const byPeriod = Object.fromEntries(
+      result.reportSubmissions.map((r) => [r.reportingPeriod, r])
+    )
+
+    expect(byPeriod['Jan 2025'].submittedDate).toBe(
+      FIXED_DATE.toISOString().slice(0, 10)
+    )
+    expect(byPeriod['Jan 2026'].submittedDate).toBe(
+      FIXED_DATE.toISOString().slice(0, 10)
+    )
+  })
 })
 
 // ---------------------------------------------------------------------------
