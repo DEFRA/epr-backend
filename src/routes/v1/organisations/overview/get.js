@@ -47,18 +47,12 @@ export const organisationsOverviewGet = {
       const isExporter =
         reg.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
 
-      const processingType = isExporter
-        ? WASTE_PROCESSING_TYPE.EXPORTER
-        : reg.reprocessingType
-          ? `${WASTE_PROCESSING_TYPE.REPROCESSOR} - ${reg.reprocessingType}`
-          : WASTE_PROCESSING_TYPE.REPROCESSOR
-
       return {
         id: reg.id,
         registrationNumber: reg.registrationNumber,
         status: reg.status,
         material: reg.material,
-        processingType,
+        processingType: getProcessingType(reg),
         site: isExporter ? null : reg.site?.address?.line1,
         ...(linkedAccreditation && {
           accreditation: {
@@ -78,4 +72,17 @@ export const organisationsOverviewGet = {
       })
       .code(StatusCodes.OK)
   }
+}
+
+/**
+ * @param {{ wasteProcessingType: string, reprocessingType?: string | null }} registration
+ * @returns {string}
+ */
+function getProcessingType(registration) {
+  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+    return WASTE_PROCESSING_TYPE.EXPORTER
+  }
+  return registration.reprocessingType
+    ? `${WASTE_PROCESSING_TYPE.REPROCESSOR} - ${registration.reprocessingType}`
+    : WASTE_PROCESSING_TYPE.REPROCESSOR
 }
