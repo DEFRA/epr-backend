@@ -53,47 +53,25 @@ export const findRowIdCollisions = async (db) => {
   return /** @type {RowIdCollisionGroup[]} */ (rolledUp)
 }
 
-const resolveRegistrationNumbers = async (organisationsRepository, group) => {
+const logAffectedRegistration = async (organisationsRepository, group) => {
   const { organisationId, registrationId } = group._id
   const { collidingRowIds, collidingRecordCount } = group
+  const counts = `collidingRowIds=${collidingRowIds} collidingRecordCount=${collidingRecordCount}`
   try {
     const registration = await organisationsRepository.findRegistrationById(
       organisationId,
       registrationId
     )
-    return {
-      organisationId,
-      registrationNumber: registration.registrationNumber,
-      accreditationNumber:
-        registration.accreditation?.accreditationNumber ?? null,
-      collidingRowIds,
-      collidingRecordCount
-    }
+    const accreditationNumber =
+      registration.accreditation?.accreditationNumber ?? '<none>'
+    logger.info({
+      message: `Waste-balance row-id collision affected registration: organisationId=${organisationId} registrationNumber=${registration.registrationNumber} accreditationNumber=${accreditationNumber} ${counts}`
+    })
   } catch (error) {
-    return {
-      organisationId,
-      registrationNumber: null,
-      accreditationNumber: null,
-      collidingRowIds,
-      collidingRecordCount,
-      lookupError: error.message
-    }
+    logger.info({
+      message: `Waste-balance row-id collision affected registration (lookup failed): organisationId=${organisationId} registrationId=${registrationId} ${counts} lookupError="${error.message}"`
+    })
   }
-}
-
-/**
- * @param {{organisationId: string, registrationNumber: string|null|undefined, accreditationNumber: string|null, collidingRowIds: number, collidingRecordCount: number, lookupError?: string}} entry
- */
-const formatAffectedRegistration = ({
-  organisationId,
-  registrationNumber,
-  accreditationNumber,
-  collidingRowIds,
-  collidingRecordCount,
-  lookupError
-}) => {
-  const base = `organisationId=${organisationId} registrationNumber=${registrationNumber ?? '<unknown>'} accreditationNumber=${accreditationNumber ?? '<none>'} collidingRowIds=${collidingRowIds} collidingRecordCount=${collidingRecordCount}`
-  return lookupError ? `${base} lookupError="${lookupError}"` : base
 }
 
 const runDiagnostic = async (server) => {
@@ -115,23 +93,17 @@ const runDiagnostic = async (server) => {
     await createOrganisationsRepository(server.db)
   )()
 
-  const sample = await Promise.all(
-    rolledUp
-      .slice(0, MAX_REGISTRATIONS_LOGGED)
-      .map((group) =>
-        resolveRegistrationNumbers(organisationsRepository, group)
-      )
-  )
+  const sample = rolledUp.slice(0, MAX_REGISTRATIONS_LOGGED)
 
   logger.info({
     message: `Waste-balance row-id collision diagnostic: ${rolledUp.length} affected registrations (logging first ${sample.length} below)`
   })
 
-  for (const entry of sample) {
-    logger.info({
-      message: `Waste-balance row-id collision affected registration: ${formatAffectedRegistration(entry)}`
-    })
-  }
+  await Promise.all(
+    sample.map((group) =>
+      logAffectedRegistration(organisationsRepository, group)
+    )
+  )
 }
 
 /**

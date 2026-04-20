@@ -198,7 +198,7 @@ describe('runRowIdCollisionDiagnostic', () => {
     expect(logger.error).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance row-id collision affected registration: organisationId=org-missing registrationNumber=<unknown> accreditationNumber=<none> collidingRowIds=2 collidingRecordCount=3 lookupError="Organisation with id org-missing not found"'
+        'Waste-balance row-id collision affected registration (lookup failed): organisationId=org-missing registrationId=reg-X collidingRowIds=2 collidingRecordCount=3 lookupError="Organisation with id org-missing not found"'
     })
   })
 
