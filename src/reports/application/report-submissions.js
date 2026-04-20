@@ -53,7 +53,9 @@ async function getRegistrations(organisationsRepository) {
  * @returns {string}
  */
 function resolveAccreditationNumber(registration, org) {
-  if (!registration.accreditationId) return ''
+  if (!registration.accreditationId) {
+    return ''
+  }
   return /** @type {import('#domain/organisations/accreditation.js').AccreditationApproved} */ (
     org.accreditations.find((a) => a.id === registration.accreditationId)
   ).accreditationNumber
