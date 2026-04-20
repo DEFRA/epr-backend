@@ -375,5 +375,55 @@ describe('MongoDB organisations repository', () => {
       expect(page.rows).toStrictEqual([])
       expect(page.totalItems).toBe(0)
     })
+
+    it('drops mappings whose overseasSiteId is not a valid ObjectId string', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const siteCollection = mongoClient
+        .db(DATABASE_NAME)
+        .collection('overseas-sites')
+
+      const alphaSiteId = new ObjectId()
+
+      await siteCollection.insertOne({
+        _id: alphaSiteId,
+        name: 'Alpha Reprocessor',
+        country: 'France',
+        address: {
+          line1: '1 Rue de Test',
+          townOrCity: 'Paris'
+        },
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z')
+      })
+
+      await repository.insert(
+        buildOrganisation({
+          registrations: [
+            buildRegistration({
+              id: new ObjectId().toString(),
+              material: 'plastic',
+              registrationNumber: 'REG-001',
+              wasteProcessingType: 'exporter',
+              overseasSites: {
+                '001': { overseasSiteId: alphaSiteId.toString() },
+                '002': { overseasSiteId: 'not-a-valid-object-id' }
+              }
+            })
+          ]
+        })
+      )
+
+      const page = await repository.findPageForOverseasSitesAdminList({
+        page: 1,
+        pageSize: 10
+      })
+
+      expect(page.totalItems).toBe(1)
+      expect(page.rows).toHaveLength(1)
+      expect(page.rows[0].orsId).toBe('001')
+    })
   })
 })
