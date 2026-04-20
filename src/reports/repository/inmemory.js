@@ -11,7 +11,8 @@ import {
 import {
   prepareCreateReportParams,
   STATUS_TO_SLOT,
-  groupAsPeriodicReports
+  groupAsPeriodicReports,
+  transformToPeriodicReports
 } from '#root/reports/repository/helpers.js'
 
 /**
@@ -248,17 +249,7 @@ const findPeriodicReports = async (reports, params) => {
  */
 const findAllPeriodicReports = async (reports) => {
   const allDocs = [...reports.values()]
-  if (allDocs.length === 0) return []
-  const grouped = Object.groupBy(
-    allDocs,
-    (d) => `${d.organisationId}::${d.registrationId}`
-  )
-  return Object.values(grouped).flatMap((group) => {
-    const { organisationId, registrationId } = group[0]
-    return structuredClone(
-      groupAsPeriodicReports(organisationId, registrationId, group)
-    )
-  })
+  return transformToPeriodicReports(allDocs)
 }
 
 /**

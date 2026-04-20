@@ -78,6 +78,25 @@ export const groupAsPeriodicReports = (
   }))
 }
 
+/**
+ * Groups raw reports and transforms them into periodic reports.
+ * @param {import('./port.js').Report[]} reports
+ * @returns {import('./port.js').PeriodicReport[]}
+ */
+export const transformToPeriodicReports = (reports) => {
+  const grouped = reports.reduce((acc, report) => {
+    const key = `${report.organisationId}::${report.registrationId}`
+    acc[key] ??= []
+    acc[key].push(report)
+    return acc
+  }, {})
+
+  return Object.values(grouped).flatMap((group) => {
+    const { organisationId, registrationId } = group[0]
+    return groupAsPeriodicReports(organisationId, registrationId, group)
+  })
+}
+
 /** @type {import('./port.js').Report} */
 /**
  * @param {import('./port.js').CreateReportParams} validatedParams

@@ -8,6 +8,7 @@ import {
   validateUpdateReportStatus
 } from './validation.js'
 import {
+  transformToPeriodicReports,
   groupAsPeriodicReports,
   prepareCreateReportParams,
   STATUS_TO_SLOT
@@ -311,15 +312,7 @@ const performFindAllPeriodicReports = async (db) => {
     )
     .toArray()
 
-  if (docs.length === 0) return []
-  const grouped = Object.groupBy(
-    docs,
-    (d) => `${d.organisationId}::${d.registrationId}`
-  )
-  return Object.values(grouped).flatMap((group) => {
-    const { organisationId, registrationId } = group[0]
-    return groupAsPeriodicReports(organisationId, registrationId, group)
-  })
+  return transformToPeriodicReports(docs)
 }
 
 /**
