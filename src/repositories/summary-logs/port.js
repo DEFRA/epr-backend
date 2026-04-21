@@ -40,6 +40,7 @@
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
+ * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistrationId
  * @property {(logId: string) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: string) => Promise<DownloadUrlResult>} getDownloadUrl
