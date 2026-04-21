@@ -101,7 +101,7 @@ export async function getApproximateMessageCount(sqsClient, queueUrl) {
   )
 
   /* c8 ignore next - defensive: SDK always returns the requested attribute */
-  return parseInt(attributes?.ApproximateNumberOfMessages ?? '0', 10)
+  return Number.parseInt(attributes?.ApproximateNumberOfMessages ?? '0', 10)
 }
 
 /**
