@@ -93,6 +93,42 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
   }
 }
 
+const PRN_ENTITY_TYPES = new Set([
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CREATED,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ISSUED,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ACCEPTED,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
+])
+
+const isPrnTransaction = (transaction) =>
+  (transaction.entities || []).some((entity) =>
+    PRN_ENTITY_TYPES.has(entity.type)
+  )
+
+/**
+ * Sums the net effect of PRN transactions on a balance field. Waste-record
+ * transactions are excluded because they are keyed by naked rowId and can
+ * silently lose data under a rowId collision (PAE-1380); the waste-record
+ * contribution is derived directly from the waste records themselves.
+ *
+ * @param {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} transactions
+ * @param {'Amount' | 'AvailableAmount'} field
+ * @returns {number}
+ */
+const sumPrnTransactionAdjustment = (transactions, field) => {
+  let adjustment = 0
+  for (const transaction of transactions) {
+    if (!isPrnTransaction(transaction)) {
+      continue
+    }
+    const closing = transaction[`closing${field}`] ?? 0
+    const opening = transaction[`opening${field}`] ?? 0
+    adjustment = toNumber(add(adjustment, subtract(closing, opening)))
+  }
+  return adjustment
+}
+
 /**
  * Calculates the target amount for a waste record based on accreditation.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
@@ -147,31 +183,31 @@ export const calculateWasteBalanceUpdates = ({
   const newTransactions = []
   let currentAmount = currentBalance.amount || 0
   let currentAvailableAmount = currentBalance.availableAmount || 0
+  const historicTransactions = currentBalance.transactions || []
 
-  // Optimization: Pre-calculate credited amounts to avoid O(N*M) complexity
+  // Per-record transactions remain the audit ledger. They still drive the
+  // per-row delta and closing-amount bookkeeping exactly as before.
   const creditedAmountMap = new Map()
-
-  // Initialize map with existing transactions
-  ;(currentBalance.transactions || []).forEach((transaction) =>
+  historicTransactions.forEach((transaction) =>
     updateCreditedAmountMap(creditedAmountMap, transaction)
   )
 
+  let wasteRecordTotal = 0
+
   for (const record of wasteRecords) {
     const targetAmount = getTargetAmount(record, accreditation, overseasSites)
+    wasteRecordTotal = toNumber(add(wasteRecordTotal, targetAmount))
 
-    // Calculate Already Credited Amount
     const alreadyCreditedAmount =
       creditedAmountMap.get(String(record.rowId)) || 0
 
     const delta = subtract(targetAmount, alreadyCreditedAmount)
 
-    // Only create transaction if there is a difference (exact decimal comparison)
     if (!isZero(delta)) {
       const type = greaterThan(delta, 0)
         ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
         : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
 
-      // Create Transaction
       const transaction = buildTransaction(
         record,
         toNumber(abs(delta)),
@@ -180,19 +216,34 @@ export const calculateWasteBalanceUpdates = ({
         type
       )
 
-      // Update State
       currentAmount = transaction.closingAmount
       currentAvailableAmount = transaction.closingAvailableAmount
       newTransactions.push(transaction)
 
-      // Update map for next iteration
       updateCreditedAmountMap(creditedAmountMap, transaction)
     }
   }
 
+  // Balance totals come directly from the waste records and PRN transactions,
+  // not from accumulated waste-record deltas. Waste-record transactions key
+  // entities by naked rowId and silently lose data under rowId collisions
+  // (PAE-1380); waste records are the authoritative source and are uniquely
+  // keyed by (type, rowId). PRN transactions use prnId entity ids and are
+  // collision-free, so their net adjustment is safe to pull from the ledger.
+  const prnAmountAdjustment = sumPrnTransactionAdjustment(
+    historicTransactions,
+    'Amount'
+  )
+  const prnAvailableAmountAdjustment = sumPrnTransactionAdjustment(
+    historicTransactions,
+    'AvailableAmount'
+  )
+
   return {
     newTransactions,
-    newAmount: currentAmount,
-    newAvailableAmount: currentAvailableAmount
+    newAmount: toNumber(add(wasteRecordTotal, prnAmountAdjustment)),
+    newAvailableAmount: toNumber(
+      add(wasteRecordTotal, prnAvailableAmountAdjustment)
+    )
   }
 }

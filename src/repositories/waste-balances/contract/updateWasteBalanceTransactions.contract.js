@@ -107,10 +107,13 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
-      // Assert
+      // Assert: balance totals are recomputed directly from the waste records
+      // passed in (plus any PRN transactions). The pre-existing anonymous
+      // transaction does not contribute. The new per-record transaction is
+      // appended to the ledger for audit.
       const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(2)
-      expect(balance.amount).toBe(15.5)
+      expect(balance.amount).toBe(10.5)
     })
 
     it('Should not update if no transactions generated', async ({
@@ -178,10 +181,12 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
-      // Assert
+      // Assert: balance totals come directly from the waste records (plus PRN
+      // transactions). The stray pre-existing amount without a corresponding
+      // waste record is not carried forward.
       const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBe(15.5)
+      expect(balance.amount).toBe(10.5)
     })
 
     it('Should ignore records with outcome other than INCLUDED', async ({
