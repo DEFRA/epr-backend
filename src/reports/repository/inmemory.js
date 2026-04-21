@@ -11,7 +11,8 @@ import {
 import {
   prepareCreateReportParams,
   STATUS_TO_SLOT,
-  groupAsPeriodicReports
+  groupAsPeriodicReports,
+  transformToPeriodicReports
 } from '#root/reports/repository/helpers.js'
 
 /**
@@ -240,6 +241,18 @@ const findPeriodicReports = async (reports, params) => {
 }
 
 /**
+ * Returns all periodic reports across every org/registration, with
+ * submittedAt/submittedBy embedded in each ReportSummary.
+ *
+ * @param {Map<string, Object>} reports
+ * @returns {Promise<PeriodicReport[]>}
+ */
+const findAllPeriodicReports = async (reports) => {
+  const allDocs = [...reports.values()]
+  return transformToPeriodicReports(allDocs)
+}
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -256,6 +269,7 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     updateReportStatus: (params) => updateReportStatus(reports, params),
     deleteReport: (params) => deleteReport(reports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
-    findPeriodicReports: (params) => findPeriodicReports(reports, params)
+    findPeriodicReports: (params) => findPeriodicReports(reports, params),
+    findAllPeriodicReports: () => findAllPeriodicReports(reports)
   })
 }

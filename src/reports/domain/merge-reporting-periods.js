@@ -26,6 +26,17 @@ function indexPersistedSlots(periodicReports, cadence) {
 }
 
 /**
+ * @typedef {{
+ *   year: number;
+ *   period: number;
+ *   startDate: string;
+ *   endDate: string;
+ *   dueDate: string;
+ *   report: import('../repository/port.js').ReportSummary | null;
+ * }} MergedPeriod
+ */
+
+/**
  * Merges computed reporting periods with persisted periodic-report slots.
  *
  * For each period:
@@ -36,7 +47,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  * @param {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string}>} computedPeriods
  * @param {import('../repository/port.js').PeriodicReport[]} periodicReports
  * @param {string} cadence
- * @returns {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string, report: {id: string, status: string} | null}>}
+ * @returns {MergedPeriod[]}
  */
 export function mergeReportingPeriods(
   computedPeriods,

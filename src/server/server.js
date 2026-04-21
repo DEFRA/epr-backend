@@ -39,6 +39,7 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
+import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
 
 function getServerConfig(config) {
   return {
@@ -207,6 +208,7 @@ async function createServer(options = {}) {
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
+    runRowIdCollisionDiagnostic(server)
   })
 
   return server
