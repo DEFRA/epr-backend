@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { organisationsOverviewResponseSchema } from './response.schema.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -15,7 +16,10 @@ export const organisationsOverviewGet = {
     auth: {
       scope: [ROLES.serviceMaintainer]
     },
-    tags: ['api', 'admin']
+    tags: ['api', 'admin'],
+    response: {
+      schema: organisationsOverviewResponseSchema
+    }
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
