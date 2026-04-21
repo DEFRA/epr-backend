@@ -139,6 +139,34 @@ const findLatestSubmittedForOrgReg =
     return { id: _id, version, summaryLog }
   }
 
+const findAllByOrgReg = (db) => async (organisationId, registrationId) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .aggregate([
+      {
+        $match: {
+          organisationId,
+          registrationId,
+          status: {
+            $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
+          }
+        }
+      },
+      {
+        $addFields: {
+          _uploadedAt: { $ifNull: ['$submittedAt', '$createdAt'] }
+        }
+      },
+      { $sort: { _uploadedAt: -1 } }
+    ])
+    .toArray()
+
+  return docs.map((doc) => {
+    const { _id, version, _uploadedAt: _u, ...summaryLog } = doc
+    return { id: _id, version, summaryLog }
+  })
+}
+
 const findAllSummaryLogStatsByRegistrationId = (db) => async () => {
   const docs = await db
     .collection(COLLECTION_NAME)
@@ -322,6 +350,7 @@ export const createSummaryLogsRepository = async (db, s3Config) => {
     update: update(db, logger),
     findById: findById(db),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
+    findAllByOrgReg: findAllByOrgReg(db),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(db),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(db),
