@@ -3,6 +3,7 @@ import Boom from '@hapi/boom'
 
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { dlqStatusResponseSchema } from './response.schema.js'
 
 export const dlqStatusPath = '/v1/admin/queues/dlq/status'
 
@@ -11,7 +12,10 @@ export const dlqStatusGet = {
   path: dlqStatusPath,
   options: {
     auth: getAuthConfig([ROLES.serviceMaintainer]),
-    tags: ['api', 'admin']
+    tags: ['api', 'admin'],
+    response: {
+      schema: dlqStatusResponseSchema
+    }
   },
   handler: async (request, h) => {
     const { logger, dlqService } = request

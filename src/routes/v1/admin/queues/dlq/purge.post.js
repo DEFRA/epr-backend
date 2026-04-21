@@ -3,6 +3,7 @@ import Boom from '@hapi/boom'
 
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { dlqPurgeResponseSchema } from './response.schema.js'
 
 export const dlqPurgePath = '/v1/admin/queues/dlq/purge'
 
@@ -11,7 +12,10 @@ export const dlqPurgePost = {
   path: dlqPurgePath,
   options: {
     auth: getAuthConfig([ROLES.serviceMaintainer]),
-    tags: ['api', 'admin']
+    tags: ['api', 'admin'],
+    response: {
+      schema: dlqPurgeResponseSchema
+    }
   },
   handler: async (request, h) => {
     const { logger, dlqService } = request
