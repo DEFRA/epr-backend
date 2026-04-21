@@ -1,4 +1,5 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { isRegistrationAccredited } from './is-registration-accredited.js'
 
 /**
  * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
@@ -41,7 +42,7 @@ const OPERATOR_CATEGORY_BY_WASTE_PROCESSING_TYPE = Object.freeze({
 /**
  * Derives the operator category from a registration.
  *
- * @param {{ wasteProcessingType: string, accreditationId?: string }} registration
+ * @param {{ wasteProcessingType: string, accreditationId?: string, accreditation: { status?: string } | null }} registration
  * @returns {OperatorCategory}
  */
 export function getOperatorCategory(registration) {
@@ -56,7 +57,7 @@ export function getOperatorCategory(registration) {
     )
   }
 
-  return registration.accreditationId
+  return isRegistrationAccredited(registration)
     ? category.accredited
     : category.registeredOnly
 }

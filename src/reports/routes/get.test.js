@@ -7,7 +7,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  buildOrganisation,
+  buildOrganisationWithRegistration,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { reportsGetPath } from './get.js'
@@ -21,17 +21,19 @@ describe(`GET ${reportsGetPath}`, () => {
   describe('when feature flag is enabled', () => {
     const createServer = async (
       registrationOverrides = {},
-      reportsRepositoryFactory
+      reportsRepositoryFactory,
+      accreditationStatus
     ) => {
       const registration = buildRegistration(registrationOverrides)
-      const org = buildOrganisation({
-        registrations: [registration]
-      })
+      const org = buildOrganisationWithRegistration(
+        registration,
+        accreditationStatus
+      )
 
+      // Use initial-org pattern to preserve accreditation statusHistory
+      // (insert() overrides statusHistory to the default 'created' entry).
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository()
-      const organisationsRepository = organisationsRepositoryFactory()
-      await organisationsRepository.insert(org)
+        createInMemoryOrganisationsRepository([org])
 
       const server = await createTestServer({
         repositories: {
@@ -170,10 +172,34 @@ describe(`GET ${reportsGetPath}`, () => {
       const currentYear = new Date().getUTCFullYear()
 
       it('returns monthly cadence', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          undefined,
+          'approved'
+        )
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.cadence).toBe('monthly')
+      })
+
+      it('returns monthly cadence for suspended accreditation', async () => {
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          undefined,
+          'suspended'
+        )
 
         const response = await makeRequest(
           server,
@@ -186,10 +212,14 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('returns only ended monthly periods', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          undefined,
+          'approved'
+        )
 
         const response = await makeRequest(
           server,
@@ -205,10 +235,14 @@ describe(`GET ${reportsGetPath}`, () => {
       })
 
       it('includes dueDate for each monthly period', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          undefined,
+          'approved'
+        )
 
         const response = await makeRequest(
           server,
@@ -222,6 +256,48 @@ describe(`GET ${reportsGetPath}`, () => {
       })
     })
 
+    describe('registration with unapproved accreditation', () => {
+      it.each(['created', 'rejected', 'cancelled'])(
+        'returns quarterly cadence when linked accreditation status is %s',
+        async (accreditationStatus) => {
+          const { server, organisationId, registrationId } = await createServer(
+            {
+              wasteProcessingType: 'exporter',
+              accreditationId: new ObjectId().toString()
+            },
+            undefined,
+            accreditationStatus
+          )
+
+          const response = await makeRequest(
+            server,
+            organisationId,
+            registrationId
+          )
+          const payload = JSON.parse(response.payload)
+
+          expect(payload.cadence).toBe('quarterly')
+        }
+      )
+
+      it('returns quarterly cadence when accreditationId points to nothing (unhydrated)', async () => {
+        // No accreditation in org, so registration.accreditation hydrates to null
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'exporter',
+          accreditationId: new ObjectId().toString()
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.cadence).toBe('quarterly')
+      })
+    })
+
     describe('with persisted reports', () => {
       it('includes report object for period with persisted report', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
@@ -230,7 +306,8 @@ describe(`GET ${reportsGetPath}`, () => {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
           },
-          reportsRepositoryFactory
+          reportsRepositoryFactory,
+          'approved'
         )
 
         const reportsRepository = reportsRepositoryFactory()
@@ -286,7 +363,8 @@ describe(`GET ${reportsGetPath}`, () => {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
           },
-          reportsRepositoryFactory
+          reportsRepositoryFactory,
+          'approved'
         )
 
         const reportsRepository = reportsRepositoryFactory()
@@ -348,7 +426,8 @@ describe(`GET ${reportsGetPath}`, () => {
             wasteProcessingType: 'exporter',
             accreditationId: new ObjectId().toString()
           },
-          reportsRepositoryFactory
+          reportsRepositoryFactory,
+          'approved'
         )
 
         const reportsRepository = reportsRepositoryFactory()
