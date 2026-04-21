@@ -15,6 +15,27 @@ import {
  * @property {{get: (key: string) => string}} config
  */
 
+/**
+ * @typedef {Object} DlqMessage
+ * @property {string} messageId
+ * @property {string} sentTimestamp - ISO 8601 timestamp
+ * @property {number} approximateReceiveCount
+ * @property {object|null} command - Parsed message body, or null if not valid JSON
+ * @property {string} body - Raw message body
+ */
+
+/**
+ * @typedef {Object} DlqMessagesResult
+ * @property {number} approximateMessageCount
+ * @property {DlqMessage[]} messages
+ */
+
+/**
+ * @typedef {Object} DlqService
+ * @property {() => Promise<DlqMessagesResult>} getMessages
+ * @property {() => Promise<void>} purge
+ */
+
 export const dlqAdminPlugin = {
   name: 'dlq-admin',
   version: '1.0.0',
@@ -43,6 +64,7 @@ export const dlqAdminPlugin = {
       }
     })
 
+    /** @type {DlqService} */
     const dlqService = {
       getMessages: async () => {
         const [approximateMessageCount, rawMessages] = await Promise.all([

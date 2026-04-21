@@ -1,3 +1,9 @@
+/**
+ * @typedef {Object} MockDlqAdminPluginOptions
+ * @property {import('./dlq-admin.js').DlqService} [dlqService]
+ */
+
+/** @returns {import('./dlq-admin.js').DlqService} */
 const createNoOpDlqService = () => ({
   getMessages: async () => ({ approximateMessageCount: 0, messages: [] }),
   purge: async () => {}
@@ -7,6 +13,7 @@ export const mockDlqAdminPlugin = {
   name: 'dlq-admin',
   version: '1.0.0',
 
+  /** @param {MockDlqAdminPluginOptions} [options] */
   register: (server, options = {}) => {
     const dlqService = options.dlqService ?? createNoOpDlqService()
     server.decorate('request', 'dlqService', () => dlqService, { apply: true })

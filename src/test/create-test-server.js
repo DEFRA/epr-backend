@@ -50,7 +50,7 @@ import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-
  *   featureFlags?: object
  *   repositories?: object
  *   workers?: object
- *   dlqService?: { getMessages: Function, purge: Function }
+ *   dlqService?: import('#plugins/dlq-admin.js').DlqService
  * }} CreateTestServerOptions
  */
 

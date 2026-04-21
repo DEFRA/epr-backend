@@ -17,6 +17,10 @@ export const dlqMessagesGet = {
       schema: dlqMessagesResponseSchema
     }
   },
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & { dlqService: import('#plugins/dlq-admin.js').DlqService }} request
+   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
     const { logger, dlqService } = request
 

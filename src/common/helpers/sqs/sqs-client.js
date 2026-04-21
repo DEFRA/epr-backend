@@ -8,6 +8,14 @@ import {
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClientType */
 
+/**
+ * Creates a configured AWS SQS client.
+ * @param {Object} options
+ * @param {string} options.region - AWS region
+ * @param {string} [options.endpoint] - Custom SQS endpoint (e.g. LocalStack)
+ * @param {object} [options.credentials] - AWS credentials override
+ * @returns {import('@aws-sdk/client-sqs').SQSClient}
+ */
 export function createSqsClient({ region, endpoint, credentials = undefined }) {
   const config = {
     region,
