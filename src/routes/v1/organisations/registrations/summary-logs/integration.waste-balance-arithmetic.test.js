@@ -323,6 +323,48 @@ describe('Waste balance arithmetic integration tests', () => {
       // Available = 350 - 200 = 150
     })
 
+    it('preserves an issued PRN debit in amount when the same rows are re-uploaded (PAE-1380)', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-issue-1',
+        'file-issue-1',
+        'waste-issue-1.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(200)
+      expect(balance.availableAmount).toBe(200)
+
+      const prn = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(150)
+      expect(balance.availableAmount).toBe(150)
+
+      await performSummaryLogSubmission(
+        env,
+        'log-issue-2',
+        'file-issue-2',
+        'waste-issue-2.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBe(150)
+      expect(balance.availableAmount).toBe(150)
+    })
+
     it('should handle decimal tonnage values correctly', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'

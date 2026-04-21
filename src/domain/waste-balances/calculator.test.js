@@ -714,6 +714,206 @@ describe('Waste Balance Calculator', () => {
     expect(result.newTransactions[0].amount).toBe(10.0)
   })
 
+  describe('rowId collision across waste record types (PAE-1380)', () => {
+    it('computes newAmount from the waste records themselves so a colliding SENT_ON rowId cannot offset an EXPORTED credit', () => {
+      const sharedRowId = 1000
+
+      const exportedRecord = buildWasteRecord({
+        rowId: sharedRowId,
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        versions: [
+          {
+            id: 'exported-v1',
+            createdAt: '2025-01-20T10:00:00.000Z',
+            status: VERSION_STATUS.CREATED,
+            summaryLog: { id: 'log-1', uri: 's3://...' },
+            data: {}
+          }
+        ],
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
+        }
+      })
+
+      const sentOnRecord = buildWasteRecord({
+        rowId: sharedRowId,
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        versions: [
+          {
+            id: 'sent-on-v1',
+            createdAt: '2025-01-20T10:00:00.000Z',
+            status: VERSION_STATUS.CREATED,
+            summaryLog: { id: 'log-1', uri: 's3://...' },
+            data: {}
+          }
+        ],
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [SENT_ON_FIELDS.ROW_ID]: sharedRowId,
+          [SENT_ON_FIELDS.DATE_LOAD_LEFT_SITE]: '2023-06-01',
+          [SENT_ON_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: '5.0'
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [exportedRecord, sentOnRecord],
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
+
+      expect(result.newAmount).toBe(10.0)
+      expect(result.newAvailableAmount).toBe(10.0)
+    })
+
+    it('preserves a PRN issuance debit in newAmount when re-calculating against the same waste records', () => {
+      const record = buildWasteRecord({
+        rowId: 1000,
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
+        }
+      })
+
+      const prnIssuedTransaction = {
+        id: 'tx-prn-issued',
+        type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+        amount: 3.0,
+        entities: [
+          {
+            id: 'prn-1',
+            type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ISSUED,
+            currentVersionId: 'prn-1',
+            previousVersionIds: []
+          }
+        ],
+        createdAt: '2023-07-01T00:00:00.000Z',
+        createdBy: { id: 'user-1', name: 'Test User' },
+        openingAmount: 10.0,
+        closingAmount: 7.0,
+        openingAvailableAmount: 10.0,
+        closingAvailableAmount: 10.0
+      }
+
+      const currentBalance = {
+        ...emptyBalance,
+        amount: 7.0,
+        availableAmount: 10.0,
+        transactions: [prnIssuedTransaction]
+      }
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance,
+        wasteRecords: [record],
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
+
+      // wasteRecordTotal 10 + PRN issuance debit (-3) = 7; available 10 + 0 (no PRN ringfence) = 10
+      expect(result.newAmount).toBe(7.0)
+      expect(result.newAvailableAmount).toBe(10.0)
+    })
+
+    it('treats missing opening/closing amounts on a PRN transaction as no adjustment', () => {
+      const record = buildWasteRecord({
+        rowId: 1000,
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
+        }
+      })
+
+      const malformedPrnTransaction = {
+        id: 'tx-prn-malformed',
+        type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+        amount: 3.0,
+        entities: [
+          {
+            id: 'prn-1',
+            type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ISSUED,
+            currentVersionId: 'prn-1',
+            previousVersionIds: []
+          }
+        ],
+        createdAt: '2023-07-01T00:00:00.000Z',
+        createdBy: { id: 'user-1', name: 'Test User' }
+        // openingAmount/closingAmount/openingAvailableAmount/closingAvailableAmount missing
+      }
+
+      const currentBalance = {
+        ...emptyBalance,
+        amount: 10.0,
+        availableAmount: 10.0,
+        transactions: [malformedPrnTransaction]
+      }
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance,
+        wasteRecords: [record],
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
+
+      expect(result.newAmount).toBe(10.0)
+      expect(result.newAvailableAmount).toBe(10.0)
+    })
+
+    it('preserves a PRN creation ringfence in newAvailableAmount', () => {
+      const record = buildWasteRecord({
+        rowId: 1000,
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
+        }
+      })
+
+      const prnCreatedTransaction = {
+        id: 'tx-prn-created',
+        type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+        amount: 4.0,
+        entities: [
+          {
+            id: 'prn-1',
+            type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CREATED,
+            currentVersionId: 'prn-1',
+            previousVersionIds: []
+          }
+        ],
+        createdAt: '2023-07-01T00:00:00.000Z',
+        createdBy: { id: 'user-1', name: 'Test User' },
+        openingAmount: 10.0,
+        closingAmount: 10.0,
+        openingAvailableAmount: 10.0,
+        closingAvailableAmount: 6.0
+      }
+
+      const currentBalance = {
+        ...emptyBalance,
+        amount: 10.0,
+        availableAmount: 6.0,
+        transactions: [prnCreatedTransaction]
+      }
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance,
+        wasteRecords: [record],
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
+
+      expect(result.newAmount).toBe(10.0)
+      expect(result.newAvailableAmount).toBe(6.0)
+    })
+  })
+
   describe('buildTransaction', async () => {
     const { buildTransaction } = await import('./calculator.js')
 
