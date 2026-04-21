@@ -20,6 +20,8 @@ import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/inde
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
+import { dlqStatusGet } from '#routes/v1/admin/queues/dlq/status.get.js'
+import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
 const router = {
   plugin: {
@@ -58,7 +60,9 @@ const router = {
           ...summaryLogUploadsReportRoutes,
           adminPackagingRecyclingNotesList,
           ...Object.values(overseasSitesRoutes),
-          ...reportsBehindFeatureFlag
+          ...reportsBehindFeatureFlag,
+          dlqStatusGet,
+          dlqPurgePost
         ])
       })
     }
