@@ -2,7 +2,8 @@ import {
   SQSClient,
   GetQueueUrlCommand,
   GetQueueAttributesCommand,
-  PurgeQueueCommand
+  PurgeQueueCommand,
+  ReceiveMessageCommand
 } from '@aws-sdk/client-sqs'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClientType */
@@ -112,4 +113,66 @@ export async function getApproximateMessageCount(sqsClient, queueUrl) {
  */
 export async function purgeQueue(sqsClient, queueUrl) {
   await sqsClient.send(new PurgeQueueCommand({ QueueUrl: queueUrl }))
+}
+
+/**
+ * Receives messages from a queue, deduplicating by MessageId.
+ * Loops ReceiveMessage calls until an empty response or the maxMessages cap.
+ * @param {SQSClientType} sqsClient
+ * @param {string} queueUrl
+ * @param {Object} [options]
+ * @param {number} [options.maxMessages=100]
+ * @param {number} [options.visibilityTimeout=5]
+ * @returns {Promise<Array<{messageId: string, sentTimestamp: string, approximateReceiveCount: number, body: string}>>}
+ */
+export async function receiveMessages(
+  sqsClient,
+  queueUrl,
+  { maxMessages = 100, visibilityTimeout = 5 } = {}
+) {
+  const seen = new Set()
+  const messages = []
+
+  while (messages.length < maxMessages) {
+    const result = await sqsClient.send(
+      new ReceiveMessageCommand({
+        QueueUrl: queueUrl,
+        MaxNumberOfMessages: 10,
+        VisibilityTimeout: visibilityTimeout,
+        MessageAttributeNames: ['All'],
+        AttributeNames: ['All']
+      })
+    )
+
+    const received = result.Messages ?? []
+
+    if (received.length === 0) {
+      break
+    }
+
+    for (const msg of received) {
+      if (seen.has(msg.MessageId)) {
+        continue
+      }
+
+      seen.add(msg.MessageId)
+
+      messages.push({
+        messageId: msg.MessageId,
+        sentTimestamp: new Date(
+          Number(msg.Attributes?.SentTimestamp)
+        ).toISOString(),
+        approximateReceiveCount: Number(
+          msg.Attributes?.ApproximateReceiveCount
+        ),
+        body: msg.Body
+      })
+
+      if (messages.length >= maxMessages) {
+        break
+      }
+    }
+  }
+
+  return messages
 }

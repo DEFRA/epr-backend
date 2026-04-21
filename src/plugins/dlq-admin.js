@@ -6,6 +6,7 @@ import {
   createSqsClient,
   resolveDlqUrl,
   getApproximateMessageCount,
+  receiveMessages,
   purgeQueue
 } from '#common/helpers/sqs/sqs-client.js'
 
@@ -43,10 +44,25 @@ export const dlqAdminPlugin = {
     })
 
     const dlqService = {
-      getStatus: () =>
-        getApproximateMessageCount(sqsClient, dlqUrl).then(
-          (approximateMessageCount) => ({ approximateMessageCount })
-        ),
+      getMessages: async () => {
+        const [approximateMessageCount, rawMessages] = await Promise.all([
+          getApproximateMessageCount(sqsClient, dlqUrl),
+          receiveMessages(sqsClient, dlqUrl)
+        ])
+
+        const messages = rawMessages.map((msg) => {
+          let command = null
+          try {
+            command = JSON.parse(msg.body)
+          } catch {
+            // body is not valid JSON — leave command as null
+          }
+
+          return { ...msg, command }
+        })
+
+        return { approximateMessageCount, messages }
+      },
       purge: () => purgeQueue(sqsClient, dlqUrl)
     }
 

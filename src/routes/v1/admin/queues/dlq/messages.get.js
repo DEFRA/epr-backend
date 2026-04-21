@@ -3,33 +3,33 @@ import Boom from '@hapi/boom'
 
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { dlqStatusResponseSchema } from './response.schema.js'
+import { dlqMessagesResponseSchema } from './response.schema.js'
 
-export const dlqStatusPath = '/v1/admin/queues/dlq/status'
+export const dlqMessagesPath = '/v1/admin/queues/dlq/messages'
 
-export const dlqStatusGet = {
+export const dlqMessagesGet = {
   method: 'GET',
-  path: dlqStatusPath,
+  path: dlqMessagesPath,
   options: {
     auth: getAuthConfig([ROLES.serviceMaintainer]),
     tags: ['api', 'admin'],
     response: {
-      schema: dlqStatusResponseSchema
+      schema: dlqMessagesResponseSchema
     }
   },
   handler: async (request, h) => {
     const { logger, dlqService } = request
 
     try {
-      const status = await dlqService.getStatus()
-      return h.response(status).code(StatusCodes.OK)
+      const result = await dlqService.getMessages()
+      return h.response(result).code(StatusCodes.OK)
     } catch (error) {
       logger.error({
         err: error,
-        message: `Failure on ${dlqStatusPath}`
+        message: `Failure on ${dlqMessagesPath}`
       })
 
-      throw Boom.badImplementation(`Failure on ${dlqStatusPath}`)
+      throw Boom.badImplementation(`Failure on ${dlqMessagesPath}`)
     }
   }
 }

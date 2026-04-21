@@ -4,7 +4,8 @@ import { it } from '#vite/fixtures/sqs.js'
 import {
   resolveDlqUrl,
   getApproximateMessageCount,
-  purgeQueue
+  purgeQueue,
+  receiveMessages
 } from './sqs-client.js'
 
 const TEST_TIMEOUT = 30000
@@ -79,6 +80,107 @@ describe('SQS client DLQ helpers', () => {
         const count = await getApproximateMessageCount(sqsClient, dlqUrl)
 
         expect(count).toBeGreaterThanOrEqual(1)
+      }
+    )
+  })
+
+  describe('receiveMessages', () => {
+    it(
+      'returns an empty array for an empty queue',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        const messages = await receiveMessages(sqsClient, dlqUrl)
+
+        expect(messages).toEqual([])
+      }
+    )
+
+    it(
+      'returns messages with correct shape',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: dlqUrl,
+            MessageBody: '{"type":"TEST_COMMAND"}'
+          })
+        )
+
+        const messages = await receiveMessages(sqsClient, dlqUrl)
+
+        expect(messages).toHaveLength(1)
+        expect(messages[0]).toEqual(
+          expect.objectContaining({
+            messageId: expect.any(String),
+            sentTimestamp: expect.any(String),
+            approximateReceiveCount: expect.any(Number),
+            body: '{"type":"TEST_COMMAND"}'
+          })
+        )
+      }
+    )
+
+    it(
+      'returns a valid ISO 8601 sentTimestamp',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        await sqsClient.send(
+          new SendMessageCommand({ QueueUrl: dlqUrl, MessageBody: 'test' })
+        )
+
+        const messages = await receiveMessages(sqsClient, dlqUrl)
+
+        expect(new Date(messages[0].sentTimestamp).toISOString()).toBe(
+          messages[0].sentTimestamp
+        )
+      }
+    )
+
+    it(
+      'deduplicates messages across batches',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        await sqsClient.send(
+          new SendMessageCommand({ QueueUrl: dlqUrl, MessageBody: 'msg1' })
+        )
+
+        const messages = await receiveMessages(sqsClient, dlqUrl)
+        const uniqueIds = new Set(messages.map((m) => m.messageId))
+
+        expect(uniqueIds.size).toBe(messages.length)
+      }
+    )
+
+    it(
+      'respects the maxMessages cap',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        await Promise.all(
+          Array.from({ length: 5 }, (_, i) =>
+            sqsClient.send(
+              new SendMessageCommand({
+                QueueUrl: dlqUrl,
+                MessageBody: `msg-${i}`
+              })
+            )
+          )
+        )
+
+        const messages = await receiveMessages(sqsClient, dlqUrl, {
+          maxMessages: 3
+        })
+
+        expect(messages.length).toBeLessThanOrEqual(3)
       }
     )
   })

@@ -8,6 +8,7 @@ import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
 import {
   resolveDlqUrl,
   getApproximateMessageCount,
+  receiveMessages,
   purgeQueue
 } from '#common/helpers/sqs/sqs-client.js'
 
@@ -29,25 +30,40 @@ describe('DLQ admin routes — real SQS', () => {
     mockOidcServer?.close()
   })
 
-  describe('GET /v1/admin/queues/dlq/status', () => {
+  describe('GET /v1/admin/queues/dlq/messages', () => {
     it(
-      'returns the actual message count from SQS',
+      'returns messages from the DLQ',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+        const messageBody = JSON.stringify({
+          type: 'SUMMARY_LOG_COMMAND.VALIDATE',
+          payload: { summaryLogId: 'log-1' }
+        })
 
         await sqsClient.send(
-          new SendMessageCommand({ QueueUrl: dlqUrl, MessageBody: 'msg1' })
+          new SendMessageCommand({ QueueUrl: dlqUrl, MessageBody: messageBody })
         )
 
         const server = await createTestServer({
           dlqService: {
-            getStatus: async () => {
-              const approximateMessageCount = await getApproximateMessageCount(
-                sqsClient,
-                dlqUrl
-              )
-              return { approximateMessageCount }
+            getMessages: async () => {
+              const [approximateMessageCount, rawMessages] = await Promise.all([
+                getApproximateMessageCount(sqsClient, dlqUrl),
+                receiveMessages(sqsClient, dlqUrl)
+              ])
+
+              const messages = rawMessages.map((msg) => {
+                let command = null
+                try {
+                  command = JSON.parse(msg.body)
+                } catch {
+                  // leave command as null
+                }
+                return { ...msg, command }
+              })
+
+              return { approximateMessageCount, messages }
             },
             purge: () => purgeQueue(sqsClient, dlqUrl)
           }
@@ -55,14 +71,65 @@ describe('DLQ admin routes — real SQS', () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: '/v1/admin/queues/dlq/status',
+          url: '/v1/admin/queues/dlq/messages',
           ...asServiceMaintainer()
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(
-          JSON.parse(response.payload).approximateMessageCount
-        ).toBeGreaterThanOrEqual(1)
+
+        const payload = JSON.parse(response.payload)
+        // approximateMessageCount is eventually consistent in SQS,
+        // so we only check it is a non-negative number
+        expect(payload.approximateMessageCount).toBeGreaterThanOrEqual(0)
+        expect(payload.messages).toHaveLength(1)
+        expect(payload.messages[0]).toEqual(
+          expect.objectContaining({
+            messageId: expect.any(String),
+            sentTimestamp: expect.any(String),
+            approximateReceiveCount: expect.any(Number),
+            command: {
+              type: 'SUMMARY_LOG_COMMAND.VALIDATE',
+              payload: { summaryLogId: 'log-1' }
+            },
+            body: messageBody
+          })
+        )
+
+        await server.stop()
+      }
+    )
+
+    it(
+      'returns empty messages array when DLQ is empty',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        const server = await createTestServer({
+          dlqService: {
+            getMessages: async () => {
+              const [approximateMessageCount, rawMessages] = await Promise.all([
+                getApproximateMessageCount(sqsClient, dlqUrl),
+                receiveMessages(sqsClient, dlqUrl)
+              ])
+
+              return { approximateMessageCount, messages: rawMessages }
+            },
+            purge: () => purgeQueue(sqsClient, dlqUrl)
+          }
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/admin/queues/dlq/messages',
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const payload = JSON.parse(response.payload)
+        expect(payload.approximateMessageCount).toBe(0)
+        expect(payload.messages).toEqual([])
 
         await server.stop()
       }
@@ -82,12 +149,12 @@ describe('DLQ admin routes — real SQS', () => {
 
         const server = await createTestServer({
           dlqService: {
-            getStatus: async () => {
+            getMessages: async () => {
               const approximateMessageCount = await getApproximateMessageCount(
                 sqsClient,
                 dlqUrl
               )
-              return { approximateMessageCount }
+              return { approximateMessageCount, messages: [] }
             },
             purge: () => purgeQueue(sqsClient, dlqUrl)
           }

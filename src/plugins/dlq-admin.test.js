@@ -8,6 +8,7 @@ const {
   createSqsClient,
   resolveDlqUrl,
   getApproximateMessageCount,
+  receiveMessages,
   purgeQueue
 } = await import('#common/helpers/sqs/sqs-client.js')
 
@@ -76,16 +77,24 @@ describe('dlqAdminPlugin', () => {
     expect(resolveDlqUrl).toHaveBeenCalledWith(mockSqsClient, 'test-queue')
   })
 
-  it('decorates request with dlqService', async () => {
-    vi.mocked(getApproximateMessageCount).mockResolvedValue(5)
+  it('decorates request with dlqService exposing getMessages and purge', async () => {
+    vi.mocked(getApproximateMessageCount).mockResolvedValue(2)
+    vi.mocked(receiveMessages).mockResolvedValue([
+      {
+        messageId: 'msg-1',
+        sentTimestamp: '2026-04-21T10:30:00.000Z',
+        approximateReceiveCount: 3,
+        body: '{"type":"TEST"}'
+      }
+    ])
     vi.mocked(purgeQueue).mockResolvedValue(undefined)
 
     await server.register({ plugin: dlqAdminPlugin, options: { config } })
 
     server.route({
       method: 'GET',
-      path: '/test-status',
-      handler: async (request) => request.dlqService.getStatus()
+      path: '/test-messages',
+      handler: async (request) => request.dlqService.getMessages()
     })
 
     server.route({
@@ -97,12 +106,23 @@ describe('dlqAdminPlugin', () => {
       }
     })
 
-    const statusResponse = await server.inject({
+    const messagesResponse = await server.inject({
       method: 'GET',
-      url: '/test-status'
+      url: '/test-messages'
     })
-    expect(statusResponse.statusCode).toBe(200)
-    expect(statusResponse.result).toEqual({ approximateMessageCount: 5 })
+    expect(messagesResponse.statusCode).toBe(200)
+    expect(messagesResponse.result).toEqual({
+      approximateMessageCount: 2,
+      messages: [
+        {
+          messageId: 'msg-1',
+          sentTimestamp: '2026-04-21T10:30:00.000Z',
+          approximateReceiveCount: 3,
+          body: '{"type":"TEST"}',
+          command: { type: 'TEST' }
+        }
+      ]
+    })
 
     const purgeResponse = await server.inject({
       method: 'POST',
@@ -110,6 +130,33 @@ describe('dlqAdminPlugin', () => {
     })
     expect(purgeResponse.statusCode).toBe(200)
     expect(purgeResponse.result).toEqual({ purged: true })
+  })
+
+  it('sets command to null when body is not valid JSON', async () => {
+    vi.mocked(getApproximateMessageCount).mockResolvedValue(1)
+    vi.mocked(receiveMessages).mockResolvedValue([
+      {
+        messageId: 'msg-bad',
+        sentTimestamp: '2026-04-21T11:00:00.000Z',
+        approximateReceiveCount: 1,
+        body: 'not-json'
+      }
+    ])
+
+    await server.register({ plugin: dlqAdminPlugin, options: { config } })
+
+    server.route({
+      method: 'GET',
+      path: '/test-messages',
+      handler: async (request) => request.dlqService.getMessages()
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/test-messages'
+    })
+
+    expect(response.result.messages[0].command).toBeNull()
   })
 
   it('destroys SQS client on server stop', async () => {

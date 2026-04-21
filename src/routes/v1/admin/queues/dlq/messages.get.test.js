@@ -5,9 +5,9 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-const DLQ_STATUS_PATH = '/v1/admin/queues/dlq/status'
+const DLQ_MESSAGES_PATH = '/v1/admin/queues/dlq/messages'
 
-describe('GET /v1/admin/queues/dlq/status', () => {
+describe('GET /v1/admin/queues/dlq/messages', () => {
   setupAuthContext()
 
   let server
@@ -15,7 +15,18 @@ describe('GET /v1/admin/queues/dlq/status', () => {
   beforeAll(async () => {
     server = await createTestServer({
       dlqService: {
-        getStatus: vi.fn().mockResolvedValue({ approximateMessageCount: 3 }),
+        getMessages: vi.fn().mockResolvedValue({
+          approximateMessageCount: 1,
+          messages: [
+            {
+              messageId: 'abc-123',
+              sentTimestamp: '2026-04-21T10:30:00.000Z',
+              approximateReceiveCount: 4,
+              command: { type: 'SUMMARY_LOG_COMMAND.VALIDATE' },
+              body: '{"type":"SUMMARY_LOG_COMMAND.VALIDATE"}'
+            }
+          ]
+        }),
         purge: vi.fn()
       }
     })
@@ -28,7 +39,7 @@ describe('GET /v1/admin/queues/dlq/status', () => {
   it('returns 401 when not authenticated', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: DLQ_STATUS_PATH
+      url: DLQ_MESSAGES_PATH
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -37,7 +48,7 @@ describe('GET /v1/admin/queues/dlq/status', () => {
   it('returns 403 when authenticated as standard user', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: DLQ_STATUS_PATH,
+      url: DLQ_MESSAGES_PATH,
       ...asStandardUser({ linkedOrgId: 'org-123' })
     })
 
@@ -45,7 +56,7 @@ describe('GET /v1/admin/queues/dlq/status', () => {
   })
 })
 
-describe('GET /v1/admin/queues/dlq/status — service failure', () => {
+describe('GET /v1/admin/queues/dlq/messages — service failure', () => {
   setupAuthContext()
 
   let server
@@ -53,7 +64,7 @@ describe('GET /v1/admin/queues/dlq/status — service failure', () => {
   beforeAll(async () => {
     server = await createTestServer({
       dlqService: {
-        getStatus: vi.fn().mockRejectedValue(new Error('SQS unavailable')),
+        getMessages: vi.fn().mockRejectedValue(new Error('SQS unavailable')),
         purge: vi.fn()
       }
     })
@@ -66,7 +77,7 @@ describe('GET /v1/admin/queues/dlq/status — service failure', () => {
   it('returns 500 when dlqService throws', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: DLQ_STATUS_PATH,
+      url: DLQ_MESSAGES_PATH,
       ...asServiceMaintainer()
     })
 

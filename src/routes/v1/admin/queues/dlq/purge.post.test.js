@@ -15,7 +15,7 @@ describe('POST /v1/admin/queues/dlq/purge', () => {
   beforeAll(async () => {
     server = await createTestServer({
       dlqService: {
-        getStatus: vi.fn(),
+        getMessages: vi.fn(),
         purge: vi.fn().mockResolvedValue(undefined)
       }
     })
@@ -53,7 +53,7 @@ describe('POST /v1/admin/queues/dlq/purge — service failure', () => {
   beforeAll(async () => {
     server = await createTestServer({
       dlqService: {
-        getStatus: vi.fn(),
+        getMessages: vi.fn(),
         purge: vi.fn().mockRejectedValue(new Error('SQS unavailable'))
       }
     })

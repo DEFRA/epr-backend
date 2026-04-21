@@ -1,5 +1,5 @@
 const createNoOpDlqService = () => ({
-  getStatus: async () => ({ approximateMessageCount: 0 }),
+  getMessages: async () => ({ approximateMessageCount: 0, messages: [] }),
   purge: async () => {}
 })
 
