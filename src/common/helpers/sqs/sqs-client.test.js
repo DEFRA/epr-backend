@@ -119,6 +119,22 @@ describe('receiveMessages', () => {
     expect(result[0].messageId).toBe('dup-1')
   })
 
+  it('skips messages with missing MessageId or Body', async () => {
+    const timestamp = Date.now()
+    const validMsg = createSqsMessage('valid-1', 'body', timestamp, 1)
+    const noId = { Body: 'body', Attributes: {} }
+    const noBody = { MessageId: 'no-body-1', Attributes: {} }
+
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [noId, noBody, validMsg] })
+      .mockResolvedValueOnce({ Messages: [] })
+
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].messageId).toBe('valid-1')
+  })
+
   it('stops when maxMessages cap is reached', async () => {
     const timestamp = Date.now()
     const batch = Array.from({ length: 10 }, (_, i) =>

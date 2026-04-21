@@ -151,6 +151,10 @@ export async function receiveMessages(
     }
 
     for (const msg of received) {
+      if (!msg.MessageId || msg.Body === undefined) {
+        continue
+      }
+
       if (seen.has(msg.MessageId)) {
         continue
       }
