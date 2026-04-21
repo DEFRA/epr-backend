@@ -8,6 +8,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import {
   buildOrganisation,
+  buildOrganisationWithRegistration,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
@@ -24,17 +25,19 @@ describe(`GET ${reportsGetDetailPath}`, () => {
   describe('when feature flag is enabled', () => {
     const createServer = async (
       registrationOverrides = {},
-      wasteRecordOverrides = []
+      wasteRecordOverrides = [],
+      accreditationStatus
     ) => {
       const registration = buildRegistration(registrationOverrides)
-      const org = buildOrganisation({
-        registrations: [registration]
-      })
+      const org = buildOrganisationWithRegistration(
+        registration,
+        accreditationStatus
+      )
 
+      // Use initial-org pattern to preserve accreditation statusHistory
+      // (insert() overrides statusHistory to the default 'created' entry).
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository()
-      const organisationsRepository = organisationsRepositoryFactory()
-      await organisationsRepository.insert(org)
+        createInMemoryOrganisationsRepository([org])
 
       const wasteRecords = wasteRecordOverrides.map((overrides) =>
         buildWasteRecord({
@@ -321,10 +324,14 @@ describe(`GET ${reportsGetDetailPath}`, () => {
     describe('accredited reprocessor', () => {
       it('returns 200 with monthly cadence', async () => {
         const accreditationId = new ObjectId().toString()
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'reprocessor',
-          accreditationId
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'reprocessor',
+            accreditationId
+          },
+          [],
+          'approved'
+        )
 
         const response = await makeRequest(
           server,
@@ -346,10 +353,14 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       })
 
       it('returns registration details', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'reprocessor',
-          accreditationId: new ObjectId().toString()
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'reprocessor',
+            accreditationId: new ObjectId().toString()
+          },
+          [],
+          'approved'
+        )
 
         const response = await makeRequest(
           server,
@@ -396,7 +407,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Collector'
               }
             }
-          ]
+          ],
+          'approved'
         )
 
         const response = await makeRequest(
@@ -637,10 +649,14 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
     describe('accredited exporter', () => {
       it('returns 200 with monthly cadence', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          [],
+          'approved'
+        )
 
         const response = await makeRequest(
           server,
@@ -688,7 +704,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 OSR_ID: '096'
               }
             }
-          ]
+          ],
+          'approved'
         )
 
         const response = await makeRequest(
@@ -741,7 +758,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 OSR_ID: '096'
               }
             }
-          ]
+          ],
+          'approved'
         )
 
         const response = await makeRequest(
@@ -779,7 +797,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 OSR_ID: '001'
               }
             }
-          ]
+          ],
+          'approved'
         )
 
         const januaryResponse = await makeRequest(
@@ -810,10 +829,14 @@ describe(`GET ${reportsGetDetailPath}`, () => {
       })
 
       it('returns empty sections when no records exist', async () => {
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'exporter',
-          accreditationId: new ObjectId().toString()
-        })
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          [],
+          'approved'
+        )
 
         const response = await makeRequest(
           server,
@@ -857,7 +880,8 @@ describe(`GET ${reportsGetDetailPath}`, () => {
                 ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Baler'
               }
             }
-          ]
+          ],
+          'approved'
         )
 
         const response = await makeRequest(

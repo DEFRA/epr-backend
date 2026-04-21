@@ -11,20 +11,33 @@ import {
 } from './report-service.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-const buildRegistration = (overrides = {}) => ({
-  id: new ObjectId().toString(),
-  accreditationId: new ObjectId().toString(),
-  material: 'plastic',
-  wasteProcessingType: 'reprocessor',
-  site: {
-    address: {
-      line1: '1 Recycling Lane',
-      town: 'Greenville',
-      postcode: 'GR1 1AA'
-    }
-  },
-  ...overrides
-})
+const buildRegistration = (overrides = {}) => {
+  const hasAccreditationIdOverride = 'accreditationId' in overrides
+  const accreditationId = hasAccreditationIdOverride
+    ? overrides.accreditationId
+    : new ObjectId().toString()
+  const defaultAccreditation = accreditationId ? { status: 'approved' } : null
+  const accreditation =
+    'accreditation' in overrides
+      ? overrides.accreditation
+      : defaultAccreditation
+  const { accreditation: _a, accreditationId: _b, ...rest } = overrides
+  return {
+    id: new ObjectId().toString(),
+    accreditationId,
+    accreditation,
+    material: 'plastic',
+    wasteProcessingType: 'reprocessor',
+    site: {
+      address: {
+        line1: '1 Recycling Lane',
+        town: 'Greenville',
+        postcode: 'GR1 1AA'
+      }
+    },
+    ...rest
+  }
+}
 
 const buildWasteRecord = ({
   data = {},
