@@ -4,7 +4,6 @@ import { vi } from 'vitest'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
-import { mockDlqServicePlugin } from '#adapters/dlq/dlq-service.mock.plugin.js'
 import { mockSqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/mock.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
@@ -239,7 +238,18 @@ export async function createTestServer(options = {}) {
     ),
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     {
-      plugin: mockDlqServicePlugin,
+      plugin: {
+        name: 'dlq-admin',
+        register: (server, pluginOptions = {}) => {
+          const dlqService = pluginOptions.dlqService ?? {
+            getStatus: async () => ({ approximateMessageCount: 0 }),
+            purge: async () => {}
+          }
+          server.decorate('request', 'dlqService', () => dlqService, {
+            apply: true
+          })
+        }
+      },
       options: { dlqService: options.dlqService }
     },
     router
