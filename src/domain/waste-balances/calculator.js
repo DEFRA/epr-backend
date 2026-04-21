@@ -93,6 +93,9 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
   }
 }
 
+// PRN_ACCEPTED has no builder today; included for forward-compat so any future
+// PRN_ACCEPTED transaction that conserves opening/closing semantics is picked
+// up without another diff here.
 const PRN_ENTITY_TYPES = new Set([
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CREATED,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ISSUED,
