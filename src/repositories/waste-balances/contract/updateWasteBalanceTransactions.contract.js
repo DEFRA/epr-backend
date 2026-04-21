@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest'
-import { buildWasteRecord } from './test-data.js'
+import { buildWasteBalance, buildWasteRecord } from './test-data.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -78,15 +78,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
-      const existingBalance = {
+      const existingBalance = buildWasteBalance({
         accreditationId: accreditation.id,
-        organisationId: 'org-1',
-        amount: 5,
-        availableAmount: 5,
-        transactions: [{ id: 'tx-1', amount: 5 }],
-        version: 1,
-        schemaVersion: 1
-      }
+        organisationId: 'org-1'
+      })
       await insertWasteBalance(existingBalance)
 
       const record = buildWasteRecord({
@@ -107,10 +102,15 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
-      // Assert
+      // Assert: the prior balance document is updated in place (not
+      // recreated) — the new transaction is appended to the existing
+      // ledger, giving two entries. The total is derived from the waste
+      // records passed in; prior non-PRN transactions do not carry
+      // forward under the new calculator, so amount reflects the single
+      // new record.
       const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(2)
-      expect(balance.amount).toBe(15.5)
+      expect(balance.amount).toBe(10.5)
     })
 
     it('Should not update if no transactions generated', async ({
@@ -149,12 +149,16 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
+      // Intentionally omits the `transactions` field to exercise the
+      // calculator's defensive `currentBalance.transactions || []` guard.
+      // Other contract tests use `buildWasteBalance`, which always seeds a
+      // transactions array — this is the one shape that builder can't
+      // produce.
       const existingBalance = {
         accreditationId: accreditation.id,
         organisationId: 'org-1',
         amount: 5,
         availableAmount: 5,
-        // transactions missing
         version: 1,
         schemaVersion: 1
       }
@@ -178,10 +182,12 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
-      // Assert
+      // Assert: the nullish-guard handles the missing `transactions` field
+      // without crashing, and the new transaction becomes the only entry.
+      // amount is derived from the single passed-in record.
       const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(1)
-      expect(balance.amount).toBe(15.5)
+      expect(balance.amount).toBe(10.5)
     })
 
     it('Should ignore records with outcome other than INCLUDED', async ({
