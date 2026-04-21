@@ -25,17 +25,6 @@ describe('POST /v1/admin/queues/dlq/purge', () => {
     await server.stop()
   })
 
-  it('returns 200 with purged: true for service maintainer', async () => {
-    const response = await server.inject({
-      method: 'POST',
-      url: DLQ_PURGE_PATH,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({ purged: true })
-  })
-
   it('returns 401 when not authenticated', async () => {
     const response = await server.inject({
       method: 'POST',

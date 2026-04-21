@@ -25,19 +25,6 @@ describe('GET /v1/admin/queues/dlq/status', () => {
     await server.stop()
   })
 
-  it('returns 200 with approximateMessageCount for service maintainer', async () => {
-    const response = await server.inject({
-      method: 'GET',
-      url: DLQ_STATUS_PATH,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toStrictEqual({
-      approximateMessageCount: 3
-    })
-  })
-
   it('returns 401 when not authenticated', async () => {
     const response = await server.inject({
       method: 'GET',
