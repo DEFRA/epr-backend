@@ -7,6 +7,9 @@ import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.j
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+
+const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @typedef {Object} ReportSubmissionsRow
@@ -37,14 +40,16 @@ const INCLUDED_STATUSES = new Set([
  */
 async function getRegistrations(organisationsRepository) {
   const orgs = await organisationsRepository.findAll()
-  return orgs.flatMap((org) =>
-    org.registrations
-      .filter((registration) => INCLUDED_STATUSES.has(registration.status))
-      .map((registration) => ({
-        org,
-        registration: /** @type {RegistrationApproved} */ (registration)
-      }))
-  )
+  return orgs
+    .filter((org) => !TEST_ORGANISATIONS.has(org.orgId))
+    .flatMap((org) =>
+      org.registrations
+        .filter((registration) => INCLUDED_STATUSES.has(registration.status))
+        .map((registration) => ({
+          org,
+          registration: /** @type {RegistrationApproved} */ (registration)
+        }))
+    )
 }
 
 /**
