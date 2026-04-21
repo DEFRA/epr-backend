@@ -264,9 +264,18 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       // accumulating from the rowId-keyed transaction ledger, the SENT_ON
       // row would conflate with the RECEIVED row's credit and the closing
       // balance would drift.
-      expect(balance).not.toBeNull()
+      expect(balance).toBeDefined()
       expect(balance.amount).toBe(400)
       expect(balance.availableAmount).toBe(400)
+
+      // Both rows must produce a ledger entry — a regression that silently
+      // dropped one of the colliding rows would still tally to 400 by luck
+      // in a single-upload scenario, but would leave only one transaction.
+      expect(balance.transactions).toHaveLength(2)
+      expect(
+        balance.transactions.find((t) => t.type === 'credit')
+      ).toBeDefined()
+      expect(balance.transactions.find((t) => t.type === 'debit')).toBeDefined()
     })
 
     it('should not create transaction for received load outside accreditation period', async () => {
