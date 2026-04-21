@@ -8,7 +8,10 @@ import {
   validateSummaryLogInsert,
   validateSummaryLogUpdate
 } from './validation.js'
-import { SUMMARY_LOG_FAILURE_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_FAILURE_STATUS,
+  SUMMARY_LOG_STATUS
+} from '#domain/summary-logs/status.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 
 const FAILURE_STATUS = new Set(SUMMARY_LOG_FAILURE_STATUS)
@@ -118,6 +121,36 @@ const findLatestSubmittedForOrgReg =
       version: latestDoc.version,
       summaryLog: structuredClone(latestDoc.summaryLog)
     }
+  }
+
+const TERMINAL_STATUS = new Set([
+  SUMMARY_LOG_STATUS.SUBMITTED,
+  ...SUMMARY_LOG_FAILURE_STATUS
+])
+
+const findAllByOrgReg =
+  (staleCache) => async (organisationId, registrationId) => {
+    const matches = []
+
+    for (const [id, doc] of staleCache) {
+      const { summaryLog } = doc
+      if (
+        summaryLog.organisationId === organisationId &&
+        summaryLog.registrationId === registrationId &&
+        TERMINAL_STATUS.has(summaryLog.status)
+      ) {
+        matches.push({
+          id,
+          version: doc.version,
+          summaryLog: structuredClone(summaryLog),
+          _uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt
+        })
+      }
+    }
+
+    matches.sort((a, b) => b._uploadedAt.localeCompare(a._uploadedAt))
+
+    return matches.map(({ _uploadedAt: _u, ...rest }) => rest)
   }
 
 const findAllSummaryLogStatsByRegistrationId = (staleCache) => async () => {
@@ -246,6 +279,7 @@ export const createInMemorySummaryLogsRepository = () => {
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
+    findAllByOrgReg: findAllByOrgReg(staleCache),
     findAllSummaryLogStatsByRegistrationId:
       findAllSummaryLogStatsByRegistrationId(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
