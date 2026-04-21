@@ -20,24 +20,12 @@ describe('isRegistrationAccredited', () => {
     }
   )
 
-  it('returns false when accreditation is null', () => {
+  it('returns false when accreditation is null (accreditationId points to nothing)', () => {
     expect(
       isRegistrationAccredited({
         accreditationId: 'acc-1',
         accreditation: null
       })
     ).toBe(false)
-  })
-
-  it('returns false when accreditation field is absent', () => {
-    expect(isRegistrationAccredited({})).toBe(false)
-  })
-
-  it('returns false when registration is undefined', () => {
-    expect(isRegistrationAccredited()).toBe(false)
-  })
-
-  it('returns false when registration is null', () => {
-    expect(isRegistrationAccredited(null)).toBe(false)
   })
 })

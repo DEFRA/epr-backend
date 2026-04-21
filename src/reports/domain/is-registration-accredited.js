@@ -6,11 +6,11 @@ import { REG_ACC_STATUS } from '#domain/organisations/model.js'
  * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
  * state has never been active and must be treated as registered-only.
  *
- * @param {{ accreditation?: { status?: string } | null }} [registration]
+ * @param {{ accreditation: { status?: string } | null }} registration
  * @returns {boolean}
  */
 export function isRegistrationAccredited(registration) {
-  const status = registration?.accreditation?.status
+  const status = registration.accreditation?.status
 
   return (
     status === REG_ACC_STATUS.APPROVED || status === REG_ACC_STATUS.SUSPENDED
