@@ -110,35 +110,39 @@ const isPrnTransaction = (transaction) =>
   )
 
 /**
- * @typedef {'openingAmount' | 'closingAmount' | 'openingAvailableAmount' | 'closingAvailableAmount'} WasteBalanceField
- */
-
-/**
- * Sums the net effect of PRN transactions on a balance field. Waste-record
- * transactions are excluded because they are keyed by naked rowId and can
- * silently lose data under a rowId collision (PAE-1380); the waste-record
- * contribution is derived directly from the waste records themselves.
+ * Sums the net effect of PRN transactions on both balance fields in a single
+ * pass. Waste-record transactions are excluded because they are keyed by
+ * naked rowId and can silently lose data under a rowId collision (PAE-1380);
+ * the waste-record contribution is derived directly from the waste records
+ * themselves.
  *
  * @param {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} transactions
- * @param {WasteBalanceField} closingField
- * @param {WasteBalanceField} openingField
- * @returns {number}
+ * @returns {{ amount: number, availableAmount: number }}
  */
-const sumPrnTransactionAdjustment = (
-  transactions,
-  closingField,
-  openingField
-) => {
-  let adjustment = 0
+const sumPrnTransactionAdjustments = (transactions) => {
+  let amount = 0
+  let availableAmount = 0
   for (const transaction of transactions) {
     if (!isPrnTransaction(transaction)) {
       continue
     }
-    const closing = transaction[closingField] ?? 0
-    const opening = transaction[openingField] ?? 0
-    adjustment = toNumber(add(adjustment, subtract(closing, opening)))
+    amount = toNumber(
+      add(
+        amount,
+        subtract(transaction.closingAmount ?? 0, transaction.openingAmount ?? 0)
+      )
+    )
+    availableAmount = toNumber(
+      add(
+        availableAmount,
+        subtract(
+          transaction.closingAvailableAmount ?? 0,
+          transaction.openingAvailableAmount ?? 0
+        )
+      )
+    )
   }
-  return adjustment
+  return { amount, availableAmount }
 }
 
 /**
@@ -242,16 +246,10 @@ export const calculateWasteBalanceUpdates = ({
   // (PAE-1380); waste records are the authoritative source and are uniquely
   // keyed by (type, rowId). PRN transactions use prnId entity ids and are
   // collision-free, so their net adjustment is safe to pull from the ledger.
-  const prnAmountAdjustment = sumPrnTransactionAdjustment(
-    historicTransactions,
-    'closingAmount',
-    'openingAmount'
-  )
-  const prnAvailableAmountAdjustment = sumPrnTransactionAdjustment(
-    historicTransactions,
-    'closingAvailableAmount',
-    'openingAvailableAmount'
-  )
+  const {
+    amount: prnAmountAdjustment,
+    availableAmount: prnAvailableAmountAdjustment
+  } = sumPrnTransactionAdjustments(historicTransactions)
 
   return {
     newTransactions,
