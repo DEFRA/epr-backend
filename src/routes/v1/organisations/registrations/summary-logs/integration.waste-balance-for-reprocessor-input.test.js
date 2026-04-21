@@ -230,6 +230,45 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
+    it('should compute correct balance when RECEIVED and SENT_ON rows share a rowId', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType: 'input'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // RECEIVED requires rowId >= 1000; SENT_ON requires rowId >= 5000.
+      // The minimums are floors, not walls — a single value >= 5000 satisfies
+      // both, so a real upload can legitimately present the same rowId
+      // across the two tables.
+      const sharedRowId = 5001
+
+      const uploadData = createUploadData(
+        [{ rowId: sharedRowId, tonnageReceived: 500 }],
+        [
+          {
+            rowId: sharedRowId,
+            tonnageSent: 100,
+            dateLeft: '2025-01-20T00:00:00.000Z'
+          }
+        ]
+      )
+
+      await performSubmission(env, summaryLogId, fileId, filename, uploadData)
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // 500 (credit from RECEIVED) - 100 (debit from SENT_ON) = 400.
+      // Regression guard: if the balance calculation ever reverts to
+      // accumulating from the rowId-keyed transaction ledger, the SENT_ON
+      // row would conflate with the RECEIVED row's credit and the closing
+      // balance would drift.
+      expect(balance).not.toBeNull()
+      expect(balance.amount).toBe(400)
+      expect(balance.availableAmount).toBe(400)
+    })
+
     it('should not create transaction for received load outside accreditation period', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
