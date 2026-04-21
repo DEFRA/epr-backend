@@ -7,7 +7,6 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -299,17 +298,33 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('returns 403 when called as a standard user', async () => {
-    const org = buildOrganisation()
-    await organisationsRepository.insert(org)
+  describe('Authentication', () => {
+    it('returns 401 when not authenticated', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
 
-    const response = await server.inject({
-      method: 'GET',
-      url: makePath(org.id),
-      ...asStandardUser({ linkedOrgId: org.id })
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id)
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
 
-    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    it('returns 403 when user is not a service maintainer', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: makePath(org.id),
+        headers: {
+          Authorization: `Bearer ${entraIdMockAuthTokens.nonServiceMaintainerUserToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
   })
 
   testInvalidTokenScenarios({
