@@ -8,6 +8,7 @@ import {
   validateUpdateReportStatus
 } from './validation.js'
 import {
+  transformToPeriodicReports,
   groupAsPeriodicReports,
   prepareCreateReportParams,
   STATUS_TO_SLOT
@@ -269,13 +270,49 @@ const performFindPeriodicReports = async (db, params) => {
           endDate: 1,
           dueDate: 1,
           'status.currentStatus': 1,
-          'status.created': 1
+          'status.created': 1,
+          'status.submitted': 1
         }
       }
     )
     .toArray()
 
   return groupAsPeriodicReports(organisationId, registrationId, docs)
+}
+
+/**
+ * Returns all periodic reports across every org/registration, with
+ * submittedAt/submittedBy embedded in each ReportSummary.
+ *
+ * @param {Db} db
+ * @returns {Promise<PeriodicReport[]>}
+ */
+const performFindAllPeriodicReports = async (db) => {
+  const docs = await reportsCollection(db)
+    .find(
+      {},
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          submissionNumber: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          startDate: 1,
+          endDate: 1,
+          dueDate: 1,
+          organisationId: 1,
+          registrationId: 1,
+          'status.currentStatus': 1,
+          'status.created': 1,
+          'status.submitted': 1
+        }
+      }
+    )
+    .toArray()
+
+  return transformToPeriodicReports(docs)
 }
 
 /**
@@ -293,6 +330,7 @@ export const createReportsRepository = async (db) => {
     updateReportStatus: (params) => performUpdateReportStatus(db, params),
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
+    findAllPeriodicReports: () => performFindAllPeriodicReports(db),
     findReportById: (reportId) => performFindReportById(db, reportId)
   })
 }
