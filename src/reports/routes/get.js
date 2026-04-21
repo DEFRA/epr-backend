@@ -5,6 +5,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
+import { isRegistrationAccredited } from '#reports/domain/is-registration-accredited.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 
 export const reportsGetPath =
@@ -32,8 +33,9 @@ export const reportsGet = {
       registrationId
     )
 
-    const isAccredited = Boolean(registration.accreditationId)
-    const cadence = isAccredited ? CADENCE.monthly : CADENCE.quarterly
+    const cadence = isRegistrationAccredited(registration)
+      ? CADENCE.monthly
+      : CADENCE.quarterly
 
     /**
      * We simply return for the current year for now for both Registered-Only

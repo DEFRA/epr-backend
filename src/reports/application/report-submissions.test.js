@@ -346,4 +346,27 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(row.registrationNumber).toBe('REG-001')
     expect(row.accreditationNumber).toBe('')
   })
+
+  it('excludes test organisations from report submissions', async () => {
+    const testOrg = buildOrg({
+      orgId: 999999,
+      companyDetails: { name: 'Test Org Ltd' },
+      registrations: [buildRegistrationMock({ status: 'approved' })]
+    })
+    const normalOrg = buildOrg({
+      id: 'org-2',
+      orgId: 500001,
+      companyDetails: { name: 'Normal Org Ltd' },
+      registrations: [buildRegistrationMock({ status: 'approved' })]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([testOrg, normalOrg]),
+      makeReportsRepo()
+    )
+
+    const orgNames = result.reportSubmissions.map((r) => r.organisationName)
+    expect(orgNames).not.toContain('Test Org Ltd')
+    expect(orgNames).toContain('Normal Org Ltd')
+  })
 })

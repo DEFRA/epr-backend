@@ -130,6 +130,38 @@ export const buildOrganisation = (overrides = {}) => {
   return org
 }
 
+/**
+ * Builds an organisation with the given registration, optionally linking a
+ * matching accreditation with a specific status. When accreditationStatus is
+ * provided, the returned org should be passed as an initial org to
+ * createInMemoryOrganisationsRepository — otherwise insert() will overwrite
+ * the statusHistory with the default 'created' entry.
+ *
+ * @param {object} registration - From buildRegistration
+ * @param {string} [accreditationStatus] - If set, links a matching accreditation
+ * @returns {object}
+ */
+export const buildOrganisationWithRegistration = (
+  registration,
+  accreditationStatus
+) => {
+  const orgOptions = { registrations: [registration] }
+
+  if (accreditationStatus && registration.accreditationId) {
+    const accreditation = buildAccreditation({
+      id: registration.accreditationId,
+      wasteProcessingType: registration.wasteProcessingType,
+      statusHistory: [
+        { status: 'created', updatedAt: new Date('2024-01-01') },
+        { status: accreditationStatus, updatedAt: new Date('2024-02-01') }
+      ]
+    })
+    orgOptions.accreditations = [accreditation]
+  }
+
+  return buildOrganisation(orgOptions)
+}
+
 const mergeArrayById = (existing, updates) => {
   const updatesById = new Map(updates.map((item) => [item.id, item]))
   const merged = existing.map((item) => updatesById.get(item.id) || item)
