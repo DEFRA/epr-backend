@@ -85,7 +85,7 @@ describe('SQS client DLQ helpers', () => {
 
   describe('purgeQueue', () => {
     it(
-      'purges messages and returns successfully',
+      'purges messages so the queue is empty',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
@@ -94,7 +94,10 @@ describe('SQS client DLQ helpers', () => {
           new SendMessageCommand({ QueueUrl: dlqUrl, MessageBody: 'msg1' })
         )
 
-        await expect(purgeQueue(sqsClient, dlqUrl)).resolves.not.toThrow()
+        await purgeQueue(sqsClient, dlqUrl)
+
+        const count = await getApproximateMessageCount(sqsClient, dlqUrl)
+        expect(count).toBe(0)
       }
     )
 
