@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
@@ -256,6 +257,75 @@ describe('generateReportSubmissions (edge cases)', () => {
     )
 
     expect(result.reportSubmissions[0].material).toBe('Glass-remelt')
+  })
+
+  it('returns empty string for accreditationNumber when accreditation has null accreditationNumber', async () => {
+    const org = buildOrg({
+      accreditations: [{ id: 'acc-1', accreditationNumber: null }],
+      registrations: [
+        buildRegistrationMock({
+          status: 'approved',
+          accreditationId: 'acc-1'
+        })
+      ]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    expect(result.reportSubmissions[0].accreditationNumber).toBe('')
+  })
+
+  it('uses quarterly cadence and empty accreditationNumber when accreditation status is not approved or suspended', async () => {
+    const org = buildOrg({
+      accreditations: [
+        { id: 'acc-1', status: 'created', accreditationNumber: 'ACC-001' }
+      ],
+      registrations: [
+        buildRegistrationMock({
+          status: REG_ACC_STATUS.APPROVED,
+          accreditationId: 'acc-1'
+        })
+      ]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    const row = result.reportSubmissions[0]
+    expect(row.accreditationNumber).toBe('')
+    expect(row.reportType).toBe('Quarterly')
+  })
+
+  it('uses monthly cadence and accreditationNumber when accreditation status is suspended', async () => {
+    const org = buildOrg({
+      accreditations: [
+        {
+          id: 'acc-1',
+          status: REG_ACC_STATUS.SUSPENDED,
+          accreditationNumber: 'ACC-999'
+        }
+      ],
+      registrations: [
+        buildRegistrationMock({
+          status: 'approved',
+          accreditationId: 'acc-1'
+        })
+      ]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    const row = result.reportSubmissions[0]
+    expect(row.accreditationNumber).toBe('ACC-999')
+    expect(row.reportType).toBe('Monthly')
   })
 
   it('formats accreditationNumber as empty for registered only operator', async () => {

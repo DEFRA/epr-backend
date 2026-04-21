@@ -56,9 +56,11 @@ function resolveAccreditationNumber(registration, org) {
   if (!registration.accreditationId) {
     return ''
   }
-  return /** @type {import('#domain/organisations/accreditation.js').AccreditationApproved} */ (
-    org.accreditations.find((a) => a.id === registration.accreditationId)
-  ).accreditationNumber
+  const accreditation = org.accreditations.find(
+    (a) =>
+      a.id === registration.accreditationId && INCLUDED_STATUSES.has(a.status)
+  )
+  return accreditation?.accreditationNumber ?? ''
 }
 
 /**
@@ -117,9 +119,8 @@ async function buildSubmissionRows(
 
   /** @type {ReportSubmissionsRow[]} */
   return registrations.flatMap(({ org, registration }) => {
-    const cadence = registration.accreditationId
-      ? CADENCE.monthly
-      : CADENCE.quarterly
+    const accreditationNumber = resolveAccreditationNumber(registration, org)
+    const cadence = accreditationNumber ? CADENCE.monthly : CADENCE.quarterly
 
     const computedPeriods = generateReportingPeriods(cadence, currentYear)
     const periodicReports =
@@ -129,7 +130,6 @@ async function buildSubmissionRows(
       periodicReports,
       cadence
     )
-    const accreditationNumber = resolveAccreditationNumber(registration, org)
 
     return merged.map((mergedPeriod) => {
       const report = mergedPeriod.report
