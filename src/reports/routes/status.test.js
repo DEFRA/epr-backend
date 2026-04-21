@@ -8,7 +8,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  buildOrganisation,
+  buildOrganisationWithRegistration,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
@@ -55,17 +55,30 @@ describe(`POST ${reportsStatusPath}`, () => {
       }
     }
 
-    const createServerWithReport = async (
-      registrationOverrides = {},
-      reportOverrides = {}
+    const buildOrgWithRegistration = (
+      registrationOverrides,
+      accreditationStatus
     ) => {
       const registration = buildRegistration(registrationOverrides)
-      const org = buildOrganisation({ registrations: [registration] })
+      const org = buildOrganisationWithRegistration(
+        registration,
+        accreditationStatus
+      )
+      return { org, registration }
+    }
+
+    const createServerWithReport = async (
+      registrationOverrides = {},
+      reportOverrides = {},
+      accreditationStatus
+    ) => {
+      const { org, registration } = buildOrgWithRegistration(
+        registrationOverrides,
+        accreditationStatus
+      )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository()
-      const organisationsRepository = organisationsRepositoryFactory()
-      await organisationsRepository.insert(org)
+        createInMemoryOrganisationsRepository([org])
 
       const reportsRepositoryFactory = createInMemoryReportsRepository()
       const reportsRepository = reportsRepositoryFactory()
@@ -103,14 +116,17 @@ describe(`POST ${reportsStatusPath}`, () => {
       }
     }
 
-    const createServerWithoutReport = async (registrationOverrides = {}) => {
-      const registration = buildRegistration(registrationOverrides)
-      const org = buildOrganisation({ registrations: [registration] })
+    const createServerWithoutReport = async (
+      registrationOverrides = {},
+      accreditationStatus
+    ) => {
+      const { org, registration } = buildOrgWithRegistration(
+        registrationOverrides,
+        accreditationStatus
+      )
 
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository()
-      const organisationsRepository = organisationsRepositoryFactory()
-      await organisationsRepository.insert(org)
+        createInMemoryOrganisationsRepository([org])
 
       const server = await createTestServer({
         repositories: {
@@ -256,7 +272,7 @@ describe(`POST ${reportsStatusPath}`, () => {
       it('returns 400 when transitioning an accredited reprocessor report to ready_to_submit with prn.totalRevenue null', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport(
-            { wasteProcessingType: 'reprocessor' }, // accreditationId set by buildRegistration default
+            { wasteProcessingType: 'reprocessor' },
             {
               prn: {
                 issuedTonnage: 100,
@@ -264,7 +280,8 @@ describe(`POST ${reportsStatusPath}`, () => {
                 freeTonnage: 0,
                 averagePricePerTonne: null
               }
-            }
+            },
+            'approved'
           )
 
         const response = await postStatus(
@@ -276,6 +293,34 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })
+
+      it.each(['created', 'rejected', 'cancelled'])(
+        'allows transition for reprocessor with %s accreditation (treated as registered-only, prn fields not required)',
+        async (accreditationStatus) => {
+          const { server, organisationId, registrationId } =
+            await createServerWithReport(
+              { wasteProcessingType: 'reprocessor' },
+              {
+                prn: {
+                  issuedTonnage: 100,
+                  totalRevenue: null,
+                  freeTonnage: 0,
+                  averagePricePerTonne: null
+                }
+              },
+              accreditationStatus
+            )
+
+          const response = await postStatus(
+            server,
+            organisationId,
+            registrationId,
+            { status: 'ready_to_submit', version: 1 }
+          )
+
+          expect(response.statusCode).toBe(StatusCodes.OK)
+        }
+      )
 
       it('allows transition to ready_to_submit when all required fields for the operator category are populated', async () => {
         const { server, organisationId, registrationId } =
