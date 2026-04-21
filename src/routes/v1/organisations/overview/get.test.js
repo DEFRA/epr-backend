@@ -298,6 +298,28 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
+  describe('error handling', () => {
+    it('returns 500 when the repository throws', async () => {
+      const throwingRepositoryFactory = () => ({
+        findById: () => {
+          throw new Error('database error')
+        }
+      })
+
+      const serverWithThrowingRepo = await createTestServer({
+        repositories: { organisationsRepository: throwingRepositoryFactory }
+      })
+
+      const response = await serverWithThrowingRepo.inject({
+        method: 'GET',
+        url: makePath('some-org-id'),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
+  })
+
   describe('Authentication', () => {
     it('returns 401 when not authenticated', async () => {
       const org = buildOrganisation()
