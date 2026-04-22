@@ -1,13 +1,13 @@
 import { test as baseTest } from 'vitest'
-import { GenericContainer, Wait } from 'testcontainers'
+import { GenericContainer } from 'testcontainers'
 import {
   SQSClient,
   CreateQueueCommand,
   GetQueueAttributesCommand
 } from '@aws-sdk/client-sqs'
 
-const LOCALSTACK_IMAGE = 'localstack/localstack:3.0.2'
-const LOCALSTACK_PORT = 4566
+const FLOCI_IMAGE = 'hectorvent/floci:1.5.3'
+const FLOCI_PORT = 4566
 
 const REGION = 'eu-west-2'
 const CREDENTIALS = {
@@ -20,25 +20,21 @@ const DLQ_NAME_PREFIX = 'epr_backend_commands_dlq'
 
 let testCounter = 0
 
-const localstackFixture = {
-  localstack: [
+const flociFixture = {
+  floci: [
     // eslint-disable-next-line no-empty-pattern -- vitest fixtures require object destructuring
     async ({}, use) => {
-      const container = await new GenericContainer(LOCALSTACK_IMAGE)
-        .withExposedPorts(LOCALSTACK_PORT)
+      const container = await new GenericContainer(FLOCI_IMAGE)
+        .withExposedPorts(FLOCI_PORT)
         .withEnvironment({
-          SERVICES: 'sqs',
-          DEFAULT_REGION: REGION,
+          FLOCI_DEFAULT_REGION: REGION,
           AWS_ACCESS_KEY_ID: CREDENTIALS.accessKeyId,
           AWS_SECRET_ACCESS_KEY: CREDENTIALS.secretAccessKey
         })
-        .withStartupTimeout(60000)
-        .withWaitStrategy(
-          Wait.forLogMessage(/Ready\./).withStartupTimeout(60000)
-        )
+        .withStartupTimeout(90000)
         .start()
 
-      const port = container.getMappedPort(LOCALSTACK_PORT)
+      const port = container.getMappedPort(FLOCI_PORT)
       const endpoint = `http://127.0.0.1:${port}`
 
       await use({
@@ -55,11 +51,11 @@ const localstackFixture = {
 }
 
 const sqsClientFixture = {
-  sqsClient: async ({ localstack }, use) => {
+  sqsClient: async ({ floci }, use) => {
     const client = new SQSClient({
-      region: localstack.region,
-      endpoint: localstack.endpoint,
-      credentials: localstack.credentials
+      region: floci.region,
+      endpoint: floci.endpoint,
+      credentials: floci.credentials
     })
 
     // Create unique queue names for this test to ensure isolation
@@ -107,12 +103,12 @@ const sqsClientFixture = {
 /**
  * Extended test with SQS fixtures.
  * Each test gets:
- * - localstack: shared container (file scope)
+ * - floci: shared container (file scope)
  * - sqsClient: fresh client with unique queues per test (test scope)
  *
  * Access queue names via sqsClient.queueName and sqsClient.dlqName
  */
 export const it = baseTest.extend({
-  ...localstackFixture,
+  ...flociFixture,
   ...sqsClientFixture
 })

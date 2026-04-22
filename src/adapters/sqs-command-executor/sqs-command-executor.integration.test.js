@@ -15,7 +15,7 @@ const TEST_TIMEOUT = 30000
  * Integration tests for SQS command executor.
  *
  * These tests verify that the executor correctly sends messages to an SQS queue
- * (via LocalStack). They focus on:
+ * (via Floci). They focus on:
  * - Queue URL resolution
  * - Message format and content
  * - User context serialisation
