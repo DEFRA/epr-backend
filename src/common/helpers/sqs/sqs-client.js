@@ -158,17 +158,15 @@ export async function receiveMessages(
       break
     }
 
-    for (const msg of received) {
-      if (!msg.MessageId || msg.Body === undefined) {
-        continue
+    const unique = received.filter((msg) => {
+      if (!msg.MessageId || msg.Body === undefined || seen.has(msg.MessageId)) {
+        return false
       }
-
-      if (seen.has(msg.MessageId)) {
-        continue
-      }
-
       seen.add(msg.MessageId)
+      return true
+    })
 
+    for (const msg of unique.slice(0, maxMessages - messages.length)) {
       messages.push({
         messageId: msg.MessageId,
         sentTimestamp: new Date(
@@ -179,10 +177,6 @@ export async function receiveMessages(
         ),
         body: msg.Body
       })
-
-      if (messages.length >= maxMessages) {
-        break
-      }
     }
   }
 
