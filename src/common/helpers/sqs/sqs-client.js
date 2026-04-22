@@ -144,6 +144,24 @@ export async function purgeQueue(sqsClient, queueUrl) {
  * @param {number} [options.maxMessages=100]
  * @returns {Promise<Array<{messageId: string, sentTimestamp: string|null, approximateReceiveCount: number, body: string}>>}
  */
+/**
+ * @param {Object} msg - Raw SQS message
+ * @returns {{messageId: string, sentTimestamp: string|null, approximateReceiveCount: number, body: string}}
+ */
+function formatMessage(msg) {
+  const timestamp = Number(msg.Attributes?.SentTimestamp)
+
+  return {
+    messageId: msg.MessageId,
+    sentTimestamp: Number.isFinite(timestamp)
+      ? new Date(timestamp).toISOString()
+      : null,
+    approximateReceiveCount:
+      Number(msg.Attributes?.ApproximateReceiveCount) || 0,
+    body: msg.Body
+  }
+}
+
 export async function receiveMessages(
   sqsClient,
   queueUrl,
@@ -163,32 +181,20 @@ export async function receiveMessages(
       })
     )
 
-    const received = result.Messages ?? []
-    if (received.length === 0) break
-
-    let added = 0
-    for (const msg of received) {
-      if (!msg.MessageId || msg.Body === undefined) continue
-      if (seen.has(msg.MessageId)) continue
+    const unique = (result.Messages ?? []).filter((msg) => {
+      if (!msg.MessageId || msg.Body === undefined || seen.has(msg.MessageId)) {
+        return false
+      }
       seen.add(msg.MessageId)
+      return true
+    })
 
-      const timestamp = Number(msg.Attributes?.SentTimestamp)
-
-      messages.push({
-        messageId: msg.MessageId,
-        sentTimestamp: Number.isFinite(timestamp)
-          ? new Date(timestamp).toISOString()
-          : null,
-        approximateReceiveCount:
-          Number(msg.Attributes?.ApproximateReceiveCount) || 0,
-        body: msg.Body
-      })
-
-      added++
-      if (messages.length >= maxMessages) break
+    if (unique.length === 0) {
+      break
     }
 
-    if (added === 0) break
+    const batch = unique.slice(0, maxMessages - messages.length)
+    messages.push(...batch.map(formatMessage))
   }
 
   return messages
