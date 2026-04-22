@@ -43,6 +43,17 @@ describe('POST /v1/admin/queues/dlq/purge', () => {
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
   })
+
+  it('returns purged: true on success', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url: DLQ_PURGE_PATH,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({ purged: true })
+  })
 })
 
 describe('POST /v1/admin/queues/dlq/purge — service failure', () => {

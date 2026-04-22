@@ -54,6 +54,65 @@ describe('GET /v1/admin/queues/dlq/messages', () => {
 
     expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
   })
+
+  it('returns messages from the DLQ', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: DLQ_MESSAGES_PATH,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+
+    const payload = JSON.parse(response.payload)
+    expect(payload.approximateMessageCount).toBe(1)
+    expect(payload.messages).toHaveLength(1)
+    expect(payload.messages[0]).toEqual(
+      expect.objectContaining({
+        messageId: 'abc-123',
+        sentTimestamp: '2026-04-21T10:30:00.000Z',
+        approximateReceiveCount: 4,
+        command: { type: 'SUMMARY_LOG_COMMAND.VALIDATE' },
+        body: '{"type":"SUMMARY_LOG_COMMAND.VALIDATE"}'
+      })
+    )
+  })
+})
+
+describe('GET /v1/admin/queues/dlq/messages — empty queue', () => {
+  setupAuthContext()
+
+  let server
+
+  beforeAll(async () => {
+    server = await createTestServer({
+      dlqService: {
+        getMessages: vi.fn().mockResolvedValue({
+          approximateMessageCount: 0,
+          messages: []
+        }),
+        purge: vi.fn()
+      }
+    })
+  })
+
+  afterAll(async () => {
+    await server.stop()
+  })
+
+  it('returns empty messages array', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: DLQ_MESSAGES_PATH,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+
+    const payload = JSON.parse(response.payload)
+    expect(payload.approximateMessageCount).toBe(0)
+    expect(payload.messages).toEqual([])
+  })
 })
 
 describe('GET /v1/admin/queues/dlq/messages — service failure', () => {
