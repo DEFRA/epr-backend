@@ -1,11 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import {
-  periodParamsSchema,
-  standardUserAuth,
-  withRegistrationDetails
-} from './shared.js'
+import { periodParamsSchema, withRegistrationDetails } from './shared.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
 
 export const reportsGetDetailPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
@@ -14,7 +12,7 @@ export const reportsGetDetail = {
   method: 'GET',
   path: reportsGetDetailPath,
   options: {
-    auth: standardUserAuth,
+    auth: getAuthConfig([ROLES.standardUser, ROLES.serviceMaintainer]),
     tags: ['api'],
     validate: {
       params: periodParamsSchema
