@@ -7,13 +7,12 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { organisationsOverviewGetPath } from './get.js'
-
-const { validToken } = entraIdMockAuthTokens
 
 const makePath = (id) =>
   organisationsOverviewGetPath.replace('{organisationId}', id)
@@ -40,7 +39,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -56,7 +55,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -75,7 +74,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -93,7 +92,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -120,7 +119,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -150,7 +149,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -169,7 +168,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -185,7 +184,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -203,7 +202,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -219,7 +218,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -241,7 +240,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -270,7 +269,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath(org.id),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -282,7 +281,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath('nonexistent-id'),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -292,7 +291,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
     const response = await server.inject({
       method: 'GET',
       url: makePath('%20%20%20'),
-      headers: { Authorization: `Bearer ${validToken}` }
+      ...asServiceMaintainer()
     })
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -313,7 +312,7 @@ describe(`GET ${organisationsOverviewGetPath}`, () => {
       const response = await serverWithThrowingRepo.inject({
         method: 'GET',
         url: makePath('some-org-id'),
-        headers: { Authorization: `Bearer ${validToken}` }
+        ...asServiceMaintainer()
       })
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
