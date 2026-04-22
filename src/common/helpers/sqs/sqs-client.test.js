@@ -189,14 +189,43 @@ describe('receiveMessages', () => {
     expect(result[0].approximateReceiveCount).toBe(0)
   })
 
-  it('uses short polling and zero visibility timeout', async () => {
+  it('deduplicates messages seen across batches', async () => {
+    const timestamp = Date.now()
+    const msg = createSqsMessage('dup-1', 'body', timestamp, 1)
+
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [msg] })
+      .mockResolvedValueOnce({ Messages: [msg] })
+      .mockResolvedValueOnce({ Messages: [] })
+
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('stops polling when a batch yields only duplicates', async () => {
+    const timestamp = Date.now()
+    const msg = createSqsMessage('msg-1', 'body', timestamp, 1)
+
+    // First batch: 1 new message. Second batch: same message (duplicate).
+    // Should stop rather than polling indefinitely.
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [msg] })
+      .mockResolvedValue({ Messages: [msg] })
+
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('uses short polling and a short visibility timeout', async () => {
     mockClient.send.mockResolvedValueOnce({ Messages: [] })
 
     await receiveMessages(mockClient, queueUrl)
 
     expect(ReceiveMessageCommand).toHaveBeenCalledWith(
       expect.objectContaining({
-        VisibilityTimeout: 0,
+        VisibilityTimeout: 2,
         WaitTimeSeconds: 0,
         AttributeNames: ['All']
       })

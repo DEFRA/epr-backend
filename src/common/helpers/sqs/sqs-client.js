@@ -125,7 +125,10 @@ export async function purgeQueue(sqsClient, queueUrl) {
 
 /**
  * Peeks at messages in a queue without consuming them.
- * Uses VisibilityTimeout: 0 so messages remain visible to real consumers.
+ * Uses a short VisibilityTimeout so messages reappear quickly for real
+ * consumers. The timeout must be non-zero to prevent the same batch being
+ * re-delivered on the next poll, which would block access to messages on
+ * other SQS server partitions.
  * @param {SQSClientType} sqsClient
  * @param {string} queueUrl
  * @param {Object} [options]
@@ -145,7 +148,7 @@ export async function receiveMessages(
       new ReceiveMessageCommand({
         QueueUrl: queueUrl,
         MaxNumberOfMessages: Math.min(maxMessages - messages.length, 10),
-        VisibilityTimeout: 0,
+        VisibilityTimeout: 2,
         WaitTimeSeconds: 0,
         AttributeNames: ['All']
       })

@@ -169,6 +169,32 @@ describe('SQS client DLQ helpers', () => {
     )
 
     it(
+      'collects messages across multiple batches when queue exceeds the SQS per-call limit of 10',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        await Promise.all(
+          Array.from({ length: 15 }, (_, i) =>
+            sqsClient.send(
+              new SendMessageCommand({
+                QueueUrl: dlqUrl,
+                MessageBody: `msg-${i}`
+              })
+            )
+          )
+        )
+
+        const messages = await receiveMessages(sqsClient, dlqUrl, {
+          maxMessages: 100
+        })
+
+        const uniqueIds = new Set(messages.map((m) => m.messageId))
+        expect(uniqueIds.size).toBe(15)
+      }
+    )
+
+    it(
       'respects the maxMessages cap',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
