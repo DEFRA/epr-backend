@@ -140,8 +140,9 @@ export async function receiveMessages(
 ) {
   const seen = new Set()
   const messages = []
+  let hasMore = true
 
-  while (messages.length < maxMessages) {
+  while (hasMore && messages.length < maxMessages) {
     const result = await sqsClient.send(
       new ReceiveMessageCommand({
         QueueUrl: queueUrl,
@@ -153,10 +154,7 @@ export async function receiveMessages(
     )
 
     const received = result.Messages ?? []
-
-    if (received.length === 0) {
-      break
-    }
+    hasMore = received.length > 0
 
     const unique = received.filter((msg) => {
       if (!msg.MessageId || msg.Body === undefined || seen.has(msg.MessageId)) {
