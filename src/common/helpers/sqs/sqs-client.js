@@ -166,14 +166,14 @@ export async function receiveMessages(
 
     for (const msg of unique.slice(0, maxMessages - messages.length)) {
       messages.push({
-        messageId: msg.MessageId,
+        messageId: /** @type {string} */ (msg.MessageId),
         sentTimestamp: new Date(
           Number(msg.Attributes?.SentTimestamp)
         ).toISOString(),
         approximateReceiveCount: Number(
           msg.Attributes?.ApproximateReceiveCount
         ),
-        body: msg.Body
+        body: /** @type {string} */ (msg.Body)
       })
     }
   }
