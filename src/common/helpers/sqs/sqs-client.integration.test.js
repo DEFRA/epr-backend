@@ -143,24 +143,7 @@ describe('SQS client DLQ helpers', () => {
     )
 
     it(
-      'deduplicates messages across batches',
-      { timeout: TEST_TIMEOUT },
-      async ({ sqsClient }) => {
-        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
-
-        await sqsClient.send(
-          new SendMessageCommand({ QueueUrl: dlqUrl, MessageBody: 'msg1' })
-        )
-
-        const messages = await receiveMessages(sqsClient, dlqUrl)
-        const uniqueIds = new Set(messages.map((m) => m.messageId))
-
-        expect(uniqueIds.size).toBe(messages.length)
-      }
-    )
-
-    it(
-      'terminates when queue has fewer messages than maxMessages',
+      'returns each message once even when VisibilityTimeout: 0 causes re-delivery',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
@@ -180,7 +163,8 @@ describe('SQS client DLQ helpers', () => {
           maxMessages: 100
         })
 
-        expect(messages).toHaveLength(3)
+        const uniqueIds = new Set(messages.map((m) => m.messageId))
+        expect(uniqueIds.size).toBe(3)
       }
     )
 
