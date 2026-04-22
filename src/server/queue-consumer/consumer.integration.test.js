@@ -48,7 +48,7 @@ const stopConsumerAndWait = (consumer) => {
  * Integration tests for SQS command queue consumer.
  *
  * These tests verify the consumer's interaction with a real SQS queue
- * (via LocalStack). They focus on:
+ * (via Floci). They focus on:
  * - Queue connection and URL resolution
  * - Message receipt and deletion
  * - Error handling at the SQS level

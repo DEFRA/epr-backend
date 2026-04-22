@@ -70,7 +70,7 @@ docker compose --profile stub up
 
 **Supporting services included:**
 
-- LocalStack (AWS service emulation)
+- Floci (AWS service emulation)
 - MongoDB (backend only)
 - Redis (frontend + supporting services)
 - nginx-proxy (frontend only)
