@@ -21,7 +21,7 @@ jobs:
       docs-only: ${{ steps.check.outputs.docs-only }}
     steps:
       - name: Prepare PR
-        uses: DEFRA/epr-re-ex-service/.github/actions/pr-preparation@main
+        uses: DEFRA/epr-re-ex-service/.github/actions/pr-preparation@PAE-1385-add-ci-pin-check
 
       - name: Check for docs-only changes
         id: check
