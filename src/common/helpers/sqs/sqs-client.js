@@ -124,13 +124,17 @@ export async function purgeQueue(sqsClient, queueUrl) {
 }
 
 /**
- * Receives messages from a queue, deduplicating by MessageId.
+ * Peeks at messages in a queue without consuming them.
+ * Uses a short visibility timeout so messages reappear for real consumers.
  * Loops ReceiveMessage calls until an empty response or the maxMessages cap.
+ * Because the visibility timeout is short, a message can reappear across
+ * loop iterations before the previous batch's timeout expires, so results
+ * are deduplicated by MessageId.
  * @param {SQSClientType} sqsClient
  * @param {string} queueUrl
  * @param {Object} [options]
  * @param {number} [options.maxMessages=100]
- * @param {number} [options.visibilityTimeout=5]
+ * @param {number} [options.visibilityTimeout=5] - seconds before messages reappear
  * @returns {Promise<Array<{messageId: string, sentTimestamp: string, approximateReceiveCount: number, body: string}>>}
  */
 export async function receiveMessages(
