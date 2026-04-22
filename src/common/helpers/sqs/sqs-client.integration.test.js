@@ -160,6 +160,31 @@ describe('SQS client DLQ helpers', () => {
     )
 
     it(
+      'terminates when queue has fewer messages than maxMessages',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const dlqUrl = await resolveDlqUrl(sqsClient, sqsClient.queueName)
+
+        await Promise.all(
+          Array.from({ length: 3 }, (_, i) =>
+            sqsClient.send(
+              new SendMessageCommand({
+                QueueUrl: dlqUrl,
+                MessageBody: `msg-${i}`
+              })
+            )
+          )
+        )
+
+        const messages = await receiveMessages(sqsClient, dlqUrl, {
+          maxMessages: 100
+        })
+
+        expect(messages).toHaveLength(3)
+      }
+    )
+
+    it(
       'respects the maxMessages cap',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {

@@ -125,61 +125,58 @@ export async function purgeQueue(sqsClient, queueUrl) {
 
 /**
  * Peeks at messages in a queue without consuming them.
- * Uses a short visibility timeout so messages reappear for real consumers.
- * Loops ReceiveMessage calls until an empty response or the maxMessages cap.
- * Because the visibility timeout is short, a message can reappear across
- * loop iterations before the previous batch's timeout expires, so results
- * are deduplicated by MessageId.
+ * Uses VisibilityTimeout: 0 so messages remain visible to real consumers.
  * @param {SQSClientType} sqsClient
  * @param {string} queueUrl
  * @param {Object} [options]
  * @param {number} [options.maxMessages=100]
- * @param {number} [options.visibilityTimeout=5] - seconds before messages reappear
- * @returns {Promise<Array<{messageId: string, sentTimestamp: string, approximateReceiveCount: number, body: string}>>}
+ * @returns {Promise<Array<{messageId: string, sentTimestamp: string|null, approximateReceiveCount: number, body: string}>>}
  */
 export async function receiveMessages(
   sqsClient,
   queueUrl,
-  { maxMessages = 100, visibilityTimeout = 5 } = {}
+  { maxMessages = 100 } = {}
 ) {
   const seen = new Set()
   const messages = []
-  let hasMore = true
 
-  while (hasMore && messages.length < maxMessages) {
+  while (messages.length < maxMessages) {
     const result = await sqsClient.send(
       new ReceiveMessageCommand({
         QueueUrl: queueUrl,
-        MaxNumberOfMessages: 10,
-        VisibilityTimeout: visibilityTimeout,
-        MessageAttributeNames: ['All'],
+        MaxNumberOfMessages: Math.min(maxMessages - messages.length, 10),
+        VisibilityTimeout: 0,
+        WaitTimeSeconds: 0,
         AttributeNames: ['All']
       })
     )
 
     const received = result.Messages ?? []
-    hasMore = received.length > 0
+    if (received.length === 0) break
 
-    const unique = received.filter((msg) => {
-      if (!msg.MessageId || msg.Body === undefined || seen.has(msg.MessageId)) {
-        return false
-      }
+    let added = 0
+    for (const msg of received) {
+      if (!msg.MessageId || msg.Body === undefined) continue
+      if (seen.has(msg.MessageId)) continue
       seen.add(msg.MessageId)
-      return true
-    })
 
-    for (const msg of unique.slice(0, maxMessages - messages.length)) {
+      const timestamp = Number(msg.Attributes?.SentTimestamp)
+
       messages.push({
-        messageId: /** @type {string} */ (msg.MessageId),
-        sentTimestamp: new Date(
-          Number(msg.Attributes?.SentTimestamp)
-        ).toISOString(),
-        approximateReceiveCount: Number(
-          msg.Attributes?.ApproximateReceiveCount
-        ),
-        body: /** @type {string} */ (msg.Body)
+        messageId: msg.MessageId,
+        sentTimestamp: Number.isFinite(timestamp)
+          ? new Date(timestamp).toISOString()
+          : null,
+        approximateReceiveCount:
+          Number(msg.Attributes?.ApproximateReceiveCount) || 0,
+        body: msg.Body
       })
+
+      added++
+      if (messages.length >= maxMessages) break
     }
+
+    if (added === 0) break
   }
 
   return messages

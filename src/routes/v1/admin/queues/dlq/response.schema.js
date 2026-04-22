@@ -6,7 +6,7 @@ export const dlqMessagesResponseSchema = Joi.object({
     .items(
       Joi.object({
         messageId: Joi.string().required(),
-        sentTimestamp: Joi.string().isoDate().required(),
+        sentTimestamp: Joi.string().isoDate().allow(null).required(),
         approximateReceiveCount: Joi.number().integer().min(0).required(),
         command: Joi.object().allow(null).required(),
         body: Joi.string().required()

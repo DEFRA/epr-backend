@@ -18,7 +18,7 @@ import {
 /**
  * @typedef {Object} DlqMessage
  * @property {string} messageId
- * @property {string} sentTimestamp - ISO 8601 timestamp
+ * @property {string|null} sentTimestamp - ISO 8601 timestamp, or null if unavailable
  * @property {number} approximateReceiveCount
  * @property {object|null} command - Parsed message body, or null if not valid JSON
  * @property {string} body - Raw message body

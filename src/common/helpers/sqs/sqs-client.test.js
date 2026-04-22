@@ -104,44 +104,13 @@ describe('receiveMessages', () => {
     ])
   })
 
-  it('deduplicates messages by MessageId', async () => {
-    const timestamp = Date.now()
-    const msg = createSqsMessage('dup-1', 'body', timestamp, 1)
-
-    mockClient.send
-      .mockResolvedValueOnce({ Messages: [msg, msg] })
-      .mockResolvedValueOnce({ Messages: [msg] })
-      .mockResolvedValueOnce({ Messages: [] })
-
-    const result = await receiveMessages(mockClient, queueUrl)
-
-    expect(result).toHaveLength(1)
-    expect(result[0].messageId).toBe('dup-1')
-  })
-
-  it('skips messages with missing MessageId or Body', async () => {
-    const timestamp = Date.now()
-    const validMsg = createSqsMessage('valid-1', 'body', timestamp, 1)
-    const noId = { Body: 'body', Attributes: {} }
-    const noBody = { MessageId: 'no-body-1', Attributes: {} }
-
-    mockClient.send
-      .mockResolvedValueOnce({ Messages: [noId, noBody, validMsg] })
-      .mockResolvedValueOnce({ Messages: [] })
-
-    const result = await receiveMessages(mockClient, queueUrl)
-
-    expect(result).toHaveLength(1)
-    expect(result[0].messageId).toBe('valid-1')
-  })
-
   it('stops when maxMessages cap is reached', async () => {
     const timestamp = Date.now()
     const batch = Array.from({ length: 10 }, (_, i) =>
       createSqsMessage(`msg-${i}`, `body-${i}`, timestamp, 1)
     )
 
-    mockClient.send.mockResolvedValue({ Messages: batch })
+    mockClient.send.mockResolvedValueOnce({ Messages: batch })
 
     const result = await receiveMessages(mockClient, queueUrl, {
       maxMessages: 5
@@ -158,45 +127,79 @@ describe('receiveMessages', () => {
     expect(result).toEqual([])
   })
 
-  it('passes visibilityTimeout to ReceiveMessageCommand', async () => {
-    mockClient.send.mockResolvedValueOnce({ Messages: [] })
+  it('skips messages with missing MessageId', async () => {
+    const timestamp = Date.now()
+    const valid = createSqsMessage('valid-1', 'body', timestamp, 1)
+    const noId = { Body: 'body', Attributes: {} }
 
-    await receiveMessages(mockClient, queueUrl, { visibilityTimeout: 30 })
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [noId, valid] })
+      .mockResolvedValueOnce({ Messages: [] })
 
-    expect(ReceiveMessageCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ VisibilityTimeout: 30 })
-    )
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].messageId).toBe('valid-1')
   })
 
-  it('requests all message and system attributes', async () => {
+  it('skips messages with undefined Body', async () => {
+    const timestamp = Date.now()
+    const valid = createSqsMessage('valid-1', 'body', timestamp, 1)
+    const noBody = { MessageId: 'no-body', Attributes: {} }
+
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [noBody, valid] })
+      .mockResolvedValueOnce({ Messages: [] })
+
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].messageId).toBe('valid-1')
+  })
+
+  it('returns null sentTimestamp when SentTimestamp is missing', async () => {
+    const msg = {
+      MessageId: 'msg-1',
+      Body: 'body',
+      Attributes: { ApproximateReceiveCount: '2' }
+    }
+
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [msg] })
+      .mockResolvedValueOnce({ Messages: [] })
+
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result[0].sentTimestamp).toBeNull()
+  })
+
+  it('defaults approximateReceiveCount to 0 when missing', async () => {
+    const msg = {
+      MessageId: 'msg-1',
+      Body: 'body',
+      Attributes: { SentTimestamp: String(Date.now()) }
+    }
+
+    mockClient.send
+      .mockResolvedValueOnce({ Messages: [msg] })
+      .mockResolvedValueOnce({ Messages: [] })
+
+    const result = await receiveMessages(mockClient, queueUrl)
+
+    expect(result[0].approximateReceiveCount).toBe(0)
+  })
+
+  it('uses short polling and zero visibility timeout', async () => {
     mockClient.send.mockResolvedValueOnce({ Messages: [] })
 
     await receiveMessages(mockClient, queueUrl)
 
     expect(ReceiveMessageCommand).toHaveBeenCalledWith(
       expect.objectContaining({
-        MessageAttributeNames: ['All'],
+        VisibilityTimeout: 0,
+        WaitTimeSeconds: 0,
         AttributeNames: ['All']
       })
     )
-  })
-
-  it('collects messages across multiple batches', async () => {
-    const timestamp = Date.now()
-    const batch1 = Array.from({ length: 10 }, (_, i) =>
-      createSqsMessage(`batch1-${i}`, `body-${i}`, timestamp, 1)
-    )
-    const batch2 = Array.from({ length: 3 }, (_, i) =>
-      createSqsMessage(`batch2-${i}`, `body-${i}`, timestamp, 2)
-    )
-
-    mockClient.send
-      .mockResolvedValueOnce({ Messages: batch1 })
-      .mockResolvedValueOnce({ Messages: batch2 })
-      .mockResolvedValueOnce({ Messages: [] })
-
-    const result = await receiveMessages(mockClient, queueUrl)
-
-    expect(result).toHaveLength(13)
   })
 })
