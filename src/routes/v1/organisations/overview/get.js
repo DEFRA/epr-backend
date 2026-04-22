@@ -60,7 +60,7 @@ export const organisationsOverviewGet = {
           status: reg.status,
           material: reg.material,
           processingType: getProcessingType(reg),
-          site: isExporter ? null : reg.site?.address?.line1,
+          site: isExporter ? null : reg.site.address.line1,
           ...(linkedAccreditation && {
             accreditation: {
               id: linkedAccreditation.id,
