@@ -125,10 +125,19 @@ export async function purgeQueue(sqsClient, queueUrl) {
 
 /**
  * Peeks at messages in a queue without consuming them.
- * Uses a short VisibilityTimeout so messages reappear quickly for real
- * consumers. The timeout must be non-zero to prevent the same batch being
- * re-delivered on the next poll, which would block access to messages on
- * other SQS server partitions.
+ *
+ * SQS has no native peek or list-messages operation. The only way to inspect
+ * queue contents is ReceiveMessage, which temporarily hides messages from
+ * other consumers. This function works around that by using a short
+ * VisibilityTimeout (2s) so messages reappear quickly. The timeout must be
+ * non-zero: at zero, the same batch is re-delivered on the next poll,
+ * blocking access to messages on other SQS server partitions.
+ *
+ * Because SQS distributes messages across servers, repeated polling may
+ * return the same messages once the visibility timeout expires. Results are
+ * deduplicated by MessageId and the loop exits when a batch yields nothing
+ * new. This means results are a best-effort sample, not an exhaustive list.
+ *
  * @param {SQSClientType} sqsClient
  * @param {string} queueUrl
  * @param {Object} [options]
