@@ -33,16 +33,32 @@ describe('ExcelJSSummaryLogsParser', () => {
     return parse(buffer, options)
   }
 
-  it('should throw error for invalid Excel buffer', async () => {
+  it('should throw SpreadsheetValidationError for invalid Excel buffer', async () => {
     const invalidBuffer = Buffer.from('not an excel file')
 
-    await expect(parse(invalidBuffer)).rejects.toThrow()
+    await expect(parse(invalidBuffer)).rejects.toThrow(
+      SpreadsheetValidationError
+    )
+    await expect(parse(invalidBuffer)).rejects.toMatchObject({
+      code: VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
+    })
   })
 
-  it('should handle empty buffer', async () => {
+  it('should throw SpreadsheetValidationError for empty buffer', async () => {
     const emptyBuffer = Buffer.from('')
 
-    await expect(parse(emptyBuffer)).rejects.toThrow()
+    await expect(parse(emptyBuffer)).rejects.toThrow(SpreadsheetValidationError)
+  })
+
+  it('should preserve the original exceljs error as cause', async () => {
+    const invalidBuffer = Buffer.from('not an excel file')
+
+    await expect(parse(invalidBuffer)).rejects.toSatisfy(
+      (error) =>
+        error instanceof SpreadsheetValidationError &&
+        error.cause !== undefined &&
+        !(error.cause instanceof SpreadsheetValidationError)
+    )
   })
 
   describe('workbook structure validation', () => {
@@ -2429,5 +2445,16 @@ describe('SpreadsheetValidationError', () => {
 
     expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
     expect(error.message).toBe('Duplicate marker')
+  })
+
+  it('should preserve cause when provided via options', () => {
+    const original = new TypeError('underlying failure')
+    const error = new SpreadsheetValidationError(
+      'Wrapped failure',
+      VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
+      { cause: original }
+    )
+
+    expect(error.cause).toBe(original)
   })
 })

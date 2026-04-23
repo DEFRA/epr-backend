@@ -20,9 +20,14 @@ export class SpreadsheetValidationError extends Error {
   /**
    * @param {string} message - Error message
    * @param {string} [code] - Validation code for i18n/translation on the client side
+   * @param {ErrorOptions} [options] - Standard Error options (e.g. `{ cause }`)
    */
-  constructor(message, code = VALIDATION_CODE.SPREADSHEET_INVALID_ERROR) {
-    super(message)
+  constructor(
+    message,
+    code = VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
+    options = {}
+  ) {
+    super(message, options)
     this.name = 'SpreadsheetValidationError'
     /** @type {string} */
     this.code = code
@@ -559,9 +564,17 @@ export const parse = async (buffer, options = {}) => {
   } = options
 
   const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.load(
-    /** @type {import('exceljs').Buffer} */ (/** @type {unknown} */ (buffer))
-  )
+  try {
+    await workbook.xlsx.load(
+      /** @type {import('exceljs').Buffer} */ (/** @type {unknown} */ (buffer))
+    )
+  } catch (error) {
+    throw new SpreadsheetValidationError(
+      `Failed to parse spreadsheet: ${error.message}`,
+      VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
+      { cause: error }
+    )
+  }
 
   validateWorkbookStructure(workbook, {
     requiredWorksheet,
