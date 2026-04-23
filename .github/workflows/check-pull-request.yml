@@ -130,7 +130,8 @@ jobs:
                   if . >= 60 then "\(. / 60 | floor)m \(. % 60)s"
                   else "\(.)s"
                   end;
-                sort_by(-.stop + .start) | .[0:5][]
+                map(select(.start != null and .stop != null))
+                | sort_by(-.stop + .start) | .[0:5][]
                 | ((.stop - .start) / 1000 | round) as $secs
                 | "| \(.name) | \($secs | fmt_secs) |"
               ' allure-results/*-result.json)
