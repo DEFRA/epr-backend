@@ -353,6 +353,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_ORS_WASTE_BALANCE_VALIDATION'
+    },
+    allowSensitiveLogs: {
+      doc: 'Feature Flag: Allow potentially sensitive logging',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_ALLOW_SENSITIVE_LOGS'
     }
   },
   formSubmissionOverrides: {
