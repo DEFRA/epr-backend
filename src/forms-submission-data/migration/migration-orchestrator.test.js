@@ -8,6 +8,7 @@ import {
 import { transformAll } from './submission-transformer.js'
 import { getSubmissionsToMigrate } from './migration-delta-calculator.js'
 import { upsertOrganisations } from './organisation-persistence.js'
+import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 import {
   linkItemsToOrganisations,
   linkRegistrationToAccreditations
@@ -33,6 +34,10 @@ vi.mock('./organisation-persistence.js', () => ({
   upsertOrganisations: vi.fn().mockResolvedValue({ successful: [], failed: [] })
 }))
 
+vi.mock('./copy-operator-uploaded-files.js', () => ({
+  copyOperatorUploadedFiles: vi.fn().mockResolvedValue(undefined)
+}))
+
 vi.mock('#formsubmission/link-form-submissions.js', () => ({
   linkItemsToOrganisations: vi.fn(),
   linkRegistrationToAccreditations: vi.fn()
@@ -46,6 +51,7 @@ describe('MigrationOrchestrator', () => {
   let formsSubmissionRepository
   let organisationsRepository
   let systemLogsRepository
+  let formsFileUploadsRepository
   let migrator
 
   // Reusable mock helpers
@@ -116,10 +122,15 @@ describe('MigrationOrchestrator', () => {
       insert: vi.fn()
     }
 
+    formsFileUploadsRepository = {
+      copyFormFileToS3: vi.fn().mockResolvedValue(undefined)
+    }
+
     migrator = createFormDataMigrator(
       formsSubmissionRepository,
       organisationsRepository,
-      systemLogsRepository
+      systemLogsRepository,
+      formsFileUploadsRepository
     )
 
     // Default mock implementations
@@ -276,6 +287,42 @@ describe('MigrationOrchestrator', () => {
         ])
       )
     })
+
+    it('should call copyOperatorUploadedFiles with transformed registrations and accreditations after upsert', async () => {
+      const orgId = new ObjectId().toString()
+      const regId = new ObjectId().toString()
+      const accrId = new ObjectId().toString()
+
+      getSubmissionsToMigrate.mockResolvedValue(
+        createMockDelta([], [orgId], [regId], [accrId])
+      )
+
+      const org = createOrg(orgId)
+      const reg = createReg(regId, orgId)
+      const accr = createAccr(accrId, orgId)
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [reg],
+        accreditations: [accr]
+      })
+
+      await migrator.migrate()
+
+      expect(copyOperatorUploadedFiles).toHaveBeenCalledWith(
+        [reg],
+        [accr],
+        formsFileUploadsRepository
+      )
+    })
+
+    it('should not call copyOperatorUploadedFiles when there are no submissions to migrate', async () => {
+      getSubmissionsToMigrate.mockResolvedValue(createMockDelta())
+
+      await migrator.migrate()
+
+      expect(copyOperatorUploadedFiles).not.toHaveBeenCalled()
+    })
   })
 
   describe('migrateById()', () => {
@@ -288,7 +335,8 @@ describe('MigrationOrchestrator', () => {
       orchestrator = new MigrationOrchestrator(
         formsSubmissionRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        formsFileUploadsRepository
       )
     })
 

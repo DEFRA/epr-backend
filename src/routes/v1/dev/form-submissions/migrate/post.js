@@ -3,6 +3,9 @@ import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
 import { MigrationOrchestrator } from '#formsubmission/migration/migration-orchestrator.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
+import { createFormsFileUploadsRepository } from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
+import { config } from '../../../../../config.js'
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
@@ -43,10 +46,20 @@ async function handler(request, h) {
   } = request
   const { id } = request.params
 
+  const s3Client = createS3Client({
+    region: config.get('awsRegion'),
+    endpoint: config.get('s3Endpoint'),
+    forcePathStyle: config.get('isDevelopment')
+  })
+  const formsFileUploadsRepository = createFormsFileUploadsRepository({
+    s3Client
+  })
+
   const orchestrator = new MigrationOrchestrator(
     formSubmissionsRepository,
     organisationsRepository,
-    systemLogsRepository
+    systemLogsRepository,
+    formsFileUploadsRepository
   )
 
   const result = await orchestrator.migrateById(id)
