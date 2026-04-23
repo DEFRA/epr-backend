@@ -20,7 +20,7 @@ import {
  * @property {string} messageId
  * @property {string|null} sentTimestamp - ISO 8601 timestamp, or null if unavailable
  * @property {number} approximateReceiveCount
- * @property {object|null} command - Parsed message body, or null if not valid JSON
+ * @property {object|string} command - Parsed message body, or raw body string if not valid JSON
  * @property {string} body - Raw message body
  */
 
@@ -73,11 +73,11 @@ export const dlqAdminPlugin = {
         ])
 
         const messages = rawMessages.map((msg) => {
-          let command = null
+          let command
           try {
             command = JSON.parse(msg.body)
           } catch {
-            // body is not valid JSON — leave command as null
+            command = msg.body
           }
 
           return { ...msg, command }

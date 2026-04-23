@@ -132,7 +132,7 @@ describe('dlqAdminPlugin', () => {
     expect(purgeResponse.result).toEqual({ purged: true })
   })
 
-  it('sets command to null when body is not valid JSON', async () => {
+  it('sets command to the raw body string when body is not valid JSON', async () => {
     vi.mocked(getApproximateMessageCount).mockResolvedValue(1)
     vi.mocked(receiveMessages).mockResolvedValue([
       {
@@ -156,7 +156,7 @@ describe('dlqAdminPlugin', () => {
       url: '/test-messages'
     })
 
-    expect(response.result.messages[0].command).toBeNull()
+    expect(response.result.messages[0].command).toBe('not-json')
   })
 
   it('destroys SQS client on server stop', async () => {
