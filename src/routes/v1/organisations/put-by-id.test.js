@@ -418,6 +418,45 @@ describe('PUT /v1/organisations/{id}', () => {
       }
     }
   })
+
+  describe('unexpected repository errors', () => {
+    it('returns 500 when the repository throws a non-Boom error', async () => {
+      const instance = createInMemoryOrganisationsRepository([])()
+      const fixture = buildOrganisation()
+      await instance.insert(fixture)
+
+      const testServer = await createTestServer({
+        repositories: {
+          organisationsRepository: instance,
+          systemLogsRepository: createSystemLogsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ organisations: true })
+      })
+
+      const fetchResponse = await testServer.inject({
+        method: 'GET',
+        url: `/v1/organisations/${fixture.id}`,
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      const org = JSON.parse(fetchResponse.payload)
+
+      instance.replace = async () => {
+        throw new Error('unexpected repository failure')
+      }
+
+      const response = await testServer.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: { Authorization: `Bearer ${validToken}` },
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
+  })
 })
 
 describe('PUT /v1/organisations/{id} overseas sites validation', () => {

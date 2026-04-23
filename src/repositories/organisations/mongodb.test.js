@@ -66,6 +66,144 @@ describe('MongoDB organisations repository', () => {
         'Unexpected database error'
       )
     })
+
+    it('converts E11000 from replace to a curated Boom.conflict without leaking the raw errmsg', async () => {
+      const existingOrg = buildOrganisation()
+      const existingDoc = {
+        ...existingOrg,
+        _id: ObjectId.createFromHexString(existingOrg.id),
+        version: 1,
+        schemaVersion: 1,
+        users: []
+      }
+      const leakyErrmsg =
+        'E11000 duplicate key error collection: epr-backend.epr-organisations index: orgId_1 dup key: { orgId: "conflicting-value" }'
+      const dbMock = {
+        collection: () => ({
+          createIndex: async () => {},
+          findOne: async () => existingDoc,
+          replaceOne: async () => {
+            const error = new Error(leakyErrmsg)
+            error.code = 11000
+            error.keyPattern = { orgId: 1 }
+            throw error
+          }
+        })
+      }
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+      const updatePayload = prepareOrgUpdate(existingOrg, {
+        wasteProcessingTypes: ['reprocessor']
+      })
+
+      await expect(
+        repository.replace(existingOrg.id, 1, updatePayload)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining('orgId')
+          }
+        }
+      })
+
+      await expect(
+        repository.replace(existingOrg.id, 1, updatePayload)
+      ).rejects.not.toMatchObject({
+        message: expect.stringContaining('conflicting-value')
+      })
+    })
+
+    it('converts E11000 from replaceRaw to a curated Boom.conflict without leaking the raw errmsg', async () => {
+      const leakyErrmsg =
+        'E11000 duplicate key error collection: epr-backend.epr-organisations index: registrations.id_1 dup key: { "registrations.id": "secret-reg-id-abc" }'
+      const dbMock = {
+        collection: () => ({
+          createIndex: async () => {},
+          replaceOne: async () => {
+            const error = new Error(leakyErrmsg)
+            error.code = 11000
+            error.keyPattern = { 'registrations.id': 1 }
+            throw error
+          }
+        })
+      }
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+      const anyOrg = buildOrganisation()
+
+      await expect(
+        repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining('registrations.id')
+          }
+        }
+      })
+
+      await expect(
+        repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
+      ).rejects.not.toMatchObject({
+        message: expect.stringContaining('secret-reg-id-abc')
+      })
+    })
+
+    it('rethrows non-dup-key errors from replaceRaw', async () => {
+      const dbMock = {
+        collection: () => ({
+          createIndex: async () => {},
+          replaceOne: async () => {
+            const error = new Error('Unexpected database error')
+            error.code = 99999
+            throw error
+          }
+        })
+      }
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+      const anyOrg = buildOrganisation()
+
+      await expect(
+        repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
+      ).rejects.toThrow('Unexpected database error')
+    })
+
+    it('falls back to "unknown" in the dup-key message when keyPattern is absent', async () => {
+      const dbMock = {
+        collection: () => ({
+          createIndex: async () => {},
+          replaceOne: async () => {
+            const error = new Error('E11000 duplicate key error')
+            error.code = 11000
+            // No keyPattern — covers the defensive fallback path
+            throw error
+          }
+        })
+      }
+
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+      const anyOrg = buildOrganisation()
+
+      await expect(
+        repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringContaining('unknown')
+          }
+        }
+      })
+    })
   })
 
   describe('findAllLinked query filtering', () => {

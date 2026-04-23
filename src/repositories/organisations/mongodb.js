@@ -78,6 +78,17 @@ const performInsert = (db) => async (organisation) => {
   }
 }
 
+const throwCuratedDuplicateKeyBoom = (error, id) => {
+  const conflictFields = error.keyPattern
+    ? Object.keys(error.keyPattern).join(', ')
+    : 'unknown'
+  const boom = Boom.conflict(
+    `Duplicate key conflict updating organisation ${id} (${conflictFields})`
+  )
+  boom.cause = error
+  throw boom
+}
+
 const performReplace = (db) => async (id, version, updates) => {
   const validatedId = validateId(id)
 
@@ -88,12 +99,20 @@ const performReplace = (db) => async (id, version, updates) => {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
 
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .replaceOne(
-      { _id: ObjectId.createFromHexString(validatedId), version },
-      prepareForReplace(mapDocumentWithCurrentStatuses(existing), updates)
-    )
+  let result
+  try {
+    result = await db
+      .collection(COLLECTION_NAME)
+      .replaceOne(
+        { _id: ObjectId.createFromHexString(validatedId), version },
+        prepareForReplace(mapDocumentWithCurrentStatuses(existing), updates)
+      )
+  } catch (error) {
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      throwCuratedDuplicateKeyBoom(error, validatedId)
+    }
+    throw error
+  }
 
   if (result.matchedCount === 0) {
     throw Boom.conflict(
@@ -105,14 +124,22 @@ const performReplace = (db) => async (id, version, updates) => {
 const performReplaceRaw = (db) => async (id, version, document) => {
   const validatedId = validateId(id)
 
-  const result = await db.collection(COLLECTION_NAME).replaceOne(
-    { _id: ObjectId.createFromHexString(validatedId), version },
-    {
-      _id: ObjectId.createFromHexString(validatedId),
-      ...document,
-      version: version + 1
+  let result
+  try {
+    result = await db.collection(COLLECTION_NAME).replaceOne(
+      { _id: ObjectId.createFromHexString(validatedId), version },
+      {
+        _id: ObjectId.createFromHexString(validatedId),
+        ...document,
+        version: version + 1
+      }
+    )
+  } catch (error) {
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      throwCuratedDuplicateKeyBoom(error, validatedId)
     }
-  )
+    throw error
+  }
 
   if (result.matchedCount === 0) {
     throw Boom.conflict(
