@@ -9,8 +9,9 @@ import { ecsFormat } from '@elastic/ecs-pino-format'
 const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
-const cdpEnvironment = config.get('cdpEnvironment')
-const isProductionEnvironment = cdpEnvironment === 'prod'
+//const cdpEnvironment = config.get('cdpEnvironment')
+//const isProductionEnvironment = cdpEnvironment === 'prod'
+export const turnOffSensitiveLogs = false // isProductionEnvironment
 
 const formatters = {
   ecs: {
@@ -50,7 +51,7 @@ export const loggerOptions = {
 
       // Include Boom error details for better debugging (non-prod only)
       // @ts-ignore - check for Boom error before casting
-      if (!isProductionEnvironment && err.isBoom && err.output) {
+      if (!turnOffSensitiveLogs && err.isBoom && err.output) {
         /** @type {BoomError} */
         const boomErr = /** @type {BoomError} */ (err)
         errorObj.statusCode = boomErr.output.statusCode
@@ -81,7 +82,7 @@ export const loggerOptions = {
   },
   // Log 4xx response bodies as 'err' field in non-prod environments
   // This properly accesses request.response.source which contains error details
-  log4xxResponseErrors: !isProductionEnvironment,
+  log4xxResponseErrors: !turnOffSensitiveLogs,
   // @fixme: add coverage
   /* v8 ignore next 8 */
   mixin() {

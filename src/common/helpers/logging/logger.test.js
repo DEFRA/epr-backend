@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { loggerOptions } from './logger-options.js'
+import { loggerOptions, turnOffSensitiveLogs } from './logger-options.js'
 
 // vi.mock is hoisted by vitest, so this runs before the import above
 vi.mock('#root/config.js', () => ({
@@ -173,7 +173,7 @@ describe('loggerOptions in production environment', () => {
     vi.resetModules()
   })
 
-  test('excludes Boom error details in prod environment', async () => {
+  test('excludes Boom error details in prod environment when set to do that', async () => {
     vi.doMock('#root/config.js', () => ({
       config: {
         get: vi.fn((key) => {
@@ -207,17 +207,27 @@ describe('loggerOptions in production environment', () => {
 
     const result = errorSerializer(boomError)
 
-    expect(result).toEqual({
-      message: 'Validation failed',
-      stack_trace: expect.stringContaining('Error: Validation failed'),
-      type: 'Error'
-    })
-    expect(result.statusCode).toBeUndefined()
-    expect(result.payload).toBeUndefined()
-    expect(result.message).not.toContain('sensitiveInfo')
+    expect(result.stack_trace).toStrictEqual(
+      expect.stringContaining('Error: Validation failed')
+    )
+    expect(result.type).toBe('Error')
+    expect(result.statusCode).toBe(turnOffSensitiveLogs ? undefined : 422)
+    expect(result.payload).toStrictEqual(
+      turnOffSensitiveLogs
+        ? undefined
+        : {
+            error: 'Unprocessable Entity',
+            message: 'Sensitive details'
+          }
+    )
+    expect(result.message).toBe(
+      turnOffSensitiveLogs
+        ? 'Validation failed'
+        : 'Validation failed | data: {"sensitiveInfo":"should not appear"}'
+    )
   })
 
-  test('log4xxResponseErrors is disabled in prod environment', async () => {
+  test('log4xxResponseErrors is disabled in prod environment when set to do that', async () => {
     vi.doMock('#root/config.js', () => ({
       config: {
         get: vi.fn((key) => {
@@ -240,6 +250,6 @@ describe('loggerOptions in production environment', () => {
     const { loggerOptions: prodLoggerOptions } =
       await import('./logger-options.js')
 
-    expect(prodLoggerOptions.log4xxResponseErrors).toBe(false)
+    expect(prodLoggerOptions.log4xxResponseErrors).toBe(!turnOffSensitiveLogs)
   })
 })
