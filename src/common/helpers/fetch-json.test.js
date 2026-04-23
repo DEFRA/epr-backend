@@ -245,9 +245,41 @@ describe('#fetchJson', () => {
         output: {
           statusCode: 500
         },
-        message: expect.stringContaining(
-          `Failed to fetch from url: ${url}: Network request failed`
-        )
+        message: `Failed to fetch from url: ${url}`
+      })
+    })
+
+    test('does not leak the underlying error message into the Boom message', async () => {
+      const leakyError = new Error(
+        'connect ECONNREFUSED https://api.example.com/secret?token=abc123'
+      )
+      global.fetch = vi.fn().mockRejectedValue(leakyError)
+
+      await expect(fetchJson(url)).rejects.toMatchObject({
+        isBoom: true,
+        message: `Failed to fetch from url: ${url}`
+      })
+      await expect(fetchJson(url)).rejects.not.toMatchObject({
+        message: expect.stringContaining('token=abc123')
+      })
+    })
+
+    test('attaches the original error as Boom.cause for observability', async () => {
+      const networkError = new Error('Network request failed')
+      global.fetch = vi.fn().mockRejectedValue(networkError)
+
+      await expect(fetchJson(url)).rejects.toHaveProperty('cause', networkError)
+    })
+
+    test('preserves error.code on cause so classifiers land in logs (e.g. ECONNREFUSED)', async () => {
+      const connRefused = new Error('connection refused — system detail')
+      connRefused.code = 'ECONNREFUSED'
+      global.fetch = vi.fn().mockRejectedValue(connRefused)
+
+      await expect(fetchJson(url)).rejects.toMatchObject({
+        isBoom: true,
+        message: `Failed to fetch from url: ${url}`,
+        cause: { code: 'ECONNREFUSED' }
       })
     })
 
@@ -260,9 +292,7 @@ describe('#fetchJson', () => {
         output: {
           statusCode: 500
         },
-        message: expect.stringContaining(
-          `Failed to fetch from url: ${url}: Request timeout`
-        )
+        message: `Failed to fetch from url: ${url}`
       })
     })
 

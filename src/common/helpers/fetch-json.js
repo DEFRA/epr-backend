@@ -44,7 +44,13 @@ export const fetchJson = async (url, options) => {
       throw error
     }
 
-    // For network errors or other non-HTTP errors, create a 500 Boom error
-    throw Boom.internal(`Failed to fetch from url: ${url}: ${error.message}`)
+    // For network errors or other non-HTTP errors, create a 500 Boom error.
+    // error.message is not interpolated because it can echo unbounded content
+    // (e.g. URL query strings, response body fragments). The original error is
+    // attached as .cause so the logger can surface bounded classifiers
+    // (name, code) via the err serializer without exposing the message.
+    const boom = Boom.internal(`Failed to fetch from url: ${url}`)
+    boom.cause = error
+    throw boom
   }
 }
