@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
 import { failAction } from './fail-action.js'
 
 vi.mock('#root/config.js', () => ({
@@ -49,7 +50,37 @@ describe('#fail-action', () => {
         StatusCodes.UNPROCESSABLE_ENTITY
       )
       expect(thrownError?.message).toBe('"redirectUrl" is required')
-      expect(thrownError?.data).toEqual(joiError.details)
+    })
+
+    test('does not carry user-submitted values into the thrown Boom (would leak via data-interpolating serializers)', () => {
+      const schema = Joi.object({
+        email: Joi.string().email().required()
+      })
+
+      const sensitiveValue = 'possibly-pii@not-a-real-email'
+      const { error: joiError } = schema.validate({ email: sensitiveValue })
+
+      const mockRequest = createMockRequest()
+
+      let thrown
+      try {
+        failAction(mockRequest, {}, joiError)
+      } catch (e) {
+        thrown = e
+      }
+
+      // Positive shape: only the field-name-and-rule message, no data
+      // (Boom sets .data to null when no data argument is passed)
+      expect(thrown.isBoom).toBe(true)
+      expect(thrown.output.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(thrown.message).toBe('"email" must be a valid email')
+      expect(thrown.data).toBeNull()
+
+      // Regression anchor: the raw user value must not appear anywhere on
+      // the Boom that the err serializer will see (message, data, or any
+      // stringified form).
+      expect(thrown.message).not.toContain(sensitiveValue)
+      expect(JSON.stringify(thrown.data ?? '')).not.toContain(sensitiveValue)
     })
 
     test('logs at warn level', () => {
