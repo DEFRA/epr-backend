@@ -41,33 +41,7 @@ export const createSystemLogsRepository = async (db) => {
     },
 
     async findByOrganisationId({ organisationId, limit, cursor }) {
-      const filter = { 'context.organisationId': organisationId }
-
-      if (cursor) {
-        filter._id = { $lt: ObjectId.createFromHexString(cursor) }
-      }
-
-      const docs = await db
-        .collection(SYSTEM_LOGS_COLLECTION_NAME)
-        .find(filter)
-        .sort({ _id: -1 })
-        .limit(limit + 1)
-        .toArray()
-
-      const hasMore = docs.length > limit
-      const items = hasMore ? docs.slice(0, limit) : docs
-
-      return {
-        systemLogs: items.map((doc) => ({
-          event: doc.event,
-          context: doc.context,
-          createdAt: doc.createdAt,
-          createdBy: doc.createdBy
-        })),
-        hasMore,
-        // @ts-expect-error hasMore guarantees items is non-empty
-        nextCursor: hasMore ? items.at(-1)._id.toHexString() : null
-      }
+      return this.find({ organisationId, limit, cursor })
     },
 
     async find({ organisationId, email, subCategory, limit, cursor }) {

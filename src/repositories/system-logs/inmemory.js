@@ -23,27 +23,7 @@ export function createSystemLogsRepository() {
       },
 
       async findByOrganisationId({ organisationId, limit, cursor }) {
-        let results = storage.filter(
-          (payload) => payload.context?.organisationId === organisationId
-        )
-
-        // Sort by internal ID descending (newest first)
-        results.sort((a, b) => b._internalId - a._internalId)
-
-        if (cursor) {
-          const cursorId = fromHexCursor(cursor)
-          results = results.filter((item) => item._internalId < cursorId)
-        }
-
-        const hasMore = results.length > limit
-        const page = hasMore ? results.slice(0, limit) : results
-
-        return {
-          systemLogs: page.map(({ _internalId, ...rest }) => rest),
-          hasMore,
-          // @ts-expect-error hasMore guarantees page is non-empty
-          nextCursor: hasMore ? toHexCursor(page.at(-1)._internalId) : null
-        }
+        return this.find({ organisationId, limit, cursor })
       },
 
       async find({ organisationId, email, subCategory, limit, cursor }) {
