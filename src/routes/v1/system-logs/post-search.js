@@ -24,7 +24,7 @@ export const systemLogsPostSearch = {
         subCategory: Joi.string().optional(),
         limit: Joi.number().integer().min(1).optional(),
         cursor: Joi.string().hex().length(24).optional()
-      }).or('organisationId', 'email', 'subCategory')
+      }).or('organisationId', 'email')
     }
   },
   handler: async (request, h) => {

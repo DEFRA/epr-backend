@@ -72,15 +72,16 @@ describe('POST /v1/system-logs/search', () => {
     })
 
     it('returns logs filtered by sub-category', async () => {
-      await addSystemLog({ subCategory: 'Reconciliation', id: 1 })
-      await addSystemLog({ subCategory: 'Organisations', id: 2 })
+      const email = 'alice@example.com'
+      await addSystemLog({ email, subCategory: 'summary-log', id: 1 })
+      await addSystemLog({ email, subCategory: 'epr-organisations', id: 2 })
 
-      const response = await makeRequest({ subCategory: 'Reconciliation' })
+      const response = await makeRequest({ email, subCategory: 'summary-log' })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result.systemLogs).toHaveLength(1)
-      expect(result.systemLogs[0].event.subCategory).toBe('Reconciliation')
+      expect(result.systemLogs[0].event.subCategory).toBe('summary-log')
     })
 
     it('returns logs filtered by organisation ID', async () => {
@@ -103,20 +104,20 @@ describe('POST /v1/system-logs/search', () => {
       await addSystemLog({
         organisationId,
         email: 'alice@example.com',
-        subCategory: 'Reconciliation',
+        subCategory: 'summary-log',
         id: 1
       })
       await addSystemLog({
         organisationId,
         email: 'bob@example.com',
-        subCategory: 'Reconciliation',
+        subCategory: 'summary-log',
         id: 2
       })
 
       const response = await makeRequest({
         organisationId,
         email: 'alice@example.com',
-        subCategory: 'Reconciliation'
+        subCategory: 'summary-log'
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -186,6 +187,12 @@ describe('POST /v1/system-logs/search', () => {
   describe('validation', () => {
     it('returns 422 when no filters are provided', async () => {
       const response = await makeRequest({})
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 422 when only subCategory is provided', async () => {
+      const response = await makeRequest({ subCategory: 'summary-log' })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
