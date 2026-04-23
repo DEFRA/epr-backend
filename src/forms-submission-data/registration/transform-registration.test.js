@@ -51,6 +51,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         phone: '1234567890',
         jobTitle: 'Packaging Compliance Officer'
       },
+      applicationContactDetails: {
+        fullName: 'Sarah Mitchell',
+        email: 'reexserviceteam@defra.gov.uk',
+        phone: '1234567890',
+        jobTitle: 'Packaging Compliance Officer'
+      },
       site: undefined,
       noticeAddress: {
         line1: '45',
@@ -180,6 +186,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         'Optical sorting machine (Model XR-500), industrial crusher producing 10-40mm cullet, trommel screen (50mm aperture), magnetic separator, vibrating screens for grading, wash and rinse facility, rotary dryer, storage bunkers (50 tonne capacity), conveyor belt system (50m length), bag splitter, dust extraction system, weighbridge (60 tonne)',
       exportPorts: undefined,
       submitterContactDetails: {
+        fullName: 'James Patterson',
+        email: 'reexserviceteam@defra.gov.uk',
+        phone: '020 7946 0123',
+        jobTitle: 'Director'
+      },
+      applicationContactDetails: {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',

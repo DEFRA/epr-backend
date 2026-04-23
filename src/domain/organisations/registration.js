@@ -43,6 +43,7 @@
  *  site: RegistrationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
+ *  applicationContactDetails?: User;
  *  wasteProcessingType: string;
  *  reprocessingType?: ReprocessingType;
  *  overseasSites?: Record<string, {overseasSiteId: string}>;

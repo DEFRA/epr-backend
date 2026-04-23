@@ -15,6 +15,27 @@ export function getSubmitterDetails(answersByShortDescription) {
   }
 }
 
+export function getApplicationContactDetails(answersByShortDescription) {
+  return {
+    fullName:
+      answersByShortDescription[
+        REGISTRATION.APPLICATION_CONTACT_DETAILS.fields.NAME
+      ],
+    email:
+      answersByShortDescription[
+        REGISTRATION.APPLICATION_CONTACT_DETAILS.fields.EMAIL
+      ],
+    phone:
+      answersByShortDescription[
+        REGISTRATION.APPLICATION_CONTACT_DETAILS.fields.TELEPHONE_NUMBER
+      ],
+    jobTitle:
+      answersByShortDescription[
+        REGISTRATION.APPLICATION_CONTACT_DETAILS.fields.JOB_TITLE
+      ]
+  }
+}
+
 export function getApprovedPersons(answersByShortDescription) {
   const approvedPerson = {
     fullName:

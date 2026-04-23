@@ -95,6 +95,14 @@ export const REGISTRATION = {
       JOB_TITLE: APP_CONTACT_JOB_TITLE
     }
   },
+  APPLICATION_CONTACT_DETAILS: {
+    fields: {
+      NAME: APP_CONTACT_NAME,
+      EMAIL: APP_CONTACT_EMAIL,
+      TELEPHONE_NUMBER: APP_CONTACT_TELEPHONE,
+      JOB_TITLE: APP_CONTACT_JOB_TITLE
+    }
+  },
   ENV_PERMIT_DETAILS: {
     title: 'Environmental permit or waste management licence details',
     fields: {

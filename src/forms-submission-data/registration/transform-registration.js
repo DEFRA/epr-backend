@@ -18,6 +18,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getWasteManagementPermits } from '#formsubmission/registration/extract-permits.js'
 import { getSiteDetails } from '#formsubmission/registration/extract-site.js'
 import {
+  getApplicationContactDetails,
   getSubmitterDetails,
   getApprovedPersons
 } from '#formsubmission/registration/extract-contacts.js'
@@ -69,6 +70,9 @@ function buildParsedRegistration(id, rawSubmissionData) {
         REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),
+    applicationContactDetails: getApplicationContactDetails(
+      answersByShortDescription
+    ),
     site: isReprocessor
       ? getSiteDetails(answersByShortDescription, answersByPages)
       : undefined,
