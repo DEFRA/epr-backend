@@ -357,7 +357,7 @@ const baseConfig = {
     allowSensitiveLogs: {
       doc: 'Feature Flag: Allow potentially sensitive logging',
       format: Boolean,
-      default: false,
+      default: true,
       env: 'FEATURE_FLAG_ALLOW_SENSITIVE_LOGS'
     }
   },
