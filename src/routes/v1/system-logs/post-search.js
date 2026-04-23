@@ -45,7 +45,7 @@ export const systemLogsPostSearch = {
 
       return respondWithSystemLogs(result, h, logger)
     } catch (error) {
-      handleSystemLogsError(error, logger, systemLogsSearchPath)
+      return handleSystemLogsError(error, logger, systemLogsSearchPath)
     }
   }
 }

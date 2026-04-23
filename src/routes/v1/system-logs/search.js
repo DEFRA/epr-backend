@@ -42,7 +42,7 @@ export const systemLogsGet = {
 
       return respondWithSystemLogs(result, h, logger)
     } catch (error) {
-      handleSystemLogsError(error, logger, systemLogsPath)
+      return handleSystemLogsError(error, logger, systemLogsPath)
     }
   }
 }
