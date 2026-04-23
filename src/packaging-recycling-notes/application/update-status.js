@@ -22,7 +22,7 @@ const STATUS_OPERATION_SLOT = Object.freeze({
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
- * @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository
+ * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  */
 

@@ -19,7 +19,7 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
- *   wasteBalancesRepository: import('#repositories/waste-balances/port.js').WasteBalancesRepository
+ *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository
  * }} QueueConsumerRepositories
  */
 

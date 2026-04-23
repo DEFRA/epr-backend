@@ -17,11 +17,11 @@ import {
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { buildWasteBalance } from '#repositories/waste-balances/contract/test-data.js'
+import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
 import {
   createWasteBalancesRepository,
   saveBalance
-} from '#repositories/waste-balances/mongodb.js'
+} from '#waste-balances/repository/mongodb.js'
 import {
   buildVersionData,
   toWasteRecordVersions
