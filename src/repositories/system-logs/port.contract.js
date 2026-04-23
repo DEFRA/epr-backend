@@ -333,6 +333,25 @@ export const testSystemLogsRepositoryContract = (it) => {
         expect(result.systemLogs[0].createdBy.email).toBe(email)
       })
 
+      it('matches email case-insensitively', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const storedEmail = `Alice.Smith-${randomUUID()}@Example.COM`
+
+        await repository.insert(buildSystemLog({ email: storedEmail, id: 1 }))
+
+        const result = await repository.find({
+          email: storedEmail.toLowerCase(),
+          limit: DEFAULT_LIMIT
+        })
+
+        expect(result.systemLogs).toHaveLength(1)
+        expect(result.systemLogs[0].createdBy.email).toBe(storedEmail)
+      })
+
       it('returns logs matching the provided sub-category', async ({
         systemLogsRepository
       }) => {

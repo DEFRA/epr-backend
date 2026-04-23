@@ -34,7 +34,10 @@ export function createSystemLogsRepository() {
           ) {
             return false
           }
-          if (email && item.createdBy?.email !== email) {
+          if (
+            email &&
+            item.createdBy?.email?.toLowerCase() !== email.toLowerCase()
+          ) {
             return false
           }
           if (subCategory && item.event?.subCategory !== subCategory) {

@@ -13,7 +13,13 @@ async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
 
   await collection.createIndex({ 'context.organisationId': 1, _id: -1 })
-  await collection.createIndex({ 'createdBy.email': 1, _id: -1 })
+  // Case-insensitive collation (strength 2) so email searches ignore case.
+  // The query must specify the same collation for Mongo to use this index;
+  // without it, a case-insensitive regex would bypass the index entirely.
+  await collection.createIndex(
+    { 'createdBy.email': 1, _id: -1 },
+    { collation: { locale: 'en', strength: 2 } }
+  )
 
   return collection
 }
@@ -60,9 +66,13 @@ export const createSystemLogsRepository = async (db) => {
         filter._id = { $lt: ObjectId.createFromHexString(cursor) }
       }
 
+      // Collation must match the email index for case-insensitive lookup.
+      // Strength 2 is case-insensitive, accent-sensitive. This only affects
+      // string comparisons; the UUID/enum filters are unaffected.
       const docs = await db
         .collection(SYSTEM_LOGS_COLLECTION_NAME)
         .find(filter)
+        .collation({ locale: 'en', strength: 2 })
         .sort({ _id: -1 })
         .limit(limit + 1)
         .toArray()
