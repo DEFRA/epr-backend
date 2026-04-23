@@ -52,13 +52,20 @@ describe('#fail-action', () => {
       expect(thrownError?.message).toBe('"redirectUrl" is required')
     })
 
-    test('does not carry user-submitted values into the thrown Boom (would leak via data-interpolating serializers)', () => {
+    test('does not carry user-submitted values into the thrown Boom when multiple fields fail', () => {
       const schema = Joi.object({
-        email: Joi.string().email().required()
+        email: Joi.string().email().required(),
+        age: Joi.number().min(18).required(),
+        country: Joi.string().valid('UK', 'IE').required()
       })
 
-      const sensitiveValue = 'possibly-pii@not-a-real-email'
-      const { error: joiError } = schema.validate({ email: sensitiveValue })
+      const sensitiveEmail = 'possibly-pii@not-a-real-email'
+      const sensitiveAge = 12
+      const sensitiveCountry = 'secret-country-name'
+      const { error: joiError } = schema.validate(
+        { email: sensitiveEmail, age: sensitiveAge, country: sensitiveCountry },
+        { abortEarly: false }
+      )
 
       const mockRequest = createMockRequest()
 
@@ -69,18 +76,25 @@ describe('#fail-action', () => {
         thrown = e
       }
 
-      // Positive shape: only the field-name-and-rule message, no data
-      // (Boom sets .data to null when no data argument is passed)
+      // Positive shape: Joi joins all three messages with '. '; no data set
+      // (Boom defaults .data to null when no second argument is passed).
       expect(thrown.isBoom).toBe(true)
       expect(thrown.output.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      expect(thrown.message).toBe('"email" must be a valid email')
+      expect(thrown.message).toBe(
+        '"email" must be a valid email. "age" must be greater than or equal to 18. "country" must be one of [UK, IE]'
+      )
       expect(thrown.data).toBeNull()
 
-      // Regression anchor: the raw user value must not appear anywhere on
-      // the Boom that the err serializer will see (message, data, or any
-      // stringified form).
-      expect(thrown.message).not.toContain(sensitiveValue)
-      expect(JSON.stringify(thrown.data ?? '')).not.toContain(sensitiveValue)
+      // Regression anchor: none of the user-submitted values appear on the
+      // Boom that the err serializer will see (message or data).
+      const serialisedBoom = JSON.stringify({
+        message: thrown.message,
+        data: thrown.data,
+        payload: thrown.output.payload
+      })
+      expect(serialisedBoom).not.toContain(sensitiveEmail)
+      expect(serialisedBoom).not.toContain(String(sensitiveAge))
+      expect(serialisedBoom).not.toContain(sensitiveCountry)
     })
 
     test('logs at warn level', () => {
