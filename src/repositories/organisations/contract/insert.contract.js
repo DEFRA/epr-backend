@@ -68,14 +68,19 @@ export const testInsertBehaviour = (it) => {
         })
       })
 
-      it('throws conflict error when inserting duplicate ID', async () => {
+      it('throws conflict error with clean message when inserting duplicate ID', async () => {
         const organisation = buildOrganisation()
 
         await repository.insert(organisation)
 
         await expect(repository.insert(organisation)).rejects.toMatchObject({
           isBoom: true,
-          output: { statusCode: 409 }
+          output: {
+            statusCode: 409,
+            payload: {
+              message: `Organisation with ${organisation.id} already exists`
+            }
+          }
         })
       })
     })
