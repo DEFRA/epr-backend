@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
   extractCellValue,
+  shouldWrapAsSpreadsheetError,
   parse,
   SpreadsheetValidationError
 } from './exceljs-parser.js'
@@ -33,16 +34,51 @@ describe('ExcelJSSummaryLogsParser', () => {
     return parse(buffer, options)
   }
 
-  it('should throw error for invalid Excel buffer', async () => {
+  it('should throw SpreadsheetValidationError for invalid Excel buffer', async () => {
     const invalidBuffer = Buffer.from('not an excel file')
 
-    await expect(parse(invalidBuffer)).rejects.toThrow()
+    await expect(parse(invalidBuffer)).rejects.toThrow(
+      SpreadsheetValidationError
+    )
+    await expect(parse(invalidBuffer)).rejects.toMatchObject({
+      code: VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
+    })
   })
 
-  it('should handle empty buffer', async () => {
+  it('should throw SpreadsheetValidationError for empty buffer', async () => {
     const emptyBuffer = Buffer.from('')
 
-    await expect(parse(emptyBuffer)).rejects.toThrow()
+    await expect(parse(emptyBuffer)).rejects.toThrow(SpreadsheetValidationError)
+  })
+
+  it('should preserve the original exceljs error as cause', async () => {
+    const invalidBuffer = Buffer.from('not an excel file')
+
+    await expect(parse(invalidBuffer)).rejects.toSatisfy(
+      (error) =>
+        error instanceof SpreadsheetValidationError &&
+        error.cause !== undefined &&
+        !(error.cause instanceof SpreadsheetValidationError)
+    )
+  })
+
+  it('should rethrow unrecognised errors from the load call unchanged', async () => {
+    const unexpected = new RangeError('this looks like a bug, not bad data')
+    function MockWorkbook() {
+      return {
+        xlsx: { load: vi.fn().mockRejectedValue(unexpected) },
+        worksheets: []
+      }
+    }
+    const workbookSpy = vi
+      .spyOn(ExcelJS, 'Workbook')
+      .mockImplementation(MockWorkbook)
+
+    try {
+      await expect(parse(Buffer.from('anything'))).rejects.toBe(unexpected)
+    } finally {
+      workbookSpy.mockRestore()
+    }
   })
 
   describe('workbook structure validation', () => {
@@ -2429,5 +2465,94 @@ describe('SpreadsheetValidationError', () => {
 
     expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
     expect(error.message).toBe('Duplicate marker')
+  })
+
+  it('should preserve cause when provided via options', () => {
+    const original = new TypeError('underlying failure')
+    const error = new SpreadsheetValidationError(
+      'Wrapped failure',
+      VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
+      { cause: original }
+    )
+
+    expect(error.cause).toBe(original)
+  })
+})
+
+describe('shouldWrapAsSpreadsheetError', () => {
+  it('should wrap a TypeError dereferencing a missing XML element', () => {
+    const error = new TypeError(
+      "Cannot read properties of undefined (reading 'richText')"
+    )
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap the legacy TypeError wording', () => {
+    const error = new TypeError("Cannot read property 'richText' of undefined")
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap yauzl central-directory errors', () => {
+    const error = new Error(
+      "Can't find end of central directory : is this a zip file ?"
+    )
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap yauzl invalid-signature errors', () => {
+    const error = new Error('invalid signature: 0x00000000')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap yauzl size-mismatch errors', () => {
+    const error = new Error('compressed/uncompressed size mismatch')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap truncated-zip errors from the jszip path', () => {
+    const error = new Error(
+      'End of data reached (data length = 0, asked index = 4). Corrupted zip ?'
+    )
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap SaxesError by name', () => {
+    const error = new Error('Stray markup')
+    error.name = 'SaxesError'
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap XML parse failures by message', () => {
+    const error = new Error('Invalid character in XML at line 3')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should not wrap generic programming errors', () => {
+    const error = new RangeError('Maximum call stack size exceeded')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(false)
+  })
+
+  it('should not wrap a TypeError without a dereference-undefined message', () => {
+    const error = new TypeError('foo is not a function')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(false)
+  })
+
+  it('should not wrap non-Error values', () => {
+    expect(shouldWrapAsSpreadsheetError(null)).toBe(false)
+    expect(shouldWrapAsSpreadsheetError(undefined)).toBe(false)
+    expect(shouldWrapAsSpreadsheetError('not an error')).toBe(false)
+    expect(shouldWrapAsSpreadsheetError({ message: 'central directory' })).toBe(
+      false
+    )
   })
 })
