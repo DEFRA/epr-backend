@@ -64,6 +64,19 @@ export const loggerOptions = {
         }
       }
 
+      // Surface bounded classifiers from the .cause chain — name and code are
+      // enum-shaped identifiers (ECONNREFUSED, AbortError, etc.) that classify
+      // the failure without leaking cause.message or cause.stack content.
+      if (err.cause instanceof Error) {
+        const cause = /** @type {Error & { code?: string | number }} */ (
+          err.cause
+        )
+        errorObj.cause = {
+          type: cause.name,
+          code: cause.code
+        }
+      }
+
       return errorObj
     },
     // Note: Custom res serializer simplified - hapi-pino passes request.raw.res

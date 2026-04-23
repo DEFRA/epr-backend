@@ -50,7 +50,7 @@ vi.mock('#domain/waste-balances/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
 }))
 
-describe('src/repositories/waste-balances/helpers.js', () => {
+describe('src/waste-balances/repository/helpers.js', () => {
   describe('markExcludedRecords', () => {
     it('should return empty array when wasteRecords is empty', () => {
       const result = markExcludedRecords([])

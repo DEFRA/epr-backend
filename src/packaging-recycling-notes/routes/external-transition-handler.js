@@ -15,7 +15,7 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
 
 /**
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
- * @import {WasteBalancesRepository} from '#repositories/waste-balances/port.js'
+ * @import {WasteBalancesRepository} from '#waste-balances/repository/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  */
