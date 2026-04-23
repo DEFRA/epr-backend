@@ -57,7 +57,7 @@ const performFindByAccreditationIds = (db) => async (accreditationIds) => {
  * Find a waste balance by accreditation ID.
  *
  * @param {import('mongodb').Db} db
- * @returns {(id: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ * @returns {(id: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const findBalance = (db) => async (id) => {
   const doc = await db
@@ -69,7 +69,7 @@ export const findBalance = (db) => async (id) => {
   }
 
   const { _id, ...domainFields } = doc
-  return /** @type {import('#domain/waste-balances/model.js').WasteBalance} */ (
+  return /** @type {import('../domain/model.js').WasteBalance} */ (
     structuredClone({ id: _id.toString(), ...domainFields })
   )
 }
@@ -78,7 +78,7 @@ export const findBalance = (db) => async (id) => {
  * Save a waste balance.
  *
  * @param {import('mongodb').Db} db
- * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
+ * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
 export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
   await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(

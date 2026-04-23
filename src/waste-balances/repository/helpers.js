@@ -4,7 +4,7 @@ import {
   isPayloadSmallEnoughToAudit,
   safeAudit
 } from '#root/auditing/helpers.js'
-import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
+import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { randomUUID } from 'node:crypto'
 import {
   classifyRow,
@@ -16,7 +16,7 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '#domain/waste-balances/model.js'
+} from '../domain/model.js'
 import { add, subtract, toNumber } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -44,7 +44,7 @@ const isRecordValid = (record) => {
  *
  * @param {string} accreditationId
  * @param {string} organisationId
- * @returns {import('#domain/waste-balances/model.js').WasteBalance}
+ * @returns {import('../domain/model.js').WasteBalance}
  */
 export const createNewWasteBalance = (accreditationId, organisationId) => ({
   id: randomUUID(),
@@ -61,11 +61,11 @@ export const createNewWasteBalance = (accreditationId, organisationId) => ({
  * Find an existing waste balance or create a new one if allowed.
  *
  * @param {Object} params
- * @param {(id: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
+ * @param {(id: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {string} params.accreditationId
  * @param {string} [params.organisationId]
  * @param {boolean} params.shouldCreate
- * @returns {Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ * @returns {Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const findOrCreateWasteBalance = async ({
   findBalance,
@@ -200,8 +200,8 @@ const calculateAndApplyUpdates = async (
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
- * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
- * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
+ * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {any} [params.user]
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
  */
@@ -249,8 +249,8 @@ export const performUpdateWasteBalanceTransactions = async ({
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to deduct
  * @param {string} params.userId - User performing the action
- * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
- * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ * @param {import('../domain/model.js').WasteBalance} params.currentBalance
+ * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildPrnCreationTransaction = ({
   prnId,
@@ -284,8 +284,8 @@ export const buildPrnCreationTransaction = ({
  *
  * @param {Object} params
  * @param {import('./port.js').DeductAvailableBalanceParams} params.deductParams
- * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
- * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
   deductParams,
@@ -326,8 +326,8 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to deduct
  * @param {string} params.userId - User performing the action
- * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
- * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ * @param {import('../domain/model.js').WasteBalance} params.currentBalance
+ * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildPrnIssuedTransaction = ({
   prnId,
@@ -359,8 +359,8 @@ export const buildPrnIssuedTransaction = ({
  *
  * @param {Object} params
  * @param {import('./port.js').DeductTotalBalanceParams} params.deductParams
- * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
- * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performDeductTotalBalanceForPrnIssue = async ({
   deductParams,
@@ -401,8 +401,8 @@ export const performDeductTotalBalanceForPrnIssue = async ({
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to restore
  * @param {string} params.userId - User performing the action
- * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
- * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ * @param {import('../domain/model.js').WasteBalance} params.currentBalance
+ * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildPrnCancellationTransaction = ({
   prnId,
@@ -440,8 +440,8 @@ export const buildPrnCancellationTransaction = ({
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to restore
  * @param {string} params.userId - User performing the action
- * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance
- * @returns {import('#domain/waste-balances/model.js').WasteBalanceTransaction}
+ * @param {import('../domain/model.js').WasteBalance} params.currentBalance
+ * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildIssuedPrnCancellationTransaction = ({
   prnId,
@@ -476,8 +476,8 @@ export const buildIssuedPrnCancellationTransaction = ({
  *
  * @param {Object} params
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
- * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
- * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   creditParams,
@@ -518,8 +518,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
  *
  * @param {Object} params
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
- * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
- * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performCreditAvailableBalanceForPrnCancellation = async ({
   creditParams,
