@@ -44,6 +44,41 @@ export function createSystemLogsRepository() {
           // @ts-expect-error hasMore guarantees page is non-empty
           nextCursor: hasMore ? toHexCursor(page.at(-1)._internalId) : null
         }
+      },
+
+      async find({ organisationId, email, subCategory, limit, cursor }) {
+        let results = storage.filter((item) => {
+          if (
+            organisationId &&
+            item.context?.organisationId !== organisationId
+          ) {
+            return false
+          }
+          if (email && item.createdBy?.email !== email) {
+            return false
+          }
+          if (subCategory && item.event?.subCategory !== subCategory) {
+            return false
+          }
+          return true
+        })
+
+        results.sort((a, b) => b._internalId - a._internalId)
+
+        if (cursor) {
+          const cursorId = fromHexCursor(cursor)
+          results = results.filter((item) => item._internalId < cursorId)
+        }
+
+        const hasMore = results.length > limit
+        const page = hasMore ? results.slice(0, limit) : results
+
+        return {
+          systemLogs: page.map(({ _internalId, ...rest }) => rest),
+          hasMore,
+          // @ts-expect-error hasMore guarantees page is non-empty
+          nextCursor: hasMore ? toHexCursor(page.at(-1)._internalId) : null
+        }
       }
     }
   }

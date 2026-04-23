@@ -13,6 +13,7 @@ async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
 
   await collection.createIndex({ 'context.organisationId': 1, _id: -1 })
+  await collection.createIndex({ 'createdBy.email': 1, _id: -1 })
 
   return collection
 }
@@ -42,6 +43,45 @@ export const createSystemLogsRepository = async (db) => {
     async findByOrganisationId({ organisationId, limit, cursor }) {
       const filter = { 'context.organisationId': organisationId }
 
+      if (cursor) {
+        filter._id = { $lt: ObjectId.createFromHexString(cursor) }
+      }
+
+      const docs = await db
+        .collection(SYSTEM_LOGS_COLLECTION_NAME)
+        .find(filter)
+        .sort({ _id: -1 })
+        .limit(limit + 1)
+        .toArray()
+
+      const hasMore = docs.length > limit
+      const items = hasMore ? docs.slice(0, limit) : docs
+
+      return {
+        systemLogs: items.map((doc) => ({
+          event: doc.event,
+          context: doc.context,
+          createdAt: doc.createdAt,
+          createdBy: doc.createdBy
+        })),
+        hasMore,
+        // @ts-expect-error hasMore guarantees items is non-empty
+        nextCursor: hasMore ? items.at(-1)._id.toHexString() : null
+      }
+    },
+
+    async find({ organisationId, email, subCategory, limit, cursor }) {
+      const filter = {}
+
+      if (organisationId) {
+        filter['context.organisationId'] = organisationId
+      }
+      if (email) {
+        filter['createdBy.email'] = email
+      }
+      if (subCategory) {
+        filter['event.subCategory'] = subCategory
+      }
       if (cursor) {
         filter._id = { $lt: ObjectId.createFromHexString(cursor) }
       }
