@@ -3,7 +3,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
-/** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
 
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'

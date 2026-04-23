@@ -19,7 +19,7 @@ import { updatePrnStatus } from '#packaging-recycling-notes/application/update-s
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
-/** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
