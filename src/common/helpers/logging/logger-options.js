@@ -69,9 +69,12 @@ export const loggerOptions = {
       // enum-shaped identifiers (ECONNREFUSED, AbortError, etc.) that classify
       // the failure without leaking cause.message or cause.stack content.
       if (err.cause instanceof Error) {
+        const cause = /** @type {Error & { code?: string | number }} */ (
+          err.cause
+        )
         errorObj.cause = {
-          type: err.cause.name,
-          code: err.cause.code
+          type: cause.name,
+          code: cause.code
         }
       }
 
