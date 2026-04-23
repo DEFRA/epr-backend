@@ -13,6 +13,7 @@ import { requestTracing } from '#common/helpers/request-tracing.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
+import { userIdLogger } from '#plugins/user-id-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags as featureFlagsPlugin } from '#plugins/feature-flags.js'
@@ -187,7 +188,7 @@ function attachLoggerMocks(testServer) {
     warn: vi.fn()
   }
 
-  testServer.ext('onRequest', (request, h) => {
+  const spyLogger = (request) => {
     vi.spyOn(request.logger, 'info').mockImplementation(
       testServer.loggerMocks.info
     )
@@ -197,6 +198,15 @@ function attachLoggerMocks(testServer) {
     vi.spyOn(request.logger, 'warn').mockImplementation(
       testServer.loggerMocks.warn
     )
+  }
+
+  testServer.ext('onRequest', (request, h) => {
+    spyLogger(request)
+    return h.continue
+  })
+
+  testServer.ext('onPreHandler', (request, h) => {
+    spyLogger(request)
     return h.continue
   })
 }
@@ -225,6 +235,7 @@ export async function createTestServer(options = {}) {
       options: { config }
     },
     authFailureLogger,
+    userIdLogger,
     externalApiErrorFormatter,
     {
       plugin: featureFlagsPlugin,

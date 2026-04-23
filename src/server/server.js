@@ -24,6 +24,7 @@ import {
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
+import { userIdLogger } from '#plugins/user-id-logger.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
@@ -167,6 +168,7 @@ async function createServer(options = {}) {
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies
   // authFailureLogger - logs 401 authentication failures
+  // userIdLogger   - enriches request.logger with user.id after auth
   const plugins = [
     requestLogger,
     requestTracing,
@@ -180,6 +182,7 @@ async function createServer(options = {}) {
       options: { config }
     },
     authFailureLogger,
+    userIdLogger,
     externalApiErrorFormatter
   ]
 
