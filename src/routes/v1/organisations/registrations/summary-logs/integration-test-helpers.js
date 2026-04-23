@@ -12,7 +12,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
+import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 // eslint-disable-next-line n/no-unpublished-import

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
+import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'

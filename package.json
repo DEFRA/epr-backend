@@ -24,7 +24,8 @@
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
     "#test/*": "./src/test/*",
-    "#vite/*": "./.vite/*"
+    "#vite/*": "./.vite/*",
+    "#waste-balances/*": "./src/waste-balances/*"
   },
   "engines": {
     "node": ">=24.14.0 <25",
