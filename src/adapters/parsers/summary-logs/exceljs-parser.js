@@ -35,6 +35,72 @@ export class SpreadsheetValidationError extends Error {
 }
 
 /**
+ * Error message thrown by exceljs when it dereferences a missing XML
+ * element (e.g. `.richText` on a malformed shared-strings entry). Comes
+ * out as a TypeError. Both the modern and legacy V8 wordings match.
+ */
+const DEREFERENCE_UNDEFINED_MESSAGE =
+  /cannot read (?:properties|property\s+\S+) of (?:undefined|null)/i
+
+/**
+ * Error messages from yauzl / jszip for non-zip buffers or corrupt-zip
+ * streams (an xlsx is a zip archive under the hood).
+ */
+const CORRUPT_ZIP_MESSAGE =
+  /central directory|invalid signature|compressed\/uncompressed size|corrupted zip|end of data reached/i
+
+/**
+ * Error messages from saxes (or exceljs' XML layer) when an xlsx's XML
+ * parts are malformed. Errors of class `SaxesError` are also matched
+ * separately by `error.name`.
+ */
+const MALFORMED_XML_MESSAGE =
+  /invalid character in xml|xml parsing|unexpected token in xml/i
+
+/**
+ * Decide whether an error thrown during workbook load should be wrapped
+ * as a SpreadsheetValidationError (warn-level log, treated as bad user
+ * data) or left to propagate as a system error (error-level log, fires
+ * the backend error alert).
+ *
+ * Wraps when the error matches one of these known bad-workbook signatures:
+ * - TypeError dereferencing a missing XML element (e.g. `.richText` on
+ *   a malformed shared-strings entry)
+ * - yauzl errors for non-zip / corrupt-zip buffers
+ * - saxes errors for malformed XML parts
+ *
+ * Anything else (RangeError, assertion failures, our own bugs) is
+ * treated as a system error.
+ *
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export const shouldWrapAsSpreadsheetError = (error) => {
+  if (!(error instanceof Error) || typeof error.message !== 'string') {
+    return false
+  }
+
+  const { message } = error
+
+  if (
+    error instanceof TypeError &&
+    DEREFERENCE_UNDEFINED_MESSAGE.test(message)
+  ) {
+    return true
+  }
+
+  if (CORRUPT_ZIP_MESSAGE.test(message)) {
+    return true
+  }
+
+  if (error.name === 'SaxesError') {
+    return true
+  }
+
+  return MALFORMED_XML_MESSAGE.test(message)
+}
+
+/**
  * Threshold for consecutive empty rows/columns before assuming phantom data.
  * These are not configurable - they're tuned for detecting phantom data
  * in Excel files while allowing legitimate gaps in data.
@@ -569,11 +635,15 @@ export const parse = async (buffer, options = {}) => {
       /** @type {import('exceljs').Buffer} */ (/** @type {unknown} */ (buffer))
     )
   } catch (error) {
-    throw new SpreadsheetValidationError(
-      `Failed to parse spreadsheet: ${error.message}`,
-      VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
-      { cause: error }
-    )
+    if (shouldWrapAsSpreadsheetError(error)) {
+      throw new SpreadsheetValidationError(
+        `Failed to parse spreadsheet: ${error.message}`,
+        VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
+        { cause: error }
+      )
+    }
+
+    throw error
   }
 
   validateWorkbookStructure(workbook, {
