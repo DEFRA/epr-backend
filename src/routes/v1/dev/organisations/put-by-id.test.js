@@ -314,5 +314,30 @@ describe('PUT /v1/dev/organisations/{id}', () => {
 
       expect(response.statusCode).toBeGreaterThanOrEqual(400)
     })
+
+    it('returns 500 when the repository throws a non-Boom error', async () => {
+      const instance = createInMemoryOrganisationsRepository([])()
+      const org = buildOrganisation()
+      await instance.insert(org)
+
+      const testServer = await createTestServer({
+        repositories: { organisationsRepository: instance },
+        featureFlags: createInMemoryFeatureFlags({ devEndpoints: true })
+      })
+
+      const current = await instance.findById(org.id)
+
+      instance.replaceRaw = async () => {
+        throw new Error('unexpected repository failure')
+      }
+
+      const response = await testServer.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: { organisation: current }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    })
   })
 })
