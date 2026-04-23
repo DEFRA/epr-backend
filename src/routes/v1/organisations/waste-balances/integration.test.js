@@ -9,6 +9,10 @@ vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',
   async () => import('#adapters/sqs-command-executor/mock.plugin.js')
 )
+vi.mock(
+  '#plugins/dlq-admin.js',
+  async () => import('#plugins/dlq-admin.mock.plugin.js')
+)
 
 const { validToken } = entraIdMockAuthTokens
 

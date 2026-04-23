@@ -6,6 +6,7 @@ import HapiSwagger from 'hapi-swagger'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
+import { dlqAdminPlugin } from '#plugins/dlq-admin.js'
 import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
@@ -122,6 +123,7 @@ function getProductionPlugins(config) {
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
     { plugin: sqsCommandExecutorPlugin, options: { config } },
+    { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
     orsImportsRepositoryPlugin
   ]
@@ -160,6 +162,7 @@ async function createServer(options = {}) {
   // s3*Plugin      - S3 repository plugins
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // sqsCommandExecutor - sets up SQS command executor and attaches to `request` objects
+  // dlqAdmin       - sets up DLQ admin service and attaches to `request` objects
   // router         - routes used in the app
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies

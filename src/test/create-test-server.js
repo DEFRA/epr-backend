@@ -5,6 +5,7 @@ import { vi } from 'vitest'
 import { secureContext } from '@defra/hapi-secure-context'
 
 import { mockSqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/mock.plugin.js'
+import { mockDlqAdminPlugin } from '#plugins/dlq-admin.mock.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
@@ -49,6 +50,7 @@ import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-
  *   featureFlags?: object
  *   repositories?: object
  *   workers?: object
+ *   dlqService?: import('#plugins/dlq-admin.js').DlqService
  * }} CreateTestServerOptions
  */
 
@@ -236,6 +238,10 @@ export async function createTestServer(options = {}) {
       options.repositories ?? {}
     ),
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
+    {
+      plugin: mockDlqAdminPlugin,
+      options: { dlqService: options.dlqService }
+    },
     router
   ]
 
