@@ -14,7 +14,7 @@ vi.mock('#root/config.js', () => ({
         },
         serviceName: 'test-service',
         serviceVersion: '1.0.0',
-        cdpEnvironment: 'test' // non-prod by default
+        'featureFlags.allowSensitiveLogs': true // allow sensitive logs by default in tests
       }
       return values[key]
     })
@@ -70,7 +70,7 @@ describe('loggerOptions.serializers.err', () => {
     expect(result.stack_trace).toBe(error.stack)
   })
 
-  test('includes Boom error details in non-prod environment', () => {
+  test('includes Boom error details when allowSensitiveLogs is enabled', () => {
     const boomError = new Error('Validation failed')
     boomError.isBoom = true
     boomError.output = {
@@ -97,7 +97,7 @@ describe('loggerOptions.serializers.err', () => {
     })
   })
 
-  test('enhances message with Boom data details in non-prod environment', () => {
+  test('enhances message with Boom data details when allowSensitiveLogs is enabled', () => {
     const boomError = new Error('Unauthorized')
     boomError.isBoom = true
     boomError.output = {
@@ -163,17 +163,17 @@ describe('loggerOptions.serializers.res', () => {
 })
 
 describe('loggerOptions.log4xxResponseErrors', () => {
-  test('is enabled in non-prod environment', () => {
+  test('is enabled when allowSensitiveLogs feature flag is on', () => {
     expect(loggerOptions.log4xxResponseErrors).toBe(true)
   })
 })
 
-describe('loggerOptions in production environment', () => {
+describe('loggerOptions when allowSensitiveLogs feature flag is off', () => {
   beforeEach(() => {
     vi.resetModules()
   })
 
-  test('excludes Boom error details in prod environment', async () => {
+  test('excludes Boom error details', async () => {
     vi.doMock('#root/config.js', () => ({
       config: {
         get: vi.fn((key) => {
@@ -186,16 +186,16 @@ describe('loggerOptions in production environment', () => {
             },
             serviceName: 'test-service',
             serviceVersion: '1.0.0',
-            cdpEnvironment: 'prod'
+            'featureFlags.allowSensitiveLogs': false
           }
           return values[key]
         })
       }
     }))
 
-    const { loggerOptions: prodLoggerOptions } =
+    const { loggerOptions: restrictedLoggerOptions } =
       await import('./logger-options.js')
-    const { err: errorSerializer } = prodLoggerOptions.serializers
+    const { err: errorSerializer } = restrictedLoggerOptions.serializers
 
     const boomError = new Error('Validation failed')
     boomError.isBoom = true
@@ -217,7 +217,7 @@ describe('loggerOptions in production environment', () => {
     expect(result.message).not.toContain('sensitiveInfo')
   })
 
-  test('log4xxResponseErrors is disabled in prod environment', async () => {
+  test('log4xxResponseErrors is disabled', async () => {
     vi.doMock('#root/config.js', () => ({
       config: {
         get: vi.fn((key) => {
@@ -230,16 +230,16 @@ describe('loggerOptions in production environment', () => {
             },
             serviceName: 'test-service',
             serviceVersion: '1.0.0',
-            cdpEnvironment: 'prod'
+            'featureFlags.allowSensitiveLogs': false
           }
           return values[key]
         })
       }
     }))
 
-    const { loggerOptions: prodLoggerOptions } =
+    const { loggerOptions: restrictedLoggerOptions } =
       await import('./logger-options.js')
 
-    expect(prodLoggerOptions.log4xxResponseErrors).toBe(false)
+    expect(restrictedLoggerOptions.log4xxResponseErrors).toBe(false)
   })
 })

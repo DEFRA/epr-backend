@@ -8,6 +8,7 @@ import {
 } from '#common/enums/event.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { validateConfig } from '#common/helpers/validate-config.js'
+import { logFeatureFlagStates } from '#feature-flags/log-feature-flag-states.js'
 
 import { getConfig } from '#root/config.js'
 
@@ -16,6 +17,7 @@ async function startServer() {
 
   // We want the server to break early if the configuration is invalid
   validateConfig(config)
+  logFeatureFlagStates(config, logger)
   const auditConfig = config.get('audit')
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)
