@@ -35,6 +35,7 @@
  * @typedef {{ id: string } & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
+ *  applicationContactDetails?: User;
  *  approvedPersons: User[]
  *  formSubmissionTime: Date;
  *  material: Material;

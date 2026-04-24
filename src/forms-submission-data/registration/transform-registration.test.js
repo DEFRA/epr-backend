@@ -51,6 +51,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         phone: '0121 496 8574',
         jobTitle: 'Director'
       },
+      applicationContactDetails: {
+        fullName: 'Sarah Mitchell',
+        email: 'reexserviceteam@defra.gov.uk',
+        phone: '1234567890',
+        jobTitle: 'Packaging Compliance Officer'
+      },
       site: undefined,
       noticeAddress: {
         line1: '45',
@@ -194,6 +200,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         email: 'james.patterson@ecoretail.co.uk',
         phone: '020 7946 0123',
         jobTitle: 'Directory'
+      },
+      applicationContactDetails: {
+        fullName: 'James Patterson',
+        email: 'reexserviceteam@defra.gov.uk',
+        phone: '020 7946 0123',
+        jobTitle: 'Director'
       },
       site: {
         address: {
