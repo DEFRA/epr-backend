@@ -207,7 +207,22 @@ export const testSystemLogsRepositoryContract = (it) => {
     })
 
     describe('pagination', () => {
-      it('paginates through filtered results', async ({
+      it('respects limit parameter', async ({ systemLogsRepository }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const email = `alice-${randomUUID()}@example.com`
+
+        for (let i = 1; i <= 3; i++) {
+          await repository.insert(buildSystemLog({ email, id: i }))
+        }
+
+        const result = await repository.find({ email, limit: 2 })
+
+        expect(result.systemLogs).toHaveLength(2)
+      })
+
+      it('returns hasMore true when more items exist beyond limit', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
@@ -218,24 +233,125 @@ export const testSystemLogsRepositoryContract = (it) => {
         for (let i = 1; i <= 3; i++) {
           await repository.insert(buildSystemLog({ email, id: i }))
         }
-        await repository.insert(
-          buildSystemLog({ email: `bob-${randomUUID()}@example.com`, id: 99 })
-        )
 
-        const page1 = await repository.find({ email, limit: 2 })
+        const result = await repository.find({ email, limit: 2 })
 
-        expect(page1.systemLogs).toHaveLength(2)
+        expect(result.hasMore).toBe(true)
+        expect(result.nextCursor).not.toBeNull()
+      })
+
+      it('returns hasMore false when all items fit within limit', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const email = `alice-${randomUUID()}@example.com`
+
+        await repository.insert(buildSystemLog({ email, id: 1 }))
+        await repository.insert(buildSystemLog({ email, id: 2 }))
+
+        const result = await repository.find({ email, limit: 10 })
+
+        expect(result.systemLogs).toHaveLength(2)
+        expect(result.hasMore).toBe(false)
+        expect(result.nextCursor).toBeNull()
+      })
+
+      it('returns items after cursor when cursor is provided', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const email = `alice-${randomUUID()}@example.com`
+
+        for (let i = 1; i <= 3; i++) {
+          await repository.insert(buildSystemLog({ email, id: i }))
+        }
+
+        const page1 = await repository.find({ email, limit: 1 })
+
+        expect(page1.systemLogs).toHaveLength(1)
         expect(page1.hasMore).toBe(true)
 
         const page2 = await repository.find({
           email,
-          limit: 2,
+          limit: 1,
           cursor: page1.nextCursor
         })
 
         expect(page2.systemLogs).toHaveLength(1)
+        expect(page2.systemLogs[0].context.id).not.toBe(
+          page1.systemLogs[0].context.id
+        )
+      })
+
+      it('paginates through all results across multiple pages', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const email = `alice-${randomUUID()}@example.com`
+
+        for (let i = 1; i <= 5; i++) {
+          await repository.insert(buildSystemLog({ email, id: i }))
+        }
+        await repository.insert(
+          buildSystemLog({ email: `bob-${randomUUID()}@example.com`, id: 99 })
+        )
+
+        const allIds = []
+        let cursor
+
+        do {
+          const page = await repository.find({ email, limit: 2, cursor })
+
+          allIds.push(...page.systemLogs.map((log) => log.context.id))
+          cursor = page.nextCursor
+        } while (cursor)
+
+        expect(allIds).toHaveLength(5)
+        expect(new Set(allIds).size).toBe(5)
+      })
+
+      it('does not include items from other filters in paginated results', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const targetEmail = `alice-${randomUUID()}@example.com`
+        const otherEmail = `bob-${randomUUID()}@example.com`
+
+        await repository.insert(buildSystemLog({ email: targetEmail, id: 1 }))
+        await repository.insert(buildSystemLog({ email: otherEmail, id: 2 }))
+        await repository.insert(buildSystemLog({ email: targetEmail, id: 3 }))
+        await repository.insert(buildSystemLog({ email: otherEmail, id: 4 }))
+        await repository.insert(buildSystemLog({ email: targetEmail, id: 5 }))
+
+        const result = await repository.find({
+          email: targetEmail,
+          limit: 2
+        })
+
+        expect(result.systemLogs).toHaveLength(2)
+        result.systemLogs.forEach((log) => {
+          expect(log.createdBy.email).toBe(targetEmail)
+        })
+
+        expect(result.hasMore).toBe(true)
+
+        const page2 = await repository.find({
+          email: targetEmail,
+          limit: 2,
+          cursor: result.nextCursor
+        })
+
+        expect(page2.systemLogs).toHaveLength(1)
+        expect(page2.systemLogs[0].createdBy.email).toBe(targetEmail)
         expect(page2.hasMore).toBe(false)
-        expect(page2.nextCursor).toBeNull()
       })
     })
   })
