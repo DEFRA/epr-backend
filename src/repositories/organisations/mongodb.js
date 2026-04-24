@@ -3,13 +3,13 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
   createInitialStatusHistory,
-  getCurrentStatus,
   mapDocumentWithCurrentStatuses,
   performFindAllForOverseasSitesAdminList,
   performFindPageForOrsAdminList,
   prepareForReplace,
   SCHEMA_VERSION
 } from './helpers.js'
+import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 
 const COLLECTION_NAME = 'epr-organisations'
