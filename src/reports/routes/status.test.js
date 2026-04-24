@@ -308,19 +308,19 @@ describe(`POST ${reportsStatusPath}`, () => {
 
       describe('4xx access log shape', () => {
         afterEach(() => {
-          config.reset('featureFlags.allowSensitiveLogs')
+          config.reset('featureFlags.allowFullErrorOutput')
         })
 
         it.each([
           {
-            name: 'without allowSensitiveLogs — err field is undefined',
+            name: 'without allowFullErrorOutput — err field is undefined',
             flag: false,
             assertErr: (accessLog) => {
               expect(accessLog.err).toBeUndefined()
             }
           },
           {
-            name: 'with allowSensitiveLogs — err carries the curated payload including missingFields',
+            name: 'with allowFullErrorOutput — err carries the curated payload including missingFields',
             flag: true,
             assertErr: (accessLog) => {
               expect(accessLog.err).toEqual({
@@ -336,7 +336,7 @@ describe(`POST ${reportsStatusPath}`, () => {
             }
           }
         ])('$name', async ({ flag, assertErr }) => {
-          config.set('featureFlags.allowSensitiveLogs', flag)
+          config.set('featureFlags.allowFullErrorOutput', flag)
 
           const { server, organisationId, registrationId } =
             await createServerWithReport(

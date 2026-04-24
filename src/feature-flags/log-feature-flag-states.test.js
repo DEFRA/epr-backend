@@ -7,7 +7,7 @@ describe('logFeatureFlagStates', () => {
       get: vi.fn().mockReturnValue({
         devEndpoints: false,
         reports: true,
-        allowSensitiveLogs: false
+        allowFullErrorOutput: false
       })
     }
     const logger = { info: vi.fn() }
@@ -18,7 +18,7 @@ describe('logFeatureFlagStates', () => {
     expect(logger.info).toHaveBeenCalledTimes(1)
     const [logged] = logger.info.mock.calls[0]
     expect(logged.message).toBe(
-      'Feature flags: devEndpoints=false reports=true allowSensitiveLogs=false'
+      'Feature flags: devEndpoints=false reports=true allowFullErrorOutput=false'
     )
     expect(logged.event).toEqual({ category: 'configuration' })
   })
