@@ -1,10 +1,14 @@
 import Boom from '@hapi/boom'
 
+import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
-import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
+import { getOperatorCategory } from '#reports/domain/operator-category.js'
+
+/**
+ * @import { PeriodicReport } from '#reports/repository/port.js'
+ */
 
 /**
  * Finds the current report ID for a specific period slot within periodic reports.
@@ -89,16 +93,20 @@ function formatSiteAddress(address) {
 }
 
 /**
- * Validates that a period exists for the given cadence and has ended.
- * @param {string} cadence
- * @param {number} year
- * @param {number} period
- * @returns {{ startDate: string, endDate: string, dueDate: string }}
+ * @typedef {{ period: number, startDate: string, endDate: string, dueDate: string }} PeriodInfo
  */
-function getValidatedPeriodInfo(cadence, year, period) {
-  const allPeriods = generateAllPeriodsForYear(cadence, year)
-  const periodInfo = allPeriods.find((p) => p.period === period)
 
+/**
+ * Throws a 400 Boom with `output.payload.invalidPeriod` if the period isn't
+ * in the cadence's valid range for the year.
+ *
+ * @param {number} period
+ * @param {string} cadence
+ * @param {PeriodInfo[]} allPeriods
+ * @returns {PeriodInfo}
+ */
+const assertValidPeriod = (period, cadence, allPeriods) => {
+  const periodInfo = allPeriods.find((p) => p.period === period)
   if (!periodInfo) {
     const boom = Boom.badRequest(
       `Invalid period ${period} for cadence ${cadence}`
@@ -110,7 +118,19 @@ function getValidatedPeriodInfo(cadence, year, period) {
     }
     throw boom
   }
+  return periodInfo
+}
 
+/**
+ * Throws a 400 Boom with `output.payload.periodNotEnded` if the period's
+ * end date has not yet passed.
+ *
+ * @param {PeriodInfo} periodInfo
+ * @param {number} period
+ * @param {string} cadence
+ * @returns {void}
+ */
+const assertPeriodEnded = (periodInfo, period, cadence) => {
   const dayAfterEnd = new Date(periodInfo.endDate)
   dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
   if (dayAfterEnd > new Date()) {
@@ -125,7 +145,40 @@ function getValidatedPeriodInfo(cadence, year, period) {
     }
     throw boom
   }
+}
 
+/**
+ * Throws a 409 Boom with `output.payload.existingReport` if a report for the
+ * same period already exists.
+ *
+ * @param {PeriodicReport[]} periodicReports
+ * @param {number} year
+ * @param {string} cadence
+ * @param {number} period
+ * @returns {void}
+ */
+const assertNoExistingReport = (periodicReports, year, cadence, period) => {
+  const id = findCurrentReportId(periodicReports, year, cadence, period)
+  if (id) {
+    const boom = Boom.conflict(
+      `Report already exists for ${cadence} period ${period} of ${year}`
+    )
+    boom.output.payload.existingReport = { id, cadence, period, year }
+    throw boom
+  }
+}
+
+/**
+ * Validates that a period exists for the given cadence and has ended.
+ * @param {string} cadence
+ * @param {number} year
+ * @param {number} period
+ * @returns {{ startDate: string, endDate: string, dueDate: string }}
+ */
+function getValidatedPeriodInfo(cadence, year, period) {
+  const allPeriods = generateAllPeriodsForYear(cadence, year)
+  const periodInfo = assertValidPeriod(period, cadence, allPeriods)
+  assertPeriodEnded(periodInfo, period, cadence)
   return periodInfo
 }
 
@@ -297,24 +350,7 @@ export async function createReportForPeriod({
     registrationId
   })
 
-  const existingReportId = findCurrentReportId(
-    periodicReports,
-    year,
-    cadence,
-    period
-  )
-  if (existingReportId) {
-    const boom = Boom.conflict(
-      `Report already exists for ${cadence} period ${period} of ${year}`
-    )
-    boom.output.payload.existingReport = {
-      id: existingReportId,
-      cadence,
-      period,
-      year
-    }
-    throw boom
-  }
+  assertNoExistingReport(periodicReports, year, cadence, period)
 
   const operatorCategory = getOperatorCategory(registration)
   const wasteRecords = await wasteRecordsRepository.findByRegistration(
