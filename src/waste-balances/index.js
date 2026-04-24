@@ -1,9 +1,8 @@
 /**
  * Waste Balances Module
  *
- * This module contains the domain, application, and repository layers for
- * waste balances. Routes remain in their original location and move in the
- * next slice.
+ * This module contains the domain, application, repository, and route
+ * layers for waste balances.
  *
  * @module waste-balances
  */
@@ -16,3 +15,6 @@ export {
 
 // Repository exports
 export { createWasteBalancesRepository } from './repository/mongodb.js'
+
+// Route exports
+export { wasteBalanceGet } from './routes/get.js'
