@@ -186,7 +186,7 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(payload.material).toBe('plastic')
     })
 
-    it('returns 400 for invalid period number for cadence', async () => {
+    it('returns 400 with structured invalidPeriod when period exceeds the cadence range', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: undefined
@@ -202,6 +202,16 @@ describe(`POST ${reportsPostPath}`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.BAD_REQUEST,
+        error: 'Bad Request',
+        message: 'Invalid period 5 for cadence quarterly',
+        invalidPeriod: {
+          actual: 5,
+          cadence: 'quarterly',
+          validPeriods: [1, 2, 3, 4]
+        }
+      })
     })
 
     it('returns 400 with structured cadence when accredited registration uses quarterly cadence', async () => {
@@ -221,7 +231,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       expect(JSON.parse(response.payload)).toEqual({
-        statusCode: 400,
+        statusCode: StatusCodes.BAD_REQUEST,
         error: 'Bad Request',
         message:
           "Cadence 'quarterly' does not match registration type — expected 'monthly'",
@@ -246,7 +256,7 @@ describe(`POST ${reportsPostPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       expect(JSON.parse(response.payload)).toEqual({
-        statusCode: 400,
+        statusCode: StatusCodes.BAD_REQUEST,
         error: 'Bad Request',
         message:
           "Cadence 'monthly' does not match registration type — expected 'quarterly'",
@@ -272,7 +282,7 @@ describe(`POST ${reportsPostPath}`, () => {
           flag: true,
           assertErr: (accessLog) => {
             expect(accessLog.err).toEqual({
-              statusCode: 400,
+              statusCode: StatusCodes.BAD_REQUEST,
               error: 'Bad Request',
               message:
                 "Cadence 'monthly' does not match registration type — expected 'quarterly'",

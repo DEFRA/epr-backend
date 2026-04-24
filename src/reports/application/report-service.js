@@ -100,7 +100,15 @@ function getValidatedPeriodInfo(cadence, year, period) {
   const periodInfo = allPeriods.find((p) => p.period === period)
 
   if (!periodInfo) {
-    throw Boom.badRequest(`Invalid period ${period} for cadence ${cadence}`)
+    const boom = Boom.badRequest(
+      `Invalid period ${period} for cadence ${cadence}`
+    )
+    boom.output.payload.invalidPeriod = {
+      actual: period,
+      cadence,
+      validPeriods: allPeriods.map((p) => p.period)
+    }
+    throw boom
   }
 
   const dayAfterEnd = new Date(periodInfo.endDate)

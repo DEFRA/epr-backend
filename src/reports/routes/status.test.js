@@ -268,7 +268,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
         expect(JSON.parse(response.payload)).toEqual({
-          statusCode: 400,
+          statusCode: StatusCodes.BAD_REQUEST,
           error: 'Bad Request',
           message: 'Report is incomplete; 1 required field(s) not populated',
           missingFields: ['recyclingActivity.tonnageRecycled']
@@ -299,7 +299,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
         expect(JSON.parse(response.payload)).toEqual({
-          statusCode: 400,
+          statusCode: StatusCodes.BAD_REQUEST,
           error: 'Bad Request',
           message: 'Report is incomplete; 1 required field(s) not populated',
           missingFields: ['prn.totalRevenue']
@@ -324,7 +324,7 @@ describe(`POST ${reportsStatusPath}`, () => {
             flag: true,
             assertErr: (accessLog) => {
               expect(accessLog.err).toEqual({
-                statusCode: 400,
+                statusCode: StatusCodes.BAD_REQUEST,
                 error: 'Bad Request',
                 message:
                   'Report is incomplete; 2 required field(s) not populated',
