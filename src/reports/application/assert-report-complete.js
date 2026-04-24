@@ -75,6 +75,7 @@ const findMissingFields = (report, operatorCategory) => {
  *
  * @param {Report} report
  * @param {OperatorCategory} operatorCategory
+ * @returns {void}
  */
 export const assertReportComplete = (report, operatorCategory) => {
   const missingFields = findMissingFields(report, operatorCategory)
