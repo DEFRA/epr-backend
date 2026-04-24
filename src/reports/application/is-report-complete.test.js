@@ -1,9 +1,6 @@
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { describe, expect, it } from 'vitest'
-import {
-  assertReportComplete,
-  findMissingFields
-} from './is-report-complete.js'
+import { assertReportComplete } from './is-report-complete.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -260,60 +257,45 @@ describe('is report complete?', () => {
     })
   })
 
-  describe('findMissingFields', () => {
+  describe('missing fields', () => {
     /**
      * @param {SparseReport} report
      * @param {OperatorCategory | string} category
      */
-    const find = (report, category) =>
-      findMissingFields(
-        /** @type {Report} */ (/** @type {unknown} */ (report)),
-        /** @type {OperatorCategory} */ (category)
-      )
-
-    it('should return an empty array when the report is complete', () => {
-      const report = {
-        exportActivity: { tonnageReceivedNotExported: 5 },
-        prn: { totalRevenue: 1000, freeTonnage: 0 }
+    const getMissing = (report, category) => {
+      try {
+        assertReportComplete(
+          /** @type {Report} */ (/** @type {unknown} */ (report)),
+          /** @type {OperatorCategory} */ (category)
+        )
+      } catch (err) {
+        if (err?.isBoom) {
+          return err.output.payload.missingFields
+        }
+        throw err
       }
+      return []
+    }
 
-      expect(find(report, OPERATOR_CATEGORY.EXPORTER)).toEqual([])
-    })
-
-    it('should return the dotted path of a single missing field', () => {
-      const report = {
-        exportActivity: { tonnageReceivedNotExported: null }
-      }
-
-      expect(find(report, OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY)).toEqual([
-        'exportActivity.tonnageReceivedNotExported'
-      ])
-    })
-
-    it('should return all missing fields (not just the first) for a partially-populated report', () => {
+    it('should include all missing fields (not just the first)', () => {
       const report = {
         exportActivity: { tonnageReceivedNotExported: null },
         prn: { totalRevenue: null, freeTonnage: null }
       }
 
-      const missing = find(report, OPERATOR_CATEGORY.EXPORTER)
-
-      expect(missing).toContain('exportActivity.tonnageReceivedNotExported')
-      expect(missing).toContain('prn.totalRevenue')
-      expect(missing).toContain('prn.freeTonnage')
-      expect(missing).toHaveLength(3)
-    })
-
-    it('should return the block name when an entire required block is null', () => {
-      const report = { exportActivity: null }
-
-      expect(find(report, OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY)).toEqual([
-        'exportActivity'
+      expect(getMissing(report, OPERATOR_CATEGORY.EXPORTER)).toEqual([
+        'exportActivity.tonnageReceivedNotExported',
+        'prn.totalRevenue',
+        'prn.freeTonnage'
       ])
     })
 
-    it('should throw for an unknown operator category', () => {
-      expect(() => find({}, 'UNKNOWN')).toThrow()
+    it('should include the block name when an entire required block is null', () => {
+      const report = { exportActivity: null }
+
+      expect(
+        getMissing(report, OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY)
+      ).toEqual(['exportActivity'])
     })
   })
 })

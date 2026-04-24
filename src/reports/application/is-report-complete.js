@@ -57,7 +57,7 @@ export const completeReportSchemas = Object.freeze({
  * @param {OperatorCategory} operatorCategory
  * @returns {string[]} dotted paths of required fields missing from the report
  */
-export const findMissingFields = (report, operatorCategory) => {
+const findMissingFields = (report, operatorCategory) => {
   const schema = completeReportSchemas[operatorCategory]
 
   if (!schema) {
