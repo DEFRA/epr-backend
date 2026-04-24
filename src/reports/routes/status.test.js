@@ -305,6 +305,42 @@ describe(`POST ${reportsStatusPath}`, () => {
         })
       })
 
+      it('report incomplete attaches REPORT_INCOMPLETE code and missingFields in event.reason', async () => {
+        const { server, organisationId, registrationId, reportId } =
+          await createServerWithReport(
+            { wasteProcessingType: 'reprocessor', accreditationId: undefined },
+            {
+              recyclingActivity: {
+                suppliers: [],
+                totalTonnageReceived: 0,
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              }
+            }
+          )
+
+        await postStatus(server, organisationId, registrationId, {
+          status: 'ready_to_submit',
+          version: 1
+        })
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: 'Report is incomplete; 2 required field(s) not populated',
+          err: expect.objectContaining({
+            isBoom: true,
+            code: 'REPORT_INCOMPLETE'
+          }),
+          event: {
+            category: 'http',
+            outcome: 'failure',
+            action: 'update_report_status',
+            reason:
+              'missingCount=2 missingFields=[recyclingActivity.tonnageRecycled,recyclingActivity.tonnageNotRecycled]',
+            reference: reportId
+          }
+        })
+      })
+
       it.each(['created', 'rejected', 'cancelled'])(
         'allows transition for reprocessor with %s accreditation (treated as registered-only, prn fields not required)',
         async (accreditationStatus) => {
