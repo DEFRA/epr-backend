@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
+import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '../../domain/model.js'
 
 export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
   describe('creditAvailableBalanceForPrnCancellation', () => {
