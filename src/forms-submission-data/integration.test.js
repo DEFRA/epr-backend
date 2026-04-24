@@ -32,11 +32,10 @@ describe('Migration Integration Tests with Fixtures', () => {
     organisationId,
     expectedAccreditationsCount
   ) {
-    const { systemLogs: orgLogs } =
-      await sharedSystemLogsRepo.findByOrganisationId({
-        organisationId,
-        limit: 1000
-      })
+    const { systemLogs: orgLogs } = await sharedSystemLogsRepo.find({
+      organisationId,
+      limit: 1000
+    })
     expect(orgLogs.length).toBeGreaterThan(0)
 
     const incrementalMigrationLogs = orgLogs.filter(

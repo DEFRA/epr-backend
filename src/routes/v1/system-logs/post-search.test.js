@@ -231,7 +231,6 @@ describe('POST /v1/system-logs/search', () => {
     it('returns 500 when repository throws unexpected error', async () => {
       const failingFactory = () => ({
         insert: async () => {},
-        findByOrganisationId: async () => {},
         find: async () => {
           throw new Error('Database connection lost')
         }
@@ -259,7 +258,6 @@ describe('POST /v1/system-logs/search', () => {
       const Boom = await import('@hapi/boom')
       const boomFactory = () => ({
         insert: async () => {},
-        findByOrganisationId: async () => {},
         find: async () => {
           throw Boom.default.notFound('Not found')
         }

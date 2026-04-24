@@ -22,10 +22,6 @@ export function createSystemLogsRepository() {
         storage.push({ ...systemLog, _internalId: id })
       },
 
-      async findByOrganisationId({ organisationId, limit, cursor }) {
-        return this.find({ organisationId, limit, cursor })
-      },
-
       async find({ organisationId, email, subCategory, limit, cursor }) {
         let results = storage.filter((item) => {
           if (
