@@ -220,8 +220,10 @@ export class MigrationOrchestrator {
       message: `Found ${pendingMigration.organisations.size} organisations, ${pendingMigration.registrations.size} registrations, ${pendingMigration.accreditations.size} accreditations to migrate`
     })
 
-    const { organisations, registrations, accreditations } =
-      await this.transformAndLinkAllNewSubmissions(migrated, pendingMigration)
+    const { organisations } = await this.transformAndLinkAllNewSubmissions(
+      migrated,
+      pendingMigration
+    )
 
     const migrationItems = this.prepareMigrationItems(
       organisations,
@@ -234,9 +236,16 @@ export class MigrationOrchestrator {
       migrationItems
     )
 
+    const linkedRegistrations = organisations.flatMap(
+      (org) => org.registrations ?? []
+    )
+    const linkedAccreditations = organisations.flatMap(
+      (org) => org.accreditations ?? []
+    )
+
     await copyOperatorUploadedFiles(
-      registrations,
-      accreditations,
+      linkedRegistrations,
+      linkedAccreditations,
       this.formsFileUploadsRepository
     )
   }
