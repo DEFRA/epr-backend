@@ -214,6 +214,35 @@ describe(`POST ${reportsPostPath}`, () => {
       })
     })
 
+    it('returns 400 with structured periodNotEnded when the period has not yet ended', async () => {
+      const { server, organisationId, registrationId } = await createServer({
+        wasteProcessingType: 'reprocessor',
+        accreditationId: undefined
+      })
+
+      const response = await makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2099,
+        'quarterly',
+        1
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.BAD_REQUEST,
+        error: 'Bad Request',
+        message: 'Cannot create report for period 1 — period has not yet ended',
+        periodNotEnded: {
+          period: 1,
+          cadence: 'quarterly',
+          endDate: '2099-03-31',
+          earliestSubmissionDate: '2099-04-01T00:00:00.000Z'
+        }
+      })
+    })
+
     it('returns 400 with structured cadence when accredited registration uses quarterly cadence', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',

@@ -114,9 +114,16 @@ function getValidatedPeriodInfo(cadence, year, period) {
   const dayAfterEnd = new Date(periodInfo.endDate)
   dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
   if (dayAfterEnd > new Date()) {
-    throw Boom.badRequest(
+    const boom = Boom.badRequest(
       `Cannot create report for period ${period} — period has not yet ended`
     )
+    boom.output.payload.periodNotEnded = {
+      period,
+      cadence,
+      endDate: periodInfo.endDate,
+      earliestSubmissionDate: dayAfterEnd.toISOString()
+    }
+    throw boom
   }
 
   return periodInfo
