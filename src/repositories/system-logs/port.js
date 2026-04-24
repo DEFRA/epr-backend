@@ -25,6 +25,16 @@
 
 /**
  * @typedef {{
+ *   organisationId?: string
+ *   email?: string
+ *   subCategory?: string
+ *   limit: number
+ *   cursor?: string
+ * }} FindParams
+ */
+
+/**
+ * @typedef {{
  *   systemLogs: SystemLog[]
  *   hasMore: boolean
  *   nextCursor: string | null
@@ -35,6 +45,7 @@
  * @typedef {{
  *   insert: (systemLog: SystemLog) => Promise<void>
  *   findByOrganisationId: (params: FindByOrganisationIdParams) => Promise<PaginatedSystemLogs>
+ *   find: (params: FindParams) => Promise<PaginatedSystemLogs>
  * }} SystemLogsRepository
  */
 
