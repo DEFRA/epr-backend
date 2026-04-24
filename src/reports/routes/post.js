@@ -67,9 +67,14 @@ export const reportsPost = {
         : CADENCE.quarterly
 
       if (cadence !== expectedCadence) {
-        throw Boom.badRequest(
+        const boom = Boom.badRequest(
           `Cadence '${cadence}' does not match registration type — expected '${expectedCadence}'`
         )
+        boom.output.payload.cadence = {
+          actual: cadence,
+          expected: expectedCadence
+        }
+        throw boom
       }
 
       const createdReport = await createReportForPeriod({
