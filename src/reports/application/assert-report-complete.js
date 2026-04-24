@@ -1,10 +1,10 @@
-import Boom from '@hapi/boom'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import {
   exportManualFields,
   prnManualFields,
   recyclingManualFields
 } from '#reports/repository/schema.js'
+import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 /**
@@ -79,11 +79,11 @@ const findMissingFields = (report, operatorCategory) => {
  */
 export const assertReportComplete = (report, operatorCategory) => {
   const missingFields = findMissingFields(report, operatorCategory)
-  if (missingFields.length === 0) return
-
-  const boom = Boom.badRequest(
-    `Report is incomplete; ${missingFields.length} required field(s) not populated`
-  )
-  boom.output.payload.missingFields = missingFields
-  throw boom
+  if (missingFields.length) {
+    const boom = Boom.badRequest(
+      `Report is incomplete; ${missingFields.length} required field(s) not populated`
+    )
+    boom.output.payload.missingFields = missingFields
+    throw boom
+  }
 }
