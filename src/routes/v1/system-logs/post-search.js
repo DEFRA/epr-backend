@@ -9,40 +9,43 @@ import {
   respondWithSystemLogs
 } from './helpers.js'
 
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+const systemLogsSearchPath = '/v1/system-logs/search'
 
-const systemLogsPath = '/v1/system-logs'
-
-export const systemLogsGet = {
-  method: 'GET',
-  path: systemLogsPath,
+export const systemLogsPostSearch = {
+  method: 'POST',
+  path: systemLogsSearchPath,
   options: {
     auth: getAuthConfig([ROLES.serviceMaintainer]),
     tags: ['api', 'admin'],
     validate: {
-      query: Joi.object({
-        organisationId: Joi.string().required(),
+      payload: Joi.object({
+        organisationId: Joi.string().optional(),
+        email: Joi.string().trim().optional(),
+        subCategory: Joi.string().optional(),
         limit: Joi.number().integer().min(1).optional(),
         cursor: Joi.string().hex().length(24).optional()
-      })
+      }).or('organisationId', 'email')
     }
   },
   handler: async (request, h) => {
     const { systemLogsRepository, logger } = request
-    const { organisationId, limit, cursor } = request.query
+    const { organisationId, email, subCategory, limit, cursor } =
+      request.payload
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
-      const result = await systemLogsRepository.findByOrganisationId({
+      const result = await systemLogsRepository.find({
         organisationId,
+        email,
+        subCategory,
         limit: effectiveLimit,
         cursor
       })
 
       return respondWithSystemLogs(result, h, logger)
     } catch (error) {
-      return handleSystemLogsError(error, logger, systemLogsPath)
+      return handleSystemLogsError(error, logger, systemLogsSearchPath)
     }
   }
 }

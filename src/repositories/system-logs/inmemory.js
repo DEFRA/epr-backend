@@ -23,11 +23,29 @@ export function createSystemLogsRepository() {
       },
 
       async findByOrganisationId({ organisationId, limit, cursor }) {
-        let results = storage.filter(
-          (payload) => payload.context?.organisationId === organisationId
-        )
+        return this.find({ organisationId, limit, cursor })
+      },
 
-        // Sort by internal ID descending (newest first)
+      async find({ organisationId, email, subCategory, limit, cursor }) {
+        let results = storage.filter((item) => {
+          if (
+            organisationId &&
+            item.context?.organisationId !== organisationId
+          ) {
+            return false
+          }
+          if (
+            email &&
+            item.createdBy?.email?.toLowerCase() !== email.toLowerCase()
+          ) {
+            return false
+          }
+          if (subCategory && item.event?.subCategory !== subCategory) {
+            return false
+          }
+          return true
+        })
+
         results.sort((a, b) => b._internalId - a._internalId)
 
         if (cursor) {
