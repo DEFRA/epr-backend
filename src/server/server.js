@@ -23,6 +23,7 @@ import {
 } from '#overseas-sites/index.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
+import { boomResponseLogger } from '#plugins/boom-response-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
@@ -167,6 +168,7 @@ async function createServer(options = {}) {
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies
   // authFailureLogger - logs 401 authentication failures
+  // boomResponseLogger - logs structured 4xx/5xx boom responses
   const plugins = [
     requestLogger,
     requestTracing,
@@ -180,6 +182,7 @@ async function createServer(options = {}) {
       options: { config }
     },
     authFailureLogger,
+    boomResponseLogger,
     externalApiErrorFormatter
   ]
 

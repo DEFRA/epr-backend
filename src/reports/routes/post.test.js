@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
-import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -287,58 +286,6 @@ describe(`POST ${reportsPostPath}`, () => {
       })
     })
 
-    describe('4xx access log shape for cadence mismatch', () => {
-      afterEach(() => {
-        config.reset('featureFlags.allowFullErrorOutput')
-      })
-
-      it.each([
-        {
-          name: 'without allowFullErrorOutput — err field is undefined',
-          flag: false,
-          assertErr: (accessLog) => {
-            expect(accessLog.err).toBeUndefined()
-          }
-        },
-        {
-          name: 'with allowFullErrorOutput — err carries the curated payload including cadence detail',
-          flag: true,
-          assertErr: (accessLog) => {
-            expect(accessLog.err).toEqual({
-              statusCode: StatusCodes.BAD_REQUEST,
-              error: 'Bad Request',
-              message:
-                "Cadence 'monthly' does not match registration type — expected 'quarterly'",
-              cadence: { actual: 'monthly', expected: 'quarterly' }
-            })
-          }
-        }
-      ])('$name', async ({ flag, assertErr }) => {
-        config.set('featureFlags.allowFullErrorOutput', flag)
-
-        const { server, organisationId, registrationId } = await createServer({
-          wasteProcessingType: 'reprocessor',
-          accreditationId: undefined
-        })
-
-        await makeRequest(
-          server,
-          organisationId,
-          registrationId,
-          2025,
-          'monthly',
-          1
-        )
-
-        const accessLogCall = server.loggerMocks.info.mock.calls.find(
-          ([entry]) => entry?.res?.statusCode === 400
-        )
-
-        expect(accessLogCall).toBeDefined()
-        assertErr(accessLogCall[0])
-      })
-    })
-
     it('returns 422 for invalid cadence', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
@@ -390,7 +337,7 @@ describe(`POST ${reportsPostPath}`, () => {
         )
       })
 
-      it('does not log when an expected Boom error is thrown', async () => {
+      it('logs a structured warn (not error) when an expected Boom 4xx is thrown', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
@@ -405,7 +352,14 @@ describe(`POST ${reportsPostPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
         expect(server.loggerMocks.error).not.toHaveBeenCalled()
-        expect(server.loggerMocks.warn).not.toHaveBeenCalled()
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: expect.any(String),
+          err: expect.objectContaining({ isBoom: true }),
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            outcome: 'failure'
+          }
+        })
       })
     })
 

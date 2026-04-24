@@ -11,6 +11,7 @@ import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
+import { boomResponseLogger } from '#plugins/boom-response-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
@@ -225,6 +226,7 @@ export async function createTestServer(options = {}) {
       options: { config }
     },
     authFailureLogger,
+    boomResponseLogger,
     externalApiErrorFormatter,
     {
       plugin: featureFlagsPlugin,

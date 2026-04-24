@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
-import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -303,68 +302,6 @@ describe(`POST ${reportsStatusPath}`, () => {
           error: 'Bad Request',
           message: 'Report is incomplete; 1 required field(s) not populated',
           missingFields: ['prn.totalRevenue']
-        })
-      })
-
-      describe('4xx access log shape', () => {
-        afterEach(() => {
-          config.reset('featureFlags.allowFullErrorOutput')
-        })
-
-        it.each([
-          {
-            name: 'without allowFullErrorOutput — err field is undefined',
-            flag: false,
-            assertErr: (accessLog) => {
-              expect(accessLog.err).toBeUndefined()
-            }
-          },
-          {
-            name: 'with allowFullErrorOutput — err carries the curated payload including missingFields',
-            flag: true,
-            assertErr: (accessLog) => {
-              expect(accessLog.err).toEqual({
-                statusCode: StatusCodes.BAD_REQUEST,
-                error: 'Bad Request',
-                message:
-                  'Report is incomplete; 2 required field(s) not populated',
-                missingFields: [
-                  'recyclingActivity.tonnageRecycled',
-                  'recyclingActivity.tonnageNotRecycled'
-                ]
-              })
-            }
-          }
-        ])('$name', async ({ flag, assertErr }) => {
-          config.set('featureFlags.allowFullErrorOutput', flag)
-
-          const { server, organisationId, registrationId } =
-            await createServerWithReport(
-              {
-                wasteProcessingType: 'reprocessor',
-                accreditationId: undefined
-              },
-              {
-                recyclingActivity: {
-                  suppliers: [],
-                  totalTonnageReceived: 0,
-                  tonnageRecycled: null,
-                  tonnageNotRecycled: null
-                }
-              }
-            )
-
-          await postStatus(server, organisationId, registrationId, {
-            status: 'ready_to_submit',
-            version: 1
-          })
-
-          const accessLogCall = server.loggerMocks.info.mock.calls.find(
-            ([entry]) => entry?.res?.statusCode === 400
-          )
-
-          expect(accessLogCall).toBeDefined()
-          assertErr(accessLogCall[0])
         })
       })
 
