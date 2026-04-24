@@ -459,13 +459,14 @@ describe(`POST ${reportsPostPath}`, () => {
         )
       })
 
-      it('logs a structured warn (not error) when an expected Boom 4xx is thrown', async () => {
+      it('routes an expected 4xx boom to warn (not error) with full structured event', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
         })
 
-        await makeRequest(server, organisationId, registrationId)
+        const first = await makeRequest(server, organisationId, registrationId)
+        const existingId = JSON.parse(first.payload).id
         const response = await makeRequest(
           server,
           organisationId,
@@ -475,12 +476,18 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
         expect(server.loggerMocks.error).not.toHaveBeenCalled()
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
-          message: expect.any(String),
-          err: expect.objectContaining({ isBoom: true }),
-          event: expect.objectContaining({
+          message: 'Report already exists for quarterly period 1 of 2025',
+          err: expect.objectContaining({
+            isBoom: true,
+            code: 'REPORT_ALREADY_EXISTS'
+          }),
+          event: {
             category: LOGGING_EVENT_CATEGORIES.HTTP,
-            outcome: 'failure'
-          })
+            outcome: 'failure',
+            action: 'create_report',
+            reason: 'cadence=quarterly period=1 year=2025',
+            reference: existingId
+          }
         })
       })
     })
