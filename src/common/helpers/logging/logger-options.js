@@ -2,16 +2,9 @@ import { config } from '#root/config.js'
 import { getTraceId } from '@defra/hapi-tracing'
 import { ecsFormat } from '@elastic/ecs-pino-format'
 
-/**
- * @typedef {Error & {isBoom: true, output: {statusCode: number, payload: object}, data?: object}} BoomError
- */
-
 const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
-
-const allowFullErrorOutput = () =>
-  config.get('featureFlags.allowFullErrorOutput')
 
 const formatters = {
   ecs: {
@@ -34,7 +27,6 @@ export const loggerOptions = {
   level: logConfig.level,
   ...formatters[logConfig.format],
   nesting: true,
-  // Log request errors - includes validation errors, Boom errors, etc.
   logEvents: ['onPostStart', 'onPostStop', 'response', 'request-error'],
   serializers: {
     /** @param {unknown} err */
@@ -49,21 +41,10 @@ export const loggerOptions = {
         type: err.name
       }
 
-      // Include Boom error details for better debugging when sensitive logs are allowed
-      // @ts-ignore - check for Boom error before casting
-      if (allowFullErrorOutput() && err.isBoom && err.output) {
-        /** @type {BoomError} */
-        const boomErr = /** @type {BoomError} */ (err)
-        errorObj.statusCode = boomErr.output.statusCode
-        errorObj.payload = boomErr.output.payload
-
-        if (boomErr.data) {
-          try {
-            errorObj.message = `${err.message} | data: ${JSON.stringify(boomErr.data)}`
-          } catch {
-            errorObj.message = `${err.message} | data: [unserializable]`
-          }
-        }
+      // @ts-ignore - err.code is a convention on Error subclasses
+      if (err.code) {
+        // @ts-ignore
+        errorObj.code = err.code
       }
 
       // Surface bounded classifiers from the .cause chain — name and code are
@@ -81,9 +62,6 @@ export const loggerOptions = {
 
       return errorObj
     },
-    // Note: Custom res serializer simplified - hapi-pino passes request.raw.res
-    // (Node's raw response) to serializers, not Hapi's response with source.
-    // Use log4xxResponseErrors option instead for error response details.
     res: (res) => {
       if (!res) {
         return res
@@ -92,11 +70,6 @@ export const loggerOptions = {
         statusCode: res.statusCode
       }
     }
-  },
-  // Log 4xx response bodies as 'err' field when sensitive logs are allowed
-  // This properly accesses request.response.source which contains error details
-  get log4xxResponseErrors() {
-    return allowFullErrorOutput()
   },
   // @fixme: add coverage
   /* v8 ignore next 8 */

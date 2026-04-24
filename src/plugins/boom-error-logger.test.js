@@ -57,6 +57,20 @@ describe('boom-error-logger plugin', () => {
         handler: () => {
           throw Boom.internal('Database died')
         }
+      },
+      {
+        method: 'GET',
+        path: '/enriched',
+        handler: () => {
+          const boom = Boom.badRequest('Something invalid')
+          boom.code = 'SOMETHING_INVALID'
+          boom.event = {
+            action: 'create_report',
+            reason: 'foo=bar baz=qux',
+            reference: 'reg-123'
+          }
+          throw boom
+        }
       }
     ])
 
@@ -143,5 +157,28 @@ describe('boom-error-logger plugin', () => {
 
     expect(mockLogger.warn).not.toHaveBeenCalled()
     expect(mockLogger.error).not.toHaveBeenCalled()
+  })
+
+  it('uses boom.code as error.code when set by a helper', async () => {
+    await server.inject({ method: 'GET', url: '/enriched' })
+
+    expect(mockLogger.warn).toHaveBeenCalledWith({
+      message: 'Something invalid',
+      error: {
+        code: 'SOMETHING_INVALID',
+        id: expect.any(String),
+        message: 'Something invalid',
+        type: 'Bad Request'
+      },
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.HTTP,
+        action: 'create_report',
+        kind: 'event',
+        outcome: 'failure',
+        reason: 'foo=bar baz=qux',
+        reference: 'reg-123'
+      },
+      http: { response: { status_code: 400 } }
+    })
   })
 })

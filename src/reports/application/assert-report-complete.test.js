@@ -155,4 +155,42 @@ describe('assertReportComplete', () => {
       ).toEqual([])
     })
   })
+
+  describe('code and event for indexed logging', () => {
+    /** @import { EnrichedBoom } from '#common/types/enriched-boom.js' */
+    /**
+     * @param {SparseReport} report
+     * @param {OperatorCategory} category
+     * @returns {EnrichedBoom}
+     */
+    const captureBoom = (report, category) => {
+      try {
+        assertReportComplete(
+          /** @type {Report} */ (/** @type {unknown} */ (report)),
+          category
+        )
+        throw new Error('expected throw')
+      } catch (err) {
+        return /** @type {EnrichedBoom} */ (err)
+      }
+    }
+
+    it('attaches code REPORT_INCOMPLETE and flat event.reason referencing report.id', () => {
+      const boom = captureBoom(
+        {
+          id: 'rep-42',
+          recyclingActivity: {}
+        },
+        OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
+      )
+
+      expect(boom.code).toBe('REPORT_INCOMPLETE')
+      expect(boom.event).toEqual({
+        action: 'update_report_status',
+        reason:
+          'missingCount=2 missingFields=[recyclingActivity.tonnageRecycled,recyclingActivity.tonnageNotRecycled]',
+        reference: 'rep-42'
+      })
+    })
+  })
 })

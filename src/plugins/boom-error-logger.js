@@ -5,21 +5,24 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 
+/**
+ * @import { HapiServer, HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
+ */
+
 const SERVER_ERROR_THRESHOLD = 500
 
 export const boomErrorLogger = {
   plugin: {
     name: 'boom-error-logger',
     version: '1.0.0',
-    /**
-     * @param {import('#common/hapi-types.js').HapiServer} server
-     */
+    /** @param {HapiServer} server */
     register: (server) => {
       server.ext(
         'onPreResponse',
         /**
-         * @param {import('#common/hapi-types.js').HapiRequest} request
-         * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+         * @param {HapiRequest} request
+         * @param {HapiResponseToolkit} h
          */
         (request, h) => {
           const response = request.response
@@ -28,7 +31,7 @@ export const boomErrorLogger = {
             return h.continue
           }
 
-          const boom = /** @type {import('@hapi/boom').Boom} */ (response)
+          const boom = /** @type {EnrichedBoom} */ (response)
           const statusCode = boom.output.statusCode
 
           // 401 is already logged by authFailureLogger; skip to avoid duplicates
@@ -38,7 +41,7 @@ export const boomErrorLogger = {
 
           const isServerError = statusCode >= SERVER_ERROR_THRESHOLD
           const level = isServerError ? 'error' : 'warn'
-          const action = isServerError
+          const defaultAction = isServerError
             ? LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
             : LOGGING_EVENT_ACTIONS.REQUEST_FAILURE
 
@@ -47,19 +50,24 @@ export const boomErrorLogger = {
           // (arbitrary developer-attached payload), or boom.stack (the first
           // line of a stack trace echoes the error message, which can leak
           // PII when an upstream Error was constructed from user input).
+          //
+          // Helpers may enrich a Boom with `code` (semantic classifier) and
+          // `event` fields (action/reason/reference) for indexed search — see
+          // EnrichedBoom. These override the defaults when present.
           request.logger[level]({
             message: boom.message,
             error: {
-              code: String(statusCode),
+              code: boom.code ?? String(statusCode),
               id: request.info.id,
               message: boom.message,
               type: boom.output.payload.error
             },
             event: {
               category: LOGGING_EVENT_CATEGORIES.HTTP,
-              action,
+              action: defaultAction,
               kind: 'event',
-              outcome: 'failure'
+              outcome: 'failure',
+              ...(boom.event ?? {})
             },
             http: {
               response: {

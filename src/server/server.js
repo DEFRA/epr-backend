@@ -168,7 +168,7 @@ async function createServer(options = {}) {
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies
   // authFailureLogger - logs 401 authentication failures
-  // boomErrorLogger    - logs all other Boom errors with PII-safe ECS error fields
+  // boomErrorLogger    - logs other Boom errors with PII-safe ECS error fields
   const plugins = [
     requestLogger,
     requestTracing,
