@@ -7,7 +7,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#domain/waste-balances/model.js'
+import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#waste-balances/domain/model.js'
 
 import {
   asStandardUser,

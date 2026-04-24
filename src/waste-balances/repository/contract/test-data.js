@@ -2,15 +2,15 @@ import { randomUUID } from 'node:crypto'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '#domain/waste-balances/model.js'
+} from '../../domain/model.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Build a minimal waste balance for testing
- * @param {Partial<import('#domain/waste-balances/model.js').WasteBalance>} [overrides] - Optional overrides for the waste balance
- * @returns {import('#domain/waste-balances/model.js').WasteBalance}
+ * @param {Partial<import('../../domain/model.js').WasteBalance>} [overrides] - Optional overrides for the waste balance
+ * @returns {import('../../domain/model.js').WasteBalance}
  */
 export const buildWasteBalance = (overrides = {}) => {
   const id = overrides.id ?? randomUUID()

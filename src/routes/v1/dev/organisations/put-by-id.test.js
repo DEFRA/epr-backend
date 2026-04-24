@@ -170,6 +170,67 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       expect(body.organisation.users.length).toBeGreaterThan(0)
     })
 
+    it('should update users[] when an approvedPerson is edited on an already-approved registration', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const initial = await organisationsRepository.findById(org.id)
+      const approvedRegStatusHistory = [
+        { status: 'created', updatedAt: '2024-01-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' }
+      ]
+      const approvedRegFields = {
+        statusHistory: approvedRegStatusHistory,
+        registrationNumber: 'REG12345',
+        validFrom: VALID_FROM,
+        validTo: VALID_TO,
+        reprocessingType: 'input'
+      }
+
+      const approvedResponse = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            ...initial,
+            registrations: initial.registrations.map((reg, idx) =>
+              idx === 0 ? { ...reg, ...approvedRegFields } : reg
+            )
+          }
+        }
+      })
+      expect(approvedResponse.statusCode).toBe(StatusCodes.OK)
+
+      const afterApproval = await organisationsRepository.findById(org.id)
+      const editedEmail = 'edited-ap@example.com'
+
+      const editResponse = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            ...afterApproval,
+            registrations: afterApproval.registrations.map((reg, idx) =>
+              idx === 0
+                ? {
+                    ...reg,
+                    approvedPersons: [
+                      { ...reg.approvedPersons[0], email: editedEmail }
+                    ]
+                  }
+                : reg
+            )
+          }
+        }
+      })
+
+      expect(editResponse.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(editResponse.payload)
+      expect(body.organisation.users.some((u) => u.email === editedEmail)).toBe(
+        true
+      )
+    })
+
     it('should not require authentication', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)

@@ -10,8 +10,8 @@ import {
 /**
  * Find a waste balance by accreditation ID.
  *
- * @param {import('#domain/waste-balances/model.js').WasteBalance[]} wasteBalanceStorage
- * @returns {(id: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
+ * @returns {(id: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const findBalance = (wasteBalanceStorage) => async (id) => {
   const balance = wasteBalanceStorage.find((b) => b.accreditationId === id)
@@ -21,8 +21,8 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
 /**
  * Save a waste balance.
  *
- * @param {import('#domain/waste-balances/model.js').WasteBalance[]} wasteBalanceStorage
- * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
+ * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
+ * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
 export const saveBalance =
   (wasteBalanceStorage) => async (updatedBalance, _newTransactions) => {
@@ -40,8 +40,8 @@ export const saveBalance =
 /**
  * Find a waste balance by accreditation ID.
  *
- * @param {import('#domain/waste-balances/model.js').WasteBalance[]} wasteBalanceStorage
- * @returns {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
+ * @returns {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const performFindByAccreditationId =
   (wasteBalanceStorage) => async (accreditationId) => {

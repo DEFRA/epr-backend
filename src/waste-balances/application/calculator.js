@@ -4,7 +4,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '#domain/waste-balances/model.js'
+} from '../domain/model.js'
 import {
   add,
   subtract,
@@ -23,7 +23,7 @@ import {
  * @param {number} amount
  * @param {number} currentAmount
  * @param {number} currentAvailableAmount
- * @param {import('#domain/waste-balances/model.js').WasteBalanceTransactionType} [type]
+ * @param {import('../domain/model.js').WasteBalanceTransactionType} [type]
  */
 export const buildTransaction = (
   record,
@@ -77,7 +77,7 @@ export const buildTransaction = (
  * Updates the credited amount map with the transaction amount for each entity.
  * Credits increase the credited amount, Debits decrease it.
  * @param {Map<string, number>} creditedAmountMap
- * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
+ * @param {import('../domain/model.js').WasteBalanceTransaction} transaction
  */
 const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
   const sign =
@@ -116,7 +116,7 @@ const isPrnTransaction = (transaction) =>
  * the waste-record contribution is derived directly from the waste records
  * themselves.
  *
- * @param {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} transactions
+ * @param {Array<import('../domain/model.js').WasteBalanceTransaction>} transactions
  * @returns {{ amount: number, availableAmount: number }}
  */
 const sumPrnTransactionAdjustments = (transactions) => {
@@ -179,14 +179,14 @@ const getTargetAmount = (record, accreditation, overseasSites) => {
  * Implements a pipeline pattern to process each record through a series of steps.
  *
  * @param {Object} params
- * @param {import('#domain/waste-balances/model.js').WasteBalance} params.currentBalance - The current waste balance state.
+ * @param {import('../domain/model.js').WasteBalance} params.currentBalance - The current waste balance state.
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords - The waste records to process.
  * @param {Object} params.accreditation - The accreditation details.
  * @param {string} [params.accreditation.validFrom] - ISO date string.
  * @param {string} [params.accreditation.validTo] - ISO date string.
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED.
  * @returns {Object} Result containing new transactions and updated totals.
- * @property {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} newTransactions
+ * @property {Array<import('../domain/model.js').WasteBalanceTransaction>} newTransactions
  * @property {number} newAmount
  * @property {number} newAvailableAmount
  */
