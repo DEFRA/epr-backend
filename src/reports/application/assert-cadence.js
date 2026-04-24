@@ -12,7 +12,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
  * fields for indexed logging, and `output.payload.cadence` for API clients.
  *
  * @param {Cadence} cadence
- * @param {{ id: string, accreditationId?: string | null }} registration
+ * @param {{ accreditationId?: string | null }} registration
  * @returns {void}
  */
 export const assertCadence = (cadence, registration) => {
@@ -32,8 +32,7 @@ export const assertCadence = (cadence, registration) => {
   boom.code = 'CADENCE_MISMATCH'
   boom.event = {
     action: 'create_report',
-    reason: `actual=${cadence} expected=${expected}`,
-    reference: registration.id
+    reason: `actual=${cadence} expected=${expected}`
   }
   boom.output.payload.cadence = { actual: cadence, expected }
   throw boom

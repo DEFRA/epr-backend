@@ -286,6 +286,128 @@ describe(`POST ${reportsPostPath}`, () => {
       })
     })
 
+    describe('indexed warn log shape per helper', () => {
+      it('cadence mismatch attaches CADENCE_MISMATCH code and cadence event.reason', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2025,
+          'monthly',
+          1
+        )
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message:
+            "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+          err: expect.objectContaining({
+            isBoom: true,
+            code: 'CADENCE_MISMATCH'
+          }),
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            outcome: 'failure',
+            action: 'create_report',
+            reason: 'actual=monthly expected=quarterly'
+          }
+        })
+      })
+
+      it('invalid period attaches INVALID_PERIOD code and flat event.reason', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2025,
+          'quarterly',
+          5
+        )
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: 'Invalid period 5 for cadence quarterly',
+          err: expect.objectContaining({
+            isBoom: true,
+            code: 'INVALID_PERIOD'
+          }),
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            outcome: 'failure',
+            action: 'create_report',
+            reason: 'actual=5 cadence=quarterly validPeriods=[1,2,3,4]'
+          }
+        })
+      })
+
+      it('period not ended attaches PERIOD_NOT_ENDED code and flat event.reason', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2099,
+          'quarterly',
+          1
+        )
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message:
+            'Cannot create report for period 1 — period has not yet ended',
+          err: expect.objectContaining({
+            isBoom: true,
+            code: 'PERIOD_NOT_ENDED'
+          }),
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            outcome: 'failure',
+            action: 'create_report',
+            reason:
+              'period=1 cadence=quarterly endDate=2099-03-31 earliestSubmissionDate=2099-04-01T00:00:00.000Z'
+          }
+        })
+      })
+
+      it('report already exists attaches REPORT_ALREADY_EXISTS code and existingId as event.reference', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const first = await makeRequest(server, organisationId, registrationId)
+        const existingId = JSON.parse(first.payload).id
+
+        await makeRequest(server, organisationId, registrationId)
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: 'Report already exists for quarterly period 1 of 2025',
+          err: expect.objectContaining({
+            isBoom: true,
+            code: 'REPORT_ALREADY_EXISTS'
+          }),
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            outcome: 'failure',
+            action: 'create_report',
+            reason: 'cadence=quarterly period=1 year=2025',
+            reference: existingId
+          }
+        })
+      })
+    })
+
     it('returns 422 for invalid cadence', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
@@ -355,10 +477,10 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: expect.any(String),
           err: expect.objectContaining({ isBoom: true }),
-          event: {
+          event: expect.objectContaining({
             category: LOGGING_EVENT_CATEGORIES.HTTP,
             outcome: 'failure'
-          }
+          })
         })
       })
     })

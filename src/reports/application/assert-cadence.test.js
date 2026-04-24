@@ -19,19 +19,19 @@ const capture = (fn) => {
 describe('assertCadence', () => {
   it('does not throw when cadence matches a registered-only registration', () => {
     expect(() =>
-      assertCadence('quarterly', { id: 'reg-1', accreditationId: null })
+      assertCadence('quarterly', { accreditationId: null })
     ).not.toThrow()
   })
 
   it('does not throw when cadence matches an accredited registration', () => {
     expect(() =>
-      assertCadence('monthly', { id: 'reg-1', accreditationId: 'acc-1' })
+      assertCadence('monthly', { accreditationId: 'acc-1' })
     ).not.toThrow()
   })
 
   it('throws Boom with code, event, and payload when registered-only uses monthly', () => {
     const boom = capture(() =>
-      assertCadence('monthly', { id: 'reg-1', accreditationId: null })
+      assertCadence('monthly', { accreditationId: null })
     )
 
     expect(boom.isBoom).toBe(true)
@@ -42,8 +42,7 @@ describe('assertCadence', () => {
     expect(boom.code).toBe('CADENCE_MISMATCH')
     expect(boom.event).toEqual({
       action: 'create_report',
-      reason: 'actual=monthly expected=quarterly',
-      reference: 'reg-1'
+      reason: 'actual=monthly expected=quarterly'
     })
     expect(boom.output.payload.cadence).toEqual({
       actual: 'monthly',
@@ -53,14 +52,13 @@ describe('assertCadence', () => {
 
   it('throws with expected=monthly when an accredited registration uses quarterly', () => {
     const boom = capture(() =>
-      assertCadence('quarterly', { id: 'reg-2', accreditationId: 'acc-1' })
+      assertCadence('quarterly', { accreditationId: 'acc-1' })
     )
 
     expect(boom.code).toBe('CADENCE_MISMATCH')
     expect(boom.event).toEqual({
       action: 'create_report',
-      reason: 'actual=quarterly expected=monthly',
-      reference: 'reg-2'
+      reason: 'actual=quarterly expected=monthly'
     })
   })
 })

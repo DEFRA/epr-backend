@@ -8,6 +8,7 @@ import { getOperatorCategory } from '#reports/domain/operator-category.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
+ * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
  */
 
 /**
@@ -107,18 +108,25 @@ function formatSiteAddress(address) {
  */
 const assertValidPeriod = (period, cadence, allPeriods) => {
   const periodInfo = allPeriods.find((p) => p.period === period)
-  if (!periodInfo) {
-    const boom = Boom.badRequest(
-      `Invalid period ${period} for cadence ${cadence}`
-    )
-    boom.output.payload.invalidPeriod = {
-      actual: period,
-      cadence,
-      validPeriods: allPeriods.map((p) => p.period)
-    }
-    throw boom
+  if (periodInfo) {
+    return periodInfo
   }
-  return periodInfo
+
+  const validPeriods = allPeriods.map((p) => p.period)
+  const boom = /** @type {EnrichedBoom} */ (
+    Boom.badRequest(`Invalid period ${period} for cadence ${cadence}`)
+  )
+  boom.code = 'INVALID_PERIOD'
+  boom.event = {
+    action: 'create_report',
+    reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
+  }
+  boom.output.payload.invalidPeriod = {
+    actual: period,
+    cadence,
+    validPeriods
+  }
+  throw boom
 }
 
 /**
@@ -133,18 +141,28 @@ const assertValidPeriod = (period, cadence, allPeriods) => {
 const assertPeriodEnded = (periodInfo, period, cadence) => {
   const dayAfterEnd = new Date(periodInfo.endDate)
   dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
-  if (dayAfterEnd > new Date()) {
-    const boom = Boom.badRequest(
+  if (dayAfterEnd <= new Date()) {
+    return
+  }
+
+  const earliestSubmissionDate = dayAfterEnd.toISOString()
+  const boom = /** @type {EnrichedBoom} */ (
+    Boom.badRequest(
       `Cannot create report for period ${period} — period has not yet ended`
     )
-    boom.output.payload.periodNotEnded = {
-      period,
-      cadence,
-      endDate: periodInfo.endDate,
-      earliestSubmissionDate: dayAfterEnd.toISOString()
-    }
-    throw boom
+  )
+  boom.code = 'PERIOD_NOT_ENDED'
+  boom.event = {
+    action: 'create_report',
+    reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
   }
+  boom.output.payload.periodNotEnded = {
+    period,
+    cadence,
+    endDate: periodInfo.endDate,
+    earliestSubmissionDate
+  }
+  throw boom
 }
 
 /**
@@ -159,13 +177,23 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  */
 const assertNoExistingReport = (periodicReports, year, cadence, period) => {
   const id = findCurrentReportId(periodicReports, year, cadence, period)
-  if (id) {
-    const boom = Boom.conflict(
+  if (!id) {
+    return
+  }
+
+  const boom = /** @type {EnrichedBoom} */ (
+    Boom.conflict(
       `Report already exists for ${cadence} period ${period} of ${year}`
     )
-    boom.output.payload.existingReport = { id, cadence, period, year }
-    throw boom
+  )
+  boom.code = 'REPORT_ALREADY_EXISTS'
+  boom.event = {
+    action: 'create_report',
+    reason: `cadence=${cadence} period=${period} year=${year}`,
+    reference: id
   }
+  boom.output.payload.existingReport = { id, cadence, period, year }
+  throw boom
 }
 
 /**

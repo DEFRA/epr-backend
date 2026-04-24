@@ -4,7 +4,7 @@
  * @typedef {object} BoomEvent
  * @property {string} action
  * @property {string} reason
- * @property {string} reference
+ * @property {string} [reference]
  *
  * @typedef {Boom & { code?: string, event?: BoomEvent }} EnrichedBoom
  */
