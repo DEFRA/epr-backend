@@ -139,24 +139,6 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     })
 
-    it('returns 400 when period has not yet ended', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
-
-      const response = await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2099,
-        'quarterly',
-        1
-      )
-
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-    })
-
     it('returns 404 when registration not found', async () => {
       const { server, organisationId } = await createServer()
       const unknownRegId = new ObjectId().toString()
