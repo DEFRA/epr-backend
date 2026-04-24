@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
+import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -244,7 +245,7 @@ describe(`POST ${reportsStatusPath}`, () => {
     })
 
     describe('completeness guard', () => {
-      it('returns 400 when transitioning a reprocessor report to ready_to_submit with tonnageRecycled null', async () => {
+      it('returns 400 with structured missingFields when tonnageRecycled is null for a registered-only reprocessor', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport(
             { wasteProcessingType: 'reprocessor', accreditationId: undefined },
@@ -266,10 +267,15 @@ describe(`POST ${reportsStatusPath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-        expect(JSON.parse(response.payload).message).toMatch(/incomplete/i)
+        expect(JSON.parse(response.payload)).toEqual({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Report is incomplete; 1 required field(s) not populated',
+          missingFields: ['recyclingActivity.tonnageRecycled']
+        })
       })
 
-      it('returns 400 when transitioning an accredited reprocessor report to ready_to_submit with prn.totalRevenue null', async () => {
+      it('returns 400 with structured missingFields when prn.totalRevenue is null for an accredited reprocessor', async () => {
         const { server, organisationId, registrationId } =
           await createServerWithReport(
             { wasteProcessingType: 'reprocessor' },
@@ -292,6 +298,74 @@ describe(`POST ${reportsStatusPath}`, () => {
         )
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(JSON.parse(response.payload)).toEqual({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Report is incomplete; 1 required field(s) not populated',
+          missingFields: ['prn.totalRevenue']
+        })
+      })
+
+      describe('4xx access log shape', () => {
+        afterEach(() => {
+          config.reset('featureFlags.allowSensitiveLogs')
+        })
+
+        it.each([
+          {
+            name: 'without allowSensitiveLogs — err field is undefined',
+            flag: false,
+            assertErr: (accessLog) => {
+              expect(accessLog.err).toBeUndefined()
+            }
+          },
+          {
+            name: 'with allowSensitiveLogs — err carries the curated payload including missingFields',
+            flag: true,
+            assertErr: (accessLog) => {
+              expect(accessLog.err).toEqual({
+                statusCode: 400,
+                error: 'Bad Request',
+                message:
+                  'Report is incomplete; 2 required field(s) not populated',
+                missingFields: [
+                  'recyclingActivity.tonnageRecycled',
+                  'recyclingActivity.tonnageNotRecycled'
+                ]
+              })
+            }
+          }
+        ])('$name', async ({ flag, assertErr }) => {
+          config.set('featureFlags.allowSensitiveLogs', flag)
+
+          const { server, organisationId, registrationId } =
+            await createServerWithReport(
+              {
+                wasteProcessingType: 'reprocessor',
+                accreditationId: undefined
+              },
+              {
+                recyclingActivity: {
+                  suppliers: [],
+                  totalTonnageReceived: 0,
+                  tonnageRecycled: null,
+                  tonnageNotRecycled: null
+                }
+              }
+            )
+
+          await postStatus(server, organisationId, registrationId, {
+            status: 'ready_to_submit',
+            version: 1
+          })
+
+          const accessLogCall = server.loggerMocks.info.mock.calls.find(
+            ([entry]) => entry?.res?.statusCode === 400
+          )
+
+          expect(accessLogCall).toBeDefined()
+          assertErr(accessLogCall[0])
+        })
       })
 
       it.each(['created', 'rejected', 'cancelled'])(

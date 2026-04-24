@@ -1,6 +1,6 @@
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { describe, expect, it } from 'vitest'
-import { isReportComplete } from './is-report-complete.js'
+import { findMissingFields, isReportComplete } from './is-report-complete.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -22,229 +22,288 @@ import { isReportComplete } from './is-report-complete.js'
 // RR = REPROCESSOR_REGISTERED_ONLY, R = REPROCESSOR,
 // ER = EXPORTER_REGISTERED_ONLY,    E = EXPORTER.
 
-/**
- * @param {SparseReport} report
- * @param {OperatorCategory | string} category
- */
-const check = (report, category) =>
-  isReportComplete(
-    /** @type {Report} */ (/** @type {unknown} */ (report)),
-    /** @type {OperatorCategory} */ (category)
-  )
-
-describe('isReportComplete', () => {
-  it('should throw for unknown operator category', () => {
-    expect(() => check({}, 'UNKNOWN')).toThrow()
-  })
-
-  it('should ignore unrelated fields on real reports', () => {
-    /** @type {SparseReport} */
-    const reportWithExtras = {
-      recyclingActivity: {
-        tonnageRecycled: 100,
-        tonnageNotRecycled: 10,
-        suppliers: [{ supplierName: 'Acme' }],
-        totalTonnageReceived: 500
-      },
-      exportActivity: {
-        tonnageReceivedNotExported: 5,
-        tonnageRefusedAtDestination: 2
-      },
-      prn: { totalRevenue: 1000, freeTonnage: 0, issuedTonnage: 50 },
-      source: { summaryLogId: 'abc', lastUploadedAt: null },
-      supportingInformation: 'notes'
-    }
-
-    expect(check(reportWithExtras, OPERATOR_CATEGORY.REPROCESSOR)).toBe(true)
-  })
-
-  describe('REPROCESSOR_REGISTERED_ONLY', () => {
-    const category = OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
-
-    /** @type {SparseReport} */
-    const report = {
-      recyclingActivity: { tonnageRecycled: 100, tonnageNotRecycled: 10 }
-    }
-
-    it('should be complete when recycling fields are populated', () => {
-      expect(check(report, category)).toBe(true)
-    })
-
-    it('should be incomplete when recyclingActivity is null', () => {
-      expect(check({ ...report, recyclingActivity: null }, category)).toBe(
-        false
+describe('is report complete?', () => {
+  describe('isReportComplete', () => {
+    /**
+     * @param {SparseReport} report
+     * @param {OperatorCategory | string} category
+     */
+    const check = (report, category) =>
+      isReportComplete(
+        /** @type {Report} */ (/** @type {unknown} */ (report)),
+        /** @type {OperatorCategory} */ (category)
       )
+
+    it('should throw for unknown operator category', () => {
+      expect(() => check({}, 'UNKNOWN')).toThrow()
     })
 
-    it('should be incomplete when tonnageRecycled is null', () => {
-      const incomplete = {
-        ...report,
+    it('should ignore unrelated fields on real reports', () => {
+      /** @type {SparseReport} */
+      const reportWithExtras = {
         recyclingActivity: {
-          ...report.recyclingActivity,
-          tonnageRecycled: null
-        }
+          tonnageRecycled: 100,
+          tonnageNotRecycled: 10,
+          suppliers: [{ supplierName: 'Acme' }],
+          totalTonnageReceived: 500
+        },
+        exportActivity: {
+          tonnageReceivedNotExported: 5,
+          tonnageRefusedAtDestination: 2
+        },
+        prn: { totalRevenue: 1000, freeTonnage: 0, issuedTonnage: 50 },
+        source: { summaryLogId: 'abc', lastUploadedAt: null },
+        supportingInformation: 'notes'
       }
 
-      expect(check(incomplete, category)).toBe(false)
+      expect(check(reportWithExtras, OPERATOR_CATEGORY.REPROCESSOR)).toBe(true)
     })
 
-    it('should be incomplete when tonnageNotRecycled is null', () => {
-      const incomplete = {
-        ...report,
-        recyclingActivity: {
-          ...report.recyclingActivity,
-          tonnageNotRecycled: null
-        }
+    describe('REPROCESSOR_REGISTERED_ONLY', () => {
+      const category = OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
+
+      /** @type {SparseReport} */
+      const report = {
+        recyclingActivity: { tonnageRecycled: 100, tonnageNotRecycled: 10 }
       }
 
-      expect(check(incomplete, category)).toBe(false)
+      it('should be complete when recycling fields are populated', () => {
+        expect(check(report, category)).toBe(true)
+      })
+
+      it('should be incomplete when recyclingActivity is null', () => {
+        expect(check({ ...report, recyclingActivity: null }, category)).toBe(
+          false
+        )
+      })
+
+      it('should be incomplete when tonnageRecycled is null', () => {
+        const incomplete = {
+          ...report,
+          recyclingActivity: {
+            ...report.recyclingActivity,
+            tonnageRecycled: null
+          }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+
+      it('should be incomplete when tonnageNotRecycled is null', () => {
+        const incomplete = {
+          ...report,
+          recyclingActivity: {
+            ...report.recyclingActivity,
+            tonnageNotRecycled: null
+          }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+    })
+
+    describe('REPROCESSOR', () => {
+      const category = OPERATOR_CATEGORY.REPROCESSOR
+
+      /** @type {SparseReport} */
+      const report = {
+        recyclingActivity: { tonnageRecycled: 100, tonnageNotRecycled: 10 },
+        prn: { totalRevenue: 1000, freeTonnage: 0 }
+      }
+
+      it('should be complete when recycling and prn fields are populated', () => {
+        expect(check(report, category)).toBe(true)
+      })
+
+      it('should be incomplete when recyclingActivity is null', () => {
+        expect(check({ ...report, recyclingActivity: null }, category)).toBe(
+          false
+        )
+      })
+
+      it('should be incomplete when tonnageRecycled is null', () => {
+        const incomplete = {
+          ...report,
+          recyclingActivity: {
+            ...report.recyclingActivity,
+            tonnageRecycled: null
+          }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+
+      it('should be incomplete when tonnageNotRecycled is null', () => {
+        const incomplete = {
+          ...report,
+          recyclingActivity: {
+            ...report.recyclingActivity,
+            tonnageNotRecycled: null
+          }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+
+      it('should be incomplete when prn is null', () => {
+        expect(check({ ...report, prn: null }, category)).toBe(false)
+      })
+
+      it('should be incomplete when prn.totalRevenue is null', () => {
+        const incomplete = {
+          ...report,
+          prn: { ...report.prn, totalRevenue: null }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+
+      it('should be incomplete when prn.freeTonnage is null', () => {
+        const incomplete = {
+          ...report,
+          prn: { ...report.prn, freeTonnage: null }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+    })
+
+    describe('EXPORTER_REGISTERED_ONLY', () => {
+      const category = OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
+
+      /** @type {SparseReport} */
+      const report = {
+        exportActivity: { tonnageReceivedNotExported: 5 }
+      }
+
+      it('should be complete when export fields are populated', () => {
+        expect(check(report, category)).toBe(true)
+      })
+
+      it('should be incomplete when exportActivity is null', () => {
+        expect(check({ ...report, exportActivity: null }, category)).toBe(false)
+      })
+
+      it('should be incomplete when tonnageReceivedNotExported is null', () => {
+        const incomplete = {
+          ...report,
+          exportActivity: {
+            ...report.exportActivity,
+            tonnageReceivedNotExported: null
+          }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+    })
+
+    describe('EXPORTER', () => {
+      const category = OPERATOR_CATEGORY.EXPORTER
+
+      /** @type {SparseReport} */
+      const report = {
+        exportActivity: { tonnageReceivedNotExported: 5 },
+        prn: { totalRevenue: 1000, freeTonnage: 0 }
+      }
+
+      it('should be complete when export and prn fields are populated', () => {
+        expect(check(report, category)).toBe(true)
+      })
+
+      it('should be incomplete when exportActivity is null', () => {
+        expect(check({ ...report, exportActivity: null }, category)).toBe(false)
+      })
+
+      it('should be incomplete when tonnageReceivedNotExported is null', () => {
+        const incomplete = {
+          ...report,
+          exportActivity: {
+            ...report.exportActivity,
+            tonnageReceivedNotExported: null
+          }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+
+      it('should be incomplete when prn is null', () => {
+        expect(check({ ...report, prn: null }, category)).toBe(false)
+      })
+
+      it('should be incomplete when prn.totalRevenue is null', () => {
+        const incomplete = {
+          ...report,
+          prn: { ...report.prn, totalRevenue: null }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
+
+      it('should be incomplete when prn.freeTonnage is null', () => {
+        const incomplete = {
+          ...report,
+          prn: { ...report.prn, freeTonnage: null }
+        }
+
+        expect(check(incomplete, category)).toBe(false)
+      })
     })
   })
 
-  describe('REPROCESSOR', () => {
-    const category = OPERATOR_CATEGORY.REPROCESSOR
-
-    /** @type {SparseReport} */
-    const report = {
-      recyclingActivity: { tonnageRecycled: 100, tonnageNotRecycled: 10 },
-      prn: { totalRevenue: 1000, freeTonnage: 0 }
-    }
-
-    it('should be complete when recycling and prn fields are populated', () => {
-      expect(check(report, category)).toBe(true)
-    })
-
-    it('should be incomplete when recyclingActivity is null', () => {
-      expect(check({ ...report, recyclingActivity: null }, category)).toBe(
-        false
+  describe('findMissingFields', () => {
+    /**
+     * @param {SparseReport} report
+     * @param {OperatorCategory | string} category
+     */
+    const find = (report, category) =>
+      findMissingFields(
+        /** @type {Report} */ (/** @type {unknown} */ (report)),
+        /** @type {OperatorCategory} */ (category)
       )
-    })
 
-    it('should be incomplete when tonnageRecycled is null', () => {
-      const incomplete = {
-        ...report,
-        recyclingActivity: {
-          ...report.recyclingActivity,
-          tonnageRecycled: null
-        }
+    it('should return an empty array when the report is complete', () => {
+      const report = {
+        exportActivity: { tonnageReceivedNotExported: 5 },
+        prn: { totalRevenue: 1000, freeTonnage: 0 }
       }
 
-      expect(check(incomplete, category)).toBe(false)
+      expect(find(report, OPERATOR_CATEGORY.EXPORTER)).toEqual([])
     })
 
-    it('should be incomplete when tonnageNotRecycled is null', () => {
-      const incomplete = {
-        ...report,
-        recyclingActivity: {
-          ...report.recyclingActivity,
-          tonnageNotRecycled: null
-        }
+    it('should return the dotted path of a single missing field', () => {
+      const report = {
+        exportActivity: { tonnageReceivedNotExported: null }
       }
 
-      expect(check(incomplete, category)).toBe(false)
+      expect(find(report, OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY)).toEqual([
+        'exportActivity.tonnageReceivedNotExported'
+      ])
     })
 
-    it('should be incomplete when prn is null', () => {
-      expect(check({ ...report, prn: null }, category)).toBe(false)
-    })
-
-    it('should be incomplete when prn.totalRevenue is null', () => {
-      const incomplete = {
-        ...report,
-        prn: { ...report.prn, totalRevenue: null }
+    it('should return all missing fields (not just the first) for a partially-populated report', () => {
+      const report = {
+        exportActivity: { tonnageReceivedNotExported: null },
+        prn: { totalRevenue: null, freeTonnage: null }
       }
 
-      expect(check(incomplete, category)).toBe(false)
+      const missing = find(report, OPERATOR_CATEGORY.EXPORTER)
+
+      expect(missing).toContain('exportActivity.tonnageReceivedNotExported')
+      expect(missing).toContain('prn.totalRevenue')
+      expect(missing).toContain('prn.freeTonnage')
+      expect(missing).toHaveLength(3)
     })
 
-    it('should be incomplete when prn.freeTonnage is null', () => {
-      const incomplete = {
-        ...report,
-        prn: { ...report.prn, freeTonnage: null }
-      }
+    it('should return the block name when an entire required block is null', () => {
+      const report = { exportActivity: null }
 
-      expect(check(incomplete, category)).toBe(false)
-    })
-  })
-
-  describe('EXPORTER_REGISTERED_ONLY', () => {
-    const category = OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
-
-    /** @type {SparseReport} */
-    const report = {
-      exportActivity: { tonnageReceivedNotExported: 5 }
-    }
-
-    it('should be complete when export fields are populated', () => {
-      expect(check(report, category)).toBe(true)
+      expect(find(report, OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY)).toEqual([
+        'exportActivity'
+      ])
     })
 
-    it('should be incomplete when exportActivity is null', () => {
-      expect(check({ ...report, exportActivity: null }, category)).toBe(false)
-    })
-
-    it('should be incomplete when tonnageReceivedNotExported is null', () => {
-      const incomplete = {
-        ...report,
-        exportActivity: {
-          ...report.exportActivity,
-          tonnageReceivedNotExported: null
-        }
-      }
-
-      expect(check(incomplete, category)).toBe(false)
-    })
-  })
-
-  describe('EXPORTER', () => {
-    const category = OPERATOR_CATEGORY.EXPORTER
-
-    /** @type {SparseReport} */
-    const report = {
-      exportActivity: { tonnageReceivedNotExported: 5 },
-      prn: { totalRevenue: 1000, freeTonnage: 0 }
-    }
-
-    it('should be complete when export and prn fields are populated', () => {
-      expect(check(report, category)).toBe(true)
-    })
-
-    it('should be incomplete when exportActivity is null', () => {
-      expect(check({ ...report, exportActivity: null }, category)).toBe(false)
-    })
-
-    it('should be incomplete when tonnageReceivedNotExported is null', () => {
-      const incomplete = {
-        ...report,
-        exportActivity: {
-          ...report.exportActivity,
-          tonnageReceivedNotExported: null
-        }
-      }
-
-      expect(check(incomplete, category)).toBe(false)
-    })
-
-    it('should be incomplete when prn is null', () => {
-      expect(check({ ...report, prn: null }, category)).toBe(false)
-    })
-
-    it('should be incomplete when prn.totalRevenue is null', () => {
-      const incomplete = {
-        ...report,
-        prn: { ...report.prn, totalRevenue: null }
-      }
-
-      expect(check(incomplete, category)).toBe(false)
-    })
-
-    it('should be incomplete when prn.freeTonnage is null', () => {
-      const incomplete = {
-        ...report,
-        prn: { ...report.prn, freeTonnage: null }
-      }
-
-      expect(check(incomplete, category)).toBe(false)
+    it('should throw for an unknown operator category', () => {
+      expect(() => find({}, 'UNKNOWN')).toThrow()
     })
   })
 })

@@ -54,14 +54,24 @@ export const completeReportSchemas = Object.freeze({
 /**
  * @param {Report} report
  * @param {OperatorCategory} operatorCategory
- * @returns {boolean}
+ * @returns {string[]} dotted paths of required fields missing from the report
  */
-export const isReportComplete = (report, operatorCategory) => {
+export const findMissingFields = (report, operatorCategory) => {
   const schema = completeReportSchemas[operatorCategory]
 
   if (!schema) {
     throw new TypeError(`Unknown operator category: ${operatorCategory}`)
   }
 
-  return !schema.validate(report).error
+  const { error } = schema.validate(report, { abortEarly: false })
+
+  return error ? error.details.map((d) => d.path.join('.')) : []
 }
+
+/**
+ * @param {Report} report
+ * @param {OperatorCategory} operatorCategory
+ * @returns {boolean}
+ */
+export const isReportComplete = (report, operatorCategory) =>
+  findMissingFields(report, operatorCategory).length === 0
