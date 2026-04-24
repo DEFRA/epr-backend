@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { auditReportStatusTransition } from '#reports/application/audit.js'
-import { findMissingFields } from '#reports/application/is-report-complete.js'
+import { assertReportComplete } from '#reports/application/is-report-complete.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -77,17 +77,7 @@ export const reportsStatus = {
       )
     }
 
-    const missingFields = findMissingFields(
-      report,
-      getOperatorCategory(registration)
-    )
-    if (missingFields.length > 0) {
-      const boom = Boom.badRequest(
-        `Report is incomplete; ${missingFields.length} required field(s) not populated`
-      )
-      boom.output.payload.missingFields = missingFields
-      throw boom
-    }
+    assertReportComplete(report, getOperatorCategory(registration))
 
     const updated = await reportsRepository.updateReportStatus({
       reportId: report.id,

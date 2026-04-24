@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import {
   exportManualFields,
@@ -69,9 +70,19 @@ export const findMissingFields = (report, operatorCategory) => {
 }
 
 /**
+ * Throws a 400 Boom with `output.payload.missingFields` if any required
+ * manual-entry fields are missing for the given operator category.
+ *
  * @param {Report} report
  * @param {OperatorCategory} operatorCategory
- * @returns {boolean}
  */
-export const isReportComplete = (report, operatorCategory) =>
-  findMissingFields(report, operatorCategory).length === 0
+export const assertReportComplete = (report, operatorCategory) => {
+  const missingFields = findMissingFields(report, operatorCategory)
+  if (missingFields.length === 0) return
+
+  const boom = Boom.badRequest(
+    `Report is incomplete; ${missingFields.length} required field(s) not populated`
+  )
+  boom.output.payload.missingFields = missingFields
+  throw boom
+}

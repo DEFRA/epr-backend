@@ -1,6 +1,9 @@
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { describe, expect, it } from 'vitest'
-import { findMissingFields, isReportComplete } from './is-report-complete.js'
+import {
+  assertReportComplete,
+  findMissingFields
+} from './is-report-complete.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
@@ -23,16 +26,23 @@ import { findMissingFields, isReportComplete } from './is-report-complete.js'
 // ER = EXPORTER_REGISTERED_ONLY,    E = EXPORTER.
 
 describe('is report complete?', () => {
-  describe('isReportComplete', () => {
+  describe('assertReportComplete', () => {
     /**
      * @param {SparseReport} report
      * @param {OperatorCategory | string} category
      */
-    const check = (report, category) =>
-      isReportComplete(
-        /** @type {Report} */ (/** @type {unknown} */ (report)),
-        /** @type {OperatorCategory} */ (category)
-      )
+    const check = (report, category) => {
+      try {
+        assertReportComplete(
+          /** @type {Report} */ (/** @type {unknown} */ (report)),
+          /** @type {OperatorCategory} */ (category)
+        )
+        return true
+      } catch (err) {
+        if (err?.isBoom) return false
+        throw err
+      }
+    }
 
     it('should throw for unknown operator category', () => {
       expect(() => check({}, 'UNKNOWN')).toThrow()
