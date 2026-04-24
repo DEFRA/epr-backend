@@ -1,4 +1,5 @@
-import { collateUsers } from '#repositories/organisations/helpers.js'
+import Boom from '@hapi/boom'
+import { collateUsers } from '#repositories/organisations/collate-users.js'
 import { validateOrganisationUpdate } from '#repositories/organisations/schema/index.js'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
@@ -58,13 +59,17 @@ export const devOrganisationsPutById = {
 
     const { id: _, version: _v, ...document } = organisation
     validateOrganisationUpdate(document, current)
-    document.users = collateUsers(current, document)
+    document.users = collateUsers(document)
 
-    await organisationsRepository.replaceRaw(id, current.version, document)
-    const updated = await organisationsRepository.findById(
-      id,
-      current.version + 1
-    )
-    return h.response({ organisation: updated }).code(StatusCodes.OK)
+    try {
+      await organisationsRepository.replaceRaw(id, current.version, document)
+      const updated = await organisationsRepository.findById(
+        id,
+        current.version + 1
+      )
+      return h.response({ organisation: updated }).code(StatusCodes.OK)
+    } catch (error) {
+      throw Boom.boomify(error)
+    }
   }
 }

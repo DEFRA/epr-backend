@@ -46,10 +46,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       plantEquipmentDetails: undefined,
       exportPorts: ['SouthHampton', 'Portsmouth'],
       submitterContactDetails: {
-        fullName: 'Sarah Mitchell',
-        email: 'reexserviceteam@defra.gov.uk',
-        phone: '1234567890',
-        jobTitle: 'Packaging Compliance Officer'
+        fullName: 'Emma Roberts',
+        email: 'test@gmail.com',
+        phone: '0121 496 8574',
+        jobTitle: 'Director'
       },
       site: undefined,
       noticeAddress: {
@@ -60,10 +60,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       },
       approvedPersons: [
         {
-          email: 'reexserviceteam@defra.gov.uk',
-          fullName: 'Sarah Mitchell',
-          phone: '1234567890',
-          jobTitle: 'Packaging Compliance Officer'
+          email: 'e.roberts@britishbeverage.co.uk',
+          fullName: 'Emma Roberts',
+          phone: '0121 496 8574',
+          jobTitle: 'Company secretary'
         }
       ],
       samplingInspectionPlanPart1FileUploads: [
@@ -96,6 +96,16 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       })
     )
     expect(result[1].id).not.toBe(exporter._id.$oid)
+
+    // Regression guard: submitter and approved person must come from distinct
+    // form sections. Pre-fix, both were extracted from the "App contact"
+    // fields and were always identical.
+    expect(result[0].submitterContactDetails.email).not.toBe(
+      result[0].approvedPersons[0].email
+    )
+    expect(result[0].submitterContactDetails.jobTitle).not.toBe(
+      result[0].approvedPersons[0].jobTitle
+    )
   })
 
   it('should parse reprocessor registration for all materials from fixture', async () => {
@@ -181,9 +191,9 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       exportPorts: undefined,
       submitterContactDetails: {
         fullName: 'James Patterson',
-        email: 'reexserviceteam@defra.gov.uk',
+        email: 'james.patterson@ecoretail.co.uk',
         phone: '020 7946 0123',
-        jobTitle: 'Director'
+        jobTitle: 'Directory'
       },
       site: {
         address: {
@@ -233,10 +243,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       },
       approvedPersons: [
         {
-          email: 'reexserviceteam@defra.gov.uk',
+          email: 'james.patterson@ecoretail.co.uk',
           fullName: 'James Patterson',
           phone: '020 7946 0123',
-          jobTitle: 'Director'
+          jobTitle: 'Chair, treasurer or secretary'
         }
       ],
       noticeAddress: {
@@ -291,6 +301,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         }
       ]
     })
+
+    // Regression guard: the reprocessor fixture has identical emails for
+    // submitter and AP, so we rely on jobTitle to catch a constants collision.
+    expect(result[0].submitterContactDetails.jobTitle).not.toBe(
+      result[0].approvedPersons[0].jobTitle
+    )
   })
 
   it('should handle missing notice address', async () => {

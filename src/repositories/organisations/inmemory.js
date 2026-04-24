@@ -5,11 +5,11 @@ import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
-  getCurrentStatus,
   mapDocumentWithCurrentStatuses,
   prepareForReplace,
   SCHEMA_VERSION
 } from './helpers.js'
+import { getCurrentStatus } from './status.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
