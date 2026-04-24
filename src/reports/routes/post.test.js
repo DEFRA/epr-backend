@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
-import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -287,35 +286,8 @@ describe(`POST ${reportsPostPath}`, () => {
       })
     })
 
-    describe('4xx access log shape for cadence mismatch', () => {
-      afterEach(() => {
-        config.reset('featureFlags.allowFullErrorOutput')
-      })
-
-      it.each([
-        {
-          name: 'without allowFullErrorOutput — err field is undefined',
-          flag: false,
-          assertErr: (accessLog) => {
-            expect(accessLog.err).toBeUndefined()
-          }
-        },
-        {
-          name: 'with allowFullErrorOutput — err carries the curated payload including cadence detail',
-          flag: true,
-          assertErr: (accessLog) => {
-            expect(accessLog.err).toEqual({
-              statusCode: StatusCodes.BAD_REQUEST,
-              error: 'Bad Request',
-              message:
-                "Cadence 'monthly' does not match registration type — expected 'quarterly'",
-              cadence: { actual: 'monthly', expected: 'quarterly' }
-            })
-          }
-        }
-      ])('$name', async ({ flag, assertErr }) => {
-        config.set('featureFlags.allowFullErrorOutput', flag)
-
+    describe('indexed warn log shape per helper', () => {
+      it('cadence mismatch attaches CADENCE_MISMATCH code and cadence event.reason', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
@@ -330,12 +302,127 @@ describe(`POST ${reportsPostPath}`, () => {
           1
         )
 
-        const accessLogCall = server.loggerMocks.info.mock.calls.find(
-          ([entry]) => entry?.res?.statusCode === 400
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message:
+            "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+          error: {
+            code: 'CADENCE_MISMATCH',
+            id: expect.any(String),
+            message:
+              "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+            type: 'Bad Request'
+          },
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
+            reason: 'actual=monthly expected=quarterly'
+          },
+          http: { response: { status_code: StatusCodes.BAD_REQUEST } }
+        })
+      })
+
+      it('invalid period attaches INVALID_PERIOD code and flat event.reason', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2025,
+          'quarterly',
+          5
         )
 
-        expect(accessLogCall).toBeDefined()
-        assertErr(accessLogCall[0])
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: 'Invalid period 5 for cadence quarterly',
+          error: {
+            code: 'INVALID_PERIOD',
+            id: expect.any(String),
+            message: 'Invalid period 5 for cadence quarterly',
+            type: 'Bad Request'
+          },
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
+            reason: 'actual=5 cadence=quarterly validPeriods=[1,2,3,4]'
+          },
+          http: { response: { status_code: StatusCodes.BAD_REQUEST } }
+        })
+      })
+
+      it('period not ended attaches PERIOD_NOT_ENDED code and flat event.reason', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2099,
+          'quarterly',
+          1
+        )
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message:
+            'Cannot create report for period 1 — period has not yet ended',
+          error: {
+            code: 'PERIOD_NOT_ENDED',
+            id: expect.any(String),
+            message:
+              'Cannot create report for period 1 — period has not yet ended',
+            type: 'Bad Request'
+          },
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
+            reason:
+              'period=1 cadence=quarterly endDate=2099-03-31 earliestSubmissionDate=2099-04-01T00:00:00.000Z'
+          },
+          http: { response: { status_code: StatusCodes.BAD_REQUEST } }
+        })
+      })
+
+      it('report already exists attaches REPORT_ALREADY_EXISTS code and existingId as event.reference', async () => {
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const first = await makeRequest(server, organisationId, registrationId)
+        const existingId = JSON.parse(first.payload).id
+
+        await makeRequest(server, organisationId, registrationId)
+
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: 'Report already exists for quarterly period 1 of 2025',
+          error: {
+            code: 'REPORT_ALREADY_EXISTS',
+            id: expect.any(String),
+            message: 'Report already exists for quarterly period 1 of 2025',
+            type: 'Conflict'
+          },
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
+            reason: 'cadence=quarterly period=1 year=2025',
+            reference: existingId
+          },
+          http: { response: { status_code: StatusCodes.CONFLICT } }
+        })
       })
     })
 
@@ -390,13 +477,14 @@ describe(`POST ${reportsPostPath}`, () => {
         )
       })
 
-      it('does not log when an expected Boom error is thrown', async () => {
+      it('routes an expected 4xx boom to warn (not error) with full structured event', async () => {
         const { server, organisationId, registrationId } = await createServer({
           wasteProcessingType: 'reprocessor',
           accreditationId: undefined
         })
 
-        await makeRequest(server, organisationId, registrationId)
+        const first = await makeRequest(server, organisationId, registrationId)
+        const existingId = JSON.parse(first.payload).id
         const response = await makeRequest(
           server,
           organisationId,
@@ -405,7 +493,24 @@ describe(`POST ${reportsPostPath}`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
         expect(server.loggerMocks.error).not.toHaveBeenCalled()
-        expect(server.loggerMocks.warn).not.toHaveBeenCalled()
+        expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+          message: 'Report already exists for quarterly period 1 of 2025',
+          error: {
+            code: 'REPORT_ALREADY_EXISTS',
+            id: expect.any(String),
+            message: 'Report already exists for quarterly period 1 of 2025',
+            type: 'Conflict'
+          },
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.HTTP,
+            action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
+            reason: 'cadence=quarterly period=1 year=2025',
+            reference: existingId
+          },
+          http: { response: { status_code: StatusCodes.CONFLICT } }
+        })
       })
     })
 

@@ -10,6 +10,7 @@ import Joi from 'joi'
 /**
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { Report } from '#reports/repository/port.js'
+ * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
  */
 
 const required = (/** @type {Record<string, Joi.Schema>} */ fields) =>
@@ -79,11 +80,21 @@ const findMissingFields = (report, operatorCategory) => {
  */
 export const assertReportComplete = (report, operatorCategory) => {
   const missingFields = findMissingFields(report, operatorCategory)
-  if (missingFields.length) {
-    const boom = Boom.badRequest(
+  if (!missingFields.length) {
+    return
+  }
+
+  const boom = /** @type {EnrichedBoom} */ (
+    Boom.badRequest(
       `Report is incomplete; ${missingFields.length} required field(s) not populated`
     )
-    boom.output.payload.missingFields = missingFields
-    throw boom
+  )
+  boom.code = 'REPORT_INCOMPLETE'
+  boom.event = {
+    action: 'update_report_status',
+    reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
+    reference: report.id
   }
+  boom.output.payload.missingFields = missingFields
+  throw boom
 }

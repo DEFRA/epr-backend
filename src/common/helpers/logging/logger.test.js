@@ -1,7 +1,6 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { describe, test, expect, vi } from 'vitest'
 import { loggerOptions } from './logger-options.js'
 
-// vi.mock is hoisted by vitest, so this runs before the import above
 vi.mock('#root/config.js', () => ({
   config: {
     get: vi.fn((key) => {
@@ -13,8 +12,7 @@ vi.mock('#root/config.js', () => ({
           redact: []
         },
         serviceName: 'test-service',
-        serviceVersion: '1.0.0',
-        'featureFlags.allowFullErrorOutput': true // allow sensitive logs by default in tests
+        serviceVersion: '1.0.0'
       }
       return values[key]
     })
@@ -70,69 +68,26 @@ describe('loggerOptions.serializers.err', () => {
     expect(result.stack_trace).toBe(error.stack)
   })
 
-  test('includes Boom error details when allowFullErrorOutput is enabled', () => {
-    const boomError = new Error('Validation failed')
-    boomError.isBoom = true
-    boomError.output = {
-      statusCode: 422,
-      payload: {
-        error: 'Unprocessable Entity',
-        message: 'Validation failed: field is required',
-        validation: { source: 'payload', keys: ['field'] }
-      }
-    }
+  test('passes through err.code as error.code', () => {
+    const error = new Error('classified failure')
+    error.code = 'SOMETHING_WRONG'
 
-    const result = errorSerializer(boomError)
+    const result = errorSerializer(error)
 
     expect(result).toEqual({
-      message: 'Validation failed',
-      stack_trace: expect.stringContaining('Error: Validation failed'),
+      message: 'classified failure',
+      stack_trace: expect.any(String),
       type: 'Error',
-      statusCode: 422,
-      payload: {
-        error: 'Unprocessable Entity',
-        message: 'Validation failed: field is required',
-        validation: { source: 'payload', keys: ['field'] }
-      }
+      code: 'SOMETHING_WRONG'
     })
   })
 
-  test('enhances message with Boom data details when allowFullErrorOutput is enabled', () => {
-    const boomError = new Error('Unauthorized')
-    boomError.isBoom = true
-    boomError.output = {
-      statusCode: 401,
-      payload: {
-        error: 'Unauthorized',
-        message: 'Unauthorized'
-      }
-    }
-    boomError.data = {
-      reason: 'Token issuer not recognised',
-      issuer: 'https://unknown-issuer.example.com'
-    }
+  test('omits code when err.code is not set', () => {
+    const error = new Error('no code here')
 
-    const result = errorSerializer(boomError)
+    const result = errorSerializer(error)
 
-    expect(result.message).toContain('Unauthorized')
-    expect(result.message).toContain('Token issuer not recognised')
-  })
-
-  test('falls back to [unserializable] when Boom data has circular references', () => {
-    const circular = {}
-    circular.self = circular
-
-    const boomError = new Error('JWKS endpoint error')
-    boomError.isBoom = true
-    boomError.output = {
-      statusCode: 502,
-      payload: { error: 'Bad Gateway', message: 'JWKS endpoint error' }
-    }
-    boomError.data = circular
-
-    const result = errorSerializer(boomError)
-
-    expect(result.message).toBe('JWKS endpoint error | data: [unserializable]')
+    expect(result).not.toHaveProperty('code')
   })
 })
 
@@ -146,8 +101,6 @@ describe('loggerOptions.serializers.err with cause', () => {
     originalError.code = 'ECONNREFUSED'
 
     const boomError = new Error('Failed to fetch from url: http://example.com')
-    boomError.isBoom = true
-    boomError.output = { statusCode: 500, payload: {} }
     boomError.cause = originalError
 
     const result = errorSerializer(boomError)
@@ -162,8 +115,6 @@ describe('loggerOptions.serializers.err with cause', () => {
     originalError.code = 'SOMETHING'
 
     const boomError = new Error('clean boom message')
-    boomError.isBoom = true
-    boomError.output = { statusCode: 500, payload: {} }
     boomError.cause = originalError
 
     const result = errorSerializer(boomError)
@@ -176,8 +127,6 @@ describe('loggerOptions.serializers.err with cause', () => {
 
   test('omits cause field when the error has no cause', () => {
     const boomError = new Error('no cause here')
-    boomError.isBoom = true
-    boomError.output = { statusCode: 500, payload: {} }
 
     const result = errorSerializer(boomError)
 
@@ -186,8 +135,6 @@ describe('loggerOptions.serializers.err with cause', () => {
 
   test('omits cause field when the cause is not an Error instance', () => {
     const boomError = new Error('weird cause')
-    boomError.isBoom = true
-    boomError.output = { statusCode: 500, payload: {} }
     boomError.cause = 'a string, not an Error'
 
     const result = errorSerializer(boomError)
@@ -218,9 +165,6 @@ describe('loggerOptions.serializers.res', () => {
   })
 
   test('returns only statusCode for responses', () => {
-    // Note: res serializer only returns statusCode because hapi-pino passes
-    // request.raw.res (Node's raw response), not Hapi's response with source.
-    // Error details for 4xx are logged via log4xxResponseErrors option instead.
     const res = { statusCode: 200 }
     const result = resSerializer(res)
 
@@ -232,87 +176,5 @@ describe('loggerOptions.serializers.res', () => {
     const result = resSerializer(res)
 
     expect(result).toEqual({ statusCode: 422 })
-  })
-})
-
-describe('loggerOptions.log4xxResponseErrors', () => {
-  test('is enabled when allowFullErrorOutput feature flag is on', () => {
-    expect(loggerOptions.log4xxResponseErrors).toBe(true)
-  })
-})
-
-describe('loggerOptions when allowFullErrorOutput feature flag is off', () => {
-  beforeEach(() => {
-    vi.resetModules()
-  })
-
-  test('excludes Boom error details', async () => {
-    vi.doMock('#root/config.js', () => ({
-      config: {
-        get: vi.fn((key) => {
-          const values = {
-            log: {
-              isEnabled: true,
-              level: 'info',
-              format: 'ecs',
-              redact: []
-            },
-            serviceName: 'test-service',
-            serviceVersion: '1.0.0',
-            'featureFlags.allowFullErrorOutput': false
-          }
-          return values[key]
-        })
-      }
-    }))
-
-    const { loggerOptions: restrictedLoggerOptions } =
-      await import('./logger-options.js')
-    const { err: errorSerializer } = restrictedLoggerOptions.serializers
-
-    const boomError = new Error('Validation failed')
-    boomError.isBoom = true
-    boomError.output = {
-      statusCode: 422,
-      payload: { error: 'Unprocessable Entity', message: 'Sensitive details' }
-    }
-    boomError.data = { sensitiveInfo: 'should not appear' }
-
-    const result = errorSerializer(boomError)
-
-    expect(result).toEqual({
-      message: 'Validation failed',
-      stack_trace: expect.stringContaining('Error: Validation failed'),
-      type: 'Error'
-    })
-    expect(result.statusCode).toBeUndefined()
-    expect(result.payload).toBeUndefined()
-    expect(result.message).not.toContain('sensitiveInfo')
-  })
-
-  test('log4xxResponseErrors is disabled', async () => {
-    vi.doMock('#root/config.js', () => ({
-      config: {
-        get: vi.fn((key) => {
-          const values = {
-            log: {
-              isEnabled: true,
-              level: 'info',
-              format: 'ecs',
-              redact: []
-            },
-            serviceName: 'test-service',
-            serviceVersion: '1.0.0',
-            'featureFlags.allowFullErrorOutput': false
-          }
-          return values[key]
-        })
-      }
-    }))
-
-    const { loggerOptions: restrictedLoggerOptions } =
-      await import('./logger-options.js')
-
-    expect(restrictedLoggerOptions.log4xxResponseErrors).toBe(false)
   })
 })
