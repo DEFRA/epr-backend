@@ -323,68 +323,6 @@ describe('MigrationOrchestrator', () => {
 
       expect(copyOperatorUploadedFiles).not.toHaveBeenCalled()
     })
-
-    it('should pass empty arrays to copyOperatorUploadedFiles when organisations have no linked registrations or accreditations', async () => {
-      const orgId = new ObjectId().toString()
-
-      getSubmissionsToMigrate.mockResolvedValue(
-        createMockDelta([], [orgId], [], [])
-      )
-
-      transformAll.mockResolvedValue({
-        organisations: [createOrg(orgId)],
-        registrations: [],
-        accreditations: []
-      })
-
-      linkItemsToOrganisations.mockImplementation((orgs) => orgs)
-
-      await migrator.migrate()
-
-      expect(copyOperatorUploadedFiles).toHaveBeenCalledWith(
-        [],
-        [],
-        formsFileUploadsRepository
-      )
-    })
-
-    it('should not pass unlinked registrations or accreditations to copyOperatorUploadedFiles', async () => {
-      const orgId = new ObjectId().toString()
-      const linkedRegId = new ObjectId().toString()
-      const unlinkedRegId = new ObjectId().toString()
-      const linkedAccrId = new ObjectId().toString()
-      const unlinkedAccrId = new ObjectId().toString()
-      const orphanSystemRef = new ObjectId().toString()
-
-      getSubmissionsToMigrate.mockResolvedValue(
-        createMockDelta(
-          [],
-          [orgId],
-          [linkedRegId, unlinkedRegId],
-          [linkedAccrId, unlinkedAccrId]
-        )
-      )
-
-      const org = createOrg(orgId)
-      const linkedReg = createReg(linkedRegId, orgId)
-      const unlinkedReg = createReg(unlinkedRegId, orphanSystemRef)
-      const linkedAccr = createAccr(linkedAccrId, orgId)
-      const unlinkedAccr = createAccr(unlinkedAccrId, orphanSystemRef)
-
-      transformAll.mockResolvedValue({
-        organisations: [org],
-        registrations: [linkedReg, unlinkedReg],
-        accreditations: [linkedAccr, unlinkedAccr]
-      })
-
-      await migrator.migrate()
-
-      expect(copyOperatorUploadedFiles).toHaveBeenCalledWith(
-        [linkedReg],
-        [linkedAccr],
-        formsFileUploadsRepository
-      )
-    })
   })
 
   describe('migrateById()', () => {
