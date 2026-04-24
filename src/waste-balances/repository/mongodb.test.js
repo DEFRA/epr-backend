@@ -3,6 +3,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
+import { WASTE_BALANCE_LEDGER_COLLECTION_NAME } from './ledger-mongodb.js'
 
 const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -47,6 +48,22 @@ describe('MongoDB waste balances repository', () => {
       const instance = repository()
       expect(instance).toBeDefined()
       expect(instance.findByAccreditationId).toBeTypeOf('function')
+    })
+
+    it('ensures the ledger collection indexes exist', async ({
+      mongoClient
+    }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await createWasteBalancesRepository(database)
+
+      const indexes = await database
+        .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)
+        .indexes()
+      const names = indexes.map((idx) => idx.name)
+      expect(names).toContain('accreditationId_number')
+      expect(names).toContain('summaryLogRow_wasteRecordId')
+      expect(names).toContain('summaryLogRow_row')
+      expect(names).toContain('prnOperation_prnId')
     })
   })
 
