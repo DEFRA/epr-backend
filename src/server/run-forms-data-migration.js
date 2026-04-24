@@ -3,6 +3,9 @@ import { createFormDataMigrator } from '#formsubmission/migration/migration-orch
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
+import { createFormsFileUploadsRepository } from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
+import { config } from '../config.js'
 
 export const runFormsDataMigration = async (server) => {
   try {
@@ -28,10 +31,20 @@ export const runFormsDataMigration = async (server) => {
         await createSystemLogsRepository(server.db)
       )(logger)
 
+      const s3Client = createS3Client({
+        region: config.get('awsRegion'),
+        endpoint: config.get('s3Endpoint'),
+        forcePathStyle: config.get('isDevelopment')
+      })
+      const formsFileUploadsRepository = createFormsFileUploadsRepository({
+        s3Client
+      })
+
       const formsDataMigration = createFormDataMigrator(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        formsFileUploadsRepository
       )
 
       await formsDataMigration.migrate()
