@@ -6,8 +6,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
+import { assertCadence } from '#reports/application/assert-cadence.js'
 import { auditReportCreate } from '#reports/application/audit.js'
-import { CADENCE } from '#reports/domain/cadence.js'
 import {
   extractChangedBy,
   periodParamsSchema,
@@ -62,15 +62,7 @@ export const reportsPost = {
         registrationId
       )
 
-      const expectedCadence = registration.accreditationId
-        ? CADENCE.monthly
-        : CADENCE.quarterly
-
-      if (cadence !== expectedCadence) {
-        throw Boom.badRequest(
-          `Cadence '${cadence}' does not match registration type — expected '${expectedCadence}'`
-        )
-      }
+      assertCadence(cadence, registration)
 
       const createdReport = await createReportForPeriod({
         reportsRepository,

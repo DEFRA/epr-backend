@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
 import { failAction } from './fail-action.js'
 
 vi.mock('#root/config.js', () => ({
@@ -49,7 +50,51 @@ describe('#fail-action', () => {
         StatusCodes.UNPROCESSABLE_ENTITY
       )
       expect(thrownError?.message).toBe('"redirectUrl" is required')
-      expect(thrownError?.data).toEqual(joiError.details)
+    })
+
+    test('does not carry user-submitted values into the thrown Boom when multiple fields fail', () => {
+      const schema = Joi.object({
+        email: Joi.string().email().required(),
+        age: Joi.number().min(18).required(),
+        country: Joi.string().valid('UK', 'IE').required()
+      })
+
+      const sensitiveEmail = 'possibly-pii@not-a-real-email'
+      const sensitiveAge = 12
+      const sensitiveCountry = 'secret-country-name'
+      const { error: joiError } = schema.validate(
+        { email: sensitiveEmail, age: sensitiveAge, country: sensitiveCountry },
+        { abortEarly: false }
+      )
+
+      const mockRequest = createMockRequest()
+
+      let thrown
+      try {
+        failAction(mockRequest, {}, joiError)
+      } catch (e) {
+        thrown = e
+      }
+
+      // Positive shape: Joi joins all three messages with '. '; no data set
+      // (Boom defaults .data to null when no second argument is passed).
+      expect(thrown.isBoom).toBe(true)
+      expect(thrown.output.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(thrown.message).toBe(
+        '"email" must be a valid email. "age" must be greater than or equal to 18. "country" must be one of [UK, IE]'
+      )
+      expect(thrown.data).toBeNull()
+
+      // Regression anchor: none of the user-submitted values appear on the
+      // Boom that the err serializer will see (message or data).
+      const serialisedBoom = JSON.stringify({
+        message: thrown.message,
+        data: thrown.data,
+        payload: thrown.output.payload
+      })
+      expect(serialisedBoom).not.toContain(sensitiveEmail)
+      expect(serialisedBoom).not.toContain(String(sensitiveAge))
+      expect(serialisedBoom).not.toContain(sensitiveCountry)
     })
 
     test('logs at warn level', () => {
