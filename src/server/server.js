@@ -25,6 +25,7 @@ import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-no
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
+import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { featureFlags } from '#plugins/feature-flags.js'
@@ -167,6 +168,7 @@ async function createServer(options = {}) {
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies
   // authFailureLogger - logs 401 authentication failures
+  // boomErrorLogger    - logs all other Boom errors with PII-safe ECS error fields
   const plugins = [
     requestLogger,
     requestTracing,
@@ -180,6 +182,7 @@ async function createServer(options = {}) {
       options: { config }
     },
     authFailureLogger,
+    boomErrorLogger,
     externalApiErrorFormatter
   ]
 
