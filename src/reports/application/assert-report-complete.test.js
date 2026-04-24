@@ -1,6 +1,6 @@
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { describe, expect, it } from 'vitest'
-import { assertReportComplete } from './is-report-complete.js'
+import { assertReportComplete } from './assert-report-complete.js'
 
 /**
  * @import { Report } from '#reports/repository/port.js'
