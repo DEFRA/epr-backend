@@ -2529,6 +2529,25 @@ describe('shouldWrapAsSpreadsheetError', () => {
     expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
   })
 
+  it('should wrap saxes-originated errors by stack trace', () => {
+    const error = new Error('3:31: unexpected close tag.')
+    error.stack = [
+      'Error: 3:31: unexpected close tag.',
+      '    at SaxesParser.makeError (/home/node/node_modules/saxes/saxes.js:410:16)',
+      '    at SaxesParser.fail (/home/node/node_modules/saxes/saxes.js:422:26)',
+      '    at SaxesParser.closeTag (/home/node/node_modules/saxes/saxes.js:2019:18)'
+    ].join('\n')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should not wrap an Error with no stack trace', () => {
+    const error = new Error('some random failure')
+    delete error.stack
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(false)
+  })
+
   it('should wrap XML parse failures by message', () => {
     const error = new Error('Invalid character in XML at line 3')
 
