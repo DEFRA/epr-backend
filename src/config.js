@@ -354,11 +354,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_ORS_WASTE_BALANCE_VALIDATION'
     },
-    allowSensitiveLogs: {
-      doc: 'Feature Flag: Allow potentially sensitive logging',
+    allowFullErrorOutput: {
+      doc: 'Feature Flag: Allow full error output (including potentially sensitive payload / stack detail)',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_ALLOW_SENSITIVE_LOGS'
+      env: 'FEATURE_FLAG_ALLOW_FULL_ERROR_OUTPUT'
     }
   },
   formSubmissionOverrides: {

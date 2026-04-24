@@ -23,7 +23,8 @@ describe('collateUsers', () => {
     id = 'reg-1',
     status,
     submitterEmail = 'reg-submitter@example.com',
-    approvedPersons = []
+    approvedPersons = [],
+    applicationContact
   }) => ({
     id,
     statusHistory: [{ status, updatedAt: new Date() }],
@@ -31,7 +32,8 @@ describe('collateUsers', () => {
       fullName: 'Reg Submitter',
       email: submitterEmail
     },
-    approvedPersons
+    approvedPersons,
+    ...(applicationContact && { applicationContactDetails: applicationContact })
   })
 
   const buildAccreditation = ({
@@ -114,6 +116,82 @@ describe('collateUsers', () => {
     ).length
 
     expect(sharedCount).toBe(1)
+  })
+
+  it('includes applicationContactDetails for an approved registration', () => {
+    const org = buildOrg({
+      registrations: [
+        buildRegistration({
+          status: REG_ACC_STATUS.APPROVED,
+          applicationContact: {
+            email: 'app-contact@example.com',
+            fullName: 'App Contact'
+          }
+        })
+      ]
+    })
+
+    const result = collateUsers(org)
+    const emails = result.map((u) => u.email)
+
+    expect(emails).toContain('app-contact@example.com')
+    expect(
+      result.find((u) => u.email === 'app-contact@example.com').roles
+    ).toContain(USER_ROLES.INITIAL)
+  })
+
+  it('omits applicationContactDetails from a non-approved registration', () => {
+    const org = buildOrg({
+      registrations: [
+        buildRegistration({
+          status: REG_ACC_STATUS.CREATED,
+          applicationContact: {
+            email: 'pending-app-contact@example.com',
+            fullName: 'Pending App Contact'
+          }
+        })
+      ]
+    })
+
+    const emails = collateUsers(org).map((u) => u.email)
+
+    expect(emails).not.toContain('pending-app-contact@example.com')
+  })
+
+  it('dedupes an applicationContactDetails email shared with submitter or approvedPersons', () => {
+    const sharedEmail = 'shared@example.com'
+    const org = buildOrg({
+      registrations: [
+        buildRegistration({
+          status: REG_ACC_STATUS.APPROVED,
+          submitterEmail: sharedEmail,
+          approvedPersons: [{ email: sharedEmail, fullName: 'Shared Person' }],
+          applicationContact: { email: sharedEmail, fullName: 'Shared Person' }
+        })
+      ]
+    })
+
+    const sharedCount = collateUsers(org).filter(
+      (u) => u.email === sharedEmail
+    ).length
+
+    expect(sharedCount).toBe(1)
+  })
+
+  it('collates an approved registration that has no applicationContactDetails', () => {
+    const org = buildOrg({
+      registrations: [
+        buildRegistration({
+          status: REG_ACC_STATUS.APPROVED,
+          approvedPersons: [{ email: 'ap@example.com', fullName: 'AP' }]
+        })
+      ]
+    })
+
+    const emails = collateUsers(org).map((u) => u.email)
+
+    expect(emails).toContain('reg-submitter@example.com')
+    expect(emails).toContain('ap@example.com')
   })
 
   it('returns submitter and signatories for an approved accreditation', () => {

@@ -19,7 +19,8 @@ import { getWasteManagementPermits } from '#formsubmission/registration/extract-
 import { getSiteDetails } from '#formsubmission/registration/extract-site.js'
 import {
   getSubmitterDetails,
-  getApprovedPersons
+  getApprovedPersons,
+  getApplicationContactDetails
 } from '#formsubmission/registration/extract-contacts.js'
 import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
 import { applyRegistrationOverrides } from '#formsubmission/overrides/override.js'
@@ -69,6 +70,9 @@ function buildParsedRegistration(id, rawSubmissionData) {
         REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),
+    applicationContactDetails: getApplicationContactDetails(
+      answersByShortDescription
+    ),
     site: isReprocessor
       ? getSiteDetails(answersByShortDescription, answersByPages)
       : undefined,

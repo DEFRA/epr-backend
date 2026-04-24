@@ -56,12 +56,20 @@ const collateRegistrationUsers = (updated) =>
   collateItems(
     updated,
     'registrations',
-    (/** @type {Registration} */ registration) =>
-      registration.approvedPersons.map(({ email, fullName }) => ({
-        fullName,
-        email,
-        roles: getUserRolesForStatus(getCurrentStatus(registration))
-      }))
+    (/** @type {Registration} */ registration) => {
+      const roles = getUserRolesForStatus(getCurrentStatus(registration))
+
+      const additional = registration.approvedPersons.map(
+        ({ email, fullName }) => ({ fullName, email, roles })
+      )
+
+      if (registration.applicationContactDetails) {
+        const { email, fullName } = registration.applicationContactDetails
+        additional.push({ fullName, email, roles })
+      }
+
+      return additional
+    }
   )
 
 /**

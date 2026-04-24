@@ -148,6 +148,7 @@ export const registrationSchema = Joi.object({
   ),
   plantEquipmentDetails: requiredForReprocessor(Joi.string()),
   submitterContactDetails: userSchema.required(),
+  applicationContactDetails: userSchema.optional(),
   samplingInspectionPlanPart1FileUploads: Joi.array()
     .items(formFileUploadSchema)
     .required(),

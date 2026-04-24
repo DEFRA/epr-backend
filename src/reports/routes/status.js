@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { auditReportStatusTransition } from '#reports/application/audit.js'
-import { isReportComplete } from '#reports/application/is-report-complete.js'
+import { assertReportComplete } from '#reports/application/assert-report-complete.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -77,11 +77,7 @@ export const reportsStatus = {
       )
     }
 
-    if (!isReportComplete(report, getOperatorCategory(registration))) {
-      throw Boom.badRequest(
-        `Report is incomplete; all required manual-entry fields must be populated before transitioning to '${status}'`
-      )
-    }
+    assertReportComplete(report, getOperatorCategory(registration))
 
     const updated = await reportsRepository.updateReportStatus({
       reportId: report.id,
