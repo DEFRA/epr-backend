@@ -12,7 +12,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '#domain/waste-balances/model.js'
+} from '../domain/model.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 const buildWasteRecord = (overrides = {}) => {

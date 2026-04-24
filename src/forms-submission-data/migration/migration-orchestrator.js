@@ -8,6 +8,7 @@ import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migrat
 import { transformAll } from './submission-transformer.js'
 import { getSubmissionsToMigrate } from './migration-delta-calculator.js'
 import { upsertOrganisations } from './organisation-persistence.js'
+import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
@@ -21,15 +22,18 @@ export class MigrationOrchestrator {
    * @param {FormSubmissionsRepository} formsSubmissionRepository
    * @param {OrganisationsRepository} organisationsRepository
    * @param {SystemLogsRepository} systemLogsRepository
+   * @param {object} formsFileUploadsRepository
    */
   constructor(
     formsSubmissionRepository,
     organisationsRepository,
-    systemLogsRepository
+    systemLogsRepository,
+    formsFileUploadsRepository
   ) {
     this.formsSubmissionRepository = formsSubmissionRepository
     this.organisationsRepository = organisationsRepository
     this.systemLogsRepository = systemLogsRepository
+    this.formsFileUploadsRepository = formsFileUploadsRepository
   }
 
   linkRegistrations(organisations, registrations) {
@@ -110,7 +114,13 @@ export class MigrationOrchestrator {
       accreditations
     )
 
-    return linkRegistrationToAccreditations(organisationsWithAccreditations)
+    return {
+      organisations: linkRegistrationToAccreditations(
+        organisationsWithAccreditations
+      ),
+      registrations,
+      accreditations
+    }
   }
 
   prepareMigrationItems(organisations, submissionsToMigrate) {
@@ -161,7 +171,7 @@ export class MigrationOrchestrator {
       accreditations: migratedIds.accreditations
     }
 
-    const organisations = await this.transformAndLinkAllNewSubmissions(
+    const { organisations } = await this.transformAndLinkAllNewSubmissions(
       migrated,
       pendingMigration
     )
@@ -210,10 +220,8 @@ export class MigrationOrchestrator {
       message: `Found ${pendingMigration.organisations.size} organisations, ${pendingMigration.registrations.size} registrations, ${pendingMigration.accreditations.size} accreditations to migrate`
     })
 
-    const organisations = await this.transformAndLinkAllNewSubmissions(
-      migrated,
-      pendingMigration
-    )
+    const { organisations, registrations, accreditations } =
+      await this.transformAndLinkAllNewSubmissions(migrated, pendingMigration)
 
     const migrationItems = this.prepareMigrationItems(
       organisations,
@@ -225,6 +233,12 @@ export class MigrationOrchestrator {
       this.systemLogsRepository,
       migrationItems
     )
+
+    await copyOperatorUploadedFiles(
+      registrations,
+      accreditations,
+      this.formsFileUploadsRepository
+    )
   }
 }
 
@@ -232,17 +246,20 @@ export class MigrationOrchestrator {
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SystemLogsRepository} systemLogsRepository
+ * @param {object} formsFileUploadsRepository
  * @returns {FormDataMigrator}
  */
 export function createFormDataMigrator(
   formsSubmissionRepository,
   organisationsRepository,
-  systemLogsRepository
+  systemLogsRepository,
+  formsFileUploadsRepository
 ) {
   const orchestrator = new MigrationOrchestrator(
     formsSubmissionRepository,
     organisationsRepository,
-    systemLogsRepository
+    systemLogsRepository,
+    formsFileUploadsRepository
   )
 
   /** @type {FormDataMigrator} */

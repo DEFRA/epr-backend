@@ -13,12 +13,12 @@ import {
   buildIssuedPrnCancellationTransaction,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
-import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
+import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { audit } from '@defra/cdp-auditing'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '#domain/waste-balances/model.js'
+} from '../domain/model.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -46,7 +46,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-vi.mock('#domain/waste-balances/calculator.js', () => ({
+vi.mock('../application/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
 }))
 
