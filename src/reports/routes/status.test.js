@@ -326,18 +326,22 @@ describe(`POST ${reportsStatusPath}`, () => {
 
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Report is incomplete; 2 required field(s) not populated',
-          err: expect.objectContaining({
-            isBoom: true,
-            code: 'REPORT_INCOMPLETE'
-          }),
+          error: {
+            code: 'REPORT_INCOMPLETE',
+            id: expect.any(String),
+            message: 'Report is incomplete; 2 required field(s) not populated',
+            type: 'Bad Request'
+          },
           event: {
             category: 'http',
-            outcome: 'failure',
             action: 'update_report_status',
+            kind: 'event',
+            outcome: 'failure',
             reason:
               'missingCount=2 missingFields=[recyclingActivity.tonnageRecycled,recyclingActivity.tonnageNotRecycled]',
             reference: reportId
-          }
+          },
+          http: { response: { status_code: 400 } }
         })
       })
 

@@ -305,16 +305,21 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message:
             "Cadence 'monthly' does not match registration type — expected 'quarterly'",
-          err: expect.objectContaining({
-            isBoom: true,
-            code: 'CADENCE_MISMATCH'
-          }),
+          error: {
+            code: 'CADENCE_MISMATCH',
+            id: expect.any(String),
+            message:
+              "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+            type: 'Bad Request'
+          },
           event: {
             category: LOGGING_EVENT_CATEGORIES.HTTP,
-            outcome: 'failure',
             action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
             reason: 'actual=monthly expected=quarterly'
-          }
+          },
+          http: { response: { status_code: StatusCodes.BAD_REQUEST } }
         })
       })
 
@@ -335,16 +340,20 @@ describe(`POST ${reportsPostPath}`, () => {
 
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Invalid period 5 for cadence quarterly',
-          err: expect.objectContaining({
-            isBoom: true,
-            code: 'INVALID_PERIOD'
-          }),
+          error: {
+            code: 'INVALID_PERIOD',
+            id: expect.any(String),
+            message: 'Invalid period 5 for cadence quarterly',
+            type: 'Bad Request'
+          },
           event: {
             category: LOGGING_EVENT_CATEGORIES.HTTP,
-            outcome: 'failure',
             action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
             reason: 'actual=5 cadence=quarterly validPeriods=[1,2,3,4]'
-          }
+          },
+          http: { response: { status_code: StatusCodes.BAD_REQUEST } }
         })
       })
 
@@ -366,17 +375,22 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message:
             'Cannot create report for period 1 — period has not yet ended',
-          err: expect.objectContaining({
-            isBoom: true,
-            code: 'PERIOD_NOT_ENDED'
-          }),
+          error: {
+            code: 'PERIOD_NOT_ENDED',
+            id: expect.any(String),
+            message:
+              'Cannot create report for period 1 — period has not yet ended',
+            type: 'Bad Request'
+          },
           event: {
             category: LOGGING_EVENT_CATEGORIES.HTTP,
-            outcome: 'failure',
             action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
             reason:
               'period=1 cadence=quarterly endDate=2099-03-31 earliestSubmissionDate=2099-04-01T00:00:00.000Z'
-          }
+          },
+          http: { response: { status_code: StatusCodes.BAD_REQUEST } }
         })
       })
 
@@ -393,17 +407,21 @@ describe(`POST ${reportsPostPath}`, () => {
 
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Report already exists for quarterly period 1 of 2025',
-          err: expect.objectContaining({
-            isBoom: true,
-            code: 'REPORT_ALREADY_EXISTS'
-          }),
+          error: {
+            code: 'REPORT_ALREADY_EXISTS',
+            id: expect.any(String),
+            message: 'Report already exists for quarterly period 1 of 2025',
+            type: 'Conflict'
+          },
           event: {
             category: LOGGING_EVENT_CATEGORIES.HTTP,
-            outcome: 'failure',
             action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
             reason: 'cadence=quarterly period=1 year=2025',
             reference: existingId
-          }
+          },
+          http: { response: { status_code: StatusCodes.CONFLICT } }
         })
       })
     })
@@ -477,17 +495,21 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.error).not.toHaveBeenCalled()
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Report already exists for quarterly period 1 of 2025',
-          err: expect.objectContaining({
-            isBoom: true,
-            code: 'REPORT_ALREADY_EXISTS'
-          }),
+          error: {
+            code: 'REPORT_ALREADY_EXISTS',
+            id: expect.any(String),
+            message: 'Report already exists for quarterly period 1 of 2025',
+            type: 'Conflict'
+          },
           event: {
             category: LOGGING_EVENT_CATEGORIES.HTTP,
-            outcome: 'failure',
             action: 'create_report',
+            kind: 'event',
+            outcome: 'failure',
             reason: 'cadence=quarterly period=1 year=2025',
             reference: existingId
-          }
+          },
+          http: { response: { status_code: StatusCodes.CONFLICT } }
         })
       })
     })
