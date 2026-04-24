@@ -50,12 +50,21 @@ const CORRUPT_ZIP_MESSAGE =
   /central directory|invalid signature|compressed\/uncompressed size|corrupted zip|end of data reached/i
 
 /**
- * Error messages from saxes (or exceljs' XML layer) when an xlsx's XML
- * parts are malformed. Errors of class `SaxesError` are also matched
- * separately by `error.name`.
+ * Error messages from exceljs' own XML layer when an xlsx's XML parts are
+ * malformed. Saxes-originated errors are detected separately via stack
+ * origin (see `SAXES_STACK_ORIGIN`).
  */
 const MALFORMED_XML_MESSAGE =
   /invalid character in xml|xml parsing|unexpected token in xml/i
+
+/**
+ * Stack-trace marker for errors originating inside the saxes XML parser.
+ * Saxes's `makeError` creates plain `Error` instances with `line:column:`
+ * prefixed messages ("3:31: unexpected close tag."), so neither `error.name`
+ * nor the message wording is a reliable signal on its own. The stack
+ * origin is.
+ */
+const SAXES_STACK_ORIGIN = /node_modules[\\/]saxes[\\/]/
 
 /**
  * Decide whether an error thrown during workbook load should be wrapped
@@ -93,7 +102,10 @@ export const shouldWrapAsSpreadsheetError = (error) => {
     return true
   }
 
-  if (error.name === 'SaxesError') {
+  if (
+    error.name === 'SaxesError' ||
+    SAXES_STACK_ORIGIN.test(error.stack ?? '')
+  ) {
     return true
   }
 
