@@ -14,7 +14,7 @@ vi.mock('#root/config.js', () => ({
         },
         serviceName: 'test-service',
         serviceVersion: '1.0.0',
-        'featureFlags.allowSensitiveLogs': true // allow sensitive logs by default in tests
+        'featureFlags.allowFullErrorOutput': true // allow sensitive logs by default in tests
       }
       return values[key]
     })
@@ -70,7 +70,7 @@ describe('loggerOptions.serializers.err', () => {
     expect(result.stack_trace).toBe(error.stack)
   })
 
-  test('includes Boom error details when allowSensitiveLogs is enabled', () => {
+  test('includes Boom error details when allowFullErrorOutput is enabled', () => {
     const boomError = new Error('Validation failed')
     boomError.isBoom = true
     boomError.output = {
@@ -97,7 +97,7 @@ describe('loggerOptions.serializers.err', () => {
     })
   })
 
-  test('enhances message with Boom data details when allowSensitiveLogs is enabled', () => {
+  test('enhances message with Boom data details when allowFullErrorOutput is enabled', () => {
     const boomError = new Error('Unauthorized')
     boomError.isBoom = true
     boomError.output = {
@@ -236,12 +236,12 @@ describe('loggerOptions.serializers.res', () => {
 })
 
 describe('loggerOptions.log4xxResponseErrors', () => {
-  test('is enabled when allowSensitiveLogs feature flag is on', () => {
+  test('is enabled when allowFullErrorOutput feature flag is on', () => {
     expect(loggerOptions.log4xxResponseErrors).toBe(true)
   })
 })
 
-describe('loggerOptions when allowSensitiveLogs feature flag is off', () => {
+describe('loggerOptions when allowFullErrorOutput feature flag is off', () => {
   beforeEach(() => {
     vi.resetModules()
   })
@@ -259,7 +259,7 @@ describe('loggerOptions when allowSensitiveLogs feature flag is off', () => {
             },
             serviceName: 'test-service',
             serviceVersion: '1.0.0',
-            'featureFlags.allowSensitiveLogs': false
+            'featureFlags.allowFullErrorOutput': false
           }
           return values[key]
         })
@@ -303,7 +303,7 @@ describe('loggerOptions when allowSensitiveLogs feature flag is off', () => {
             },
             serviceName: 'test-service',
             serviceVersion: '1.0.0',
-            'featureFlags.allowSensitiveLogs': false
+            'featureFlags.allowFullErrorOutput': false
           }
           return values[key]
         })

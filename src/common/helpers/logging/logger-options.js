@@ -9,7 +9,9 @@ import { ecsFormat } from '@elastic/ecs-pino-format'
 const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
-const allowSensitiveLogs = config.get('featureFlags.allowSensitiveLogs')
+
+const allowFullErrorOutput = () =>
+  config.get('featureFlags.allowFullErrorOutput')
 
 const formatters = {
   ecs: {
@@ -49,7 +51,7 @@ export const loggerOptions = {
 
       // Include Boom error details for better debugging when sensitive logs are allowed
       // @ts-ignore - check for Boom error before casting
-      if (allowSensitiveLogs && err.isBoom && err.output) {
+      if (allowFullErrorOutput() && err.isBoom && err.output) {
         /** @type {BoomError} */
         const boomErr = /** @type {BoomError} */ (err)
         errorObj.statusCode = boomErr.output.statusCode
@@ -93,7 +95,9 @@ export const loggerOptions = {
   },
   // Log 4xx response bodies as 'err' field when sensitive logs are allowed
   // This properly accesses request.response.source which contains error details
-  log4xxResponseErrors: allowSensitiveLogs,
+  get log4xxResponseErrors() {
+    return allowFullErrorOutput()
+  },
   // @fixme: add coverage
   /* v8 ignore next 8 */
   mixin() {

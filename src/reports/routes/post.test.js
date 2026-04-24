@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
+import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -126,34 +127,28 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(payload.exportActivity).toBeUndefined()
     })
 
-    it('returns 409 when report already exists', async () => {
+    it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: undefined
       })
 
-      await makeRequest(server, organisationId, registrationId)
+      const first = await makeRequest(server, organisationId, registrationId)
+      const firstPayload = JSON.parse(first.payload)
       const response = await makeRequest(server, organisationId, registrationId)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    })
-
-    it('returns 400 when period has not yet ended', async () => {
-      const { server, organisationId, registrationId } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.CONFLICT,
+        error: 'Conflict',
+        message: 'Report already exists for quarterly period 1 of 2025',
+        existingReport: {
+          id: firstPayload.id,
+          cadence: 'quarterly',
+          period: 1,
+          year: 2025
+        }
       })
-
-      const response = await makeRequest(
-        server,
-        organisationId,
-        registrationId,
-        2099,
-        'quarterly',
-        1
-      )
-
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     })
 
     it('returns 404 when registration not found', async () => {
@@ -185,7 +180,7 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(payload.material).toBe('plastic')
     })
 
-    it('returns 400 for invalid period number for cadence', async () => {
+    it('returns 400 with structured invalidPeriod when period exceeds the cadence range', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: undefined
@@ -201,9 +196,48 @@ describe(`POST ${reportsPostPath}`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.BAD_REQUEST,
+        error: 'Bad Request',
+        message: 'Invalid period 5 for cadence quarterly',
+        invalidPeriod: {
+          actual: 5,
+          cadence: 'quarterly',
+          validPeriods: [1, 2, 3, 4]
+        }
+      })
     })
 
-    it('returns 400 when accredited registration uses quarterly cadence', async () => {
+    it('returns 400 with structured periodNotEnded when the period has not yet ended', async () => {
+      const { server, organisationId, registrationId } = await createServer({
+        wasteProcessingType: 'reprocessor',
+        accreditationId: undefined
+      })
+
+      const response = await makeRequest(
+        server,
+        organisationId,
+        registrationId,
+        2099,
+        'quarterly',
+        1
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.BAD_REQUEST,
+        error: 'Bad Request',
+        message: 'Cannot create report for period 1 — period has not yet ended',
+        periodNotEnded: {
+          period: 1,
+          cadence: 'quarterly',
+          endDate: '2099-03-31',
+          earliestSubmissionDate: '2099-04-01T00:00:00.000Z'
+        }
+      })
+    })
+
+    it('returns 400 with structured cadence when accredited registration uses quarterly cadence', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: new ObjectId().toString()
@@ -219,9 +253,16 @@ describe(`POST ${reportsPostPath}`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.BAD_REQUEST,
+        error: 'Bad Request',
+        message:
+          "Cadence 'quarterly' does not match registration type — expected 'monthly'",
+        cadence: { actual: 'quarterly', expected: 'monthly' }
+      })
     })
 
-    it('returns 400 when registered-only registration uses monthly cadence', async () => {
+    it('returns 400 with structured cadence when registered-only registration uses monthly cadence', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: undefined
@@ -237,6 +278,65 @@ describe(`POST ${reportsPostPath}`, () => {
       )
 
       expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.BAD_REQUEST,
+        error: 'Bad Request',
+        message:
+          "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+        cadence: { actual: 'monthly', expected: 'quarterly' }
+      })
+    })
+
+    describe('4xx access log shape for cadence mismatch', () => {
+      afterEach(() => {
+        config.reset('featureFlags.allowFullErrorOutput')
+      })
+
+      it.each([
+        {
+          name: 'without allowFullErrorOutput — err field is undefined',
+          flag: false,
+          assertErr: (accessLog) => {
+            expect(accessLog.err).toBeUndefined()
+          }
+        },
+        {
+          name: 'with allowFullErrorOutput — err carries the curated payload including cadence detail',
+          flag: true,
+          assertErr: (accessLog) => {
+            expect(accessLog.err).toEqual({
+              statusCode: StatusCodes.BAD_REQUEST,
+              error: 'Bad Request',
+              message:
+                "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+              cadence: { actual: 'monthly', expected: 'quarterly' }
+            })
+          }
+        }
+      ])('$name', async ({ flag, assertErr }) => {
+        config.set('featureFlags.allowFullErrorOutput', flag)
+
+        const { server, organisationId, registrationId } = await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await makeRequest(
+          server,
+          organisationId,
+          registrationId,
+          2025,
+          'monthly',
+          1
+        )
+
+        const accessLogCall = server.loggerMocks.info.mock.calls.find(
+          ([entry]) => entry?.res?.statusCode === 400
+        )
+
+        expect(accessLogCall).toBeDefined()
+        assertErr(accessLogCall[0])
+      })
     })
 
     it('returns 422 for invalid cadence', async () => {
