@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 import { CADENCE } from '#reports/domain/cadence.js'
 
-/** @import { Cadence } from '#reports/domain/cadence.js' */
+/**
+ * @import { Cadence } from '#reports/domain/cadence.js'
+ * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
+ */
 
 /**
  * Throws a 400 Boom when the submitted cadence does not match what the
@@ -21,8 +24,10 @@ export const assertCadence = (cadence, registration) => {
     return
   }
 
-  const boom = Boom.badRequest(
-    `Cadence '${cadence}' does not match registration type — expected '${expected}'`
+  const boom = /** @type {EnrichedBoom} */ (
+    Boom.badRequest(
+      `Cadence '${cadence}' does not match registration type — expected '${expected}'`
+    )
   )
   boom.code = 'CADENCE_MISMATCH'
   boom.event = {

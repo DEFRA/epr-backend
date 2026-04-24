@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import { assertCadence } from './assert-cadence.js'
 
-/** @param {() => unknown} fn */
+/** @import { EnrichedBoom } from '#common/types/enriched-boom.js' */
+
+/**
+ * @param {() => void} fn
+ * @returns {EnrichedBoom}
+ */
 const capture = (fn) => {
   try {
     fn()
-    return null
+    throw new Error('expected function to throw')
   } catch (err) {
-    return err
+    return /** @type {EnrichedBoom} */ (err)
   }
 }
 

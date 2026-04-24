@@ -2,9 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Boom from '@hapi/boom'
 import { boomResponseLogger } from './boom-response-logger.js'
 
+/**
+ * @import { Server, ServerRoute } from '@hapi/hapi'
+ * @import { Mock } from 'vitest'
+ * @typedef {{ warn: Mock, error: Mock }} MockLogger
+ */
+
+/** @param {ServerRoute[]} routes */
 const makeServer = async (routes = []) => {
   const { default: Hapi } = await import('@hapi/hapi')
   const server = Hapi.server()
+  /** @type {MockLogger} */
   const mockLogger = { warn: vi.fn(), error: vi.fn() }
 
   server.ext('onRequest', (request, h) => {
@@ -19,7 +27,9 @@ const makeServer = async (routes = []) => {
 }
 
 describe('boom-response-logger plugin', () => {
+  /** @type {Server} */
   let server
+  /** @type {MockLogger} */
   let mockLogger
 
   beforeEach(async () => {
