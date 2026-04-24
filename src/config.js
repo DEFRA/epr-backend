@@ -359,6 +359,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_ALLOW_FULL_ERROR_OUTPUT'
+    },
+    wasteBalanceLedger: {
+      doc: 'Feature Flag: Write and read waste balance transactions via the append-only ledger collection (ADR 0031)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_WASTE_BALANCE_LEDGER'
     }
   },
   formSubmissionOverrides: {
