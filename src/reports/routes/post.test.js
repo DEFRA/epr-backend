@@ -127,16 +127,28 @@ describe(`POST ${reportsPostPath}`, () => {
       expect(payload.exportActivity).toBeUndefined()
     })
 
-    it('returns 409 when report already exists', async () => {
+    it('returns 409 with structured existingReport when a report for the same period already exists', async () => {
       const { server, organisationId, registrationId } = await createServer({
         wasteProcessingType: 'reprocessor',
         accreditationId: undefined
       })
 
-      await makeRequest(server, organisationId, registrationId)
+      const first = await makeRequest(server, organisationId, registrationId)
+      const firstPayload = JSON.parse(first.payload)
       const response = await makeRequest(server, organisationId, registrationId)
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: StatusCodes.CONFLICT,
+        error: 'Conflict',
+        message: 'Report already exists for quarterly period 1 of 2025',
+        existingReport: {
+          id: firstPayload.id,
+          cadence: 'quarterly',
+          period: 1,
+          year: 2025
+        }
+      })
     })
 
     it('returns 404 when registration not found', async () => {

@@ -297,10 +297,23 @@ export async function createReportForPeriod({
     registrationId
   })
 
-  if (findCurrentReportId(periodicReports, year, cadence, period)) {
-    throw Boom.conflict(
+  const existingReportId = findCurrentReportId(
+    periodicReports,
+    year,
+    cadence,
+    period
+  )
+  if (existingReportId) {
+    const boom = Boom.conflict(
       `Report already exists for ${cadence} period ${period} of ${year}`
     )
+    boom.output.payload.existingReport = {
+      id: existingReportId,
+      cadence,
+      period,
+      year
+    }
+    throw boom
   }
 
   const operatorCategory = getOperatorCategory(registration)
