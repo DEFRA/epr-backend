@@ -650,8 +650,7 @@ export const parse = async (buffer, options = {}) => {
     if (shouldWrapAsSpreadsheetError(error)) {
       throw new SpreadsheetValidationError(
         `Failed to parse spreadsheet: ${error.message}`,
-        VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
-        { cause: error }
+        VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
       )
     }
 
