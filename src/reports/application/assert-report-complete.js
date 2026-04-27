@@ -4,13 +4,12 @@ import {
   prnManualFields,
   recyclingManualFields
 } from '#reports/repository/schema.js'
-import Boom from '@hapi/boom'
 import Joi from 'joi'
+import { badRequest } from '#common/helpers/enrich-boom.js'
 
 /**
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { Report } from '#reports/repository/port.js'
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
  */
 
 const required = (/** @type {Record<string, Joi.Schema>} */ fields) =>
@@ -84,17 +83,16 @@ export const assertReportComplete = (report, operatorCategory) => {
     return
   }
 
-  const boom = /** @type {EnrichedBoom} */ (
-    Boom.badRequest(
-      `Report is incomplete; ${missingFields.length} required field(s) not populated`
-    )
+  throw badRequest(
+    `Report is incomplete; ${missingFields.length} required field(s) not populated`,
+    'REPORT_INCOMPLETE',
+    {
+      event: {
+        action: 'update_report_status',
+        reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
+        reference: report.id
+      },
+      payload: { missingFields }
+    }
   )
-  boom.code = 'REPORT_INCOMPLETE'
-  boom.event = {
-    action: 'update_report_status',
-    reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
-    reference: report.id
-  }
-  boom.output.payload.missingFields = missingFields
-  throw boom
 }
