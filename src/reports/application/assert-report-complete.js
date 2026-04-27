@@ -79,20 +79,18 @@ const findMissingFields = (report, operatorCategory) => {
  */
 export const assertReportComplete = (report, operatorCategory) => {
   const missingFields = findMissingFields(report, operatorCategory)
-  if (!missingFields.length) {
-    return
+  if (missingFields.length) {
+    throw badRequest(
+      `Report is incomplete; ${missingFields.length} required field(s) not populated`,
+      'REPORT_INCOMPLETE',
+      {
+        event: {
+          action: 'update_report_status',
+          reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
+          reference: report.id
+        },
+        payload: { missingFields }
+      }
+    )
   }
-
-  throw badRequest(
-    `Report is incomplete; ${missingFields.length} required field(s) not populated`,
-    'REPORT_INCOMPLETE',
-    {
-      event: {
-        action: 'update_report_status',
-        reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
-        reference: report.id
-      },
-      payload: { missingFields }
-    }
-  )
 }

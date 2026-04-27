@@ -19,19 +19,17 @@ export const assertCadence = (cadence, registration) => {
     ? CADENCE.monthly
     : CADENCE.quarterly
 
-  if (cadence === expected) {
-    return
+  if (cadence !== expected) {
+    throw badRequest(
+      `Cadence '${cadence}' does not match registration type — expected '${expected}'`,
+      'CADENCE_MISMATCH',
+      {
+        event: {
+          action: 'create_report',
+          reason: `actual=${cadence} expected=${expected}`
+        },
+        payload: { cadence: { actual: cadence, expected } }
+      }
+    )
   }
-
-  throw badRequest(
-    `Cadence '${cadence}' does not match registration type — expected '${expected}'`,
-    'CADENCE_MISMATCH',
-    {
-      event: {
-        action: 'create_report',
-        reason: `actual=${cadence} expected=${expected}`
-      },
-      payload: { cadence: { actual: cadence, expected } }
-    }
-  )
 }

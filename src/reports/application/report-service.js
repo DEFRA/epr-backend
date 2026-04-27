@@ -106,22 +106,21 @@ function formatSiteAddress(address) {
  */
 const assertValidPeriod = (period, cadence, allPeriods) => {
   const periodInfo = allPeriods.find((p) => p.period === period)
-  if (periodInfo) {
-    return periodInfo
+  if (!periodInfo) {
+    const validPeriods = allPeriods.map((p) => p.period)
+    throw badRequest(
+      `Invalid period ${period} for cadence ${cadence}`,
+      'INVALID_PERIOD',
+      {
+        event: {
+          action: 'create_report',
+          reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
+        },
+        payload: { invalidPeriod: { actual: period, cadence, validPeriods } }
+      }
+    )
   }
-
-  const validPeriods = allPeriods.map((p) => p.period)
-  throw badRequest(
-    `Invalid period ${period} for cadence ${cadence}`,
-    'INVALID_PERIOD',
-    {
-      event: {
-        action: 'create_report',
-        reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
-      },
-      payload: { invalidPeriod: { actual: period, cadence, validPeriods } }
-    }
-  )
+  return periodInfo
 }
 
 /**
@@ -136,29 +135,29 @@ const assertValidPeriod = (period, cadence, allPeriods) => {
 const assertPeriodEnded = (periodInfo, period, cadence) => {
   const dayAfterEnd = new Date(periodInfo.endDate)
   dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
-  if (dayAfterEnd <= new Date()) {
-    return
-  }
 
-  const earliestSubmissionDate = dayAfterEnd.toISOString()
-  throw badRequest(
-    `Cannot create report for period ${period} — period has not yet ended`,
-    'PERIOD_NOT_ENDED',
-    {
-      event: {
-        action: 'create_report',
-        reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
-      },
-      payload: {
-        periodNotEnded: {
-          period,
-          cadence,
-          endDate: periodInfo.endDate,
-          earliestSubmissionDate
+  if (dayAfterEnd > new Date()) {
+    const earliestSubmissionDate = dayAfterEnd.toISOString()
+
+    throw badRequest(
+      `Cannot create report for period ${period} — period has not yet ended`,
+      'PERIOD_NOT_ENDED',
+      {
+        event: {
+          action: 'create_report',
+          reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
+        },
+        payload: {
+          periodNotEnded: {
+            period,
+            cadence,
+            endDate: periodInfo.endDate,
+            earliestSubmissionDate
+          }
         }
       }
-    }
-  )
+    )
+  }
 }
 
 /**
@@ -173,22 +172,20 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  */
 const assertNoExistingReport = (periodicReports, year, cadence, period) => {
   const id = findCurrentReportId(periodicReports, year, cadence, period)
-  if (!id) {
-    return
+  if (id) {
+    throw conflict(
+      `Report already exists for ${cadence} period ${period} of ${year}`,
+      'REPORT_ALREADY_EXISTS',
+      {
+        event: {
+          action: 'create_report',
+          reason: `cadence=${cadence} period=${period} year=${year}`,
+          reference: id
+        },
+        payload: { existingReport: { id, cadence, period, year } }
+      }
+    )
   }
-
-  throw conflict(
-    `Report already exists for ${cadence} period ${period} of ${year}`,
-    'REPORT_ALREADY_EXISTS',
-    {
-      event: {
-        action: 'create_report',
-        reason: `cadence=${cadence} period=${period} year=${year}`,
-        reference: id
-      },
-      payload: { existingReport: { id, cadence, period, year } }
-    }
-  )
 }
 
 /**
