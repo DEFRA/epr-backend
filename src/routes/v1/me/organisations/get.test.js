@@ -1,12 +1,16 @@
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
   COMPANY_2_ID,
+  DEFRA_TOKEN_SECOND_RELATIONSHIP_ID,
+  VALID_TOKEN_CONTACT_ID,
+  VALID_TOKEN_CURRENT_RELATIONSHIP,
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -554,6 +558,295 @@ describe('GET /v1/me/organisations', () => {
     expect(server.loggerMocks.warn).toHaveBeenCalledWith({
       message:
         'User token missing organisation information. relationshipsCount: 2, orgInfo: [{"defraIdOrgName":"Company One","isCurrent":false},{"defraIdOrgName":"Company Two","isCurrent":false}]'
+    })
+  })
+
+  describe('system log auditing', () => {
+    it('should persist a system log with full linked context when a linked org exists', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const linkedAt = new Date().toISOString()
+      const linkedOrg = await buildApprovedOrg(organisationsRepository, {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ],
+        linkedDefraOrganisation: {
+          orgId: COMPANY_1_ID,
+          orgName: COMPANY_1_NAME,
+          linkedBy: { email, id: '550e8400-e29b-41d4-a716-446655440001' },
+          linkedAt
+        }
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const { systemLogs } = await systemLogsRepository.find({
+        subCategory: 'defra-id-reconciliation',
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
+      const [log] = systemLogs
+      expect(log.event).toEqual({
+        category: 'identity',
+        subCategory: 'defra-id-reconciliation',
+        action: 'organisations-discovered'
+      })
+      expect(log.context.organisationId).toBe(linkedOrg.id)
+      expect(log.context.linked).toMatchObject({
+        id: linkedOrg.id,
+        name: COMPANY_1_NAME,
+        orgId: linkedOrg.orgId,
+        status: 'approved',
+        linkedBy: { email, id: '550e8400-e29b-41d4-a716-446655440001' },
+        linkedAt
+      })
+      expect(log.context.unlinked).toEqual([])
+    })
+
+    it('should set createdBy from the user token', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      await buildApprovedOrg(organisationsRepository, {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ],
+        linkedDefraOrganisation: {
+          orgId: COMPANY_1_ID,
+          orgName: COMPANY_1_NAME,
+          linkedBy: { email, id: '550e8400-e29b-41d4-a716-446655440001' },
+          linkedAt: new Date().toISOString()
+        }
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const { systemLogs } = await systemLogsRepository.find({
+        subCategory: 'defra-id-reconciliation',
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
+      const [log] = systemLogs
+      expect(log.createdBy).toEqual({
+        id: VALID_TOKEN_CONTACT_ID,
+        email,
+        scope: expect.any(Array)
+      })
+    })
+
+    it('should record all DefraID relationships in the log', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      await buildApprovedOrg(organisationsRepository, {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ],
+        linkedDefraOrganisation: {
+          orgId: COMPANY_1_ID,
+          orgName: COMPANY_1_NAME,
+          linkedBy: { email, id: '550e8400-e29b-41d4-a716-446655440001' },
+          linkedAt: new Date().toISOString()
+        }
+      })
+
+      const thirdRelId = randomUUID()
+      const thirdOrgId = randomUUID()
+      const tokenWith3Rels = generateValidTokenWith({
+        email,
+        relationships: [
+          `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
+          `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`,
+          `${thirdRelId}:${thirdOrgId}:Company 3 Name`
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${tokenWith3Rels}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const { systemLogs } = await systemLogsRepository.find({
+        subCategory: 'defra-id-reconciliation',
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
+      const [log] = systemLogs
+      expect(log.context.defraIdRelationships).toHaveLength(3)
+    })
+
+    it('should log null linked and unlinked entries with status when no linked org exists', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const unlinkedOrg = await buildApprovedOrg(organisationsRepository, {
+        users: [
+          {
+            fullName: 'Test User',
+            email,
+            roles: ['initial_user', 'standard_user']
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const { systemLogs } = await systemLogsRepository.find({
+        subCategory: 'defra-id-reconciliation',
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
+      const [log] = systemLogs
+      expect(log.context.organisationId).toBeUndefined()
+      expect(log.context.linked).toBeNull()
+      expect(log.context.unlinked).toHaveLength(1)
+      expect(log.context.unlinked[0]).toMatchObject({
+        id: unlinkedOrg.id,
+        orgId: unlinkedOrg.orgId,
+        status: 'approved'
+      })
+    })
+
+    it('should log empty unlinked array when user has no EPR organisations', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const { systemLogs } = await systemLogsRepository.find({
+        subCategory: 'defra-id-reconciliation',
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
+      const [log] = systemLogs
+      expect(log.context.linked).toBeNull()
+      expect(log.context.unlinked).toEqual([])
+    })
+
+    it('should return 200 even when the audit call throws', async () => {
+      const throwingSystemLogsRepository = {
+        async insert() {
+          throw new Error('DB unavailable')
+        },
+        async find() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        },
+        async findByOrganisationId() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        }
+      }
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: throwingSystemLogsRepository
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
   })
 })

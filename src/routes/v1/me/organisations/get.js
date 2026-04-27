@@ -1,9 +1,11 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
+import { auditOrganisationsDiscovery } from '#auditing/organisations-discovery.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 /**
  * @typedef {{
@@ -53,22 +55,20 @@ const getLoggableOrgInfo = (orgInfo) =>
   }))
 
 /**
- * Get current Defra ID details from token
+ * Get current Defra ID details from token relationships
  *
- * @param {*} auth
+ * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} defraIdRelationships
  * @param {*} logger
  * @returns {DefraOrgSummary}
  */
-const getCurrentDetailsFromToken = (auth, logger) => {
-  const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
-
-  const currentOrg = orgInfo.find((org) => org.isCurrent)
+const getCurrentDetailsFromToken = (defraIdRelationships, logger) => {
+  const currentOrg = defraIdRelationships.find((org) => org.isCurrent)
 
   // Token should always have a current organisation
   if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
-    const loggableOrgInfo = getLoggableOrgInfo(orgInfo)
+    const loggableOrgInfo = getLoggableOrgInfo(defraIdRelationships)
     logger.warn({
-      message: `User token missing organisation information. relationshipsCount: ${orgInfo.length}, orgInfo: ${JSON.stringify(loggableOrgInfo)}`
+      message: `User token missing organisation information. relationshipsCount: ${defraIdRelationships.length}, orgInfo: ${JSON.stringify(loggableOrgInfo)}`
     })
 
     throw Boom.forbidden(
@@ -92,7 +92,7 @@ export const organisationsLinkedGetAll = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest} request
+   * @param {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: SystemLogsRepository }} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
@@ -104,7 +104,13 @@ export const organisationsLinkedGetAll = {
         auth.credentials
       )
 
-    const current = getCurrentDetailsFromToken(auth, logger)
+    const defraIdRelationships = getOrgDataFromDefraIdToken(
+      /** @type {{ decoded: { payload: import('#common/helpers/auth/types.js').DefraIdTokenPayload } }} */ (
+        auth.artifacts
+      ).decoded.payload
+    )
+
+    const current = getCurrentDetailsFromToken(defraIdRelationships, logger)
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
       organisationsRepository.findByLinkedDefraOrgId(current.id),
@@ -126,6 +132,39 @@ export const organisationsLinkedGetAll = {
       name: unlinkedOrg.companyDetails.name,
       orgId: unlinkedOrg.orgId
     }))
+
+    const auditLinked = linkedOrg?.linkedDefraOrganisation
+      ? {
+          id: linkedOrg.id,
+          name: linkedOrg.linkedDefraOrganisation.orgName,
+          orgId: linkedOrg.orgId,
+          status: linkedOrg.status,
+          linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
+          linkedAt: new Date(
+            linkedOrg.linkedDefraOrganisation.linkedAt
+          ).toISOString()
+        }
+      : null
+
+    const auditUnlinked = linkableOrgs.map((org) => ({
+      id: org.id,
+      name: org.companyDetails.name,
+      orgId: org.orgId,
+      status: org.status
+    }))
+
+    try {
+      await auditOrganisationsDiscovery(request, {
+        defraIdOrg: current,
+        defraIdRelationships,
+        linked: auditLinked,
+        unlinked: auditUnlinked
+      })
+    } catch (err) {
+      logger.error({
+        message: `Failed to audit organisations discovery: ${/** @type {Error} */ (err).message}`
+      })
+    }
 
     /** @type {{ organisations: UserOrganisationsResponse }} */
     const payload = { organisations: { current, linked, unlinked } }
