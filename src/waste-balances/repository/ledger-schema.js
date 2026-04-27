@@ -94,8 +94,8 @@ const sourceSchema = Joi.object({
 /**
  * Discriminated union — `kind` selects which variant carries the payload.
  *
- * @typedef {{ kind: 'summary-log-row', summaryLogRow: LedgerSummaryLogRow }
- *   | { kind: 'prn-operation', prnOperation: LedgerPrnOperation }} LedgerSource
+ * @typedef {{ kind: (typeof LEDGER_SOURCE_KIND)['SUMMARY_LOG_ROW'], summaryLogRow: LedgerSummaryLogRow }
+ *   | { kind: (typeof LEDGER_SOURCE_KIND)['PRN_OPERATION'], prnOperation: LedgerPrnOperation }} LedgerSource
  */
 
 /**
