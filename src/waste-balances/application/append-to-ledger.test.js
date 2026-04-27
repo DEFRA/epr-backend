@@ -50,10 +50,7 @@ describe('appendToLedger', () => {
       const repository = createInMemoryLedgerRepository()()
       const builder = vi.fn((latest) => buildCreditFields(latest))
 
-      await appendToLedger(
-        { repository, ...buildIdentity() },
-        /** @type {*} */ (builder)
-      )
+      await appendToLedger({ repository, ...buildIdentity() }, builder)
 
       expect(builder).toHaveBeenCalledTimes(1)
       expect(builder).toHaveBeenCalledWith({
@@ -92,10 +89,7 @@ describe('appendToLedger', () => {
 
       const builder = vi.fn((latest) => buildCreditFields(latest, 30))
 
-      await appendToLedger(
-        { repository, ...buildIdentity() },
-        /** @type {*} */ (builder)
-      )
+      await appendToLedger({ repository, ...buildIdentity() }, builder)
 
       expect(builder).toHaveBeenCalledWith({
         number: 1,
@@ -199,7 +193,7 @@ describe('appendToLedger', () => {
 
       const result = await appendToLedger(
         { repository, ...buildIdentity() },
-        /** @type {*} */ (builder)
+        builder
       )
 
       expect(result.id).toBe('stored')

@@ -8,11 +8,19 @@ export const LEDGER_TRANSACTION_TYPE = Object.freeze({
   PENDING_DEBIT: 'pending_debit'
 })
 
+/**
+ * @typedef {typeof LEDGER_TRANSACTION_TYPE[keyof typeof LEDGER_TRANSACTION_TYPE]} LedgerTransactionType
+ */
+
 export const LEDGER_SOURCE_KIND = Object.freeze({
   SUMMARY_LOG_ROW: 'summary-log-row',
   PRN_OPERATION: 'prn-operation',
   MANUAL_ADJUSTMENT: 'manual-adjustment'
 })
+
+/**
+ * @typedef {typeof LEDGER_SOURCE_KIND[keyof typeof LEDGER_SOURCE_KIND]} LedgerSourceKind
+ */
 
 export const LEDGER_PRN_OPERATION_TYPE = Object.freeze({
   CREATION: 'creation',
@@ -21,6 +29,10 @@ export const LEDGER_PRN_OPERATION_TYPE = Object.freeze({
   CANCELLATION: 'cancellation',
   ISSUED_CANCELLATION: 'issued_cancellation'
 })
+
+/**
+ * @typedef {typeof LEDGER_PRN_OPERATION_TYPE[keyof typeof LEDGER_PRN_OPERATION_TYPE]} LedgerPrnOperationType
+ */
 
 const typeValues = Object.values(LEDGER_TRANSACTION_TYPE)
 const sourceKindValues = Object.values(LEDGER_SOURCE_KIND)
@@ -74,6 +86,69 @@ const sourceSchema = Joi.object({
     otherwise: Joi.forbidden()
   })
 })
+
+/**
+ * @typedef {Object} LedgerSummaryLogRow
+ * @property {string} summaryLogId
+ * @property {string} rowId
+ * @property {import('#domain/waste-records/model.js').WasteRecordType} rowType
+ * @property {string} wasteRecordId
+ * @property {string} wasteRecordVersionId
+ */
+
+/**
+ * @typedef {Object} LedgerPrnOperation
+ * @property {string} prnId
+ * @property {LedgerPrnOperationType} operationType
+ */
+
+/**
+ * @typedef {Object} LedgerManualAdjustment
+ * @property {string} userId
+ * @property {string} reason
+ */
+
+/**
+ * Discriminated union — `kind` selects which variant carries the payload.
+ *
+ * @typedef {{ kind: 'summary-log-row', summaryLogRow: LedgerSummaryLogRow }
+ *   | { kind: 'prn-operation', prnOperation: LedgerPrnOperation }
+ *   | { kind: 'manual-adjustment', manualAdjustment: LedgerManualAdjustment }} LedgerSource
+ */
+
+/**
+ * @typedef {Object} LedgerUserSummary
+ * @property {string} id
+ * @property {string} name
+ */
+
+/**
+ * Shape accepted by `LedgerRepository.insertTransaction`. Mirrors
+ * `ledgerTransactionInsertSchema` — keep the two in sync; the schema is the
+ * runtime gate, this typedef is the check-time gate.
+ *
+ * @typedef {Object} LedgerTransactionInsert
+ * @property {string} accreditationId
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {number} number
+ * @property {LedgerTransactionType} type
+ * @property {Date} createdAt
+ * @property {LedgerUserSummary} [createdBy]
+ * @property {number} amount
+ * @property {number} openingAmount
+ * @property {number} closingAmount
+ * @property {number} openingAvailableAmount
+ * @property {number} closingAvailableAmount
+ * @property {LedgerSource} source
+ */
+
+/**
+ * Shape returned by `LedgerRepository` reads — `LedgerTransactionInsert` plus
+ * the storage-assigned `id`.
+ *
+ * @typedef {LedgerTransactionInsert & { id: string }} LedgerTransaction
+ */
 
 export const ledgerTransactionInsertSchema = Joi.object({
   accreditationId: Joi.string().required(),

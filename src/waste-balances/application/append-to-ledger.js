@@ -70,17 +70,10 @@ const summariseLatest = (latest) => {
  *   organisationId: string,
  *   registrationId: string
  * }} context
- * @param {(latest: { number: number, closingAmount: number, closingAvailableAmount: number }) => {
- *   type: string,
- *   amount: number,
- *   openingAmount: number,
- *   closingAmount: number,
- *   openingAvailableAmount: number,
- *   closingAvailableAmount: number,
- *   source: object,
- *   createdBy?: { id: string, name: string },
- *   createdAt: Date
- * }} builder
+ * @param {(latest: { number: number, closingAmount: number, closingAvailableAmount: number }) =>
+ *   Omit<import('../repository/ledger-schema.js').LedgerTransactionInsert,
+ *     'accreditationId' | 'organisationId' | 'registrationId' | 'number'>
+ * } builder
  * @returns {Promise<import('../repository/ledger-port.js').LedgerTransaction>}
  */
 export const appendToLedger = async (

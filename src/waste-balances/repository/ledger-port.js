@@ -30,30 +30,16 @@ export class LedgerSlotConflictError extends Error {
 }
 
 /**
- * @typedef {import('./ledger-schema.js').ledgerTransactionInsertSchema} LedgerTransactionInsertShape
+ * @typedef {import('./ledger-schema.js').LedgerTransactionInsert} LedgerTransactionInsert
  */
 
 /**
- * @typedef {Object} LedgerTransaction
- * @property {string} id
- * @property {string} accreditationId
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {number} number
- * @property {string} type
- * @property {Date} createdAt
- * @property {{ id: string; name: string }} [createdBy]
- * @property {number} amount
- * @property {number} openingAmount
- * @property {number} closingAmount
- * @property {number} openingAvailableAmount
- * @property {number} closingAvailableAmount
- * @property {object} source
+ * @typedef {import('./ledger-schema.js').LedgerTransaction} LedgerTransaction
  */
 
 /**
  * @typedef {Object} LedgerRepository
- * @property {(transaction: object) => Promise<LedgerTransaction>} insertTransaction
+ * @property {(transaction: LedgerTransactionInsert) => Promise<LedgerTransaction>} insertTransaction
  *   Persist a transaction. Throws `LedgerSlotConflictError` if the
  *   `(accreditationId, number)` slot is already occupied. Returns the stored
  *   transaction with its assigned `id`.
