@@ -5,6 +5,7 @@
 import { config } from '#root/config.js'
 
 const SKIP_TEST_ORG_IDS = config.get('skipTransformingTestOrganisations')
+const SKIP_ACCREDITATION_IDS = config.get('skipMigratingAccreditations')
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationsRepository} organisationsRepository
@@ -23,6 +24,11 @@ export async function getSubmissionsToMigrate(
       (orgId) => !SKIP_TEST_ORG_IDS.includes(orgId)
     )
   )
+  const submittedAccreditationIds = new Set(
+    [...submissionIds.accreditations].filter(
+      (accrId) => !SKIP_ACCREDITATION_IDS.includes(accrId)
+    )
+  )
   const pendingOrgs = submittedOrganisationIds.difference(
     migratedIds.organisations
   )
@@ -30,7 +36,7 @@ export async function getSubmissionsToMigrate(
   const pendingRegs = submissionIds.registrations.difference(
     migratedIds.registrations
   )
-  const pendingAccrs = submissionIds.accreditations.difference(
+  const pendingAccrs = submittedAccreditationIds.difference(
     migratedIds.accreditations
   )
 

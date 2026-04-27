@@ -6,6 +6,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
+import { ensureLedgerCollection } from './ledger-mongodb.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
@@ -111,6 +112,7 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  */
 export const createWasteBalancesRepository = async (db, dependencies = {}) => {
   await ensureCollection(db)
+  await ensureLedgerCollection(db)
 
   return () => ({
     findByAccreditationId: performFindByAccreditationId(db),
