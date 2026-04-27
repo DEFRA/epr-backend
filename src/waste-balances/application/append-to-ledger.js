@@ -7,19 +7,10 @@ const ZERO_LATEST = Object.freeze({
  * @param {import('../repository/ledger-port.js').LedgerTransaction | null} latest
  * @returns {{ number: number, closingBalance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }}
  */
-const summariseLatest = (latest) => {
-  if (latest === null) {
-    return ZERO_LATEST
-  }
-
-  return {
-    number: latest.number,
-    closingBalance: {
-      amount: latest.closingBalance.amount,
-      availableAmount: latest.closingBalance.availableAmount
-    }
-  }
-}
+const summariseLatest = (latest) =>
+  latest === null
+    ? ZERO_LATEST
+    : { number: latest.number, closingBalance: latest.closingBalance }
 
 /**
  * Append a transaction to the waste balance ledger.
