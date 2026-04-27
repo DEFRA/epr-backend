@@ -270,7 +270,7 @@ describe('#fetchJson', () => {
       global.fetch = vi.fn().mockRejectedValue(networkError)
 
       await expect(fetchJson(url)).rejects.toMatchObject({
-        code: 'EXTERNAL_FETCH_FAILED',
+        code: 'external_fetch_failed',
         event: {
           action: 'external_fetch',
           reason: 'type=Error code=ENETUNREACH'

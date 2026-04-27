@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { withTraceId } from '@defra/hapi-tracing'
+import { errorCodes } from '#common/enums/error-codes.js'
 import { internal } from './enrich-boom.js'
 import { getTracingHeaderName } from './request-tracing.js'
 
@@ -51,7 +52,7 @@ export const fetchJson = async (url, options) => {
     // they are CDP-allowlisted and indexed in OpenSearch.
     throw internal(
       `Failed to fetch from url: ${url}`,
-      'EXTERNAL_FETCH_FAILED',
+      errorCodes.externalFetchFailed,
       {
         event: {
           action: 'external_fetch',

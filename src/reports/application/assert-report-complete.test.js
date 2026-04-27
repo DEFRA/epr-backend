@@ -184,7 +184,7 @@ describe('assertReportComplete', () => {
         OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
       )
 
-      expect(boom.code).toBe('REPORT_INCOMPLETE')
+      expect(boom.code).toBe('report_incomplete')
       expect(boom.event).toEqual({
         action: 'update_report_status',
         reason:

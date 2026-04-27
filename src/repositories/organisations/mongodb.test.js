@@ -194,7 +194,7 @@ describe('MongoDB organisations repository', () => {
       await expect(
         repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
       ).rejects.toMatchObject({
-        code: 'ORGANISATION_DUPLICATE_KEY',
+        code: 'organisation_duplicate_key',
         event: {
           action: 'update_organisation',
           reason: 'fields=registrations.id, orgId'

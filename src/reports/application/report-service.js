@@ -4,6 +4,7 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
@@ -110,7 +111,7 @@ const assertValidPeriod = (period, cadence, allPeriods) => {
     const validPeriods = allPeriods.map((p) => p.period)
     throw badRequest(
       `Invalid period ${period} for cadence ${cadence}`,
-      'INVALID_PERIOD',
+      errorCodes.invalidPeriod,
       {
         event: {
           action: 'create_report',
@@ -141,7 +142,7 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
 
     throw badRequest(
       `Cannot create report for period ${period} — period has not yet ended`,
-      'PERIOD_NOT_ENDED',
+      errorCodes.periodNotEnded,
       {
         event: {
           action: 'create_report',
@@ -175,7 +176,7 @@ const assertNoExistingReport = (periodicReports, year, cadence, period) => {
   if (id) {
     throw conflict(
       `Report already exists for ${cadence} period ${period} of ${year}`,
-      'REPORT_ALREADY_EXISTS',
+      errorCodes.reportAlreadyExists,
       {
         event: {
           action: 'create_report',

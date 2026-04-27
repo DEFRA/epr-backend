@@ -10,6 +10,7 @@ import {
   prepareForReplace,
   SCHEMA_VERSION
 } from './helpers.js'
+import { errorCodes } from './enums/error-codes.js'
 import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 
@@ -85,7 +86,7 @@ const throwCuratedDuplicateKeyBoom = (error, id) => {
     : 'unknown'
   throw conflict(
     `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
-    'ORGANISATION_DUPLICATE_KEY',
+    errorCodes.organisationDuplicateKey,
     {
       event: {
         action: 'update_organisation',

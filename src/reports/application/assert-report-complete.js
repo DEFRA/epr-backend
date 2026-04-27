@@ -6,6 +6,7 @@ import {
 } from '#reports/repository/schema.js'
 import Joi from 'joi'
 import { badRequest } from '#common/helpers/enrich-boom.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
@@ -82,7 +83,7 @@ export const assertReportComplete = (report, operatorCategory) => {
   if (missingFields.length) {
     throw badRequest(
       `Report is incomplete; ${missingFields.length} required field(s) not populated`,
-      'REPORT_INCOMPLETE',
+      errorCodes.reportIncomplete,
       {
         event: {
           action: 'update_report_status',

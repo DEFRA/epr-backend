@@ -11,7 +11,7 @@ describe('logSchema', () => {
   it('should accept a log with indexed nested error and event fields', () => {
     const { error } = logSchema.validate({
       message: 'something failed',
-      error: { code: 'CADENCE_MISMATCH', message: 'oops' },
+      error: { code: 'cadence_mismatch', message: 'oops' },
       event: { category: 'http', action: 'create_report' },
       http: { response: { status_code: 400 } }
     })

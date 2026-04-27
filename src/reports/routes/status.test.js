@@ -327,7 +327,7 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Report is incomplete; 2 required field(s) not populated',
           error: {
-            code: 'REPORT_INCOMPLETE',
+            code: 'report_incomplete',
             id: expect.any(String),
             message: 'Report is incomplete; 2 required field(s) not populated',
             type: 'Bad Request'

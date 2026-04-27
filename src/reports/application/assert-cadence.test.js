@@ -39,7 +39,7 @@ describe('assertCadence', () => {
     expect(boom.message).toBe(
       "Cadence 'monthly' does not match registration type — expected 'quarterly'"
     )
-    expect(boom.code).toBe('CADENCE_MISMATCH')
+    expect(boom.code).toBe('cadence_mismatch')
     expect(boom.event).toEqual({
       action: 'create_report',
       reason: 'actual=monthly expected=quarterly'
@@ -55,7 +55,7 @@ describe('assertCadence', () => {
       assertCadence('quarterly', { accreditationId: 'acc-1' })
     )
 
-    expect(boom.code).toBe('CADENCE_MISMATCH')
+    expect(boom.code).toBe('cadence_mismatch')
     expect(boom.event).toEqual({
       action: 'create_report',
       reason: 'actual=quarterly expected=monthly'

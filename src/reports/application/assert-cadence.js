@@ -1,5 +1,6 @@
 import { badRequest } from '#common/helpers/enrich-boom.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -22,7 +23,7 @@ export const assertCadence = (cadence, registration) => {
   if (cadence !== expected) {
     throw badRequest(
       `Cadence '${cadence}' does not match registration type — expected '${expected}'`,
-      'CADENCE_MISMATCH',
+      errorCodes.cadenceMismatch,
       {
         event: {
           action: 'create_report',
