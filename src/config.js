@@ -392,6 +392,12 @@ const baseConfig = {
     default: '[]',
     env: 'TEST_ORGANISATIONS_SKIP_TRANSFORM'
   },
+  skipMigratingAccreditations: {
+    doc: 'JSON array of accreditation form submission mongo ids to exclude from form data migration, e.g. ["697a10349b947884b8407c7d"]. Used to skip known-orphaned submissions (e.g. those referencing non-existent organisations) that would otherwise retry and fail on every pod restart.',
+    format: String,
+    default: '[]',
+    env: 'MIGRATION_ACCREDITATIONS_SKIP'
+  },
   commandQueue: {
     endpoint: {
       doc: 'AWS SQS endpoint for command queue (only set for local development)',
