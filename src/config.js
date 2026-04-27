@@ -359,6 +359,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_ALLOW_FULL_ERROR_OUTPUT'
+    },
+    wasteBalanceLedger: {
+      doc: 'Feature Flag: Write and read waste balance transactions via the append-only ledger collection (ADR 0031)',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_WASTE_BALANCE_LEDGER'
     }
   },
   formSubmissionOverrides: {
@@ -391,6 +397,12 @@ const baseConfig = {
     format: String,
     default: '[]',
     env: 'TEST_ORGANISATIONS_SKIP_TRANSFORM'
+  },
+  skipMigratingAccreditations: {
+    doc: 'JSON array of accreditation form submission mongo ids to exclude from form data migration, e.g. ["697a10349b947884b8407c7d"]. Used to skip known-orphaned submissions (e.g. those referencing non-existent organisations) that would otherwise retry and fail on every pod restart.',
+    format: String,
+    default: '[]',
+    env: 'MIGRATION_ACCREDITATIONS_SKIP'
   },
   commandQueue: {
     endpoint: {

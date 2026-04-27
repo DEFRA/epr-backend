@@ -20,7 +20,8 @@ const COLLECTIONS = {
   REPORTS: 'reports',
   WASTE_RECORDS: 'waste-records',
   SUMMARY_LOGS: 'summary-logs',
-  OVERSEAS_SITES: 'overseas-sites'
+  OVERSEAS_SITES: 'overseas-sites',
+  SYSTEM_LOGS: 'system-logs'
 }
 
 const EMPTY_COUNTS = Object.freeze({
@@ -30,6 +31,7 @@ const EMPTY_COUNTS = Object.freeze({
   'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
+  'system-logs': 0,
   registration: 0,
   accreditation: 0,
   'epr-organisations': 0,
@@ -116,6 +118,11 @@ const buildCascadeSteps = (
       overseasSiteIds.length === 0
         ? null
         : { _id: { $in: overseasSiteIds.map(toObjectId) } }
+  },
+  {
+    label: 'system-logs',
+    collection: COLLECTIONS.SYSTEM_LOGS,
+    filter: { 'context.organisationId': mongoIdHex }
   },
   {
     label: 'registration',
