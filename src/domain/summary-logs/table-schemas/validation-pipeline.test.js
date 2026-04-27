@@ -10,6 +10,7 @@ import {
   checkRequiredFields,
   CLASSIFICATION_REASON
 } from './shared/classify-helpers.js'
+import { customJoi } from '#common/validation/custom-joi.js'
 
 describe('validation-pipeline', () => {
   describe('ROW_OUTCOME', () => {
@@ -435,6 +436,121 @@ describe('validation-pipeline', () => {
         expect(result.issues[0].type).toBe(
           'custom.netWeightCalculationMismatch'
         )
+      })
+    })
+
+    describe('coerced row data', () => {
+      const createCoercedSchema = () => ({
+        unfilledValues: {},
+        validationSchema: customJoi
+          .object({
+            ROW_ID: Joi.number().optional(),
+            SUPPLIER_NAME: customJoi.coercedString().optional(),
+            EWC_CODE: customJoi.coercedString().optional()
+          })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        classifyForWasteBalance: () => ({
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: 0
+        })
+      })
+
+      it('returns row data with numeric values coerced to strings for INCLUDED rows', () => {
+        const schema = createCoercedSchema()
+        const row = { ROW_ID: 100, SUPPLIER_NAME: 0, EWC_CODE: 12345 }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
+        expect(result.data).toEqual({
+          ROW_ID: 100,
+          SUPPLIER_NAME: '0',
+          EWC_CODE: '12345'
+        })
+      })
+
+      it('preserves unfilled fields in returned data', () => {
+        const schema = {
+          unfilledValues: {
+            DROPDOWN: ['Please select...']
+          },
+          validationSchema: customJoi
+            .object({
+              SUPPLIER_NAME: customJoi.coercedString().optional()
+            })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: () => ({
+            outcome: ROW_OUTCOME.INCLUDED,
+            reasons: [],
+            transactionAmount: 0
+          })
+        }
+        const row = {
+          SUPPLIER_NAME: 0,
+          DROPDOWN: 'Please select...',
+          EMPTY: '',
+          NULL_VALUE: null
+        }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.data).toEqual({
+          SUPPLIER_NAME: '0',
+          DROPDOWN: 'Please select...',
+          EMPTY: '',
+          NULL_VALUE: null
+        })
+      })
+
+      it('returns coerced data when row is EXCLUDED for missing required fields', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: customJoi
+            .object({
+              SUPPLIER_NAME: customJoi.coercedString().optional()
+            })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: (data) =>
+            checkRequiredFields(data, ['ROW_ID'], {}) ?? {
+              outcome: ROW_OUTCOME.INCLUDED,
+              reasons: [],
+              transactionAmount: 0
+            }
+        }
+        const row = { SUPPLIER_NAME: 0 }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.data.SUPPLIER_NAME).toBe('0')
+      })
+
+      it('returns coerced data when row is REJECTED', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: customJoi
+            .object({
+              ROW_ID: Joi.number().min(10000).optional(),
+              SUPPLIER_NAME: customJoi.coercedString().optional()
+            })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: () => ({
+            outcome: ROW_OUTCOME.INCLUDED,
+            reasons: [],
+            transactionAmount: 0
+          })
+        }
+        const row = { ROW_ID: 1, SUPPLIER_NAME: 0 }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
+        expect(result.data.SUPPLIER_NAME).toBe('0')
       })
     })
   })
