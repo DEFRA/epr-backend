@@ -3,10 +3,12 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
 import {
+  createMongoLedgerRepository,
   ensureLedgerCollection,
   WASTE_BALANCE_LEDGER_COLLECTION_NAME
 } from './ledger-mongodb.js'
 import { buildLedgerTransaction } from './ledger-test-data.js'
+import { testLedgerRepositoryContract } from './ledger-port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -21,6 +23,15 @@ const it = mongoIt.extend({
     const database = mongoClient.db(DATABASE_NAME)
     await ensureLedgerCollection(database)
     await use(database.collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME))
+  },
+
+  ledgerRepository: async ({ mongoClient }, use) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    await database
+      .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)
+      .deleteMany({})
+    const factory = await createMongoLedgerRepository(database)
+    await use(factory)
   }
 })
 
@@ -122,6 +133,38 @@ describe('ensureLedgerCollection', () => {
       const database = mongoClient.db(DATABASE_NAME)
       await ensureLedgerCollection(database)
       await expect(ensureLedgerCollection(database)).resolves.toBeDefined()
+    })
+  })
+})
+
+describe('MongoDB ledger repository', () => {
+  it('exposes the ledger port surface', async ({ mongoClient }) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const repository = (await createMongoLedgerRepository(database))()
+    expect(repository.insertTransaction).toBeTypeOf('function')
+    expect(repository.findLatestByAccreditationId).toBeTypeOf('function')
+  })
+
+  describe('ledger repository contract', () => {
+    testLedgerRepositoryContract(it)
+  })
+
+  describe('insertTransaction error translation', () => {
+    it('rethrows non-conflict MongoDB errors unchanged', async () => {
+      const upstream = new Error('connection lost')
+      const stubCollection = {
+        createIndex: () => Promise.resolve(),
+        insertOne: () => Promise.reject(upstream)
+      }
+      const stubDb = { collection: () => stubCollection }
+
+      const repository = (
+        await createMongoLedgerRepository(/** @type {*} */ (stubDb))
+      )()
+
+      await expect(
+        repository.insertTransaction(buildLedgerTransaction({ number: 1 }))
+      ).rejects.toBe(upstream)
     })
   })
 })
