@@ -352,6 +352,11 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
+        await database.collection('system-logs').countDocuments({
+          'context.organisationId': target.organisationId
+        })
+      ).toBe(0)
+      expect(
         await database.collection('epr-organisations').countDocuments({
           _id: ObjectId.createFromHexString(other.organisationId)
         })
