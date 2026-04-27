@@ -175,6 +175,33 @@ describe('MongoDB organisations repository', () => {
       ).rejects.toThrow('Unexpected database error')
     })
 
+    it('should attach code ORGANISATION_DUPLICATE_KEY and event with conflicting fields for indexed logging', async () => {
+      const dbMock = {
+        collection: () => ({
+          createIndex: async () => {},
+          replaceOne: async () => {
+            const error = new Error('E11000 duplicate key error')
+            error.code = 11000
+            error.keyPattern = { 'registrations.id': 1, orgId: 1 }
+            throw error
+          }
+        })
+      }
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
+      const anyOrg = buildOrganisation()
+
+      await expect(
+        repository.replaceRaw(anyOrg.id, 1, { orgId: 'x' })
+      ).rejects.toMatchObject({
+        code: 'ORGANISATION_DUPLICATE_KEY',
+        event: {
+          action: 'update_organisation',
+          reason: 'fields=registrations.id, orgId'
+        }
+      })
+    })
+
     it('falls back to "unknown" in the dup-key message when keyPattern is absent', async () => {
       const dbMock = {
         collection: () => ({

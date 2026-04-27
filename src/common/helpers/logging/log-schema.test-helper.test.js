@@ -40,13 +40,13 @@ describe('expectLogToBeCdpCompliant', () => {
     ).not.toThrow()
   })
 
-  it('should reject when err.cause adds an indexed field that the CDP allowlist does not include', () => {
+  it('should accept err with a .cause chain since the serializer no longer surfaces cause', () => {
     const err = new Error('outer')
     err.cause = new Error('inner')
 
     expect(() =>
       expectLogToBeCdpCompliant({ message: 'something failed', err })
-    ).toThrow(/cause/)
+    ).not.toThrow()
   })
 
   it('should pass-through non-Error values in err per the pino serializer contract', () => {
