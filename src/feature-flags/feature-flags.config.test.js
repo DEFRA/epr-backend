@@ -51,4 +51,17 @@ describe('createConfigFeatureFlags', () => {
     const flags = createConfigFeatureFlags(config)
     expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(false)
   })
+
+  it('returns true when wasteBalanceLedger flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isWasteBalanceLedgerEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.wasteBalanceLedger')
+  })
+
+  it('returns false when wasteBalanceLedger flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
+  })
 })
