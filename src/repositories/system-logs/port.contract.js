@@ -1,29 +1,11 @@
 import { describe, expect } from 'vitest'
 import { randomUUID } from 'crypto'
 
+import { buildSystemLog } from './contract/test-data.js'
+
 /** @import {SystemLogsRepository} from './port.js' */
 
 const DEFAULT_LIMIT = 100
-
-const buildSystemLog = ({
-  organisationId,
-  createdAt = new Date(),
-  email = 'user@email.com',
-  subCategory = 'test-sub-category',
-  id
-} = {}) => ({
-  createdAt,
-  createdBy: { id: 'user-001', email, scope: [] },
-  event: {
-    category: 'test-category',
-    subCategory,
-    action: 'test-action'
-  },
-  context: {
-    ...(organisationId !== undefined && { organisationId }),
-    ...(id !== undefined && { id })
-  }
-})
 
 export const testSystemLogsRepositoryContract = (it) => {
   describe('filtering', () => {
