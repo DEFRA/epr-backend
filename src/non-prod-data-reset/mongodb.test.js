@@ -17,6 +17,7 @@ import {
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
 import {
@@ -202,16 +203,7 @@ const seedDownstreamForOrganisation = async (
     summaryLogFactory.validating({ organisationId, registrationId })
   )
 
-  await repositories.systemLogs.insert({
-    createdAt: new Date(),
-    createdBy: { id: 'user-001', email: 'test@example.com', scope: [] },
-    event: {
-      category: 'entity',
-      subCategory: 'epr-organisations',
-      action: 'update'
-    },
-    context: { organisationId }
-  })
+  await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
 }
 
 // The 'organisation' collection is written by the journey-test apply path and
