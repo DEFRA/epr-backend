@@ -4,6 +4,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { expectLogToBeCdpCompliant } from '#common/helpers/logging/log-schema.test-helper.js'
 
 import { boomErrorLogger } from './boom-error-logger.js'
 
@@ -181,4 +182,20 @@ describe('boom-error-logger plugin', () => {
       http: { response: { status_code: 400 } }
     })
   })
+
+  it.each([
+    { url: '/bad-request', level: 'warn' },
+    { url: '/not-found', level: 'warn' },
+    { url: '/internal', level: 'error' },
+    { url: '/enriched', level: 'warn' }
+  ])(
+    'should emit a CDP-compliant log shape for $url',
+    async ({ url, level }) => {
+      await server.inject({ method: 'GET', url })
+      const logged = mockLogger[level].mock.calls[0][0]
+
+      expect(logged).toBeDefined()
+      expectLogToBeCdpCompliant(logged)
+    }
+  )
 })

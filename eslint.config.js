@@ -34,7 +34,12 @@ export default [
     }
   },
   {
-    files: ['.vite/**/*.js', '**/*.contract.js', 'benchmarks/**/*.js'],
+    files: [
+      '.vite/**/*.js',
+      '**/*.contract.js',
+      '**/*.test-helper.js',
+      'benchmarks/**/*.js'
+    ],
     rules: {
       'n/no-unpublished-import': 'off'
     }
