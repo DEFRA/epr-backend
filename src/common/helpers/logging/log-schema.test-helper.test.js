@@ -1,8 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import {
-  expectLogToBeCdpCompliant,
-  warnIfLogNotCdpCompliant
-} from './log-schema.test-helper.js'
+import { describe, it, expect } from 'vitest'
+import { expectLogToBeCdpCompliant } from './log-schema.test-helper.js'
 
 describe('expectLogToBeCdpCompliant', () => {
   it('should not throw for a CDP-compliant log shape', () => {
@@ -56,35 +53,5 @@ describe('expectLogToBeCdpCompliant', () => {
         err: { message: 'a string-shaped not-Error' }
       })
     ).not.toThrow()
-  })
-})
-
-describe('warnIfLogNotCdpCompliant', () => {
-  it('should not warn for a CDP-compliant log shape', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    warnIfLogNotCdpCompliant({ message: 'hi' })
-
-    expect(warnSpy).not.toHaveBeenCalled()
-    warnSpy.mockRestore()
-  })
-
-  it('should print a console warning naming the offending key for non-compliant shapes', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    warnIfLogNotCdpCompliant({ message: 'hi', somethingNotIndexed: 'x' })
-
-    expect(warnSpy).toHaveBeenCalledOnce()
-    expect(warnSpy.mock.calls[0][0]).toMatch(/somethingNotIndexed/)
-    warnSpy.mockRestore()
-  })
-
-  it('should not throw on non-compliant shapes', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    expect(() =>
-      warnIfLogNotCdpCompliant({ message: 'hi', somethingNotIndexed: 'x' })
-    ).not.toThrow()
-    warnSpy.mockRestore()
   })
 })
