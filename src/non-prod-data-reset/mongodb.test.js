@@ -17,6 +17,7 @@ import {
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
 import {
   createWasteBalancesRepository,
@@ -48,7 +49,8 @@ const COLLECTIONS = [
   'reports',
   'waste-records',
   'summary-logs',
-  'overseas-sites'
+  'overseas-sites',
+  'system-logs'
 ]
 
 const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
@@ -88,6 +90,7 @@ const it = mongoIt.extend({
       mockS3Config
     )
     const overseasSitesFactory = await createOverseasSitesRepository(database)
+    const systemLogsFactory = await createSystemLogsRepository(database)
 
     await use({
       organisations: organisationsFactory(),
@@ -97,6 +100,7 @@ const it = mongoIt.extend({
       wasteRecords: wasteRecordsFactory(),
       summaryLogs: summaryLogsFactory(mockLogger),
       overseasSites: overseasSitesFactory(),
+      systemLogs: systemLogsFactory(mockLogger),
       wasteBalancesSave: saveBalance(database)
     })
   },
@@ -197,6 +201,17 @@ const seedDownstreamForOrganisation = async (
     `summary-log-${randomUUID()}`,
     summaryLogFactory.validating({ organisationId, registrationId })
   )
+
+  await repositories.systemLogs.insert({
+    createdAt: new Date(),
+    createdBy: { id: 'user-001', email: 'test@example.com', scope: [] },
+    event: {
+      category: 'entity',
+      subCategory: 'epr-organisations',
+      action: 'update'
+    },
+    context: { organisationId }
+  })
 }
 
 // The 'organisation' collection is written by the journey-test apply path and
@@ -234,6 +249,7 @@ const EMPTY_COUNTS = {
   'waste-records': 0,
   'summary-logs': 0,
   'overseas-sites': 0,
+  'system-logs': 0,
   registration: 0,
   accreditation: 0,
   'epr-organisations': 0,
@@ -271,6 +287,7 @@ describe('non-prod data reset (mongo)', () => {
         'waste-records': 1,
         'summary-logs': 1,
         'overseas-sites': 2,
+        'system-logs': 1,
         registration: 1,
         accreditation: 1,
         'epr-organisations': 1,
@@ -337,6 +354,11 @@ describe('non-prod data reset (mongo)', () => {
           }
         })
       ).toBe(2)
+      expect(
+        await database.collection('system-logs').countDocuments({
+          'context.organisationId': other.organisationId
+        })
+      ).toBe(1)
       expect(
         await database.collection('epr-organisations').countDocuments({
           _id: ObjectId.createFromHexString(other.organisationId)
