@@ -1,18 +1,34 @@
+import { errSerializer } from './err-serializer.js'
 import { logSchema } from './log-schema.js'
 
 /**
- * Asserts a log object's shape passes the CDP indexed-fields schema.
- * Intended for test-time use; throws with the Joi error message on mismatch
- * so vitest surfaces the failure clearly.
+ * Mirrors the `err → error` rename + serializer transform that
+ * `@elastic/ecs-pino-format` applies on its way to OpenSearch. Lets tests
+ * assert their input shape against the indexed-fields schema, since the
+ * input is what mock-based tests capture.
  *
- * @param {object} logObject
+ * @param {Record<string, unknown>} input
+ */
+const applyEcsErrTransform = (input) => {
+  if (!('err' in input)) return input
+  const { err, ...rest } = input
+  return { ...rest, error: errSerializer(err) }
+}
+
+/**
+ * Asserts a log object's shape passes the CDP indexed-fields schema, after
+ * applying the same `err → error` transform pino+ecs would. Throws with
+ * the Joi error message on mismatch so vitest surfaces the failure clearly.
+ *
+ * @param {Record<string, unknown>} logObject
  */
 export const expectLogToBeCdpCompliant = (logObject) => {
-  const { error } = logSchema.validate(logObject)
+  const transformed = applyEcsErrTransform(logObject)
+  const { error } = logSchema.validate(transformed)
   if (!error) return
   throw new Error(
     `log object is not CDP-compliant: ${error.message}\n${JSON.stringify(
-      logObject,
+      transformed,
       null,
       2
     )}`
