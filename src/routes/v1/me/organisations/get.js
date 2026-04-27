@@ -104,11 +104,12 @@ export const organisationsLinkedGetAll = {
         auth.credentials
       )
 
-    const defraIdRelationships = getOrgDataFromDefraIdToken(
-      /** @type {{ decoded: { payload: import('#common/helpers/auth/types.js').DefraIdTokenPayload } }} */ (
-        auth.artifacts
-      ).decoded.payload
+    const {
+      decoded: { payload: tokenPayload }
+    } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
+      auth.artifacts
     )
+    const defraIdRelationships = getOrgDataFromDefraIdToken(tokenPayload)
 
     const current = getCurrentDetailsFromToken(defraIdRelationships, logger)
 

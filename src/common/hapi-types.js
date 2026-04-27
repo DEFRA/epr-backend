@@ -24,6 +24,10 @@
  */
 
 /**
+ * @typedef {{ decoded: { payload: import('./helpers/auth/types.js').DefraIdTokenPayload } }} DefraIdArtifacts
+ */
+
+/**
  * @typedef {{
  *   isAuthenticated: boolean,
  *   credentials: MachineCredentials | HumanCredentials,
