@@ -18,6 +18,7 @@ import {
 import { wasteManagementPermitSchema } from './waste-permits.js'
 import { yearlyMetricsSchema } from './metrics.js'
 import {
+  CURRENT_SCHEMA_VERSION,
   dateRequiredWhenApprovedOrSuspended,
   requiredForExporterOptionalForReprocessor,
   requiredForReprocessor,
@@ -149,7 +150,11 @@ export const registrationSchema = Joi.object({
   ),
   plantEquipmentDetails: requiredForReprocessor(Joi.string()),
   submitterContactDetails: userSchema.required(),
-  applicationContactDetails: userSchema.optional(),
+  applicationContactDetails: Joi.when('/schemaVersion', {
+    is: Joi.number().required().min(CURRENT_SCHEMA_VERSION),
+    then: userSchema.required(),
+    otherwise: userSchema.optional()
+  }),
   samplingInspectionPlanPart1FileUploads: Joi.array()
     .items(formFileUploadSchema)
     .required(),

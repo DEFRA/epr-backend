@@ -594,6 +594,11 @@ export const testReplaceBehaviour = (it) => {
               fullName: 'New Person',
               email: 'newperson@example.com',
               roles: ['initial_user', 'standard_user']
+            },
+            {
+              email: 'anakin.skywalker@starwars.com',
+              fullName: 'Anakin Skywalker',
+              roles: ['initial_user', 'standard_user']
             }
           ])
         })
@@ -664,6 +669,11 @@ export const testReplaceBehaviour = (it) => {
             {
               fullName: 'Jane Smith',
               email: 'jane@example.com',
+              roles: ['initial_user', 'standard_user']
+            },
+            {
+              email: 'luke.skywalker@starwars.com',
+              fullName: 'Luke Skywalker',
               roles: ['initial_user', 'standard_user']
             }
           ])

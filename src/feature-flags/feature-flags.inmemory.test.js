@@ -81,22 +81,22 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
   })
 
-  it('returns true when migrateFormSubmissionLineage flag is enabled', () => {
+  it('returns true when registrationContactsMigration flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({
-      migrateFormSubmissionLineage: true
+      registrationContactsMigration: true
     })
-    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(true)
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(true)
   })
 
-  it('returns false when migrateFormSubmissionLineage flag is disabled', () => {
+  it('returns false when registrationContactsMigration flag is disabled', () => {
     const flags = createInMemoryFeatureFlags({
-      migrateFormSubmissionLineage: false
+      registrationContactsMigration: false
     })
-    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(false)
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
   })
 
-  it('returns false when migrateFormSubmissionLineage flag is not provided', () => {
+  it('returns false when registrationContactsMigration flag is not provided', () => {
     const flags = createInMemoryFeatureFlags({})
-    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(false)
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
   })
 })

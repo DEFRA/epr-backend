@@ -65,18 +65,18 @@ describe('createConfigFeatureFlags', () => {
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
   })
 
-  it('returns true when migrateFormSubmissionLineage flag is enabled', () => {
+  it('returns true when isRegistrationContactsMigrationEnabled flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(true)
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(true)
     expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.migrateFormSubmissionLineage'
+      'featureFlags.registrationContactsMigration'
     )
   })
 
-  it('returns false when migrateFormSubmissionLineage flag is disabled', () => {
+  it('returns false when isRegistrationContactsMigrationEnabled flag is disabled', () => {
     const config = { get: vi.fn().mockReturnValue(false) }
     const flags = createConfigFeatureFlags(config)
-    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(false)
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
   })
 })

@@ -117,6 +117,12 @@
         "jobTitle": "Manager",
         "phone": "1112223333"
       },
+      "applicationContactDetails": {
+        "fullName": "Alice Smith",
+        "email": "alice.smith@ecorecycle.com",
+        "jobTitle": "Manager",
+        "phone": "1112223333"
+      },
       "samplingInspectionPlanPart1FileUploads": [
         {
           "defraFormUploadedFileId": "file-654",
@@ -156,6 +162,12 @@
       "suppliers": "International paper suppliers",
       "exportPorts": ["Leith", "Aberdeen"],
       "submitterContactDetails": {
+        "fullName": "Bob Brown",
+        "email": "bob.brown@ecorecycle.com",
+        "jobTitle": "Export Manager",
+        "phone": "2223334444"
+      },
+      "applicationContactDetails": {
         "fullName": "Bob Brown",
         "email": "bob.brown@ecorecycle.com",
         "jobTitle": "Export Manager",

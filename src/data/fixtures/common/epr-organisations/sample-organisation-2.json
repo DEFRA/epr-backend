@@ -59,6 +59,12 @@
         "jobTitle": "Owner",
         "phone": "2223334444"
       },
+      "applicationContactDetails": {
+        "fullName": "Carol White",
+        "email": "carol.white@export.com",
+        "jobTitle": "Owner",
+        "phone": "2223334444"
+      },
       "samplingInspectionPlanPart1FileUploads": [
         {
           "defraFormUploadedFileId": "file-789",
