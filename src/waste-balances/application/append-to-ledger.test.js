@@ -7,11 +7,7 @@ import {
   LEDGER_TRANSACTION_TYPE
 } from '../repository/ledger-schema.js'
 import { LedgerSlotConflictError } from '../repository/ledger-port.js'
-import {
-  appendToLedger,
-  LedgerContentionError,
-  MAX_LEDGER_APPEND_RETRIES
-} from './append-to-ledger.js'
+import { appendToLedger } from './append-to-ledger.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const buildIdentity = (overrides = {}) => ({
@@ -169,48 +165,10 @@ describe('appendToLedger', () => {
     })
   })
 
-  describe('retry on slot conflict', () => {
-    it('retries when insertTransaction raises LedgerSlotConflictError', async () => {
-      const insertTransaction = vi
-        .fn()
-        .mockRejectedValueOnce(new LedgerSlotConflictError('acc-1', 1))
-        .mockRejectedValueOnce(new LedgerSlotConflictError('acc-1', 2))
-        .mockResolvedValueOnce({ id: 'stored', number: 3 })
-
-      const findLatestByAccreditationId = vi
-        .fn()
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          number: 1,
-          closingBalance: { amount: 50, availableAmount: 50 }
-        })
-        .mockResolvedValueOnce({
-          number: 2,
-          closingBalance: { amount: 80, availableAmount: 80 }
-        })
-
-      const repository = {
-        insertTransaction,
-        findLatestByAccreditationId
-      }
-
-      const builder = vi.fn((latest) => buildCreditFields(latest, 30))
-
-      const result = await appendToLedger(
-        { repository, ...buildIdentity() },
-        builder
-      )
-
-      expect(result.id).toBe('stored')
-      expect(insertTransaction).toHaveBeenCalledTimes(3)
-      expect(builder).toHaveBeenCalledTimes(3)
-      expect(findLatestByAccreditationId).toHaveBeenCalledTimes(3)
-    })
-
-    it('throws LedgerContentionError after the configured retry budget is exhausted', async () => {
-      const insertTransaction = vi
-        .fn()
-        .mockRejectedValue(new LedgerSlotConflictError('acc-1', 1))
+  describe('error propagation', () => {
+    it('propagates LedgerSlotConflictError to the caller', async () => {
+      const slotConflict = new LedgerSlotConflictError('acc-1', 1)
+      const insertTransaction = vi.fn().mockRejectedValue(slotConflict)
       const findLatestByAccreditationId = vi.fn().mockResolvedValue(null)
 
       const repository = { insertTransaction, findLatestByAccreditationId }
@@ -219,31 +177,12 @@ describe('appendToLedger', () => {
         appendToLedger({ repository, ...buildIdentity() }, (latest) =>
           buildCreditFields(latest)
         )
-      ).rejects.toBeInstanceOf(LedgerContentionError)
+      ).rejects.toBe(slotConflict)
 
-      expect(insertTransaction).toHaveBeenCalledTimes(MAX_LEDGER_APPEND_RETRIES)
+      expect(insertTransaction).toHaveBeenCalledTimes(1)
     })
 
-    it('LedgerContentionError carries accreditationId and attempt count', async () => {
-      const insertTransaction = vi
-        .fn()
-        .mockRejectedValue(new LedgerSlotConflictError('acc-busy', 1))
-      const findLatestByAccreditationId = vi.fn().mockResolvedValue(null)
-
-      const repository = { insertTransaction, findLatestByAccreditationId }
-
-      await expect(
-        appendToLedger(
-          { repository, ...buildIdentity({ accreditationId: 'acc-busy' }) },
-          (latest) => buildCreditFields(latest)
-        )
-      ).rejects.toMatchObject({
-        accreditationId: 'acc-busy',
-        attempts: MAX_LEDGER_APPEND_RETRIES
-      })
-    })
-
-    it('does not swallow non-conflict errors thrown by insertTransaction', async () => {
+    it('propagates other errors thrown by insertTransaction', async () => {
       const upstreamError = new Error('database is on fire')
       const insertTransaction = vi.fn().mockRejectedValue(upstreamError)
       const findLatestByAccreditationId = vi.fn().mockResolvedValue(null)
