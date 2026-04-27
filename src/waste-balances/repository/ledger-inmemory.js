@@ -43,12 +43,16 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
         (existing) => existing.accreditationId === accreditationId
       )
 
-      if (matches.length === 0) {
+      const [first, ...rest] = matches
+
+      if (!first) {
         return null
       }
 
-      const latest = matches.reduce((highest, current) =>
-        current.number > highest.number ? current : highest
+      const latest = rest.reduce(
+        (highest, current) =>
+          current.number > highest.number ? current : highest,
+        first
       )
 
       return structuredClone(latest)
