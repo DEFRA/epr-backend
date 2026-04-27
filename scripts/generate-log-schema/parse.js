@@ -1,5 +1,6 @@
 /**
- * @typedef {Record<string, { __type?: string } & Record<string, unknown>>} KeyTree
+ * Build-time parsers for CDP upstream sources. Used by parse-upstream.js
+ * to derive the allowlist + types vendored as parsed-sources.json.
  */
 
 /**
@@ -16,8 +17,7 @@ export const parseIncludeKeys = (varsTf) => {
   if (!block) {
     throw new Error('include_keys variable not found in vars.tf')
   }
-  const keys = [...block[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
-  return keys
+  return [...block[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
 }
 
 /**
@@ -45,49 +45,3 @@ const walk = (node, path, out) => {
     }
   }
 }
-
-/**
- * Builds a nested tree from a flat list of keys (slash- or dot-paths). Each
- * leaf carries `__type` resolved from the type map, falling back to `keyword`.
- *
- * @param {string[]} keys
- * @param {Record<string, string>} types
- * @returns {KeyTree}
- */
-export const buildKeyTree = (keys, types) => {
-  /** @type {KeyTree} */
-  const tree = {}
-  for (const raw of keys) {
-    const path = raw.replace(/\//g, '.')
-    const segments = path.split('.')
-    let cursor = tree
-    segments.forEach((segment, i) => {
-      const isLeaf = i === segments.length - 1
-      if (isLeaf) {
-        cursor[segment] = cursor[segment] ?? {}
-        cursor[segment].__type = types[path] ?? 'keyword'
-      } else {
-        cursor[segment] = cursor[segment] ?? {}
-        cursor = /** @type {KeyTree} */ (cursor[segment])
-      }
-    })
-  }
-  return tree
-}
-
-const TYPE_MAP = {
-  keyword: 'Joi.string()',
-  text: 'Joi.string()',
-  ip: 'Joi.string()',
-  long: 'Joi.number().integer()',
-  date: 'Joi.string().isoDate()',
-  boolean: 'Joi.boolean()',
-  float: 'Joi.number()',
-  double: 'Joi.number()'
-}
-
-/**
- * @param {string} osType
- * @returns {string}
- */
-export const joiTypeFor = (osType) => TYPE_MAP[osType] ?? 'Joi.string()'

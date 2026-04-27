@@ -1,18 +1,12 @@
-import Joi from 'joi'
+import { buildJoiSchema, buildKeyTree } from './log-schema-build.js'
+import sources from './parsed-sources.json' with { type: 'json' }
 
-export const logSchema = Joi.object({
-  message: Joi.string(),
-  error: Joi.object({
-    code: Joi.string(),
-    message: Joi.string()
-  }).unknown(false),
-  event: Joi.object({
-    category: Joi.string(),
-    action: Joi.string()
-  }).unknown(false),
-  http: Joi.object({
-    response: Joi.object({
-      status_code: Joi.number().integer()
-    }).unknown(false)
-  }).unknown(false)
-}).unknown(false)
+const keys = Object.keys(sources)
+
+/** @type {Record<string, string>} */
+const types = {}
+for (const key of keys) {
+  types[key.replace(/\//g, '.')] = sources[key]
+}
+
+export const logSchema = buildJoiSchema(buildKeyTree(keys, types))

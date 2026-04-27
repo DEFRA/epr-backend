@@ -1,0 +1,14 @@
+{
+  "cdp-tf-modules": {
+    "ref": "b3f0e54",
+    "files": {
+      "opensearch_ingestion/vars.tf": "sha256:f8e75411af26337ce3b7a72179a27b4415c3b5e53e5d334e763f993bc56caa0b"
+    }
+  },
+  "cdp-tf-core": {
+    "ref": "4125378",
+    "files": {
+      "files/cdp-logs-index-template.json": "sha256:5f64416046368de5f7bc851d25ef25a35083221d396ed91a7b39126f4ce57239"
+    }
+  }
+}
