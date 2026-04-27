@@ -32,3 +32,20 @@ export const expectLogToBeCdpCompliant = (logObject) => {
 
   expect(error, message).toBeUndefined()
 }
+
+/**
+ * Advisory variant: validates the log shape and prints a console warning when
+ * non-compliant, but does not fail the test. Use this to surface drift while
+ * the cleanup PR is still in flight; flip to `expectLogToBeCdpCompliant` once
+ * the underlying violation is resolved.
+ *
+ * @param {Record<string, unknown>} logObject
+ */
+export const warnIfLogNotCdpCompliant = (logObject) => {
+  const transformed = applyEcsErrTransform(logObject)
+  const { error } = logSchema.validate(transformed)
+  if (!error) return
+  console.warn(
+    `[log-schema] non-compliant: ${error.message}\n${JSON.stringify(transformed, null, 2)}`
+  )
+}

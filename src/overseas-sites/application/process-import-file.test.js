@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { processImportFile } from './process-import-file.js'
 import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import { warnIfLogNotCdpCompliant } from '#common/helpers/logging/log-schema.test-helper.js'
 
 vi.mock('../parsers/ors-spreadsheet-parser.js')
 
@@ -220,6 +221,25 @@ describe('processImportFile', () => {
         "Invalid ORS spreadsheet structure: Missing required 'ORS ID Log' worksheet"
     })
     expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('emits a non-CDP-compliant warn log when SpreadsheetValidationError carries an underlying cause (advisory: surfaces error.cause drift)', async () => {
+    const buffer = Buffer.from('malformed-zip')
+    const innerExcelError = new TypeError('saxes: invalid characters in <c>')
+    const validationError = new SpreadsheetValidationError(
+      `Failed to parse spreadsheet: ${innerExcelError.message}`,
+      'SPREADSHEET_INVALID_ERROR',
+      { cause: innerExcelError }
+    )
+    parse.mockRejectedValue(validationError)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await processImportFile(buffer, deps())
+    warnIfLogNotCdpCompliant(logger.warn.mock.calls[0][0])
+
+    expect(warnSpy).toHaveBeenCalledOnce()
+    expect(warnSpy.mock.calls[0][0]).toMatch(/cause/)
+    warnSpy.mockRestore()
   })
 
   it('returns failure when organisation is not found', async () => {
