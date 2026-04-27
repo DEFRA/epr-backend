@@ -5,6 +5,9 @@ import {
   ledgerTransactionReadSchema
 } from './ledger-schema.js'
 
+/**
+ * @returns {import('./ledger-schema.js').LedgerTransactionInsert}
+ */
 export const validateLedgerTransactionInsert = (data) => {
   const { error, value } = ledgerTransactionInsertSchema.validate(data, {
     abortEarly: false,
@@ -19,6 +22,9 @@ export const validateLedgerTransactionInsert = (data) => {
   return value
 }
 
+/**
+ * @returns {import('./ledger-schema.js').LedgerTransaction}
+ */
 export const validateLedgerTransactionRead = (data) => {
   const { error, value } = ledgerTransactionReadSchema.validate(data, {
     abortEarly: false,
