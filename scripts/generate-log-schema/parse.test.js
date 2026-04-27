@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  parseIncludeKeys,
-  parseFieldTypes,
-  buildKeyTree,
-  joiTypeFor
-} from './parse.js'
+import { parseIncludeKeys, parseFieldTypes } from './parse.js'
 
 describe('parseIncludeKeys', () => {
   it('should extract quoted strings from the include_keys default block', () => {
@@ -101,58 +96,5 @@ describe('parseFieldTypes', () => {
 
     expect(types).toEqual({ 'error.code': 'keyword' })
     expect(types.error).toBeUndefined()
-  })
-})
-
-describe('buildKeyTree', () => {
-  it('should convert slash- and dot-paths into a nested tree, dedupe, and attach types', () => {
-    const keys = [
-      'message',
-      'error/code',
-      'error.code',
-      'http/response/status_code'
-    ]
-    const types = {
-      message: 'keyword',
-      'error.code': 'keyword',
-      'http.response.status_code': 'long'
-    }
-
-    expect(buildKeyTree(keys, types)).toEqual({
-      message: { __type: 'keyword' },
-      error: {
-        code: { __type: 'keyword' }
-      },
-      http: {
-        response: {
-          status_code: { __type: 'long' }
-        }
-      }
-    })
-  })
-
-  it('should fall back to keyword when a key is missing from types', () => {
-    const tree = buildKeyTree(['message'], {})
-
-    expect(tree.message.__type).toBe('keyword')
-  })
-})
-
-describe('joiTypeFor', () => {
-  it.each([
-    ['keyword', 'Joi.string()'],
-    ['text', 'Joi.string()'],
-    ['ip', 'Joi.string()'],
-    ['long', 'Joi.number().integer()'],
-    ['date', 'Joi.string().isoDate()'],
-    ['boolean', 'Joi.boolean()'],
-    ['float', 'Joi.number()'],
-    ['double', 'Joi.number()']
-  ])('should map %s to %s', (osType, joi) => {
-    expect(joiTypeFor(osType)).toBe(joi)
-  })
-
-  it('should fall back to Joi.string() for unknown types', () => {
-    expect(joiTypeFor('whatever')).toBe('Joi.string()')
   })
 })
