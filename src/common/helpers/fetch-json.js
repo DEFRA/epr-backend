@@ -1,10 +1,7 @@
 import Boom from '@hapi/boom'
 import { withTraceId } from '@defra/hapi-tracing'
+import { internal } from './enrich-boom.js'
 import { getTracingHeaderName } from './request-tracing.js'
-
-/**
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
- */
 
 /**
  * Fetch JSON from a given url
@@ -52,14 +49,15 @@ export const fetchJson = async (url, options) => {
     // (URL query strings, response body fragments). Bounded classifiers from
     // the underlying error (name, code) land in event.reason instead, where
     // they are CDP-allowlisted and indexed in OpenSearch.
-    const boom = /** @type {EnrichedBoom} */ (
-      Boom.internal(`Failed to fetch from url: ${url}`)
+    throw internal(
+      `Failed to fetch from url: ${url}`,
+      'EXTERNAL_FETCH_FAILED',
+      {
+        event: {
+          action: 'external_fetch',
+          reason: `type=${error?.name ?? 'Error'} code=${error?.code ?? 'unknown'}`
+        }
+      }
     )
-    boom.code = 'EXTERNAL_FETCH_FAILED'
-    boom.event = {
-      action: 'external_fetch',
-      reason: `type=${error?.name ?? 'Error'} code=${error?.code ?? 'unknown'}`
-    }
-    throw boom
   }
 }
