@@ -20,8 +20,7 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
         buildLedgerTransaction({
           accreditationId: 'acc-single',
           number: 1,
-          closingAmount: 50,
-          closingAvailableAmount: 40
+          closing: { amount: 50, availableAmount: 40 }
         })
       )
 
@@ -30,8 +29,7 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
       expect(result).not.toBeNull()
       expect(result.id).toBe(inserted.id)
       expect(result.number).toBe(1)
-      expect(result.closingAmount).toBe(50)
-      expect(result.closingAvailableAmount).toBe(40)
+      expect(result.closing).toEqual({ amount: 50, availableAmount: 40 })
     })
 
     it('returns the highest-numbered transaction when many exist', async () => {
@@ -39,32 +37,28 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 1,
-          closingAmount: 10,
-          closingAvailableAmount: 10
+          closing: { amount: 10, availableAmount: 10 }
         })
       )
       await repository.insertTransaction(
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 3,
-          closingAmount: 30,
-          closingAvailableAmount: 25
+          closing: { amount: 30, availableAmount: 25 }
         })
       )
       await repository.insertTransaction(
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 2,
-          closingAmount: 20,
-          closingAvailableAmount: 18
+          closing: { amount: 20, availableAmount: 18 }
         })
       )
 
       const result = await repository.findLatestByAccreditationId('acc-many')
 
       expect(result.number).toBe(3)
-      expect(result.closingAmount).toBe(30)
-      expect(result.closingAvailableAmount).toBe(25)
+      expect(result.closing).toEqual({ amount: 30, availableAmount: 25 })
     })
 
     it('isolates results by accreditation', async () => {

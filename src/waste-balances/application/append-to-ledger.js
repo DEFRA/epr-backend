@@ -4,8 +4,7 @@ export const MAX_LEDGER_APPEND_RETRIES = 10
 
 const ZERO_LATEST = Object.freeze({
   number: 0,
-  closingAmount: 0,
-  closingAvailableAmount: 0
+  closing: Object.freeze({ amount: 0, availableAmount: 0 })
 })
 
 /**
@@ -36,8 +35,10 @@ const summariseLatest = (latest) => {
 
   return {
     number: latest.number,
-    closingAmount: latest.closingAmount,
-    closingAvailableAmount: latest.closingAvailableAmount
+    closing: {
+      amount: latest.closing.amount,
+      availableAmount: latest.closing.availableAmount
+    }
   }
 }
 
@@ -49,10 +50,9 @@ const summariseLatest = (latest) => {
  * and bounded-retries on `LedgerSlotConflictError` so concurrent writers
  * race for the slot rather than overwriting each other's totals.
  *
- * Builder receives `{ number, closingAmount, closingAvailableAmount }`
- * (zeros when the accreditation has no prior transactions) and returns the
- * transaction-specific fields — `type`, `amount`, `openingAmount`,
- * `closingAmount`, `openingAvailableAmount`, `closingAvailableAmount`,
+ * Builder receives `{ number, closing: { amount, availableAmount } }` (zeros
+ * when the accreditation has no prior transactions) and returns the
+ * transaction-specific fields — `type`, `amount`, `opening`, `closing`,
  * `source`, `createdBy`, `createdAt`. The builder is the single seat of
  * domain logic that knows whether a given transaction type moves both
  * balances (credit/debit) or only the available balance (pending_debit).
@@ -70,7 +70,7 @@ const summariseLatest = (latest) => {
  *   organisationId: string,
  *   registrationId: string
  * }} context
- * @param {(latest: { number: number, closingAmount: number, closingAvailableAmount: number }) =>
+ * @param {(latest: { number: number, closing: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }) =>
  *   Omit<import('../repository/ledger-schema.js').LedgerTransactionInsert,
  *     'accreditationId' | 'organisationId' | 'registrationId' | 'number'>
  * } builder

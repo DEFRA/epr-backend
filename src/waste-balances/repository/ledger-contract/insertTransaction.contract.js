@@ -24,14 +24,8 @@ export const testInsertTransactionBehaviour = (it) => {
       expect(stored.accreditationId).toBe('acc-round-trip')
       expect(stored.number).toBe(1)
       expect(stored.amount).toBe(transaction.amount)
-      expect(stored.openingAmount).toBe(transaction.openingAmount)
-      expect(stored.closingAmount).toBe(transaction.closingAmount)
-      expect(stored.openingAvailableAmount).toBe(
-        transaction.openingAvailableAmount
-      )
-      expect(stored.closingAvailableAmount).toBe(
-        transaction.closingAvailableAmount
-      )
+      expect(stored.opening).toEqual(transaction.opening)
+      expect(stored.closing).toEqual(transaction.closing)
       expect(stored.source).toEqual(transaction.source)
     })
 

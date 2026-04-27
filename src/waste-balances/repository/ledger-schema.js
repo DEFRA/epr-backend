@@ -123,9 +123,22 @@ const sourceSchema = Joi.object({
  */
 
 /**
+ * Snapshot of the running balance state. `amount` is the total balance;
+ * `availableAmount` is the total minus pending debits.
+ *
+ * @typedef {Object} LedgerBalanceSnapshot
+ * @property {number} amount
+ * @property {number} availableAmount
+ */
+
+/**
  * Shape accepted by `LedgerRepository.insertTransaction`. Mirrors
  * `ledgerTransactionInsertSchema` — keep the two in sync; the schema is the
  * runtime gate, this typedef is the check-time gate.
+ *
+ * Note the dual-`amount` shape: top-level `amount` is the transaction delta;
+ * `opening.amount` / `closing.amount` are the running balance totals before
+ * and after the transaction.
  *
  * @typedef {Object} LedgerTransactionInsert
  * @property {string} accreditationId
@@ -136,10 +149,8 @@ const sourceSchema = Joi.object({
  * @property {Date} createdAt
  * @property {LedgerUserSummary} [createdBy]
  * @property {number} amount
- * @property {number} openingAmount
- * @property {number} closingAmount
- * @property {number} openingAvailableAmount
- * @property {number} closingAvailableAmount
+ * @property {LedgerBalanceSnapshot} opening
+ * @property {LedgerBalanceSnapshot} closing
  * @property {LedgerSource} source
  */
 
@@ -149,6 +160,11 @@ const sourceSchema = Joi.object({
  *
  * @typedef {LedgerTransactionInsert & { id: string }} LedgerTransaction
  */
+
+const balanceSnapshotSchema = Joi.object({
+  amount: Joi.number().required(),
+  availableAmount: Joi.number().required()
+})
 
 export const ledgerTransactionInsertSchema = Joi.object({
   accreditationId: Joi.string().required(),
@@ -161,10 +177,8 @@ export const ledgerTransactionInsertSchema = Joi.object({
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.optional(),
   amount: Joi.number().required(),
-  openingAmount: Joi.number().required(),
-  closingAmount: Joi.number().required(),
-  openingAvailableAmount: Joi.number().required(),
-  closingAvailableAmount: Joi.number().required(),
+  opening: balanceSnapshotSchema.required(),
+  closing: balanceSnapshotSchema.required(),
   source: sourceSchema.required()
 })
 

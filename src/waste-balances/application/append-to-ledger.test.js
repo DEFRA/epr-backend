@@ -35,10 +35,14 @@ const summaryLogRowSource = {
 const buildCreditFields = (latest, amount = 100) => ({
   type: LEDGER_TRANSACTION_TYPE.CREDIT,
   amount,
-  openingAmount: latest.closingAmount,
-  closingAmount: latest.closingAmount + amount,
-  openingAvailableAmount: latest.closingAvailableAmount,
-  closingAvailableAmount: latest.closingAvailableAmount + amount,
+  opening: {
+    amount: latest.closing.amount,
+    availableAmount: latest.closing.availableAmount
+  },
+  closing: {
+    amount: latest.closing.amount + amount,
+    availableAmount: latest.closing.availableAmount + amount
+  },
   source: summaryLogRowSource,
   createdBy: { id: 'user-1', name: 'Test User' },
   createdAt: new Date('2026-01-15T10:00:00.000Z')
@@ -55,8 +59,7 @@ describe('appendToLedger', () => {
       expect(builder).toHaveBeenCalledTimes(1)
       expect(builder).toHaveBeenCalledWith({
         number: 0,
-        closingAmount: 0,
-        closingAvailableAmount: 0
+        closing: { amount: 0, availableAmount: 0 }
       })
     })
 
@@ -73,10 +76,8 @@ describe('appendToLedger', () => {
       expect(result.accreditationId).toBe('acc-1')
       expect(result.organisationId).toBe('org-1')
       expect(result.registrationId).toBe('reg-1')
-      expect(result.openingAmount).toBe(0)
-      expect(result.closingAmount).toBe(100)
-      expect(result.openingAvailableAmount).toBe(0)
-      expect(result.closingAvailableAmount).toBe(100)
+      expect(result.opening).toEqual({ amount: 0, availableAmount: 0 })
+      expect(result.closing).toEqual({ amount: 100, availableAmount: 100 })
     })
   })
 
@@ -93,8 +94,7 @@ describe('appendToLedger', () => {
 
       expect(builder).toHaveBeenCalledWith({
         number: 1,
-        closingAmount: 70,
-        closingAvailableAmount: 70
+        closing: { amount: 70, availableAmount: 70 }
       })
     })
 
@@ -110,8 +110,8 @@ describe('appendToLedger', () => {
       )
 
       expect(second.number).toBe(2)
-      expect(second.openingAmount).toBe(70)
-      expect(second.closingAmount).toBe(100)
+      expect(second.opening.amount).toBe(70)
+      expect(second.closing.amount).toBe(100)
     })
 
     it('ignores builder-returned accreditationId, organisationId, registrationId and number', async () => {
@@ -141,10 +141,14 @@ describe('appendToLedger', () => {
         (latest) => ({
           type: LEDGER_TRANSACTION_TYPE.PENDING_DEBIT,
           amount: -5,
-          openingAmount: latest.closingAmount,
-          closingAmount: latest.closingAmount,
-          openingAvailableAmount: latest.closingAvailableAmount,
-          closingAvailableAmount: latest.closingAvailableAmount - 5,
+          opening: {
+            amount: latest.closing.amount,
+            availableAmount: latest.closing.availableAmount
+          },
+          closing: {
+            amount: latest.closing.amount,
+            availableAmount: latest.closing.availableAmount - 5
+          },
           source: {
             kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
             prnOperation: {
@@ -175,13 +179,11 @@ describe('appendToLedger', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({
           number: 1,
-          closingAmount: 50,
-          closingAvailableAmount: 50
+          closing: { amount: 50, availableAmount: 50 }
         })
         .mockResolvedValueOnce({
           number: 2,
-          closingAmount: 80,
-          closingAvailableAmount: 80
+          closing: { amount: 80, availableAmount: 80 }
         })
 
       const repository = {
