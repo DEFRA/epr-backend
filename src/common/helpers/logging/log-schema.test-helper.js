@@ -1,3 +1,5 @@
+import { expect } from 'vitest'
+
 import { errSerializer } from './err-serializer.js'
 import { logSchema } from './log-schema.js'
 
@@ -17,20 +19,16 @@ const applyEcsErrTransform = (input) => {
 
 /**
  * Asserts a log object's shape passes the CDP indexed-fields schema, after
- * applying the same `err → error` transform pino+ecs would. Throws with
- * the Joi error message on mismatch so vitest surfaces the failure clearly.
+ * applying the same `err → error` transform pino+ecs would.
  *
  * @param {Record<string, unknown>} logObject
  */
 export const expectLogToBeCdpCompliant = (logObject) => {
   const transformed = applyEcsErrTransform(logObject)
   const { error } = logSchema.validate(transformed)
-  if (!error) return
-  throw new Error(
-    `log object is not CDP-compliant: ${error.message}\n${JSON.stringify(
-      transformed,
-      null,
-      2
-    )}`
-  )
+  const message = error
+    ? `${error.message}\n${JSON.stringify(transformed, null, 2)}`
+    : undefined
+
+  expect(error, message).toBeUndefined()
 }
