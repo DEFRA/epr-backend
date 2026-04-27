@@ -10,8 +10,7 @@ import {
 } from './ledger-schema.js'
 import {
   buildLedgerTransaction,
-  buildPrnOperationLedgerTransaction,
-  buildManualAdjustmentLedgerTransaction
+  buildPrnOperationLedgerTransaction
 } from './ledger-test-data.js'
 
 describe('ledger transaction insert schema', () => {
@@ -24,12 +23,6 @@ describe('ledger transaction insert schema', () => {
 
     it('accepts a prn-operation transaction', () => {
       const data = buildPrnOperationLedgerTransaction()
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts a manual-adjustment transaction', () => {
-      const data = buildManualAdjustmentLedgerTransaction()
       const { error } = ledgerTransactionInsertSchema.validate(data)
       expect(error).toBeUndefined()
     })
@@ -223,14 +216,6 @@ describe('ledger transaction insert schema', () => {
       const { error } = ledgerTransactionInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
-
-    it('rejects manual-adjustment kind when manualAdjustment is missing', () => {
-      const data = buildLedgerTransaction({
-        source: { kind: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
   })
 
   describe('summary-log-row source fields', () => {
@@ -317,30 +302,6 @@ describe('ledger transaction insert schema', () => {
         source: {
           kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
           prnOperation: { prnId: 'prn-1', operationType: 'teleportation' }
-        }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-  })
-
-  describe('manual-adjustment source fields', () => {
-    it('rejects when userId is missing', () => {
-      const data = buildManualAdjustmentLedgerTransaction({
-        source: {
-          kind: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT,
-          manualAdjustment: { reason: 'typo' }
-        }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-
-    it('rejects when reason is missing', () => {
-      const data = buildManualAdjustmentLedgerTransaction({
-        source: {
-          kind: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT,
-          manualAdjustment: { userId: 'user-1' }
         }
       })
       const { error } = ledgerTransactionInsertSchema.validate(data)

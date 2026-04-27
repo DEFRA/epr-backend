@@ -34,9 +34,8 @@ const summariseLatest = (latest) => {
  *   already idempotent under the per-row delta-reconciliation invariant
  *   (ADR 0031 "Per-row delta reconciliation"). A re-upload converges
  *   regardless of which rows landed on the failed attempt.
- * - PRN operations and manual adjustments are single-row writes whose
- *   handlers can surface a retryable 5xx so the originating client
- *   re-issues the operation.
+ * - PRN operations are single-row writes whose handlers can surface a
+ *   retryable 5xx so the originating client re-issues the operation.
  *
  * Surfacing slot conflicts rather than retrying inside the primitive
  * keeps every conflict diagnostically visible and avoids hiding any

@@ -22,12 +22,6 @@ const buildPrnOperationSource = (overrides = {}) => ({
   ...overrides
 })
 
-const buildManualAdjustmentSource = (overrides = {}) => ({
-  userId: 'user-1',
-  reason: 'Corrective adjustment',
-  ...overrides
-})
-
 /**
  * Build a valid ledger transaction (insert shape — no `id`).
  * @param {object} [overrides]
@@ -59,19 +53,6 @@ export const buildPrnOperationLedgerTransaction = (overrides = {}) =>
     source: {
       kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
       prnOperation: buildPrnOperationSource()
-    },
-    ...overrides
-  })
-
-export const buildManualAdjustmentLedgerTransaction = (overrides = {}) =>
-  buildLedgerTransaction({
-    type: LEDGER_TRANSACTION_TYPE.DEBIT,
-    amount: -2,
-    openingBalance: { amount: 10, availableAmount: 10 },
-    closingBalance: { amount: 8, availableAmount: 8 },
-    source: {
-      kind: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT,
-      manualAdjustment: buildManualAdjustmentSource()
     },
     ...overrides
   })

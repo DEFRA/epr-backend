@@ -14,8 +14,7 @@ export const LEDGER_TRANSACTION_TYPE = Object.freeze({
 
 export const LEDGER_SOURCE_KIND = Object.freeze({
   SUMMARY_LOG_ROW: 'summary-log-row',
-  PRN_OPERATION: 'prn-operation',
-  MANUAL_ADJUSTMENT: 'manual-adjustment'
+  PRN_OPERATION: 'prn-operation'
 })
 
 /**
@@ -61,11 +60,6 @@ const prnOperationSourceSchema = Joi.object({
     .required()
 })
 
-const manualAdjustmentSourceSchema = Joi.object({
-  userId: Joi.string().required(),
-  reason: Joi.string().required()
-})
-
 const sourceSchema = Joi.object({
   kind: Joi.string()
     .valid(...sourceKindValues)
@@ -78,11 +72,6 @@ const sourceSchema = Joi.object({
   prnOperation: Joi.when('kind', {
     is: LEDGER_SOURCE_KIND.PRN_OPERATION,
     then: prnOperationSourceSchema.required(),
-    otherwise: Joi.forbidden()
-  }),
-  manualAdjustment: Joi.when('kind', {
-    is: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT,
-    then: manualAdjustmentSourceSchema.required(),
     otherwise: Joi.forbidden()
   })
 })
@@ -103,17 +92,10 @@ const sourceSchema = Joi.object({
  */
 
 /**
- * @typedef {Object} LedgerManualAdjustment
- * @property {string} userId
- * @property {string} reason
- */
-
-/**
  * Discriminated union — `kind` selects which variant carries the payload.
  *
  * @typedef {{ kind: 'summary-log-row', summaryLogRow: LedgerSummaryLogRow }
- *   | { kind: 'prn-operation', prnOperation: LedgerPrnOperation }
- *   | { kind: 'manual-adjustment', manualAdjustment: LedgerManualAdjustment }} LedgerSource
+ *   | { kind: 'prn-operation', prnOperation: LedgerPrnOperation }} LedgerSource
  */
 
 /**
