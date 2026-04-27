@@ -96,11 +96,11 @@ export const appendToLedger = async (
 
     try {
       return await repository.insertTransaction({
+        ...fields,
         accreditationId,
         organisationId,
         registrationId,
-        number: latest.number + 1,
-        ...fields
+        number: latest.number + 1
       })
     } catch (error) {
       if (!(error instanceof LedgerSlotConflictError)) {

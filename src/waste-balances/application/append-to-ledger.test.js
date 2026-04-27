@@ -120,6 +120,26 @@ describe('appendToLedger', () => {
       expect(second.closingAmount).toBe(100)
     })
 
+    it('ignores builder-returned accreditationId, organisationId, registrationId and number', async () => {
+      const repository = createInMemoryLedgerRepository()()
+
+      const result = await appendToLedger(
+        { repository, ...buildIdentity() },
+        (latest) => ({
+          ...buildCreditFields(latest),
+          accreditationId: 'acc-spoofed',
+          organisationId: 'org-spoofed',
+          registrationId: 'reg-spoofed',
+          number: 999
+        })
+      )
+
+      expect(result.accreditationId).toBe('acc-1')
+      expect(result.organisationId).toBe('org-1')
+      expect(result.registrationId).toBe('reg-1')
+      expect(result.number).toBe(1)
+    })
+
     it('preserves the source kind from the builder', async () => {
       const repository = createInMemoryLedgerRepository()()
       const result = await appendToLedger(
