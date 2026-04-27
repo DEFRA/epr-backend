@@ -13,5 +13,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isOrsWasteBalanceValidationEnabled() {
     return config.get('featureFlags.orsWasteBalanceValidation')
+  },
+  isWasteBalanceLedgerEnabled() {
+    return config.get('featureFlags.wasteBalanceLedger')
   }
 })

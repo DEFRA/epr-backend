@@ -13,5 +13,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isOrsWasteBalanceValidationEnabled() {
     return flags.orsWasteBalanceValidation ?? false
+  },
+  isWasteBalanceLedgerEnabled() {
+    return flags.wasteBalanceLedger ?? false
   }
 })

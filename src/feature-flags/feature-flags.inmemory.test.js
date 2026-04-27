@@ -65,4 +65,19 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(false)
   })
+
+  it('returns true when wasteBalanceLedger flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ wasteBalanceLedger: true })
+    expect(flags.isWasteBalanceLedgerEnabled()).toBe(true)
+  })
+
+  it('returns false when wasteBalanceLedger flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ wasteBalanceLedger: false })
+    expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
+  })
+
+  it('returns false when wasteBalanceLedger flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
+  })
 })
