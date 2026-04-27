@@ -14,6 +14,11 @@ const ZERO_LATEST = Object.freeze({
  * retry the request.
  */
 export class LedgerContentionError extends Error {
+  /** @type {string} */
+  accreditationId
+  /** @type {number} */
+  attempts
+
   /**
    * @param {string} accreditationId
    * @param {number} attempts
@@ -28,6 +33,10 @@ export class LedgerContentionError extends Error {
   }
 }
 
+/**
+ * @param {import('../repository/ledger-port.js').LedgerTransaction | null} latest
+ * @returns {{ number: number, closing: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }}
+ */
 const summariseLatest = (latest) => {
   if (latest === null) {
     return ZERO_LATEST
@@ -90,6 +99,8 @@ export const appendToLedger = async (
     try {
       return await repository.insertTransaction({
         ...fields,
+        // identity fields override builder output by design — see the
+        // `ignores builder-returned …` test in append-to-ledger.test.js
         accreditationId,
         organisationId,
         registrationId,

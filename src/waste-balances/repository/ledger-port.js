@@ -15,17 +15,22 @@
  * can react uniformly.
  */
 export class LedgerSlotConflictError extends Error {
+  /** @type {string} */
+  accreditationId
+  /** @type {number} */
+  slotNumber
+
   /**
    * @param {string} accreditationId
-   * @param {number} number
+   * @param {number} slotNumber
    */
-  constructor(accreditationId, number) {
+  constructor(accreditationId, slotNumber) {
     super(
-      `Ledger slot already occupied for accreditation ${accreditationId} number ${number}`
+      `Ledger slot already occupied for accreditation ${accreditationId} number ${slotNumber}`
     )
     this.name = 'LedgerSlotConflictError'
     this.accreditationId = accreditationId
-    this.number = number
+    this.slotNumber = slotNumber
   }
 }
 

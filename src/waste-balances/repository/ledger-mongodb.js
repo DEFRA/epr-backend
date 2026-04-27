@@ -58,6 +58,7 @@ const toLedgerTransaction = (doc) => {
   return validateLedgerTransactionRead({ id: _id.toString(), ...rest })
 }
 
+/** @param {Collection} collection */
 const performInsertTransaction = (collection) => async (transaction) => {
   const validated = validateLedgerTransactionInsert(transaction)
 
@@ -65,7 +66,11 @@ const performInsertTransaction = (collection) => async (transaction) => {
     const result = await collection.insertOne(validated)
     return toLedgerTransaction({ _id: result.insertedId, ...validated })
   } catch (error) {
-    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE
+    ) {
       throw new LedgerSlotConflictError(
         validated.accreditationId,
         validated.number
@@ -75,6 +80,7 @@ const performInsertTransaction = (collection) => async (transaction) => {
   }
 }
 
+/** @param {Collection} collection */
 const performFindLatestByAccreditationId =
   (collection) => async (accreditationId) => {
     const doc = await collection.findOne(

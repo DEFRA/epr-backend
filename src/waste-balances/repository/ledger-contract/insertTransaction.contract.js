@@ -63,7 +63,7 @@ export const testInsertTransactionBehaviour = (it) => {
       ).rejects.toBeInstanceOf(LedgerSlotConflictError)
     })
 
-    it('LedgerSlotConflictError carries accreditationId and number', async () => {
+    it('LedgerSlotConflictError carries accreditationId and slotNumber', async () => {
       await repository.insertTransaction(
         buildLedgerTransaction({ accreditationId: 'acc-conflict-2', number: 7 })
       )
@@ -77,7 +77,7 @@ export const testInsertTransactionBehaviour = (it) => {
         )
       ).rejects.toMatchObject({
         accreditationId: 'acc-conflict-2',
-        number: 7
+        slotNumber: 7
       })
     })
   })
