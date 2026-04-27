@@ -3,7 +3,7 @@
  *
  * Surface is deliberately minimal: only primitives where two correct adapters
  * could meaningfully implement things differently (persistence, native conflict
- * signal translation). Domain logic — opening/closing arithmetic, retry on
+ * signal translation). Domain logic — balance arithmetic, retry on
  * slot conflict, builder-callback semantics — lives above the port in
  * `appendToLedger`, not on adapters.
  */

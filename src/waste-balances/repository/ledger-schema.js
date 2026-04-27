@@ -136,10 +136,6 @@ const sourceSchema = Joi.object({
  * `ledgerTransactionInsertSchema` — keep the two in sync; the schema is the
  * runtime gate, this typedef is the check-time gate.
  *
- * Note the dual-`amount` shape: top-level `amount` is the transaction delta;
- * `opening.amount` / `closing.amount` are the running balance totals before
- * and after the transaction.
- *
  * @typedef {Object} LedgerTransactionInsert
  * @property {string} accreditationId
  * @property {string} organisationId
@@ -149,8 +145,8 @@ const sourceSchema = Joi.object({
  * @property {Date} createdAt
  * @property {LedgerUserSummary} [createdBy]
  * @property {number} amount
- * @property {LedgerBalanceSnapshot} opening
- * @property {LedgerBalanceSnapshot} closing
+ * @property {LedgerBalanceSnapshot} openingBalance
+ * @property {LedgerBalanceSnapshot} closingBalance
  * @property {LedgerSource} source
  */
 
@@ -177,8 +173,8 @@ export const ledgerTransactionInsertSchema = Joi.object({
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.optional(),
   amount: Joi.number().required(),
-  opening: balanceSnapshotSchema.required(),
-  closing: balanceSnapshotSchema.required(),
+  openingBalance: balanceSnapshotSchema.required(),
+  closingBalance: balanceSnapshotSchema.required(),
   source: sourceSchema.required()
 })
 

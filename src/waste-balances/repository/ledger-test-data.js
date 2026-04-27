@@ -41,8 +41,8 @@ export const buildLedgerTransaction = (overrides = {}) => ({
   createdAt: DEFAULT_CREATED_AT,
   createdBy: { id: 'user-1', name: 'Test User' },
   amount: 10,
-  opening: { amount: 0, availableAmount: 0 },
-  closing: { amount: 10, availableAmount: 10 },
+  openingBalance: { amount: 0, availableAmount: 0 },
+  closingBalance: { amount: 10, availableAmount: 10 },
   source: {
     kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
     summaryLogRow: buildSummaryLogRowSource()
@@ -54,8 +54,8 @@ export const buildPrnOperationLedgerTransaction = (overrides = {}) =>
   buildLedgerTransaction({
     type: LEDGER_TRANSACTION_TYPE.PENDING_DEBIT,
     amount: -5,
-    opening: { amount: 10, availableAmount: 10 },
-    closing: { amount: 10, availableAmount: 5 },
+    openingBalance: { amount: 10, availableAmount: 10 },
+    closingBalance: { amount: 10, availableAmount: 5 },
     source: {
       kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
       prnOperation: buildPrnOperationSource()
@@ -67,8 +67,8 @@ export const buildManualAdjustmentLedgerTransaction = (overrides = {}) =>
   buildLedgerTransaction({
     type: LEDGER_TRANSACTION_TYPE.DEBIT,
     amount: -2,
-    opening: { amount: 10, availableAmount: 10 },
-    closing: { amount: 8, availableAmount: 8 },
+    openingBalance: { amount: 10, availableAmount: 10 },
+    closingBalance: { amount: 8, availableAmount: 8 },
     source: {
       kind: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT,
       manualAdjustment: buildManualAdjustmentSource()

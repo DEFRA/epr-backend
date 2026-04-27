@@ -59,7 +59,7 @@ describe('ledger transaction insert schema', () => {
       const data = buildLedgerTransaction({
         type: LEDGER_TRANSACTION_TYPE.DEBIT,
         amount: -5,
-        closing: { amount: -5, availableAmount: -5 }
+        closingBalance: { amount: -5, availableAmount: -5 }
       })
       const { error } = ledgerTransactionInsertSchema.validate(data)
       expect(error).toBeUndefined()
@@ -68,7 +68,7 @@ describe('ledger transaction insert schema', () => {
     it('accepts closing totals equal to zero', () => {
       const data = buildLedgerTransaction({
         amount: 0,
-        closing: { amount: 0, availableAmount: 0 }
+        closingBalance: { amount: 0, availableAmount: 0 }
       })
       const { error } = ledgerTransactionInsertSchema.validate(data)
       expect(error).toBeUndefined()
@@ -84,8 +84,8 @@ describe('ledger transaction insert schema', () => {
       'type',
       'createdAt',
       'amount',
-      'opening',
-      'closing',
+      'openingBalance',
+      'closingBalance',
       'source'
     ]
 
@@ -100,7 +100,7 @@ describe('ledger transaction insert schema', () => {
   })
 
   describe('balance snapshot fields', () => {
-    const snapshotKeys = ['opening', 'closing']
+    const snapshotKeys = ['openingBalance', 'closingBalance']
     const innerKeys = ['amount', 'availableAmount']
 
     for (const snapshotKey of snapshotKeys) {

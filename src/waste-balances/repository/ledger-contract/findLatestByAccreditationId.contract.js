@@ -20,7 +20,7 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
         buildLedgerTransaction({
           accreditationId: 'acc-single',
           number: 1,
-          closing: { amount: 50, availableAmount: 40 }
+          closingBalance: { amount: 50, availableAmount: 40 }
         })
       )
 
@@ -29,7 +29,7 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
       expect(result).not.toBeNull()
       expect(result.id).toBe(inserted.id)
       expect(result.number).toBe(1)
-      expect(result.closing).toEqual({ amount: 50, availableAmount: 40 })
+      expect(result.closingBalance).toEqual({ amount: 50, availableAmount: 40 })
     })
 
     it('returns the highest-numbered transaction when many exist', async () => {
@@ -37,28 +37,28 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 1,
-          closing: { amount: 10, availableAmount: 10 }
+          closingBalance: { amount: 10, availableAmount: 10 }
         })
       )
       await repository.insertTransaction(
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 3,
-          closing: { amount: 30, availableAmount: 25 }
+          closingBalance: { amount: 30, availableAmount: 25 }
         })
       )
       await repository.insertTransaction(
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 2,
-          closing: { amount: 20, availableAmount: 18 }
+          closingBalance: { amount: 20, availableAmount: 18 }
         })
       )
 
       const result = await repository.findLatestByAccreditationId('acc-many')
 
       expect(result.number).toBe(3)
-      expect(result.closing).toEqual({ amount: 30, availableAmount: 25 })
+      expect(result.closingBalance).toEqual({ amount: 30, availableAmount: 25 })
     })
 
     it('isolates results by accreditation', async () => {

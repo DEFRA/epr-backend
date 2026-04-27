@@ -4,7 +4,7 @@ export const MAX_LEDGER_APPEND_RETRIES = 10
 
 const ZERO_LATEST = Object.freeze({
   number: 0,
-  closing: Object.freeze({ amount: 0, availableAmount: 0 })
+  closingBalance: Object.freeze({ amount: 0, availableAmount: 0 })
 })
 
 /**
@@ -35,7 +35,7 @@ export class LedgerContentionError extends Error {
 
 /**
  * @param {import('../repository/ledger-port.js').LedgerTransaction | null} latest
- * @returns {{ number: number, closing: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }}
+ * @returns {{ number: number, closingBalance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }}
  */
 const summariseLatest = (latest) => {
   if (latest === null) {
@@ -44,9 +44,9 @@ const summariseLatest = (latest) => {
 
   return {
     number: latest.number,
-    closing: {
-      amount: latest.closing.amount,
-      availableAmount: latest.closing.availableAmount
+    closingBalance: {
+      amount: latest.closingBalance.amount,
+      availableAmount: latest.closingBalance.availableAmount
     }
   }
 }
@@ -59,12 +59,13 @@ const summariseLatest = (latest) => {
  * and bounded-retries on `LedgerSlotConflictError` so concurrent writers
  * race for the slot rather than overwriting each other's totals.
  *
- * Builder receives `{ number, closing: { amount, availableAmount } }` (zeros
- * when the accreditation has no prior transactions) and returns the
- * transaction-specific fields — `type`, `amount`, `opening`, `closing`,
- * `source`, `createdBy`, `createdAt`. The builder is the single seat of
- * domain logic that knows whether a given transaction type moves both
- * balances (credit/debit) or only the available balance (pending_debit).
+ * Builder receives `{ number, closingBalance: { amount, availableAmount } }`
+ * (zeros when the accreditation has no prior transactions) and returns the
+ * transaction-specific fields — `type`, `amount`, `openingBalance`,
+ * `closingBalance`, `source`, `createdBy`, `createdAt`. The builder is the
+ * single seat of domain logic that knows whether a given transaction type
+ * moves both balances (credit/debit) or only the available balance
+ * (pending_debit).
  *
  * Retry policy: at most `MAX_LEDGER_APPEND_RETRIES` (10) attempts, no
  * backoff. Slot contention resolves in microseconds — a unique-index
@@ -79,7 +80,7 @@ const summariseLatest = (latest) => {
  *   organisationId: string,
  *   registrationId: string
  * }} context
- * @param {(latest: { number: number, closing: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }) =>
+ * @param {(latest: { number: number, closingBalance: import('../repository/ledger-schema.js').LedgerBalanceSnapshot }) =>
  *   Omit<import('../repository/ledger-schema.js').LedgerTransactionInsert,
  *     'accreditationId' | 'organisationId' | 'registrationId' | 'number'>
  * } builder
