@@ -3,6 +3,11 @@
  * applies before logs reach OpenSearch. Extracted so tests can apply the same
  * transform when validating log shapes against the CDP schema.
  *
+ * Emits only fields in the CDP indexed-fields allowlist (message, stack_trace,
+ * type, code). The `.cause` chain is not surfaced — `error.cause.*` is not in
+ * the allowlist, so cause classifiers must be encoded into `error.code` or
+ * `event.reason` at the throw site instead (see fetch-json.js, mongodb.js).
+ *
  * @param {unknown} err
  */
 export const errSerializer = (err) => {
@@ -21,17 +26,6 @@ export const errSerializer = (err) => {
   if (err.code) {
     // @ts-ignore
     errorObj.code = err.code
-  }
-
-  // Surface bounded classifiers from the .cause chain — name and code are
-  // enum-shaped identifiers (ECONNREFUSED, AbortError, etc.) that classify
-  // the failure without leaking cause.message or cause.stack content.
-  if (err.cause instanceof Error) {
-    const cause = /** @type {Error & { code?: string | number }} */ (err.cause)
-    errorObj.cause = {
-      type: cause.name,
-      code: cause.code
-    }
   }
 
   return errorObj

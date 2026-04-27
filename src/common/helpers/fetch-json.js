@@ -3,6 +3,10 @@ import { withTraceId } from '@defra/hapi-tracing'
 import { getTracingHeaderName } from './request-tracing.js'
 
 /**
+ * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
+ */
+
+/**
  * Fetch JSON from a given url
  * @param {string} url -
  * @param {RequestInit} [options] - Fetch API options (method, headers, body, etc.)
@@ -44,13 +48,18 @@ export const fetchJson = async (url, options) => {
       throw error
     }
 
-    // For network errors or other non-HTTP errors, create a 500 Boom error.
     // error.message is not interpolated because it can echo unbounded content
-    // (e.g. URL query strings, response body fragments). The original error is
-    // attached as .cause so the logger can surface bounded classifiers
-    // (name, code) via the err serializer without exposing the message.
-    const boom = Boom.internal(`Failed to fetch from url: ${url}`)
-    boom.cause = error
+    // (URL query strings, response body fragments). Bounded classifiers from
+    // the underlying error (name, code) land in event.reason instead, where
+    // they are CDP-allowlisted and indexed in OpenSearch.
+    const boom = /** @type {EnrichedBoom} */ (
+      Boom.internal(`Failed to fetch from url: ${url}`)
+    )
+    boom.code = 'EXTERNAL_FETCH_FAILED'
+    boom.event = {
+      action: 'external_fetch',
+      reason: `type=${error?.name ?? 'Error'} code=${error?.code ?? 'unknown'}`
+    }
     throw boom
   }
 }

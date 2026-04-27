@@ -12,6 +12,10 @@ import {
 import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 
+/**
+ * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
+ */
+
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
@@ -82,10 +86,16 @@ const throwCuratedDuplicateKeyBoom = (error, id) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
-  const boom = Boom.conflict(
-    `Duplicate key conflict updating organisation ${id} (${conflictFields})`
+  const boom = /** @type {EnrichedBoom} */ (
+    Boom.conflict(
+      `Duplicate key conflict updating organisation ${id} (${conflictFields})`
+    )
   )
-  boom.cause = error
+  boom.code = 'ORGANISATION_DUPLICATE_KEY'
+  boom.event = {
+    action: 'update_organisation',
+    reason: `fields=${conflictFields}`
+  }
   throw boom
 }
 
