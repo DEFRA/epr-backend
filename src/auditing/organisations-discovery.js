@@ -5,8 +5,38 @@
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
+ * @typedef {{
+ *   id: string
+ *   name: string
+ *   orgId: number
+ *   status: string
+ *   linkedBy: { email: string, id: string }
+ *   linkedAt: string
+ * }} AuditLinkedOrg
+ */
+
+/**
+ * @typedef {{
+ *   id: string
+ *   name: string
+ *   orgId: number
+ *   status: string
+ * }} AuditUnlinkedOrg
+ */
+
+/**
+ * @typedef {{
+ *   organisationId: string | null
+ *   defraIdOrg: { id: string, name: string }
+ *   defraIdRelationships: DefraIdRelationship[]
+ *   linked: AuditLinkedOrg | null
+ *   unlinked: AuditUnlinkedOrg[]
+ * }} ReconciliationContext
+ */
+
+/**
  * @param {Organisation | null} linkedOrg
- * @returns {{ id: string, name: string, orgId: number, status: string, linkedBy: { email: string, id: string }, linkedAt: string } | null}
+ * @returns {AuditLinkedOrg | null}
  */
 function toAuditLinked(linkedOrg) {
   if (!linkedOrg?.linkedDefraOrganisation) {
@@ -25,7 +55,7 @@ function toAuditLinked(linkedOrg) {
 
 /**
  * @param {Organisation[]} linkableOrgs
- * @returns {Array<{ id: string, name: string, orgId: number, status: string }>}
+ * @returns {AuditUnlinkedOrg[]}
  */
 function toAuditUnlinked(linkableOrgs) {
   return linkableOrgs.map((org) => ({
@@ -52,6 +82,7 @@ export async function auditOrganisationsDiscovery(
   const linked = toAuditLinked(linkedOrg)
   const unlinked = toAuditUnlinked(linkableOrgs)
 
+  /** @type {ReconciliationContext} */
   const context = {
     organisationId: linked?.id ?? null,
     defraIdOrg,
