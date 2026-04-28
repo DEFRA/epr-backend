@@ -1,9 +1,8 @@
 /**
- * Read primitives for the waste balance ledger.
+ * Read primitives for the waste balance ledger (ADR 0031).
  *
- * Each function resolves through a single port call. Higher-level operations
- * compose them — see ADR 0031 and the read-side acceptance criteria for the
- * read primitives bead (Defra-v4xtg.9).
+ * Each function resolves through a single port call; higher-level operations
+ * compose them.
  */
 
 /**
@@ -52,7 +51,7 @@ export const getCreditedAmountByWasteRecordId = async (
   const credited = await repository.findCreditedAmountsByWasteRecordIds([
     wasteRecordId
   ])
-  return credited.get(wasteRecordId) ?? 0
+  return /** @type {number} */ (credited.get(wasteRecordId))
 }
 
 /**

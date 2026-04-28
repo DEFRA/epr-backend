@@ -109,6 +109,37 @@ export const testFindLatestPerAccreditationByOrganisationIdBehaviour = (it) => {
       })
     })
 
+    it('scopes to organisationId only — registrationId is not part of the filter', async () => {
+      // Two accreditations under the same organisation but different
+      // registrations both appear in the result; the org-level query does
+      // not narrow by registrationId.
+      await repository.insertTransactions([
+        buildLedgerTransaction({
+          organisationId: 'org-X',
+          registrationId: 'reg-1',
+          accreditationId: 'acc-A',
+          number: 1,
+          closingBalance: { amount: 10, availableAmount: 10 }
+        }),
+        buildLedgerTransaction({
+          organisationId: 'org-X',
+          registrationId: 'reg-2',
+          accreditationId: 'acc-B',
+          number: 1,
+          closingBalance: { amount: 20, availableAmount: 20 }
+        })
+      ])
+
+      const result =
+        await repository.findLatestPerAccreditationByOrganisationId('org-X')
+
+      expect(result).toHaveLength(2)
+      expect(result.map((t) => t.accreditationId).sort()).toEqual([
+        'acc-A',
+        'acc-B'
+      ])
+    })
+
     it('does not include accreditations from other organisations', async () => {
       await repository.insertTransactions([
         buildLedgerTransaction({

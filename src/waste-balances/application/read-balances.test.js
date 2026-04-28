@@ -118,15 +118,6 @@ describe('getCreditedAmountByWasteRecordId', () => {
     expect(credited).toBe(70)
   })
 
-  it('returns 0 when the bulk primitive omits the requested id', async () => {
-    // Defensive: a malformed adapter response shouldn't crash the caller.
-    const repository = {
-      findCreditedAmountsByWasteRecordIds: async () => new Map()
-    }
-    const credited = await getCreditedAmountByWasteRecordId(repository, 'wr-X')
-    expect(credited).toBe(0)
-  })
-
   it('handles the multi-upload delta case (+100, -30, re-upload of 70 → 70)', async () => {
     // Initial upload credits 100, second upload debits 30 (target dropped to 70),
     // third upload re-applies same target — delta is 0, so no third transaction.
