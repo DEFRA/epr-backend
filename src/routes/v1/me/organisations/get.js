@@ -1,5 +1,9 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
+import {
+  auditOrganisationsDiscovery,
+  auditTokenValidationFailed
+} from '#auditing/organisations-discovery.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -53,22 +57,20 @@ const getLoggableOrgInfo = (orgInfo) =>
   }))
 
 /**
- * Get current Defra ID details from token
+ * Get current Defra ID details from token relationships
  *
- * @param {*} auth
+ * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} defraIdRelationships
  * @param {*} logger
  * @returns {DefraOrgSummary}
  */
-const getCurrentDetailsFromToken = (auth, logger) => {
-  const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
-
-  const currentOrg = orgInfo.find((org) => org.isCurrent)
+const getCurrentDetailsFromToken = (defraIdRelationships, logger) => {
+  const currentOrg = defraIdRelationships.find((org) => org.isCurrent)
 
   // Token should always have a current organisation
   if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
-    const loggableOrgInfo = getLoggableOrgInfo(orgInfo)
+    const loggableOrgInfo = getLoggableOrgInfo(defraIdRelationships)
     logger.warn({
-      message: `User token missing organisation information. relationshipsCount: ${orgInfo.length}, orgInfo: ${JSON.stringify(loggableOrgInfo)}`
+      message: `User token missing organisation information. relationshipsCount: ${defraIdRelationships.length}, orgInfo: ${JSON.stringify(loggableOrgInfo)}`
     })
 
     throw Boom.forbidden(
@@ -79,6 +81,30 @@ const getCurrentDetailsFromToken = (auth, logger) => {
   return {
     id: currentOrg.defraIdOrgId,
     name: currentOrg.defraIdOrgName
+  }
+}
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} defraIdRelationships
+ * @returns {Promise<DefraOrgSummary>}
+ */
+const tryGetCurrentDetailsFromToken = async (request, defraIdRelationships) => {
+  const { logger } = request
+  try {
+    return getCurrentDetailsFromToken(defraIdRelationships, logger)
+  } catch (err) {
+    try {
+      await auditTokenValidationFailed(request, {
+        defraIdRelationships,
+        error: /** @type {Error} */ (err).message
+      })
+    } catch (auditErr) {
+      logger.error({
+        message: `Failed to audit token validation failure: ${/** @type {Error} */ (auditErr).message}`
+      })
+    }
+    throw err
   }
 }
 
@@ -104,7 +130,17 @@ export const organisationsLinkedGetAll = {
         auth.credentials
       )
 
-    const current = getCurrentDetailsFromToken(auth, logger)
+    const {
+      decoded: { payload: tokenPayload }
+    } = /** @type {import('#common/hapi-types.js').DefraIdArtifacts} */ (
+      auth.artifacts
+    )
+    const defraIdRelationships = getOrgDataFromDefraIdToken(tokenPayload)
+
+    const current = await tryGetCurrentDetailsFromToken(
+      request,
+      defraIdRelationships
+    )
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
       organisationsRepository.findByLinkedDefraOrgId(current.id),
@@ -126,6 +162,19 @@ export const organisationsLinkedGetAll = {
       name: unlinkedOrg.companyDetails.name,
       orgId: unlinkedOrg.orgId
     }))
+
+    try {
+      await auditOrganisationsDiscovery(request, {
+        defraIdOrg: current,
+        defraIdRelationships,
+        linkedOrg,
+        linkableOrgs
+      })
+    } catch (err) {
+      logger.error({
+        message: `Failed to audit organisations discovery: ${/** @type {Error} */ (err).message}`
+      })
+    }
 
     /** @type {{ organisations: UserOrganisationsResponse }} */
     const payload = { organisations: { current, linked, unlinked } }
