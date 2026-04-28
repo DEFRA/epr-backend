@@ -30,6 +30,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
     const commonFields = {
       orgId: 503181,
       systemReference: '68e6912278f83083f0f17a7b',
+      formSubmission: {
+        id: exporter._id.$oid,
+        time: new Date('2025-10-08T17:48:22.220Z')
+      },
       formSubmissionTime: new Date('2025-10-08T17:48:22.220Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
@@ -129,6 +133,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       id: reprocessorAllMaterials._id.$oid,
       orgId: 503176,
       systemReference: '68e68d9c78f83083f0f17a76',
+      formSubmission: {
+        id: reprocessorAllMaterials._id.$oid,
+        time: new Date('2025-10-08T17:40:07.373Z')
+      },
       formSubmissionTime: new Date('2025-10-08T17:40:07.373Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,

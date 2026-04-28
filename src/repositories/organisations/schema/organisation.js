@@ -34,7 +34,10 @@ export const organisationInsertSchema = Joi.object({
     )
     .optional(),
   companyDetails: companyDetailsSchema.required(),
-  formSubmissionTime: Joi.date().iso().required(),
+  formSubmission: Joi.object({
+    id: idSchema.required(),
+    time: Joi.date().iso().required()
+  }).required(),
   id: idSchema,
   linkedDefraOrganisation: linkedDefraOrganisationSchema.optional(),
   managementContactDetails: userSchema.optional(),
@@ -79,7 +82,7 @@ export const organisationReplaceSchema = organisationInsertSchema
   .fork(NON_UPDATABLE_FIELDS, (schema) => schema.forbidden())
   .fork(['status'], (schema) => schema.optional())
   .keys({
-    schemaVersion: Joi.number().required().valid(1),
+    schemaVersion: Joi.number().required().valid(1, 2),
     registrations: Joi.array()
       .items(registrationUpdateSchema)
       .default([])

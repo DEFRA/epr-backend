@@ -68,7 +68,6 @@ export const accreditationSchema = Joi.object({
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null),
   reprocessingType: reprocessingTypeSchema,
-  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -99,6 +98,10 @@ export const accreditationSchema = Joi.object({
   wasteProcessingType: Joi.string()
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
+  formSubmission: Joi.object({
+    id: idSchema.required(),
+    time: Joi.date().iso().required()
+  }).required(),
   prnIssuance: prnIssuanceSchema.required(),
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart2FileUploads: Joi.array()

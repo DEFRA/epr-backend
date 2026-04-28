@@ -27,6 +27,10 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
 
     expect(result[0]).toStrictEqual({
       id: '68e6aa2423d5d5454a9a193c',
+      formSubmission: {
+        id: '68e6aa2423d5d5454a9a193c',
+        time: new Date('2025-10-08T18:15:00.199Z')
+      },
       formSubmissionTime: new Date('2025-10-08T18:15:00.199Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
@@ -138,6 +142,10 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
 
     expect(result[0]).toStrictEqual({
       id: '68e6a62723d5d5454a9a193a',
+      formSubmission: {
+        id: '68e6a62723d5d5454a9a193a',
+        time: new Date('2025-10-08T17:57:59.709Z')
+      },
       formSubmissionTime: new Date('2025-10-08T17:57:59.709Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -242,6 +250,10 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
 
     expect(result[0]).toStrictEqual({
       id: '68e6a50423d5d5454a9a1939',
+      formSubmission: {
+        id: '68e6a50423d5d5454a9a1939',
+        time: new Date('2025-10-08T17:53:08.213Z')
+      },
       formSubmissionTime: new Date('2025-10-08T17:53:08.213Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -351,6 +363,10 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
     )
 
     const commonFields = {
+      formSubmission: {
+        id: '68e6a97723d5d5454a9a193b',
+        time: new Date('2025-10-08T18:12:07.326Z')
+      },
       formSubmissionTime: new Date('2025-10-08T18:12:07.326Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,

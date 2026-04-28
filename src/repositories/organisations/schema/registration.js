@@ -83,7 +83,6 @@ export const registrationSchema = Joi.object({
   reprocessingType: reprocessingTypeSchema,
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
-  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -104,6 +103,10 @@ export const registrationSchema = Joi.object({
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
   accreditationId: idSchema.optional(),
+  formSubmission: Joi.object({
+    id: idSchema.required(),
+    time: Joi.date().iso().required()
+  }).required(),
   glassRecyclingProcess: whenMaterial(
     MATERIAL.GLASS,
     Joi.array()

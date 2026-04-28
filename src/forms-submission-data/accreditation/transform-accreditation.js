@@ -55,6 +55,7 @@ function buildParsedAccreditation(id, rawSubmissionData) {
 
   return {
     id,
+    formSubmission: { id, time: extractTimestamp(rawSubmissionData) },
     formSubmissionTime: extractTimestamp(rawSubmissionData),
     submittedToRegulator: extractAgencyFromDefinitionName(rawSubmissionData),
     wasteProcessingType,

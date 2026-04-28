@@ -165,7 +165,10 @@ export const testReplaceBehaviour = (it) => {
 
         const { statusHistory: _, ...expectedReg } = {
           ...newRegistration,
-          formSubmissionTime: new Date(newRegistration.formSubmissionTime)
+          formSubmission: {
+            id: newRegistration.formSubmission.id,
+            time: new Date(newRegistration.formSubmission.time)
+          }
         }
         const { statusHistory: actualStatusHistory, ...actualReg } = addedReg
 
@@ -202,8 +205,7 @@ export const testReplaceBehaviour = (it) => {
         expect(addedAcc).toBeDefined()
 
         const { statusHistory: _, ...expectedAcc } = {
-          ...newAccreditation,
-          formSubmissionTime: new Date(newAccreditation.formSubmissionTime)
+          ...newAccreditation
         }
         const { statusHistory: actualStatusHistory, ...actualAcc } = addedAcc
         expect(actualAcc).toMatchObject(expectedAcc)

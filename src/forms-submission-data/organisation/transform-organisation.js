@@ -196,6 +196,7 @@ export function parseOrgSubmission(id, orgId, rawSubmissionData) {
   const parsed = {
     id,
     orgId,
+    formSubmission: { id, time: extractTimestamp(rawSubmissionData) },
     wasteProcessingTypes: extractWasteProcessingTypes(
       answersByShortDescription
     ),

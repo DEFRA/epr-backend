@@ -64,4 +64,19 @@ describe('createConfigFeatureFlags', () => {
     const flags = createConfigFeatureFlags(config)
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
   })
+
+  it('returns true when migrateFormSubmissionLineage flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.migrateFormSubmissionLineage'
+    )
+  })
+
+  it('returns false when migrateFormSubmissionLineage flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(false)
+  })
 })

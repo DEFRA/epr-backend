@@ -211,6 +211,14 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ schemaVersion })
+    .toArray()
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 const performFindPage =
   (db) =>
   async ({ search, page, pageSize }) => {
@@ -455,6 +463,7 @@ export const createOrganisationsRepository = async (
       replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
+      findAllBySchemaVersion: performFindAllBySchemaVersion(db),
       findPage: performFindPage(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
