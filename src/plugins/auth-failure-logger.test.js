@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { expectLogToBeCdpCompliant } from '#common/helpers/logging/schema-test-helpers.js'
 
 describe('auth-failure-logger plugin', () => {
   let server
@@ -62,6 +63,7 @@ describe('auth-failure-logger plugin', () => {
         action: LOGGING_EVENT_ACTIONS.AUTH_FAILED
       }
     })
+    expectLogToBeCdpCompliant(mockLogger.warn.mock.calls[0][0])
   })
 
   it('does not log for successful responses', async () => {

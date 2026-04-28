@@ -1,14 +1,20 @@
-import Boom from '@hapi/boom'
-
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-
+import { expectLogToBeCdpCompliant } from '#common/helpers/logging/schema-test-helpers.js'
+import Boom from '@hapi/boom'
 import { boomErrorLogger } from './boom-error-logger.js'
 
+/** @import { Server } from '@hapi/hapi' */
+/** @import { Mock } from 'vitest' */
+
+/** @typedef {{ warn: Mock, error: Mock }} MockLogger */
+
 describe('boom-error-logger plugin', () => {
+  /** @type {Server} */
   let server
+  /** @type {MockLogger} */
   let mockLogger
 
   beforeEach(async () => {
@@ -181,4 +187,22 @@ describe('boom-error-logger plugin', () => {
       http: { response: { status_code: 400 } }
     })
   })
+
+  it.each(
+    /** @type {Array<{ url: string, level: keyof MockLogger }>} */ ([
+      { url: '/bad-request', level: 'warn' },
+      { url: '/not-found', level: 'warn' },
+      { url: '/internal', level: 'error' },
+      { url: '/enriched', level: 'warn' }
+    ])
+  )(
+    'should emit a cdp-compliant log shape for $url',
+    async ({ url, level }) => {
+      await server.inject({ method: 'GET', url })
+      const logged = mockLogger[level].mock.calls[0][0]
+
+      expect(logged).toBeDefined()
+      expectLogToBeCdpCompliant(logged)
+    }
+  )
 })

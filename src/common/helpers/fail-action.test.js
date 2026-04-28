@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 import { failAction } from './fail-action.js'
+import { expectLogToBeCdpCompliant } from './logging/schema-test-helpers.js'
 
 vi.mock('#root/config.js', () => ({
   getConfig: vi.fn(() => ({
@@ -204,6 +205,33 @@ describe('#fail-action', () => {
       const logCall = mockRequest.logger.warn.mock.calls[0][0]
       expect(logCall.message).toBe('Invalid payload')
       expect(logCall.message).not.toContain('| data:')
+    })
+  })
+
+  describe('cdp-compliant log shape', () => {
+    it.each([
+      {
+        label: 'joi validation error',
+        error: () => {
+          const e = new Error('"redirectUrl" is required')
+          e.isJoi = true
+          e.details = [{ message: '"redirectUrl" is required' }]
+          return e
+        }
+      },
+      {
+        label: 'boom error from custom validator',
+        error: () => Boom.badRequest('Invalid payload')
+      },
+      {
+        label: 'generic error',
+        error: () => new Error('Something went wrong')
+      }
+    ])('should emit cdp-compliant log shape for $label', ({ error }) => {
+      const mockRequest = createMockRequest()
+
+      expect(() => failAction(mockRequest, {}, error())).toThrow()
+      expectLogToBeCdpCompliant(mockRequest.logger.warn.mock.calls[0][0])
     })
   })
 
