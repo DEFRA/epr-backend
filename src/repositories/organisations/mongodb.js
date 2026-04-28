@@ -1,6 +1,7 @@
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
+import { conflict } from '#common/helpers/enrich-boom.js'
 import {
   createInitialStatusHistory,
   mapDocumentWithCurrentStatuses,
@@ -9,6 +10,7 @@ import {
   prepareForReplace,
   SCHEMA_VERSION
 } from './helpers.js'
+import { errorCodes } from './enums/error-codes.js'
 import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 
@@ -82,11 +84,16 @@ const throwCuratedDuplicateKeyBoom = (error, id) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
-  const boom = Boom.conflict(
-    `Duplicate key conflict updating organisation ${id} (${conflictFields})`
+  throw conflict(
+    `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
+    errorCodes.organisationDuplicateKey,
+    {
+      event: {
+        action: 'update_organisation',
+        reason: `fields=${conflictFields}`
+      }
+    }
   )
-  boom.cause = error
-  throw boom
 }
 
 const performReplace = (db) => async (id, version, updates) => {

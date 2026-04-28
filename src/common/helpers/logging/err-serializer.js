@@ -23,13 +23,5 @@ export const errSerializer = (err) => {
     errorObj.code = err.code
   }
 
-  if (err.cause instanceof Error) {
-    const cause = /** @type {Error & { code?: string | number }} */ (err.cause)
-    errorObj.cause = {
-      type: cause.name,
-      code: cause.code
-    }
-  }
-
   return errorObj
 }

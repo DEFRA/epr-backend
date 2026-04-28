@@ -43,7 +43,7 @@ describe('#validateConfig', () => {
   })
 
   describe('when roles.serviceMaintainers contains malformed JSON', () => {
-    test('throws error with cause when JSON is invalid', () => {
+    test('throws when JSON is invalid', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue('not valid json')
       }
@@ -53,7 +53,7 @@ describe('#validateConfig', () => {
       )
     })
 
-    test('throws error with cause when JSON is incomplete', () => {
+    test('throws when JSON is incomplete', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue('["user1", "user2"')
       }
@@ -63,7 +63,7 @@ describe('#validateConfig', () => {
       )
     })
 
-    test('throws error with cause when JSON has trailing comma', () => {
+    test('throws when JSON has trailing comma', () => {
       const mockConfig = {
         get: vi.fn().mockReturnValue('["user1", "user2",]')
       }
@@ -71,25 +71,6 @@ describe('#validateConfig', () => {
       expect(() => validateConfig(mockConfig)).toThrow(
         'Invalid roles.serviceMaintainers configuration: malformed JSON'
       )
-    })
-
-    test('includes original error as cause when JSON parsing fails', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('invalid json')
-      }
-
-      let thrownError
-      try {
-        validateConfig(mockConfig)
-      } catch (e) {
-        thrownError = e
-      }
-
-      expect(thrownError?.message).toBe(
-        'Invalid roles.serviceMaintainers configuration: malformed JSON'
-      )
-      expect(thrownError?.cause).toBeDefined()
-      expect(thrownError?.cause).toBeInstanceOf(SyntaxError)
     })
   })
 

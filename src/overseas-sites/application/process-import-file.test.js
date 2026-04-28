@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { processImportFile } from './process-import-file.js'
 import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import { expectLogToBeCdpCompliant } from '#common/helpers/logging/schema-test-helpers.js'
 
 vi.mock('../parsers/ors-spreadsheet-parser.js')
 
@@ -220,6 +221,7 @@ describe('processImportFile', () => {
         "Invalid ORS spreadsheet structure: Missing required 'ORS ID Log' worksheet"
     })
     expect(logger.error).not.toHaveBeenCalled()
+    expectLogToBeCdpCompliant(logger.warn.mock.calls[0][0])
   })
 
   it('returns failure when organisation is not found', async () => {

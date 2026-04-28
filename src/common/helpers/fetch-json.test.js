@@ -264,14 +264,21 @@ describe('#fetchJson', () => {
       })
     })
 
-    test('attaches the original error as Boom.cause for observability', async () => {
+    test('attaches code external_fetch_failed and event encoding the cause classifier for indexed logging', async () => {
       const networkError = new Error('Network request failed')
+      networkError.code = 'ENETUNREACH'
       global.fetch = vi.fn().mockRejectedValue(networkError)
 
-      await expect(fetchJson(url)).rejects.toHaveProperty('cause', networkError)
+      await expect(fetchJson(url)).rejects.toMatchObject({
+        code: 'external_fetch_failed',
+        event: {
+          action: 'external_fetch',
+          reason: 'type=Error code=ENETUNREACH'
+        }
+      })
     })
 
-    test('preserves error.code on cause so classifiers land in logs (e.g. ECONNREFUSED)', async () => {
+    test('encodes ECONNREFUSED into event.reason without leaking the original message', async () => {
       const connRefused = new Error('connection refused — system detail')
       connRefused.code = 'ECONNREFUSED'
       global.fetch = vi.fn().mockRejectedValue(connRefused)
@@ -279,7 +286,24 @@ describe('#fetchJson', () => {
       await expect(fetchJson(url)).rejects.toMatchObject({
         isBoom: true,
         message: `Failed to fetch from url: ${url}`,
-        cause: { code: 'ECONNREFUSED' }
+        event: { reason: expect.stringContaining('ECONNREFUSED') }
+      })
+    })
+
+    test('falls back to code=unknown in event.reason when the cause has no code', async () => {
+      const noCode = new TypeError('something went wrong')
+      global.fetch = vi.fn().mockRejectedValue(noCode)
+
+      await expect(fetchJson(url)).rejects.toMatchObject({
+        event: { reason: 'type=TypeError code=unknown' }
+      })
+    })
+
+    test('falls back to type=Error and code=unknown when fetch rejects with a non-Error value', async () => {
+      global.fetch = vi.fn().mockRejectedValue('plain string thrown')
+
+      await expect(fetchJson(url)).rejects.toMatchObject({
+        event: { reason: 'type=Error code=unknown' }
       })
     })
 

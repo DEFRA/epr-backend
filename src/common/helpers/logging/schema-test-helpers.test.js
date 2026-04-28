@@ -37,12 +37,12 @@ describe('expectLogToBeCdpCompliant', () => {
     ).not.toThrow()
   })
 
-  it('should reject when err.cause adds an indexed field that the cdp allowlist does not include', () => {
-    const err = new Error('outer')
-    err.cause = new Error('inner')
-
+  it('should reject error.cause since cdp allowlist does not include it', () => {
     expect(() =>
-      expectLogToBeCdpCompliant({ message: 'something failed', err })
+      expectLogToBeCdpCompliant({
+        message: 'something failed',
+        error: { message: 'oops', cause: { type: 'Error', code: 'X' } }
+      })
     ).toThrow(/cause/)
   })
 
