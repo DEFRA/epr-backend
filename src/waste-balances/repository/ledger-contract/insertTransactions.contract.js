@@ -104,6 +104,24 @@ export const testInsertTransactionsBehaviour = (it) => {
       })
     })
 
+    it('throws LedgerSlotConflictError when two rows in the same batch share a slot', async () => {
+      await expect(
+        repository.insertTransactions([
+          buildLedgerTransaction({
+            accreditationId: 'acc-self-conflict',
+            number: 1
+          }),
+          buildLedgerTransaction({
+            accreditationId: 'acc-self-conflict',
+            number: 1
+          })
+        ])
+      ).rejects.toMatchObject({
+        accreditationId: 'acc-self-conflict',
+        slotNumber: 1
+      })
+    })
+
     it('throws LedgerSlotConflictError when a slot collides mid-batch (ordered early-stop)', async () => {
       await repository.insertTransactions([
         buildLedgerTransaction({
