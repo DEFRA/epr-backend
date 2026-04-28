@@ -35,7 +35,7 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  * @returns {AuditLinkedOrg | null}
  */
 function toAuditLinked(linkedOrg) {
-  if (!linkedOrg?.linkedDefraOrganisation) {
+  if (!linkedOrg) {
     return null
   }
 
