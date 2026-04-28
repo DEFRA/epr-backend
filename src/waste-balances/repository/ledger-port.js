@@ -43,13 +43,6 @@ export class LedgerSlotConflictError extends Error {
  */
 
 /**
- * @typedef {Object} TransactionsByRowQuery
- * @property {string} summaryLogId
- * @property {string} rowId
- * @property {import('#domain/waste-records/model.js').WasteRecordType} rowType
- */
-
-/**
  * @typedef {Object} LedgerRepository
  * @property {(transactions: LedgerTransactionInsert[]) => Promise<LedgerTransaction[]>} insertTransactions
  *   Persist a batch of transactions in input order. Returns the stored
@@ -69,20 +62,6 @@ export class LedgerSlotConflictError extends Error {
  * @property {(accreditationId: string) => Promise<LedgerTransaction | null>} findLatestByAccreditationId
  *   Return the highest-numbered transaction for the accreditation, or `null`
  *   if none exist.
- * @property {(summaryLogId: string) => Promise<LedgerTransaction[]>} findTransactionsBySummaryLogId
- *   Return every summary-log-row transaction emitted by the given summary log,
- *   ordered by `number` ascending. Empty array if none exist.
- * @property {(wasteRecordId: string) => Promise<LedgerTransaction[]>} findTransactionsByWasteRecordId
- *   Return the full version history for a waste record — every summary-log-row
- *   transaction touching this `wasteRecordId`, ordered by `number` ascending.
- *   Empty array if none exist.
- * @property {(prnId: string) => Promise<LedgerTransaction[]>} findTransactionsByPrnId
- *   Return every PRN-operation transaction for the given PRN, ordered by
- *   `number` ascending. Empty array if none exist.
- * @property {(query: TransactionsByRowQuery) => Promise<LedgerTransaction[]>} findTransactionsByRow
- *   Return every summary-log-row transaction caused by the row identified by
- *   `(summaryLogId, rowId, rowType)`, ordered by `number` ascending. Empty
- *   array if none exist.
  * @property {(wasteRecordIds: string[]) => Promise<Map<string, number>>} findCreditedAmountsByWasteRecordIds
  *   For each waste record id in the input, return the signed sum of every
  *   summary-log-row transaction touching it: credits add their amount,

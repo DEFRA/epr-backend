@@ -150,15 +150,6 @@ const performFindLatestByAccreditationId =
 
 /**
  * @param {Collection} collection
- * @returns {(filter: object) => Promise<LedgerTransaction[]>}
- */
-const performFindOrdered = (collection) => async (filter) => {
-  const docs = await collection.find(filter).sort({ number: 1 }).toArray()
-  return docs.map(toLedgerTransaction)
-}
-
-/**
- * @param {Collection} collection
  * @returns {(wasteRecordIds: string[]) => Promise<Map<string, number>>}
  */
 const performFindCreditedAmountsByWasteRecordIds =
@@ -241,33 +232,10 @@ const performFindLatestPerAccreditationByParent =
  */
 export const createMongoLedgerRepository = async (db) => {
   const collection = await ensureLedgerCollection(db)
-  const findOrdered = performFindOrdered(collection)
 
   return () => ({
     insertTransactions: performInsertTransactions(collection),
     findLatestByAccreditationId: performFindLatestByAccreditationId(collection),
-    findTransactionsBySummaryLogId: (summaryLogId) =>
-      findOrdered({
-        'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
-        'source.summaryLogRow.summaryLogId': summaryLogId
-      }),
-    findTransactionsByWasteRecordId: (wasteRecordId) =>
-      findOrdered({
-        'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
-        'source.summaryLogRow.wasteRecordId': wasteRecordId
-      }),
-    findTransactionsByPrnId: (prnId) =>
-      findOrdered({
-        'source.kind': LEDGER_SOURCE_KIND.PRN_OPERATION,
-        'source.prnOperation.prnId': prnId
-      }),
-    findTransactionsByRow: ({ summaryLogId, rowId, rowType }) =>
-      findOrdered({
-        'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
-        'source.summaryLogRow.summaryLogId': summaryLogId,
-        'source.summaryLogRow.rowId': rowId,
-        'source.summaryLogRow.rowType': rowType
-      }),
     findCreditedAmountsByWasteRecordIds:
       performFindCreditedAmountsByWasteRecordIds(collection),
     findLatestPerAccreditationByOrganisationId:

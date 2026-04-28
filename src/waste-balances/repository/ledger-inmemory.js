@@ -19,22 +19,12 @@ import { validateLedgerTransactionInsert } from './ledger-validation.js'
  * @typedef {import('./ledger-schema.js').LedgerTransactionInsert} LedgerTransactionInsert
  */
 
-const byNumberAscending = (a, b) => a.number - b.number
-
 /**
  * @param {LedgerTransaction} transaction
  */
 const summaryLogRowOf = (transaction) =>
   transaction.source.kind === LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW
     ? transaction.source.summaryLogRow
-    : null
-
-/**
- * @param {LedgerTransaction} transaction
- */
-const prnOperationOf = (transaction) =>
-  transaction.source.kind === LEDGER_SOURCE_KIND.PRN_OPERATION
-    ? transaction.source.prnOperation
     : null
 
 /**
@@ -65,16 +55,6 @@ const latestPerAccreditationFrom = (transactions) => {
     structuredClone(transaction)
   )
 }
-
-/**
- * @param {LedgerTransaction[]} storage
- * @param {(transaction: LedgerTransaction) => boolean} predicate
- */
-const findOrdered = (storage, predicate) =>
-  storage
-    .filter((transaction) => predicate(transaction))
-    .sort(byNumberAscending)
-    .map((transaction) => structuredClone(transaction))
 
 /**
  * @param {LedgerTransaction[]} storage
@@ -166,35 +146,6 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
     insertTransactions: performInsertTransactions(storage),
 
     findLatestByAccreditationId: performFindLatestByAccreditationId(storage),
-
-    findTransactionsBySummaryLogId: async (summaryLogId) =>
-      findOrdered(storage, (transaction) => {
-        const row = summaryLogRowOf(transaction)
-        return row !== null && row.summaryLogId === summaryLogId
-      }),
-
-    findTransactionsByWasteRecordId: async (wasteRecordId) =>
-      findOrdered(storage, (transaction) => {
-        const row = summaryLogRowOf(transaction)
-        return row !== null && row.wasteRecordId === wasteRecordId
-      }),
-
-    findTransactionsByPrnId: async (prnId) =>
-      findOrdered(storage, (transaction) => {
-        const operation = prnOperationOf(transaction)
-        return operation !== null && operation.prnId === prnId
-      }),
-
-    findTransactionsByRow: async ({ summaryLogId, rowId, rowType }) =>
-      findOrdered(storage, (transaction) => {
-        const row = summaryLogRowOf(transaction)
-        return (
-          row !== null &&
-          row.summaryLogId === summaryLogId &&
-          row.rowId === rowId &&
-          row.rowType === rowType
-        )
-      }),
 
     findCreditedAmountsByWasteRecordIds:
       performFindCreditedAmountsByWasteRecordIds(storage),
