@@ -1,5 +1,4 @@
-import Boom from '@hapi/boom'
-
+import { badRequest, conflict } from '#common/helpers/enrich-boom.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -9,7 +8,6 @@ import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
  */
 
 /**
@@ -109,25 +107,21 @@ function formatSiteAddress(address) {
  */
 const assertValidPeriod = (period, cadence, allPeriods) => {
   const periodInfo = allPeriods.find((p) => p.period === period)
-  if (periodInfo) {
-    return periodInfo
+  if (!periodInfo) {
+    const validPeriods = allPeriods.map((p) => p.period)
+    throw badRequest(
+      `Invalid period ${period} for cadence ${cadence}`,
+      errorCodes.invalidPeriod,
+      {
+        event: {
+          action: 'create_report',
+          reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
+        },
+        payload: { invalidPeriod: { actual: period, cadence, validPeriods } }
+      }
+    )
   }
-
-  const validPeriods = allPeriods.map((p) => p.period)
-  const boom = /** @type {EnrichedBoom} */ (
-    Boom.badRequest(`Invalid period ${period} for cadence ${cadence}`)
-  )
-  boom.code = errorCodes.invalidPeriod
-  boom.event = {
-    action: 'create_report',
-    reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
-  }
-  boom.output.payload.invalidPeriod = {
-    actual: period,
-    cadence,
-    validPeriods
-  }
-  throw boom
+  return periodInfo
 }
 
 /**
@@ -142,28 +136,27 @@ const assertValidPeriod = (period, cadence, allPeriods) => {
 const assertPeriodEnded = (periodInfo, period, cadence) => {
   const dayAfterEnd = new Date(periodInfo.endDate)
   dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1)
-  if (dayAfterEnd <= new Date()) {
-    return
-  }
-
-  const earliestSubmissionDate = dayAfterEnd.toISOString()
-  const boom = /** @type {EnrichedBoom} */ (
-    Boom.badRequest(
-      `Cannot create report for period ${period} — period has not yet ended`
+  if (dayAfterEnd > new Date()) {
+    const earliestSubmissionDate = dayAfterEnd.toISOString()
+    throw badRequest(
+      `Cannot create report for period ${period} — period has not yet ended`,
+      errorCodes.periodNotEnded,
+      {
+        event: {
+          action: 'create_report',
+          reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
+        },
+        payload: {
+          periodNotEnded: {
+            period,
+            cadence,
+            endDate: periodInfo.endDate,
+            earliestSubmissionDate
+          }
+        }
+      }
     )
-  )
-  boom.code = errorCodes.periodNotEnded
-  boom.event = {
-    action: 'create_report',
-    reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
   }
-  boom.output.payload.periodNotEnded = {
-    period,
-    cadence,
-    endDate: periodInfo.endDate,
-    earliestSubmissionDate
-  }
-  throw boom
 }
 
 /**
@@ -178,23 +171,20 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  */
 const assertNoExistingReport = (periodicReports, year, cadence, period) => {
   const id = findCurrentReportId(periodicReports, year, cadence, period)
-  if (!id) {
-    return
-  }
-
-  const boom = /** @type {EnrichedBoom} */ (
-    Boom.conflict(
-      `Report already exists for ${cadence} period ${period} of ${year}`
+  if (id) {
+    throw conflict(
+      `Report already exists for ${cadence} period ${period} of ${year}`,
+      errorCodes.reportAlreadyExists,
+      {
+        event: {
+          action: 'create_report',
+          reason: `cadence=${cadence} period=${period} year=${year}`,
+          reference: id
+        },
+        payload: { existingReport: { id, cadence, period, year } }
+      }
     )
-  )
-  boom.code = errorCodes.reportAlreadyExists
-  boom.event = {
-    action: 'create_report',
-    reason: `cadence=${cadence} period=${period} year=${year}`,
-    reference: id
   }
-  boom.output.payload.existingReport = { id, cadence, period, year }
-  throw boom
 }
 
 /**
