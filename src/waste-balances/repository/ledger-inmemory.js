@@ -67,99 +67,126 @@ const latestPerAccreditationFrom = (transactions) => {
 }
 
 /**
+ * @param {LedgerTransaction[]} storage
+ * @param {(transaction: LedgerTransaction) => boolean} predicate
+ */
+const findOrdered = (storage, predicate) =>
+  storage
+    .filter((transaction) => predicate(transaction))
+    .sort(byNumberAscending)
+    .map((transaction) => structuredClone(transaction))
+
+/**
+ * @param {LedgerTransaction[]} storage
+ * @param {string} accreditationId
+ * @param {number} number
+ */
+const slotTakenIn = (storage, accreditationId, number) =>
+  storage.some(
+    (existing) =>
+      existing.accreditationId === accreditationId && existing.number === number
+  )
+
+/**
+ * @param {LedgerTransaction[]} storage
+ * @returns {(transactions: LedgerTransactionInsert[]) => Promise<LedgerTransaction[]>}
+ */
+const performInsertTransactions = (storage) => async (transactions) => {
+  /** @type {LedgerTransaction[]} */
+  const stored = []
+
+  for (const transaction of transactions) {
+    const validated = validateLedgerTransactionInsert(transaction)
+
+    if (slotTakenIn(storage, validated.accreditationId, validated.number)) {
+      throw new LedgerSlotConflictError(
+        validated.accreditationId,
+        validated.number
+      )
+    }
+
+    const persisted = { id: randomUUID(), ...validated }
+    storage.push(persisted)
+    stored.push(structuredClone(persisted))
+  }
+
+  return stored
+}
+
+/**
+ * @param {LedgerTransaction[]} storage
+ * @returns {(accreditationId: string) => Promise<LedgerTransaction | null>}
+ */
+const performFindLatestByAccreditationId =
+  (storage) => async (accreditationId) => {
+    const matches = storage.filter(
+      (existing) => existing.accreditationId === accreditationId
+    )
+
+    const [first, ...rest] = matches
+
+    if (!first) {
+      return null
+    }
+
+    const latest = rest.reduce(
+      (highest, current) =>
+        current.number > highest.number ? current : highest,
+      first
+    )
+
+    return structuredClone(latest)
+  }
+
+/**
+ * @param {LedgerTransaction[]} storage
+ * @returns {(wasteRecordIds: string[]) => Promise<Map<string, number>>}
+ */
+const performFindCreditedAmountsByWasteRecordIds =
+  (storage) => async (wasteRecordIds) => {
+    const result = new Map(wasteRecordIds.map((id) => [id, 0]))
+    for (const transaction of storage) {
+      const row = summaryLogRowOf(transaction)
+      const current = row ? result.get(row.wasteRecordId) : undefined
+      if (current !== undefined && row) {
+        result.set(row.wasteRecordId, current + signedAmount(transaction))
+      }
+    }
+    return result
+  }
+
+/**
  * @param {Array<LedgerTransaction>} [initialTransactions]
  * @returns {import('./ledger-port.js').LedgerRepositoryFactory}
  */
 export const createInMemoryLedgerRepository = (initialTransactions = []) => {
   const storage = initialTransactions
 
-  /**
-   * @param {Array<LedgerTransaction>} haystack
-   * @param {string} accreditationId
-   * @param {number} number
-   */
-  const slotTakenIn = (haystack, accreditationId, number) =>
-    haystack.some(
-      (existing) =>
-        existing.accreditationId === accreditationId &&
-        existing.number === number
-    )
-
-  const findOrdered = (predicate) =>
-    storage
-      .filter(predicate)
-      .sort(byNumberAscending)
-      .map((transaction) => structuredClone(transaction))
-
   return () => ({
-    /** @param {LedgerTransactionInsert[]} transactions */
-    insertTransactions: async (transactions) => {
-      /** @type {LedgerTransaction[]} */
-      const stored = []
+    insertTransactions: performInsertTransactions(storage),
 
-      for (const transaction of transactions) {
-        const validated = validateLedgerTransactionInsert(transaction)
+    findLatestByAccreditationId: performFindLatestByAccreditationId(storage),
 
-        if (slotTakenIn(storage, validated.accreditationId, validated.number)) {
-          throw new LedgerSlotConflictError(
-            validated.accreditationId,
-            validated.number
-          )
-        }
-
-        const persisted = { id: randomUUID(), ...validated }
-        storage.push(persisted)
-        stored.push(structuredClone(persisted))
-      }
-
-      return stored
-    },
-
-    /** @param {string} accreditationId */
-    findLatestByAccreditationId: async (accreditationId) => {
-      const matches = storage.filter(
-        (existing) => existing.accreditationId === accreditationId
-      )
-
-      const [first, ...rest] = matches
-
-      if (!first) {
-        return null
-      }
-
-      const latest = rest.reduce(
-        (highest, current) =>
-          current.number > highest.number ? current : highest,
-        first
-      )
-
-      return structuredClone(latest)
-    },
-
-    /** @param {string} summaryLogId */
     findTransactionsBySummaryLogId: async (summaryLogId) =>
-      findOrdered((transaction) => {
+      findOrdered(storage, (transaction) => {
         const row = summaryLogRowOf(transaction)
         return row !== null && row.summaryLogId === summaryLogId
       }),
 
-    /** @param {string} wasteRecordId */
     findTransactionsByWasteRecordId: async (wasteRecordId) =>
-      findOrdered((transaction) => {
+      findOrdered(storage, (transaction) => {
         const row = summaryLogRowOf(transaction)
         return row !== null && row.wasteRecordId === wasteRecordId
       }),
 
-    /** @param {string} prnId */
     findTransactionsByPrnId: async (prnId) =>
-      findOrdered((transaction) => {
+      findOrdered(storage, (transaction) => {
         const operation = prnOperationOf(transaction)
         return operation !== null && operation.prnId === prnId
       }),
 
-    /** @param {{ summaryLogId: string, rowId: string, rowType: string }} key */
     findTransactionsByRow: async ({ summaryLogId, rowId, rowType }) =>
-      findOrdered((transaction) => {
+      findOrdered(storage, (transaction) => {
         const row = summaryLogRowOf(transaction)
         return (
           row !== null &&
@@ -169,24 +196,9 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
         )
       }),
 
-    /** @param {string[]} wasteRecordIds */
-    findCreditedAmountsByWasteRecordIds: async (wasteRecordIds) => {
-      const result = new Map(wasteRecordIds.map((id) => [id, 0]))
-      for (const transaction of storage) {
-        const row = summaryLogRowOf(transaction)
-        if (row === null) {
-          continue
-        }
-        const current = result.get(row.wasteRecordId)
-        if (current === undefined) {
-          continue
-        }
-        result.set(row.wasteRecordId, current + signedAmount(transaction))
-      }
-      return result
-    },
+    findCreditedAmountsByWasteRecordIds:
+      performFindCreditedAmountsByWasteRecordIds(storage),
 
-    /** @param {string} organisationId */
     findLatestPerAccreditationByOrganisationId: async (organisationId) =>
       latestPerAccreditationFrom(
         storage.filter(
@@ -194,7 +206,6 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
         )
       ),
 
-    /** @param {string} registrationId */
     findLatestPerAccreditationByRegistrationId: async (registrationId) =>
       latestPerAccreditationFrom(
         storage.filter(
