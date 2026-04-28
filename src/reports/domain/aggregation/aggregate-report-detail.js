@@ -9,6 +9,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 import { aggregateWasteReceived } from './aggregate-waste-received.js'
 import { aggregateWasteExported } from './aggregate-waste-exported.js'
 import { aggregateWasteSentOn } from './aggregate-waste-sent-on.js'
+import { coerceWasteRecordsForRead } from './coerce-waste-record.js'
 
 /**
  * @typedef {Object} AggregatedRecyclingActivity
@@ -88,14 +89,21 @@ export function aggregateReportDetail(
   const wasteReceivedDateField = sectionDateFields.wasteReceived
   const wasteExportedDateField = sectionDateFields.wasteExported
 
+  const coercedRecords = coerceWasteRecordsForRead(wasteRecords)
+
   const {
     wasteReceivedRecords,
     wasteExportedRecords,
     wasteRepatriatedRecords,
     wasteSentOnRecords
-  } = sliceRecordsByPeriod(wasteRecords, sectionDateFields, startDate, endDate)
+  } = sliceRecordsByPeriod(
+    coercedRecords,
+    sectionDateFields,
+    startDate,
+    endDate
+  )
 
-  const { lastUploadedAt, summaryLogId } = findLastUpload(wasteRecords)
+  const { lastUploadedAt, summaryLogId } = findLastUpload(coercedRecords)
 
   const tonnageReceivedField =
     TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY[operatorCategory]
@@ -111,7 +119,7 @@ export function aggregateReportDetail(
   // but the accredited category looks up DATE_RECEIVED_FOR_*. See ADR 0030,
   // Finding 3. Only wasteReceived needs this check — all other sections use
   // the same date field name regardless of operator category.
-  const wasteReceivedRecordsExcluded = wasteRecords.filter(
+  const wasteReceivedRecordsExcluded = coercedRecords.filter(
     (r) =>
       r.type === WASTE_RECORD_TYPE.RECEIVED &&
       wasteReceivedDateField &&

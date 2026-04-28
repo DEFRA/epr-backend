@@ -38,6 +38,11 @@ const isTemplateRow = (rowIdValue) => {
 /**
  * Prepares rows for transformation by building data objects
  *
+ * Row values are stored as ExcelJS produced them. Schema-driven type
+ * coercion happens at read time (see #reports/domain/aggregation/
+ * coerce-waste-record.js), so the persisted record preserves the
+ * user's original input.
+ *
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
  * @param {string} rowIdField - The header name used to identify the row ID

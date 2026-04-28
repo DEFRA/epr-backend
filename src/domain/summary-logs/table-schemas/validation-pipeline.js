@@ -109,6 +109,28 @@ export const filterToFilled = (row, unfilledValues) => {
 }
 
 /**
+ * Applies a table schema's coercion rules to a row, returning the row with
+ * Joi-coerced values overlaid on the original data.
+ *
+ * Joi's coercion rules (see custom-joi.js, field-schemas.js) define the
+ * canonical representation of each field — e.g. numeric supplier names
+ * become strings, three-digit IDs are zero-padded, dates become
+ * YYYY-MM-DD strings. Validation produces these as the `value` output;
+ * this helper exposes them so persistence and validation paths can share
+ * the same coerced shape.
+ *
+ * @param {Record<string, any>} row - The row data
+ * @param {{ unfilledValues: Record<string, string[]>, validationSchema: import('joi').ObjectSchema }} tableSchema
+ * @returns {{ data: Record<string, any>, error: import('joi').ValidationError | undefined }} Coerced data merged with original row, plus any Joi error
+ */
+export const coerceRowData = (row, { unfilledValues, validationSchema }) => {
+  const filledFields = filterToFilled(row, unfilledValues)
+  const { value: coercedFields, error } =
+    validationSchema.validate(filledFields)
+  return { data: { ...row, ...coercedFields }, error }
+}
+
+/**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
  * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message?: string, type: string }} ValidationErrorIssue
  */
@@ -177,21 +199,24 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * 3. VAL011: Check required fields are present → EXCLUDED if missing
  * 4. All pass → INCLUDED
  *
+ * The returned `data` is the row with Joi's coerced values applied
+ * (e.g. numeric supplier names → strings, 3-digit ID numbers → padded
+ * strings, Date objects → YYYY-MM-DD strings). Unfilled fields from
+ * the original row are preserved.
+ *
  * @param {Record<string, any>} row - The row data
  * @param {Object} tableSchema - The table schema
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance | null} tableSchema.classifyForWasteBalance - Waste balance classifier
- * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
+ * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], data: Record<string, any> }}
  */
 export const classifyRow = (row, tableSchema) => {
-  const { unfilledValues, validationSchema } = tableSchema
+  // Steps 1 & 2: Filter to filled fields and run VAL010 validation.
+  // The coerced data is propagated to all return paths so persistence sees
+  // the schema's canonical types, not the raw shapes ExcelJS produced.
+  const { data, error } = coerceRowData(row, tableSchema)
 
-  // Step 1: Filter to filled fields only
-  const filledFields = filterToFilled(row, unfilledValues)
-
-  // Step 2: VAL010 - Validate filled fields
-  const { error } = validationSchema.validate(filledFields)
   if (error) {
     return {
       outcome: ROW_OUTCOME.REJECTED,
@@ -203,7 +228,8 @@ export const classifyRow = (row, tableSchema) => {
         field: detail.path[0] ?? detail.context?.field,
         message: detail.message,
         type: detail.type // Include Joi error type for application-layer mapping
-      }))
+      })),
+      data
     }
   }
 
@@ -213,7 +239,8 @@ export const classifyRow = (row, tableSchema) => {
   if (!tableSchema.classifyForWasteBalance) {
     return {
       outcome: ROW_OUTCOME.EXCLUDED,
-      issues: []
+      issues: [],
+      data
     }
   }
 
@@ -226,5 +253,5 @@ export const classifyRow = (row, tableSchema) => {
     accreditation: null,
     overseasSites: ORS_VALIDATION_DISABLED
   })
-  return mapWasteBalanceResult(wasteBalanceResult)
+  return { ...mapWasteBalanceResult(wasteBalanceResult), data }
 }
