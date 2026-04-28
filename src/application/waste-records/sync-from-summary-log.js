@@ -11,7 +11,6 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_CHANGE } from '#domain/waste-records/model.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
@@ -39,18 +38,17 @@ const isTemplateRow = (rowIdValue) => {
 /**
  * Prepares rows for transformation by building data objects
  *
- * Schema coercion is applied so the persisted record uses the canonical
- * types (e.g. numeric supplier names → strings, dates → YYYY-MM-DD) and
- * matches the shape produced by the validation pipeline; without this,
- * existing-record comparison during the next upload would mis-classify
- * unchanged rows as adjusted.
+ * Row values are stored as ExcelJS produced them. Schema-driven type
+ * coercion happens at read time (see #reports/domain/aggregation/
+ * coerce-waste-record.js), so the persisted record preserves the
+ * user's original input.
  *
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
- * @param {Object} tableSchema - The table schema (with rowIdField, validationSchema, unfilledValues)
+ * @param {string} rowIdField - The header name used to identify the row ID
  * @returns {TransformableRow[]} Array of rows with data objects built
  */
-const prepareRows = (headers, rows, tableSchema) => {
+const prepareRows = (headers, rows, rowIdField) => {
   // Build header to index map, excluding EPR markers and nulls
   const headerToIndexMap = new Map()
   for (const [index, header] of headers.entries()) {
@@ -59,7 +57,7 @@ const prepareRows = (headers, rows, tableSchema) => {
     }
   }
 
-  const rowIdIndex = headerToIndexMap.get(tableSchema.rowIdField)
+  const rowIdIndex = headerToIndexMap.get(rowIdField)
 
   return rows.flatMap((row) => {
     const { values } = row
@@ -68,12 +66,11 @@ const prepareRows = (headers, rows, tableSchema) => {
       return []
     }
 
-    const rawData = {}
+    const data = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
-      rawData[headerName] = values[colIndex]
+      data[headerName] = values[colIndex]
     }
 
-    const { data } = coerceRowData(rawData, tableSchema)
     return [{ data }]
   })
 }
@@ -102,7 +99,11 @@ const prepareRowsForTransformation = (parsedData) => {
     }
     transformedData[tableName] = {
       ...tableData,
-      rows: prepareRows(tableData.headers, tableData.rows, tableSchema)
+      rows: prepareRows(
+        tableData.headers,
+        tableData.rows,
+        tableSchema.rowIdField
+      )
     }
   }
 

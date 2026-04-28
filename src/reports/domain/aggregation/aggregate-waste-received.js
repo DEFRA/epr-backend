@@ -50,7 +50,7 @@ export function aggregateWasteReceived(wasteReceivedRecords, tonnageField) {
         data.SUPPLIER_ADDRESS,
         data.SUPPLIER_POSTCODE
       ),
-      supplierPhone: data.SUPPLIER_PHONE_NUMBER?.toString() ?? null,
+      supplierPhone: data.SUPPLIER_PHONE_NUMBER ?? null,
       supplierEmail: data.SUPPLIER_EMAIL ?? null
     }),
     ({ data }) => data[tonnageField]
