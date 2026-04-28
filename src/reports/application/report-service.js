@@ -5,6 +5,7 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { PeriodicReport } from '#reports/repository/port.js'
@@ -116,7 +117,7 @@ const assertValidPeriod = (period, cadence, allPeriods) => {
   const boom = /** @type {EnrichedBoom} */ (
     Boom.badRequest(`Invalid period ${period} for cadence ${cadence}`)
   )
-  boom.code = 'INVALID_PERIOD'
+  boom.code = errorCodes.invalidPeriod
   boom.event = {
     action: 'create_report',
     reason: `actual=${period} cadence=${cadence} validPeriods=[${validPeriods.join(',')}]`
@@ -151,7 +152,7 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
       `Cannot create report for period ${period} — period has not yet ended`
     )
   )
-  boom.code = 'PERIOD_NOT_ENDED'
+  boom.code = errorCodes.periodNotEnded
   boom.event = {
     action: 'create_report',
     reason: `period=${period} cadence=${cadence} endDate=${periodInfo.endDate} earliestSubmissionDate=${earliestSubmissionDate}`
@@ -186,7 +187,7 @@ const assertNoExistingReport = (periodicReports, year, cadence, period) => {
       `Report already exists for ${cadence} period ${period} of ${year}`
     )
   )
-  boom.code = 'REPORT_ALREADY_EXISTS'
+  boom.code = errorCodes.reportAlreadyExists
   boom.event = {
     action: 'create_report',
     reason: `cadence=${cadence} period=${period} year=${year}`,

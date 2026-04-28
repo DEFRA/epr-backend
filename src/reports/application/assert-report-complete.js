@@ -1,4 +1,5 @@
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 import {
   exportManualFields,
   prnManualFields,
@@ -89,7 +90,7 @@ export const assertReportComplete = (report, operatorCategory) => {
       `Report is incomplete; ${missingFields.length} required field(s) not populated`
     )
   )
-  boom.code = 'REPORT_INCOMPLETE'
+  boom.code = errorCodes.reportIncomplete
   boom.event = {
     action: 'update_report_status',
     reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,

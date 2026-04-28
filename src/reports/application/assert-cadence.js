@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -29,7 +30,7 @@ export const assertCadence = (cadence, registration) => {
       `Cadence '${cadence}' does not match registration type — expected '${expected}'`
     )
   )
-  boom.code = 'CADENCE_MISMATCH'
+  boom.code = errorCodes.cadenceMismatch
   boom.event = {
     action: 'create_report',
     reason: `actual=${cadence} expected=${expected}`
