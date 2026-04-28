@@ -11,12 +11,25 @@ import { validateLedgerTransactionInsert } from './ledger-validation.js'
  */
 
 /**
- * @param {Array<import('./ledger-port.js').LedgerTransaction>} [initialTransactions]
+ * @typedef {import('./ledger-port.js').LedgerTransaction} LedgerTransaction
+ */
+
+/**
+ * @typedef {import('./ledger-schema.js').LedgerTransactionInsert} LedgerTransactionInsert
+ */
+
+/**
+ * @param {Array<LedgerTransaction>} [initialTransactions]
  * @returns {import('./ledger-port.js').LedgerRepositoryFactory}
  */
 export const createInMemoryLedgerRepository = (initialTransactions = []) => {
   const storage = initialTransactions
 
+  /**
+   * @param {Array<LedgerTransaction>} haystack
+   * @param {string} accreditationId
+   * @param {number} number
+   */
   const slotTakenIn = (haystack, accreditationId, number) =>
     haystack.some(
       (existing) =>
@@ -25,7 +38,9 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
     )
 
   return () => ({
+    /** @param {LedgerTransactionInsert[]} transactions */
     insertTransactions: async (transactions) => {
+      /** @type {LedgerTransaction[]} */
       const stored = []
 
       for (const transaction of transactions) {
@@ -45,6 +60,7 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
 
       return stored
     },
+    /** @param {string} accreditationId */
     findLatestByAccreditationId: async (accreditationId) => {
       const matches = storage.filter(
         (existing) => existing.accreditationId === accreditationId

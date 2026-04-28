@@ -1,5 +1,13 @@
 /** @import { Collection, Db } from 'mongodb' */
 
+/**
+ * @typedef {import('./ledger-schema.js').LedgerTransactionInsert} LedgerTransactionInsert
+ */
+
+/**
+ * @typedef {import('./ledger-schema.js').LedgerTransaction} LedgerTransaction
+ */
+
 import { LedgerSlotConflictError } from './ledger-port.js'
 import {
   validateLedgerTransactionInsert,
@@ -58,12 +66,38 @@ const toLedgerTransaction = (doc) => {
   return validateLedgerTransactionRead({ id: _id.toString(), ...rest })
 }
 
-const findDuplicateKeyWriteError = (error) =>
-  error?.writeErrors?.find(
-    (writeError) => writeError?.code === MONGODB_DUPLICATE_KEY_ERROR_CODE
-  )
+/**
+ * @param {unknown} candidate
+ * @returns {candidate is { index: number, code: number }}
+ */
+const isDuplicateKeyWriteError = (candidate) =>
+  typeof candidate === 'object' &&
+  candidate !== null &&
+  'code' in candidate &&
+  candidate.code === MONGODB_DUPLICATE_KEY_ERROR_CODE &&
+  'index' in candidate &&
+  typeof candidate.index === 'number'
 
-/** @param {Collection} collection */
+/**
+ * @param {unknown} error
+ * @returns {{ index: number, code: number } | undefined}
+ */
+const findDuplicateKeyWriteError = (error) => {
+  if (
+    typeof error !== 'object' ||
+    error === null ||
+    !('writeErrors' in error) ||
+    !Array.isArray(error.writeErrors)
+  ) {
+    return undefined
+  }
+  return error.writeErrors.find(isDuplicateKeyWriteError)
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {(transactions: LedgerTransactionInsert[]) => Promise<LedgerTransaction[]>}
+ */
 const performInsertTransactions = (collection) => async (transactions) => {
   if (transactions.length === 0) {
     return []
@@ -89,7 +123,10 @@ const performInsertTransactions = (collection) => async (transactions) => {
   }
 }
 
-/** @param {Collection} collection */
+/**
+ * @param {Collection} collection
+ * @returns {(accreditationId: string) => Promise<LedgerTransaction | null>}
+ */
 const performFindLatestByAccreditationId =
   (collection) => async (accreditationId) => {
     const doc = await collection.findOne(
