@@ -80,4 +80,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
   })
+
+  it('returns true when migrateFormSubmissionLineage flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      migrateFormSubmissionLineage: true
+    })
+    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(true)
+  })
+
+  it('returns false when migrateFormSubmissionLineage flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      migrateFormSubmissionLineage: false
+    })
+    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(false)
+  })
+
+  it('returns false when migrateFormSubmissionLineage flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isMigrateFormSubmissionLineageEnabled()).toBe(false)
+  })
 })

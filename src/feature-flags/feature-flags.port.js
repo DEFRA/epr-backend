@@ -5,6 +5,7 @@
  * @property {() => boolean} isReportsEnabled
  * @property {() => boolean} isOrsWasteBalanceValidationEnabled
  * @property {() => boolean} isWasteBalanceLedgerEnabled
+ * @property {() => boolean} isMigrateFormSubmissionLineageEnabled
  */
 
 /**

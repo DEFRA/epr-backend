@@ -365,6 +365,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_WASTE_BALANCE_LEDGER'
+    },
+    migrateFormSubmissionLineage: {
+      doc: 'Feature Flag: Backfill formSubmission lineage on existing orgs/reg/acc',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_MIGRATE_FORM_SUBMISSION_LINEAGE'
     }
   },
   formSubmissionOverrides: {
