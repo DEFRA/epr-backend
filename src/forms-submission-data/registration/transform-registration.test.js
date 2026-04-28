@@ -102,6 +102,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       })
     )
     expect(result[1].id).not.toBe(exporter._id.$oid)
+    expect(result[1].splitFromSubmissionId).toBe(exporter._id.$oid)
+    expect(result[0].splitFromSubmissionId).toBeUndefined()
 
     // Regression guard: submitter and approved person must come from distinct
     // form sections. Pre-fix, both were extracted from the "App contact"

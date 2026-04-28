@@ -26,6 +26,7 @@ function splitIntoRemeltAndOther(registration) {
   const other = {
     ...registration,
     id: new ObjectId().toString(),
+    splitFromSubmissionId: registration.id,
     glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
   }
 

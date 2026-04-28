@@ -454,6 +454,8 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
       })
     )
     expect(result[1].id).not.toBe('68e6a97723d5d5454a9a193b')
+    expect(result[1].splitFromSubmissionId).toBe('68e6a97723d5d5454a9a193b')
+    expect(result[0].splitFromSubmissionId).toBeUndefined()
   })
 
   it('should apply systemReference override when accreditation id matches override config', () => {

@@ -104,6 +104,7 @@ export const registrationSchema = Joi.object({
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
   accreditationId: idSchema.optional(),
+  splitFromSubmissionId: idSchema.optional(),
   glassRecyclingProcess: whenMaterial(
     MATERIAL.GLASS,
     Joi.array()

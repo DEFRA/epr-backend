@@ -116,6 +116,34 @@ describe('splitGlassSubmissions', () => {
     expect(result[1].id).toBeTruthy()
   })
 
+  it('should set splitFromSubmissionId on the other registration to the original id', () => {
+    const both = makeGlassRegistration(
+      [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ],
+      { id: 'original-id' }
+    )
+
+    const result = splitGlassSubmissions([both])
+
+    expect(result[1].splitFromSubmissionId).toBe('original-id')
+  })
+
+  it('should not set splitFromSubmissionId on the remelt registration', () => {
+    const both = makeGlassRegistration(
+      [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ],
+      { id: 'original-id' }
+    )
+
+    const result = splitGlassSubmissions([both])
+
+    expect(result[0].splitFromSubmissionId).toBeUndefined()
+  })
+
   it('should handle a mix of glass and non-glass registrations', () => {
     const plastic = makeRegistration({ id: 'plastic-1' })
     const glassBoth = makeGlassRegistration(

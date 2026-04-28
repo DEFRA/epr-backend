@@ -1,6 +1,9 @@
 import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json'
 import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
-import { MATERIAL } from '#domain/organisations/model.js'
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL
+} from '#domain/organisations/model.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -26,6 +29,19 @@ describe('Migration Integration Tests with Fixtures', () => {
       const filePath = join(fixturesDir, filename)
       return JSON.parse(readFileSync(filePath, 'utf-8'))
     })
+  }
+
+  function verifyGlassSplitLineage(submissions) {
+    const remelt = submissions.find(
+      (s) =>
+        s.glassRecyclingProcess?.[0] === GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+    )
+    const other = submissions.find(
+      (s) =>
+        s.glassRecyclingProcess?.[0] === GLASS_RECYCLING_PROCESS.GLASS_OTHER
+    )
+    expect(other.splitFromSubmissionId).toBe(remelt.id)
+    expect(remelt.splitFromSubmissionId).toBeUndefined()
   }
 
   async function verifyIncrementalMigrationAudit(
@@ -176,6 +192,11 @@ describe('Migration Integration Tests with Fixtures', () => {
       for (const reg of org503181.registrations) {
         expect(reg.accreditationId).toBe(exporterAccreditation._id.$oid)
       }
+
+      verifyGlassSplitLineage(org503181.registrations)
+
+      const org503177 = allOrgs.find((o) => o.orgId === 503177)
+      verifyGlassSplitLineage(org503177.accreditations)
 
       const org503176 = allOrgs.find((o) => o.orgId === 503176)
       expect(org503176.accreditations).toHaveLength(3)

@@ -99,6 +99,7 @@ export const accreditationSchema = Joi.object({
   wasteProcessingType: Joi.string()
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
+  splitFromSubmissionId: idSchema.optional(),
   prnIssuance: prnIssuanceSchema.required(),
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart2FileUploads: Joi.array()
