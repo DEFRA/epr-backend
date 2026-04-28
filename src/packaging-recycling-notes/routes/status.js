@@ -90,7 +90,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       organisationsRepository,
       params,
       payload,
-      logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
+      logger,
       auth
     } = request
     const { organisationId, accreditationId, id } = params

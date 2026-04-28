@@ -60,7 +60,7 @@ const getLoggableOrgInfo = (orgInfo) =>
  * Get current Defra ID details from token relationships
  *
  * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} defraIdRelationships
- * @param {*} logger
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {DefraOrgSummary}
  */
 const getCurrentDetailsFromToken = (defraIdRelationships, logger) => {

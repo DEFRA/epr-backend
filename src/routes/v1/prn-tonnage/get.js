@@ -22,11 +22,12 @@ export const getPrnTonnage = {
       schema: prnTonnageResponseSchema
     }
   },
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest} request
+   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
-    const {
-      db,
-      logger /** @type {import('#common/hapi-types.js').TypedLogger} */
-    } = request
+    const { db, logger } = request
 
     try {
       const result = await aggregatePrnTonnage(db)

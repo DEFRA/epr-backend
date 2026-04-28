@@ -55,6 +55,7 @@ async function findHighestOrgId(db) {
  * Uses $setOnInsert so it only writes when the counter doesn't exist yet.
  *
  * @param {import('mongodb').Db} db
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  */
 async function seedOrgIdCounter(db, logger) {
   const seq = await findHighestOrgId(db)
@@ -67,7 +68,7 @@ async function seedOrgIdCounter(db, logger) {
       { upsert: true }
     )
 
-  logger.info(`orgId counter seeded at ${seq}`)
+  logger.info({ message: `orgId counter seeded at ${seq}` })
 }
 
 const mapDocument = (doc) => {

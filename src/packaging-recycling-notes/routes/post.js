@@ -145,7 +145,7 @@ export const packagingRecyclingNotesCreate = {
       organisationsRepository,
       params,
       payload,
-      logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
+      logger,
       auth
     } = request
     const { organisationId, registrationId, accreditationId } = params

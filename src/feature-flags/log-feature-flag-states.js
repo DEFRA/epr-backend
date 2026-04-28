@@ -5,7 +5,7 @@ import { LOGGING_EVENT_CATEGORIES } from '#common/enums/event.js'
  * which flags are active in a given environment.
  *
  * @param {{ get: (key: string) => unknown }} config
- * @param {{ info: (obj: object) => void }} logger
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  */
 export const logFeatureFlagStates = (config, logger) => {
   const flags = /** @type {Record<string, unknown>} */ (

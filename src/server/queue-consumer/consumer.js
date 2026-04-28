@@ -204,9 +204,7 @@ const createMessageHandler =
     const { handler, payload, context } = result
 
     const commandLogger = context?.traceId
-      ? /** @type {TypedLogger} */ (
-          logger.child({ trace: { id: context.traceId } })
-        )
+      ? logger.child({ trace: { id: context.traceId } })
       : logger
 
     const commandDeps = context?.traceId
@@ -299,9 +297,7 @@ const attachEventHandlers = (
     )
 
     const timeoutLogger = result?.context?.traceId
-      ? /** @type {TypedLogger} */ (
-          logger.child({ trace: { id: result.context.traceId } })
-        )
+      ? logger.child({ trace: { id: result.context.traceId } })
       : logger
 
     timeoutLogger.error({

@@ -13,7 +13,7 @@ import {
  *
  * @param {string} summaryLogId
  * @param {SummaryLogsRepository} repository
- * @param {object} logger
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {Promise<void>}
  */
 export const markAsValidationFailed = async (
@@ -56,7 +56,7 @@ export const markAsValidationFailed = async (
  *
  * @param {string} summaryLogId
  * @param {SummaryLogsRepository} repository
- * @param {object} logger
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @returns {Promise<void>}
  */
 export const markAsSubmissionFailed = async (

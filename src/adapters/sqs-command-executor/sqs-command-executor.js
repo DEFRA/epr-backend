@@ -55,7 +55,7 @@ const buildContext = () => {
  * Sends a command message to the SQS queue.
  * @param {string} queueUrl
  * @param {SQSClient} sqsClient
- * @param {object} logger
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {string} command
  * @param {object} payload
  * @param {string} description

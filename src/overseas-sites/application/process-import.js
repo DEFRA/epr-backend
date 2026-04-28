@@ -25,7 +25,7 @@ import { processImportFile } from './process-import-file.js'
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
- * @param {object} deps.logger
+ * @param {import('#common/hapi-types.js').TypedLogger} deps.logger
  * @param {import('#overseas-sites/metrics/ors-imports.js').OrsImportMetrics} deps.orsImportMetrics
  * @param {{ id: string, email: string, scope: string[] }} deps.user
  */
