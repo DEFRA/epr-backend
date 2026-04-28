@@ -84,6 +84,30 @@ const getCurrentDetailsFromToken = (defraIdRelationships, logger) => {
   }
 }
 
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} defraIdRelationships
+ * @returns {Promise<DefraOrgSummary>}
+ */
+const tryGetCurrentDetailsFromToken = async (request, defraIdRelationships) => {
+  const { logger } = request
+  try {
+    return getCurrentDetailsFromToken(defraIdRelationships, logger)
+  } catch (err) {
+    try {
+      await auditTokenValidationFailed(request, {
+        defraIdRelationships,
+        error: /** @type {Error} */ (err).message
+      })
+    } catch (auditErr) {
+      logger.error({
+        message: `Failed to audit token validation failure: ${/** @type {Error} */ (auditErr).message}`
+      })
+    }
+    throw err
+  }
+}
+
 export const organisationsLinkedGetAll = {
   method: 'GET',
   path: organisationsLinkedGetAllPath,
@@ -113,22 +137,10 @@ export const organisationsLinkedGetAll = {
     )
     const defraIdRelationships = getOrgDataFromDefraIdToken(tokenPayload)
 
-    let current
-    try {
-      current = getCurrentDetailsFromToken(defraIdRelationships, logger)
-    } catch (err) {
-      try {
-        await auditTokenValidationFailed(request, {
-          defraIdRelationships,
-          error: /** @type {Error} */ (err).message
-        })
-      } catch (auditErr) {
-        logger.error({
-          message: `Failed to audit token validation failure: ${/** @type {Error} */ (auditErr).message}`
-        })
-      }
-      throw err
-    }
+    const current = await tryGetCurrentDetailsFromToken(
+      request,
+      defraIdRelationships
+    )
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
       organisationsRepository.findByLinkedDefraOrgId(current.id),
