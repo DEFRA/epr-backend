@@ -18,7 +18,7 @@ const extendedIt = base.extend({
 describe('waste-balances ledger repository - in-memory implementation', () => {
   it('exposes the ledger port surface', () => {
     const repository = createInMemoryLedgerRepository()()
-    expect(repository.insertTransaction).toBeTypeOf('function')
+    expect(repository.insertTransactions).toBeTypeOf('function')
     expect(repository.findLatestByAccreditationId).toBeTypeOf('function')
   })
 

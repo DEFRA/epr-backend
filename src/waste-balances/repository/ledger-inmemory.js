@@ -11,33 +11,56 @@ import { validateLedgerTransactionInsert } from './ledger-validation.js'
  */
 
 /**
- * @param {Array<import('./ledger-port.js').LedgerTransaction>} [initialTransactions]
+ * @typedef {import('./ledger-port.js').LedgerTransaction} LedgerTransaction
+ */
+
+/**
+ * @typedef {import('./ledger-schema.js').LedgerTransactionInsert} LedgerTransactionInsert
+ */
+
+/**
+ * @param {Array<LedgerTransaction>} [initialTransactions]
  * @returns {import('./ledger-port.js').LedgerRepositoryFactory}
  */
 export const createInMemoryLedgerRepository = (initialTransactions = []) => {
   const storage = initialTransactions
 
+  /**
+   * @param {Array<LedgerTransaction>} haystack
+   * @param {string} accreditationId
+   * @param {number} number
+   */
+  const slotTakenIn = (haystack, accreditationId, number) =>
+    haystack.some(
+      (existing) =>
+        existing.accreditationId === accreditationId &&
+        existing.number === number
+    )
+
   return () => ({
-    insertTransaction: async (transaction) => {
-      const validated = validateLedgerTransactionInsert(transaction)
+    /** @param {LedgerTransactionInsert[]} transactions */
+    insertTransactions: async (transactions) => {
+      /** @type {LedgerTransaction[]} */
+      const stored = []
 
-      const slotTaken = storage.some(
-        (existing) =>
-          existing.accreditationId === validated.accreditationId &&
-          existing.number === validated.number
-      )
+      for (const transaction of transactions) {
+        const validated = validateLedgerTransactionInsert(transaction)
 
-      if (slotTaken) {
-        throw new LedgerSlotConflictError(
-          validated.accreditationId,
-          validated.number
-        )
+        if (slotTakenIn(storage, validated.accreditationId, validated.number)) {
+          throw new LedgerSlotConflictError(
+            validated.accreditationId,
+            validated.number
+          )
+        }
+
+        const persisted = { id: randomUUID(), ...validated }
+        storage.push(persisted)
+        stored.push(structuredClone(persisted))
       }
 
-      const stored = { id: randomUUID(), ...validated }
-      storage.push(stored)
-      return structuredClone(stored)
+      return stored
     },
+    /** @param {string} accreditationId */
     findLatestByAccreditationId: async (accreditationId) => {
       const matches = storage.filter(
         (existing) => existing.accreditationId === accreditationId
