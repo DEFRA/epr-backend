@@ -224,6 +224,23 @@ describe('processImportFile', () => {
     expectLogToBeCdpCompliant(logger.warn.mock.calls[0][0])
   })
 
+  it('emits a cdp-compliant warn log when SpreadsheetValidationError carries an underlying cause', async () => {
+    const buffer = Buffer.from('malformed-zip')
+    const innerExcelError = new TypeError('saxes: invalid characters in <c>')
+    const validationError = new SpreadsheetValidationError(
+      `Failed to parse spreadsheet: ${innerExcelError.message}`,
+      'SPREADSHEET_INVALID_ERROR',
+      { cause: innerExcelError }
+    )
+    parse.mockRejectedValue(validationError)
+
+    await processImportFile(buffer, deps())
+    const logged = logger.warn.mock.calls[0][0]
+
+    expect(logged).toBeDefined()
+    expectLogToBeCdpCompliant(logged)
+  })
+
   it('returns failure when organisation is not found', async () => {
     const buffer = Buffer.from('spreadsheet')
 
