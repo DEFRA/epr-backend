@@ -17,26 +17,33 @@ import { validateLedgerTransactionInsert } from './ledger-validation.js'
 export const createInMemoryLedgerRepository = (initialTransactions = []) => {
   const storage = initialTransactions
 
+  const slotTakenIn = (haystack, accreditationId, number) =>
+    haystack.some(
+      (existing) =>
+        existing.accreditationId === accreditationId &&
+        existing.number === number
+    )
+
   return () => ({
-    insertTransaction: async (transaction) => {
-      const validated = validateLedgerTransactionInsert(transaction)
+    insertTransactions: async (transactions) => {
+      const stored = []
 
-      const slotTaken = storage.some(
-        (existing) =>
-          existing.accreditationId === validated.accreditationId &&
-          existing.number === validated.number
-      )
+      for (const transaction of transactions) {
+        const validated = validateLedgerTransactionInsert(transaction)
 
-      if (slotTaken) {
-        throw new LedgerSlotConflictError(
-          validated.accreditationId,
-          validated.number
-        )
+        if (slotTakenIn(storage, validated.accreditationId, validated.number)) {
+          throw new LedgerSlotConflictError(
+            validated.accreditationId,
+            validated.number
+          )
+        }
+
+        const persisted = { id: randomUUID(), ...validated }
+        storage.push(persisted)
+        stored.push(structuredClone(persisted))
       }
 
-      const stored = { id: randomUUID(), ...validated }
-      storage.push(stored)
-      return structuredClone(stored)
+      return stored
     },
     findLatestByAccreditationId: async (accreditationId) => {
       const matches = storage.filter(

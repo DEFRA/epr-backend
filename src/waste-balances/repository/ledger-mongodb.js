@@ -58,22 +58,31 @@ const toLedgerTransaction = (doc) => {
   return validateLedgerTransactionRead({ id: _id.toString(), ...rest })
 }
 
+const findDuplicateKeyWriteError = (error) =>
+  error?.writeErrors?.find(
+    (writeError) => writeError?.code === MONGODB_DUPLICATE_KEY_ERROR_CODE
+  )
+
 /** @param {Collection} collection */
-const performInsertTransaction = (collection) => async (transaction) => {
-  const validated = validateLedgerTransactionInsert(transaction)
+const performInsertTransactions = (collection) => async (transactions) => {
+  if (transactions.length === 0) {
+    return []
+  }
+
+  const validated = transactions.map(validateLedgerTransactionInsert)
 
   try {
-    const result = await collection.insertOne(validated)
-    return toLedgerTransaction({ _id: result.insertedId, ...validated })
+    const result = await collection.insertMany(validated, { ordered: true })
+    return validated.map((transaction, index) =>
+      toLedgerTransaction({ _id: result.insertedIds[index], ...transaction })
+    )
   } catch (error) {
-    if (
-      error instanceof Error &&
-      'code' in error &&
-      error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE
-    ) {
+    const writeError = findDuplicateKeyWriteError(error)
+    if (writeError) {
+      const conflict = validated[writeError.index]
       throw new LedgerSlotConflictError(
-        validated.accreditationId,
-        validated.number
+        conflict.accreditationId,
+        conflict.number
       )
     }
     throw error
@@ -101,7 +110,7 @@ export const createMongoLedgerRepository = async (db) => {
   const collection = await ensureLedgerCollection(db)
 
   return () => ({
-    insertTransaction: performInsertTransaction(collection),
+    insertTransactions: performInsertTransactions(collection),
     findLatestByAccreditationId: performFindLatestByAccreditationId(collection)
   })
 }

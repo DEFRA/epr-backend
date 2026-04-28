@@ -16,13 +16,13 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
     })
 
     it('returns the only transaction when one exists', async () => {
-      const inserted = await repository.insertTransaction(
+      const [inserted] = await repository.insertTransactions([
         buildLedgerTransaction({
           accreditationId: 'acc-single',
           number: 1,
           closingBalance: { amount: 50, availableAmount: 40 }
         })
-      )
+      ])
 
       const result = await repository.findLatestByAccreditationId('acc-single')
 
@@ -33,27 +33,23 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
     })
 
     it('returns the highest-numbered transaction when many exist', async () => {
-      await repository.insertTransaction(
+      await repository.insertTransactions([
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 1,
           closingBalance: { amount: 10, availableAmount: 10 }
-        })
-      )
-      await repository.insertTransaction(
+        }),
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 3,
           closingBalance: { amount: 30, availableAmount: 25 }
-        })
-      )
-      await repository.insertTransaction(
+        }),
         buildLedgerTransaction({
           accreditationId: 'acc-many',
           number: 2,
           closingBalance: { amount: 20, availableAmount: 18 }
         })
-      )
+      ])
 
       const result = await repository.findLatestByAccreditationId('acc-many')
 
@@ -62,12 +58,10 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
     })
 
     it('isolates results by accreditation', async () => {
-      await repository.insertTransaction(
-        buildLedgerTransaction({ accreditationId: 'acc-x', number: 1 })
-      )
-      await repository.insertTransaction(
+      await repository.insertTransactions([
+        buildLedgerTransaction({ accreditationId: 'acc-x', number: 1 }),
         buildLedgerTransaction({ accreditationId: 'acc-y', number: 5 })
-      )
+      ])
 
       const x = await repository.findLatestByAccreditationId('acc-x')
       const y = await repository.findLatestByAccreditationId('acc-y')
