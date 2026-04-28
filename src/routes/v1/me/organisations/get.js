@@ -1,6 +1,9 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
-import { auditOrganisationsDiscovery } from '#auditing/organisations-discovery.js'
+import {
+  auditOrganisationsDiscovery,
+  auditTokenValidationFailed
+} from '#auditing/organisations-discovery.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -110,7 +113,22 @@ export const organisationsLinkedGetAll = {
     )
     const defraIdRelationships = getOrgDataFromDefraIdToken(tokenPayload)
 
-    const current = getCurrentDetailsFromToken(defraIdRelationships, logger)
+    let current
+    try {
+      current = getCurrentDetailsFromToken(defraIdRelationships, logger)
+    } catch (err) {
+      try {
+        await auditTokenValidationFailed(request, {
+          defraIdRelationships,
+          error: /** @type {Error} */ (err).message
+        })
+      } catch (auditErr) {
+        logger.error({
+          message: `Failed to audit token validation failure: ${/** @type {Error} */ (auditErr).message}`
+        })
+      }
+      throw err
+    }
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
       organisationsRepository.findByLinkedDefraOrgId(current.id),

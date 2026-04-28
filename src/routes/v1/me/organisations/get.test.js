@@ -588,6 +588,99 @@ describe('GET /v1/me/organisations', () => {
       expect(systemLogs).toHaveLength(1)
     })
 
+    it('should persist a token-validation-failed log when the token has no current organisation', async () => {
+      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepository = systemLogsRepositoryFactory()
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: systemLogsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const orgId1 = randomUUID()
+      const orgId2 = randomUUID()
+
+      const tokenWithNoCurrentOrg = generateValidTokenWith({
+        email,
+        relationships: [
+          `rel-1:${orgId1}:Company One`,
+          `rel-2:${orgId2}:Company Two`
+        ],
+        currentRelationshipId: undefined
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${tokenWithNoCurrentOrg}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+
+      const { systemLogs } = await systemLogsRepository.find({
+        subCategory: 'defra-id-reconciliation',
+        limit: 10
+      })
+      expect(systemLogs).toHaveLength(1)
+      expect(systemLogs[0]).toMatchObject({
+        event: {
+          category: 'identity',
+          subCategory: 'defra-id-reconciliation',
+          action: 'token-validation-failed'
+        },
+        context: {
+          defraIdRelationships: expect.arrayContaining([
+            expect.objectContaining({ defraIdOrgName: 'Company One' }),
+            expect.objectContaining({ defraIdOrgName: 'Company Two' })
+          ]),
+          error: expect.stringContaining('not associated with any organisation')
+        }
+      })
+    })
+
+    it('should still return 403 when the token is malformed and the audit call also throws', async () => {
+      const throwingSystemLogsRepository = {
+        async insert() {
+          throw new Error('DB unavailable')
+        },
+        async find() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        },
+        async findByOrganisationId() {
+          return { systemLogs: [], hasMore: false, nextCursor: null }
+        }
+      }
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          systemLogsRepository: throwingSystemLogsRepository
+        },
+        featureFlags
+      })
+
+      const tokenWithNoCurrentOrg = generateValidTokenWith({
+        email,
+        relationships: undefined,
+        currentRelationshipId: undefined
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: { Authorization: `Bearer ${tokenWithNoCurrentOrg}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+
     it('should return 200 even when the audit call throws', async () => {
       const throwingSystemLogsRepository = {
         async insert() {

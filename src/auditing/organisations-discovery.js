@@ -99,3 +99,31 @@ export async function auditOrganisationsDiscovery(
   safeAudit(payload)
   await recordSystemLog(request, payload)
 }
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @param {{
+ *   defraIdRelationships: DefraIdRelationship[]
+ *   error: string
+ * }} params
+ */
+export async function auditTokenValidationFailed(
+  request,
+  { defraIdRelationships, error }
+) {
+  const payload = {
+    event: {
+      category: 'identity',
+      subCategory: 'defra-id-reconciliation',
+      action: 'token-validation-failed'
+    },
+    context: {
+      defraIdRelationships,
+      error
+    },
+    user: extractUserDetails(request)
+  }
+
+  safeAudit(payload)
+  await recordSystemLog(request, payload)
+}
