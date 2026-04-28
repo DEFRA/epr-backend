@@ -51,17 +51,6 @@ describe('ExcelJSSummaryLogsParser', () => {
     await expect(parse(emptyBuffer)).rejects.toThrow(SpreadsheetValidationError)
   })
 
-  it('should preserve the original exceljs error as cause', async () => {
-    const invalidBuffer = Buffer.from('not an excel file')
-
-    await expect(parse(invalidBuffer)).rejects.toSatisfy(
-      (error) =>
-        error instanceof SpreadsheetValidationError &&
-        error.cause !== undefined &&
-        !(error.cause instanceof SpreadsheetValidationError)
-    )
-  })
-
   it('should rethrow unrecognised errors from the load call unchanged', async () => {
     const unexpected = new RangeError('this looks like a bug, not bad data')
     function MockWorkbook() {
@@ -2465,17 +2454,6 @@ describe('SpreadsheetValidationError', () => {
 
     expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
     expect(error.message).toBe('Duplicate marker')
-  })
-
-  it('should preserve cause when provided via options', () => {
-    const original = new TypeError('underlying failure')
-    const error = new SpreadsheetValidationError(
-      'Wrapped failure',
-      VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
-      { cause: original }
-    )
-
-    expect(error.cause).toBe(original)
   })
 })
 

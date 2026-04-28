@@ -2,12 +2,9 @@ export function validateConfig(config) {
   let serviceMaintainers
   try {
     serviceMaintainers = JSON.parse(config.get('roles.serviceMaintainers'))
-  } catch (error) {
+  } catch {
     throw new Error(
-      'Invalid roles.serviceMaintainers configuration: malformed JSON',
-      {
-        cause: error
-      }
+      'Invalid roles.serviceMaintainers configuration: malformed JSON'
     )
   }
 
