@@ -46,10 +46,6 @@ export const createSystemLogsRepository = async (db) => {
       }
     },
 
-    async findByOrganisationId({ organisationId, limit, cursor }) {
-      return this.find({ organisationId, limit, cursor })
-    },
-
     async find({ organisationId, email, subCategory, limit, cursor }) {
       const filter = {}
 
