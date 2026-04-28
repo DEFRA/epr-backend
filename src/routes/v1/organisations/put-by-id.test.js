@@ -132,8 +132,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const updatedOrgResponseBody = JSON.parse(updateResponse.payload)
 
       const systemLogsResponse = await server.inject({
-        method: 'GET',
-        url: `/v1/system-logs?organisationId=${organisationId}`,
+        method: 'POST',
+        url: '/v1/system-logs/search',
+        payload: { organisationId },
         headers: {
           Authorization: `Bearer ${validToken}`
         }
