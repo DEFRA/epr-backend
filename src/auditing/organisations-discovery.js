@@ -1,5 +1,4 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 /** @import {DefraIdRelationship} from '#common/helpers/auth/types.js' */
 
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
@@ -63,7 +62,7 @@ function toAuditUnlinked(linkableOrgs) {
 }
 
 /**
- * @param {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: SystemLogsRepository }} request
+ * @param {import('#common/hapi-types.js').HapiRequest} request
  * @param {{
  *   defraIdOrg: { id: string; name: string }
  *   defraIdRelationships: DefraIdRelationship[]

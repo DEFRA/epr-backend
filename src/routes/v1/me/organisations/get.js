@@ -5,7 +5,6 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 /**
  * @typedef {{
@@ -92,7 +91,7 @@ export const organisationsLinkedGetAll = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: SystemLogsRepository }} request
+   * @param {import('#common/hapi-types.js').HapiRequest} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */

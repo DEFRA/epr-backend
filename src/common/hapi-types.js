@@ -5,6 +5,7 @@
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  */
 
 /**
@@ -43,7 +44,8 @@
  *  db: Db,
  *  locker: LockManager,
  *  logger: TypedLogger,
- *  organisationsRepository: OrganisationsRepository
+ *  organisationsRepository: OrganisationsRepository,
+ *  systemLogsRepository: SystemLogsRepository,
  *  payload: T,
  *  server: HapiServer,
  *  featureFlags: FeatureFlags
