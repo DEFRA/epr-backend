@@ -8,11 +8,18 @@ export const LEDGER_TRANSACTION_TYPE = Object.freeze({
   PENDING_DEBIT: 'pending_debit'
 })
 
+/**
+ * @typedef {typeof LEDGER_TRANSACTION_TYPE[keyof typeof LEDGER_TRANSACTION_TYPE]} LedgerTransactionType
+ */
+
 export const LEDGER_SOURCE_KIND = Object.freeze({
   SUMMARY_LOG_ROW: 'summary-log-row',
-  PRN_OPERATION: 'prn-operation',
-  MANUAL_ADJUSTMENT: 'manual-adjustment'
+  PRN_OPERATION: 'prn-operation'
 })
+
+/**
+ * @typedef {typeof LEDGER_SOURCE_KIND[keyof typeof LEDGER_SOURCE_KIND]} LedgerSourceKind
+ */
 
 export const LEDGER_PRN_OPERATION_TYPE = Object.freeze({
   CREATION: 'creation',
@@ -21,6 +28,10 @@ export const LEDGER_PRN_OPERATION_TYPE = Object.freeze({
   CANCELLATION: 'cancellation',
   ISSUED_CANCELLATION: 'issued_cancellation'
 })
+
+/**
+ * @typedef {typeof LEDGER_PRN_OPERATION_TYPE[keyof typeof LEDGER_PRN_OPERATION_TYPE]} LedgerPrnOperationType
+ */
 
 const typeValues = Object.values(LEDGER_TRANSACTION_TYPE)
 const sourceKindValues = Object.values(LEDGER_SOURCE_KIND)
@@ -49,11 +60,6 @@ const prnOperationSourceSchema = Joi.object({
     .required()
 })
 
-const manualAdjustmentSourceSchema = Joi.object({
-  userId: Joi.string().required(),
-  reason: Joi.string().required()
-})
-
 const sourceSchema = Joi.object({
   kind: Joi.string()
     .valid(...sourceKindValues)
@@ -67,12 +73,75 @@ const sourceSchema = Joi.object({
     is: LEDGER_SOURCE_KIND.PRN_OPERATION,
     then: prnOperationSourceSchema.required(),
     otherwise: Joi.forbidden()
-  }),
-  manualAdjustment: Joi.when('kind', {
-    is: LEDGER_SOURCE_KIND.MANUAL_ADJUSTMENT,
-    then: manualAdjustmentSourceSchema.required(),
-    otherwise: Joi.forbidden()
   })
+})
+
+/**
+ * @typedef {Object} LedgerSummaryLogRow
+ * @property {string} summaryLogId
+ * @property {string} rowId
+ * @property {import('#domain/waste-records/model.js').WasteRecordType} rowType
+ * @property {string} wasteRecordId
+ * @property {string} wasteRecordVersionId
+ */
+
+/**
+ * @typedef {Object} LedgerPrnOperation
+ * @property {string} prnId
+ * @property {LedgerPrnOperationType} operationType
+ */
+
+/**
+ * Discriminated union — `kind` selects which variant carries the payload.
+ *
+ * @typedef {{ kind: (typeof LEDGER_SOURCE_KIND)['SUMMARY_LOG_ROW'], summaryLogRow: LedgerSummaryLogRow }
+ *   | { kind: (typeof LEDGER_SOURCE_KIND)['PRN_OPERATION'], prnOperation: LedgerPrnOperation }} LedgerSource
+ */
+
+/**
+ * @typedef {Object} LedgerUserSummary
+ * @property {string} id
+ * @property {string} name
+ */
+
+/**
+ * Snapshot of the running balance state. `amount` is the total balance;
+ * `availableAmount` is the total minus pending debits.
+ *
+ * @typedef {Object} LedgerBalanceSnapshot
+ * @property {number} amount
+ * @property {number} availableAmount
+ */
+
+/**
+ * Shape accepted by `LedgerRepository.insertTransaction`. Mirrors
+ * `ledgerTransactionInsertSchema` — keep the two in sync; the schema is the
+ * runtime gate, this typedef is the check-time gate.
+ *
+ * @typedef {Object} LedgerTransactionInsert
+ * @property {string} accreditationId
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {number} number
+ * @property {LedgerTransactionType} type
+ * @property {Date} createdAt
+ * @property {LedgerUserSummary} [createdBy]
+ * @property {number} amount
+ * @property {LedgerBalanceSnapshot} openingBalance
+ * @property {LedgerBalanceSnapshot} closingBalance
+ * @property {LedgerSource} source
+ */
+
+/**
+ * Shape returned by `LedgerRepository` reads — `LedgerTransactionInsert` plus
+ * the storage-assigned `id`.
+ *
+ * @typedef {LedgerTransactionInsert & { id: string }} LedgerTransaction
+ */
+
+const balanceSnapshotSchema = Joi.object({
+  amount: Joi.number().required(),
+  availableAmount: Joi.number().required()
 })
 
 export const ledgerTransactionInsertSchema = Joi.object({
@@ -86,10 +155,8 @@ export const ledgerTransactionInsertSchema = Joi.object({
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.optional(),
   amount: Joi.number().required(),
-  openingAmount: Joi.number().required(),
-  closingAmount: Joi.number().required(),
-  openingAvailableAmount: Joi.number().required(),
-  closingAvailableAmount: Joi.number().required(),
+  openingBalance: balanceSnapshotSchema.required(),
+  closingBalance: balanceSnapshotSchema.required(),
   source: sourceSchema.required()
 })
 
