@@ -33,6 +33,20 @@ describe('auditOrganisationsDiscovery', () => {
     }
   })
 
+  /** @type {import('#domain/organisations/model.js').Organisation} */
+  const linkedOrg = /** @type {any} */ ({
+    id: 'epr-org-1',
+    orgId: 1001,
+    status: 'approved',
+    companyDetails: { name: 'Linked Ltd' },
+    linkedDefraOrganisation: {
+      orgId: 'defra-org-1',
+      orgName: 'Linked Ltd',
+      linkedBy: { email: 'linker@example.com', id: 'linker-id' },
+      linkedAt: '2026-01-01T00:00:00.000Z'
+    }
+  })
+
   const baseParams = {
     defraIdOrg: { id: 'defra-org-1', name: 'Test Org' },
     defraIdRelationships: [
@@ -42,20 +56,28 @@ describe('auditOrganisationsDiscovery', () => {
         isCurrent: true
       }
     ],
-    linked: {
-      id: 'epr-org-1',
-      name: 'Linked Ltd',
-      orgId: 1001,
-      status: 'approved',
-      linkedBy: { email: 'linker@example.com', id: 'linker-id' },
-      linkedAt: '2026-01-01T00:00:00.000Z'
-    },
-    unlinked: []
+    linkedOrg,
+    linkableOrgs: /** @type {any[]} */ ([])
   }
 
   describe('CDP audit payload handling', () => {
     it('sends full context to CDP audit for normal-sized payloads', async () => {
       await auditOrganisationsDiscovery(createMockRequest(), baseParams)
+
+      const expectedContext = {
+        organisationId: 'epr-org-1',
+        defraIdOrg: baseParams.defraIdOrg,
+        defraIdRelationships: baseParams.defraIdRelationships,
+        linked: {
+          id: 'epr-org-1',
+          name: 'Linked Ltd',
+          orgId: 1001,
+          status: 'approved',
+          linkedBy: { email: 'linker@example.com', id: 'linker-id' },
+          linkedAt: '2026-01-01T00:00:00.000Z'
+        },
+        unlinked: []
+      }
 
       expect(mockAudit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -64,13 +86,7 @@ describe('auditOrganisationsDiscovery', () => {
             subCategory: 'defra-id-reconciliation',
             action: 'organisations-discovered'
           },
-          context: {
-            organisationId: 'epr-org-1',
-            defraIdOrg: baseParams.defraIdOrg,
-            defraIdRelationships: baseParams.defraIdRelationships,
-            linked: baseParams.linked,
-            unlinked: []
-          }
+          context: expectedContext
         })
       )
 
@@ -81,13 +97,7 @@ describe('auditOrganisationsDiscovery', () => {
             subCategory: 'defra-id-reconciliation',
             action: 'organisations-discovered'
           },
-          context: {
-            organisationId: 'epr-org-1',
-            defraIdOrg: baseParams.defraIdOrg,
-            defraIdRelationships: baseParams.defraIdRelationships,
-            linked: baseParams.linked,
-            unlinked: []
-          }
+          context: expectedContext
         })
       )
     })

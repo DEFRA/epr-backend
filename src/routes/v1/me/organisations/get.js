@@ -134,32 +134,12 @@ export const organisationsLinkedGetAll = {
       orgId: unlinkedOrg.orgId
     }))
 
-    const auditLinked = linkedOrg?.linkedDefraOrganisation
-      ? {
-          id: linkedOrg.id,
-          name: linkedOrg.linkedDefraOrganisation.orgName,
-          orgId: linkedOrg.orgId,
-          status: linkedOrg.status,
-          linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
-          linkedAt: new Date(
-            linkedOrg.linkedDefraOrganisation.linkedAt
-          ).toISOString()
-        }
-      : null
-
-    const auditUnlinked = linkableOrgs.map((org) => ({
-      id: org.id,
-      name: org.companyDetails.name,
-      orgId: org.orgId,
-      status: org.status
-    }))
-
     try {
       await auditOrganisationsDiscovery(request, {
         defraIdOrg: current,
         defraIdRelationships,
-        linked: auditLinked,
-        unlinked: auditUnlinked
+        linkedOrg,
+        linkableOrgs
       })
     } catch (err) {
       logger.error({
