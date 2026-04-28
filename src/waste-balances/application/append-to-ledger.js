@@ -52,7 +52,7 @@ const summariseLatest = (latest) =>
  * >} builders
  * @returns {Promise<import('../repository/ledger-port.js').LedgerTransaction[]>}
  */
-export const appendBatchToLedger = async (
+export const appendToLedger = async (
   { repository, accreditationId, organisationId, registrationId },
   builders
 ) => {

@@ -7,7 +7,7 @@ import {
   LEDGER_TRANSACTION_TYPE
 } from '../repository/ledger-schema.js'
 import { LedgerSlotConflictError } from '../repository/ledger-port.js'
-import { appendBatchToLedger } from './append-batch-to-ledger.js'
+import { appendToLedger } from './append-to-ledger.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const buildIdentity = (overrides = {}) => ({
@@ -63,7 +63,7 @@ const buildPendingDebitFor = (amount) => (latest) => ({
   createdAt: new Date('2026-01-15T10:00:00.000Z')
 })
 
-describe('appendBatchToLedger', () => {
+describe('appendToLedger', () => {
   describe('empty batch', () => {
     it('returns an empty array without touching the repository', async () => {
       const insertTransactions = vi.fn()
@@ -73,7 +73,7 @@ describe('appendBatchToLedger', () => {
         findLatestByAccreditationId
       }
 
-      const result = await appendBatchToLedger(
+      const result = await appendToLedger(
         { repository, ...buildIdentity() },
         []
       )
@@ -90,7 +90,7 @@ describe('appendBatchToLedger', () => {
       const findLatestSpy = vi.spyOn(repository, 'findLatestByAccreditationId')
       const insertSpy = vi.spyOn(repository, 'insertTransactions')
 
-      const [result] = await appendBatchToLedger(
+      const [result] = await appendToLedger(
         { repository, ...buildIdentity() },
         [buildPendingDebitFor(-5)]
       )
@@ -114,10 +114,11 @@ describe('appendBatchToLedger', () => {
       const builderB = vi.fn(buildCreditFor('row-b', 30))
       const builderC = vi.fn(buildCreditFor('row-c', 70))
 
-      const results = await appendBatchToLedger(
-        { repository, ...buildIdentity() },
-        [builderA, builderB, builderC]
-      )
+      const results = await appendToLedger({ repository, ...buildIdentity() }, [
+        builderA,
+        builderB,
+        builderC
+      ])
 
       expect(builderA).toHaveBeenCalledWith({
         number: 0,
@@ -144,7 +145,7 @@ describe('appendBatchToLedger', () => {
       const repository = createInMemoryLedgerRepository()()
       const findLatestSpy = vi.spyOn(repository, 'findLatestByAccreditationId')
 
-      await appendBatchToLedger({ repository, ...buildIdentity() }, [
+      await appendToLedger({ repository, ...buildIdentity() }, [
         buildCreditFor('row-a', 10),
         buildCreditFor('row-b', 20),
         buildCreditFor('row-c', 30)
@@ -157,7 +158,7 @@ describe('appendBatchToLedger', () => {
       const repository = createInMemoryLedgerRepository()()
       const insertSpy = vi.spyOn(repository, 'insertTransactions')
 
-      await appendBatchToLedger({ repository, ...buildIdentity() }, [
+      await appendToLedger({ repository, ...buildIdentity() }, [
         buildCreditFor('row-a', 10),
         buildCreditFor('row-b', 20)
       ])
@@ -169,17 +170,17 @@ describe('appendBatchToLedger', () => {
     it('chains off the freshest observed snapshot', async () => {
       const repository = createInMemoryLedgerRepository()()
 
-      await appendBatchToLedger({ repository, ...buildIdentity() }, [
+      await appendToLedger({ repository, ...buildIdentity() }, [
         buildCreditFor('row-a', 50)
       ])
 
       const builderB = vi.fn(buildCreditFor('row-b', 25))
       const builderC = vi.fn(buildCreditFor('row-c', 25))
 
-      const results = await appendBatchToLedger(
-        { repository, ...buildIdentity() },
-        [builderB, builderC]
-      )
+      const results = await appendToLedger({ repository, ...buildIdentity() }, [
+        builderB,
+        builderC
+      ])
 
       expect(builderB).toHaveBeenCalledWith({
         number: 1,
@@ -195,7 +196,7 @@ describe('appendBatchToLedger', () => {
     it('ignores builder-returned identity and number fields', async () => {
       const repository = createInMemoryLedgerRepository()()
 
-      const [result] = await appendBatchToLedger(
+      const [result] = await appendToLedger(
         { repository, ...buildIdentity() },
         [
           (latest) => ({
@@ -227,7 +228,7 @@ describe('appendBatchToLedger', () => {
       }
 
       await expect(
-        appendBatchToLedger({ repository, ...buildIdentity() }, [
+        appendToLedger({ repository, ...buildIdentity() }, [
           buildCreditFor('row-a', 10)
         ])
       ).rejects.toBe(slotConflict)
@@ -246,7 +247,7 @@ describe('appendBatchToLedger', () => {
       }
 
       await expect(
-        appendBatchToLedger({ repository, ...buildIdentity() }, [
+        appendToLedger({ repository, ...buildIdentity() }, [
           buildCreditFor('row-a', 10)
         ])
       ).rejects.toBe(upstream)

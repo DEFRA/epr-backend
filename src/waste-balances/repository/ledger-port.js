@@ -5,7 +5,7 @@
  * could meaningfully implement things differently (persistence, native conflict
  * signal translation). Domain logic — balance arithmetic, retry on
  * slot conflict, builder-callback semantics — lives above the port in
- * `appendBatchToLedger`, not on adapters.
+ * `appendToLedger`, not on adapters.
  */
 
 /**
