@@ -10,18 +10,14 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  *   name: string
  *   orgId: number
  *   status: string
- *   linkedBy: { email: string, id: string }
- *   linkedAt: string
- * }} AuditLinkedOrg
+ * }} AuditUnlinkedOrg
  */
 
 /**
- * @typedef {{
- *   id: string
- *   name: string
- *   orgId: number
- *   status: string
- * }} AuditUnlinkedOrg
+ * @typedef {AuditUnlinkedOrg & {
+ *   linkedBy: { email: string, id: string }
+ *   linkedAt: string
+ * }} AuditLinkedOrg
  */
 
 /**
