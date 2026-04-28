@@ -9,6 +9,7 @@
  */
 
 import { LedgerSlotConflictError } from './ledger-port.js'
+import { LEDGER_SOURCE_KIND, LEDGER_TRANSACTION_TYPE } from './ledger-schema.js'
 import {
   validateLedgerTransactionInsert,
   validateLedgerTransactionRead
@@ -56,6 +57,16 @@ export async function ensureLedgerCollection(db) {
   await collection.createIndex(
     { 'source.prnOperation.prnId': 1 },
     { name: 'prnOperation_prnId' }
+  )
+
+  await collection.createIndex(
+    { organisationId: 1, accreditationId: 1, number: -1 },
+    { name: 'organisationId_accreditationId_number' }
+  )
+
+  await collection.createIndex(
+    { registrationId: 1, accreditationId: 1, number: -1 },
+    { name: 'registrationId_accreditationId_number' }
   )
 
   return collection
@@ -138,6 +149,91 @@ const performFindLatestByAccreditationId =
   }
 
 /**
+ * @param {Collection} collection
+ * @returns {(filter: object) => Promise<LedgerTransaction[]>}
+ */
+const performFindOrdered = (collection) => async (filter) => {
+  const docs = await collection.find(filter).sort({ number: 1 }).toArray()
+  return docs.map(toLedgerTransaction)
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {(wasteRecordIds: string[]) => Promise<Map<string, number>>}
+ */
+const performFindCreditedAmountsByWasteRecordIds =
+  (collection) => async (wasteRecordIds) => {
+    const result = new Map(wasteRecordIds.map((id) => [id, 0]))
+    if (wasteRecordIds.length === 0) {
+      return result
+    }
+
+    const aggregation = collection.aggregate([
+      {
+        $match: {
+          'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
+          'source.summaryLogRow.wasteRecordId': { $in: wasteRecordIds }
+        }
+      },
+      {
+        $group: {
+          _id: '$source.summaryLogRow.wasteRecordId',
+          credited: {
+            $sum: {
+              $switch: {
+                branches: [
+                  {
+                    case: { $eq: ['$type', LEDGER_TRANSACTION_TYPE.CREDIT] },
+                    then: '$amount'
+                  },
+                  {
+                    case: { $eq: ['$type', LEDGER_TRANSACTION_TYPE.DEBIT] },
+                    then: { $multiply: ['$amount', -1] }
+                  }
+                ],
+                default: 0
+              }
+            }
+          }
+        }
+      }
+    ])
+
+    for await (const row of aggregation) {
+      result.set(row._id, row.credited)
+    }
+    return result
+  }
+
+/**
+ * Returns the latest transaction (highest `number`) per accreditation among
+ * documents matching `parentField === parentId`. A single aggregation pass:
+ * the index `(parentField, accreditationId, number)` (descending on number)
+ * lets the planner find the head row per accreditation directly.
+ *
+ * @param {Collection} collection
+ * @param {string} parentField
+ * @returns {(parentId: string) => Promise<LedgerTransaction[]>}
+ */
+const performFindLatestPerAccreditationByParent =
+  (collection, parentField) => async (parentId) => {
+    const aggregation = collection.aggregate([
+      { $match: { [parentField]: parentId } },
+      { $sort: { accreditationId: 1, number: -1 } },
+      {
+        $group: {
+          _id: '$accreditationId',
+          latest: { $first: '$$ROOT' }
+        }
+      },
+      { $replaceRoot: { newRoot: '$latest' } }
+    ])
+
+    const docs = await aggregation.toArray()
+    return docs.map(toLedgerTransaction)
+  }
+
+/**
  * Creates a MongoDB-backed ledger repository.
  *
  * @param {Db} db
@@ -145,9 +241,38 @@ const performFindLatestByAccreditationId =
  */
 export const createMongoLedgerRepository = async (db) => {
   const collection = await ensureLedgerCollection(db)
+  const findOrdered = performFindOrdered(collection)
 
   return () => ({
     insertTransactions: performInsertTransactions(collection),
-    findLatestByAccreditationId: performFindLatestByAccreditationId(collection)
+    findLatestByAccreditationId: performFindLatestByAccreditationId(collection),
+    findTransactionsBySummaryLogId: (summaryLogId) =>
+      findOrdered({
+        'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
+        'source.summaryLogRow.summaryLogId': summaryLogId
+      }),
+    findTransactionsByWasteRecordId: (wasteRecordId) =>
+      findOrdered({
+        'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
+        'source.summaryLogRow.wasteRecordId': wasteRecordId
+      }),
+    findTransactionsByPrnId: (prnId) =>
+      findOrdered({
+        'source.kind': LEDGER_SOURCE_KIND.PRN_OPERATION,
+        'source.prnOperation.prnId': prnId
+      }),
+    findTransactionsByRow: ({ summaryLogId, rowId, rowType }) =>
+      findOrdered({
+        'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
+        'source.summaryLogRow.summaryLogId': summaryLogId,
+        'source.summaryLogRow.rowId': rowId,
+        'source.summaryLogRow.rowType': rowType
+      }),
+    findCreditedAmountsByWasteRecordIds:
+      performFindCreditedAmountsByWasteRecordIds(collection),
+    findLatestPerAccreditationByOrganisationId:
+      performFindLatestPerAccreditationByParent(collection, 'organisationId'),
+    findLatestPerAccreditationByRegistrationId:
+      performFindLatestPerAccreditationByParent(collection, 'registrationId')
   })
 }

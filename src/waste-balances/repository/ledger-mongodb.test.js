@@ -89,6 +89,32 @@ describe('ensureLedgerCollection', () => {
         'source.prnOperation.prnId': 1
       })
     })
+
+    it('creates the organisationId_accreditationId_number index', async ({
+      ledgerCollection
+    }) => {
+      const indexes = await ledgerCollection.indexes()
+      expect(
+        indexKeyFor(indexes, 'organisationId_accreditationId_number')
+      ).toEqual({
+        organisationId: 1,
+        accreditationId: 1,
+        number: -1
+      })
+    })
+
+    it('creates the registrationId_accreditationId_number index', async ({
+      ledgerCollection
+    }) => {
+      const indexes = await ledgerCollection.indexes()
+      expect(
+        indexKeyFor(indexes, 'registrationId_accreditationId_number')
+      ).toEqual({
+        registrationId: 1,
+        accreditationId: 1,
+        number: -1
+      })
+    })
   })
 
   describe('unique constraint on (accreditationId, number)', () => {
