@@ -775,13 +775,16 @@ describe('GET /v1/me/organisations', () => {
       })
       expect(systemLogs).toHaveLength(1)
       const [log] = systemLogs
-      expect(log.context.organisationId).toBeUndefined()
-      expect(log.context.linked).toBeNull()
-      expect(log.context.unlinked).toHaveLength(1)
-      expect(log.context.unlinked[0]).toMatchObject({
-        id: unlinkedOrg.id,
-        orgId: unlinkedOrg.orgId,
-        status: 'approved'
+      expect(log.context).toMatchObject({
+        organisationId: null,
+        linked: null,
+        unlinked: [
+          expect.objectContaining({
+            id: unlinkedOrg.id,
+            orgId: unlinkedOrg.orgId,
+            status: 'approved'
+          })
+        ]
       })
     })
 
@@ -813,8 +816,10 @@ describe('GET /v1/me/organisations', () => {
       })
       expect(systemLogs).toHaveLength(1)
       const [log] = systemLogs
-      expect(log.context.linked).toBeNull()
-      expect(log.context.unlinked).toEqual([])
+      expect(log.context).toMatchObject({
+        linked: null,
+        unlinked: []
+      })
     })
 
     it('should return 200 even when the audit call throws', async () => {

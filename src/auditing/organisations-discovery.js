@@ -37,7 +37,7 @@ export async function auditOrganisationsDiscovery(
   { defraIdOrg, defraIdRelationships, linked, unlinked }
 ) {
   const context = {
-    ...(linked ? { organisationId: linked.id } : {}),
+    organisationId: linked?.id ?? null,
     defraIdOrg,
     defraIdRelationships,
     linked,
