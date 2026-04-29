@@ -160,9 +160,7 @@ const performFindPage =
 
     if (trimmedSearch !== '') {
       const pattern = new RegExp(escapeRegex(trimmedSearch), 'i')
-      matches = matches.filter((org) =>
-        pattern.test(org.companyDetails.name)
-      )
+      matches = matches.filter((org) => pattern.test(org.companyDetails.name))
     }
 
     matches.sort((a, b) => {
