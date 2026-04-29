@@ -43,6 +43,8 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
 
+/** @import { Lifecycle } from '@hapi/hapi' */
+
 function getServerConfig(config) {
   return {
     host: config.get('host'),
@@ -56,7 +58,7 @@ function getServerConfig(config) {
         // failAction declares HapiRequest in its signature so callers get the
         // typed logger; Hapi's Lifecycle.FailAction expects plain Request.
         // Runtime is fine — Hapi populates the augmented request before calling.
-        failAction: /** @type {import('@hapi/hapi').Lifecycle.FailAction} */ (
+        failAction: /** @type {Lifecycle.FailAction} */ (
           /** @type {unknown} */ (failAction)
         )
       },

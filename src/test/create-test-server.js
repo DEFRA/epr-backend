@@ -35,6 +35,8 @@ import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-l
 import { createInMemoryWasteBalancesRepositoryPlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 
+/** @import { Lifecycle } from '@hapi/hapi' */
+
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
  *   loggerMocks: {
@@ -167,7 +169,7 @@ function createHapiServer(config) {
     routes: {
       validate: {
         options: { abortEarly: false },
-        failAction: /** @type {import('@hapi/hapi').Lifecycle.FailAction} */ (
+        failAction: /** @type {Lifecycle.FailAction} */ (
           /** @type {unknown} */ (failAction)
         )
       },
