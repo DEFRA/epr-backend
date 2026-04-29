@@ -141,7 +141,7 @@ describe('MongoDB ledger repository', () => {
   it('exposes the ledger port surface', async ({ mongoClient }) => {
     const database = mongoClient.db(DATABASE_NAME)
     const repository = (await createMongoLedgerRepository(database))()
-    expect(repository.insertTransaction).toBeTypeOf('function')
+    expect(repository.insertTransactions).toBeTypeOf('function')
     expect(repository.findLatestByAccreditationId).toBeTypeOf('function')
   })
 
@@ -149,12 +149,12 @@ describe('MongoDB ledger repository', () => {
     testLedgerRepositoryContract(it)
   })
 
-  describe('insertTransaction error translation', () => {
+  describe('insertTransactions error translation', () => {
     it('rethrows non-conflict MongoDB errors unchanged', async () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
-        insertOne: () => Promise.reject(upstream)
+        insertMany: () => Promise.reject(upstream)
       }
       const stubDb = { collection: () => stubCollection }
 
@@ -163,7 +163,7 @@ describe('MongoDB ledger repository', () => {
       )()
 
       await expect(
-        repository.insertTransaction(buildLedgerTransaction({ number: 1 }))
+        repository.insertTransactions([buildLedgerTransaction({ number: 1 })])
       ).rejects.toBe(upstream)
     })
   })

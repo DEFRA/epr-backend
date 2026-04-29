@@ -114,7 +114,7 @@ const sourceSchema = Joi.object({
  */
 
 /**
- * Shape accepted by `LedgerRepository.insertTransaction`. Mirrors
+ * Shape accepted by `LedgerRepository.insertTransactions`. Mirrors
  * `ledgerTransactionInsertSchema` — keep the two in sync; the schema is the
  * runtime gate, this typedef is the check-time gate.
  *
