@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient } from 'mongodb'
+import { Decimal128, MongoClient } from 'mongodb'
 
 import {
   createMongoLedgerRepository,
@@ -147,6 +147,35 @@ describe('MongoDB ledger repository', () => {
 
   describe('ledger repository contract', () => {
     testLedgerRepositoryContract(it)
+  })
+
+  describe('amount field BSON typing', () => {
+    it('persists amount and snapshot fields as Decimal128', async ({
+      ledgerCollection,
+      ledgerRepository
+    }) => {
+      const repository = await ledgerRepository()
+      await repository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-decimal',
+          number: 1,
+          amount: 1.5,
+          openingBalance: { amount: 0, availableAmount: 0 },
+          closingBalance: { amount: 1.5, availableAmount: 1.5 }
+        })
+      ])
+
+      const raw = await ledgerCollection.findOne({
+        accreditationId: 'acc-decimal'
+      })
+
+      expect(raw.amount).toBeInstanceOf(Decimal128)
+      expect(raw.openingBalance.amount).toBeInstanceOf(Decimal128)
+      expect(raw.openingBalance.availableAmount).toBeInstanceOf(Decimal128)
+      expect(raw.closingBalance.amount).toBeInstanceOf(Decimal128)
+      expect(raw.closingBalance.availableAmount).toBeInstanceOf(Decimal128)
+      expect(raw.amount.toString()).toBe('1.5')
+    })
   })
 
   describe('insertTransactions error translation', () => {
