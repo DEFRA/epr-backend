@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { withTraceId } from '@defra/hapi-tracing'
 import { errorCodes } from '#common/enums/error-codes.js'
-import { internal } from './logging/cdp-boom.js'
+import { classifierTail, internal } from './logging/cdp-boom.js'
 import { getTracingHeaderName } from './request-tracing.js'
 
 /**
@@ -56,7 +56,7 @@ export const fetchJson = async (url, options) => {
       {
         event: {
           action: 'external_fetch',
-          reason: `type=${error?.name ?? 'Error'} code=${error?.code ?? 'unknown'}`
+          reason: classifierTail(error)
         }
       }
     )

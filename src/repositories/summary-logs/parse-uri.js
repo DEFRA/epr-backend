@@ -1,5 +1,5 @@
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
-import { internal } from '#common/helpers/logging/cdp-boom.js'
+import { classifierTail, internal } from '#common/helpers/logging/cdp-boom.js'
 
 import { errorCodes } from './enums/error-codes.js'
 
@@ -16,14 +16,8 @@ export const parseSummaryLogUri = (uri, summaryLogId) => {
   try {
     return parseS3Uri(uri)
   } catch (error) {
-    const err =
-      /** @type {Error & { code?: string, cause?: Error & { code?: string } }} */ (
-        error
-      )
+    const err = /** @type {Error & { cause?: Error }} */ (error)
     const cause = err.cause ?? err
-    const classifier = cause.code
-      ? `type=${cause.name} code=${cause.code}`
-      : `type=${cause.name}`
 
     throw internal(
       `Failed to parse S3 URI for summary log ${summaryLogId}`,
@@ -31,7 +25,7 @@ export const parseSummaryLogUri = (uri, summaryLogId) => {
       {
         event: {
           action: 'get_download_url',
-          reason: `summaryLogId=${summaryLogId} ${classifier}`
+          reason: `summaryLogId=${summaryLogId} ${classifierTail(cause)}`
         }
       }
     )

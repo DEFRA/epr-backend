@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { badRequest, conflict, internal } from './cdp-boom.js'
+import { badRequest, classifierTail, conflict, internal } from './cdp-boom.js'
+
+describe('classifierTail', () => {
+  it.each([
+    {
+      label: 'with name and code',
+      input: Object.assign(new TypeError('msg'), { code: 'ERR_INVALID_URL' }),
+      expected: 'type=TypeError code=ERR_INVALID_URL'
+    },
+    {
+      label: 'with name but no code',
+      input: new TypeError('msg'),
+      expected: 'type=TypeError code=unknown'
+    },
+    {
+      label: 'with null',
+      input: null,
+      expected: 'type=Error code=unknown'
+    }
+  ])('returns "$expected" $label', ({ input, expected }) => {
+    expect(classifierTail(input)).toBe(expected)
+  })
+})
 
 describe('factories', () => {
   it.each(

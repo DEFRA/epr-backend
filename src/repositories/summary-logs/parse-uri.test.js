@@ -17,7 +17,7 @@ describe('parseSummaryLogUri', () => {
       code: 'summary_log_uri_corrupt',
       event: {
         action: 'get_download_url',
-        reason: 'summaryLogId=log-1 type=Error'
+        reason: 'summaryLogId=log-1 type=Error code=unknown'
       }
     })
   })

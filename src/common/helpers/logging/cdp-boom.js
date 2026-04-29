@@ -59,3 +59,14 @@ export const conflict = (message, code, enrichment) =>
  */
 export const internal = (message, code, enrichment) =>
   enrich(Boom.internal(message), code, enrichment)
+
+/**
+ * Composes the `type=… code=…` tail of an `event.reason` string from an
+ * underlying error. Falls back to `Error` / `unknown` when fields are
+ * missing so the tail keeps a fixed shape — easier to query in OpenSearch.
+ *
+ * @param {{ name?: string, code?: string | number } | null | undefined} error
+ * @returns {string}
+ */
+export const classifierTail = (error) =>
+  `type=${error?.name ?? 'Error'} code=${error?.code ?? 'unknown'}`

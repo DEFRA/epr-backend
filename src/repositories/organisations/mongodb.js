@@ -1,4 +1,4 @@
-import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
@@ -96,7 +96,7 @@ const throwCuratedDuplicateKeyBoom = (error, id) => {
     {
       event: {
         action: 'update_organisation',
-        reason: `fields=${conflictFields} type=${error.name} code=${error.code}`
+        reason: `fields=${conflictFields} ${classifierTail(error)}`
       }
     }
   )

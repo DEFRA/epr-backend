@@ -290,23 +290,6 @@ describe('#fetchJson', () => {
       })
     })
 
-    test('falls back to code=unknown in event.reason when the cause has no code', async () => {
-      const noCode = new TypeError('something went wrong')
-      global.fetch = vi.fn().mockRejectedValue(noCode)
-
-      await expect(fetchJson(url)).rejects.toMatchObject({
-        event: { reason: 'type=TypeError code=unknown' }
-      })
-    })
-
-    test('falls back to type=Error and code=unknown when fetch rejects with a non-Error value', async () => {
-      global.fetch = vi.fn().mockRejectedValue('plain string thrown')
-
-      await expect(fetchJson(url)).rejects.toMatchObject({
-        event: { reason: 'type=Error code=unknown' }
-      })
-    })
-
     test('throws Boom internal server error when fetch throws timeout error', async () => {
       const timeoutError = new Error('Request timeout')
       global.fetch = vi.fn().mockRejectedValue(timeoutError)
