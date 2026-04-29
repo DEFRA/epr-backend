@@ -9,6 +9,8 @@ import {
 } from '#domain/organisations/model.js'
 import {
   formFileUploadSchema,
+  formSubmissionSchema,
+  formSubmissionTimeSchema,
   idSchema,
   reprocessingTypeSchema,
   userSchema
@@ -68,7 +70,6 @@ export const accreditationSchema = Joi.object({
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null),
   reprocessingType: reprocessingTypeSchema,
-  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -99,6 +100,17 @@ export const accreditationSchema = Joi.object({
   wasteProcessingType: Joi.string()
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
+  formSubmissionTime: Joi.when('/schemaVersion', {
+    is: 1,
+    then: formSubmissionTimeSchema.required(),
+    otherwise: formSubmissionTimeSchema.forbidden()
+  }),
+
+  formSubmission: Joi.when('/schemaVersion', {
+    is: 2,
+    then: formSubmissionSchema.required(),
+    otherwise: formSubmissionSchema.forbidden()
+  }),
   prnIssuance: prnIssuanceSchema.required(),
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart2FileUploads: Joi.array()

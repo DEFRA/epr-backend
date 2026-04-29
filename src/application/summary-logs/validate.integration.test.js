@@ -30,14 +30,15 @@ describe('SummaryLogsValidator integration', () => {
   ) => {
     const registrationId = randomUUID()
 
+    const accreditationId = randomUUID()
     const accreditation = accreditationNumber
       ? {
-          id: randomUUID(),
+          id: accreditationId,
           accreditationNumber,
           material: 'paper',
           wasteProcessingType,
           ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
-          formSubmissionTime: new Date(),
+          formSubmission: { id: accreditationId, time: new Date() },
           submittedToRegulator: 'ea'
         }
       : undefined
@@ -48,7 +49,7 @@ describe('SummaryLogsValidator integration', () => {
       material: 'paper',
       wasteProcessingType,
       ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
-      formSubmissionTime: new Date(),
+      formSubmission: { id: registrationId, time: new Date() },
       submittedToRegulator: 'ea',
       ...(accreditation && { accreditationId: accreditation.id })
     }

@@ -627,7 +627,7 @@ describe('organisationJSONSchemaOverrides', () => {
     delete accreditation.glassRecyclingProcess
 
     const organisation = buildOrganisation({
-      schemaVersion: 1,
+      schemaVersion: 2,
       registrations: [registration],
       accreditations: [accreditation]
     })
@@ -647,7 +647,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete registration.glassRecyclingProcess
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [registration],
         accreditations: []
       })
@@ -666,7 +666,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete registration.glassRecyclingProcess
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [registration],
         accreditations: []
       })
@@ -687,7 +687,7 @@ describe('organisationJSONSchemaOverrides', () => {
       delete registration.plantEquipmentDetails
 
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [registration],
         accreditations: []
       })
@@ -707,7 +707,7 @@ describe('organisationJSONSchemaOverrides', () => {
       delete registration.orsFileUploads
 
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [registration],
         accreditations: []
       })
@@ -724,7 +724,7 @@ describe('organisationJSONSchemaOverrides', () => {
       delete registration.glassRecyclingProcess
 
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [registration],
         accreditations: []
       })
@@ -745,7 +745,7 @@ describe('organisationJSONSchemaOverrides', () => {
       })
       delete accreditation.glassRecyclingProcess
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [],
         accreditations: [accreditation]
       })
@@ -764,7 +764,7 @@ describe('organisationJSONSchemaOverrides', () => {
       delete accreditation.glassRecyclingProcess
 
       const organisation = buildOrganisation({
-        schemaVersion: 1,
+        schemaVersion: 2,
         registrations: [],
         accreditations: [accreditation]
       })

@@ -52,7 +52,7 @@ function buildParsedRegistration(id, rawSubmissionData) {
 
   return {
     id,
-    formSubmissionTime: extractTimestamp(rawSubmissionData),
+    formSubmission: { id, time: extractTimestamp(rawSubmissionData) },
     submittedToRegulator: extractAgencyFromDefinitionName(rawSubmissionData),
     orgId: convertToNumber(
       answersByShortDescription[

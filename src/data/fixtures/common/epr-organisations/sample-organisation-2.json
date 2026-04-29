@@ -1,7 +1,7 @@
 {
   "id": "6507f1f77bcf86cd79943921",
   "orgId": 50004,
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "version": 1,
   "statusHistory": [
     {
@@ -13,7 +13,10 @@
   "reprocessingNations": ["wales"],
   "businessType": "individual",
   "submittedToRegulator": "nrw",
-  "formSubmissionTime": "2025-10-01T08:30:00.000Z",
+  "formSubmission": {
+    "time": "2025-10-01T08:30:00.000Z",
+    "id": "6507f1f77bcf86cd79943921"
+  },
   "submitterContactDetails": {
     "fullName": "Carol White",
     "email": "carol.white@export.com",
@@ -32,7 +35,10 @@
       ],
       "submittedToRegulator": "nrw",
       "orgName": "Plastic Exporters",
-      "formSubmissionTime": "2025-10-01T08:00:00.000Z",
+      "formSubmission": {
+        "time": "2025-10-01T08:00:00.000Z",
+        "id": "6507f1f77bcf86cd79943922"
+      },
       "material": "plastic",
       "wasteProcessingType": "exporter",
       "glassRecyclingProcess": null,
@@ -78,7 +84,10 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab7499",
-      "formSubmissionTime": "2025-10-01T09:00:00.000Z",
+      "formSubmission": {
+        "time": "2025-10-01T09:00:00.000Z",
+        "id": "68f6a147c117aec8a1ab7499"
+      },
       "statusHistory": [
         {
           "status": "created",

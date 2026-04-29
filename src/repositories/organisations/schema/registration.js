@@ -10,6 +10,8 @@ import {
 import {
   addressSchema,
   formFileUploadSchema,
+  formSubmissionSchema,
+  formSubmissionTimeSchema,
   idSchema,
   reprocessingTypeSchema,
   userSchema
@@ -83,7 +85,6 @@ export const registrationSchema = Joi.object({
   reprocessingType: reprocessingTypeSchema,
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
-  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -104,6 +105,17 @@ export const registrationSchema = Joi.object({
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
   accreditationId: idSchema.optional(),
+  formSubmissionTime: Joi.when('/schemaVersion', {
+    is: 1,
+    then: formSubmissionTimeSchema.required(),
+    otherwise: formSubmissionTimeSchema.forbidden()
+  }),
+
+  formSubmission: Joi.when('/schemaVersion', {
+    is: 2,
+    then: formSubmissionSchema.required(),
+    otherwise: formSubmissionSchema.forbidden()
+  }),
   glassRecyclingProcess: whenMaterial(
     MATERIAL.GLASS,
     Joi.array()

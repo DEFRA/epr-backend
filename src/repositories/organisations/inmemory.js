@@ -7,10 +7,10 @@ import {
   createInitialStatusHistory,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
-  prepareForReplace,
-  SCHEMA_VERSION
+  prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
@@ -19,7 +19,6 @@ const CONSISTENCY_RETRY_DELAY_MS = 5
 const initializeItems = (items) =>
   items?.map((item) => ({
     ...item,
-    formSubmissionTime: new Date(item.formSubmissionTime),
     statusHistory: createInitialStatusHistory()
   })) || []
 
@@ -52,11 +51,10 @@ const performInsert = (storage, staleCache) => async (organisation) => {
   const newOrg = structuredClone({
     _id: id,
     version: 1,
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
     users: [],
     ...orgFields,
-    formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
     accreditations
   })
@@ -149,6 +147,12 @@ const performFindAll = (staleCache) => async () => {
   return structuredClone(staleCache).map((org) =>
     mapDocumentWithCurrentStatuses({ ...org })
   )
+}
+
+const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
+  return structuredClone(staleCache)
+    .filter((org) => org.schemaVersion === schemaVersion)
+    .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
 }
 
 const performFindPage =
@@ -421,6 +425,7 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       replaceRaw: replaceRawFn,
       findAll: performFindAll(staleCache),
+      findAllBySchemaVersion: performFindAllBySchemaVersion(staleCache),
       findPage: performFindPage(staleCache),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(staleCache),

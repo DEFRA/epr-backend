@@ -80,7 +80,7 @@ describe('Repeated uploads of identical data', () => {
             glassRecyclingProcess: ['glass_re_melt'],
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
-            formSubmissionTime: new Date(),
+            formSubmission: { id: registrationId, time: new Date() },
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,

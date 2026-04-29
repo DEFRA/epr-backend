@@ -94,7 +94,10 @@ export const buildOrganisation = (overrides = {}) => {
   const accreditations = org1.accreditations.map((acc) => ({
     ...acc,
     id: accreditationIdMap.get(acc.id),
-    formSubmissionTime: new Date(acc.formSubmissionTime),
+    formSubmission: {
+      id: accreditationIdMap.get(acc.id),
+      time: new Date(acc.formSubmission.time)
+    },
     statusHistory: createInitialStatusHistory()
   }))
 
@@ -102,7 +105,10 @@ export const buildOrganisation = (overrides = {}) => {
   const registrations = org1.registrations.map((reg) => ({
     ...reg,
     id: new ObjectId().toString(),
-    formSubmissionTime: new Date(reg.formSubmissionTime),
+    formSubmission: {
+      id: reg.formSubmission.id,
+      time: new Date(reg.formSubmission.time)
+    },
     statusHistory: createInitialStatusHistory(),
     // Update accreditationId to point to the new accreditation ID
     ...(reg.accreditationId && {
@@ -114,7 +120,10 @@ export const buildOrganisation = (overrides = {}) => {
     ...org1,
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
-    formSubmissionTime: new Date(org1.formSubmissionTime),
+    formSubmission: {
+      id: org1.formSubmission.id,
+      time: new Date(org1.formSubmission.time)
+    },
     partnership: org1.partnership,
     statusHistory: createInitialStatusHistory(),
     registrations,

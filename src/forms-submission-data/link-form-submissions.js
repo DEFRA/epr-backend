@@ -153,11 +153,11 @@ function findEligibleAccreditations(registration, accreditations) {
 }
 
 /**
- * Selects the latest accreditation from a list by formSubmissionTime
+ * Selects the latest accreditation from a list by formSubmission.time
  */
 function selectLatestAccreditation(accreditations) {
   return accreditations.sort(
-    (a, b) => b.formSubmissionTime - a.formSubmissionTime
+    (a, b) => b.formSubmission.time - a.formSubmission.time
   )[0]
 }
 

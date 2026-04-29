@@ -196,6 +196,7 @@ export function parseOrgSubmission(id, orgId, rawSubmissionData) {
   const parsed = {
     id,
     orgId,
+    formSubmission: { id, time: extractTimestamp(rawSubmissionData) },
     wasteProcessingTypes: extractWasteProcessingTypes(
       answersByShortDescription
     ),
@@ -208,7 +209,6 @@ export function parseOrgSubmission(id, orgId, rawSubmissionData) {
     managementContactDetails: getManagementContactDetails(
       answersByShortDescription
     ),
-    formSubmissionTime: extractTimestamp(rawSubmissionData),
     submittedToRegulator: extractAgencyFromDefinitionName(rawSubmissionData),
     partnership: getPartnershipDetails(
       answersByShortDescription,
