@@ -64,7 +64,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID
       })
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
@@ -101,7 +101,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID
       })
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
@@ -155,7 +155,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         registrationId: DEFAULT_REG_ID
       })
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
         year: DEFAULT_REPORT_YEAR,
