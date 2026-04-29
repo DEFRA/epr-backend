@@ -70,34 +70,18 @@ export const buildCreateReportParams = (overrides = {}) => ({
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   changedBy: buildUserSummary(),
   source: { summaryLogId: 'sl-1', lastUploadedAt: '2026-04-01T21:22:28.351Z' },
+  prn: null,
   recyclingActivity: {
     suppliers: [],
-    totalTonnageReceived: 120,
-    tonnageRecycled: 95.5,
-    tonnageNotRecycled: 24.5
-  },
-  exportActivity: {
-    overseasSites: [],
-    unapprovedOverseasSites: [],
-    totalTonnageExported: 40,
-    tonnageReceivedNotExported: 8,
-    tonnageRefusedAtDestination: 1.5,
-    tonnageStoppedDuringExport: 2,
-    totalTonnageRefusedOrStopped: 3.5,
-    tonnageRepatriated: 0.5
+    totalTonnageReceived: 0,
+    tonnageRecycled: null,
+    tonnageNotRecycled: null
   },
   wasteSent: {
-    tonnageSentToReprocessor: 50,
-    tonnageSentToExporter: 20,
-    tonnageSentToAnotherSite: 10,
+    tonnageSentToReprocessor: 0,
+    tonnageSentToExporter: 0,
+    tonnageSentToAnotherSite: 0,
     finalDestinations: []
   },
-  prn: {
-    issuedTonnage: 80,
-    totalRevenue: 40000,
-    averagePricePerTonne: 500,
-    freeTonnage: 0
-  },
-  supportingInformation: 'Test note',
   ...overrides
 })

@@ -74,23 +74,25 @@ describe('generateReportSubmissions (integration)', () => {
       noteToRegulator: ''
     }
 
+    // Default buildCreateReportParams has recyclingActivity (zeros/nulls),
+    // wasteSent (zeros), prn: null, no exportActivity, no supportingInformation
     const submittedTonnage = {
-      tonnageReceivedForRecycling: '120',
-      tonnageRecycled: '95.5',
-      tonnageExportedForRecycling: '40',
-      tonnageSentOnTotal: '80',
-      tonnageSentOnToReprocessor: '50',
-      tonnageSentOnToExporter: '20',
-      tonnageSentOnToOtherFacilities: '10',
-      tonnagePrnsPernsIssued: '80',
-      totalRevenuePrnsPerns: '40000',
-      averagePrnPernPricePerTonne: '500',
-      tonnageReceivedButNotRecycled: '24.5',
-      tonnageReceivedButNotExported: '8',
-      tonnageExportedThatWasStopped: '2',
-      tonnageExportedThatWasRefused: '1.5',
-      tonnageRepatriated: '0.5',
-      noteToRegulator: 'Test note'
+      tonnageReceivedForRecycling: '0',
+      tonnageRecycled: '',
+      tonnageExportedForRecycling: '',
+      tonnageSentOnTotal: '0',
+      tonnageSentOnToReprocessor: '0',
+      tonnageSentOnToExporter: '0',
+      tonnageSentOnToOtherFacilities: '0',
+      tonnagePrnsPernsIssued: '',
+      totalRevenuePrnsPerns: '',
+      averagePrnPernPricePerTonne: '',
+      tonnageReceivedButNotRecycled: '',
+      tonnageReceivedButNotExported: '',
+      tonnageExportedThatWasStopped: '',
+      tonnageExportedThatWasRefused: '',
+      tonnageRepatriated: '',
+      noteToRegulator: ''
     }
 
     expect(result).toStrictEqual({

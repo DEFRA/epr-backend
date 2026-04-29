@@ -115,7 +115,7 @@ describe(`PATCH ${reportsPatchPath}`, () => {
         })
 
         const before = await reportsRepository.findReportById(reportId)
-        expect(before.supportingInformation).toBe('Test note')
+        expect(before.supportingInformation).toBeUndefined()
 
         const response = await patchReport(
           server,
@@ -750,13 +750,10 @@ describe(`PATCH ${reportsPatchPath}`, () => {
     describe('PRN data status guard', () => {
       it('returns 400 when patching PRN fields on a report with no PRN record', async () => {
         const { server, organisationId, registrationId } =
-          await createServerWithReport(
-            {
-              wasteProcessingType: 'reprocessor',
-              accreditationId: undefined
-            },
-            { prn: null }
-          )
+          await createServerWithReport({
+            wasteProcessingType: 'reprocessor',
+            accreditationId: undefined
+          })
 
         const response = await patchReport(
           server,

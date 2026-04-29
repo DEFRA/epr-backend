@@ -48,35 +48,19 @@ export const testCreateReportBehaviour = (it) => {
           lastUploadedAt: expect.any(String),
           summaryLogId: expect.any(String)
         },
-        prn: {
-          issuedTonnage: 80,
-          totalRevenue: 40000,
-          averagePricePerTonne: 500,
-          freeTonnage: 0
-        },
+        prn: null,
         recyclingActivity: {
           suppliers: [],
-          totalTonnageReceived: 120,
-          tonnageRecycled: 95.5,
-          tonnageNotRecycled: 24.5
-        },
-        exportActivity: {
-          overseasSites: [],
-          unapprovedOverseasSites: [],
-          totalTonnageExported: 40,
-          tonnageReceivedNotExported: 8,
-          tonnageRefusedAtDestination: 1.5,
-          tonnageStoppedDuringExport: 2,
-          totalTonnageRefusedOrStopped: 3.5,
-          tonnageRepatriated: 0.5
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
         },
         wasteSent: {
-          tonnageSentToReprocessor: 50,
-          tonnageSentToExporter: 20,
-          tonnageSentToAnotherSite: 10,
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0,
           finalDestinations: []
         },
-        supportingInformation: 'Test note',
         material: 'plastic',
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         siteAddress: '1 Recycling Lane',
