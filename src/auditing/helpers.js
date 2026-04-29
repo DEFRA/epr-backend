@@ -46,32 +46,31 @@ function isPayloadSmallEnoughToAudit(payload) {
 }
 
 /**
- * Safety-net wrapper around CDP audit. Passes small payloads through unchanged.
- * For oversized payloads, logs a warning and sends a stripped payload (event + user only)
- * so the audit event is still recorded without risking log pipeline fragmentation.
- * @param {object} payload
+ * Safety-net wrapper around CDP audit. Calls the factory to build audit context,
+ * assembles the payload, and sends it. If the assembled payload is too large,
+ * strips context and sends event + user only, logging a warning.
+ * @param {{ event: object, user?: object }} options
+ * @param {() => object} buildAuditContext - factory that builds audit-specific context
  */
-function safeAudit(payload) {
+function safeAudit({ event, user }, buildAuditContext) {
+  const context = buildAuditContext()
+  const payload = { event, ...(user && { user }), ...(context && { context }) }
+
   if (isPayloadSmallEnoughToAudit(payload)) {
     audit(payload)
     return
   }
 
-  const { category, subCategory, action } = payload.event
+  const { category, subCategory, action } = event
   logger.warn({
     message: `Audit payload too large, stripping context for ${category}/${subCategory}/${action}`
   })
 
-  const reducedPayload = { event: payload.event }
-  if (payload.user) {
-    reducedPayload.user = payload.user
+  const reducedPayload = { event }
+  if (user) {
+    reducedPayload.user = user
   }
   audit(reducedPayload)
 }
 
-export {
-  extractUserDetails,
-  isPayloadSmallEnoughToAudit,
-  recordSystemLog,
-  safeAudit
-}
+export { extractUserDetails, recordSystemLog, safeAudit }

@@ -1,9 +1,4 @@
-import {
-  extractUserDetails,
-  recordSystemLog,
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from './helpers.js'
+import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -21,29 +16,20 @@ async function auditOrganisationUpdate(
   previous,
   next
 ) {
-  const payload = {
-    event: {
-      category: 'entity',
-      subCategory: 'epr-organisations',
-      action: 'update'
-    },
-    context: {
-      organisationId,
-      previous,
-      next
-    },
-    user: extractUserDetails(request)
+  const event = {
+    category: 'entity',
+    subCategory: 'epr-organisations',
+    action: 'update'
   }
+  const user = extractUserDetails(request)
 
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: { organisationId }
-      }
+  safeAudit({ event, user }, () => ({ organisationId }))
 
-  safeAudit(safeAuditingPayload)
-  await recordSystemLog(request, payload)
+  await recordSystemLog(request, {
+    event,
+    context: { organisationId, previous, next },
+    user
+  })
 }
 
 export { auditOrganisationUpdate }

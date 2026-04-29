@@ -57,7 +57,7 @@ describe('auditPrnStatusTransition', () => {
     vi.clearAllMocks()
   })
 
-  it('sends audit event to CDP auditing with full previous and next state', async () => {
+  it('sends only organisationId and prnId to CDP audit', async () => {
     const request = createMockRequest()
 
     await auditPrnStatusTransition(request, prnId, previousPrn, nextPrn)
@@ -70,9 +70,7 @@ describe('auditPrnStatusTransition', () => {
       },
       context: {
         organisationId: 'org-456',
-        prnId,
-        previous: previousPrn,
-        next: nextPrn
+        prnId
       },
       user: {
         id: userId,
@@ -108,10 +106,9 @@ describe('auditPrnStatusTransition', () => {
     })
   })
 
-  it('truncates context to just prnId when payload is too large', async () => {
+  it('keeps same CDP audit context even when previous/next are oversized', async () => {
     const request = createMockRequest()
 
-    // Create a large PRN object that exceeds the 1MB audit size limit
     const largePreviousPrn = {
       ...previousPrn,
       largeField: 'x'.repeat(1100000)
@@ -119,7 +116,7 @@ describe('auditPrnStatusTransition', () => {
 
     await auditPrnStatusTransition(request, prnId, largePreviousPrn, nextPrn)
 
-    // CDP audit should receive truncated payload
+    // CDP audit always receives only identifiers
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'waste-reporting',

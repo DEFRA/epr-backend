@@ -1,6 +1,5 @@
 import {
   extractUserDetails,
-  isPayloadSmallEnoughToAudit,
   recordSystemLog,
   safeAudit
 } from '#auditing/helpers.js'
@@ -37,12 +36,26 @@ export async function auditReportStatusTransition(request, params) {
 
   const user = extractUserDetails(request)
 
-  const payload = {
-    event: {
-      category: AUDIT_CATEGORY,
-      subCategory: AUDIT_SUB_CATEGORY,
-      action: 'status-transition'
-    },
+  const event = {
+    category: AUDIT_CATEGORY,
+    subCategory: AUDIT_SUB_CATEGORY,
+    action: 'status-transition'
+  }
+
+  safeAudit({ event, user }, () => ({
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    previous: { status: previous.status.currentStatus },
+    next: { status: next.status.currentStatus }
+  }))
+
+  await recordSystemLog(request, {
+    event,
     context: {
       organisationId,
       registrationId,
@@ -55,28 +68,7 @@ export async function auditReportStatusTransition(request, params) {
       next
     },
     user
-  }
-
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          organisationId,
-          registrationId,
-          year,
-          cadence,
-          period,
-          submissionNumber,
-          reportId,
-          previous: { status: previous.status.currentStatus },
-          next: { status: next.status.currentStatus }
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
-
-  await recordSystemLog(request, payload)
+  })
 }
 
 /**
@@ -106,12 +98,25 @@ export async function auditReportDelete(request, params) {
 
   const user = extractUserDetails(request)
 
-  const payload = {
-    event: {
-      category: AUDIT_CATEGORY,
-      subCategory: AUDIT_SUB_CATEGORY,
-      action: 'delete'
-    },
+  const event = {
+    category: AUDIT_CATEGORY,
+    subCategory: AUDIT_SUB_CATEGORY,
+    action: 'delete'
+  }
+
+  safeAudit({ event, user }, () => ({
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    previous: { status: previous.status.currentStatus }
+  }))
+
+  await recordSystemLog(request, {
+    event,
     context: {
       organisationId,
       registrationId,
@@ -123,26 +128,7 @@ export async function auditReportDelete(request, params) {
       previous
     },
     user
-  }
-
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          organisationId,
-          registrationId,
-          year,
-          cadence,
-          period,
-          submissionNumber,
-          reportId,
-          previous: { status: previous.status.currentStatus }
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
-  await recordSystemLog(request, payload)
+  })
 }
 
 /**
@@ -170,25 +156,23 @@ export async function auditReportCreate(request, params) {
     createdAt
   } = params
 
-  const payload = {
-    event: {
-      category: AUDIT_CATEGORY,
-      subCategory: AUDIT_SUB_CATEGORY,
-      action: 'create'
-    },
-    context: {
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period,
-      submissionNumber,
-      reportId,
-      createdAt
-    },
-    user: extractUserDetails(request)
+  const event = {
+    category: AUDIT_CATEGORY,
+    subCategory: AUDIT_SUB_CATEGORY,
+    action: 'create'
+  }
+  const user = extractUserDetails(request)
+  const context = {
+    organisationId,
+    registrationId,
+    year,
+    cadence,
+    period,
+    submissionNumber,
+    reportId,
+    createdAt
   }
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => context)
+  await recordSystemLog(request, { event, context, user })
 }

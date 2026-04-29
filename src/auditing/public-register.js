@@ -10,18 +10,14 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  */
 async function auditPublicRegisterGenerate(request, context) {
   const user = extractUserDetails(request)
-  const payload = {
-    event: {
-      category: 'public-register',
-      subCategory: 'download',
-      action: 'generate'
-    },
-    context,
-    user
+  const event = {
+    category: 'public-register',
+    subCategory: 'download',
+    action: 'generate'
   }
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => context)
+  await recordSystemLog(request, { event, context, user })
 }
 
 export { auditPublicRegisterGenerate }

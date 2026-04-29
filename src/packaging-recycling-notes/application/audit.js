@@ -1,7 +1,6 @@
 import {
   extractUserDetails,
   recordSystemLog,
-  isPayloadSmallEnoughToAudit,
   safeAudit
 } from '#root/auditing/helpers.js'
 
@@ -18,30 +17,19 @@ import {
 async function auditPrnStatusTransition(request, prnId, previous, next) {
   const organisationId = next.organisation?.id
 
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'packaging-recycling-notes',
-      action: 'status-transition'
-    },
-    context: {
-      organisationId,
-      prnId,
-      previous,
-      next
-    },
-    user: extractUserDetails(request)
+  const event = {
+    category: 'waste-reporting',
+    subCategory: 'packaging-recycling-notes',
+    action: 'status-transition'
   }
+  const user = extractUserDetails(request)
 
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: { organisationId, prnId }
-      }
-
-  safeAudit(safeAuditingPayload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => ({ organisationId, prnId }))
+  await recordSystemLog(request, {
+    event,
+    context: { organisationId, prnId, previous, next },
+    user
+  })
 }
 
 export { auditPrnStatusTransition }

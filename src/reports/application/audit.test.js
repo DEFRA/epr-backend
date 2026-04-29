@@ -60,7 +60,7 @@ describe('auditReportStatusTransition', () => {
     }
   }
 
-  it('sends CDP audit event', async () => {
+  it('sends only identifiers and status to CDP audit', async () => {
     await auditReportStatusTransition(createMockRequest(), params)
 
     expect(mockAudit).toHaveBeenCalledWith({
@@ -69,12 +69,22 @@ describe('auditReportStatusTransition', () => {
         subCategory: 'reports',
         action: 'status-transition'
       },
-      context: params,
+      context: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        cadence: 'quarterly',
+        period: 1,
+        submissionNumber: 'sub-1',
+        reportId: 'rep-1',
+        previous: { status: 'in_progress' },
+        next: { status: 'ready_to_submit' }
+      },
       user
     })
   })
 
-  it('records system log', async () => {
+  it('records system log with full context', async () => {
     await auditReportStatusTransition(createMockRequest(), params)
 
     expect(mockInsert).toHaveBeenCalledWith({
@@ -89,7 +99,7 @@ describe('auditReportStatusTransition', () => {
     })
   })
 
-  it('strips previous and next from CDP audit event when payload is oversized', async () => {
+  it('keeps same CDP audit context even when previous/next are oversized', async () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
       organisationId: 'org-1',
@@ -117,11 +127,6 @@ describe('auditReportStatusTransition', () => {
 
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'status-transition'
-        },
         context: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -138,11 +143,6 @@ describe('auditReportStatusTransition', () => {
 
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'status-transition'
-        },
         context: oversizedParams
       })
     )
@@ -165,7 +165,7 @@ describe('auditReportDelete', () => {
     }
   }
 
-  it('sends CDP audit event with action: delete', async () => {
+  it('sends only identifiers and status to CDP audit', async () => {
     await auditReportDelete(createMockRequest(), params)
 
     expect(mockAudit).toHaveBeenCalledWith({
@@ -174,12 +174,21 @@ describe('auditReportDelete', () => {
         subCategory: 'reports',
         action: 'delete'
       },
-      context: params,
+      context: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        cadence: 'quarterly',
+        period: 1,
+        submissionNumber: 'sub-1',
+        reportId: 'rep-1',
+        previous: { status: 'in_progress' }
+      },
       user
     })
   })
 
-  it('records system log', async () => {
+  it('records system log with full context', async () => {
     await auditReportDelete(createMockRequest(), params)
 
     expect(mockInsert).toHaveBeenCalledWith({
@@ -194,7 +203,7 @@ describe('auditReportDelete', () => {
     })
   })
 
-  it('strips previous to { status } in CDP audit event when payload is oversized', async () => {
+  it('keeps same CDP audit context even when previous is oversized', async () => {
     const { randomBytes } = await import('crypto')
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
@@ -217,11 +226,6 @@ describe('auditReportDelete', () => {
 
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'delete'
-        },
         context: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -237,11 +241,6 @@ describe('auditReportDelete', () => {
 
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'delete'
-        },
         context: oversizedParams
       })
     )

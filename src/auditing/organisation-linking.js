@@ -10,21 +10,19 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  * @param {{ id: string, name: string }} linkedDefraOrganisation
  */
 async function auditOrganisationLinking(request, organisationId, { id, name }) {
-  const payload = {
-    event: {
-      category: 'entity',
-      subCategory: 'epr-organisations',
-      action: 'linked-to-defra-id-organisation'
-    },
-    context: {
-      organisationId,
-      linkedDefraOrganisation: { id, name }
-    },
-    user: extractUserDetails(request)
+  const event = {
+    category: 'entity',
+    subCategory: 'epr-organisations',
+    action: 'linked-to-defra-id-organisation'
+  }
+  const user = extractUserDetails(request)
+  const context = {
+    organisationId,
+    linkedDefraOrganisation: { id, name }
   }
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => context)
+  await recordSystemLog(request, { event, context, user })
 }
 
 export { auditOrganisationLinking }

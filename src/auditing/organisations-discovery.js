@@ -86,18 +86,18 @@ export async function auditOrganisationsDiscovery(
     unlinked
   }
 
-  const payload = {
-    event: {
-      category: 'identity',
-      subCategory: 'defra-id-reconciliation',
-      action: 'organisations-discovered'
-    },
-    context,
-    user: extractUserDetails(request)
+  const event = {
+    category: 'identity',
+    subCategory: 'defra-id-reconciliation',
+    action: 'organisations-discovered'
   }
+  const user = extractUserDetails(request)
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => ({
+    organisationId: linked?.id ?? null,
+    defraIdOrg
+  }))
+  await recordSystemLog(request, { event, context, user })
 }
 
 /**
@@ -111,19 +111,14 @@ export async function auditTokenValidationFailed(
   request,
   { defraIdRelationships, error }
 ) {
-  const payload = {
-    event: {
-      category: 'identity',
-      subCategory: 'defra-id-reconciliation',
-      action: 'token-validation-failed'
-    },
-    context: {
-      defraIdRelationships,
-      error
-    },
-    user: extractUserDetails(request)
+  const event = {
+    category: 'identity',
+    subCategory: 'defra-id-reconciliation',
+    action: 'token-validation-failed'
   }
+  const user = extractUserDetails(request)
+  const context = { defraIdRelationships, error }
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => context)
+  await recordSystemLog(request, { event, context, user })
 }

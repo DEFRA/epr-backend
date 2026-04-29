@@ -1,7 +1,4 @@
-import {
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from '#root/auditing/helpers.js'
+import { safeAudit } from '#root/auditing/helpers.js'
 
 /**
  * Emit the back-office system-log entry and the CDP audit event for a waste
@@ -9,10 +6,6 @@ import {
  * `repository/helpers.js` and the ledger-append path in
  * `application/update-via-ledger.js` — share this helper so they produce
  * identical audit shapes (ADR 0031's transparency requirement).
- *
- * If the full payload exceeds the safe-audit size limit, the system-log
- * entry falls back to a count-only context. The audit event itself goes
- * through `safeAudit`, which has its own internal trim.
  *
  * @param {Object} params
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.systemLogsRepository]
@@ -30,41 +23,30 @@ export const recordWasteBalanceUpdateAudit = async ({
   newTransactions,
   user
 }) => {
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'waste-balance',
-      action: 'update'
-    },
-    context: {
-      accreditationId,
-      amount,
-      availableAmount,
-      newTransactions
-    },
-    user
+  const event = {
+    category: 'waste-reporting',
+    subCategory: 'waste-balance',
+    action: 'update'
   }
 
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          accreditationId,
-          amount,
-          availableAmount,
-          transactionCount: newTransactions.length
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
+  safeAudit({ event, user }, () => ({
+    accreditationId,
+    amount,
+    availableAmount,
+    transactionCount: newTransactions.length
+  }))
 
   if (systemLogsRepository) {
     await systemLogsRepository.insert({
       createdAt: new Date(),
       createdBy: user,
-      event: payload.event,
-      context: payload.context
+      event,
+      context: {
+        accreditationId,
+        amount,
+        availableAmount,
+        newTransactions
+      }
     })
   }
 }

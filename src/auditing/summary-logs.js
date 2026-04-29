@@ -27,18 +27,14 @@ async function auditSummaryLogDownload(request, context) {
  */
 async function auditSummaryLog(request, context, action) {
   const user = extractUserDetails(request)
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'summary-log',
-      action
-    },
-    context,
-    user
+  const event = {
+    category: 'waste-reporting',
+    subCategory: 'summary-log',
+    action
   }
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => context)
+  await recordSystemLog(request, { event, context, user })
 }
 
 export { auditSummaryLogSubmit, auditSummaryLogDownload }

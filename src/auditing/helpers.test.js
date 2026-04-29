@@ -29,42 +29,32 @@ describe('safeAudit', () => {
     vi.clearAllMocks()
   })
 
-  it('should pass through small payloads to audit unchanged', () => {
-    const payload = {
-      event: {
-        category: 'entity',
-        subCategory: 'test',
-        action: 'create'
-      },
-      context: { id: '123' },
-      user: { id: 'user-1' }
+  it('should call audit with event, user and context from factory', () => {
+    const event = {
+      category: 'entity',
+      subCategory: 'test',
+      action: 'create'
     }
+    const user = { id: 'user-1' }
+    const context = { organisationId: '123' }
 
-    safeAudit(payload)
+    safeAudit({ event, user }, () => context)
 
-    expect(audit).toHaveBeenCalledWith(payload)
+    expect(audit).toHaveBeenCalledWith({ event, user, context })
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
-  it('should strip context and log warning for oversized payloads', () => {
-    const payload = {
-      event: {
-        category: 'waste-reporting',
-        subCategory: 'waste-balance',
-        action: 'update'
-      },
-      context: {
-        largeData: 'x'.repeat(1000)
-      },
-      user: { id: 'user-1', email: 'test@example.com' }
+  it('should strip context and log warning when factory output makes payload too large', () => {
+    const event = {
+      category: 'waste-reporting',
+      subCategory: 'waste-balance',
+      action: 'update'
     }
+    const user = { id: 'user-1', email: 'test@example.com' }
 
-    safeAudit(payload)
+    safeAudit({ event, user }, () => ({ largeData: 'x'.repeat(1000) }))
 
-    expect(audit).toHaveBeenCalledWith({
-      event: payload.event,
-      user: payload.user
-    })
+    expect(audit).toHaveBeenCalledWith({ event, user })
 
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -73,37 +63,28 @@ describe('safeAudit', () => {
     )
   })
 
-  it('should handle payloads without a user field', () => {
-    const payload = {
-      event: {
-        category: 'entity',
-        subCategory: 'test',
-        action: 'create'
-      },
-      context: { id: '123' }
+  it('should call audit without user when user is not provided', () => {
+    const event = {
+      category: 'entity',
+      subCategory: 'test',
+      action: 'create'
     }
+    const context = { organisationId: '123' }
 
-    safeAudit(payload)
+    safeAudit({ event }, () => context)
 
-    expect(audit).toHaveBeenCalledWith(payload)
+    expect(audit).toHaveBeenCalledWith({ event, context })
   })
 
-  it('should handle oversized payloads without a user field', () => {
-    const payload = {
-      event: {
-        category: 'entity',
-        subCategory: 'test',
-        action: 'create'
-      },
-      context: {
-        largeData: 'x'.repeat(1000)
-      }
+  it('should strip context for oversized payload without user', () => {
+    const event = {
+      category: 'entity',
+      subCategory: 'test',
+      action: 'create'
     }
 
-    safeAudit(payload)
+    safeAudit({ event }, () => ({ largeData: 'x'.repeat(1000) }))
 
-    expect(audit).toHaveBeenCalledWith({
-      event: payload.event
-    })
+    expect(audit).toHaveBeenCalledWith({ event })
   })
 })
