@@ -5,6 +5,8 @@ import {
 } from '../enums/index.js'
 import { getConfig } from '#root/config.js'
 
+/** @import { HapiRequest } from '../hapi-types.js' */
+
 const config = getConfig()
 const isProductionEnvironment = config.get('cdpEnvironment') === 'prod'
 const MAX_LOGGED_VALIDATION_ERRORS = 5
@@ -55,7 +57,7 @@ function isBoomError(error) {
  * - Boom errors: Passed through unchanged (preserves original status code)
  * - Other errors: Re-thrown as-is
  *
- * @param {import('../hapi-types.js').HapiRequest} request
+ * @param {HapiRequest} request
  * @param {object} _h - Hapi response toolkit (unused)
  * @param {Error | import('@hapi/boom').Boom | import('joi').ValidationError} error
  * @returns {never}

@@ -165,7 +165,12 @@ function createHapiServer(config) {
     port: config.get('port'),
     debug: config.get('debug'),
     routes: {
-      validate: { options: { abortEarly: false }, failAction },
+      validate: {
+        options: { abortEarly: false },
+        failAction: /** @type {import('@hapi/hapi').Lifecycle.FailAction} */ (
+          /** @type {unknown} */ (failAction)
+        )
+      },
       security: {
         hsts: { maxAge: 31536000, includeSubDomains: true, preload: false },
         xss: /** @type {'enabled'} */ ('enabled'),

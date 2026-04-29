@@ -76,15 +76,14 @@ export const reportsGetDetail = {
       report.diagnostics.wasteReceivedRecordsExcluded > 0
     ) {
       const { wasteReceivedRecordsExcluded } = report.diagnostics
-      request.logger.warn(
-        {
-          organisationId,
-          registrationId,
-          operatorCategory: report.operatorCategory,
-          wasteReceivedRecordsExcluded
-        },
-        'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)'
-      )
+      request.logger.warn({
+        message:
+          'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)',
+        event: {
+          action: 'fetch_or_generate_report',
+          reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} wasteReceivedRecordsExcluded=${wasteReceivedRecordsExcluded}`
+        }
+      })
     }
 
     return h

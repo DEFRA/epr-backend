@@ -14,14 +14,17 @@ import { updatePrnStatus } from '#packaging-recycling-notes/application/update-s
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
 /**
- * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
- * @import {WasteBalancesRepository} from '#waste-balances/repository/port.js'
- * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import { Request, Lifecycle } from '@hapi/hapi'
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { WasteBalancesRepository } from '#waste-balances/repository/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  */
 
 /**
- * @typedef {import('#common/hapi-types.js').HapiRequest & {
+ * @typedef {HapiRequest & {
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
  *   wasteBalancesRepository: WasteBalancesRepository,
  *   organisationsRepository: OrganisationsRepository,
@@ -33,11 +36,11 @@ import { auditPrnStatusTransition } from '#packaging-recycling-notes/application
  * Creates a Hapi route handler for external PRN status transitions.
  *
  * @param {Object} options
- * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} options.newStatus
+ * @param {PrnStatus} options.newStatus
  * @param {string} options.timestampField
  * @param {string} options.actionVerb
  * @param {string} options.path
- * @returns {{ handler: import('@hapi/hapi').Lifecycle.Method }}
+ * @returns {{ handler: Lifecycle.Method }}
  */
 export function createExternalTransitionHandler({
   newStatus,
@@ -46,8 +49,11 @@ export function createExternalTransitionHandler({
   path
 }) {
   return {
-    /** @param {ExternalTransitionRequest} request */
-    handler: async (request, h) => {
+    /** @param {Request} req */
+    handler: async (req, h) => {
+      const request = /** @type {ExternalTransitionRequest} */ (
+        /** @type {unknown} */ (req)
+      )
       const {
         packagingRecyclingNotesRepository,
         wasteBalancesRepository,
