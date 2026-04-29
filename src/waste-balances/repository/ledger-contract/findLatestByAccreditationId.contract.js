@@ -69,5 +69,24 @@ export const testFindLatestByAccreditationIdBehaviour = (it) => {
       expect(x.number).toBe(1)
       expect(y.number).toBe(5)
     })
+
+    it('round-trips high-precision amounts exactly', async () => {
+      await repository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-precision',
+          number: 1,
+          amount: 200.005,
+          openingBalance: { amount: 0, availableAmount: 0 },
+          closingBalance: { amount: 200.005, availableAmount: 200.005 }
+        })
+      ])
+
+      const result =
+        await repository.findLatestByAccreditationId('acc-precision')
+
+      expect(result.amount).toBe(200.005)
+      expect(result.closingBalance.amount).toBe(200.005)
+      expect(result.closingBalance.availableAmount).toBe(200.005)
+    })
   })
 }

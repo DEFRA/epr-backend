@@ -8,6 +8,10 @@
  * @typedef {import('./ledger-schema.js').LedgerTransaction} LedgerTransaction
  */
 
+import {
+  ledgerDocumentFromMongo,
+  ledgerInsertToMongo
+} from './ledger-decimal.js'
 import { LedgerSlotConflictError } from './ledger-port.js'
 import {
   validateLedgerTransactionInsert,
@@ -63,7 +67,10 @@ export async function ensureLedgerCollection(db) {
 
 const toLedgerTransaction = (doc) => {
   const { _id, ...rest } = doc
-  return validateLedgerTransactionRead({ id: _id.toString(), ...rest })
+  return validateLedgerTransactionRead({
+    id: _id.toString(),
+    ...ledgerDocumentFromMongo(rest)
+  })
 }
 
 /**
@@ -104,10 +111,11 @@ const performInsertTransactions = (collection) => async (transactions) => {
   }
 
   const validated = transactions.map(validateLedgerTransactionInsert)
+  const persistable = validated.map(ledgerInsertToMongo)
 
   try {
-    const result = await collection.insertMany(validated, { ordered: true })
-    return validated.map((transaction, index) =>
+    const result = await collection.insertMany(persistable, { ordered: true })
+    return persistable.map((transaction, index) =>
       toLedgerTransaction({ _id: result.insertedIds[index], ...transaction })
     )
   } catch (error) {
