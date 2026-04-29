@@ -2,24 +2,26 @@ import Boom from '@hapi/boom'
 
 /**
  * @import { Boom as BoomError } from '@hapi/boom'
- * @import { EnrichedBoom, BoomEvent } from '#common/types/enriched-boom.js'
+ * @import { CdpIndexedLog } from './cdp-log-types.js'
  *
- * @typedef {{ event: BoomEvent, payload?: Record<string, unknown> }} BoomEnrichment
+ * @typedef {Pick<NonNullable<CdpIndexedLog['event']>, 'action' | 'reason' | 'reference'>} CdpBoomEvent
+ * @typedef {BoomError & { code?: string, event?: CdpBoomEvent }} CdpBoom
+ * @typedef {{ event: CdpBoomEvent, payload?: Record<string, unknown> }} CdpBoomEnrichment
  */
 
 /**
  * Attaches CDP-indexed log enrichment fields (`code` + `event`) to a Boom
  * error and optionally merges `payload` into the response body. Mutates and
  * returns the boom so call sites read as
- * `throw enrichBoom(Boom.X('msg'), 'code', { event, payload })`.
+ * `throw badRequest('msg', 'code', { event, payload })`.
  *
  * @param {BoomError} boom
  * @param {string} code
- * @param {BoomEnrichment} enrichment
- * @returns {EnrichedBoom}
+ * @param {CdpBoomEnrichment} enrichment
+ * @returns {CdpBoom}
  */
-export const enrichBoom = (boom, code, { event, payload }) => {
-  const enriched = /** @type {EnrichedBoom} */ (boom)
+const enrich = (boom, code, { event, payload }) => {
+  const enriched = /** @type {CdpBoom} */ (boom)
   enriched.code = code
   enriched.event = event
   if (payload) {
@@ -33,27 +35,27 @@ export const enrichBoom = (boom, code, { event, payload }) => {
  *
  * @param {string} message
  * @param {string} code
- * @param {BoomEnrichment} enrichment
+ * @param {CdpBoomEnrichment} enrichment
  */
 export const badRequest = (message, code, enrichment) =>
-  enrichBoom(Boom.badRequest(message), code, enrichment)
+  enrich(Boom.badRequest(message), code, enrichment)
 
 /**
  * Builds a 409 Boom enriched with CDP-indexed `code` and `event` fields.
  *
  * @param {string} message
  * @param {string} code
- * @param {BoomEnrichment} enrichment
+ * @param {CdpBoomEnrichment} enrichment
  */
 export const conflict = (message, code, enrichment) =>
-  enrichBoom(Boom.conflict(message), code, enrichment)
+  enrich(Boom.conflict(message), code, enrichment)
 
 /**
  * Builds a 500 Boom enriched with CDP-indexed `code` and `event` fields.
  *
  * @param {string} message
  * @param {string} code
- * @param {BoomEnrichment} enrichment
+ * @param {CdpBoomEnrichment} enrichment
  */
 export const internal = (message, code, enrichment) =>
-  enrichBoom(Boom.internal(message), code, enrichment)
+  enrich(Boom.internal(message), code, enrichment)

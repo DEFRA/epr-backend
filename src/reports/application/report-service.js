@@ -1,4 +1,4 @@
-import { badRequest, conflict } from '#common/helpers/enrich-boom.js'
+import { badRequest, conflict } from '#common/helpers/logging/cdp-boom.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'

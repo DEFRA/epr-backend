@@ -1,4 +1,4 @@
-import { badRequest } from '#common/helpers/enrich-boom.js'
+import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import {

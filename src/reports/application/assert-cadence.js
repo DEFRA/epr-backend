@@ -1,4 +1,4 @@
-import { badRequest } from '#common/helpers/enrich-boom.js'
+import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 

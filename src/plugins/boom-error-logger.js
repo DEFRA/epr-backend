@@ -7,7 +7,7 @@ import {
 
 /**
  * @import { HapiServer, HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
+ * @import { CdpBoom } from '#common/helpers/logging/cdp-boom.js'
  */
 
 const SERVER_ERROR_THRESHOLD = 500
@@ -31,7 +31,7 @@ export const boomErrorLogger = {
             return h.continue
           }
 
-          const boom = /** @type {EnrichedBoom} */ (response)
+          const boom = /** @type {CdpBoom} */ (response)
           const statusCode = boom.output.statusCode
 
           // 401 is already logged by authFailureLogger; skip to avoid duplicates
@@ -53,7 +53,7 @@ export const boomErrorLogger = {
           //
           // Helpers may enrich a Boom with `code` (semantic classifier) and
           // `event` fields (action/reason/reference) for indexed search — see
-          // EnrichedBoom. These override the defaults when present.
+          // CdpBoom. These override the defaults when present.
           request.logger[level]({
             message: boom.message,
             error: {

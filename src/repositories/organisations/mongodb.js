@@ -1,7 +1,7 @@
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { conflict } from '#common/helpers/enrich-boom.js'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   createInitialStatusHistory,
   mapDocumentWithCurrentStatuses,

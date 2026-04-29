@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { withTraceId } from '@defra/hapi-tracing'
 import { errorCodes } from '#common/enums/error-codes.js'
-import { internal } from './enrich-boom.js'
+import { internal } from './logging/cdp-boom.js'
 import { getTracingHeaderName } from './request-tracing.js'
 
 /**
