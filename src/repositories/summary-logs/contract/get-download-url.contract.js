@@ -36,6 +36,28 @@ export const testGetDownloadUrlBehaviour = (it) => {
       )
     })
 
+    it('throws a structured cdp-boom internal error when file URI is malformed', async () => {
+      const id = `contract-${randomUUID()}`
+      await repository.insert(
+        id,
+        summaryLogFactory.submitted({
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          file: { uri: 'not a valid uri' }
+        })
+      )
+
+      await expect(repository.getDownloadUrl(id)).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 },
+        code: 'summary_log_uri_corrupt',
+        event: {
+          action: 'get_download_url',
+          reason: `summaryLogId=${id} type=TypeError code=ERR_INVALID_URL`
+        }
+      })
+    })
+
     it('throws 404 when summary log has no file URI', async () => {
       const id = `contract-${randomUUID()}`
       await repository.insert(

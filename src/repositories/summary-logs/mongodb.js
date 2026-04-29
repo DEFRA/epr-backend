@@ -1,16 +1,16 @@
-import { GetObjectCommand } from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import Boom from '@hapi/boom'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import {
-  SUMMARY_LOG_STATUS,
   calculateExpiresAt,
-  SUMMARY_LOG_FAILURE_STATUS
+  SUMMARY_LOG_FAILURE_STATUS,
+  SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
-import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import Boom from '@hapi/boom'
+import { parseSummaryLogUri } from './parse-uri.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -319,7 +319,7 @@ const getDownloadUrl =
       throw Boom.notFound('Summary log file not found')
     }
 
-    const { Bucket, Key } = parseS3Uri(doc.file.uri)
+    const { Bucket, Key } = parseSummaryLogUri(doc.file.uri, validatedId)
     const command = new GetObjectCommand({ Bucket, Key })
     const url = await getSignedUrl(s3Client, command, {
       expiresIn: preSignedUrlExpiry

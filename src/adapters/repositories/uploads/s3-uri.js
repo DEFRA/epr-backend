@@ -9,8 +9,8 @@ export const parseS3Uri = (uri) => {
   let url
   try {
     url = new URL(uri)
-  } catch {
-    throw new Error(`Malformed URI: ${uri}`)
+  } catch (error) {
+    throw new Error(`Malformed URI: ${uri}`, { cause: error })
   }
 
   if (url.protocol !== 's3:') {

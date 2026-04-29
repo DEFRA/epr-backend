@@ -1,18 +1,18 @@
-import Boom from '@hapi/boom'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import {
+  SUMMARY_LOG_FAILURE_STATUS,
+  SUMMARY_LOG_STATUS
+} from '#domain/summary-logs/status.js'
+import Boom from '@hapi/boom'
+import { parseSummaryLogUri } from './parse-uri.js'
+import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogUpdate
 } from './validation.js'
-import {
-  SUMMARY_LOG_FAILURE_STATUS,
-  SUMMARY_LOG_STATUS
-} from '#domain/summary-logs/status.js'
-import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 
 const FAILURE_STATUS = new Set(SUMMARY_LOG_FAILURE_STATUS)
 
@@ -200,7 +200,10 @@ const getDownloadUrl = (staleCache) => async (summaryLogId) => {
     throw Boom.notFound('Summary log file not found')
   }
 
-  const { Bucket, Key } = parseS3Uri(doc.summaryLog.file.uri)
+  const { Bucket, Key } = parseSummaryLogUri(
+    doc.summaryLog.file.uri,
+    validatedId
+  )
   const url = `https://${Bucket}.test/${Key}/download`
   const expiresAt = new Date(Date.now() + SIXTY_SECONDS * 1000).toISOString()
 
