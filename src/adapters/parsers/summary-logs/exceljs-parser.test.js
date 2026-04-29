@@ -41,7 +41,8 @@ describe('ExcelJSSummaryLogsParser', () => {
       SpreadsheetValidationError
     )
     await expect(parse(invalidBuffer)).rejects.toMatchObject({
-      code: VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
+      code: VALIDATION_CODE.SPREADSHEET_INVALID_ERROR,
+      message: expect.stringMatching(/^Failed to parse spreadsheet \(Error\): /)
     })
   })
 
@@ -49,25 +50,48 @@ describe('ExcelJSSummaryLogsParser', () => {
     const emptyBuffer = Buffer.from('')
 
     await expect(parse(emptyBuffer)).rejects.toThrow(SpreadsheetValidationError)
+    await expect(parse(emptyBuffer)).rejects.toMatchObject({
+      message: expect.stringMatching(/^Failed to parse spreadsheet \(Error\): /)
+    })
   })
 
-  it('should rethrow unrecognised errors from the load call unchanged', async () => {
-    const unexpected = new RangeError('this looks like a bug, not bad data')
-    function MockWorkbook() {
-      return {
-        xlsx: { load: vi.fn().mockRejectedValue(unexpected) },
-        worksheets: []
-      }
-    }
-    const workbookSpy = vi
-      .spyOn(ExcelJS, 'Workbook')
-      .mockImplementation(MockWorkbook)
+  describe('with mocked workbook', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
 
-    try {
-      await expect(parse(Buffer.from('anything'))).rejects.toBe(unexpected)
-    } finally {
-      workbookSpy.mockRestore()
+    /** @param {Error} rejection */
+    const stubWorkbookLoadRejection = (rejection) => {
+      function MockWorkbook() {
+        return {
+          xlsx: { load: vi.fn().mockRejectedValue(rejection) },
+          worksheets: []
+        }
+      }
+      vi.spyOn(ExcelJS, 'Workbook').mockImplementation(MockWorkbook)
     }
+
+    it('should rethrow unrecognised errors from the load call unchanged', async () => {
+      const unexpected = new RangeError('this looks like a bug, not bad data')
+      stubWorkbookLoadRejection(unexpected)
+
+      await expect(parse(Buffer.from('anything'))).rejects.toBe(unexpected)
+    })
+
+    it('wraps with underlying name and code when the underlying error carries a code', async () => {
+      const underlying = Object.assign(
+        new TypeError(
+          "cannot read properties of undefined (reading 'richText')"
+        ),
+        { code: 'ERR_DEREF' }
+      )
+      stubWorkbookLoadRejection(underlying)
+
+      await expect(parse(Buffer.from('anything'))).rejects.toMatchObject({
+        message:
+          "Failed to parse spreadsheet (TypeError/ERR_DEREF): cannot read properties of undefined (reading 'richText')"
+      })
+    })
   })
 
   describe('workbook structure validation', () => {
