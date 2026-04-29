@@ -1,9 +1,6 @@
 import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
-import {
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from '#root/auditing/helpers.js'
+import { safeAudit } from '#root/auditing/helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { randomUUID } from 'node:crypto'
 import {
@@ -111,41 +108,30 @@ const recordAuditLogs = async (
     return
   }
 
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'waste-balance',
-      action: 'update'
-    },
-    context: {
-      accreditationId: updatedBalance.accreditationId,
-      amount: updatedBalance.amount,
-      availableAmount: updatedBalance.availableAmount,
-      newTransactions
-    },
-    user
+  const event = {
+    category: 'waste-reporting',
+    subCategory: 'waste-balance',
+    action: 'update'
   }
 
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          accreditationId: updatedBalance.accreditationId,
-          amount: updatedBalance.amount,
-          availableAmount: updatedBalance.availableAmount,
-          transactionCount: newTransactions.length
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
+  safeAudit({ event, user }, () => ({
+    accreditationId: updatedBalance.accreditationId,
+    amount: updatedBalance.amount,
+    availableAmount: updatedBalance.availableAmount,
+    transactionCount: newTransactions.length
+  }))
 
   if (dependencies.systemLogsRepository) {
     await dependencies.systemLogsRepository.insert({
       createdAt: new Date(),
       createdBy: user,
-      event: payload.event,
-      context: payload.context
+      event,
+      context: {
+        accreditationId: updatedBalance.accreditationId,
+        amount: updatedBalance.amount,
+        availableAmount: updatedBalance.availableAmount,
+        newTransactions
+      }
     })
   }
 }

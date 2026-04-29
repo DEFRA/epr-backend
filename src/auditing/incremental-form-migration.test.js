@@ -46,7 +46,7 @@ describe('auditIncrementalFormMigration', () => {
     insert: mockInsert
   })
 
-  it('logs full previous/next state to both CDP audit and system log', async () => {
+  it('sends only organisationId to CDP audit but full state to system log', async () => {
     const previous = {
       registrations: [
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-01' }
@@ -73,18 +73,14 @@ describe('auditIncrementalFormMigration', () => {
       next
     )
 
-    // Verify CDP audit receives full context
+    // Verify CDP audit receives only organisationId
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'entity',
         subCategory: 'epr-organisations',
         action: 'incremental-form-migration'
       },
-      context: {
-        organisationId,
-        previous,
-        next
-      },
+      context: { organisationId },
       user: systemUser
     })
 
@@ -105,8 +101,7 @@ describe('auditIncrementalFormMigration', () => {
     })
   })
 
-  it('sends reduced context to CDP audit but full state to system log when payload is too large', async () => {
-    // Create a large payload that exceeds the size limit
+  it('keeps only organisationId in CDP audit even when previous/next are large', async () => {
     const largeData = 'x'.repeat(15000)
     const previous = {
       registrations: [
@@ -141,7 +136,7 @@ describe('auditIncrementalFormMigration', () => {
       next
     )
 
-    // Verify CDP audit receives reduced context (no previous/next, just organisationId)
+    // Verify CDP audit still receives only organisationId
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'entity',
@@ -152,7 +147,7 @@ describe('auditIncrementalFormMigration', () => {
       user: systemUser
     })
 
-    // Verify system log still stores full state (no size limit)
+    // Verify system log still stores full state
     expect(mockInsert).toHaveBeenCalledWith({
       createdAt: now,
       createdBy: systemUser,

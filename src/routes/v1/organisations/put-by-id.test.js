@@ -154,13 +154,7 @@ describe('PUT /v1/organisations/{id}', () => {
         expect(payload.event.action).toEqual('update')
       }
 
-      const verifyContext = (payload) => {
-        expect(payload.context.organisationId).toEqual(organisationId)
-        expect(payload.context.previous).toEqual(initialOrg)
-        expect(payload.context.next).toEqual(updatedOrgResponseBody)
-      }
-
-      // System log
+      // System log gets full context (previous + next)
       const systemLogsResponseBody = JSON.parse(systemLogsResponse.payload)
       expect(systemLogsResponseBody.systemLogs).toHaveLength(1)
       const systemLogPayload = systemLogsResponseBody.systemLogs[0]
@@ -169,17 +163,18 @@ describe('PUT /v1/organisations/{id}', () => {
         new Date(systemLogPayload.createdAt).getTime()
       ).toBeGreaterThanOrEqual(start.getTime())
       verifyEvent(systemLogPayload)
-      verifyContext(systemLogPayload)
+      expect(systemLogPayload.context.organisationId).toEqual(organisationId)
+      expect(systemLogPayload.context.previous).toEqual(initialOrg)
+      expect(systemLogPayload.context.next).toEqual(updatedOrgResponseBody)
 
-      // CDP audit event
+      // CDP audit event gets only organisationId (no previous/next)
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
-      // stringify then parse to coerce Date objects to ISO strings
       const auditPayload = JSON.parse(
         JSON.stringify(mockCdpAuditing.mock.calls[0][0])
       )
       verifyCreatedBy(auditPayload.user)
       verifyEvent(auditPayload)
-      verifyContext(auditPayload)
+      expect(auditPayload.context.organisationId).toEqual(organisationId)
     })
   })
 

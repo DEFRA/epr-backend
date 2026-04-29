@@ -399,7 +399,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             accreditationId: 'acc-1',
             amount: 200,
             availableAmount: 200,
-            newTransactions
+            transactionCount: 1
           }
         })
       )
@@ -507,7 +507,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             accreditationId: 'acc-1',
             amount: 200,
             availableAmount: 200,
-            newTransactions
+            transactionCount: 1
           }
         })
       )
@@ -515,8 +515,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       // No system log insert attempt should be made (and no crash)
     })
 
-    it('should send reduced context to CDP audit when payload exceeds size limit', async () => {
-      // Create enough large transactions to exceed the 10000 byte mock limit
+    it('sends transactionCount (not full transactions) to CDP audit even with many transactions', async () => {
       const largeTransactions = Array.from({ length: 50 }, (_, i) => ({
         id: `trans-${i}`,
         type: 'credit',
@@ -561,7 +560,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
-      // CDP audit should get reduced context
+      // CDP audit gets transactionCount, not full transactions
       expect(audit).toHaveBeenCalledWith({
         event: {
           category: 'waste-reporting',
@@ -577,7 +576,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         user
       })
 
-      // System log should still get full context
+      // System log gets full transactions
       expect(dependencies.systemLogsRepository.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           context: {

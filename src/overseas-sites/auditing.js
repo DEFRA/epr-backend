@@ -1,6 +1,5 @@
 import {
   extractUserDetails,
-  isPayloadSmallEnoughToAudit,
   recordSystemLog,
   safeAudit
 } from '#root/auditing/helpers.js'
@@ -15,18 +14,15 @@ import {
  * @param {object} context
  */
 async function auditOverseasSite(request, action, context) {
-  const payload = {
-    event: {
-      category: 'entity',
-      subCategory: 'overseas-sites',
-      action
-    },
-    context,
-    user: extractUserDetails(request)
+  const event = {
+    category: 'entity',
+    subCategory: 'overseas-sites',
+    action
   }
+  const user = extractUserDetails(request)
 
-  safeAudit(payload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => context)
+  await recordSystemLog(request, { event, context, user })
 }
 
 /**
@@ -44,25 +40,19 @@ async function auditOverseasSiteCreate(request, site) {
  * @param {object} next
  */
 async function auditOverseasSiteUpdate(request, siteId, previous, next) {
-  const payload = {
-    event: {
-      category: 'entity',
-      subCategory: 'overseas-sites',
-      action: 'update'
-    },
-    context: { siteId, previous, next },
-    user: extractUserDetails(request)
+  const event = {
+    category: 'entity',
+    subCategory: 'overseas-sites',
+    action: 'update'
   }
+  const user = extractUserDetails(request)
 
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: { siteId }
-      }
-
-  safeAudit(safeAuditingPayload)
-  await recordSystemLog(request, payload)
+  safeAudit({ event, user }, () => ({ siteId }))
+  await recordSystemLog(request, {
+    event,
+    context: { siteId, previous, next },
+    user
+  })
 }
 
 /**
