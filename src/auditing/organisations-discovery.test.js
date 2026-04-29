@@ -150,19 +150,20 @@ describe('auditOrganisationsDiscovery', () => {
     )
   })
 
-  it('sends full context to CDP audit for normal-sized payloads', async () => {
+  it('sends only organisationId and defraIdOrg to CDP audit', async () => {
     await auditOrganisationsDiscovery(createMockRequest(), baseParams)
 
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
-        context: expect.objectContaining({
-          organisationId: 'epr-org-1'
-        })
+        context: {
+          organisationId: 'epr-org-1',
+          defraIdOrg: baseParams.defraIdOrg
+        }
       })
     )
   })
 
-  it('strips context from CDP audit for oversized payloads but keeps full context in system log', async () => {
+  it('keeps small factory output in CDP audit even when full context is oversized', async () => {
     const oversizedParams = {
       ...baseParams,
       defraIdRelationships: Array.from({ length: 500 }, (_, i) => ({
@@ -174,19 +175,15 @@ describe('auditOrganisationsDiscovery', () => {
 
     await auditOrganisationsDiscovery(createMockRequest(), oversizedParams)
 
-    // CDP audit receives stripped payload (event + user only)
-    expect(mockAudit).toHaveBeenCalledWith({
-      event: {
-        category: 'identity',
-        subCategory: 'defra-id-reconciliation',
-        action: 'organisations-discovered'
-      },
-      user: {
-        id: 'contact-123',
-        email: 'user@example.com',
-        scope: ['inquirer']
-      }
-    })
+    // CDP audit receives factory output (organisationId + defraIdOrg only)
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: {
+          organisationId: 'epr-org-1',
+          defraIdOrg: baseParams.defraIdOrg
+        }
+      })
+    )
 
     // System log always gets full context
     expect(mockInsert).toHaveBeenCalledWith(

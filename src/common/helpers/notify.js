@@ -36,12 +36,14 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
     await notifyClient.sendEmail?.(templateId, emailAddress, {
       personalisation
     })
-    safeAudit({
-      event: {
-        category: AUDIT_EVENT_CATEGORIES.EMAIL,
-        action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
+    safeAudit(
+      {
+        event: {
+          category: AUDIT_EVENT_CATEGORIES.EMAIL,
+          action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
+        }
       },
-      context: {
+      () => ({
         templateId,
         emailAddress: obfuscateEmail(emailAddress, {
           asterisksLength: 8,
@@ -49,10 +51,9 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
           minimumNameObfuscationLength: 3,
           visibleCharactersEndLength: 4,
           visibleCharactersStartLength: 4
-        }),
-        personalisation
-      }
-    })
+        })
+      })
+    )
   } catch (error) {
     logger.error({
       err: error,

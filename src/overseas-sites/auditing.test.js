@@ -81,7 +81,7 @@ describe('overseas sites auditing', () => {
   })
 
   describe('auditOverseasSiteUpdate', () => {
-    it('sends audit event and system log with previous and next state', async () => {
+    it('sends only siteId to CDP audit but full context to system log', async () => {
       const siteId = 'site-001'
       const previous = { name: 'Old Name', country: 'India' }
       const next = { name: 'New Name', country: 'India' }
@@ -95,7 +95,7 @@ describe('overseas sites auditing', () => {
             subCategory: 'overseas-sites',
             action: 'update'
           },
-          context: { siteId, previous, next },
+          context: { siteId },
           user: expectedUser
         })
       )

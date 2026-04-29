@@ -135,8 +135,7 @@ describe('sendEmail', () => {
         templateId,
         emailAddress: expect.stringMatching(
           new RegExp(`^${emailFirstFourChars}[*@]+${emailLastFourChars}$`)
-        ),
-        personalisation: expect.any(Object)
+        )
       }
     })
   })

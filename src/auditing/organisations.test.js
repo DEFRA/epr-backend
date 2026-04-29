@@ -31,7 +31,7 @@ describe('auditOrganisationUpdate', () => {
   })
 
   describe('large payload handling', () => {
-    it('captures context.previous and context.next in both the audit and system log for small payloads', async () => {
+    it('sends only organisationId to CDP audit but full context to system log', async () => {
       const previous = { version: '1' }
       const next = { version: '2' }
 
@@ -49,7 +49,7 @@ describe('auditOrganisationUpdate', () => {
             category: 'entity',
             subCategory: 'epr-organisations'
           },
-          context: { organisationId, previous, next }
+          context: { organisationId }
         })
       )
 
@@ -65,7 +65,7 @@ describe('auditOrganisationUpdate', () => {
       )
     })
 
-    it('omits context.previous and context.next from the audit event for large payloads', async () => {
+    it('keeps only organisationId in CDP audit even when previous/next are large', async () => {
       const veryLongString = randomBytes(1e6).toString('hex')
       const previous = { version: '1', veryLongString }
       const next = { version: '2', veryLongString }

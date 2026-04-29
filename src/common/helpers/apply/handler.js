@@ -29,16 +29,15 @@ export function registrationAndAccreditationHandler(name, path, factory) {
         })
       )
 
-      safeAudit({
-        event: {
-          category: AUDIT_EVENT_CATEGORIES.DB,
-          action: AUDIT_EVENT_ACTIONS.DB_INSERT
+      safeAudit(
+        {
+          event: {
+            category: AUDIT_EVENT_CATEGORIES.DB,
+            action: AUDIT_EVENT_ACTIONS.DB_INSERT
+          }
         },
-        context: {
-          orgId,
-          referenceNumber
-        }
-      })
+        () => ({ orgId, referenceNumber })
+      )
 
       logger.info({
         message: `Stored ${name} data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
