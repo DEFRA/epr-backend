@@ -9,6 +9,7 @@ import {
   statusHistoryItemSchema
 } from './organisation.js'
 import { accreditationSchema } from './accreditation.js'
+import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 const formatValidationErrorDetails = (error) => {
   return error.details
@@ -41,10 +42,13 @@ export const validateId = (id) => {
   return value
 }
 
-export const validateOrganisationInsert = (data) => {
+export const validateOrganisationInsert = (
+  data,
+  schemaVersion = CURRENT_SCHEMA_VERSION
+) => {
   return validateWithSchema(
     organisationInsertSchema,
-    data,
+    { ...data, schemaVersion },
     'Invalid organisation data'
   )
 }
@@ -73,18 +77,24 @@ export const validateStatusHistory = (statusHistory) => {
   return value
 }
 
-export const validateRegistration = (data) => {
+export const validateRegistration = (
+  data,
+  schemaVersion = CURRENT_SCHEMA_VERSION
+) => {
   return validateWithSchema(
     registrationSchema,
-    data,
+    { ...data, schemaVersion },
     'Invalid registration data'
   )
 }
 
-export const validateAccreditation = (data) => {
+export const validateAccreditation = (
+  data,
+  schemaVersion = CURRENT_SCHEMA_VERSION
+) => {
   return validateWithSchema(
     accreditationSchema,
-    data,
+    { ...data, schemaVersion },
     'Invalid accreditation data'
   )
 }

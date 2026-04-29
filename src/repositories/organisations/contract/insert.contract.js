@@ -22,19 +22,16 @@ export const testInsertBehaviour = (it) => {
 
         const expectedData = {
           ...orgWithoutStatusHistory,
-          formSubmissionTime: new Date(orgData.formSubmissionTime),
           registrations: orgData.registrations.map((reg) => {
             const { statusHistory: _, ...regWithoutStatusHistory } = reg
             return {
-              ...regWithoutStatusHistory,
-              formSubmissionTime: new Date(reg.formSubmissionTime)
+              ...regWithoutStatusHistory
             }
           }),
           accreditations: orgData.accreditations.map((acc) => {
             const { statusHistory: _, ...accWithoutStatusHistory } = acc
             return {
-              ...accWithoutStatusHistory,
-              formSubmissionTime: new Date(acc.formSubmissionTime)
+              ...accWithoutStatusHistory
             }
           }),
           users: []
@@ -119,12 +116,12 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('rejects insert with missing formSubmissionTime', async () => {
+        it('rejects insert with missing formSubmission', async () => {
           const orgWithoutTime = buildOrganisation({
-            formSubmissionTime: undefined
+            formSubmission: undefined
           })
           await expect(repository.insert(orgWithoutTime)).rejects.toThrow(
-            'Invalid organisation data: formSubmissionTime: "formSubmissionTime" is required'
+            'Invalid organisation data: formSubmission: "formSubmission" is required'
           )
         })
 

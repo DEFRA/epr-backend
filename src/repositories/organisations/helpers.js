@@ -12,8 +12,6 @@ import { validateApprovals } from './schema/helpers.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
-export const SCHEMA_VERSION = 1
-
 export const createStatusHistoryEntry = (status) => ({
   status,
   updatedAt: new Date()

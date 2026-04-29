@@ -17,14 +17,14 @@ function hasBothGlassProcesses(registration) {
   )
 }
 
-function splitIntoRemeltAndOther(registration) {
+function splitIntoRemeltAndOther(submission) {
   const remelt = {
-    ...registration,
+    ...submission,
     glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
   }
 
   const other = {
-    ...registration,
+    ...submission,
     id: new ObjectId().toString(),
     glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
   }

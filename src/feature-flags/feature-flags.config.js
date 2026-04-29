@@ -16,5 +16,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isWasteBalanceLedgerEnabled() {
     return config.get('featureFlags.wasteBalanceLedger')
+  },
+  isMigrateFormSubmissionLineageEnabled() {
+    return config.get('featureFlags.migrateFormSubmissionLineage')
   }
 })

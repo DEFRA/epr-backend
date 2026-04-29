@@ -17,10 +17,6 @@ import {
 } from '#domain/organisations/model.js'
 
 export const testRegAccApprovalValidation = (it) => {
-  const DAY = 24 * 60 * 60 * 1000
-  const oneDayAgo = new Date(Date.now() - DAY)
-  const twoDaysAgo = new Date(Date.now() - 2 * DAY)
-
   // Date strings for validFrom/validTo
   const { VALID_FROM, VALID_TO } = getValidDateRange()
 
@@ -382,8 +378,7 @@ export const testRegAccApprovalValidation = (it) => {
                     defraFormUploadedFileId: 'file-1',
                     defraFormUserDownloadLink: 'https://example.com/file-1'
                   }
-                ],
-                formSubmissionTime: twoDaysAgo
+                ]
               }),
               buildAccreditation({
                 id: acc2Id,
@@ -396,8 +391,7 @@ export const testRegAccApprovalValidation = (it) => {
                     defraFormUploadedFileId: 'file-2',
                     defraFormUserDownloadLink: 'https://example.com/file-2'
                   }
-                ],
-                formSubmissionTime: oneDayAgo
+                ]
               })
             ]
           }

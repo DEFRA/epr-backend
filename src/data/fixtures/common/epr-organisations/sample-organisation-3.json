@@ -1,7 +1,7 @@
 {
   "id": "6507f1f77bcf86cd79943931",
   "orgId": 50005,
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "version": 1,
   "statusHistory": [
     {
@@ -13,7 +13,10 @@
   "reprocessingNations": ["northern_ireland", "england"],
   "businessType": "unincorporated",
   "submittedToRegulator": "niea",
-  "formSubmissionTime": "2025-11-01T12:00:00.000Z",
+  "formSubmission": {
+    "time": "2025-11-01T12:00:00.000Z",
+    "id": "6507f1f77bcf86cd79943931"
+  },
   "submitterContactDetails": {
     "fullName": "Eve Black",
     "email": "eve.black@charity.org",
@@ -32,7 +35,10 @@
       ],
       "submittedToRegulator": "niea",
       "orgName": "Green Future Trust",
-      "formSubmissionTime": "2025-11-01T11:00:00.000Z",
+      "formSubmission": {
+        "time": "2025-11-01T11:00:00.000Z",
+        "id": "6507f1f77bcf86cd79943932"
+      },
       "site": {
         "address": {
           "line1": "100 Trust Road",
@@ -131,7 +137,10 @@
       ],
       "submittedToRegulator": "niea",
       "orgName": "Green Future Trust",
-      "formSubmissionTime": "2025-11-01T11:30:00.000Z",
+      "formSubmission": {
+        "time": "2025-11-01T11:30:00.000Z",
+        "id": "6507f1f77bcf86cd79943933"
+      },
       "material": "aluminium",
       "wasteProcessingType": "exporter",
       "glassRecyclingProcess": null,
@@ -177,7 +186,10 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab749a",
-      "formSubmissionTime": "2025-11-01T13:00:00.000Z",
+      "formSubmission": {
+        "time": "2025-11-01T13:00:00.000Z",
+        "id": "68f6a147c117aec8a1ab749a"
+      },
       "statusHistory": [
         {
           "status": "created",

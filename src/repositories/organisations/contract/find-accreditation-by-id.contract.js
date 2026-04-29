@@ -38,7 +38,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       )
 
       const {
-        formSubmissionTime: _formSubmissionTime,
+        formSubmission: _formSubmission,
         statusHistory: _statusHistory,
         ...expected
       } = accreditation1
