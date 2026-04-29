@@ -8,4 +8,14 @@
  * @property {() => boolean} isMigrateFormSubmissionLineageEnabled
  */
 
+/**
+ * @typedef {Object} FeatureFlagOverrides
+ * @property {boolean} [devEndpoints]
+ * @property {boolean} [copyFormFilesToS3]
+ * @property {boolean} [reports]
+ * @property {boolean} [orsWasteBalanceValidation]
+ * @property {boolean} [wasteBalanceLedger]
+ * @property {boolean} [migrateFormSubmissionLineage]
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
