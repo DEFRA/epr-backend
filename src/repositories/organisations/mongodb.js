@@ -1,7 +1,8 @@
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import { errorCodes } from './enums/error-codes.js'
 import {
   createInitialStatusHistory,
   mapDocumentWithCurrentStatuses,
@@ -10,9 +11,8 @@ import {
   prepareForReplace,
   SCHEMA_VERSION
 } from './helpers.js'
-import { errorCodes } from './enums/error-codes.js'
-import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
+import { getCurrentStatus } from './status.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -80,17 +80,23 @@ const performInsert = (db) => async (organisation) => {
   }
 }
 
+/**
+ * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
+ * @param {string} id
+ * @returns {never}
+ */
 const throwCuratedDuplicateKeyBoom = (error, id) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
+
   throw conflict(
     `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
     errorCodes.organisationDuplicateKey,
     {
       event: {
         action: 'update_organisation',
-        reason: `fields=${conflictFields}`
+        reason: `fields=${conflictFields} type=${error.name} code=${error.code}`
       }
     }
   )
