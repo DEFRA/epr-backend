@@ -3,6 +3,7 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
   createInitialStatusHistory,
+  escapeRegex,
   mapDocumentWithCurrentStatuses,
   performFindAllForOverseasSitesAdminList,
   performFindPageForOrsAdminList,
@@ -210,6 +211,35 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performFindPage =
+  (db) =>
+  async ({ search, page, pageSize }) => {
+    const trimmedSearch = (search ?? '').trim()
+    const filter =
+      trimmedSearch === ''
+        ? {}
+        : {
+            'companyDetails.name': {
+              $regex: escapeRegex(trimmedSearch),
+              $options: 'i'
+            }
+          }
+
+    const collection = db.collection(COLLECTION_NAME)
+    const totalItems = await collection.countDocuments(filter)
+    const docs = await collection
+      .find(filter)
+      .sort({ 'companyDetails.name': 1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .toArray()
+
+    const items = docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+    const totalPages = Math.ceil(totalItems / pageSize)
+
+    return { items, page, pageSize, totalItems, totalPages }
+  }
+
 const LINKED_ORG_PROJECTION = {
   orgId: 1,
   'companyDetails.name': 1,
@@ -276,9 +306,6 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
 
   return mapDocumentWithCurrentStatuses(doc)
 }
-
-const escapeRegex = (string) =>
-  string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
@@ -428,6 +455,7 @@ export const createOrganisationsRepository = async (
       replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
+      findPage: performFindPage(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
       findPageForOverseasSitesAdminList: performFindPageForOrsAdminList(db),

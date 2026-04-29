@@ -5,6 +5,7 @@ import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
+  escapeRegex,
   mapDocumentWithCurrentStatuses,
   prepareForReplace,
   SCHEMA_VERSION
@@ -149,6 +150,38 @@ const performFindAll = (staleCache) => async () => {
     mapDocumentWithCurrentStatuses({ ...org })
   )
 }
+
+const performFindPage =
+  (staleCache) =>
+  async ({ search, page, pageSize }) => {
+    const trimmedSearch = (search ?? '').trim()
+
+    let matches = structuredClone(staleCache)
+
+    if (trimmedSearch !== '') {
+      const pattern = new RegExp(escapeRegex(trimmedSearch), 'i')
+      matches = matches.filter((org) =>
+        pattern.test(org.companyDetails.name)
+      )
+    }
+
+    matches.sort((a, b) => {
+      const aName = a.companyDetails.name
+      const bName = b.companyDetails.name
+      if (aName < bName) return -1
+      if (aName > bName) return 1
+      return 0
+    })
+
+    const totalItems = matches.length
+    const totalPages = Math.ceil(totalItems / pageSize)
+    const start = (page - 1) * pageSize
+    const items = matches
+      .slice(start, start + pageSize)
+      .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
+
+    return { items, page, pageSize, totalItems, totalPages }
+  }
 
 const performFindAllForOverseasSitesAdminList = (staleCache) => async () => {
   return structuredClone(staleCache).map(
@@ -386,6 +419,7 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       replaceRaw: replaceRawFn,
       findAll: performFindAll(staleCache),
+      findPage: performFindPage(staleCache),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
