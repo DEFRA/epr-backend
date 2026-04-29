@@ -5,8 +5,6 @@
  * silently dropped at ingest. ✅⚠️ fields are included with the caveat that
  * their value is overridden if `req`/`res` are present in the log payload.
  *
- * When the upstream CDP docs change, update this typedef in lockstep.
- *
  * Per the docs: "flattened keys and keys in a map are not considered the
  * same. i.e. `a/b = {a: {b: value}}` and `a.b = {'a.b': value}`". So the
  * dotted entries below (host.hostname, log.level, span.id, transaction.id)

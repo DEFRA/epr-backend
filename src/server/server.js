@@ -55,9 +55,7 @@ function getServerConfig(config) {
         options: {
           abortEarly: false
         },
-        // failAction declares HapiRequest in its signature so callers get the
-        // typed logger; Hapi's Lifecycle.FailAction expects plain Request.
-        // Runtime is fine — Hapi populates the augmented request before calling.
+        // Cast bridges HapiRequest (typed logger) to Hapi's plain Request signature.
         failAction: /** @type {Lifecycle.FailAction} */ (
           /** @type {unknown} */ (failAction)
         )
