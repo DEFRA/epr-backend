@@ -53,18 +53,28 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
                 submittedAt: null,
                 submittedBy: null,
                 recyclingActivity: {
-                  totalTonnageReceived: 0,
-                  tonnageRecycled: null,
-                  tonnageNotRecycled: null
+                  totalTonnageReceived: 120,
+                  tonnageRecycled: 95.5,
+                  tonnageNotRecycled: 24.5
                 },
-                exportActivity: undefined,
+                exportActivity: {
+                  totalTonnageExported: 40,
+                  tonnageReceivedNotExported: 8,
+                  tonnageRefusedAtDestination: 1.5,
+                  tonnageStoppedDuringExport: 2,
+                  tonnageRepatriated: 0.5
+                },
                 wasteSent: {
-                  tonnageSentToReprocessor: 0,
-                  tonnageSentToExporter: 0,
-                  tonnageSentToAnotherSite: 0
+                  tonnageSentToReprocessor: 50,
+                  tonnageSentToExporter: 20,
+                  tonnageSentToAnotherSite: 10
                 },
-                prn: undefined,
-                supportingInformation: undefined
+                prn: {
+                  issuedTonnage: 80,
+                  totalRevenue: 40000,
+                  averagePricePerTonne: 500
+                },
+                supportingInformation: 'Test note'
               },
               previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
@@ -114,18 +124,28 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         submittedAt: null,
         submittedBy: null,
         recyclingActivity: {
-          totalTonnageReceived: 0,
-          tonnageRecycled: null,
-          tonnageNotRecycled: null
+          totalTonnageReceived: 120,
+          tonnageRecycled: 95.5,
+          tonnageNotRecycled: 24.5
         },
-        exportActivity: undefined,
+        exportActivity: {
+          totalTonnageExported: 40,
+          tonnageReceivedNotExported: 8,
+          tonnageRefusedAtDestination: 1.5,
+          tonnageStoppedDuringExport: 2,
+          tonnageRepatriated: 0.5
+        },
         wasteSent: {
-          tonnageSentToReprocessor: 0,
-          tonnageSentToExporter: 0,
-          tonnageSentToAnotherSite: 0
+          tonnageSentToReprocessor: 50,
+          tonnageSentToExporter: 20,
+          tonnageSentToAnotherSite: 10
         },
-        prn: undefined,
-        supportingInformation: undefined
+        prn: {
+          issuedTonnage: 80,
+          totalRevenue: 40000,
+          averagePricePerTonne: 500
+        },
+        supportingInformation: 'Test note'
       })
       expect(slot.previousSubmissions).toStrictEqual([
         {
@@ -135,18 +155,28 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           submittedAt: expect.any(String),
           submittedBy: DEFAULT_CHANGED_BY,
           recyclingActivity: {
-            totalTonnageReceived: 0,
-            tonnageRecycled: null,
-            tonnageNotRecycled: null
+            totalTonnageReceived: 120,
+            tonnageRecycled: 95.5,
+            tonnageNotRecycled: 24.5
           },
-          exportActivity: undefined,
+          exportActivity: {
+            totalTonnageExported: 40,
+            tonnageReceivedNotExported: 8,
+            tonnageRefusedAtDestination: 1.5,
+            tonnageStoppedDuringExport: 2,
+            tonnageRepatriated: 0.5
+          },
           wasteSent: {
-            tonnageSentToReprocessor: 0,
-            tonnageSentToExporter: 0,
-            tonnageSentToAnotherSite: 0
+            tonnageSentToReprocessor: 50,
+            tonnageSentToExporter: 20,
+            tonnageSentToAnotherSite: 10
           },
-          prn: undefined,
-          supportingInformation: undefined
+          prn: {
+            issuedTonnage: 80,
+            totalRevenue: 40000,
+            averagePricePerTonne: 500
+          },
+          supportingInformation: 'Test note'
         }
       ])
     })
@@ -167,72 +197,6 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           String(MONTHLY_PERIODS.February)
         ])
       )
-    })
-
-    it('returns tonnage fields with non-zero values through the projection', async () => {
-      const tonnageOverrides = {
-        recyclingActivity: {
-          suppliers: [],
-          totalTonnageReceived: 100.5,
-          tonnageRecycled: 80.25,
-          tonnageNotRecycled: 20.25
-        },
-        exportActivity: {
-          overseasSites: [],
-          unapprovedOverseasSites: [],
-          totalTonnageExported: 50.75,
-          tonnageReceivedNotExported: 10.5,
-          tonnageRefusedAtDestination: 1.25,
-          tonnageStoppedDuringExport: 2.5,
-          totalTonnageRefusedOrStopped: 3.75,
-          tonnageRepatriated: 0.75
-        },
-        wasteSent: {
-          tonnageSentToReprocessor: 30,
-          tonnageSentToExporter: 15,
-          tonnageSentToAnotherSite: 5,
-          finalDestinations: []
-        },
-        prn: {
-          issuedTonnage: 90,
-          totalRevenue: 45000,
-          averagePricePerTonne: 500,
-          freeTonnage: 0
-        },
-        supportingInformation: 'Note to regulator'
-      }
-
-      const { id: reportId } = await repository.createReport(
-        buildCreateReportParams(tonnageOverrides)
-      )
-
-      const [result] = await repository.findAllPeriodicReports()
-      const current = result.reports.monthly[DEFAULT_REPORT_PERIOD].current
-
-      expect(current.id).toBe(reportId)
-      expect(current.recyclingActivity).toStrictEqual({
-        totalTonnageReceived: 100.5,
-        tonnageRecycled: 80.25,
-        tonnageNotRecycled: 20.25
-      })
-      expect(current.exportActivity).toStrictEqual({
-        totalTonnageExported: 50.75,
-        tonnageReceivedNotExported: 10.5,
-        tonnageRefusedAtDestination: 1.25,
-        tonnageStoppedDuringExport: 2.5,
-        tonnageRepatriated: 0.75
-      })
-      expect(current.wasteSent).toStrictEqual({
-        tonnageSentToReprocessor: 30,
-        tonnageSentToExporter: 15,
-        tonnageSentToAnotherSite: 5
-      })
-      expect(current.prn).toStrictEqual({
-        issuedTonnage: 90,
-        totalRevenue: 45000,
-        averagePricePerTonne: 500
-      })
-      expect(current.supportingInformation).toBe('Note to regulator')
     })
 
     it('returns separate documents for the same org/registration across different years', async () => {
