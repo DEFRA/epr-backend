@@ -62,12 +62,19 @@ export class LedgerSlotConflictError extends Error {
  * @property {(accreditationId: string) => Promise<LedgerTransaction | null>} findLatestByAccreditationId
  *   Return the highest-numbered transaction for the accreditation, or `null`
  *   if none exist.
- * @property {(wasteRecordIds: string[]) => Promise<Map<string, number>>} findCreditedAmountsByWasteRecordIds
+ * @property {(accreditationId: string, wasteRecordIds: string[]) => Promise<Map<string, number>>} findCreditedAmountsByWasteRecordIds
  *   For each `wasteRecordId` in the input, return the signed sum of every
- *   `summary-log-row` transaction touching it: credits add their amount,
- *   debits subtract their amount, pending debits are excluded. Ids with no
- *   transactions appear in the result map with value `0`. Empty input
- *   resolves to an empty map. Duplicate input ids collapse to one entry.
+ *   `summary-log-row` transaction for the given accreditation touching it:
+ *   credits add their amount, debits subtract their amount, pending debits
+ *   are excluded. Ids with no transactions appear in the result map with
+ *   value `0`. Empty input resolves to an empty map. Duplicate input ids
+ *   collapse to one entry.
+ *
+ *   The `accreditationId` filter is load-bearing: `wasteRecordId` is a
+ *   `(type, rowId)` synthesis derived from the upload, so the same string
+ *   ("exported:1") can legitimately appear under two different accreditations.
+ *   Without this filter, accreditation B's totals would absorb accreditation
+ *   A's prior credits and the v2 path would emit incorrect deltas.
  *
  *   This is the bulk read primitive that drives the per-row delta
  *   reconciliation invariant on the ledger write path: a re-upload of

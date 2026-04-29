@@ -62,14 +62,15 @@ const buildExporterRecord = ({
   rowId,
   tonnage,
   versionId = `version-${rowId}`,
-  summaryLogId = 'log-1'
+  summaryLogId = 'log-1',
+  updatedBy = { id: user.id, name: user.name }
 }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId,
   rowId: String(rowId),
   type: WASTE_RECORD_TYPE.EXPORTED,
-  updatedBy: { id: user.id, name: user.name },
+  ...(updatedBy ? { updatedBy } : {}),
   versions: [
     {
       id: versionId,
@@ -317,8 +318,6 @@ describe('performUpdateViaLedger', () => {
     })
 
     it('converges multi-step delta chains to a stable target', async () => {
-      const accreditationId = 'acc-1'
-
       await performUpdateViaLedger({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
@@ -559,8 +558,11 @@ describe('performUpdateViaLedger', () => {
 
   describe('missing updatedBy', () => {
     it('persists ledger transactions when records have no updatedBy (system-driven sync)', async () => {
-      const recordWithoutUser = buildExporterRecord({ rowId: '1', tonnage: 50 })
-      delete recordWithoutUser.updatedBy
+      const recordWithoutUser = buildExporterRecord({
+        rowId: '1',
+        tonnage: 50,
+        updatedBy: null
+      })
 
       await performUpdateViaLedger({
         wasteRecords: [recordWithoutUser],

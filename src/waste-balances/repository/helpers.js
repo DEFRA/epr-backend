@@ -1,10 +1,7 @@
 import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
-import {
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from '#root/auditing/helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
+import { recordWasteBalanceUpdateAudit } from '../application/audit.js'
 import { performUpdateViaLedger } from '../application/update-via-ledger.js'
 import { randomUUID } from 'node:crypto'
 import {
@@ -100,55 +97,6 @@ export const markExcludedRecords = (wasteRecords) => {
     ...record,
     excludedFromWasteBalance: !isRecordValid(record)
   }))
-}
-
-const recordAuditLogs = async (
-  dependencies,
-  updatedBalance,
-  newTransactions,
-  user
-) => {
-  if (!user?.id && !user?.email) {
-    return
-  }
-
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'waste-balance',
-      action: 'update'
-    },
-    context: {
-      accreditationId: updatedBalance.accreditationId,
-      amount: updatedBalance.amount,
-      availableAmount: updatedBalance.availableAmount,
-      newTransactions
-    },
-    user
-  }
-
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          accreditationId: updatedBalance.accreditationId,
-          amount: updatedBalance.amount,
-          availableAmount: updatedBalance.availableAmount,
-          transactionCount: newTransactions.length
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
-
-  if (dependencies.systemLogsRepository) {
-    await dependencies.systemLogsRepository.insert({
-      createdAt: new Date(),
-      createdBy: user,
-      event: payload.event,
-      context: payload.context
-    })
-  }
 }
 
 const calculateAndApplyUpdates = async (
@@ -262,7 +210,14 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   await saveBalance(updatedBalance, newTransactions)
 
-  await recordAuditLogs(dependencies, updatedBalance, newTransactions, user)
+  await recordWasteBalanceUpdateAudit({
+    systemLogsRepository: dependencies.systemLogsRepository,
+    accreditationId: updatedBalance.accreditationId,
+    amount: updatedBalance.amount,
+    availableAmount: updatedBalance.availableAmount,
+    newTransactions,
+    user
+  })
 }
 
 /**

@@ -21,6 +21,21 @@ import { add, toNumber } from '#common/helpers/decimal-utils.js'
  */
 
 /**
+ * @param {LedgerTransaction} transaction
+ * @returns {number} amount contributing to the credited total — credits add,
+ *   debits subtract, pending debits do not participate
+ */
+const signedContribution = (transaction) => {
+  if (transaction.type === LEDGER_TRANSACTION_TYPE.CREDIT) {
+    return transaction.amount
+  }
+  if (transaction.type === LEDGER_TRANSACTION_TYPE.DEBIT) {
+    return -transaction.amount
+  }
+  return 0
+}
+
+/**
  * @param {Array<LedgerTransaction>} [initialTransactions]
  * @returns {import('./ledger-port.js').LedgerRepositoryFactory}
  */
@@ -82,8 +97,14 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
 
       return structuredClone(latest)
     },
-    /** @param {string[]} wasteRecordIds */
-    findCreditedAmountsByWasteRecordIds: async (wasteRecordIds) => {
+    /**
+     * @param {string} accreditationId
+     * @param {string[]} wasteRecordIds
+     */
+    findCreditedAmountsByWasteRecordIds: async (
+      accreditationId,
+      wasteRecordIds
+    ) => {
       const totals = new Map()
       for (const id of wasteRecordIds) {
         totals.set(id, 0)
@@ -94,6 +115,9 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
       }
 
       for (const transaction of storage) {
+        if (transaction.accreditationId !== accreditationId) {
+          continue
+        }
         if (transaction.source?.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
           continue
         }
@@ -103,13 +127,13 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
           continue
         }
 
-        const sign =
-          transaction.type === LEDGER_TRANSACTION_TYPE.CREDIT ? 1 : -1
-        const signedAmount =
-          sign === 1 ? transaction.amount : -transaction.amount
+        const contribution = signedContribution(transaction)
+        if (contribution === 0) {
+          continue
+        }
         totals.set(
           wasteRecordId,
-          toNumber(add(totals.get(wasteRecordId), signedAmount))
+          toNumber(add(totals.get(wasteRecordId), contribution))
         )
       }
 

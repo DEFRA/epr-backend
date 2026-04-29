@@ -4,23 +4,20 @@ import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Object[]} [initialWasteBalances]
- * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryWasteBalancesRepositoryPlugin(
   initialWasteBalances
 ) {
   return {
     name: 'wasteBalancesRepository',
+    dependencies: ['feature-flags'],
     register: (server) => {
       const ledgerRepository = createInMemoryLedgerRepository()()
       const factory = createInMemoryWasteBalancesRepository(
         initialWasteBalances,
         {
           ledgerRepository,
-          featureFlags:
-            /** @type {import('#common/hapi-types.js').HapiServer} */ (
-              /** @type {*} */ (server)
-            ).featureFlags
+          featureFlags: server.featureFlags
         }
       )
       const repository = factory()

@@ -149,16 +149,18 @@ const performFindLatestByAccreditationId =
 
 /**
  * Resolve credited amounts in one round trip. The aggregation matches every
- * `summary-log-row` transaction whose `wasteRecordId` is in the input, signs
- * each amount by transaction type, and groups by `wasteRecordId`. Pending
- * debits do not participate — they are a ringfence against the running
- * balance, not a credit attributable to any specific waste record.
+ * `summary-log-row` transaction for the accreditation whose `wasteRecordId`
+ * is in the input, signs each amount by transaction type, and groups by
+ * `wasteRecordId`. Pending debits do not participate — they are a ringfence
+ * against the running balance, not a credit attributable to any specific
+ * waste record. The `accreditationId` filter is load-bearing because
+ * `wasteRecordId` ("type:rowId") is not globally unique across accreditations.
  *
  * @param {Collection} collection
- * @returns {(wasteRecordIds: string[]) => Promise<Map<string, number>>}
+ * @returns {(accreditationId: string, wasteRecordIds: string[]) => Promise<Map<string, number>>}
  */
 const performFindCreditedAmountsByWasteRecordIds =
-  (collection) => async (wasteRecordIds) => {
+  (collection) => async (accreditationId, wasteRecordIds) => {
     const totals = new Map()
     for (const id of wasteRecordIds) {
       totals.set(id, 0)
@@ -174,6 +176,7 @@ const performFindCreditedAmountsByWasteRecordIds =
       .aggregate([
         {
           $match: {
+            accreditationId,
             'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
             'source.summaryLogRow.wasteRecordId': { $in: requestedIds }
           }

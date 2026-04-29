@@ -134,6 +134,7 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     expect(latest.source.kind).toBe(LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW)
 
     const credited = await ledgerRepository.findCreditedAmountsByWasteRecordIds(
+      accreditationId,
       ['exported:1001', 'exported:1002']
     )
     expect(credited.get('exported:1001')).toBe(100)

@@ -55,15 +55,19 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
     })
 
     it('returns an empty map for an empty input', async () => {
-      const result = await repository.findCreditedAmountsByWasteRecordIds([])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        []
+      )
       expect(result).toBeInstanceOf(Map)
       expect(result.size).toBe(0)
     })
 
     it('returns 0 for waste record ids with no transactions', async () => {
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'never-touched'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['never-touched']
+      )
       expect(result.size).toBe(1)
       expect(result.get('never-touched')).toBe(0)
     })
@@ -78,9 +82,10 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a']
+      )
 
       expect(result.get('wr-a')).toBe(100)
     })
@@ -102,9 +107,10 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a']
+      )
 
       expect(result.get('wr-a')).toBe(70)
     })
@@ -126,14 +132,15 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a']
+      )
 
       expect(result.get('wr-a')).toBe(0)
     })
 
-    it('isolates totals per waste record id', async () => {
+    it('isolates totals per waste record id within an accreditation', async () => {
       await repository.insertTransactions([
         buildSummaryLogRowTransaction({
           number: 1,
@@ -149,13 +156,63 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a',
-        'wr-b'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a', 'wr-b']
+      )
 
       expect(result.get('wr-a')).toBe(100)
       expect(result.get('wr-b')).toBe(25)
+    })
+
+    it('isolates totals per accreditation when the same waste record id appears under both', async () => {
+      await repository.insertTransactions([
+        buildSummaryLogRowTransaction({
+          accreditationId: 'acc-1',
+          number: 1,
+          amount: 100,
+          closingBalance: { amount: 100, availableAmount: 100 },
+          wasteRecordId: 'wr-shared'
+        }),
+        buildSummaryLogRowTransaction({
+          accreditationId: 'acc-2',
+          number: 1,
+          amount: 250,
+          closingBalance: { amount: 250, availableAmount: 250 },
+          wasteRecordId: 'wr-shared'
+        })
+      ])
+
+      const acc1 = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-shared']
+      )
+      const acc2 = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-2',
+        ['wr-shared']
+      )
+
+      expect(acc1.get('wr-shared')).toBe(100)
+      expect(acc2.get('wr-shared')).toBe(250)
+    })
+
+    it('returns 0 for a waste record id that exists only under another accreditation', async () => {
+      await repository.insertTransactions([
+        buildSummaryLogRowTransaction({
+          accreditationId: 'acc-other',
+          number: 1,
+          amount: 999,
+          closingBalance: { amount: 999, availableAmount: 999 },
+          wasteRecordId: 'wr-shared'
+        })
+      ])
+
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-shared']
+      )
+
+      expect(result.get('wr-shared')).toBe(0)
     })
 
     it('ignores stored transactions for waste record ids not in the input', async () => {
@@ -174,9 +231,10 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-requested'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-requested']
+      )
 
       expect(result.size).toBe(1)
       expect(result.get('wr-requested')).toBe(100)
@@ -193,10 +251,10 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a',
-        'wr-missing'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a', 'wr-missing']
+      )
 
       expect(result.size).toBe(2)
       expect(result.get('wr-a')).toBe(5)
@@ -214,11 +272,37 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         buildPrnOperationTransaction({ number: 2 })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a']
+      )
 
       expect(result.get('wr-a')).toBe(60)
+    })
+
+    it('excludes pending debits — they ringfence balance, not waste-record credits', async () => {
+      await repository.insertTransactions([
+        buildSummaryLogRowTransaction({
+          number: 1,
+          amount: 100,
+          closingBalance: { amount: 100, availableAmount: 100 },
+          wasteRecordId: 'wr-a'
+        }),
+        buildSummaryLogRowTransaction({
+          number: 2,
+          type: LEDGER_TRANSACTION_TYPE.PENDING_DEBIT,
+          amount: 40,
+          closingBalance: { amount: 100, availableAmount: 60 },
+          wasteRecordId: 'wr-a'
+        })
+      ])
+
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a']
+      )
+
+      expect(result.get('wr-a')).toBe(100)
     })
 
     it('preserves high-precision amounts exactly', async () => {
@@ -238,9 +322,10 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-precise'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-precise']
+      )
 
       expect(result.get('wr-precise')).toBe(100.004)
     })
@@ -255,11 +340,10 @@ export const testFindCreditedAmountsByWasteRecordIdsBehaviour = (it) => {
         })
       ])
 
-      const result = await repository.findCreditedAmountsByWasteRecordIds([
-        'wr-a',
-        'wr-a',
-        'wr-a'
-      ])
+      const result = await repository.findCreditedAmountsByWasteRecordIds(
+        'acc-1',
+        ['wr-a', 'wr-a', 'wr-a']
+      )
 
       expect(result.size).toBe(1)
       expect(result.get('wr-a')).toBe(10)

@@ -6,25 +6,25 @@ import {
   subtract,
   toNumber
 } from '#common/helpers/decimal-utils.js'
-import {
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from '#root/auditing/helpers.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 import {
   LEDGER_SOURCE_KIND,
   LEDGER_TRANSACTION_TYPE
 } from '../repository/ledger-schema.js'
 import { appendToLedger } from './append-to-ledger.js'
+import { recordWasteBalanceUpdateAudit } from './audit.js'
 
 /**
- * Build the unique identifier we key ledger transactions by. The waste-records
- * collection identifies a row by `(organisationId, registrationId, type, rowId)`
- * and the ledger transactions are already scoped by accreditation, so combining
- * `type` and `rowId` is enough to dodge the PAE-1380 collision class without
- * exposing the underlying Mongo `_id`.
+ * Build the identifier we key ledger transactions by. Combining `type` and
+ * `rowId` dodges the PAE-1380 collision class (same naked `rowId` reused
+ * across waste record types) without coupling the ledger to the storage-layer
+ * `_id` of the waste-records collection.
+ *
+ * The pair is unique within an accreditation but not globally — bulk reads
+ * MUST scope by accreditationId; see `LedgerRepository#findCreditedAmountsByWasteRecordIds`.
  *
  * @param {{ type: string, rowId: string | number }} record
  */
@@ -55,7 +55,7 @@ const targetAmountFor = (record, accreditation, overseasSites) => {
 /**
  * @param {object} record
  * @param {object} accreditation
- * @param {*} overseasSites
+ * @param {OverseasSitesContext} overseasSites
  * @param {Map<string, number>} alreadyCreditedByWasteRecordId
  */
 const builderFor = (
@@ -66,9 +66,8 @@ const builderFor = (
 ) => {
   const targetAmount = targetAmountFor(record, accreditation, overseasSites)
   const wasteRecordId = wasteRecordIdFor(record)
-  const alreadyCredited = /** @type {number} */ (
-    alreadyCreditedByWasteRecordId.get(wasteRecordId)
-  )
+  /* c8 ignore next -- ?? 0 documents the zero-fill contract for the type checker; the right branch is unreachable because findCreditedAmountsByWasteRecordIds zero-fills every requested id */
+  const alreadyCredited = alreadyCreditedByWasteRecordId.get(wasteRecordId) ?? 0
 
   const delta = subtract(targetAmount, alreadyCredited)
   if (equals(delta, 0)) {
@@ -116,56 +115,6 @@ const builderFor = (
   }
 }
 
-const recordLedgerAuditLogs = async ({
-  systemLogsRepository,
-  accreditationId,
-  closingBalance,
-  newTransactions,
-  user
-}) => {
-  if (!user?.id && !user?.email) {
-    return
-  }
-
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'waste-balance',
-      action: 'update'
-    },
-    context: {
-      accreditationId,
-      amount: closingBalance.amount,
-      availableAmount: closingBalance.availableAmount,
-      newTransactions
-    },
-    user
-  }
-
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          accreditationId,
-          amount: closingBalance.amount,
-          availableAmount: closingBalance.availableAmount,
-          transactionCount: newTransactions.length
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
-
-  if (systemLogsRepository) {
-    await systemLogsRepository.insert({
-      createdAt: new Date(),
-      createdBy: user,
-      event: payload.event,
-      context: payload.context
-    })
-  }
-}
-
 /**
  * Migrate the summary-log row write path onto the ledger.
  *
@@ -176,9 +125,14 @@ const recordLedgerAuditLogs = async ({
  * (crashes mid-bulkWrite, summary log stuck in SUBMITTING, etc.) is the
  * operator hitting submit again.
  *
- * Audit emission is preserved: a successful append fires the equivalent of
- * the v1 path's `recordAuditLogs`, so the back-office system-logs view and
- * the CDP audit stream see the same lifecycle they did before the flag.
+ * `appendToLedger` uses an ordered insert under the hood, so a slot conflict
+ * thrown on row N leaves rows 1..N-1 persisted and the audit emission below
+ * never fires. ADR 0031 accepts this trade-off explicitly: the next re-upload
+ * converges the ledger and emits a single combined audit event.
+ *
+ * Audit emission shares its helper with the v1 path so the back-office
+ * system-logs view and the CDP audit stream see the same lifecycle either
+ * side of the flag.
  *
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
@@ -187,7 +141,7 @@ const recordLedgerAuditLogs = async ({
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {Object} [params.user]
- * @param {*} params.overseasSites
+ * @param {OverseasSitesContext} params.overseasSites
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
@@ -204,7 +158,10 @@ export const performUpdateViaLedger = async ({
   const wasteRecordIds = Array.from(new Set(wasteRecords.map(wasteRecordIdFor)))
 
   const alreadyCreditedByWasteRecordId =
-    await ledgerRepository.findCreditedAmountsByWasteRecordIds(wasteRecordIds)
+    await ledgerRepository.findCreditedAmountsByWasteRecordIds(
+      accreditation.id,
+      wasteRecordIds
+    )
 
   const builders = []
   for (const record of wasteRecords) {
@@ -238,10 +195,11 @@ export const performUpdateViaLedger = async ({
 
   const last = newTransactions[newTransactions.length - 1]
 
-  await recordLedgerAuditLogs({
+  await recordWasteBalanceUpdateAudit({
     systemLogsRepository: dependencies.systemLogsRepository,
     accreditationId: accreditation.id,
-    closingBalance: last.closingBalance,
+    amount: last.closingBalance.amount,
+    availableAmount: last.closingBalance.availableAmount,
     newTransactions,
     user
   })
