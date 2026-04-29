@@ -33,7 +33,10 @@ export const organisationsGetAll = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *   organisationsRepository: OrganisationsRepository,
+   *   query: { search?: string, page?: number, pageSize?: number }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async ({ organisationsRepository, query }, h) => {
