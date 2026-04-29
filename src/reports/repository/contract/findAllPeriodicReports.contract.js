@@ -51,7 +51,20 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
                 status: REPORT_STATUS.IN_PROGRESS,
                 submissionNumber: 1,
                 submittedAt: null,
-                submittedBy: null
+                submittedBy: null,
+                recyclingActivity: {
+                  totalTonnageReceived: 0,
+                  tonnageRecycled: null,
+                  tonnageNotRecycled: null
+                },
+                exportActivity: undefined,
+                wasteSent: {
+                  tonnageSentToReprocessor: 0,
+                  tonnageSentToExporter: 0,
+                  tonnageSentToAnotherSite: 0
+                },
+                prn: undefined,
+                supportingInformation: undefined
               },
               previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
@@ -99,7 +112,20 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         status: REPORT_STATUS.IN_PROGRESS,
         submissionNumber: 2,
         submittedAt: null,
-        submittedBy: null
+        submittedBy: null,
+        recyclingActivity: {
+          totalTonnageReceived: 0,
+          tonnageRecycled: null,
+          tonnageNotRecycled: null
+        },
+        exportActivity: undefined,
+        wasteSent: {
+          tonnageSentToReprocessor: 0,
+          tonnageSentToExporter: 0,
+          tonnageSentToAnotherSite: 0
+        },
+        prn: undefined,
+        supportingInformation: undefined
       })
       expect(slot.previousSubmissions).toStrictEqual([
         {
@@ -107,7 +133,20 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           status: REPORT_STATUS.SUBMITTED,
           submissionNumber: 1,
           submittedAt: expect.any(String),
-          submittedBy: DEFAULT_CHANGED_BY
+          submittedBy: DEFAULT_CHANGED_BY,
+          recyclingActivity: {
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          exportActivity: undefined,
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0
+          },
+          prn: undefined,
+          supportingInformation: undefined
         }
       ])
     })

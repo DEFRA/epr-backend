@@ -55,11 +55,52 @@ describe('generateReportSubmissions (integration)', () => {
       reportType: 'Monthly'
     }
 
+    const emptyTonnage = {
+      tonnageReceivedForRecycling: '',
+      tonnageRecycled: '',
+      tonnageExportedForRecycling: '',
+      tonnageSentOnTotal: '',
+      tonnageSentOnToReprocessor: '',
+      tonnageSentOnToExporter: '',
+      tonnageSentOnToOtherFacilities: '',
+      tonnagePrnsPernsIssued: '',
+      totalRevenuePrnsPerns: '',
+      averagePrnPernPricePerTonne: '',
+      tonnageReceivedButNotRecycled: '',
+      tonnageReceivedButNotExported: '',
+      tonnageExportedThatWasStopped: '',
+      tonnageExportedThatWasRefused: '',
+      tonnageRepatriated: '',
+      noteToRegulator: ''
+    }
+
+    // Default buildCreateReportParams has recyclingActivity (zeros/nulls),
+    // wasteSent (zeros), prn: null, no exportActivity, no supportingInformation
+    const submittedTonnage = {
+      tonnageReceivedForRecycling: '0',
+      tonnageRecycled: '',
+      tonnageExportedForRecycling: '',
+      tonnageSentOnTotal: '0',
+      tonnageSentOnToReprocessor: '0',
+      tonnageSentOnToExporter: '0',
+      tonnageSentOnToOtherFacilities: '0',
+      tonnagePrnsPernsIssued: '',
+      totalRevenuePrnsPerns: '',
+      averagePrnPernPricePerTonne: '',
+      tonnageReceivedButNotRecycled: '',
+      tonnageReceivedButNotExported: '',
+      tonnageExportedThatWasStopped: '',
+      tonnageExportedThatWasRefused: '',
+      tonnageRepatriated: '',
+      noteToRegulator: ''
+    }
+
     expect(result).toStrictEqual({
       generatedAt: FIXED_DATE.toISOString(),
       reportSubmissions: [
         {
           ...baseRow,
+          ...submittedTonnage,
           reportingPeriod: 'Jan 2026',
           dueDate: '2026-02-20',
           submittedDate: FIXED_DATE.toISOString().slice(0, 10),
@@ -67,6 +108,7 @@ describe('generateReportSubmissions (integration)', () => {
         },
         {
           ...baseRow,
+          ...emptyTonnage,
           reportingPeriod: 'Feb 2026',
           dueDate: '2026-03-20',
           submittedDate: '',
@@ -74,6 +116,7 @@ describe('generateReportSubmissions (integration)', () => {
         },
         {
           ...baseRow,
+          ...emptyTonnage,
           reportingPeriod: 'Mar 2026',
           dueDate: '2026-04-20',
           submittedDate: '',
@@ -81,6 +124,7 @@ describe('generateReportSubmissions (integration)', () => {
         },
         {
           ...baseRow,
+          ...emptyTonnage,
           reportingPeriod: 'Jan 2026',
           dueDate: '2026-02-20',
           submittedDate: '',
@@ -88,6 +132,7 @@ describe('generateReportSubmissions (integration)', () => {
         },
         {
           ...baseRow,
+          ...emptyTonnage,
           reportingPeriod: 'Feb 2026',
           dueDate: '2026-03-20',
           submittedDate: '',
@@ -95,12 +140,104 @@ describe('generateReportSubmissions (integration)', () => {
         },
         {
           ...baseRow,
+          ...emptyTonnage,
           reportingPeriod: 'Mar 2026',
           dueDate: '2026-04-20',
           submittedDate: '',
           submittedBy: ''
         }
       ]
+    })
+  })
+
+  it('includes tonnage fields for submitted reports and empty strings for unsubmitted periods', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    await buildSubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1,
+      recyclingActivity: {
+        suppliers: [],
+        totalTonnageReceived: 100.5,
+        tonnageRecycled: 80.25,
+        tonnageNotRecycled: 20.25
+      },
+      exportActivity: {
+        overseasSites: [],
+        unapprovedOverseasSites: [],
+        totalTonnageExported: 50.75,
+        tonnageReceivedNotExported: 10.5,
+        tonnageRefusedAtDestination: 1.25,
+        tonnageStoppedDuringExport: 2.5,
+        totalTonnageRefusedOrStopped: 3.75,
+        tonnageRepatriated: 0.75
+      },
+      wasteSent: {
+        tonnageSentToReprocessor: 30,
+        tonnageSentToExporter: 15,
+        tonnageSentToAnotherSite: 5,
+        finalDestinations: []
+      },
+      prn: {
+        issuedTonnage: 90,
+        totalRevenue: 45000,
+        averagePricePerTonne: 500,
+        freeTonnage: 0
+      },
+      supportingInformation: 'Test note to regulator'
+    })
+
+    const result = await generateReportSubmissions(orgRepo, reportsRepo)
+
+    const submittedRow = result.reportSubmissions.find(
+      (r) => r.reportingPeriod === 'Jan 2026' && r.submittedDate !== ''
+    )
+    expect(submittedRow).toMatchObject({
+      tonnageReceivedForRecycling: '100.5',
+      tonnageRecycled: '80.25',
+      tonnageExportedForRecycling: '50.75',
+      tonnageSentOnTotal: '50',
+      tonnageSentOnToReprocessor: '30',
+      tonnageSentOnToExporter: '15',
+      tonnageSentOnToOtherFacilities: '5',
+      tonnagePrnsPernsIssued: '90',
+      totalRevenuePrnsPerns: '45000',
+      averagePrnPernPricePerTonne: '500',
+      tonnageReceivedButNotRecycled: '20.25',
+      tonnageReceivedButNotExported: '10.5',
+      tonnageExportedThatWasStopped: '2.5',
+      tonnageExportedThatWasRefused: '1.25',
+      tonnageRepatriated: '0.75',
+      noteToRegulator: 'Test note to regulator'
+    })
+
+    const unsubmittedRow = result.reportSubmissions.find(
+      (r) => r.reportingPeriod === 'Feb 2026'
+    )
+    expect(unsubmittedRow).toMatchObject({
+      tonnageReceivedForRecycling: '',
+      tonnageRecycled: '',
+      tonnageExportedForRecycling: '',
+      tonnageSentOnTotal: '',
+      tonnageSentOnToReprocessor: '',
+      tonnageSentOnToExporter: '',
+      tonnageSentOnToOtherFacilities: '',
+      tonnagePrnsPernsIssued: '',
+      totalRevenuePrnsPerns: '',
+      averagePrnPernPricePerTonne: '',
+      tonnageReceivedButNotRecycled: '',
+      tonnageReceivedButNotExported: '',
+      tonnageExportedThatWasStopped: '',
+      tonnageExportedThatWasRefused: '',
+      tonnageRepatriated: '',
+      noteToRegulator: ''
     })
   })
 

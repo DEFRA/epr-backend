@@ -26,6 +26,22 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
  * @property {string} dueDate
  * @property {string} submittedDate
  * @property {string} submittedBy
+ * @property {string} tonnageReceivedForRecycling
+ * @property {string} tonnageRecycled
+ * @property {string} tonnageExportedForRecycling
+ * @property {string} tonnageSentOnTotal
+ * @property {string} tonnageSentOnToReprocessor
+ * @property {string} tonnageSentOnToExporter
+ * @property {string} tonnageSentOnToOtherFacilities
+ * @property {string} tonnagePrnsPernsIssued
+ * @property {string} totalRevenuePrnsPerns
+ * @property {string} averagePrnPernPricePerTonne
+ * @property {string} tonnageReceivedButNotRecycled
+ * @property {string} tonnageReceivedButNotExported
+ * @property {string} tonnageExportedThatWasStopped
+ * @property {string} tonnageExportedThatWasRefused
+ * @property {string} tonnageRepatriated
+ * @property {string} noteToRegulator
  */
 
 /** @type {Set<string>} */
@@ -57,6 +73,27 @@ async function getRegistrations(organisationsRepository) {
  * @param {Organisation} org
  * @returns {string}
  */
+/**
+ * @param {number | null | undefined} value
+ * @returns {string}
+ */
+function formatTonnage(value) {
+  return value !== null && value !== undefined ? String(value) : ''
+}
+
+/**
+ * @param {import('#reports/repository/port.js').WasteSent | undefined} wasteSent
+ * @returns {string}
+ */
+function sumSentOn(wasteSent) {
+  if (!wasteSent) return ''
+  return String(
+    wasteSent.tonnageSentToReprocessor +
+      wasteSent.tonnageSentToExporter +
+      wasteSent.tonnageSentToAnotherSite
+  )
+}
+
 function resolveAccreditationNumber(registration, org) {
   if (!registration.accreditationId) {
     return ''
@@ -66,6 +103,53 @@ function resolveAccreditationNumber(registration, org) {
       a.id === registration.accreditationId && INCLUDED_STATUSES.has(a.status)
   )
   return accreditation?.accreditationNumber ?? ''
+}
+
+/**
+ * @param {import('#reports/repository/port.js').ReportSummary | null} report
+ * @returns {Record<string, string>}
+ */
+function buildTonnageFields(report) {
+  return {
+    tonnageReceivedForRecycling: formatTonnage(
+      report?.recyclingActivity?.totalTonnageReceived
+    ),
+    tonnageRecycled: formatTonnage(report?.recyclingActivity?.tonnageRecycled),
+    tonnageExportedForRecycling: formatTonnage(
+      report?.exportActivity?.totalTonnageExported
+    ),
+    tonnageSentOnTotal: sumSentOn(report?.wasteSent),
+    tonnageSentOnToReprocessor: formatTonnage(
+      report?.wasteSent?.tonnageSentToReprocessor
+    ),
+    tonnageSentOnToExporter: formatTonnage(
+      report?.wasteSent?.tonnageSentToExporter
+    ),
+    tonnageSentOnToOtherFacilities: formatTonnage(
+      report?.wasteSent?.tonnageSentToAnotherSite
+    ),
+    tonnagePrnsPernsIssued: formatTonnage(report?.prn?.issuedTonnage),
+    totalRevenuePrnsPerns: formatTonnage(report?.prn?.totalRevenue),
+    averagePrnPernPricePerTonne: formatTonnage(
+      report?.prn?.averagePricePerTonne
+    ),
+    tonnageReceivedButNotRecycled: formatTonnage(
+      report?.recyclingActivity?.tonnageNotRecycled
+    ),
+    tonnageReceivedButNotExported: formatTonnage(
+      report?.exportActivity?.tonnageReceivedNotExported
+    ),
+    tonnageExportedThatWasStopped: formatTonnage(
+      report?.exportActivity?.tonnageStoppedDuringExport
+    ),
+    tonnageExportedThatWasRefused: formatTonnage(
+      report?.exportActivity?.tonnageRefusedAtDestination
+    ),
+    tonnageRepatriated: formatTonnage(
+      report?.exportActivity?.tonnageRepatriated
+    ),
+    noteToRegulator: report?.supportingInformation ?? ''
+  }
 }
 
 /**
@@ -111,7 +195,8 @@ function buildRow(
     ),
     dueDate: mergedPeriod.dueDate,
     submittedDate,
-    submittedBy
+    submittedBy,
+    ...buildTonnageFields(mergedPeriod.report)
   }
 }
 

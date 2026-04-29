@@ -40,15 +40,54 @@ const groupTransform = (arr, keyFn, valueFn) =>
 export const groupAsPeriodicReports = (
   organisationId,
   registrationId,
-  docs
+  docs,
+  { includeTonnage = false } = {}
 ) => {
-  const toSubmission = ({ id, submissionNumber, status }) => ({
-    id,
-    status: status.currentStatus,
-    submissionNumber,
-    submittedAt: status.submitted?.at ?? null,
-    submittedBy: status.submitted?.by ?? null
-  })
+  const toSubmission = (doc) => {
+    const base = {
+      id: doc.id,
+      status: doc.status.currentStatus,
+      submissionNumber: doc.submissionNumber,
+      submittedAt: doc.status.submitted?.at ?? null,
+      submittedBy: doc.status.submitted?.by ?? null
+    }
+
+    if (!includeTonnage) return base
+
+    return {
+      ...base,
+      recyclingActivity: {
+        totalTonnageReceived: doc.recyclingActivity?.totalTonnageReceived,
+        tonnageRecycled: doc.recyclingActivity?.tonnageRecycled,
+        tonnageNotRecycled: doc.recyclingActivity?.tonnageNotRecycled
+      },
+      exportActivity: doc.exportActivity
+        ? {
+            totalTonnageExported: doc.exportActivity.totalTonnageExported,
+            tonnageReceivedNotExported:
+              doc.exportActivity.tonnageReceivedNotExported,
+            tonnageRefusedAtDestination:
+              doc.exportActivity.tonnageRefusedAtDestination,
+            tonnageStoppedDuringExport:
+              doc.exportActivity.tonnageStoppedDuringExport,
+            tonnageRepatriated: doc.exportActivity.tonnageRepatriated
+          }
+        : undefined,
+      wasteSent: {
+        tonnageSentToReprocessor: doc.wasteSent?.tonnageSentToReprocessor,
+        tonnageSentToExporter: doc.wasteSent?.tonnageSentToExporter,
+        tonnageSentToAnotherSite: doc.wasteSent?.tonnageSentToAnotherSite
+      },
+      prn: doc.prn
+        ? {
+            issuedTonnage: doc.prn.issuedTonnage,
+            totalRevenue: doc.prn.totalRevenue,
+            averagePricePerTonne: doc.prn.averagePricePerTonne
+          }
+        : undefined,
+      supportingInformation: doc.supportingInformation
+    }
+  }
 
   const buildPeriodSummary = (periodDocs) => {
     const [first, ...rest] = [...periodDocs].sort(
@@ -93,7 +132,9 @@ export const transformToPeriodicReports = (reports) => {
 
   return Object.values(grouped).flatMap((group) => {
     const { organisationId, registrationId } = group[0]
-    return groupAsPeriodicReports(organisationId, registrationId, group)
+    return groupAsPeriodicReports(organisationId, registrationId, group, {
+      includeTonnage: true
+    })
   })
 }
 

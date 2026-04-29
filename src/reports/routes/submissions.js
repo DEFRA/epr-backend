@@ -30,7 +30,23 @@ export const getReportSubmissions = {
               reportingPeriod: Joi.string().required(),
               dueDate: Joi.string().required(),
               submittedDate: Joi.string().allow('').required(),
-              submittedBy: Joi.string().allow('').required()
+              submittedBy: Joi.string().allow('').required(),
+              tonnageReceivedForRecycling: Joi.string().allow('').required(),
+              tonnageRecycled: Joi.string().allow('').required(),
+              tonnageExportedForRecycling: Joi.string().allow('').required(),
+              tonnageSentOnTotal: Joi.string().allow('').required(),
+              tonnageSentOnToReprocessor: Joi.string().allow('').required(),
+              tonnageSentOnToExporter: Joi.string().allow('').required(),
+              tonnageSentOnToOtherFacilities: Joi.string().allow('').required(),
+              tonnagePrnsPernsIssued: Joi.string().allow('').required(),
+              totalRevenuePrnsPerns: Joi.string().allow('').required(),
+              averagePrnPernPricePerTonne: Joi.string().allow('').required(),
+              tonnageReceivedButNotRecycled: Joi.string().allow('').required(),
+              tonnageReceivedButNotExported: Joi.string().allow('').required(),
+              tonnageExportedThatWasStopped: Joi.string().allow('').required(),
+              tonnageExportedThatWasRefused: Joi.string().allow('').required(),
+              tonnageRepatriated: Joi.string().allow('').required(),
+              noteToRegulator: Joi.string().allow('').required()
             })
           )
           .required()
