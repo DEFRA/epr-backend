@@ -1,4 +1,5 @@
 /**
+ * @param {import('./feature-flags.port.js').FeatureFlagOverrides} [flags]
  * @returns {import('./feature-flags.port.js').FeatureFlags}
  */
 export const createInMemoryFeatureFlags = (flags = {}) => ({

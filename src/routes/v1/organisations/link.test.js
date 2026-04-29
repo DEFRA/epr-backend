@@ -57,7 +57,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   beforeAll(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {
