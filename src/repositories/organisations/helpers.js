@@ -154,7 +154,7 @@ const ORS_ADMIN_LIST_PROJECTION = {
   'accreditations.accreditationNumber': 1
 }
 
-const escapeRegex = (string) =>
+export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const buildOrsAdminListBasePipeline = ({ registrationNumber }) => [
