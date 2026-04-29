@@ -20,7 +20,7 @@ describe('GET /v1/organisations/{id}', () => {
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: { organisationsRepository: organisationsRepositoryFactory },

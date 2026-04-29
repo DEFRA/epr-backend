@@ -466,7 +466,7 @@ export const createTestInfrastructure = async (
     logger: mockLogger
   })
 
-  const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+  const featureFlags = createInMemoryFeatureFlags()
 
   const server = await createTestServer({
     repositories: {
@@ -546,10 +546,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     logger: mockLogger
   })
 
-  const featureFlags = createInMemoryFeatureFlags({
-    summaryLogs: true,
-    ...featureFlagOverrides
-  })
+  const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([
     {

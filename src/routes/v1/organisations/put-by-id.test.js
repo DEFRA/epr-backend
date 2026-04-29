@@ -31,7 +31,7 @@ describe('PUT /v1/organisations/{id}', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
-    const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+    const featureFlags = createInMemoryFeatureFlags()
 
     server = await createTestServer({
       repositories: {
@@ -431,7 +431,7 @@ describe('PUT /v1/organisations/{id}', () => {
           organisationsRepository: instance,
           systemLogsRepository: createSystemLogsRepository()
         },
-        featureFlags: createInMemoryFeatureFlags({ organisations: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       const fetchResponse = await testServer.inject({
@@ -506,9 +506,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
         systemLogsRepository: createSystemLogsRepository(),
         overseasSitesRepository: overseasSitesRepoFactory
       },
-      featureFlags: createInMemoryFeatureFlags({
-        organisations: true
-      })
+      featureFlags: createInMemoryFeatureFlags()
     })
   })
 
