@@ -35,7 +35,7 @@ const buildOrganisation = (overrides = {}) => {
     version: 1,
     schemaVersion: 1,
     companyDetails: { name: 'Test Org' },
-    formSubmissionTime: new Date().toISOString(),
+    formSubmission: { id, time: new Date() },
     submittedToRegulator: 'EA',
     submitterContactDetails: {
       fullName: 'Test User',
@@ -50,7 +50,7 @@ const buildOrganisation = (overrides = {}) => {
         wasteProcessingType: 'exporter',
         material: 'Plastic',
         orgName: 'Test Org',
-        formSubmissionTime: new Date().toISOString(),
+        formSubmission: { id: 'reg-001', time: new Date() },
         submittedToRegulator: 'EA',
         reprocessingType: null,
         submitterContactDetails: {

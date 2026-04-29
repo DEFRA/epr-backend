@@ -11,6 +11,8 @@ import {
 } from '#formsubmission/submission-keys.js'
 import Boom from '@hapi/boom'
 
+export const CURRENT_SCHEMA_VERSION = 2
+
 export const whenReprocessor = (schema) =>
   Joi.when('wasteProcessingType', {
     is: WASTE_PROCESSING_TYPE.REPROCESSOR,

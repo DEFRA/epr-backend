@@ -209,7 +209,6 @@ export function parseOrgSubmission(id, orgId, rawSubmissionData) {
     managementContactDetails: getManagementContactDetails(
       answersByShortDescription
     ),
-    formSubmissionTime: extractTimestamp(rawSubmissionData),
     submittedToRegulator: extractAgencyFromDefinitionName(rawSubmissionData),
     partnership: getPartnershipDetails(
       answersByShortDescription,

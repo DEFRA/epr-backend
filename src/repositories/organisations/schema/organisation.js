@@ -13,6 +13,8 @@ import {
 import {
   collatedUserSchema,
   companyDetailsSchema,
+  formSubmissionSchema,
+  formSubmissionTimeSchema,
   idSchema,
   linkedDefraOrganisationSchema,
   partnershipSchema,
@@ -34,10 +36,17 @@ export const organisationInsertSchema = Joi.object({
     )
     .optional(),
   companyDetails: companyDetailsSchema.required(),
-  formSubmission: Joi.object({
-    id: idSchema.required(),
-    time: Joi.date().iso().required()
-  }).required(),
+  formSubmissionTime: Joi.when('schemaVersion', {
+    is: 1,
+    then: formSubmissionTimeSchema.required(),
+    otherwise: formSubmissionTimeSchema.forbidden()
+  }),
+
+  formSubmission: Joi.when('schemaVersion', {
+    is: 2,
+    then: formSubmissionSchema.required(),
+    otherwise: formSubmissionSchema.forbidden()
+  }),
   id: idSchema,
   linkedDefraOrganisation: linkedDefraOrganisationSchema.optional(),
   managementContactDetails: userSchema.optional(),

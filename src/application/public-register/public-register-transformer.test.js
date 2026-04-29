@@ -50,14 +50,16 @@ describe('transform', () => {
   }
 
   const createTestAccreditation = (overrides = {}) => {
+    const id = new ObjectId().toString()
     const status = overrides.status || REG_ACC_STATUS.APPROVED
     return buildAccreditation({
+      id,
       status,
       material: MATERIAL.PLASTIC,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       validFrom: VALID_FROM,
       validTo: VALID_TO,
-      formSubmissionTime: new Date('2025-12-15'),
+      formSubmission: { id, time: new Date('2025-12-15') },
       prnIssuance: { tonnageBand: 'up_to_10000' },
       statusHistory: [
         { status: REG_ACC_STATUS.CREATED, updatedAt: CREATED_DATE },

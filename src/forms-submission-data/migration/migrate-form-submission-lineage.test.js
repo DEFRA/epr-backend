@@ -95,7 +95,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(organisationsRepository.replace).not.toHaveBeenCalled()
@@ -119,7 +120,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -127,6 +129,7 @@ describe('migrateFormSubmissionLineage', () => {
         id: 'org-123',
         time: SUBMISSION_TIME
       })
+      expect(updates.formSubmissionTime).toBeUndefined()
     })
   })
 
@@ -143,7 +146,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -151,6 +155,7 @@ describe('migrateFormSubmissionLineage', () => {
         id: 'reg-found',
         time: SUBMISSION_TIME
       })
+      expect(updates.registrations[0].formSubmissionTime).toBeUndefined()
     })
 
     it('links a glass-other registration to the same submission as its remelt sibling', async () => {
@@ -177,7 +182,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -202,7 +208,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -230,7 +237,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -261,7 +269,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -294,7 +303,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -321,7 +331,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -337,6 +348,64 @@ describe('migrateFormSubmissionLineage', () => {
     })
   })
 
+  describe('formSubmissionTime removal', () => {
+    it('removes formSubmissionTime from the organisation', async () => {
+      const org = makeOrg({
+        id: 'org-123',
+        formSubmissionTime: SUBMISSION_TIME
+      })
+      organisationsRepository = makeOrganisationsRepository([org])
+
+      await migrateFormSubmissionLineage(
+        formSubmissionsRepository,
+        organisationsRepository,
+        systemLogsRepository,
+        true
+      )
+
+      const updates = organisationsRepository.replace.mock.calls[0][2]
+      expect(updates.formSubmissionTime).toBeUndefined()
+    })
+
+    it('removes formSubmissionTime from each registration', async () => {
+      const reg = makeRegistration({
+        id: 'reg-1',
+        formSubmissionTime: SUBMISSION_TIME
+      })
+      const org = makeOrg({ registrations: [reg] })
+      organisationsRepository = makeOrganisationsRepository([org])
+
+      await migrateFormSubmissionLineage(
+        formSubmissionsRepository,
+        organisationsRepository,
+        systemLogsRepository,
+        true
+      )
+
+      const updates = organisationsRepository.replace.mock.calls[0][2]
+      expect(updates.registrations[0].formSubmissionTime).toBeUndefined()
+    })
+
+    it('removes formSubmissionTime from each accreditation', async () => {
+      const acc = makeAccreditation({
+        id: 'acc-1',
+        formSubmissionTime: SUBMISSION_TIME
+      })
+      const org = makeOrg({ accreditations: [acc] })
+      organisationsRepository = makeOrganisationsRepository([org])
+
+      await migrateFormSubmissionLineage(
+        formSubmissionsRepository,
+        organisationsRepository,
+        systemLogsRepository,
+        true
+      )
+
+      const updates = organisationsRepository.replace.mock.calls[0][2]
+      expect(updates.accreditations[0].formSubmissionTime).toBeUndefined()
+    })
+  })
+
   describe('schema version upgrade', () => {
     it('upgrades each organisation to schemaVersion 2 without including id or version in the saved document', async () => {
       const org = makeOrg({ id: 'org-abc', version: 3 })
@@ -345,7 +414,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(organisationsRepository.replace).toHaveBeenCalledWith(
@@ -368,7 +438,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(auditFormSubmissionLineageMigration).toHaveBeenCalledWith(
@@ -387,7 +458,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(
@@ -410,7 +482,8 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        true
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -420,6 +493,28 @@ describe('migrateFormSubmissionLineage', () => {
           )
         })
       )
+    })
+  })
+
+  describe('dry-run mode (isMigrationEnabled = false)', () => {
+    it('logs a dry-run message and skips db update and audit', async () => {
+      const org = makeOrg({ id: 'org-dry' })
+      organisationsRepository = makeOrganisationsRepository([org])
+
+      await migrateFormSubmissionLineage(
+        formSubmissionsRepository,
+        organisationsRepository,
+        systemLogsRepository,
+        false
+      )
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('dry-run mode')
+        })
+      )
+      expect(organisationsRepository.replace).not.toHaveBeenCalled()
+      expect(auditFormSubmissionLineageMigration).not.toHaveBeenCalled()
     })
   })
 })

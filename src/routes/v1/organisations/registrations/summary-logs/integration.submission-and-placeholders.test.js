@@ -87,7 +87,6 @@ describe('Submission and placeholder tests', () => {
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
-            formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
@@ -754,7 +753,6 @@ describe('Submission and placeholder tests', () => {
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
-            formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             accreditationId
           }
@@ -766,7 +764,6 @@ describe('Submission and placeholder tests', () => {
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
-            formSubmissionTime: new Date(),
             submittedToRegulator: 'ea'
           }
         ]

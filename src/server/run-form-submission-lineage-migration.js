@@ -19,14 +19,6 @@ export const runFormSubmissionLineageMigration = async (
   try {
     const featureFlagsInstance = options.featureFlags || server.featureFlags
 
-    if (!featureFlagsInstance.isMigrateFormSubmissionLineageEnabled()) {
-      logger.info({
-        message:
-          'Feature flag disabled, skipping form submission lineage migration'
-      })
-      return
-    }
-
     const lock = await server.locker.lock('migrate-form-submission-lineage')
     if (!lock) {
       logger.info({
@@ -50,7 +42,8 @@ export const runFormSubmissionLineageMigration = async (
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        featureFlagsInstance.isMigrateFormSubmissionLineageEnabled()
       )
 
       logger.info({

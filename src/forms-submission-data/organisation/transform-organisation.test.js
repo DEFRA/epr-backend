@@ -56,7 +56,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:14:15.390Z'),
       submittedToRegulator: 'ea',
       partnership: {
         type: PARTNERSHIP_TYPE.LTD,
@@ -118,7 +117,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:13:16.313Z'),
       submittedToRegulator: 'ea',
       partnership: {
         type: PARTNERSHIP_TYPE.LTD_LIABILITY,
@@ -176,7 +174,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:19:54.601Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -227,7 +224,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Director'
       },
-      formSubmissionTime: new Date('2025-10-08T16:25:35.824Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -278,7 +274,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:28:18.572Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -329,7 +324,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Sustainability master'
       },
-      formSubmissionTime: new Date('2025-10-23T13:35:37.874Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -380,7 +374,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Director'
       },
-      formSubmissionTime: new Date('2025-10-23T13:39:07.408Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -436,7 +429,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Director'
       },
-      formSubmissionTime: new Date('2025-10-23T13:42:35.918Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })

@@ -34,7 +34,6 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         id: exporter._id.$oid,
         time: new Date('2025-10-08T17:48:22.220Z')
       },
-      formSubmissionTime: new Date('2025-10-08T17:48:22.220Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
       orgName: 'EuroPack GmbH',
@@ -137,7 +136,6 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         id: reprocessorAllMaterials._id.$oid,
         time: new Date('2025-10-08T17:40:07.373Z')
       },
-      formSubmissionTime: new Date('2025-10-08T17:40:07.373Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       orgName: 'Green Recycling Solutions Ltd',

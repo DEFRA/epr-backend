@@ -79,12 +79,14 @@ async function resolveFormSubmission(
  * @param {FormSubmissionsRepository} formSubmissionsRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SystemLogsRepository} systemLogsRepository
+ * @param {boolean} isMigrationEnabled
  */
 async function migrateOrganisation(
   org,
   formSubmissionsRepository,
   organisationsRepository,
-  systemLogsRepository
+  systemLogsRepository,
+  isMigrationEnabled
 ) {
   const orgFormSubmission = {
     id: org.id,
@@ -95,37 +97,53 @@ async function migrateOrganisation(
   const accreditations = org.accreditations
 
   const updatedRegistrations = await Promise.all(
-    registrations.map(async (reg) => ({
-      ...reg,
-      formSubmission: await resolveFormSubmission(
-        reg,
-        org.id,
-        registrations,
-        (regFormSubmissionId) =>
-          formSubmissionsRepository.findRegistrationById(regFormSubmissionId),
-        'registration'
-      )
-    }))
+    registrations.map(async (reg) => {
+      const { formSubmissionTime: _regTime, ...regWithoutFormSubmissionTime } =
+        reg
+      return {
+        ...regWithoutFormSubmissionTime,
+        formSubmission: await resolveFormSubmission(
+          reg,
+          org.id,
+          registrations,
+          (registrationId) =>
+            formSubmissionsRepository.findRegistrationById(registrationId),
+          'registration'
+        )
+      }
+    })
   )
 
   const updatedAccreditations = await Promise.all(
-    accreditations.map(async (acc) => ({
-      ...acc,
-      formSubmission: await resolveFormSubmission(
-        acc,
-        org.id,
-        accreditations,
-        (accFormSubmissionId) =>
-          formSubmissionsRepository.findAccreditationById(accFormSubmissionId),
-        'accreditation'
-      )
-    }))
+    accreditations.map(async (acc) => {
+      const { formSubmissionTime: _accTime, ...accWithoutFormSubmissionTime } =
+        acc
+      return {
+        ...accWithoutFormSubmissionTime,
+        formSubmission: await resolveFormSubmission(
+          acc,
+          org.id,
+          accreditations,
+          (accreditationId) =>
+            formSubmissionsRepository.findAccreditationById(accreditationId),
+          'accreditation'
+        )
+      }
+    })
   )
 
-  const { id, version, ...orgWithoutIdAndVersion } = org
+  const {
+    id,
+    version,
+    formSubmissionTime: _orgTime,
+    ...orgWithoutIdAndVersionTime
+  } = org
+  if (!isMigrationEnabled) {
+    return
+  }
 
   await organisationsRepository.replace(id, version, {
-    ...orgWithoutIdAndVersion,
+    ...orgWithoutIdAndVersionTime,
     formSubmission: orgFormSubmission,
     registrations: updatedRegistrations,
     accreditations: updatedAccreditations,
@@ -148,12 +166,14 @@ async function migrateOrganisation(
  * @param {FormSubmissionsRepository} formSubmissionsRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SystemLogsRepository} systemLogsRepository
+ * @param {boolean} isMigrationEnabled
  * @returns {Promise<void>}
  */
 export async function migrateFormSubmissionLineage(
   formSubmissionsRepository,
   organisationsRepository,
-  systemLogsRepository
+  systemLogsRepository,
+  isMigrationEnabled
 ) {
   const orgs = await organisationsRepository.findAllBySchemaVersion(1)
 
@@ -162,6 +182,13 @@ export async function migrateFormSubmissionLineage(
       message: 'migrate-form-submission-lineage: no organisations to migrate'
     })
     return
+  }
+
+  if (!isMigrationEnabled) {
+    logger.info({
+      message:
+        'migrate-form-submission-lineage: running in dry-run mode — no changes will be written'
+    })
   }
 
   logger.info({
@@ -177,7 +204,8 @@ export async function migrateFormSubmissionLineage(
         org,
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository
+        systemLogsRepository,
+        isMigrationEnabled
       )
       succeeded++
     } catch (error) {

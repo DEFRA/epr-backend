@@ -76,7 +76,8 @@ describe('runFormSubmissionLineageMigration', () => {
     expect(migrateFormSubmissionLineage).toHaveBeenCalledWith(
       mockFormSubmissionsRepository,
       mockOrganisationsRepository,
-      mockSystemLogsRepository
+      mockSystemLogsRepository,
+      true
     )
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Form submission lineage migration completed successfully'
@@ -84,19 +85,22 @@ describe('runFormSubmissionLineageMigration', () => {
     expect(mockLock.free).toHaveBeenCalled()
   })
 
-  it('skips the migration when the feature flag is disabled', async () => {
+  it('passes the flag as false to migrateFormSubmissionLineage when the feature flag is disabled', async () => {
     mockFeatureFlags.isMigrateFormSubmissionLineageEnabled.mockReturnValue(
       false
     )
 
     await runFormSubmissionLineageMigration(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith({
-      message:
-        'Feature flag disabled, skipping form submission lineage migration'
-    })
-    expect(mockServer.locker.lock).not.toHaveBeenCalled()
-    expect(migrateFormSubmissionLineage).not.toHaveBeenCalled()
+    expect(mockServer.locker.lock).toHaveBeenCalledWith(
+      'migrate-form-submission-lineage'
+    )
+    expect(migrateFormSubmissionLineage).toHaveBeenCalledWith(
+      mockFormSubmissionsRepository,
+      mockOrganisationsRepository,
+      mockSystemLogsRepository,
+      false
+    )
   })
 
   it('skips the migration when the distributed lock cannot be obtained', async () => {
@@ -145,6 +149,11 @@ describe('runFormSubmissionLineageMigration', () => {
     expect(
       mockFeatureFlags.isMigrateFormSubmissionLineageEnabled
     ).not.toHaveBeenCalled()
-    expect(migrateFormSubmissionLineage).not.toHaveBeenCalled()
+    expect(migrateFormSubmissionLineage).toHaveBeenCalledWith(
+      mockFormSubmissionsRepository,
+      mockOrganisationsRepository,
+      mockSystemLogsRepository,
+      false
+    )
   })
 })

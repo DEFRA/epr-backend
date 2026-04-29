@@ -7,10 +7,10 @@ import {
   createInitialStatusHistory,
   escapeRegex,
   mapDocumentWithCurrentStatuses,
-  prepareForReplace,
-  SCHEMA_VERSION
+  prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
@@ -51,7 +51,7 @@ const performInsert = (storage, staleCache) => async (organisation) => {
   const newOrg = structuredClone({
     _id: id,
     version: 1,
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
     users: [],
     ...orgFields,

@@ -7,11 +7,11 @@ import {
   mapDocumentWithCurrentStatuses,
   performFindAllForOverseasSitesAdminList,
   performFindPageForOrsAdminList,
-  prepareForReplace,
-  SCHEMA_VERSION
+  prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
+import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -64,7 +64,7 @@ const performInsert = (db) => async (organisation) => {
     await db.collection(COLLECTION_NAME).insertOne({
       _id: ObjectId.createFromHexString(id),
       version: 1,
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       statusHistory: createInitialStatusHistory(),
       ...orgFields,
       registrations,
