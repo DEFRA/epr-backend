@@ -12,9 +12,12 @@ import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-co
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
-/** @typedef {import('#packaging-recycling-notes/domain/model.js').CreatePrnResponse} CreatePrnResponse */
-/** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/**
+ * @import { CreatePrnResponse } from '#packaging-recycling-notes/domain/model.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ */
 
 /**
  * @typedef {{
@@ -136,7 +139,7 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

@@ -3,6 +3,11 @@ import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/excel
 import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 
 /**
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { TypedLogger } from '#common/hapi-types.js'
+ */
+
+/**
  * Processes a single ORS spreadsheet file: parses it, creates overseas site
  * records, and replaces the registration's overseasSites map.
  *
@@ -10,8 +15,8 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @param {object} deps
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
- * @param {import('#common/hapi-types.js').TypedLogger} deps.logger
+ * @param {SystemLogsRepository} deps.systemLogsRepository
+ * @param {TypedLogger} deps.logger
  * @param {{ id: string, email: string, scope: string[] }} deps.user
  * @returns {Promise<{status: string, sitesCreated: number, mappingsUpdated: number, registrationNumber: string|null, errors: Array}>}
  */

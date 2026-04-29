@@ -15,6 +15,18 @@ export const periodParamsSchema = Joi.object({
   period: periodSchema
 })
 
+/**
+ * @import { Cadence } from '#reports/domain/cadence.js'
+ *
+ * @typedef {{
+ *   organisationId: string,
+ *   registrationId: string,
+ *   year: number,
+ *   cadence: Cadence,
+ *   period: number
+ * }} PeriodPathParams
+ */
+
 export const standardUserAuth = getAuthConfig([ROLES.standardUser])
 
 /**

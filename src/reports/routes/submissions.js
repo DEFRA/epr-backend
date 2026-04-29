@@ -4,6 +4,12 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { generateReportSubmissions } from '#reports/application/report-submissions.js'
 
+/**
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ */
+
 export const getReportSubmissionsPath = '/v1/organisations/reports/submissions'
 
 export const getReportSubmissions = {
@@ -38,6 +44,12 @@ export const getReportSubmissions = {
       failAction: 'error'
     }
   },
+  /**
+   * @param {HapiRequest & {
+   *   organisationsRepository: OrganisationsRepository,
+   *   reportsRepository: ReportsRepository
+   * }} request
+   */
   handler: async (request) => {
     const { organisationsRepository, reportsRepository } = request
 
