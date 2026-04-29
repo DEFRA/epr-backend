@@ -166,8 +166,12 @@ const performFindPage =
     matches.sort((a, b) => {
       const aName = a.companyDetails.name
       const bName = b.companyDetails.name
-      if (aName < bName) return -1
-      if (aName > bName) return 1
+      if (aName < bName) {
+        return -1
+      }
+      if (aName > bName) {
+        return 1
+      }
       return 0
     })
 
