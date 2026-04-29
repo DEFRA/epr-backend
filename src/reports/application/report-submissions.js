@@ -12,20 +12,7 @@ import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
- * @typedef {Object} ReportSubmissionsRow
- * @property {string} organisationName
- * @property {string} submitterPhone
- * @property {string} approvedPersonsPhone
- * @property {string} submitterEmail
- * @property {string} approvedPersonsEmail
- * @property {string} material
- * @property {string} registrationNumber
- * @property {string} accreditationNumber
- * @property {string} reportType
- * @property {string} reportingPeriod
- * @property {string} dueDate
- * @property {string} submittedDate
- * @property {string} submittedBy
+ * @typedef {Object} TonnageFields
  * @property {string} tonnageReceivedForRecycling
  * @property {string} tonnageRecycled
  * @property {string} tonnageExportedForRecycling
@@ -43,6 +30,25 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
  * @property {string} tonnageRepatriated
  * @property {string} noteToRegulator
  */
+
+/**
+ * @typedef {Object} SubmissionBaseFields
+ * @property {string} organisationName
+ * @property {string} submitterPhone
+ * @property {string} approvedPersonsPhone
+ * @property {string} submitterEmail
+ * @property {string} approvedPersonsEmail
+ * @property {string} material
+ * @property {string} registrationNumber
+ * @property {string} accreditationNumber
+ * @property {string} reportType
+ * @property {string} reportingPeriod
+ * @property {string} dueDate
+ * @property {string} submittedDate
+ * @property {string} submittedBy
+ */
+
+/** @typedef {SubmissionBaseFields & TonnageFields} ReportSubmissionsRow */
 
 /** @type {Set<string>} */
 const INCLUDED_STATUSES = new Set([
@@ -86,7 +92,9 @@ function formatTonnage(value) {
  * @returns {string}
  */
 function sumSentOn(wasteSent) {
-  if (!wasteSent) return ''
+  if (!wasteSent) {
+    return ''
+  }
   return String(
     wasteSent.tonnageSentToReprocessor +
       wasteSent.tonnageSentToExporter +
@@ -107,7 +115,7 @@ function resolveAccreditationNumber(registration, org) {
 
 /**
  * @param {import('#reports/repository/port.js').ReportSummary | null} report
- * @returns {Record<string, string>}
+ * @returns {TonnageFields}
  */
 function buildTonnageFields(report) {
   return {
