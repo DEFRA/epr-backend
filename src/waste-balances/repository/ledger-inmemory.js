@@ -115,26 +115,22 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
       }
 
       for (const transaction of storage) {
-        if (transaction.accreditationId !== accreditationId) {
-          continue
-        }
-        if (transaction.source?.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
-          continue
-        }
-
-        const wasteRecordId = transaction.source.summaryLogRow?.wasteRecordId
-        if (!totals.has(wasteRecordId)) {
+        const wasteRecordId = transaction.source?.summaryLogRow?.wasteRecordId
+        if (
+          transaction.accreditationId !== accreditationId ||
+          transaction.source?.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW ||
+          !totals.has(wasteRecordId)
+        ) {
           continue
         }
 
         const contribution = signedContribution(transaction)
-        if (contribution === 0) {
-          continue
+        if (contribution !== 0) {
+          totals.set(
+            wasteRecordId,
+            toNumber(add(totals.get(wasteRecordId), contribution))
+          )
         }
-        totals.set(
-          wasteRecordId,
-          toNumber(add(totals.get(wasteRecordId), contribution))
-        )
       }
 
       return totals

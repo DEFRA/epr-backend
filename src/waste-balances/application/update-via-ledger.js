@@ -193,7 +193,7 @@ export const performUpdateViaLedger = async ({
     builders
   )
 
-  const last = newTransactions[newTransactions.length - 1]
+  const last = newTransactions.at(-1)
 
   await recordWasteBalanceUpdateAudit({
     systemLogsRepository: dependencies.systemLogsRepository,
