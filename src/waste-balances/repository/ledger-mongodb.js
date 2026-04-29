@@ -13,10 +13,12 @@ import {
   ledgerInsertToMongo
 } from './ledger-decimal.js'
 import { LedgerSlotConflictError } from './ledger-port.js'
+import { LEDGER_SOURCE_KIND, LEDGER_TRANSACTION_TYPE } from './ledger-schema.js'
 import {
   validateLedgerTransactionInsert,
   validateLedgerTransactionRead
 } from './ledger-validation.js'
+import { toNumber } from '#common/helpers/decimal-utils.js'
 
 export const WASTE_BALANCE_LEDGER_COLLECTION_NAME = 'waste-balance-transactions'
 
@@ -146,6 +148,67 @@ const performFindLatestByAccreditationId =
   }
 
 /**
+ * Resolve credited amounts in one round trip. The aggregation matches every
+ * `summary-log-row` transaction whose `wasteRecordId` is in the input, signs
+ * each amount by transaction type, and groups by `wasteRecordId`. Pending
+ * debits do not participate — they are a ringfence against the running
+ * balance, not a credit attributable to any specific waste record.
+ *
+ * @param {Collection} collection
+ * @returns {(wasteRecordIds: string[]) => Promise<Map<string, number>>}
+ */
+const performFindCreditedAmountsByWasteRecordIds =
+  (collection) => async (wasteRecordIds) => {
+    const totals = new Map()
+    for (const id of wasteRecordIds) {
+      totals.set(id, 0)
+    }
+
+    if (totals.size === 0) {
+      return totals
+    }
+
+    const requestedIds = Array.from(totals.keys())
+
+    const aggregated = await collection
+      .aggregate([
+        {
+          $match: {
+            'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
+            'source.summaryLogRow.wasteRecordId': { $in: requestedIds }
+          }
+        },
+        {
+          $group: {
+            _id: '$source.summaryLogRow.wasteRecordId',
+            total: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$type', LEDGER_TRANSACTION_TYPE.CREDIT] },
+                  '$amount',
+                  {
+                    $cond: [
+                      { $eq: ['$type', LEDGER_TRANSACTION_TYPE.DEBIT] },
+                      { $multiply: ['$amount', -1] },
+                      0
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ])
+      .toArray()
+
+    for (const { _id, total } of aggregated) {
+      totals.set(_id, toNumber(/** @type {*} */ (total)))
+    }
+
+    return totals
+  }
+
+/**
  * Creates a MongoDB-backed ledger repository.
  *
  * @param {Db} db
@@ -156,6 +219,8 @@ export const createMongoLedgerRepository = async (db) => {
 
   return () => ({
     insertTransactions: performInsertTransactions(collection),
-    findLatestByAccreditationId: performFindLatestByAccreditationId(collection)
+    findLatestByAccreditationId: performFindLatestByAccreditationId(collection),
+    findCreditedAmountsByWasteRecordIds:
+      performFindCreditedAmountsByWasteRecordIds(collection)
   })
 }

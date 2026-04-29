@@ -62,6 +62,17 @@ export class LedgerSlotConflictError extends Error {
  * @property {(accreditationId: string) => Promise<LedgerTransaction | null>} findLatestByAccreditationId
  *   Return the highest-numbered transaction for the accreditation, or `null`
  *   if none exist.
+ * @property {(wasteRecordIds: string[]) => Promise<Map<string, number>>} findCreditedAmountsByWasteRecordIds
+ *   For each `wasteRecordId` in the input, return the signed sum of every
+ *   `summary-log-row` transaction touching it: credits add their amount,
+ *   debits subtract their amount, pending debits are excluded. Ids with no
+ *   transactions appear in the result map with value `0`. Empty input
+ *   resolves to an empty map. Duplicate input ids collapse to one entry.
+ *
+ *   This is the bulk read primitive that drives the per-row delta
+ *   reconciliation invariant on the ledger write path: a re-upload of
+ *   identical data converges to zero new transactions because every row's
+ *   target amount equals its already-credited amount.
  */
 
 /**

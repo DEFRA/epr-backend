@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
 
 import { LedgerSlotConflictError } from './ledger-port.js'
+import { LEDGER_SOURCE_KIND, LEDGER_TRANSACTION_TYPE } from './ledger-schema.js'
 import { validateLedgerTransactionInsert } from './ledger-validation.js'
+import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
 /**
  * In-memory adapter for the waste balance ledger.
@@ -79,6 +81,39 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
       )
 
       return structuredClone(latest)
+    },
+    /** @param {string[]} wasteRecordIds */
+    findCreditedAmountsByWasteRecordIds: async (wasteRecordIds) => {
+      const totals = new Map()
+      for (const id of wasteRecordIds) {
+        totals.set(id, 0)
+      }
+
+      if (totals.size === 0) {
+        return totals
+      }
+
+      for (const transaction of storage) {
+        if (transaction.source?.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
+          continue
+        }
+
+        const wasteRecordId = transaction.source.summaryLogRow?.wasteRecordId
+        if (!totals.has(wasteRecordId)) {
+          continue
+        }
+
+        const sign =
+          transaction.type === LEDGER_TRANSACTION_TYPE.CREDIT ? 1 : -1
+        const signedAmount =
+          sign === 1 ? transaction.amount : -transaction.amount
+        totals.set(
+          wasteRecordId,
+          toNumber(add(totals.get(wasteRecordId), signedAmount))
+        )
+      }
+
+      return totals
     }
   })
 }

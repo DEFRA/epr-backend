@@ -13,6 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 // eslint-disable-next-line n/no-unpublished-import
@@ -520,8 +521,21 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
   const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+  const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
+
+  const ledgerRepository = createInMemoryLedgerRepository()()
+
+  const systemLogsForBalanceAudit = {
+    insert: vi.fn().mockResolvedValue(undefined)
+  }
+
   const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    []
+    [],
+    {
+      ledgerRepository,
+      featureFlags,
+      systemLogsRepository: systemLogsForBalanceAudit
+    }
   )
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
@@ -545,8 +559,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
   })
-
-  const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([
     {
@@ -607,9 +619,13 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     organisationId,
     registrationId,
     accreditationId,
-    fileDataMap
+    fileDataMap,
+    ledgerRepository,
+    systemLogsForBalanceAudit
   }
 }
+
+const TEST_SYNC_USER = { id: 'test-user', name: 'Test User' }
 
 const createTestSubmitterWorker = ({
   summaryLogsRepository,
@@ -621,7 +637,7 @@ const createTestSubmitterWorker = ({
     await new Promise((resolve) => setImmediate(resolve))
     const existing = await summaryLogsRepository.findById(summaryLogId)
     const { version, summaryLog } = existing
-    await syncWasteRecords(summaryLog)
+    await syncWasteRecords(summaryLog, TEST_SYNC_USER)
     await summaryLogsRepository.update(
       summaryLogId,
       version,

@@ -5,6 +5,7 @@ import {
   safeAudit
 } from '#root/auditing/helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
+import { performUpdateViaLedger } from '../application/update-via-ledger.js'
 import { randomUUID } from 'node:crypto'
 import {
   classifyRow,
@@ -195,11 +196,17 @@ const calculateAndApplyUpdates = async (
 /**
  * Shared logic for updating waste balance transactions.
  *
+ * Dispatches on the `wasteBalanceLedger` feature flag: ON routes through the
+ * ledger-append path (ADR 0031), OFF stays on the embedded `transactions[]`
+ * array. Both paths preserve audit emission.
+ *
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('../repository/ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {any} [params.user]
@@ -221,6 +228,23 @@ export const performUpdateWasteBalanceTransactions = async ({
   }
 
   const validatedAccreditationId = validateAccreditationId(accreditation.id)
+
+  if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled?.()) {
+    await performUpdateViaLedger({
+      wasteRecords: annotatedRecords,
+      accreditation: { ...accreditation, id: validatedAccreditationId },
+      ledgerRepository:
+        /** @type {import('./ledger-port.js').LedgerRepository} */ (
+          dependencies.ledgerRepository
+        ),
+      dependencies: {
+        systemLogsRepository: dependencies.systemLogsRepository
+      },
+      user,
+      overseasSites
+    })
+    return
+  }
 
   const result = await calculateAndApplyUpdates(
     annotatedRecords,
