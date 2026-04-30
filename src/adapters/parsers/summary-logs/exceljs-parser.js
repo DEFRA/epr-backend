@@ -148,11 +148,10 @@ const CollectionState = {
  * Asserts the streamed worksheet count has not exceeded the configured limit.
  * Called once per worksheet as it arrives from the stream.
  *
- * @param {string} name - Worksheet name (used for error messages on the next sheet)
  * @param {number} count - Worksheets seen so far (including this one)
  * @param {number} max
  */
-const assertWorksheetCountWithinLimit = (name, count, max) => {
+const assertWorksheetCountWithinLimit = (count, max) => {
   if (count > max) {
     throw new SpreadsheetValidationError(
       `Too many worksheets (${count}, maximum ${max})`
@@ -575,6 +574,11 @@ const shouldSkipForPhantomDetection = (row, hasActiveCollections) => {
 }
 
 /**
+ * @typedef {{number: number, eachCell: any}} StreamingRow
+ * @typedef {AsyncIterable<StreamingRow> & {name: string}} StreamingWorksheet
+ */
+
+/**
  * Streams rows from a worksheet, applying validation limits and phantom-row
  * detection. Uses `rowHasContent` (which extracts each cell value and treats
  * `null` / '' uniformly) rather than `Row.hasValues` so that cells authored
@@ -585,40 +589,58 @@ const shouldSkipForPhantomDetection = (row, hasActiveCollections) => {
  * draining cleanly) but not processed.
  *
  * @param {object} draftState - Immer draft of the parser state
- * @param {object} worksheet - WorksheetReader instance (async-iterable of rows, with `.name`)
+ * @param {StreamingWorksheet} worksheet - WorksheetReader instance
  * @param {StreamWorksheetOptions} options
  */
 const streamWorksheet = async (draftState, worksheet, options) => {
   const { maxRowsPerSheet, maxColumnsPerSheet } = options
-  let consecutiveEmptyRows = 0
-  let phantomRowsTripped = false
+  const counters = { consecutiveEmptyRows: 0, phantomRowsTripped: false }
 
   for await (const row of worksheet) {
     const rowNumber = row.number
     assertRowWithinLimit(worksheet.name, rowNumber, maxRowsPerSheet)
-
-    if (phantomRowsTripped) {
-      continue
-    }
-
-    const hasActiveCollections = draftState.activeCollections.length > 0
-
-    if (shouldSkipForPhantomDetection(row, hasActiveCollections)) {
-      consecutiveEmptyRows++
-      if (consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
-        phantomRowsTripped = true
-      }
-      continue
-    }
-
-    consecutiveEmptyRows = 0
-    assertWorksheetColumnsWithinLimit(worksheet, row, maxColumnsPerSheet)
-    processRow(draftState, row, rowNumber, worksheet)
+    processRowAgainstPhantomState(draftState, worksheet, row, rowNumber, {
+      maxColumnsPerSheet,
+      counters
+    })
   }
 
   emitCollectionsToResult(draftState.result.data, draftState.activeCollections)
 
   draftState.activeCollections = []
+}
+
+/**
+ * @param {object} draftState
+ * @param {StreamingWorksheet} worksheet
+ * @param {StreamingRow} row
+ * @param {number} rowNumber
+ * @param {{maxColumnsPerSheet: number, counters: {consecutiveEmptyRows: number, phantomRowsTripped: boolean}}} ctx
+ */
+const processRowAgainstPhantomState = (
+  draftState,
+  worksheet,
+  row,
+  rowNumber,
+  ctx
+) => {
+  const { maxColumnsPerSheet, counters } = ctx
+  if (counters.phantomRowsTripped) {
+    return
+  }
+
+  const hasActiveCollections = draftState.activeCollections.length > 0
+  if (shouldSkipForPhantomDetection(row, hasActiveCollections)) {
+    counters.consecutiveEmptyRows++
+    if (counters.consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
+      counters.phantomRowsTripped = true
+    }
+    return
+  }
+
+  counters.consecutiveEmptyRows = 0
+  assertWorksheetColumnsWithinLimit(worksheet, row, maxColumnsPerSheet)
+  processRow(draftState, row, rowNumber, worksheet)
 }
 
 /**
@@ -675,6 +697,84 @@ const resolveSheetPath = (relTarget) =>
   `xl/${relTarget.replace(/^(\s|\/xl\/)+/, '')}`
 
 /**
+ * @typedef {Object} WorkbookParts
+ * @property {Map<string, any>} filesByPath - Zip entries indexed by archive path; values expose `.stream()` (unzipper has no published types)
+ * @property {Array<any>} workbookRels - Workbook relationships from RelationshipsXform; entries carry `Id`/`Target` strings
+ * @property {Array<any>} sheets - Worksheet descriptors from the workbook XML; entries carry `name`/`id`/`rId`
+ * @property {WorkbookShim} workbookShim - Tightly typed shim consumed by WorksheetReader
+ */
+
+/**
+ * Opens the xlsx zip and parses workbook metadata, relationships, styles and
+ * shared strings into the structures needed by `WorksheetReader`. Asserts the
+ * worksheet count limit before any sheet streaming begins.
+ *
+ * @param {Buffer} buffer
+ * @param {number} maxWorksheets
+ * @returns {Promise<WorkbookParts>}
+ */
+const loadWorkbookParts = async (buffer, maxWorksheets) => {
+  const directory = await unzipper.Open.buffer(buffer)
+  const filesByPath = new Map(
+    directory.files.map((entry) => [entry.path, entry])
+  )
+
+  const relsXform = new RelationshipsXform()
+  const workbookRels = await relsXform.parseStream(
+    filesByPath.get(WORKBOOK_RELS_PATH).stream()
+  )
+
+  const workbookXform = new WorkbookXform()
+  await workbookXform.parseStream(filesByPath.get(WORKBOOK_PATH).stream())
+  const workbookModel = workbookXform.model
+  const workbookProperties = workbookXform.map.workbookPr
+
+  const sheets = workbookModel.sheets
+  assertWorksheetCountWithinLimit(sheets.length, maxWorksheets)
+
+  const stylesXform = new StylesXform()
+  stylesXform.init()
+  await stylesXform.parseStream(filesByPath.get(STYLES_PATH).stream())
+
+  const sharedStringsXform = new SharedStringsXform()
+  const sharedStringsFile = filesByPath.get(SHARED_STRINGS_PATH)
+  if (sharedStringsFile) {
+    await sharedStringsXform.parseStream(sharedStringsFile.stream())
+  }
+
+  /** @type {WorkbookShim} */
+  const workbookShim = {
+    sharedStrings: sharedStringsXform.values,
+    styles: stylesXform,
+    properties: workbookProperties
+  }
+
+  return { filesByPath, workbookRels, sheets, workbookShim }
+}
+
+/**
+ * @param {WorkbookParts} parts
+ * @param {any} sheet - Worksheet descriptor with `name`, `id`, `rId`
+ * @returns {StreamingWorksheet}
+ */
+const createWorksheetReader = (parts, sheet) => {
+  const rel = parts.workbookRels.find((r) => r.Id === sheet.rId)
+  const sheetFile = parts.filesByPath.get(resolveSheetPath(rel.Target))
+
+  const reader = new WorksheetReader({
+    workbook: parts.workbookShim,
+    id: sheet.id,
+    iterator: sheetFile.stream(),
+    options: {
+      worksheets: 'emit',
+      hyperlinks: 'ignore'
+    }
+  })
+  reader.name = sheet.name
+  return reader
+}
+
+/**
  * Parses an Excel buffer and extracts metadata and data sections.
  *
  * Reads the zip central directory eagerly via `unzipper.Open.buffer` so we
@@ -717,62 +817,10 @@ export const parse = async (buffer, options = {}) => {
   const seenWorksheetNames = []
 
   try {
-    const directory = await unzipper.Open.buffer(buffer)
-    const filesByPath = new Map(
-      directory.files.map((entry) => [entry.path, entry])
-    )
-
-    const relsXform = new RelationshipsXform()
-    const workbookRels = await relsXform.parseStream(
-      filesByPath.get(WORKBOOK_RELS_PATH).stream()
-    )
-
-    const workbookXform = new WorkbookXform()
-    await workbookXform.parseStream(filesByPath.get(WORKBOOK_PATH).stream())
-    const workbookModel = workbookXform.model
-    const workbookProperties = workbookXform.map.workbookPr
-
-    const sheets = workbookModel.sheets
-    let worksheetCount = 0
-    for (const sheet of sheets) {
-      worksheetCount++
-      assertWorksheetCountWithinLimit(sheet.name, worksheetCount, maxWorksheets)
-    }
-
-    const stylesXform = new StylesXform()
-    stylesXform.init()
-    await stylesXform.parseStream(filesByPath.get(STYLES_PATH).stream())
-
-    const sharedStringsXform = new SharedStringsXform()
-    const sharedStringsFile = filesByPath.get(SHARED_STRINGS_PATH)
-    if (sharedStringsFile) {
-      await sharedStringsXform.parseStream(sharedStringsFile.stream())
-    }
-
-    /** @type {WorkbookShim} */
-    const workbookShim = {
-      sharedStrings: sharedStringsXform.values,
-      styles: stylesXform,
-      properties: workbookProperties
-    }
-
-    for (const sheet of sheets) {
-      const rel = workbookRels.find((r) => r.Id === sheet.rId)
-      const sheetFile = filesByPath.get(resolveSheetPath(rel.Target))
-
+    const parts = await loadWorkbookParts(buffer, maxWorksheets)
+    for (const sheet of parts.sheets) {
       seenWorksheetNames.push(sheet.name)
-
-      const reader = new WorksheetReader({
-        workbook: workbookShim,
-        id: sheet.id,
-        iterator: sheetFile.stream(),
-        options: {
-          worksheets: 'emit',
-          hyperlinks: 'ignore'
-        }
-      })
-      reader.name = sheet.name
-
+      const reader = createWorksheetReader(parts, sheet)
       await streamWorksheet(draft, reader, {
         maxRowsPerSheet,
         maxColumnsPerSheet
