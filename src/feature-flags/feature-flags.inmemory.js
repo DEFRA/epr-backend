@@ -17,8 +17,5 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isWasteBalanceLedgerEnabled() {
     return flags.wasteBalanceLedger ?? false
-  },
-  isMigrateFormSubmissionLineageEnabled() {
-    return flags.migrateFormSubmissionLineage ?? false
   }
 })

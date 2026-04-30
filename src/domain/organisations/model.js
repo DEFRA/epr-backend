@@ -231,7 +231,7 @@ export const USER_ROLES = Object.freeze({
  *   accreditations: Accreditation[];
  *   businessType?: BusinessTypeValue;
  *   companyDetails: CompanyDetails;
- *   formSubmissionTime: Date;
+ *   formSubmission: { id: string; time: Date };
  *   linkedDefraOrganisation?: LinkedDefraOrganisation;
  *   managementContactDetails?: User;
  *   orgId: number;
