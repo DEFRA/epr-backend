@@ -625,7 +625,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   }
 }
 
-const TEST_SYNC_USER = { id: 'test-user', name: 'Test User' }
+const TEST_SYNC_USER = {
+  id: 'test-user',
+  email: 'test-user@example.com',
+  scope: ['standard_user']
+}
 
 const createTestSubmitterWorker = ({
   summaryLogsRepository,

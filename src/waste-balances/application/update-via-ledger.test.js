@@ -472,19 +472,6 @@ describe('performUpdateViaLedger', () => {
       expect(systemLogsRepository.insert).not.toHaveBeenCalled()
     })
 
-    it('skips audit when user is anonymous', async () => {
-      await performUpdateViaLedger({
-        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        accreditation,
-        ledgerRepository,
-        dependencies: { systemLogsRepository },
-        user: undefined,
-        overseasSites
-      })
-
-      expect(systemLogsRepository.insert).not.toHaveBeenCalled()
-    })
-
     it('falls back to transactionCount when payload exceeds audit size limit', async () => {
       const { config } = await import('#root/config.js')
       vi.mocked(config.get).mockImplementation((key) => {

@@ -18,6 +18,12 @@ const TEST_WEIGHT_100_5 = 100.5
 const TEST_WEIGHT_200_75 = 200.75
 const TEST_WEIGHT_250_5 = 250.5
 
+const TEST_USER = {
+  id: 'test-user',
+  email: 'test@example.com',
+  scope: ['standard_user']
+}
+
 describe('syncFromSummaryLog', () => {
   let wasteRecordRepository
   let wasteBalancesRepository
@@ -170,7 +176,7 @@ describe('syncFromSummaryLog', () => {
       overseasSitesRepository
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, TEST_USER)
 
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
       'org-1',
@@ -180,7 +186,7 @@ describe('syncFromSummaryLog', () => {
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), {
-      user: undefined,
+      user: TEST_USER,
       accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
@@ -880,7 +886,7 @@ describe('syncFromSummaryLog', () => {
       featureFlags: { isOrsWasteBalanceValidationEnabled: () => true }
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, TEST_USER)
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
@@ -892,7 +898,7 @@ describe('syncFromSummaryLog', () => {
         })
       ]),
       {
-        user: undefined,
+        user: TEST_USER,
         accreditation: {
           id: 'acc-default',
           validFrom: '2023-01-01',
@@ -963,12 +969,12 @@ describe('syncFromSummaryLog', () => {
       featureFlags: { isOrsWasteBalanceValidationEnabled: () => true }
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, TEST_USER)
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), {
-      user: undefined,
+      user: TEST_USER,
       accreditation: {
         id: 'acc-default',
         validFrom: '2023-01-01',
@@ -1043,13 +1049,13 @@ describe('syncFromSummaryLog', () => {
       featureFlags
     })
 
-    await sync(summaryLog)
+    await sync(summaryLog, TEST_USER)
 
     expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(expect.any(Array), {
-      user: undefined,
+      user: TEST_USER,
       accreditation: {
         id: 'acc-default',
         validFrom: '2023-01-01',

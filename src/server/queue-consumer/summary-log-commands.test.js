@@ -117,12 +117,12 @@ describe('summaryLogCommandHandlers', () => {
     })
 
     describe('payloadSchema', () => {
-      it('accepts payload without user', () => {
+      it('rejects payload without user', () => {
         const { error } = handler.payloadSchema.validate({
           summaryLogId: 'log-123'
         })
 
-        expect(error).toBeUndefined()
+        expect(error.message).toBe('"user" is required')
       })
 
       it('accepts payload with user', () => {
@@ -156,6 +156,11 @@ describe('summaryLogCommandHandlers', () => {
       it('rejects unknown fields', () => {
         const { error } = handler.payloadSchema.validate({
           summaryLogId: 'log-123',
+          user: {
+            id: 'user-1',
+            email: 'test@example.com',
+            scope: ['operator']
+          },
           extra: true
         })
 
@@ -179,15 +184,6 @@ describe('summaryLogCommandHandlers', () => {
         expect(submitSummaryLog).toHaveBeenCalledWith('log-123', {
           ...deps,
           user: payload.user
-        })
-      })
-
-      it('calls submitSummaryLog without user when not provided', async () => {
-        await handler.execute({ summaryLogId: 'log-123' }, deps)
-
-        expect(submitSummaryLog).toHaveBeenCalledWith('log-123', {
-          ...deps,
-          user: undefined
         })
       })
     })

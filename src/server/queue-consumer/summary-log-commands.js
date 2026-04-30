@@ -85,7 +85,7 @@ export const summaryLogCommandHandlers = [
     command: SUMMARY_LOG_COMMAND.SUBMIT,
     payloadSchema: Joi.object({
       summaryLogId: Joi.string().required(),
-      user: userSchema.optional()
+      user: userSchema.required()
     }),
     execute: async (payload, /** @type {SummaryLogHandlerDeps} */ deps) => {
       await submitSummaryLog(payload.summaryLogId, {

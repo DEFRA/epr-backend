@@ -142,6 +142,15 @@ const resolveAccreditation = async (
   return accreditation
 }
 
+/**
+ * @param {object} params
+ * @param {object} params.parsedData
+ * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
+ * @param {import('#waste-balances/repository/port.js').WasteBalancesRepository} params.wasteBalancesRepository
+ * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
+ * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
+ */
 const updateWasteBalances = async ({
   parsedData,
   accreditation,
@@ -248,7 +257,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - The optional accreditation ID
-   * @param {Object} [user] - User context for the sync
+   * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
    * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
   return async (summaryLog, user) => {

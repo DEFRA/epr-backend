@@ -540,50 +540,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
       )
     })
 
-    it('should save balance but skip audit when user is not provided', async () => {
-      const wasteRecords = [
-        {
-          id: 'rec-1',
-          organisationId: 'org-1',
-          data: {}
-        }
-      ]
-      const accreditation = { id: 'acc-1' }
-      const wasteBalance = {
-        id: 'bal-1',
-        accreditationId: 'acc-1',
-        amount: 100,
-        availableAmount: 100,
-        transactions: [],
-        version: 0 // Explicit 0
-      }
-      const newTransactions = [{ id: 'trans-1' }]
-
-      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
-
-      const dependencies = {}
-
-      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
-        newTransactions,
-        newAmount: 200,
-        newAvailableAmount: 200
-      })
-
-      await performUpdateWasteBalanceTransactions({
-        wasteRecords,
-        accreditation,
-        dependencies,
-        findBalance,
-        saveBalance,
-        // user undefined
-        overseasSites: ORS_VALIDATION_DISABLED
-      })
-
-      expect(audit).not.toHaveBeenCalled()
-      expect(saveBalance).toHaveBeenCalled()
-    })
-
     it('should audit but skip system log when systemLogsRepository is missing', async () => {
       const wasteRecords = [
         {

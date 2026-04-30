@@ -133,7 +133,7 @@ const builderFor = (
  * @param {import('../repository/ledger-port.js').LedgerRepository} params.ledgerRepository
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
- * @param {Object} [params.user]
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  */
 export const performUpdateViaLedger = async ({
