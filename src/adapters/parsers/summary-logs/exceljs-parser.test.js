@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import unzipper from 'unzipper'
 
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
@@ -62,22 +63,16 @@ describe('ExcelJSSummaryLogsParser', () => {
     )
   })
 
-  it('should rethrow unrecognised errors from the load call unchanged', async () => {
+  it('should rethrow unrecognised errors from the underlying reader unchanged', async () => {
     const unexpected = new RangeError('this looks like a bug, not bad data')
-    function MockWorkbook() {
-      return {
-        xlsx: { load: vi.fn().mockRejectedValue(unexpected) },
-        worksheets: []
-      }
-    }
-    const workbookSpy = vi
-      .spyOn(ExcelJS, 'Workbook')
-      .mockImplementation(MockWorkbook)
+    const openSpy = vi
+      .spyOn(unzipper.Open, 'buffer')
+      .mockRejectedValueOnce(unexpected)
 
     try {
       await expect(parse(Buffer.from('anything'))).rejects.toBe(unexpected)
     } finally {
-      workbookSpy.mockRestore()
+      openSpy.mockRestore()
     }
   })
 
@@ -128,7 +123,6 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should throw SpreadsheetValidationError when worksheet count exceeds limit', async () => {
       const workbook = new ExcelJS.Workbook()
 
-      // Add 4 worksheets (exceeds limit of 3)
       for (let i = 1; i <= 4; i++) {
         workbook.addWorksheet(`Sheet${i}`)
       }
@@ -2520,6 +2514,19 @@ describe('shouldWrapAsSpreadsheetError', () => {
     )
 
     expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap unzipper FILE_ENDED errors from non-zip buffers', () => {
+    const error = new Error('FILE_ENDED')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap unzipper password-required errors from encrypted xlsx', () => {
+    expect(shouldWrapAsSpreadsheetError(new Error('MISSING_PASSWORD'))).toBe(
+      true
+    )
+    expect(shouldWrapAsSpreadsheetError(new Error('BAD_PASSWORD'))).toBe(true)
   })
 
   it('should wrap SaxesError by name', () => {
