@@ -16,5 +16,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isWasteBalanceLedgerEnabled() {
     return config.get('featureFlags.wasteBalanceLedger')
+  },
+  isRegistrationContactsMigrationEnabled() {
+    return config.get('featureFlags.registrationContactsMigration')
   }
 })

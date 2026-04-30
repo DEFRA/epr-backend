@@ -117,6 +117,12 @@
         "jobTitle": "Director",
         "phone": "3334445555"
       },
+      "applicationContactDetails": {
+        "fullName": "Eve Black",
+        "email": "eve.black@charity.org",
+        "jobTitle": "Director",
+        "phone": "3334445555"
+      },
       "samplingInspectionPlanPart1FileUploads": [
         {
           "defraFormUploadedFileId": "file-345",
@@ -156,6 +162,12 @@
       "suppliers": "International aluminium suppliers",
       "exportPorts": ["Belfast", "Larne"],
       "submitterContactDetails": {
+        "fullName": "John Doe",
+        "email": "john.doe@charity.org",
+        "jobTitle": "Export Manager",
+        "phone": "4445556666"
+      },
+      "applicationContactDetails": {
         "fullName": "John Doe",
         "email": "john.doe@charity.org",
         "jobTitle": "Export Manager",

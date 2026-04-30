@@ -25,7 +25,7 @@ export const testFindAllBySchemaVersionBehaviour = (it) => {
 
       await Promise.all([org1, org2, org3].map((o) => repository.insert(o)))
 
-      const result = await repository.findAllBySchemaVersion(2)
+      const result = await repository.findAllBySchemaVersion(3)
 
       expect(result).toHaveLength(3)
       expect(result.map((o) => o.id)).toEqual(

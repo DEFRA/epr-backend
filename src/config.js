@@ -365,6 +365,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_WASTE_BALANCE_LEDGER'
+    },
+    registrationContactsMigration: {
+      doc: 'Feature Flag: Re-migrate existing registrations to fix contact details and add applicationContactDetails',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REGISTRATION_CONTACTS_MIGRATION'
     }
   },
   formSubmissionOverrides: {

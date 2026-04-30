@@ -17,5 +17,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isWasteBalanceLedgerEnabled() {
     return flags.wasteBalanceLedger ?? false
+  },
+  isRegistrationContactsMigrationEnabled() {
+    return flags.registrationContactsMigration ?? false
   }
 })
