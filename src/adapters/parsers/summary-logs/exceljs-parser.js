@@ -559,7 +559,7 @@ const assertWorksheetColumnsWithinLimit = (worksheet, row, max) => {
 }
 
 // Exported for testing - allows direct unit testing of cell value extraction
-export { extractCellValue }
+export { extractCellValue } from './cell-extractor.js'
 
 /**
  * @typedef {Object} ParseOptions
