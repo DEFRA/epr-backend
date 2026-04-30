@@ -95,8 +95,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(organisationsRepository.replace).not.toHaveBeenCalled()
@@ -120,8 +119,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -146,8 +144,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -182,8 +179,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -208,8 +204,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -237,8 +232,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -269,8 +263,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -303,8 +296,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -331,8 +323,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -359,8 +350,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -378,8 +368,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -397,8 +386,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       const updates = organisationsRepository.replace.mock.calls[0][2]
@@ -414,8 +402,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(organisationsRepository.replace).toHaveBeenCalledWith(
@@ -438,8 +425,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(auditFormSubmissionLineageMigration).toHaveBeenCalledWith(
@@ -458,8 +444,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(
@@ -482,8 +467,7 @@ describe('migrateFormSubmissionLineage', () => {
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        true
+        systemLogsRepository
       )
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -493,28 +477,6 @@ describe('migrateFormSubmissionLineage', () => {
           )
         })
       )
-    })
-  })
-
-  describe('dry-run mode (isMigrationEnabled = false)', () => {
-    it('logs a dry-run message and skips db update and audit', async () => {
-      const org = makeOrg({ id: 'org-dry' })
-      organisationsRepository = makeOrganisationsRepository([org])
-
-      await migrateFormSubmissionLineage(
-        formSubmissionsRepository,
-        organisationsRepository,
-        systemLogsRepository,
-        false
-      )
-
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: expect.stringContaining('dry-run mode')
-        })
-      )
-      expect(organisationsRepository.replace).not.toHaveBeenCalled()
-      expect(auditFormSubmissionLineageMigration).not.toHaveBeenCalled()
     })
   })
 })

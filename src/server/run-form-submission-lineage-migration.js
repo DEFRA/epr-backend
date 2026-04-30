@@ -8,17 +8,10 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
  * Run the formSubmission lineage backfill migration on startup.
  *
  * @param {Object} server - Hapi server instance
- * @param {Object} [options] - Optional configuration
- * @param {Object} [options.featureFlags] - Feature flags instance (for testing)
  * @returns {Promise<void>}
  */
-export const runFormSubmissionLineageMigration = async (
-  server,
-  options = {}
-) => {
+export const runFormSubmissionLineageMigration = async (server) => {
   try {
-    const featureFlagsInstance = options.featureFlags || server.featureFlags
-
     const lock = await server.locker.lock('migrate-form-submission-lineage')
     if (!lock) {
       logger.info({
@@ -42,8 +35,7 @@ export const runFormSubmissionLineageMigration = async (
       await migrateFormSubmissionLineage(
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        featureFlagsInstance.isMigrateFormSubmissionLineageEnabled()
+        systemLogsRepository
       )
 
       logger.info({

@@ -29,7 +29,6 @@ vi.mock('#repositories/system-logs/mongodb.js', () => ({
 describe('runFormSubmissionLineageMigration', () => {
   let mockServer
   let mockLock
-  let mockFeatureFlags
   let mockFormSubmissionsRepository
   let mockOrganisationsRepository
   let mockSystemLogsRepository
@@ -45,13 +44,8 @@ describe('runFormSubmissionLineageMigration', () => {
       free: vi.fn().mockResolvedValue(undefined)
     }
 
-    mockFeatureFlags = {
-      isMigrateFormSubmissionLineageEnabled: vi.fn().mockReturnValue(true)
-    }
-
     mockServer = {
       db: {},
-      featureFlags: mockFeatureFlags,
       locker: {
         lock: vi.fn().mockResolvedValue(mockLock)
       }
@@ -67,7 +61,7 @@ describe('runFormSubmissionLineageMigration', () => {
     migrateFormSubmissionLineage.mockResolvedValue(undefined)
   })
 
-  it('runs the migration when the feature flag is enabled', async () => {
+  it('runs the migration on startup', async () => {
     await runFormSubmissionLineageMigration(mockServer)
 
     expect(mockServer.locker.lock).toHaveBeenCalledWith(
@@ -76,31 +70,12 @@ describe('runFormSubmissionLineageMigration', () => {
     expect(migrateFormSubmissionLineage).toHaveBeenCalledWith(
       mockFormSubmissionsRepository,
       mockOrganisationsRepository,
-      mockSystemLogsRepository,
-      true
+      mockSystemLogsRepository
     )
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Form submission lineage migration completed successfully'
     })
     expect(mockLock.free).toHaveBeenCalled()
-  })
-
-  it('passes the flag as false to migrateFormSubmissionLineage when the feature flag is disabled', async () => {
-    mockFeatureFlags.isMigrateFormSubmissionLineageEnabled.mockReturnValue(
-      false
-    )
-
-    await runFormSubmissionLineageMigration(mockServer)
-
-    expect(mockServer.locker.lock).toHaveBeenCalledWith(
-      'migrate-form-submission-lineage'
-    )
-    expect(migrateFormSubmissionLineage).toHaveBeenCalledWith(
-      mockFormSubmissionsRepository,
-      mockOrganisationsRepository,
-      mockSystemLogsRepository,
-      false
-    )
   })
 
   it('skips the migration when the distributed lock cannot be obtained', async () => {
@@ -132,28 +107,5 @@ describe('runFormSubmissionLineageMigration', () => {
       err: error,
       message: 'Failed to run form submission lineage migration'
     })
-  })
-
-  it('uses options.featureFlags when provided instead of server.featureFlags', async () => {
-    const overrideFlags = {
-      isMigrateFormSubmissionLineageEnabled: vi.fn().mockReturnValue(false)
-    }
-
-    await runFormSubmissionLineageMigration(mockServer, {
-      featureFlags: overrideFlags
-    })
-
-    expect(
-      overrideFlags.isMigrateFormSubmissionLineageEnabled
-    ).toHaveBeenCalled()
-    expect(
-      mockFeatureFlags.isMigrateFormSubmissionLineageEnabled
-    ).not.toHaveBeenCalled()
-    expect(migrateFormSubmissionLineage).toHaveBeenCalledWith(
-      mockFormSubmissionsRepository,
-      mockOrganisationsRepository,
-      mockSystemLogsRepository,
-      false
-    )
   })
 })

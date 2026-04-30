@@ -10,7 +10,6 @@ import {
 import {
   formFileUploadSchema,
   formSubmissionSchema,
-  formSubmissionTimeSchema,
   idSchema,
   reprocessingTypeSchema,
   userSchema
@@ -100,17 +99,7 @@ export const accreditationSchema = Joi.object({
   wasteProcessingType: Joi.string()
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
-  formSubmissionTime: Joi.when('/schemaVersion', {
-    is: 1,
-    then: formSubmissionTimeSchema.required(),
-    otherwise: formSubmissionTimeSchema.forbidden()
-  }),
-
-  formSubmission: Joi.when('/schemaVersion', {
-    is: 2,
-    then: formSubmissionSchema.required(),
-    otherwise: formSubmissionSchema.forbidden()
-  }),
+  formSubmission: formSubmissionSchema.required(),
   prnIssuance: prnIssuanceSchema.required(),
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart2FileUploads: Joi.array()

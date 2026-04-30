@@ -79,14 +79,12 @@ async function resolveFormSubmission(
  * @param {FormSubmissionsRepository} formSubmissionsRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SystemLogsRepository} systemLogsRepository
- * @param {boolean} isMigrationEnabled
  */
 async function migrateOrganisation(
   org,
   formSubmissionsRepository,
   organisationsRepository,
-  systemLogsRepository,
-  isMigrationEnabled
+  systemLogsRepository
 ) {
   const orgFormSubmission = {
     id: org.id,
@@ -138,9 +136,6 @@ async function migrateOrganisation(
     formSubmissionTime: _orgTime,
     ...orgWithoutIdAndVersionTime
   } = org
-  if (!isMigrationEnabled) {
-    return
-  }
 
   await organisationsRepository.replace(id, version, {
     ...orgWithoutIdAndVersionTime,
@@ -166,14 +161,12 @@ async function migrateOrganisation(
  * @param {FormSubmissionsRepository} formSubmissionsRepository
  * @param {OrganisationsRepository} organisationsRepository
  * @param {SystemLogsRepository} systemLogsRepository
- * @param {boolean} isMigrationEnabled
  * @returns {Promise<void>}
  */
 export async function migrateFormSubmissionLineage(
   formSubmissionsRepository,
   organisationsRepository,
-  systemLogsRepository,
-  isMigrationEnabled
+  systemLogsRepository
 ) {
   const orgs = await organisationsRepository.findAllBySchemaVersion(1)
 
@@ -182,13 +175,6 @@ export async function migrateFormSubmissionLineage(
       message: 'migrate-form-submission-lineage: no organisations to migrate'
     })
     return
-  }
-
-  if (!isMigrationEnabled) {
-    logger.info({
-      message:
-        'migrate-form-submission-lineage: running in dry-run mode — no changes will be written'
-    })
   }
 
   logger.info({
@@ -204,8 +190,7 @@ export async function migrateFormSubmissionLineage(
         org,
         formSubmissionsRepository,
         organisationsRepository,
-        systemLogsRepository,
-        isMigrationEnabled
+        systemLogsRepository
       )
       succeeded++
     } catch (error) {
