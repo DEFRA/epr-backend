@@ -452,7 +452,26 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
 }
 
 /**
- * Checks if a row contains any non-empty content.
+ * Mirrors the DOM-mode `worksheet.eachRow({includeEmpty: false})` filter:
+ * a row whose cells are all `ValueType.Null` (style only, no value) is
+ * skipped entirely rather than fed to a collection. Without this, a styled-
+ * but-empty row mid-data pushes nulls into the active collection's
+ * currentRow and terminates the section prematurely.
+ */
+const rowIsStructurallyEmpty = (row) => {
+  let hasContentCell = false
+  row.eachCell((_cell) => {
+    hasContentCell = true
+  })
+  return !hasContentCell
+}
+
+/**
+ * Stricter than `rowIsStructurallyEmpty`: also treats cells whose
+ * extracted value is null, undefined or '' as empty. Used for phantom-row
+ * detection between data sections - long runs of empty-string rows
+ * between sections (e.g. row-formatted-but-cleared user input) count
+ * toward the phantom limit just like styled-empty rows do.
  */
 const rowHasContent = (row) => {
   const cells = collectCellsFromRow(row)
@@ -463,30 +482,16 @@ const rowHasContent = (row) => {
 }
 
 /**
- * Determines whether a row should be skipped during phantom row detection.
- *
- * A row should be processed (not skipped) if:
- * - There are active data collections that need this row for termination detection
- * - It contains any non-empty content (markers or otherwise)
- */
-const shouldSkipForPhantomDetection = (row, hasActiveCollections) => {
-  if (hasActiveCollections) {
-    return false
-  }
-
-  return !rowHasContent(row)
-}
-
-/**
  * @typedef {{number: number, eachCell: any}} StreamingRow
  * @typedef {AsyncIterable<StreamingRow> & {name: string}} StreamingWorksheet
  */
 
 /**
  * Streams rows from a worksheet, applying validation limits and phantom-row
- * detection. Uses `rowHasContent` (which extracts each cell value and treats
- * `null` / '' uniformly) rather than `Row.hasValues` so that cells authored
- * as the empty string still register as content-bearing.
+ * detection. Structurally empty rows (every cell `ValueType.Null`) are
+ * skipped to match the DOM path's `eachRow({includeEmpty: false})`
+ * semantics; a long stretch of them trips phantom-row detection and stops
+ * processing for the remainder of the sheet.
  *
  * Once phantom-row detection trips, remaining rows in this worksheet are
  * still consumed from the stream (to keep the underlying zip pipeline
@@ -533,8 +538,16 @@ const processRowAgainstPhantomState = (
     return
   }
 
+  if (rowIsStructurallyEmpty(row)) {
+    counters.consecutiveEmptyRows++
+    if (counters.consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
+      counters.phantomRowsTripped = true
+    }
+    return
+  }
+
   const hasActiveCollections = draftState.activeCollections.length > 0
-  if (shouldSkipForPhantomDetection(row, hasActiveCollections)) {
+  if (!hasActiveCollections && !rowHasContent(row)) {
     counters.consecutiveEmptyRows++
     if (counters.consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
       counters.phantomRowsTripped = true
