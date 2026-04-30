@@ -1,18 +1,15 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
-import { failAction } from './fail-action.js'
 
-vi.mock('#root/config.js', () => ({
-  getConfig: vi.fn(() => ({
-    get: vi.fn((key) => {
-      if (key === 'cdpEnvironment') return 'dev'
-      return undefined
-    })
-  }))
-}))
+import { failAction } from './fail-action.js'
+import { config } from '#root/config.js'
 
 describe('#fail-action', () => {
+  afterEach(() => {
+    config.reset('cdpEnvironment')
+  })
+
   const createMockRequest = () => ({
     logger: {
       warn: vi.fn()
@@ -241,24 +238,14 @@ describe('#fail-action', () => {
 
 describe('#fail-action (production)', () => {
   beforeEach(() => {
-    vi.resetModules()
-    vi.doMock('#root/config.js', () => ({
-      getConfig: vi.fn(() => ({
-        get: vi.fn((key) => {
-          if (key === 'cdpEnvironment') return 'prod'
-          return undefined
-        })
-      }))
-    }))
+    config.set('cdpEnvironment', 'prod')
   })
 
   afterEach(() => {
-    vi.doUnmock('#root/config.js')
+    config.reset('cdpEnvironment')
   })
 
-  test('does NOT include Joi details in message in production', async () => {
-    const { failAction: prodFailAction } = await import('./fail-action.js')
-
+  test('does NOT include Joi details in message in production', () => {
     const mockRequest = {
       logger: { warn: vi.fn() }
     }
@@ -266,7 +253,7 @@ describe('#fail-action (production)', () => {
     joiError.isJoi = true
     joiError.details = [{ message: '"redirectUrl" is required' }]
 
-    expect(() => prodFailAction(mockRequest, {}, joiError)).toThrow()
+    expect(() => failAction(mockRequest, {}, joiError)).toThrow()
 
     const logCall = mockRequest.logger.warn.mock.calls[0][0]
     expect(logCall.message).toBe('"redirectUrl" is required')
