@@ -1,8 +1,6 @@
-import { config } from '#root/config.js'
+import { isProductionEnvironment } from '#root/config.js'
 import { registerRepository } from '#plugins/register-repository.js'
 import { createNonProdDataReset } from './mongodb.js'
-
-const isProduction = () => config.get('cdpEnvironment') === 'prod'
 
 /**
  * Registers request.nonProdDataReset only when FEATURE_FLAG_DEV_ENDPOINTS is
@@ -28,7 +26,7 @@ export const nonProdDataResetPlugin = {
   ) => {
     const db = options?.db ?? server.db
     const reset = createNonProdDataReset(db, {
-      isProduction: isProduction()
+      isProduction: isProductionEnvironment()
     })
     registerRepository(server, 'nonProdDataReset', () => reset)
   }
