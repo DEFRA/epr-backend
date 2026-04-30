@@ -77,7 +77,7 @@ describe('boom-error-logger plugin', () => {
     await server.initialize()
   })
 
-  it('warns for 4xx Boom errors with PII-safe ECS error fields', async () => {
+  it('warns for 4xx Boom errors with ECS error fields', async () => {
     await server.inject({ method: 'GET', url: '/bad-request' })
 
     expect(mockLogger.warn).toHaveBeenCalledWith({
@@ -86,6 +86,7 @@ describe('boom-error-logger plugin', () => {
         code: '400',
         id: expect.any(String),
         message: 'Validation failed',
+        stack_trace: expect.stringContaining('Error: Validation failed'),
         type: 'Bad Request'
       },
       event: {
@@ -98,11 +99,14 @@ describe('boom-error-logger plugin', () => {
     })
   })
 
-  it('does not log stack_trace (the first line can leak PII from upstream errors)', async () => {
+  it('logs stack_trace from boom.stack so the formatter can strip it in prod', async () => {
     await server.inject({ method: 'GET', url: '/bad-request' })
 
     const logCall = mockLogger.warn.mock.calls[0][0]
-    expect(logCall.error).not.toHaveProperty('stack_trace')
+
+    expect(logCall.error.stack_trace).toEqual(
+      expect.stringContaining('Error: Validation failed')
+    )
   })
 
   it('uses the standard HTTP class string as error.type for 404', async () => {
@@ -168,6 +172,7 @@ describe('boom-error-logger plugin', () => {
         code: 'SOMETHING_INVALID',
         id: expect.any(String),
         message: 'Something invalid',
+        stack_trace: expect.stringContaining('Error: Something invalid'),
         type: 'Bad Request'
       },
       event: {

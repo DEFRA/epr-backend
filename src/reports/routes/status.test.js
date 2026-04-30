@@ -330,6 +330,7 @@ describe(`POST ${reportsStatusPath}`, () => {
             code: 'report_incomplete',
             id: expect.any(String),
             message: 'Report is incomplete; 2 required field(s) not populated',
+            stack_trace: expect.any(String),
             type: 'Bad Request'
           },
           event: {
