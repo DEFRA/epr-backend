@@ -104,6 +104,7 @@ const calculateAndApplyUpdates = async (
   validatedAccreditationId,
   accreditation,
   findBalance,
+  user,
   overseasSites
 ) => {
   const wasteBalance = await findOrCreateWasteBalance({
@@ -122,6 +123,7 @@ const calculateAndApplyUpdates = async (
       currentBalance: wasteBalance,
       wasteRecords: validRecords,
       accreditation,
+      user,
       overseasSites
     })
 
@@ -199,6 +201,7 @@ export const performUpdateWasteBalanceTransactions = async ({
     validatedAccreditationId,
     accreditation,
     findBalance,
+    user,
     overseasSites
   )
 

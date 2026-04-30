@@ -23,6 +23,7 @@ import {
  * @param {number} amount
  * @param {number} currentAmount
  * @param {number} currentAvailableAmount
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user
  * @param {import('../domain/model.js').WasteBalanceTransactionType} [type]
  */
 export const buildTransaction = (
@@ -30,6 +31,7 @@ export const buildTransaction = (
   amount,
   currentAmount,
   currentAvailableAmount,
+  user,
   type = WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
 ) => {
   const openingAmount = currentAmount
@@ -55,7 +57,7 @@ export const buildTransaction = (
     id: randomUUID(),
     type,
     createdAt: new Date().toISOString(),
-    createdBy: record.updatedBy,
+    createdBy: { id: user.id, name: user.email },
     amount,
     openingAmount,
     closingAmount,
@@ -184,6 +186,7 @@ const getTargetAmount = (record, accreditation, overseasSites) => {
  * @param {Object} params.accreditation - The accreditation details.
  * @param {string} [params.accreditation.validFrom] - ISO date string.
  * @param {string} [params.accreditation.validTo] - ISO date string.
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user - Authenticated user driving the submit.
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED.
  * @returns {Object} Result containing new transactions and updated totals.
  * @property {Array<import('../domain/model.js').WasteBalanceTransaction>} newTransactions
@@ -194,6 +197,7 @@ export const calculateWasteBalanceUpdates = ({
   currentBalance,
   wasteRecords,
   accreditation,
+  user,
   overseasSites
 }) => {
   const newTransactions = []
@@ -229,6 +233,7 @@ export const calculateWasteBalanceUpdates = ({
         toNumber(abs(delta)),
         currentAmount,
         currentAvailableAmount,
+        user,
         type
       )
 

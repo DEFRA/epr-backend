@@ -49,12 +49,14 @@ const targetAmountFor = (record, accreditation, overseasSites) => {
  * @param {object} accreditation
  * @param {OverseasSitesContext} overseasSites
  * @param {import('../repository/ledger-port.js').CreditedAmountLookup} previousCreditedFor
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user
  */
 const builderFor = (
   record,
   accreditation,
   overseasSites,
-  previousCreditedFor
+  previousCreditedFor,
+  user
 ) => {
   const targetAmount = targetAmountFor(record, accreditation, overseasSites)
   const recordKey = wasteRecordKeyFor(record)
@@ -68,9 +70,7 @@ const builderFor = (
   const isCredit = greaterThan(delta, 0)
   const amount = toNumber(abs(delta))
   const latestVersion = record.versions[record.versions.length - 1]
-  const createdBy = record.updatedBy
-    ? { id: record.updatedBy.id, name: record.updatedBy.name }
-    : undefined
+  const createdBy = { id: user.id, name: user.email }
 
   return (latest) => {
     const closingAmount = isCredit
@@ -160,7 +160,8 @@ export const performUpdateViaLedger = async ({
       record,
       accreditation,
       overseasSites,
-      previousCreditedFor
+      previousCreditedFor,
+      user
     )
     if (builder) {
       builders.push(builder)

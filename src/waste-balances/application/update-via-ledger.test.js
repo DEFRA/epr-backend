@@ -53,21 +53,23 @@ const accreditation = {
 }
 
 const overseasSites = new Map()
-const user = { id: 'user-1', name: 'Test User', email: 'user@example.test' }
+const user = {
+  id: 'user-1',
+  email: 'user@example.test',
+  scope: ['standard_user']
+}
 
 const buildExporterRecord = ({
   rowId,
   tonnage,
   versionId = `version-${rowId}`,
-  summaryLogId = 'log-1',
-  updatedBy = { id: user.id, name: user.name }
+  summaryLogId = 'log-1'
 }) => ({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId,
   rowId: String(rowId),
   type: WASTE_RECORD_TYPE.EXPORTED,
-  ...(updatedBy ? { updatedBy } : {}),
   versions: [
     {
       id: versionId,
@@ -567,16 +569,10 @@ describe('performUpdateViaLedger', () => {
     })
   })
 
-  describe('missing updatedBy', () => {
-    it('persists ledger transactions when records have no updatedBy (system-driven sync)', async () => {
-      const recordWithoutUser = buildExporterRecord({
-        rowId: '1',
-        tonnage: 50,
-        updatedBy: null
-      })
-
+  describe('actor attribution', () => {
+    it('stamps createdBy on each transaction from the SubmitUser, not the record', async () => {
       await performUpdateViaLedger({
-        wasteRecords: [recordWithoutUser],
+        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         ledgerRepository,
         dependencies: { systemLogsRepository },
@@ -585,9 +581,7 @@ describe('performUpdateViaLedger', () => {
       })
 
       const latest = await ledgerRepository.findLatestByAccreditationId('acc-1')
-      expect(latest).not.toBeNull()
-      expect(latest.createdBy).toBeUndefined()
-      expect(latest.amount).toBe(50)
+      expect(latest.createdBy).toEqual({ id: user.id, name: user.email })
     })
   })
 
