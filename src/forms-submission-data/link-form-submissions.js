@@ -207,7 +207,7 @@ function linkAccreditationsForOrg(organisation) {
       if (matchedAccreditations.length > 1) {
         logger.warn({
           message:
-            `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
+            `Multiple accreditations match registration, picking latest by formSubmission.time: ` +
             `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
             `registration=[${formatRegistrationDetails(registration)}],` +
             `selected accreditation=[${formatAccreditationDetails(latestMatchedAccreditation)}]`

@@ -38,8 +38,7 @@
  *   businessType?: string
  *   companyDetails: object
  *   defraId?: DefraId
- *   formSubmission?: { id: string, time: Date }
- *   formSubmissionTime: Date
+ *   formSubmission: { id: string, time: Date }
  *   id: string
  *   managementContactDetails?: User
  *   orgId: number
@@ -57,8 +56,7 @@
  *   approvedPersons: User[]
  *   cbduNumber: string
  *   exportPorts?: string[]
- *   formSubmission?: { id: string, time: Date }
- *   formSubmissionTime: Date
+ *   formSubmission: { id: string, time: Date }
  *   glassRecyclingProcess?: string
  *   id: string
  *   material: string
@@ -82,8 +80,7 @@
 
 /**
  * @typedef {{
- *   formSubmission?: { id: string, time: Date }
- *   formSubmissionTime: Date
+ *   formSubmission: { id: string, time: Date }
  *   glassRecyclingProcess?: string
  *   id: string
  *   material: string

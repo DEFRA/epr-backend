@@ -656,7 +656,7 @@ const buildComplexTestOrg = ({
     material,
     wasteProcessingType: processingType,
     reprocessingType,
-    formSubmissionTime: new Date(),
+    formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
     validTo: VALID_TO,

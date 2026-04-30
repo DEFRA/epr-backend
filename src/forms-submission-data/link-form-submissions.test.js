@@ -680,7 +680,7 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result[0].registrations[0].accreditationId).toBe(accId2)
 
     const expectedMessage =
-      `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
+      `Multiple accreditations match registration, picking latest by formSubmission.time: ` +
       `orgId=100,orgDbId=${org1Id},` +
       `registration=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)}],` +
       `selected accreditation=[id=${accId2},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[1].site)}]`
