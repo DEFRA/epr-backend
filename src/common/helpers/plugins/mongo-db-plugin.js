@@ -1,7 +1,7 @@
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { config } from '#root/config.js'
+import { isProductionEnvironment } from '#root/config.js'
 import { LockManager } from 'mongo-locks'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -38,8 +38,6 @@ export const mongoDbPlugin = {
 
       const locker = new LockManager(db.collection('mongo-locks'))
 
-      const isProduction = () => config.get('cdpEnvironment') === 'prod'
-
       await createFormCollections(db)
       await createLockManagerIndex(db)
 
@@ -50,7 +48,7 @@ export const mongoDbPlugin = {
 
       await createSeedData(
         db,
-        isProduction,
+        isProductionEnvironment,
         organisationsRepositoryFactory(),
         wasteRecordsRepositoryFactory()
       )

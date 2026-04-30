@@ -3,12 +3,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
-import { getConfig } from '#root/config.js'
+import { isProductionEnvironment } from '#root/config.js'
 
 /** @import { HapiRequest } from '../hapi-types.js' */
 
-const config = getConfig()
-const isProductionEnvironment = config.get('cdpEnvironment') === 'prod'
 const MAX_LOGGED_VALIDATION_ERRORS = 5
 
 /**
@@ -67,7 +65,7 @@ export function failAction(request, _h, error) {
   if (isJoiValidationError(error)) {
     const boomError = Boom.badData(error.message)
 
-    const message = isProductionEnvironment
+    const message = isProductionEnvironment()
       ? error.message
       : formatValidationMessage(error)
 
