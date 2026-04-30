@@ -45,8 +45,7 @@ export class LedgerSlotConflictError extends Error {
 /**
  * @typedef {{ type: string, rowId: string }} WasteRecordKey
  *   The compound identity of a waste record within an accreditation —
- *   `(type, rowId)`. Replaces the synthesised `${type}:${rowId}` flat string
- *   used in the first iteration of ADR 0031.
+ *   `(type, rowId)`.
  */
 
 /**

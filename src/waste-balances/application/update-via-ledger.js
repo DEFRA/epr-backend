@@ -109,7 +109,7 @@ const builderFor = (
 }
 
 /**
- * Migrate the summary-log row write path onto the ledger.
+ * Apply a summary-log row batch to the ledger.
  *
  * Reads the running credited amount per `wasteRecordId` once for the whole
  * batch (idempotency invariant), computes deltas, and appends one
@@ -123,7 +123,7 @@ const builderFor = (
  * never fires. ADR 0031 accepts this trade-off explicitly: the next re-upload
  * converges the ledger and emits a single combined audit event.
  *
- * Audit emission shares its helper with the v1 path so the back-office
+ * Audit emission goes through the shared helper so the back-office
  * system-logs view and the CDP audit stream see the same lifecycle either
  * side of the flag.
  *

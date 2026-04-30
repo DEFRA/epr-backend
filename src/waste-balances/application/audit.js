@@ -5,14 +5,13 @@ import {
 
 /**
  * Emit the back-office system-log entry and the CDP audit event for a waste
- * balance update. Shared by both the v1 embedded-array path
- * (`repository/helpers.js`) and the v2 ledger-append path
- * (`application/update-via-ledger.js`) so the two write paths produce
- * identical audit shapes — ADR 0031's transparency requirement.
+ * balance update. Both write paths — the embedded-array path in
+ * `repository/helpers.js` and the ledger-append path in
+ * `application/update-via-ledger.js` — share this helper so they produce
+ * identical audit shapes (ADR 0031's transparency requirement).
  *
- * Anonymous calls (no user id and no email) skip emission; this matches
- * the pre-ledger behaviour and exists to support background sync flows that
- * legitimately have no user context.
+ * Anonymous calls (no user id and no email) skip emission to support
+ * background sync flows that legitimately have no user context.
  *
  * If the full payload exceeds the safe-audit size limit, the system-log
  * entry falls back to a count-only context. The audit event itself goes
