@@ -21,10 +21,12 @@ const buildSummaryLogRowSource = (rowId) => ({
   kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
   summaryLogRow: {
     summaryLogId: 'log-1',
-    rowId,
-    rowType: WASTE_RECORD_TYPE.RECEIVED,
-    wasteRecordId: `waste-record-${rowId}`,
-    wasteRecordVersionId: `version-${rowId}`
+    wasteRecord: {
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      rowId,
+      versionId: `version-${rowId}`,
+      creditedAmount: 0
+    }
   }
 })
 

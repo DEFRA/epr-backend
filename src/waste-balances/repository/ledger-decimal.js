@@ -1,5 +1,6 @@
 import { Decimal128 } from 'mongodb'
 
+import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import { toDecimalString, toNumber } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -11,6 +12,10 @@ import { toDecimalString, toNumber } from '#common/helpers/decimal-utils.js'
  * introduce — at 73,000 transactions per accreditation per year (ADR 0031),
  * the drift would be material. Reads convert back to JS numbers via
  * `toNumber` so callers stay in the same shape they handed in.
+ *
+ * Summary-log-row transactions also carry `source.summaryLogRow.wasteRecord.creditedAmount`,
+ * the running per-waste-record net credit total. It follows the same
+ * encoding discipline.
  *
  * Only the amount fields need conversion — the slot `number`, identifiers,
  * and dates pass through unchanged.
@@ -40,6 +45,45 @@ const snapshotFromMongo = (snapshot) => ({
 })
 
 /**
+ * @param {import('./ledger-schema.js').LedgerSource} source
+ */
+const sourceToMongo = (source) => {
+  if (source.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
+    return source
+  }
+  return {
+    ...source,
+    summaryLogRow: {
+      ...source.summaryLogRow,
+      wasteRecord: {
+        ...source.summaryLogRow.wasteRecord,
+        creditedAmount: toDecimal128(
+          source.summaryLogRow.wasteRecord.creditedAmount
+        )
+      }
+    }
+  }
+}
+
+const sourceFromMongo = (source) => {
+  if (source?.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
+    return source
+  }
+  return {
+    ...source,
+    summaryLogRow: {
+      ...source.summaryLogRow,
+      wasteRecord: {
+        ...source.summaryLogRow.wasteRecord,
+        creditedAmount: toNumber(
+          /** @type {*} */ (source.summaryLogRow.wasteRecord.creditedAmount)
+        )
+      }
+    }
+  }
+}
+
+/**
  * Convert the amount fields of a ledger transaction insert document to BSON
  * Decimal128. Other fields pass through unchanged.
  *
@@ -49,7 +93,8 @@ export const ledgerInsertToMongo = (transaction) => ({
   ...transaction,
   amount: toDecimal128(transaction.amount),
   openingBalance: snapshotToMongo(transaction.openingBalance),
-  closingBalance: snapshotToMongo(transaction.closingBalance)
+  closingBalance: snapshotToMongo(transaction.closingBalance),
+  source: sourceToMongo(transaction.source)
 })
 
 /**
@@ -57,11 +102,12 @@ export const ledgerInsertToMongo = (transaction) => ({
  * JS numbers. `toNumber` accepts both Decimal128 and plain numbers, so legacy
  * Double-typed rows round-trip without a separate read path.
  *
- * @param {Record<string, unknown> & { amount: unknown, openingBalance: { amount: unknown, availableAmount: unknown }, closingBalance: { amount: unknown, availableAmount: unknown } }} doc
+ * @param {Record<string, unknown> & { amount: unknown, openingBalance: { amount: unknown, availableAmount: unknown }, closingBalance: { amount: unknown, availableAmount: unknown }, source: unknown }} doc
  */
 export const ledgerDocumentFromMongo = (doc) => ({
   ...doc,
   amount: toNumber(/** @type {*} */ (doc.amount)),
   openingBalance: snapshotFromMongo(doc.openingBalance),
-  closingBalance: snapshotFromMongo(doc.closingBalance)
+  closingBalance: snapshotFromMongo(doc.closingBalance),
+  source: sourceFromMongo(doc.source)
 })

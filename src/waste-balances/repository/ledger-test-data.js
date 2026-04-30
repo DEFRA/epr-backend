@@ -7,12 +7,15 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
 
-const buildSummaryLogRowSource = (overrides = {}) => ({
+const buildSummaryLogRowSource = ({ wasteRecord = {}, ...overrides } = {}) => ({
   summaryLogId: 'log-1',
-  rowId: 'row-1',
-  rowType: WASTE_RECORD_TYPE.RECEIVED,
-  wasteRecordId: 'waste-record-1',
-  wasteRecordVersionId: 'version-1',
+  wasteRecord: {
+    type: WASTE_RECORD_TYPE.RECEIVED,
+    rowId: 'row-1',
+    versionId: 'version-1',
+    creditedAmount: 10,
+    ...wasteRecord
+  },
   ...overrides
 })
 

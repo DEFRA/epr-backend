@@ -61,7 +61,7 @@ describe('MongoDB waste balances repository', () => {
         .indexes()
       const names = indexes.map((idx) => idx.name)
       expect(names).toContain('accreditationId_number')
-      expect(names).toContain('summaryLogRow_wasteRecordId')
+      expect(names).toContain('summaryLogRow_wasteRecord_findLatest')
       expect(names).toContain('summaryLogRow_row')
       expect(names).toContain('prnOperation_prnId')
     })

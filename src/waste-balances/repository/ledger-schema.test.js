@@ -194,10 +194,12 @@ describe('ledger transaction insert schema', () => {
           kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
           summaryLogRow: {
             summaryLogId: 'log-1',
-            rowId: 'row-1',
-            rowType: 'received',
-            wasteRecordId: 'wr-1',
-            wasteRecordVersionId: 'v-1'
+            wasteRecord: {
+              type: 'received',
+              rowId: 'row-1',
+              versionId: 'v-1',
+              creditedAmount: 10
+            }
           },
           prnOperation: {
             prnId: 'prn-1',
@@ -219,33 +221,42 @@ describe('ledger transaction insert schema', () => {
   })
 
   describe('summary-log-row source fields', () => {
-    const required = [
-      'summaryLogId',
-      'rowId',
-      'rowType',
-      'wasteRecordId',
-      'wasteRecordVersionId'
-    ]
+    it('rejects when source.summaryLogRow.summaryLogId is missing', () => {
+      const data = buildLedgerTransaction()
+      delete data.source.summaryLogRow.summaryLogId
+      const { error } = ledgerTransactionInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
 
-    for (const field of required) {
-      it(`rejects when source.summaryLogRow.${field} is missing`, () => {
+    it('rejects when source.summaryLogRow.wasteRecord is missing', () => {
+      const data = buildLedgerTransaction()
+      delete data.source.summaryLogRow.wasteRecord
+      const { error } = ledgerTransactionInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    const wasteRecordRequired = ['type', 'rowId', 'versionId', 'creditedAmount']
+    for (const field of wasteRecordRequired) {
+      it(`rejects when source.summaryLogRow.wasteRecord.${field} is missing`, () => {
         const data = buildLedgerTransaction()
-        delete data.source.summaryLogRow[field]
+        delete data.source.summaryLogRow.wasteRecord[field]
         const { error } = ledgerTransactionInsertSchema.validate(data)
         expect(error).toBeDefined()
       })
     }
 
-    it('rejects an unknown rowType', () => {
+    it('rejects an unknown wasteRecord.type', () => {
       const data = buildLedgerTransaction({
         source: {
           kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
           summaryLogRow: {
             summaryLogId: 'log-1',
-            rowId: 'row-1',
-            rowType: 'mystery',
-            wasteRecordId: 'wr-1',
-            wasteRecordVersionId: 'v-1'
+            wasteRecord: {
+              type: 'mystery',
+              rowId: 'row-1',
+              versionId: 'v-1',
+              creditedAmount: 10
+            }
           }
         }
       })
@@ -253,18 +264,20 @@ describe('ledger transaction insert schema', () => {
       expect(error).toBeDefined()
     })
 
-    it('accepts all documented rowType values', () => {
-      const rowTypes = ['received', 'processed', 'sentOn', 'exported']
-      for (const rowType of rowTypes) {
+    it('accepts all documented wasteRecord.type values', () => {
+      const types = ['received', 'processed', 'sentOn', 'exported']
+      for (const type of types) {
         const data = buildLedgerTransaction({
           source: {
             kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
             summaryLogRow: {
               summaryLogId: 'log-1',
-              rowId: 'row-1',
-              rowType,
-              wasteRecordId: 'wr-1',
-              wasteRecordVersionId: 'v-1'
+              wasteRecord: {
+                type,
+                rowId: 'row-1',
+                versionId: 'v-1',
+                creditedAmount: 10
+              }
             }
           }
         })

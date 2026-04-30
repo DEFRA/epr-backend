@@ -63,12 +63,17 @@ describe('ensureLedgerCollection', () => {
       )
     })
 
-    it('creates the summaryLogRow_wasteRecordId index', async ({
+    it('creates the summaryLogRow_wasteRecord_findLatest compound index for find-latest reconciliation reads', async ({
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'summaryLogRow_wasteRecordId')).toEqual({
-        'source.summaryLogRow.wasteRecordId': 1
+      expect(
+        indexKeyFor(indexes, 'summaryLogRow_wasteRecord_findLatest')
+      ).toEqual({
+        accreditationId: 1,
+        'source.summaryLogRow.wasteRecord.type': 1,
+        'source.summaryLogRow.wasteRecord.rowId': 1,
+        number: -1
       })
     })
 
@@ -78,8 +83,8 @@ describe('ensureLedgerCollection', () => {
       const indexes = await ledgerCollection.indexes()
       expect(indexKeyFor(indexes, 'summaryLogRow_row')).toEqual({
         'source.summaryLogRow.summaryLogId': 1,
-        'source.summaryLogRow.rowId': 1,
-        'source.summaryLogRow.rowType': 1
+        'source.summaryLogRow.wasteRecord.rowId': 1,
+        'source.summaryLogRow.wasteRecord.type': 1
       })
     })
 

@@ -13,12 +13,11 @@ import {
   ledgerInsertToMongo
 } from './ledger-decimal.js'
 import { LedgerSlotConflictError } from './ledger-port.js'
-import { LEDGER_SOURCE_KIND, LEDGER_TRANSACTION_TYPE } from './ledger-schema.js'
+import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import {
   validateLedgerTransactionInsert,
   validateLedgerTransactionRead
 } from './ledger-validation.js'
-import { toNumber } from '#common/helpers/decimal-utils.js'
 
 export const WASTE_BALANCE_LEDGER_COLLECTION_NAME = 'waste-balance-transactions'
 
@@ -41,9 +40,19 @@ export async function ensureLedgerCollection(db) {
     { name: 'accreditationId_number', unique: true }
   )
 
+  // Per-row delta reconciliation: descending on `number` so the find-latest
+  // read is a direct index scan with `limit(1)`. Only summary-log-row
+  // transactions carry `source.summaryLogRow`, so PRN operations and PRN
+  // pending debits do not appear in this index — no pending-debit filter
+  // needed.
   await collection.createIndex(
-    { 'source.summaryLogRow.wasteRecordId': 1 },
-    { name: 'summaryLogRow_wasteRecordId' }
+    {
+      accreditationId: 1,
+      'source.summaryLogRow.wasteRecord.type': 1,
+      'source.summaryLogRow.wasteRecord.rowId': 1,
+      number: -1
+    },
+    { name: 'summaryLogRow_wasteRecord_findLatest' }
   )
 
   // Compound index serves both "transactions for summary log S" queries
@@ -53,8 +62,8 @@ export async function ensureLedgerCollection(db) {
   await collection.createIndex(
     {
       'source.summaryLogRow.summaryLogId': 1,
-      'source.summaryLogRow.rowId': 1,
-      'source.summaryLogRow.rowType': 1
+      'source.summaryLogRow.wasteRecord.rowId': 1,
+      'source.summaryLogRow.wasteRecord.type': 1
     },
     { name: 'summaryLogRow_row' }
   )
@@ -148,67 +157,60 @@ const performFindLatestByAccreditationId =
   }
 
 /**
- * Resolve credited amounts in one round trip. The aggregation matches every
- * `summary-log-row` transaction for the accreditation whose `wasteRecordId`
- * is in the input, signs each amount by transaction type, and groups by
- * `wasteRecordId`. Pending debits do not participate — they are a ringfence
- * against the running balance, not a credit attributable to any specific
- * waste record. The `accreditationId` filter is load-bearing because
- * `wasteRecordId` ("type:rowId") is not globally unique across accreditations.
+ * Stable map key for a waste record `(type, rowId)`. Private to this
+ * adapter — Maps need primitive-or-reference equality, so we synthesise a
+ * string for lookup. Never persisted.
+ *
+ * @param {{ type: string, rowId: string }} record
+ */
+const wasteRecordKey = ({ type, rowId }) => `${type}:${rowId}`
+
+/**
+ * Resolve the running per-waste-record credited total for a batch. For each
+ * input `(type, rowId)`, runs a `findOne` against the find-latest secondary
+ * index — descending `number`, `limit(1)` — and stamps the persisted
+ * `wasteRecord.creditedAmount` into the lookup map. Records with no prior
+ * matching transaction return `0`.
+ *
+ * The `accreditationId` filter is load-bearing: `(type, rowId)` is unique
+ * within an accreditation but not globally, so two accreditations can
+ * legitimately use the same `(exported, "1")` pair.
  *
  * @param {Collection} collection
- * @returns {(accreditationId: string, wasteRecordIds: string[]) => Promise<Map<string, number>>}
+ * @returns {(accreditationId: string, wasteRecords: Array<{ type: string, rowId: string }>) => Promise<import('./ledger-port.js').CreditedAmountLookup>}
  */
-const performFindCreditedAmountsByWasteRecordIds =
-  (collection) => async (accreditationId, wasteRecordIds) => {
-    const totals = new Map()
-    for (const id of wasteRecordIds) {
-      totals.set(id, 0)
+const performFindLatestCreditedAmountsByWasteRecords =
+  (collection) => async (accreditationId, wasteRecords) => {
+    const uniqueByKey = new Map()
+    for (const record of wasteRecords) {
+      uniqueByKey.set(wasteRecordKey(record), record)
     }
 
-    if (totals.size === 0) {
-      return totals
-    }
+    const credited = new Map()
 
-    const requestedIds = Array.from(totals.keys())
-
-    const aggregated = await collection
-      .aggregate([
-        {
-          $match: {
+    await Promise.all(
+      Array.from(uniqueByKey, async ([key, record]) => {
+        const doc = await collection.findOne(
+          {
             accreditationId,
             'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
-            'source.summaryLogRow.wasteRecordId': { $in: requestedIds }
-          }
-        },
-        {
-          $group: {
-            _id: '$source.summaryLogRow.wasteRecordId',
-            total: {
-              $sum: {
-                $cond: [
-                  { $eq: ['$type', LEDGER_TRANSACTION_TYPE.CREDIT] },
-                  '$amount',
-                  {
-                    $cond: [
-                      { $eq: ['$type', LEDGER_TRANSACTION_TYPE.DEBIT] },
-                      { $multiply: ['$amount', -1] },
-                      0
-                    ]
-                  }
-                ]
-              }
-            }
-          }
+            'source.summaryLogRow.wasteRecord.type': record.type,
+            'source.summaryLogRow.wasteRecord.rowId': record.rowId
+          },
+          { sort: { number: -1 } }
+        )
+
+        if (doc) {
+          const decoded = ledgerDocumentFromMongo(/** @type {*} */ (doc))
+          credited.set(
+            key,
+            decoded.source.summaryLogRow.wasteRecord.creditedAmount
+          )
         }
-      ])
-      .toArray()
+      })
+    )
 
-    for (const { _id, total } of aggregated) {
-      totals.set(_id, toNumber(/** @type {*} */ (total)))
-    }
-
-    return totals
+    return (record) => credited.get(wasteRecordKey(record)) ?? 0
   }
 
 /**
@@ -223,7 +225,7 @@ export const createMongoLedgerRepository = async (db) => {
   return () => ({
     insertTransactions: performInsertTransactions(collection),
     findLatestByAccreditationId: performFindLatestByAccreditationId(collection),
-    findCreditedAmountsByWasteRecordIds:
-      performFindCreditedAmountsByWasteRecordIds(collection)
+    findLatestCreditedAmountsByWasteRecords:
+      performFindLatestCreditedAmountsByWasteRecords(collection)
   })
 }

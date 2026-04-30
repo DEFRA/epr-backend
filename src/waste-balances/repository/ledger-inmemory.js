@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto'
 
 import { LedgerSlotConflictError } from './ledger-port.js'
-import { LEDGER_SOURCE_KIND, LEDGER_TRANSACTION_TYPE } from './ledger-schema.js'
+import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import { validateLedgerTransactionInsert } from './ledger-validation.js'
-import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
 /**
  * In-memory adapter for the waste balance ledger.
@@ -21,19 +20,13 @@ import { add, toNumber } from '#common/helpers/decimal-utils.js'
  */
 
 /**
- * @param {LedgerTransaction} transaction
- * @returns {number} amount contributing to the credited total — credits add,
- *   debits subtract, pending debits do not participate
+ * Stable map key for a waste record `(type, rowId)`. Private to this
+ * adapter — Maps need primitive-or-reference equality, so we synthesise a
+ * string for lookup. Never persisted.
+ *
+ * @param {{ type: string, rowId: string }} record
  */
-const signedContribution = (transaction) => {
-  if (transaction.type === LEDGER_TRANSACTION_TYPE.CREDIT) {
-    return transaction.amount
-  }
-  if (transaction.type === LEDGER_TRANSACTION_TYPE.DEBIT) {
-    return -transaction.amount
-  }
-  return 0
-}
+const wasteRecordKey = ({ type, rowId }) => `${type}:${rowId}`
 
 /**
  * @param {Array<LedgerTransaction>} [initialTransactions]
@@ -99,20 +92,15 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
     },
     /**
      * @param {string} accreditationId
-     * @param {string[]} wasteRecordIds
+     * @param {Array<{ type: string, rowId: string }>} wasteRecords
+     * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
      */
-    findCreditedAmountsByWasteRecordIds: async (
+    findLatestCreditedAmountsByWasteRecords: async (
       accreditationId,
-      wasteRecordIds
+      wasteRecords
     ) => {
-      const totals = new Map()
-      for (const id of wasteRecordIds) {
-        totals.set(id, 0)
-      }
-
-      if (totals.size === 0) {
-        return totals
-      }
+      const requested = new Set(wasteRecords.map(wasteRecordKey))
+      const latestByKey = new Map()
 
       for (const transaction of storage) {
         if (
@@ -122,19 +110,21 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
           continue
         }
 
-        const wasteRecordId = transaction.source.summaryLogRow?.wasteRecordId
-        if (totals.has(wasteRecordId)) {
-          const contribution = signedContribution(transaction)
-          if (contribution !== 0) {
-            totals.set(
-              wasteRecordId,
-              toNumber(add(totals.get(wasteRecordId), contribution))
-            )
-          }
+        const key = wasteRecordKey(transaction.source.summaryLogRow.wasteRecord)
+        if (!requested.has(key)) {
+          continue
+        }
+
+        const existing = latestByKey.get(key)
+        if (!existing || transaction.number > existing.number) {
+          latestByKey.set(key, transaction)
         }
       }
 
-      return totals
+      return (record) => {
+        const found = latestByKey.get(wasteRecordKey(record))
+        return found ? found.source.summaryLogRow.wasteRecord.creditedAmount : 0
+      }
     }
   })
 }

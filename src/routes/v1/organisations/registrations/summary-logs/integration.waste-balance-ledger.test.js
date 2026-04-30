@@ -133,12 +133,16 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     })
     expect(latest.source.kind).toBe(LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW)
 
-    const credited = await ledgerRepository.findCreditedAmountsByWasteRecordIds(
-      accreditationId,
-      ['exported:1001', 'exported:1002']
-    )
-    expect(credited.get('exported:1001')).toBe(100)
-    expect(credited.get('exported:1002')).toBe(200)
+    const lookupCredited =
+      await ledgerRepository.findLatestCreditedAmountsByWasteRecords(
+        accreditationId,
+        [
+          { type: 'exported', rowId: '1001' },
+          { type: 'exported', rowId: '1002' }
+        ]
+      )
+    expect(lookupCredited({ type: 'exported', rowId: '1001' })).toBe(100)
+    expect(lookupCredited({ type: 'exported', rowId: '1002' })).toBe(200)
 
     const v1Balance =
       await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -209,7 +213,10 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
       amount: 200,
       availableAmount: 200
     })
-    expect(latest.source.summaryLogRow.wasteRecordId).toBe('exported:3002')
+    expect(latest.source.summaryLogRow.wasteRecord).toMatchObject({
+      type: 'exported',
+      rowId: '3002'
+    })
   })
 
   it('audits each successful ledger append into the system-logs repository', async () => {

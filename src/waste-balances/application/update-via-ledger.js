@@ -17,18 +17,10 @@ import {
 import { appendToLedger } from './append-to-ledger.js'
 import { recordWasteBalanceUpdateAudit } from './audit.js'
 
-/**
- * Build the identifier we key ledger transactions by. Combining `type` and
- * `rowId` dodges the PAE-1380 collision class (same naked `rowId` reused
- * across waste record types) without coupling the ledger to the storage-layer
- * `_id` of the waste-records collection.
- *
- * The pair is unique within an accreditation but not globally — bulk reads
- * MUST scope by accreditationId; see `LedgerRepository#findCreditedAmountsByWasteRecordIds`.
- *
- * @param {{ type: string, rowId: string | number }} record
- */
-export const wasteRecordIdFor = (record) => `${record.type}:${record.rowId}`
+const wasteRecordKeyFor = (record) => ({
+  type: record.type,
+  rowId: String(record.rowId)
+})
 
 const targetAmountFor = (record, accreditation, overseasSites) => {
   if (record.excludedFromWasteBalance) {
@@ -56,20 +48,19 @@ const targetAmountFor = (record, accreditation, overseasSites) => {
  * @param {object} record
  * @param {object} accreditation
  * @param {OverseasSitesContext} overseasSites
- * @param {Map<string, number>} alreadyCreditedByWasteRecordId
+ * @param {import('../repository/ledger-port.js').CreditedAmountLookup} previousCreditedFor
  */
 const builderFor = (
   record,
   accreditation,
   overseasSites,
-  alreadyCreditedByWasteRecordId
+  previousCreditedFor
 ) => {
   const targetAmount = targetAmountFor(record, accreditation, overseasSites)
-  const wasteRecordId = wasteRecordIdFor(record)
-  /* c8 ignore next -- ?? 0 documents the zero-fill contract for the type checker; the right branch is unreachable because findCreditedAmountsByWasteRecordIds zero-fills every requested id */
-  const alreadyCredited = alreadyCreditedByWasteRecordId.get(wasteRecordId) ?? 0
+  const recordKey = wasteRecordKeyFor(record)
+  const previousCreditedAmount = previousCreditedFor(recordKey)
 
-  const delta = subtract(targetAmount, alreadyCredited)
+  const delta = subtract(targetAmount, previousCreditedAmount)
   if (equals(delta, 0)) {
     return null
   }
@@ -103,10 +94,12 @@ const builderFor = (
         kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
         summaryLogRow: {
           summaryLogId: latestVersion.summaryLog.id,
-          rowId: String(record.rowId),
-          rowType: record.type,
-          wasteRecordId,
-          wasteRecordVersionId: latestVersion.id
+          wasteRecord: {
+            type: record.type,
+            rowId: recordKey.rowId,
+            versionId: latestVersion.id,
+            creditedAmount: targetAmount
+          }
         }
       },
       createdAt: new Date(),
@@ -155,12 +148,10 @@ export const performUpdateViaLedger = async ({
     return
   }
 
-  const wasteRecordIds = Array.from(new Set(wasteRecords.map(wasteRecordIdFor)))
-
-  const alreadyCreditedByWasteRecordId =
-    await ledgerRepository.findCreditedAmountsByWasteRecordIds(
+  const previousCreditedFor =
+    await ledgerRepository.findLatestCreditedAmountsByWasteRecords(
       accreditation.id,
-      wasteRecordIds
+      wasteRecords.map(wasteRecordKeyFor)
     )
 
   const builders = []
@@ -169,7 +160,7 @@ export const performUpdateViaLedger = async ({
       record,
       accreditation,
       overseasSites,
-      alreadyCreditedByWasteRecordId
+      previousCreditedFor
     )
     if (builder) {
       builders.push(builder)

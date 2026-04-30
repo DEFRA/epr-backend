@@ -5,10 +5,7 @@ import {
   LEDGER_SOURCE_KIND,
   LEDGER_TRANSACTION_TYPE
 } from '../repository/ledger-schema.js'
-import {
-  performUpdateViaLedger,
-  wasteRecordIdFor
-} from './update-via-ledger.js'
+import { performUpdateViaLedger } from './update-via-ledger.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -84,26 +81,6 @@ const buildExporterRecord = ({
   excludedFromWasteBalance: false
 })
 
-describe('wasteRecordIdFor', () => {
-  it('combines type and rowId into a stable identifier', () => {
-    expect(
-      wasteRecordIdFor({ type: WASTE_RECORD_TYPE.EXPORTED, rowId: '42' })
-    ).toBe('exported:42')
-  })
-
-  it('coerces non-string rowIds (numeric ROW_IDs from spreadsheets)', () => {
-    expect(
-      wasteRecordIdFor({ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 7 })
-    ).toBe('received:7')
-  })
-
-  it('keeps disjoint identifiers when types differ for the same rowId (PAE-1380)', () => {
-    const a = wasteRecordIdFor({ type: WASTE_RECORD_TYPE.RECEIVED, rowId: '1' })
-    const b = wasteRecordIdFor({ type: WASTE_RECORD_TYPE.SENT_ON, rowId: '1' })
-    expect(a).not.toBe(b)
-  })
-})
-
 describe('performUpdateViaLedger', () => {
   let ledgerRepository
   let systemLogsRepository
@@ -162,7 +139,7 @@ describe('performUpdateViaLedger', () => {
       })
     })
 
-    it('uses summary-log-row source kind with synthesised wasteRecordId', async () => {
+    it('uses summary-log-row source kind with the wasteRecord sub-object', async () => {
       const record = buildExporterRecord({
         rowId: '7',
         tonnage: 30,
@@ -184,10 +161,12 @@ describe('performUpdateViaLedger', () => {
         kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
         summaryLogRow: {
           summaryLogId: 'log-A',
-          rowId: '7',
-          rowType: WASTE_RECORD_TYPE.EXPORTED,
-          wasteRecordId: 'exported:7',
-          wasteRecordVersionId: 'v-7'
+          wasteRecord: {
+            type: WASTE_RECORD_TYPE.EXPORTED,
+            rowId: '7',
+            versionId: 'v-7',
+            creditedAmount: 30
+          }
         }
       })
     })
@@ -286,7 +265,12 @@ describe('performUpdateViaLedger', () => {
         amount: 170,
         availableAmount: 170
       })
-      expect(latest.source.summaryLogRow.wasteRecordId).toBe('exported:2')
+      expect(latest.source.summaryLogRow.wasteRecord).toEqual({
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        rowId: '2',
+        versionId: 'v-2b',
+        creditedAmount: 70
+      })
     })
 
     it('emits a debit when a re-upload reduces a tonnage', async () => {
@@ -354,6 +338,41 @@ describe('performUpdateViaLedger', () => {
       expect(latest.number).toBe(2)
       expect(latest.closingBalance).toEqual({ amount: 70, availableAmount: 70 })
     })
+
+    it('stamps the running creditedAmount on each summary-log-row transaction', async () => {
+      await performUpdateViaLedger({
+        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
+        accreditation,
+        ledgerRepository,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites
+      })
+      await performUpdateViaLedger({
+        wasteRecords: [
+          buildExporterRecord({ rowId: '1', tonnage: 30, versionId: 'v-1b' })
+        ],
+        accreditation,
+        ledgerRepository,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites
+      })
+      await performUpdateViaLedger({
+        wasteRecords: [
+          buildExporterRecord({ rowId: '1', tonnage: 90, versionId: 'v-1c' })
+        ],
+        accreditation,
+        ledgerRepository,
+        dependencies: { systemLogsRepository },
+        user,
+        overseasSites
+      })
+
+      const latest = await ledgerRepository.findLatestByAccreditationId('acc-1')
+      expect(latest.number).toBe(3)
+      expect(latest.source.summaryLogRow.wasteRecord.creditedAmount).toBe(90)
+    })
   })
 
   describe('partial-prior-submission recovery', () => {
@@ -388,7 +407,12 @@ describe('performUpdateViaLedger', () => {
         amount: 175,
         availableAmount: 175
       })
-      expect(latest.source.summaryLogRow.wasteRecordId).toBe('exported:3')
+      expect(latest.source.summaryLogRow.wasteRecord).toEqual({
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        rowId: '3',
+        versionId: 'version-3',
+        creditedAmount: 25
+      })
     })
   })
 

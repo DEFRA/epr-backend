@@ -43,14 +43,18 @@ const userSummarySchema = Joi.object({
   name: Joi.string().required()
 })
 
-const summaryLogRowSourceSchema = Joi.object({
-  summaryLogId: Joi.string().required(),
-  rowId: Joi.string().required(),
-  rowType: Joi.string()
+const wasteRecordSchema = Joi.object({
+  type: Joi.string()
     .valid(...rowTypeValues)
     .required(),
-  wasteRecordId: Joi.string().required(),
-  wasteRecordVersionId: Joi.string().required()
+  rowId: Joi.string().required(),
+  versionId: Joi.string().required(),
+  creditedAmount: Joi.number().required()
+})
+
+const summaryLogRowSourceSchema = Joi.object({
+  summaryLogId: Joi.string().required(),
+  wasteRecord: wasteRecordSchema.required()
 })
 
 const prnOperationSourceSchema = Joi.object({
@@ -77,12 +81,21 @@ const sourceSchema = Joi.object({
 })
 
 /**
+ * @typedef {Object} LedgerWasteRecord
+ * @property {import('#domain/waste-records/model.js').WasteRecordType} type
+ * @property {string} rowId
+ * @property {string} versionId
+ * @property {number} creditedAmount
+ *   Running net credit total on this waste record after this transaction.
+ *   `previousCreditedAmount + delta = creditedAmount`, where
+ *   `previousCreditedAmount` comes from the latest prior matching
+ *   transaction or zero if none.
+ */
+
+/**
  * @typedef {Object} LedgerSummaryLogRow
  * @property {string} summaryLogId
- * @property {string} rowId
- * @property {import('#domain/waste-records/model.js').WasteRecordType} rowType
- * @property {string} wasteRecordId
- * @property {string} wasteRecordVersionId
+ * @property {LedgerWasteRecord} wasteRecord
  */
 
 /**
