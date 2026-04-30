@@ -122,3 +122,8 @@ export const reprocessingTypeSchema = Joi.when('wasteProcessingType', {
     .default(null),
   otherwise: Joi.forbidden()
 })
+
+export const formSubmissionSchema = Joi.object({
+  id: idSchema.required(),
+  time: Joi.date().iso().required()
+})

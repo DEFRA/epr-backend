@@ -466,7 +466,7 @@ export const createTestInfrastructure = async (
     logger: mockLogger
   })
 
-  const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+  const featureFlags = createInMemoryFeatureFlags()
 
   const server = await createTestServer({
     repositories: {
@@ -546,10 +546,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     logger: mockLogger
   })
 
-  const featureFlags = createInMemoryFeatureFlags({
-    summaryLogs: true,
-    ...featureFlagOverrides
-  })
+  const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
   const overseasSitesRepository = createInMemoryOverseasSitesRepository([
     {
@@ -659,7 +656,7 @@ const buildComplexTestOrg = ({
     material,
     wasteProcessingType: processingType,
     reprocessingType,
-    formSubmissionTime: new Date(),
+    formSubmission: { id: registrationId, time: new Date() },
     submittedToRegulator: 'ea',
     validFrom: VALID_FROM,
     validTo: VALID_TO,

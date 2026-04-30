@@ -1,7 +1,7 @@
 {
   "id": "6507f1f77bcf86cd79943901",
   "orgId": 50002,
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "version": 1,
   "statusHistory": [
     {
@@ -26,7 +26,10 @@
     ]
   },
   "submittedToRegulator": "ea",
-  "formSubmissionTime": "2025-08-22T19:34:44.944Z",
+  "formSubmission": {
+    "time": "2025-08-22T19:34:44.944Z",
+    "id": "6507f1f77bcf86cd79943901"
+  },
   "submitterContactDetails": {
     "fullName": "Anakin Skywalker",
     "email": "anakin.skywalker@starwars.com",
@@ -48,7 +51,10 @@
       ],
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
-      "formSubmissionTime": "2025-08-20T19:34:44.944Z",
+      "formSubmission": {
+        "time": "2025-08-20T19:34:44.944Z",
+        "id": "6507f1f77bcf86cd79943902"
+      },
       "site": {
         "address": {
           "line1": "7 Glass processing site",
@@ -152,7 +158,10 @@
       ],
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
-      "formSubmissionTime": "2025-08-21T19:34:44.944Z",
+      "formSubmission": {
+        "time": "2025-08-21T19:34:44.944Z",
+        "id": "68f6a147c117aec8a1ab7494"
+      },
       "material": "plastic",
       "wasteProcessingType": "exporter",
       "glassRecyclingProcess": null,
@@ -198,7 +207,10 @@
       "accreditationNumber": null,
       "validFrom": null,
       "validTo": null,
-      "formSubmissionTime": "2025-08-20T21:34:44.944Z",
+      "formSubmission": {
+        "time": "2025-08-20T21:34:44.944Z",
+        "id": "68f6a147c117aec8a1ab7495"
+      },
       "statusHistory": [
         {
           "status": "created",
@@ -282,7 +294,10 @@
       "accreditationNumber": null,
       "validFrom": null,
       "validTo": null,
-      "formSubmissionTime": "2025-08-21T21:34:44.944Z",
+      "formSubmission": {
+        "time": "2025-08-21T21:34:44.944Z",
+        "id": "68f6a147c117aec8a1ab7496"
+      },
       "statusHistory": [
         {
           "status": "created",
@@ -366,7 +381,10 @@
       "accreditationNumber": null,
       "validFrom": null,
       "validTo": null,
-      "formSubmissionTime": "2025-08-22T21:34:44.944Z",
+      "formSubmission": {
+        "time": "2025-08-22T21:34:44.944Z",
+        "id": "68f6a147c117aec8a1ab7494"
+      },
       "statusHistory": [
         {
           "status": "created",

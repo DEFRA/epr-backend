@@ -38,7 +38,7 @@
  *   businessType?: string
  *   companyDetails: object
  *   defraId?: DefraId
- *   formSubmissionTime: Date
+ *   formSubmission: { id: string, time: Date }
  *   id: string
  *   managementContactDetails?: User
  *   orgId: number
@@ -56,7 +56,7 @@
  *   approvedPersons: User[]
  *   cbduNumber: string
  *   exportPorts?: string[]
- *   formSubmissionTime: Date
+ *   formSubmission: { id: string, time: Date }
  *   glassRecyclingProcess?: string
  *   id: string
  *   material: string
@@ -80,7 +80,7 @@
 
 /**
  * @typedef {{
- *   formSubmissionTime: Date
+ *   formSubmission: { id: string, time: Date }
  *   glassRecyclingProcess?: string
  *   id: string
  *   material: string

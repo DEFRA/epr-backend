@@ -30,6 +30,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: registeredLtdPartnership._id.$oid,
       orgId: registeredLtdPartnership.orgId,
+      formSubmission: {
+        id: registeredLtdPartnership._id.$oid,
+        time: new Date('2025-10-08T16:14:15.390Z')
+      },
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
       reprocessingNations: [],
       businessType: undefined,
@@ -52,7 +56,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:14:15.390Z'),
       submittedToRegulator: 'ea',
       partnership: {
         type: PARTNERSHIP_TYPE.LTD,
@@ -84,6 +87,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: registeredLtdLiability._id.$oid,
       orgId: registeredLtdLiability.orgId,
+      formSubmission: {
+        id: registeredLtdLiability._id.$oid,
+        time: new Date('2025-10-08T16:13:16.313Z')
+      },
       wasteProcessingTypes: [
         WASTE_PROCESSING_TYPE.REPROCESSOR,
         WASTE_PROCESSING_TYPE.EXPORTER
@@ -110,7 +117,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:13:16.313Z'),
       submittedToRegulator: 'ea',
       partnership: {
         type: PARTNERSHIP_TYPE.LTD_LIABILITY,
@@ -133,6 +139,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: registeredNoPartnership._id.$oid,
       orgId: registeredNoPartnership.orgId,
+      formSubmission: {
+        id: registeredNoPartnership._id.$oid,
+        time: new Date('2025-10-08T16:19:54.601Z')
+      },
       wasteProcessingTypes: [
         WASTE_PROCESSING_TYPE.REPROCESSOR,
         WASTE_PROCESSING_TYPE.EXPORTER
@@ -164,7 +174,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:19:54.601Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -184,6 +193,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: nonRegisteredUkSoleTrader._id.$oid,
       orgId: nonRegisteredUkSoleTrader.orgId,
+      formSubmission: {
+        id: nonRegisteredUkSoleTrader._id.$oid,
+        time: new Date('2025-10-08T16:25:35.824Z')
+      },
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
       reprocessingNations: [NATION.ENGLAND, NATION.SCOTLAND],
       businessType: BUSINESS_TYPE.INDIVIDUAL,
@@ -211,7 +224,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Director'
       },
-      formSubmissionTime: new Date('2025-10-08T16:25:35.824Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -231,6 +243,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: nonRegisteredOutsideUk._id.$oid,
       orgId: nonRegisteredOutsideUk.orgId,
+      formSubmission: {
+        id: nonRegisteredOutsideUk._id.$oid,
+        time: new Date('2025-10-08T16:28:18.572Z')
+      },
       wasteProcessingTypes: [
         WASTE_PROCESSING_TYPE.REPROCESSOR,
         WASTE_PROCESSING_TYPE.EXPORTER
@@ -258,7 +274,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
-      formSubmissionTime: new Date('2025-10-08T16:28:18.572Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -278,6 +293,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: unincorporatedSeparateControl._id.$oid,
       orgId: unincorporatedSeparateControl.orgId,
+      formSubmission: {
+        id: unincorporatedSeparateControl._id.$oid,
+        time: new Date('2025-10-23T13:35:37.874Z')
+      },
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
       reprocessingNations: [],
       businessType: BUSINESS_TYPE.UNINCORPORATED,
@@ -305,7 +324,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Sustainability master'
       },
-      formSubmissionTime: new Date('2025-10-23T13:35:37.874Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -325,6 +343,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: soleTraderSeparateControl._id.$oid,
       orgId: soleTraderSeparateControl.orgId,
+      formSubmission: {
+        id: soleTraderSeparateControl._id.$oid,
+        time: new Date('2025-10-23T13:39:07.408Z')
+      },
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
       reprocessingNations: [],
       businessType: BUSINESS_TYPE.INDIVIDUAL,
@@ -352,7 +374,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Director'
       },
-      formSubmissionTime: new Date('2025-10-23T13:39:07.408Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })
@@ -375,6 +396,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
     expect(result[0]).toStrictEqual({
       id: nonUkSeparateControl._id.$oid,
       orgId: nonUkSeparateControl.orgId,
+      formSubmission: {
+        id: nonUkSeparateControl._id.$oid,
+        time: new Date('2025-10-23T13:42:35.918Z')
+      },
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
       reprocessingNations: [NATION.ENGLAND],
       businessType: undefined,
@@ -404,7 +429,6 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0123456789',
         jobTitle: 'Director'
       },
-      formSubmissionTime: new Date('2025-10-23T13:42:35.918Z'),
       submittedToRegulator: 'ea',
       partnership: undefined
     })

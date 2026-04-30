@@ -315,7 +315,22 @@ const performFindAllPeriodicReports = async (db) => {
           registrationId: 1,
           'status.currentStatus': 1,
           'status.created': 1,
-          'status.submitted': 1
+          'status.submitted': 1,
+          'recyclingActivity.totalTonnageReceived': 1,
+          'recyclingActivity.tonnageRecycled': 1,
+          'recyclingActivity.tonnageNotRecycled': 1,
+          'exportActivity.totalTonnageExported': 1,
+          'exportActivity.tonnageReceivedNotExported': 1,
+          'exportActivity.tonnageRefusedAtDestination': 1,
+          'exportActivity.tonnageStoppedDuringExport': 1,
+          'exportActivity.tonnageRepatriated': 1,
+          'wasteSent.tonnageSentToReprocessor': 1,
+          'wasteSent.tonnageSentToExporter': 1,
+          'wasteSent.tonnageSentToAnotherSite': 1,
+          'prn.issuedTonnage': 1,
+          'prn.totalRevenue': 1,
+          'prn.averagePricePerTonne': 1,
+          supportingInformation: 1
         }
       }
     )

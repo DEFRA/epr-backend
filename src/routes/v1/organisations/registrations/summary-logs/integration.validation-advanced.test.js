@@ -307,7 +307,7 @@ describe('Advanced validation scenarios', () => {
             registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
+            formSubmission: { id: registrationId, time: new Date() },
             submittedToRegulator: 'ea'
           }
         ]

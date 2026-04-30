@@ -18,6 +18,38 @@ import {
 const ALT_ORG_ID = new ObjectId().toString()
 const ALT_REG_ID = new ObjectId().toString()
 
+const TONNAGE_OVERRIDES = {
+  recyclingActivity: {
+    suppliers: [],
+    totalTonnageReceived: 120,
+    tonnageRecycled: 95.5,
+    tonnageNotRecycled: 24.5
+  },
+  exportActivity: {
+    overseasSites: [],
+    unapprovedOverseasSites: [],
+    totalTonnageExported: 40,
+    tonnageReceivedNotExported: 8,
+    tonnageRefusedAtDestination: 1.5,
+    tonnageStoppedDuringExport: 2,
+    totalTonnageRefusedOrStopped: 3.5,
+    tonnageRepatriated: 0.5
+  },
+  wasteSent: {
+    tonnageSentToReprocessor: 50,
+    tonnageSentToExporter: 20,
+    tonnageSentToAnotherSite: 10,
+    finalDestinations: []
+  },
+  prn: {
+    issuedTonnage: 80,
+    totalRevenue: 40000,
+    averagePricePerTonne: 500,
+    freeTonnage: 0
+  },
+  supportingInformation: 'Test note'
+}
+
 export const testFindAllPeriodicReportsBehaviour = (it) => {
   describe('findAllPeriodicReports', () => {
     let repository
@@ -34,7 +66,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
 
     it('returns the periodic report document for a single org/registration', async () => {
       const { id: reportId } = await repository.createReport(
-        buildCreateReportParams()
+        buildCreateReportParams(TONNAGE_OVERRIDES)
       )
 
       const [result] = await repository.findAllPeriodicReports()
@@ -51,7 +83,30 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
                 status: REPORT_STATUS.IN_PROGRESS,
                 submissionNumber: 1,
                 submittedAt: null,
-                submittedBy: null
+                submittedBy: null,
+                recyclingActivity: {
+                  totalTonnageReceived: 120,
+                  tonnageRecycled: 95.5,
+                  tonnageNotRecycled: 24.5
+                },
+                exportActivity: {
+                  totalTonnageExported: 40,
+                  tonnageReceivedNotExported: 8,
+                  tonnageRefusedAtDestination: 1.5,
+                  tonnageStoppedDuringExport: 2,
+                  tonnageRepatriated: 0.5
+                },
+                wasteSent: {
+                  tonnageSentToReprocessor: 50,
+                  tonnageSentToExporter: 20,
+                  tonnageSentToAnotherSite: 10
+                },
+                prn: {
+                  issuedTonnage: 80,
+                  totalRevenue: 40000,
+                  averagePricePerTonne: 500
+                },
+                supportingInformation: 'Test note'
               },
               previousSubmissions: [],
               startDate: DEFAULT_REPORT_START_DATE,
@@ -82,12 +137,14 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
 
     it('moves submitted report to previousSubmissions and embeds submittedAt/submittedBy', async () => {
       const submittedId = await createAndSubmitReport(repository, {
-        period: MONTHLY_PERIODS.January
+        period: MONTHLY_PERIODS.January,
+        ...TONNAGE_OVERRIDES
       })
       const { id: newId } = await repository.createReport(
         buildCreateReportParams({
           period: MONTHLY_PERIODS.January,
-          submissionNumber: 2
+          submissionNumber: 2,
+          ...TONNAGE_OVERRIDES
         })
       )
 
@@ -99,7 +156,30 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         status: REPORT_STATUS.IN_PROGRESS,
         submissionNumber: 2,
         submittedAt: null,
-        submittedBy: null
+        submittedBy: null,
+        recyclingActivity: {
+          totalTonnageReceived: 120,
+          tonnageRecycled: 95.5,
+          tonnageNotRecycled: 24.5
+        },
+        exportActivity: {
+          totalTonnageExported: 40,
+          tonnageReceivedNotExported: 8,
+          tonnageRefusedAtDestination: 1.5,
+          tonnageStoppedDuringExport: 2,
+          tonnageRepatriated: 0.5
+        },
+        wasteSent: {
+          tonnageSentToReprocessor: 50,
+          tonnageSentToExporter: 20,
+          tonnageSentToAnotherSite: 10
+        },
+        prn: {
+          issuedTonnage: 80,
+          totalRevenue: 40000,
+          averagePricePerTonne: 500
+        },
+        supportingInformation: 'Test note'
       })
       expect(slot.previousSubmissions).toStrictEqual([
         {
@@ -107,7 +187,30 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           status: REPORT_STATUS.SUBMITTED,
           submissionNumber: 1,
           submittedAt: expect.any(String),
-          submittedBy: DEFAULT_CHANGED_BY
+          submittedBy: DEFAULT_CHANGED_BY,
+          recyclingActivity: {
+            totalTonnageReceived: 120,
+            tonnageRecycled: 95.5,
+            tonnageNotRecycled: 24.5
+          },
+          exportActivity: {
+            totalTonnageExported: 40,
+            tonnageReceivedNotExported: 8,
+            tonnageRefusedAtDestination: 1.5,
+            tonnageStoppedDuringExport: 2,
+            tonnageRepatriated: 0.5
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 50,
+            tonnageSentToExporter: 20,
+            tonnageSentToAnotherSite: 10
+          },
+          prn: {
+            issuedTonnage: 80,
+            totalRevenue: 40000,
+            averagePricePerTonne: 500
+          },
+          supportingInformation: 'Test note'
         }
       ])
     })

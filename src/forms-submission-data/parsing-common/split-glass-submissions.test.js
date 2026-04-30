@@ -15,6 +15,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 function makeRegistration(overrides = {}) {
   return {
     id: 'reg-1',
+    formSubmission: { id: 'reg-1', time: new Date('2025-01-01T00:00:00.000Z') },
     material: MATERIAL.PLASTIC,
     glassRecyclingProcess: undefined,
     orgId: 123,
@@ -114,6 +115,25 @@ describe('splitGlassSubmissions', () => {
 
     expect(result[1].id).not.toBe('original-id')
     expect(result[1].id).toBeTruthy()
+  })
+
+  it('should carry formSubmission.id from the original submission onto both split registrations', () => {
+    const submissionTime = new Date('2025-01-01T00:00:00.000Z')
+    const both = makeGlassRegistration(
+      [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ],
+      {
+        id: 'original-id',
+        formSubmission: { id: 'original-id', time: submissionTime }
+      }
+    )
+
+    const result = splitGlassSubmissions([both])
+
+    expect(result[0].formSubmission.id).toBe('original-id')
+    expect(result[1].formSubmission.id).toBe('original-id')
   })
 
   it('should handle a mix of glass and non-glass registrations', () => {

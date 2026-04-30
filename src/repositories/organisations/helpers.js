@@ -12,8 +12,6 @@ import { validateApprovals } from './schema/helpers.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
-export const SCHEMA_VERSION = 1
-
 export const createStatusHistoryEntry = (status) => ({
   status,
   updatedAt: new Date()
@@ -154,7 +152,7 @@ const ORS_ADMIN_LIST_PROJECTION = {
   'accreditations.accreditationNumber': 1
 }
 
-const escapeRegex = (string) =>
+export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const buildOrsAdminListBasePipeline = ({ registrationNumber }) => [

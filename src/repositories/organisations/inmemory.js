@@ -5,11 +5,12 @@ import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
+  escapeRegex,
   mapDocumentWithCurrentStatuses,
-  prepareForReplace,
-  SCHEMA_VERSION
+  prepareForReplace
 } from './helpers.js'
 import { getCurrentStatus } from './status.js'
+import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
@@ -18,7 +19,6 @@ const CONSISTENCY_RETRY_DELAY_MS = 5
 const initializeItems = (items) =>
   items?.map((item) => ({
     ...item,
-    formSubmissionTime: new Date(item.formSubmissionTime),
     statusHistory: createInitialStatusHistory()
   })) || []
 
@@ -51,11 +51,10 @@ const performInsert = (storage, staleCache) => async (organisation) => {
   const newOrg = structuredClone({
     _id: id,
     version: 1,
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
     users: [],
     ...orgFields,
-    formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
     accreditations
   })
@@ -147,6 +146,46 @@ const performFindAll = (staleCache) => async () => {
     mapDocumentWithCurrentStatuses({ ...org })
   )
 }
+
+const performFindAllBySchemaVersion = (staleCache) => async (schemaVersion) => {
+  return structuredClone(staleCache)
+    .filter((org) => org.schemaVersion === schemaVersion)
+    .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
+}
+
+const performFindPage =
+  (staleCache) =>
+  async ({ search, page, pageSize }) => {
+    const trimmedSearch = (search ?? '').trim()
+
+    let matches = structuredClone(staleCache)
+
+    if (trimmedSearch !== '') {
+      const pattern = new RegExp(escapeRegex(trimmedSearch), 'i')
+      matches = matches.filter((org) => pattern.test(org.companyDetails.name))
+    }
+
+    matches.sort((a, b) => {
+      const aName = a.companyDetails.name
+      const bName = b.companyDetails.name
+      if (aName < bName) {
+        return -1
+      }
+      if (aName > bName) {
+        return 1
+      }
+      return 0
+    })
+
+    const totalItems = matches.length
+    const totalPages = Math.ceil(totalItems / pageSize)
+    const start = (page - 1) * pageSize
+    const items = matches
+      .slice(start, start + pageSize)
+      .map((org) => mapDocumentWithCurrentStatuses({ ...org }))
+
+    return { items, page, pageSize, totalItems, totalPages }
+  }
 
 const performFindAllForOverseasSitesAdminList = (staleCache) => async () => {
   return structuredClone(staleCache).map(
@@ -384,6 +423,8 @@ export const createInMemoryOrganisationsRepository = (
       replace: replaceFn,
       replaceRaw: replaceRawFn,
       findAll: performFindAll(staleCache),
+      findAllBySchemaVersion: performFindAllBySchemaVersion(staleCache),
+      findPage: performFindPage(staleCache),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(staleCache),
       findAllLinked: performFindAllLinked(staleCache),

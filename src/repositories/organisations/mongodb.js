@@ -5,13 +5,14 @@ import { ObjectId } from 'mongodb'
 import { errorCodes } from './enums/error-codes.js'
 import {
   createInitialStatusHistory,
+  escapeRegex,
   mapDocumentWithCurrentStatuses,
   performFindAllForOverseasSitesAdminList,
   performFindPageForOrsAdminList,
-  prepareForReplace,
-  SCHEMA_VERSION
+  prepareForReplace
 } from './helpers.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
+import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 import { getCurrentStatus } from './status.js'
 
 const COLLECTION_NAME = 'epr-organisations'
@@ -65,7 +66,7 @@ const performInsert = (db) => async (organisation) => {
     await db.collection(COLLECTION_NAME).insertOne({
       _id: ObjectId.createFromHexString(id),
       version: 1,
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       statusHistory: createInitialStatusHistory(),
       ...orgFields,
       registrations,
@@ -223,6 +224,43 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performFindAllBySchemaVersion = (db) => async (schemaVersion) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ schemaVersion })
+    .toArray()
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
+const performFindPage =
+  (db) =>
+  async ({ search, page, pageSize }) => {
+    const trimmedSearch = (search ?? '').trim()
+    const filter =
+      trimmedSearch === ''
+        ? {}
+        : {
+            'companyDetails.name': {
+              $regex: escapeRegex(trimmedSearch),
+              $options: 'i'
+            }
+          }
+
+    const collection = db.collection(COLLECTION_NAME)
+    const totalItems = await collection.countDocuments(filter)
+    const docs = await collection
+      .find(filter)
+      .sort({ 'companyDetails.name': 1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .toArray()
+
+    const items = docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+    const totalPages = Math.ceil(totalItems / pageSize)
+
+    return { items, page, pageSize, totalItems, totalPages }
+  }
+
 const LINKED_ORG_PROJECTION = {
   orgId: 1,
   'companyDetails.name': 1,
@@ -289,9 +327,6 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
 
   return mapDocumentWithCurrentStatuses(doc)
 }
-
-const escapeRegex = (string) =>
-  string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
@@ -441,6 +476,8 @@ export const createOrganisationsRepository = async (
       replaceRaw: performReplaceRaw(db),
       findById,
       findAll: performFindAll(db),
+      findAllBySchemaVersion: performFindAllBySchemaVersion(db),
+      findPage: performFindPage(db),
       findAllForOverseasSitesAdminList:
         performFindAllForOverseasSitesAdminList(db),
       findPageForOverseasSitesAdminList: performFindPageForOrsAdminList(db),

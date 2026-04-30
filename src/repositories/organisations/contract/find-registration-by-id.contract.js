@@ -24,8 +24,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         orgName: 'Test Org 2',
         material: 'plastic',
         wasteProcessingType: 'exporter',
-        cbduNumber: 'CBDU222222',
-        formSubmissionTime: '2025-08-21T19:34:44.944Z'
+        cbduNumber: 'CBDU222222'
       })
 
       const org = buildOrganisation({
