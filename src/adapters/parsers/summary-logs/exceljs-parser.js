@@ -583,6 +583,10 @@ const shouldSkipForPhantomDetection = (row, hasActiveCollections) => {
  * Once phantom-row detection trips, remaining rows in this worksheet are
  * still consumed from the stream (to keep the underlying zip pipeline
  * draining cleanly) but not processed.
+ *
+ * @param {object} draftState - Immer draft of the parser state
+ * @param {object} worksheet - WorksheetReader instance (async-iterable of rows, with `.name`)
+ * @param {StreamWorksheetOptions} options
  */
 const streamWorksheet = async (draftState, worksheet, options) => {
   const { maxRowsPerSheet, maxColumnsPerSheet } = options
@@ -617,6 +621,11 @@ const streamWorksheet = async (draftState, worksheet, options) => {
   draftState.activeCollections = []
 }
 
+/**
+ * @param {{name: string}} worksheet
+ * @param {{eachCell: (cb: (cell: object, colNumber: number) => void) => void}} row
+ * @param {number} max
+ */
 const assertWorksheetColumnsWithinLimit = (worksheet, row, max) => {
   row.eachCell((_cell, colNumber) => {
     assertColumnWithinLimit(worksheet.name, colNumber, max)
@@ -635,11 +644,33 @@ export { extractCellValue }
  * @property {Record<string, string[]>} [unfilledValues] - Per-column values to normalise to null
  */
 
+/**
+ * Minimal shape of the workbook-like object that ExcelJS's `WorksheetReader`
+ * destructures once at the start of each parse. We provide exactly that
+ * surface and nothing more - the SAX path never reaches back into the
+ * workbook for anything else.
+ *
+ * @typedef {Object} WorkbookShim
+ * @property {string[]} sharedStrings - Shared strings table indexed by sst index; `[]` when sharedStrings.xml is absent
+ * @property {{getStyleModel: (id: number) => object}} styles - Looked up per styled cell to resolve numFmt and format
+ * @property {{model?: {date1904?: boolean}}} properties - `model` is undefined when the workbook has no `workbookPr` element
+ */
+
+/**
+ * @typedef {Object} StreamWorksheetOptions
+ * @property {number} maxRowsPerSheet
+ * @property {number} maxColumnsPerSheet
+ */
+
 const WORKBOOK_RELS_PATH = 'xl/_rels/workbook.xml.rels'
 const WORKBOOK_PATH = 'xl/workbook.xml'
 const SHARED_STRINGS_PATH = 'xl/sharedStrings.xml'
 const STYLES_PATH = 'xl/styles.xml'
 
+/**
+ * @param {string} relTarget - Sheet target from the workbook relationships XML (e.g. `worksheets/sheet1.xml` or `/xl/worksheets/sheet1.xml`)
+ * @returns {string} Path within the zip archive
+ */
 const resolveSheetPath = (relTarget) =>
   `xl/${relTarget.replace(/^(\s|\/xl\/)+/, '')}`
 
@@ -718,12 +749,11 @@ export const parse = async (buffer, options = {}) => {
       await sharedStringsXform.parseStream(sharedStringsFile.stream())
     }
 
+    /** @type {WorkbookShim} */
     const workbookShim = {
       sharedStrings: sharedStringsXform.values,
       styles: stylesXform,
-      properties: workbookProperties,
-      workbookRels,
-      model: workbookModel
+      properties: workbookProperties
     }
 
     for (const sheet of sheets) {
