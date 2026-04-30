@@ -1,4 +1,4 @@
-import { config } from '#root/config.js'
+import { config, isProductionEnvironment } from '#root/config.js'
 import { getTraceId } from '@defra/hapi-tracing'
 import { ecsFormat } from '@elastic/ecs-pino-format'
 
@@ -8,12 +8,27 @@ const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
 
+const ecsOptions = ecsFormat({ serviceVersion, serviceName })
+const ecsLog =
+  /** @type {(obj: object) => { error?: { stack_trace?: string } }} */ (
+    ecsOptions.formatters?.log
+  )
+
+const stripStackTraceInProd = (/** @type {object} */ obj) => {
+  const out = ecsLog(obj)
+  if (isProductionEnvironment() && out.error?.stack_trace) {
+    delete out.error.stack_trace
+  }
+  return out
+}
+
 const formatters = {
   ecs: {
-    ...ecsFormat({
-      serviceVersion,
-      serviceName
-    })
+    ...ecsOptions,
+    formatters: {
+      ...ecsOptions.formatters,
+      log: stripStackTraceInProd
+    }
   },
   'pino-pretty': { transport: { target: 'pino-pretty' } }
 }
