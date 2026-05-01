@@ -186,6 +186,9 @@ function createHapiServer(config) {
 
 /**
  * Attaches logger mocks to the test server for assertion in tests.
+ * Spies both the singleton `server.logger` (eagerly, so onRequest-time logs
+ * from earlier-registered extensions are captured) and per-request
+ * `request.logger` (via onRequest extension).
  * @param {TestServer} testServer
  */
 function attachLoggerMocks(testServer) {
@@ -194,6 +197,16 @@ function attachLoggerMocks(testServer) {
     error: vi.fn(),
     warn: vi.fn()
   }
+
+  vi.spyOn(testServer.logger, 'info').mockImplementation(
+    testServer.loggerMocks.info
+  )
+  vi.spyOn(testServer.logger, 'error').mockImplementation(
+    testServer.loggerMocks.error
+  )
+  vi.spyOn(testServer.logger, 'warn').mockImplementation(
+    testServer.loggerMocks.warn
+  )
 
   testServer.ext('onRequest', (request, h) => {
     vi.spyOn(request.logger, 'info').mockImplementation(
