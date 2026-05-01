@@ -14,6 +14,7 @@ import {
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
+import { performUpdateViaLedger } from '../application/update-via-ledger.js'
 import { audit } from '@defra/cdp-auditing'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
@@ -48,6 +49,10 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 
 vi.mock('../application/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
+}))
+
+vi.mock('../application/update-via-ledger.js', () => ({
+  performUpdateViaLedger: vi.fn().mockResolvedValue(undefined)
 }))
 
 describe('src/waste-balances/repository/helpers.js', () => {
@@ -345,6 +350,130 @@ describe('src/waste-balances/repository/helpers.js', () => {
       expect(result).toBeUndefined()
     })
 
+    describe('feature flag dispatch', () => {
+      it('routes to the ledger path when wasteBalanceLedger flag is ON', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const ledgerRepository = { insertTransactions: vi.fn() }
+        const findBalance = vi.fn()
+        const saveBalance = vi.fn()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
+            ledgerRepository
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).toHaveBeenCalledTimes(1)
+        const call = vi.mocked(performUpdateViaLedger).mock.calls[0][0]
+        expect(call.ledgerRepository).toBe(ledgerRepository)
+        expect(call.accreditation.id).toBe('acc-1')
+        expect(call.user).toEqual({ id: 'user-1' })
+        expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
+        expect(findBalance).not.toHaveBeenCalled()
+        expect(saveBalance).not.toHaveBeenCalled()
+      })
+
+      it('uses the v1 embedded-array path when flag is OFF', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 0
+        }
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => false }
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the v1 path when no featureFlags dependency is provided', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 0
+        }
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {},
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+    })
+
     it('should audit and log system log when user is provided', async () => {
       const wasteRecords = [
         {
@@ -409,50 +538,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           createdBy: user
         })
       )
-    })
-
-    it('should save balance but skip audit when user is not provided', async () => {
-      const wasteRecords = [
-        {
-          id: 'rec-1',
-          organisationId: 'org-1',
-          data: {}
-        }
-      ]
-      const accreditation = { id: 'acc-1' }
-      const wasteBalance = {
-        id: 'bal-1',
-        accreditationId: 'acc-1',
-        amount: 100,
-        availableAmount: 100,
-        transactions: [],
-        version: 0 // Explicit 0
-      }
-      const newTransactions = [{ id: 'trans-1' }]
-
-      const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
-
-      const dependencies = {}
-
-      vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
-        newTransactions,
-        newAmount: 200,
-        newAvailableAmount: 200
-      })
-
-      await performUpdateWasteBalanceTransactions({
-        wasteRecords,
-        accreditation,
-        dependencies,
-        findBalance,
-        saveBalance,
-        // user undefined
-        overseasSites: ORS_VALIDATION_DISABLED
-      })
-
-      expect(audit).not.toHaveBeenCalled()
-      expect(saveBalance).toHaveBeenCalled()
     })
 
     it('should audit but skip system log when systemLogsRepository is missing', async () => {

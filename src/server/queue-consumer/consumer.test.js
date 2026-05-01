@@ -22,6 +22,12 @@ vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
 
+const TEST_USER = {
+  id: 'test-user',
+  email: 'test-user@example.com',
+  scope: ['standard_user']
+}
+
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
 const { syncFromSummaryLog } =
@@ -338,7 +344,8 @@ describe('createCommandQueueConsumer', () => {
         MessageId: 'msg-123',
         Body: JSON.stringify({
           command: 'submit',
-          summaryLogId: 'summary-123'
+          summaryLogId: 'summary-123',
+          user: TEST_USER
         })
       }
 
@@ -677,6 +684,7 @@ describe('createCommandQueueConsumer', () => {
           Body: JSON.stringify({
             command: 'submit',
             summaryLogId: 'log-123',
+            user: TEST_USER,
             context: { traceId: 'trace-abc-123' }
           })
         }
@@ -1044,7 +1052,11 @@ describe('createCommandQueueConsumer', () => {
       it('processes submit command successfully', async () => {
         const message = {
           MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
+          Body: JSON.stringify({
+            command: 'submit',
+            summaryLogId: 'log-123',
+            user: TEST_USER
+          })
         }
 
         await handleMessage(message)
@@ -1087,7 +1099,11 @@ describe('createCommandQueueConsumer', () => {
 
         const message = {
           MessageId: 'msg-123',
-          Body: JSON.stringify({ command: 'submit', summaryLogId: 'log-123' })
+          Body: JSON.stringify({
+            command: 'submit',
+            summaryLogId: 'log-123',
+            user: TEST_USER
+          })
         }
 
         await handleMessage(message)
@@ -1107,7 +1123,8 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: TEST_USER
             })
           }
 
@@ -1135,7 +1152,8 @@ describe('createCommandQueueConsumer', () => {
             MessageId: 'msg-123',
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: TEST_USER
             })
           }
 
@@ -1173,7 +1191,8 @@ describe('createCommandQueueConsumer', () => {
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: TEST_USER
             })
           }
 
@@ -1201,7 +1220,8 @@ describe('createCommandQueueConsumer', () => {
             Attributes: { ApproximateReceiveCount: '1' },
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: TEST_USER
             })
           }
 
@@ -1232,7 +1252,8 @@ describe('createCommandQueueConsumer', () => {
             Attributes: { ApproximateReceiveCount: '2' },
             Body: JSON.stringify({
               command: 'submit',
-              summaryLogId: 'log-123'
+              summaryLogId: 'log-123',
+              user: TEST_USER
             })
           }
 

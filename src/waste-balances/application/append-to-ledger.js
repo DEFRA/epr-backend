@@ -21,24 +21,18 @@ const summariseLatest = (latest) =>
  * one read and one write regardless of N.
  *
  * Within a batch the chain of closing totals is pure arithmetic — no DB
- * round-trip is needed between rows. Other writers (e.g. an interleaved
- * PRN op) cannot perturb the chain we've already computed; they will either
- * land before the bulk insert (so our `latest` was stale) or land after
- * (so they observe our final closing). Either way, an
- * `(accreditationId, number)` collision surfaces as
- * `LedgerSlotConflictError` and recovery is the caller's responsibility:
+ * round-trip is needed between rows. A concurrent writer either lands
+ * before the bulk insert (so our `latest` was stale) or after (so it
+ * observes our final closing). Either way, an `(accreditationId, number)`
+ * collision surfaces as `LedgerSlotConflictError` and recovery is the
+ * caller's responsibility. Summary-log row writes recover via operator
+ * re-upload, which is already idempotent under the per-row delta-reconciliation
+ * invariant (ADR 0031 "Per-row delta reconciliation"). A re-upload converges
+ * regardless of which rows landed on the failed attempt — including
+ * partial-batch outcomes where K of N rows committed before the conflict.
  *
- * - Summary-log row writes recover via operator re-upload, which is
- *   already idempotent under the per-row delta-reconciliation invariant
- *   (ADR 0031 "Per-row delta reconciliation"). A re-upload converges
- *   regardless of which rows landed on the failed attempt — including
- *   partial-batch outcomes where K of N rows committed before the conflict.
- * - PRN operations are single-row batches whose handlers can surface a
- *   retryable 5xx so the originating client re-issues the operation.
- *
- * Surfacing slot conflicts rather than retrying inside the primitive
- * keeps every conflict diagnostically visible and avoids hiding any
- * future writer-interleaving we'd want to know about.
+ * Surfacing slot conflicts rather than retrying inside the primitive keeps
+ * every conflict diagnostically visible.
  *
  * @param {{
  *   repository: import('../repository/ledger-port.js').LedgerRepository,

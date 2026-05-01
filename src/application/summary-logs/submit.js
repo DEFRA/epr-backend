@@ -21,7 +21,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#feature-flags/feature-flags.port.js').FeatureFlags} [featureFlags]
- * @property {object} [user]
+ * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
  */
 
 /**

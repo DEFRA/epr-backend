@@ -40,26 +40,13 @@ export async function ensureLedgerCollection(db) {
   )
 
   await collection.createIndex(
-    { 'source.summaryLogRow.wasteRecordId': 1 },
-    { name: 'summaryLogRow_wasteRecordId' }
-  )
-
-  // Compound index serves both "transactions for summary log S" queries
-  // (via summaryLogId prefix) and "transactions a specific row caused"
-  // queries (full-key lookup). A standalone summaryLogId index would be
-  // strictly redundant here.
-  await collection.createIndex(
     {
-      'source.summaryLogRow.summaryLogId': 1,
-      'source.summaryLogRow.rowId': 1,
-      'source.summaryLogRow.rowType': 1
+      accreditationId: 1,
+      'source.summaryLogRow.wasteRecord.type': 1,
+      'source.summaryLogRow.wasteRecord.rowId': 1,
+      number: -1
     },
-    { name: 'summaryLogRow_row' }
-  )
-
-  await collection.createIndex(
-    { 'source.prnOperation.prnId': 1 },
-    { name: 'prnOperation_prnId' }
+    { name: 'summaryLogRow_wasteRecord_findLatest' }
   )
 
   return collection
@@ -146,6 +133,62 @@ const performFindLatestByAccreditationId =
   }
 
 /**
+ * Stable map key for a waste record `(type, rowId)`. Private to this
+ * adapter — Maps need primitive-or-reference equality, so we synthesise a
+ * string for lookup. Never persisted.
+ *
+ * @param {{ type: string, rowId: string }} record
+ */
+const wasteRecordKey = ({ type, rowId }) => `${type}:${rowId}`
+
+/**
+ * Resolve the running per-waste-record credited total for a batch. For each
+ * input `(type, rowId)`, runs a `findOne` against the find-latest secondary
+ * index — descending `number`, `limit(1)` — and stamps the persisted
+ * `wasteRecord.creditedAmount` into the lookup map. Records with no prior
+ * matching transaction return `0`.
+ *
+ * The `accreditationId` filter is load-bearing: `(type, rowId)` is unique
+ * within an accreditation but not globally, so two accreditations can
+ * legitimately use the same `(exported, "1")` pair.
+ *
+ * @param {Collection} collection
+ * @returns {(accreditationId: string, wasteRecords: Array<{ type: string, rowId: string }>) => Promise<import('./ledger-port.js').CreditedAmountLookup>}
+ */
+const performFindLatestCreditedAmountsByWasteRecords =
+  (collection) => async (accreditationId, wasteRecords) => {
+    const uniqueByKey = new Map()
+    for (const record of wasteRecords) {
+      uniqueByKey.set(wasteRecordKey(record), record)
+    }
+
+    const credited = new Map()
+
+    await Promise.all(
+      Array.from(uniqueByKey, async ([key, record]) => {
+        const doc = await collection.findOne(
+          {
+            accreditationId,
+            'source.summaryLogRow.wasteRecord.type': record.type,
+            'source.summaryLogRow.wasteRecord.rowId': record.rowId
+          },
+          { sort: { number: -1 } }
+        )
+
+        if (doc) {
+          const decoded = ledgerDocumentFromMongo(/** @type {*} */ (doc))
+          credited.set(
+            key,
+            decoded.source.summaryLogRow.wasteRecord.creditedAmount
+          )
+        }
+      })
+    )
+
+    return (record) => credited.get(wasteRecordKey(record)) ?? 0
+  }
+
+/**
  * Creates a MongoDB-backed ledger repository.
  *
  * @param {Db} db
@@ -156,6 +199,8 @@ export const createMongoLedgerRepository = async (db) => {
 
   return () => ({
     insertTransactions: performInsertTransactions(collection),
-    findLatestByAccreditationId: performFindLatestByAccreditationId(collection)
+    findLatestByAccreditationId: performFindLatestByAccreditationId(collection),
+    findLatestCreditedAmountsByWasteRecords:
+      performFindLatestCreditedAmountsByWasteRecords(collection)
   })
 }

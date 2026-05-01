@@ -24,19 +24,25 @@ import { ORS_IMPORT_COMMAND } from '#overseas-sites/domain/import-status.js'
  */
 
 /**
- * Extracts user context from a Hapi request for serialisation.
- * @param {object} [request]
- * @returns {{ id: string, email: string, scope: string[] } | undefined}
+ * Projects the authenticated request's credentials into the shape the SQS
+ * message carries. The submit route is gated to standard_user scope, so the
+ * union is narrowed to human credentials at the boundary.
+ *
+ * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @returns {import('#domain/summary-logs/worker/port.js').SubmitUser}
  */
 const extractUser = (request) => {
-  const credentials = request?.auth?.credentials
-  if (!credentials) {
-    return undefined
+  const { credentials } = request.auth
+  if (!('email' in credentials)) {
+    throw new Error(
+      'Machine credentials cannot drive a summary-log submit; route requires standard_user scope'
+    )
   }
-
   return {
     id: credentials.id,
+    // @ts-expect-error narrowed to HumanCredentials by `email in credentials` above; tsc loses the discriminant through Hapi's base Request intersection
     email: credentials.email,
+    // @ts-expect-error narrowed to HumanCredentials by `email in credentials` above; tsc loses the discriminant through Hapi's base Request intersection
     scope: credentials.scope
   }
 }
@@ -123,15 +129,12 @@ export const createSqsCommandExecutor = async (deps) => {
         )
       },
       submit: async (summaryLogId, request) => {
-        const user = extractUser(request)
-        const payload = user ? { summaryLogId, user } : { summaryLogId }
-
         await sendCommandMessage(
           queueUrl,
           sqsClient,
           logger,
           SUMMARY_LOG_COMMAND.SUBMIT,
-          payload,
+          { summaryLogId, user: extractUser(request) },
           `summaryLogId=${summaryLogId}`
         )
       }

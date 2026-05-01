@@ -24,10 +24,13 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
-      const user = { id: 'user-1', name: 'Test User' }
+      const user = {
+        id: 'user-1',
+        email: 'user-1@example.test',
+        scope: ['standard_user']
+      }
 
       const record = buildWasteRecord({
-        updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
@@ -49,7 +52,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       expect(balance).toBeDefined()
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)
-      expect(balance.transactions[0].createdBy).toEqual(user)
+      expect(balance.transactions[0].createdBy).toEqual({
+        id: user.id,
+        name: user.email
+      })
       expect(balance.amount).toBe(10.5)
     })
 
@@ -76,7 +82,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
-      const user = { id: 'user-1', name: 'Test User' }
+      const user = {
+        id: 'user-1',
+        email: 'user-1@example.test',
+        scope: ['standard_user']
+      }
 
       const existingBalance = buildWasteBalance({
         accreditationId: accreditation.id,
@@ -85,7 +95,6 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await insertWasteBalance(existingBalance)
 
       const record = buildWasteRecord({
-        updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
@@ -147,7 +156,11 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
-      const user = { id: 'user-1', name: 'Test User' }
+      const user = {
+        id: 'user-1',
+        email: 'user-1@example.test',
+        scope: ['standard_user']
+      }
 
       // Intentionally omits the `transactions` field to exercise the
       // calculator's defensive `currentBalance.transactions || []` guard.
@@ -165,7 +178,6 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       await insertWasteBalance(existingBalance)
 
       const record = buildWasteRecord({
-        updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
@@ -195,11 +207,14 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
-      const user = { id: 'user-1', name: 'Test User' }
+      const user = {
+        id: 'user-1',
+        email: 'user-1@example.test',
+        scope: ['standard_user']
+      }
 
       const validRecord = buildWasteRecord({
         type: WASTE_RECORD_TYPE.EXPORTED,
-        updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
@@ -211,7 +226,6 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       const invalidRecord = buildWasteRecord({
         type: WASTE_RECORD_TYPE.EXPORTED,
-        updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',

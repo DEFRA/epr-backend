@@ -42,7 +42,38 @@ describe('ledgerInsertToMongo', () => {
     const persistable = ledgerInsertToMongo(transaction)
     expect(persistable.accreditationId).toBe('acc-x')
     expect(persistable.number).toBe(7)
-    expect(persistable.source).toEqual(transaction.source)
+    expect(persistable.source.kind).toBe(transaction.source.kind)
+    expect(persistable.source.summaryLogRow.summaryLogId).toBe(
+      transaction.source.summaryLogRow.summaryLogId
+    )
+    expect(persistable.source.summaryLogRow.wasteRecord.type).toBe(
+      transaction.source.summaryLogRow.wasteRecord.type
+    )
+  })
+
+  it('converts source.summaryLogRow.wasteRecord.creditedAmount to Decimal128', () => {
+    const persistable = ledgerInsertToMongo(
+      buildLedgerTransaction({
+        source: {
+          kind: 'summary-log-row',
+          summaryLogRow: {
+            summaryLogId: 'log-1',
+            wasteRecord: {
+              type: 'received',
+              rowId: 'row-1',
+              versionId: 'v-1',
+              creditedAmount: 12.34
+            }
+          }
+        }
+      })
+    )
+    expect(
+      persistable.source.summaryLogRow.wasteRecord.creditedAmount
+    ).toBeInstanceOf(Decimal128)
+    expect(
+      persistable.source.summaryLogRow.wasteRecord.creditedAmount.toString()
+    ).toBe('12.34')
   })
 })
 
@@ -74,6 +105,27 @@ describe('ledgerDocumentFromMongo', () => {
     expect(decoded.amount).toBe(200.005)
     expect(decoded.closingBalance.amount).toBe(200.005)
     expect(decoded.closingBalance.availableAmount).toBe(200.005)
+  })
+
+  it('round-trips wasteRecord.creditedAmount through Decimal128', () => {
+    const original = buildLedgerTransaction({
+      source: {
+        kind: 'summary-log-row',
+        summaryLogRow: {
+          summaryLogId: 'log-1',
+          wasteRecord: {
+            type: 'received',
+            rowId: 'row-1',
+            versionId: 'v-1',
+            creditedAmount: 200.005
+          }
+        }
+      }
+    })
+    const decoded = ledgerDocumentFromMongo(ledgerInsertToMongo(original))
+    expect(decoded.source.summaryLogRow.wasteRecord.creditedAmount).toBe(
+      200.005
+    )
   })
 
   it('round-trips negative amounts', () => {

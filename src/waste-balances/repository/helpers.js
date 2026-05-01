@@ -1,10 +1,8 @@
 import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
-import {
-  isPayloadSmallEnoughToAudit,
-  safeAudit
-} from '#root/auditing/helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
+import { recordWasteBalanceUpdateAudit } from '../application/audit.js'
+import { performUpdateViaLedger } from '../application/update-via-ledger.js'
 import { randomUUID } from 'node:crypto'
 import {
   classifyRow,
@@ -101,60 +99,12 @@ export const markExcludedRecords = (wasteRecords) => {
   }))
 }
 
-const recordAuditLogs = async (
-  dependencies,
-  updatedBalance,
-  newTransactions,
-  user
-) => {
-  if (!user?.id && !user?.email) {
-    return
-  }
-
-  const payload = {
-    event: {
-      category: 'waste-reporting',
-      subCategory: 'waste-balance',
-      action: 'update'
-    },
-    context: {
-      accreditationId: updatedBalance.accreditationId,
-      amount: updatedBalance.amount,
-      availableAmount: updatedBalance.availableAmount,
-      newTransactions
-    },
-    user
-  }
-
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          accreditationId: updatedBalance.accreditationId,
-          amount: updatedBalance.amount,
-          availableAmount: updatedBalance.availableAmount,
-          transactionCount: newTransactions.length
-        }
-      }
-
-  safeAudit(safeAuditingPayload)
-
-  if (dependencies.systemLogsRepository) {
-    await dependencies.systemLogsRepository.insert({
-      createdAt: new Date(),
-      createdBy: user,
-      event: payload.event,
-      context: payload.context
-    })
-  }
-}
-
 const calculateAndApplyUpdates = async (
   validRecords,
   validatedAccreditationId,
   accreditation,
   findBalance,
+  user,
   overseasSites
 ) => {
   const wasteBalance = await findOrCreateWasteBalance({
@@ -173,6 +123,7 @@ const calculateAndApplyUpdates = async (
       currentBalance: wasteBalance,
       wasteRecords: validRecords,
       accreditation,
+      user,
       overseasSites
     })
 
@@ -195,14 +146,20 @@ const calculateAndApplyUpdates = async (
 /**
  * Shared logic for updating waste balance transactions.
  *
+ * Dispatches on the `wasteBalanceLedger` feature flag: ON routes through the
+ * ledger-append path (ADR 0031), OFF stays on the embedded `transactions[]`
+ * array. Both paths preserve audit emission.
+ *
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('../repository/ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
- * @param {any} [params.user]
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
  */
 export const performUpdateWasteBalanceTransactions = async ({
@@ -222,11 +179,29 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   const validatedAccreditationId = validateAccreditationId(accreditation.id)
 
+  if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
+    await performUpdateViaLedger({
+      wasteRecords: annotatedRecords,
+      accreditation: { ...accreditation, id: validatedAccreditationId },
+      ledgerRepository:
+        /** @type {import('./ledger-port.js').LedgerRepository} */ (
+          dependencies.ledgerRepository
+        ),
+      dependencies: {
+        systemLogsRepository: dependencies.systemLogsRepository
+      },
+      user,
+      overseasSites
+    })
+    return
+  }
+
   const result = await calculateAndApplyUpdates(
     annotatedRecords,
     validatedAccreditationId,
     accreditation,
     findBalance,
+    user,
     overseasSites
   )
 
@@ -238,7 +213,14 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   await saveBalance(updatedBalance, newTransactions)
 
-  await recordAuditLogs(dependencies, updatedBalance, newTransactions, user)
+  await recordWasteBalanceUpdateAudit({
+    systemLogsRepository: dependencies.systemLogsRepository,
+    accreditationId: updatedBalance.accreditationId,
+    amount: updatedBalance.amount,
+    availableAmount: updatedBalance.availableAmount,
+    newTransactions,
+    user
+  })
 }
 
 /**
