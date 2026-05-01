@@ -42,6 +42,27 @@ const reportsCollection = (db) =>
   /** @type {Collection<Report>} */ (db.collection(REPORTS_COLLECTION))
 
 /**
+ * Resolves a failed findOneAndUpdate into a 404 (report missing) or 409 (version mismatch).
+ *
+ * @param {Db} db
+ * @param {string} reportId
+ * @param {number} version
+ * @returns {Promise<never>}
+ */
+const throwNotFoundOrConflict = async (db, reportId, version) => {
+  const existing = await reportsCollection(db).findOne(
+    { id: reportId },
+    { projection: { _id: 0, version: 1 } }
+  )
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${reportId}`)
+  }
+  throw Boom.conflict(
+    `Version conflict: expected version ${version} for report ${reportId}`
+  )
+}
+
+/**
  * Ensures the reports collection exists with required indexes.
  * Safe to call multiple times — MongoDB createIndex is idempotent.
  *
@@ -139,16 +160,7 @@ const performUpdateReport = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc
@@ -184,16 +196,7 @@ const performUpdateReportStatus = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc
@@ -362,16 +365,7 @@ const performUnsubmitReport = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc
