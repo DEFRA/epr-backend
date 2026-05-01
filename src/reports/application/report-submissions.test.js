@@ -44,6 +44,7 @@ describe('generateReportSubmissions (integration)', () => {
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
     const baseRow = {
+      regulator: 'EA',
       organisationName: 'ACME ltd',
       submitterPhone: '1234567890',
       approvedPersonsPhone: '1234567890',
@@ -391,6 +392,45 @@ describe('generateReportSubmissions (edge cases)', () => {
     const row = result.reportSubmissions[0]
     expect(row.registrationNumber).toBe('REG-001')
     expect(row.accreditationNumber).toBe('')
+  })
+
+  it.each([
+    ['ea', 'EA'],
+    ['niea', 'NIEA'],
+    ['sepa', 'SEPA'],
+    ['nrw', 'NRW']
+  ])(
+    'uppercases regulator %s to %s',
+    async (submittedToRegulator, expected) => {
+      const org = buildOrg({
+        registrations: [
+          buildRegistrationMock({
+            status: 'approved',
+            submittedToRegulator
+          })
+        ]
+      })
+
+      const result = await generateReportSubmissions(
+        makeOrgsRepo([org]),
+        makeReportsRepo()
+      )
+
+      expect(result.reportSubmissions[0].regulator).toBe(expected)
+    }
+  )
+
+  it('returns empty regulator when submittedToRegulator is missing', async () => {
+    const org = buildOrg({
+      registrations: [buildRegistrationMock({ status: 'approved' })]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    expect(result.reportSubmissions[0].regulator).toBe('')
   })
 
   it('excludes test organisations from report submissions', async () => {

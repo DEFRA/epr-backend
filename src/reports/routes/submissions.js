@@ -18,6 +18,7 @@ export const getReportSubmissions = {
         reportSubmissions: Joi.array()
           .items(
             Joi.object({
+              regulator: Joi.string().allow('').required(),
               organisationName: Joi.string().required(),
               submitterPhone: Joi.string().required(),
               approvedPersonsPhone: Joi.string().required(),
