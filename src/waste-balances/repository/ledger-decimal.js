@@ -1,6 +1,5 @@
 import { Decimal128 } from 'mongodb'
 
-import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import { toDecimalString, toNumber } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -47,41 +46,31 @@ const snapshotFromMongo = (snapshot) => ({
 /**
  * @param {import('./ledger-schema.js').LedgerSource} source
  */
-const sourceToMongo = (source) => {
-  if (source.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
-    return source
-  }
-  return {
-    ...source,
-    summaryLogRow: {
-      ...source.summaryLogRow,
-      wasteRecord: {
-        ...source.summaryLogRow.wasteRecord,
-        creditedAmount: toDecimal128(
-          source.summaryLogRow.wasteRecord.creditedAmount
-        )
-      }
+const sourceToMongo = (source) => ({
+  ...source,
+  summaryLogRow: {
+    ...source.summaryLogRow,
+    wasteRecord: {
+      ...source.summaryLogRow.wasteRecord,
+      creditedAmount: toDecimal128(
+        source.summaryLogRow.wasteRecord.creditedAmount
+      )
     }
   }
-}
+})
 
-const sourceFromMongo = (source) => {
-  if (source?.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
-    return source
-  }
-  return {
-    ...source,
-    summaryLogRow: {
-      ...source.summaryLogRow,
-      wasteRecord: {
-        ...source.summaryLogRow.wasteRecord,
-        creditedAmount: toNumber(
-          /** @type {*} */ (source.summaryLogRow.wasteRecord.creditedAmount)
-        )
-      }
+const sourceFromMongo = (source) => ({
+  ...source,
+  summaryLogRow: {
+    ...source.summaryLogRow,
+    wasteRecord: {
+      ...source.summaryLogRow.wasteRecord,
+      creditedAmount: toNumber(
+        /** @type {*} */ (source.summaryLogRow.wasteRecord.creditedAmount)
+      )
     }
   }
-}
+})
 
 /**
  * Convert the amount fields of a ledger transaction insert document to BSON
@@ -99,8 +88,7 @@ export const ledgerInsertToMongo = (transaction) => ({
 
 /**
  * Convert the amount fields of a ledger transaction MongoDB document back to
- * JS numbers. `toNumber` accepts both Decimal128 and plain numbers, so legacy
- * Double-typed rows round-trip without a separate read path.
+ * JS numbers.
  *
  * @param {Record<string, unknown> & { amount: unknown, openingBalance: { amount: unknown, availableAmount: unknown }, closingBalance: { amount: unknown, availableAmount: unknown }, source: unknown }} doc
  */

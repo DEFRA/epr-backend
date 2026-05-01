@@ -1,8 +1,4 @@
-import {
-  LEDGER_TRANSACTION_TYPE,
-  LEDGER_SOURCE_KIND,
-  LEDGER_PRN_OPERATION_TYPE
-} from './ledger-schema.js'
+import { LEDGER_TRANSACTION_TYPE, LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
@@ -16,12 +12,6 @@ const buildSummaryLogRowSource = ({ wasteRecord = {}, ...overrides } = {}) => ({
     creditedAmount: 10,
     ...wasteRecord
   },
-  ...overrides
-})
-
-const buildPrnOperationSource = (overrides = {}) => ({
-  prnId: 'prn-1',
-  operationType: LEDGER_PRN_OPERATION_TYPE.CREATION,
   ...overrides
 })
 
@@ -46,16 +36,3 @@ export const buildLedgerTransaction = (overrides = {}) => ({
   },
   ...overrides
 })
-
-export const buildPrnOperationLedgerTransaction = (overrides = {}) =>
-  buildLedgerTransaction({
-    type: LEDGER_TRANSACTION_TYPE.PENDING_DEBIT,
-    amount: -5,
-    openingBalance: { amount: 10, availableAmount: 10 },
-    closingBalance: { amount: 10, availableAmount: 5 },
-    source: {
-      kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
-      prnOperation: buildPrnOperationSource()
-    },
-    ...overrides
-  })

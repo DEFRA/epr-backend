@@ -75,21 +75,6 @@ describe('ledgerInsertToMongo', () => {
       persistable.source.summaryLogRow.wasteRecord.creditedAmount.toString()
     ).toBe('12.34')
   })
-
-  it('passes prn-operation source through unchanged', () => {
-    const persistable = ledgerInsertToMongo(
-      buildLedgerTransaction({
-        source: {
-          kind: 'prn-operation',
-          prnOperation: { prnId: 'prn-1', operationType: 'creation' }
-        }
-      })
-    )
-    expect(persistable.source).toEqual({
-      kind: 'prn-operation',
-      prnOperation: { prnId: 'prn-1', operationType: 'creation' }
-    })
-  })
 })
 
 describe('ledgerDocumentFromMongo', () => {

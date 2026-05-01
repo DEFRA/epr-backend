@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 
 import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js'
 import {
-  LEDGER_PRN_OPERATION_TYPE,
   LEDGER_SOURCE_KIND,
   LEDGER_TRANSACTION_TYPE
 } from '../repository/ledger-schema.js'
@@ -30,15 +29,6 @@ const buildSummaryLogRowSource = (rowId) => ({
   }
 })
 
-const buildPrnOperationSource = (overrides = {}) => ({
-  kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
-  prnOperation: {
-    prnId: 'prn-1',
-    operationType: LEDGER_PRN_OPERATION_TYPE.ISSUANCE,
-    ...overrides
-  }
-})
-
 const buildCreditFor = (rowId, amount) => (latest) => ({
   type: LEDGER_TRANSACTION_TYPE.CREDIT,
   amount,
@@ -48,19 +38,6 @@ const buildCreditFor = (rowId, amount) => (latest) => ({
     availableAmount: latest.closingBalance.availableAmount + amount
   },
   source: buildSummaryLogRowSource(rowId),
-  createdBy: { id: 'user-1', name: 'Test User' },
-  createdAt: new Date('2026-01-15T10:00:00.000Z')
-})
-
-const buildPendingDebitFor = (amount) => (latest) => ({
-  type: LEDGER_TRANSACTION_TYPE.PENDING_DEBIT,
-  amount,
-  openingBalance: { ...latest.closingBalance },
-  closingBalance: {
-    amount: latest.closingBalance.amount,
-    availableAmount: latest.closingBalance.availableAmount + amount
-  },
-  source: buildPrnOperationSource(),
   createdBy: { id: 'user-1', name: 'Test User' },
   createdAt: new Date('2026-01-15T10:00:00.000Z')
 })
@@ -86,7 +63,7 @@ describe('appendToLedger', () => {
     })
   })
 
-  describe('single-row batch (PRN-op shape)', () => {
+  describe('single-row batch', () => {
     it('reads latest once and inserts a single transaction', async () => {
       const repository = createInMemoryLedgerRepository()()
       const findLatestSpy = vi.spyOn(repository, 'findLatestByAccreditationId')
@@ -94,7 +71,7 @@ describe('appendToLedger', () => {
 
       const [result] = await appendToLedger(
         { repository, ...buildIdentity() },
-        [buildPendingDebitFor(-5)]
+        [buildCreditFor('row-a', 25)]
       )
 
       expect(findLatestSpy).toHaveBeenCalledTimes(1)
@@ -103,8 +80,8 @@ describe('appendToLedger', () => {
       expect(result.id).toEqual(expect.any(String))
       expect(result.number).toBe(1)
       expect(result.openingBalance).toEqual({ amount: 0, availableAmount: 0 })
-      expect(result.closingBalance).toEqual({ amount: 0, availableAmount: -5 })
-      expect(result.source.kind).toBe(LEDGER_SOURCE_KIND.PRN_OPERATION)
+      expect(result.closingBalance).toEqual({ amount: 25, availableAmount: 25 })
+      expect(result.source.kind).toBe(LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW)
     })
   })
 

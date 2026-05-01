@@ -5,13 +5,9 @@ import {
   ledgerTransactionInsertSchema,
   ledgerTransactionReadSchema,
   LEDGER_TRANSACTION_TYPE,
-  LEDGER_SOURCE_KIND,
-  LEDGER_PRN_OPERATION_TYPE
+  LEDGER_SOURCE_KIND
 } from './ledger-schema.js'
-import {
-  buildLedgerTransaction,
-  buildPrnOperationLedgerTransaction
-} from './ledger-test-data.js'
+import { buildLedgerTransaction } from './ledger-test-data.js'
 
 describe('ledger transaction insert schema', () => {
   describe('valid documents', () => {
@@ -21,28 +17,9 @@ describe('ledger transaction insert schema', () => {
       expect(error).toBeUndefined()
     })
 
-    it('accepts a prn-operation transaction', () => {
-      const data = buildPrnOperationLedgerTransaction()
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeUndefined()
-    })
-
     it('accepts all transaction types', () => {
       for (const type of Object.values(LEDGER_TRANSACTION_TYPE)) {
         const data = buildLedgerTransaction({ type })
-        const { error } = ledgerTransactionInsertSchema.validate(data)
-        expect(error).toBeUndefined()
-      }
-    })
-
-    it('accepts all PRN operation types', () => {
-      for (const operationType of Object.values(LEDGER_PRN_OPERATION_TYPE)) {
-        const data = buildPrnOperationLedgerTransaction({
-          source: {
-            kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
-            prnOperation: { prnId: 'prn-1', operationType }
-          }
-        })
         const { error } = ledgerTransactionInsertSchema.validate(data)
         expect(error).toBeUndefined()
       }
@@ -187,37 +164,6 @@ describe('ledger transaction insert schema', () => {
       const { error } = ledgerTransactionInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
-
-    it('rejects summary-log-row kind when prnOperation is also present', () => {
-      const data = buildLedgerTransaction({
-        source: {
-          kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
-          summaryLogRow: {
-            summaryLogId: 'log-1',
-            wasteRecord: {
-              type: 'received',
-              rowId: 'row-1',
-              versionId: 'v-1',
-              creditedAmount: 10
-            }
-          },
-          prnOperation: {
-            prnId: 'prn-1',
-            operationType: LEDGER_PRN_OPERATION_TYPE.CREATION
-          }
-        }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-
-    it('rejects prn-operation kind when prnOperation is missing', () => {
-      const data = buildLedgerTransaction({
-        source: { kind: LEDGER_SOURCE_KIND.PRN_OPERATION }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
   })
 
   describe('summary-log-row source fields', () => {
@@ -284,41 +230,6 @@ describe('ledger transaction insert schema', () => {
         const { error } = ledgerTransactionInsertSchema.validate(data)
         expect(error).toBeUndefined()
       }
-    })
-  })
-
-  describe('prn-operation source fields', () => {
-    it('rejects when prnId is missing', () => {
-      const data = buildPrnOperationLedgerTransaction({
-        source: {
-          kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
-          prnOperation: { operationType: LEDGER_PRN_OPERATION_TYPE.CREATION }
-        }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-
-    it('rejects when operationType is missing', () => {
-      const data = buildPrnOperationLedgerTransaction({
-        source: {
-          kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
-          prnOperation: { prnId: 'prn-1' }
-        }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
-    })
-
-    it('rejects an unknown operationType', () => {
-      const data = buildPrnOperationLedgerTransaction({
-        source: {
-          kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
-          prnOperation: { prnId: 'prn-1', operationType: 'teleportation' }
-        }
-      })
-      const { error } = ledgerTransactionInsertSchema.validate(data)
-      expect(error).toBeDefined()
     })
   })
 

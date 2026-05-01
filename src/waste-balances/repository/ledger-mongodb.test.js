@@ -76,24 +76,6 @@ describe('ensureLedgerCollection', () => {
         number: -1
       })
     })
-
-    it('creates the summaryLogRow_row compound index', async ({
-      ledgerCollection
-    }) => {
-      const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'summaryLogRow_row')).toEqual({
-        'source.summaryLogRow.summaryLogId': 1,
-        'source.summaryLogRow.wasteRecord.rowId': 1,
-        'source.summaryLogRow.wasteRecord.type': 1
-      })
-    })
-
-    it('creates the prnOperation_prnId index', async ({ ledgerCollection }) => {
-      const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'prnOperation_prnId')).toEqual({
-        'source.prnOperation.prnId': 1
-      })
-    })
   })
 
   describe('unique constraint on (accreditationId, number)', () => {

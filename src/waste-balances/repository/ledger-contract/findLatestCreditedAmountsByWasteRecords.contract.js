@@ -28,16 +28,6 @@ const buildSummaryLogRowTransaction = ({
     }
   })
 
-const buildPrnOperationTransaction = ({ accreditationId = 'acc-1', number }) =>
-  buildLedgerTransaction({
-    accreditationId,
-    number,
-    source: {
-      kind: 'prn-operation',
-      prnOperation: { prnId: 'prn-1', operationType: 'creation' }
-    }
-  })
-
 export const testFindLatestCreditedAmountsByWasteRecordsBehaviour = (it) => {
   describe('findLatestCreditedAmountsByWasteRecords', () => {
     let repository
@@ -209,28 +199,6 @@ export const testFindLatestCreditedAmountsByWasteRecordsBehaviour = (it) => {
       expect(
         lookup({ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 'wr-shared' })
       ).toBe(0)
-    })
-
-    it('does not include PRN-operation transactions in the lookup', async () => {
-      await repository.insertTransactions([
-        buildSummaryLogRowTransaction({
-          number: 1,
-          amount: 60,
-          closingBalance: { amount: 60, availableAmount: 60 },
-          rowId: 'wr-a',
-          creditedAmount: 60
-        }),
-        buildPrnOperationTransaction({ number: 2 })
-      ])
-
-      const lookup = await repository.findLatestCreditedAmountsByWasteRecords(
-        'acc-1',
-        [{ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 'wr-a' }]
-      )
-
-      expect(lookup({ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 'wr-a' })).toBe(
-        60
-      )
     })
 
     it('preserves high-precision creditedAmount exactly', async () => {

@@ -13,7 +13,6 @@ import {
   ledgerInsertToMongo
 } from './ledger-decimal.js'
 import { LedgerSlotConflictError } from './ledger-port.js'
-import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import {
   validateLedgerTransactionInsert,
   validateLedgerTransactionRead
@@ -40,11 +39,6 @@ export async function ensureLedgerCollection(db) {
     { name: 'accreditationId_number', unique: true }
   )
 
-  // Per-row delta reconciliation: descending on `number` so the find-latest
-  // read is a direct index scan with `limit(1)`. Only summary-log-row
-  // transactions carry `source.summaryLogRow`, so PRN operations and PRN
-  // pending debits do not appear in this index — no pending-debit filter
-  // needed.
   await collection.createIndex(
     {
       accreditationId: 1,
@@ -53,24 +47,6 @@ export async function ensureLedgerCollection(db) {
       number: -1
     },
     { name: 'summaryLogRow_wasteRecord_findLatest' }
-  )
-
-  // Compound index serves both "transactions for summary log S" queries
-  // (via summaryLogId prefix) and "transactions a specific row caused"
-  // queries (full-key lookup). A standalone summaryLogId index would be
-  // strictly redundant here.
-  await collection.createIndex(
-    {
-      'source.summaryLogRow.summaryLogId': 1,
-      'source.summaryLogRow.wasteRecord.rowId': 1,
-      'source.summaryLogRow.wasteRecord.type': 1
-    },
-    { name: 'summaryLogRow_row' }
-  )
-
-  await collection.createIndex(
-    { 'source.prnOperation.prnId': 1 },
-    { name: 'prnOperation_prnId' }
   )
 
   return collection
@@ -193,7 +169,6 @@ const performFindLatestCreditedAmountsByWasteRecords =
         const doc = await collection.findOne(
           {
             accreditationId,
-            'source.kind': LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
             'source.summaryLogRow.wasteRecord.type': record.type,
             'source.summaryLogRow.wasteRecord.rowId': record.rowId
           },
