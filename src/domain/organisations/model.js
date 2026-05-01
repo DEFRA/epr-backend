@@ -31,6 +31,13 @@ export const REGULATOR = Object.freeze({
   NIEA: 'niea'
 })
 
+export const REGULATOR_DISPLAY = Object.freeze({
+  ea: 'EA',
+  nrw: 'NRW',
+  sepa: 'SEPA',
+  niea: 'NIEA'
+})
+
 /**
  * @typedef {typeof MATERIAL[keyof typeof MATERIAL]} Material
  */

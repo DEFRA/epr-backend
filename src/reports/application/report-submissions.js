@@ -4,13 +4,12 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
-import {
-  formatMaterial,
-  capitalize,
-  uppercaseString
-} from '#common/helpers/formatters.js'
+import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import {
+  REG_ACC_STATUS,
+  REGULATOR_DISPLAY
+} from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -185,7 +184,7 @@ function buildRow(
   submittedBy
 ) {
   return {
-    regulator: uppercaseString(registration.submittedToRegulator),
+    regulator: REGULATOR_DISPLAY[registration.submittedToRegulator] ?? '',
     organisationName: org.companyDetails.name,
     submitterPhone: registration.submitterContactDetails.phone,
     approvedPersonsPhone: registration.approvedPersons

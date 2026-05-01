@@ -433,6 +433,24 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(result.reportSubmissions[0].regulator).toBe('')
   })
 
+  it('returns empty regulator for an unknown submittedToRegulator value', async () => {
+    const org = buildOrg({
+      registrations: [
+        buildRegistrationMock({
+          status: 'approved',
+          submittedToRegulator: 'foo'
+        })
+      ]
+    })
+
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
+
+    expect(result.reportSubmissions[0].regulator).toBe('')
+  })
+
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
       orgId: 999999,
