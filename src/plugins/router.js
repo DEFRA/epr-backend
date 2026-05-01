@@ -20,6 +20,7 @@ import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/inde
 import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/routes/index.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
+import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -33,6 +34,14 @@ const router = {
         const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
           ? Object.values(devRoutes)
           : []
+
+        const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } =
+          reportsRoutes
+
+        const unsubmitBehindFeatureFlag = featureFlags.isReportUnsubmitEnabled()
+          ? [reportsUnsubmit]
+          : []
+
 
         server.route([
           health,
@@ -56,7 +65,8 @@ const router = {
           ...summaryLogUploadsReportRoutes,
           adminPackagingRecyclingNotesList,
           ...Object.values(overseasSitesRoutes),
-          ...Object.values(reportsRoutes),
+          ...Object.values(coreReportsRoutes),
+          ...unsubmitBehindFeatureFlag,
           dlqMessagesGet,
           dlqPurgePost
         ])

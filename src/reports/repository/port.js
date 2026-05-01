@@ -214,10 +214,18 @@
  */
 
 /**
+ * @typedef {Object} UnsubmitReportParams
+ * @property {string} reportId
+ * @property {number} version - current version for optimistic locking
+ * @property {UserSummary} changedBy
+ */
+
+/**
  * @typedef {Object} ReportsRepository
  * @property {(params: CreateReportParams) => Promise<Report>} createReport
  * @property {(params: UpdateReportParams) => Promise<Report>} updateReport
  * @property {(params: UpdateReportStatusParams) => Promise<Report>} updateReportStatus
+ * @property {(params: UnsubmitReportParams) => Promise<Report>} unsubmitReport
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
