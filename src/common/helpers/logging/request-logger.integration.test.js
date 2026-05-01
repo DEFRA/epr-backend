@@ -120,19 +120,10 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
   })
 
-  it('exists on the singleton logger import', () => {
-    // Sanity check that the exported `logger` is a real pino instance with the
-    // tightened TypedLogger surface (info/error/warn/debug/trace/fatal/child).
-    for (const method of [
-      'info',
-      'error',
-      'warn',
-      'debug',
-      'trace',
-      'fatal',
-      'child'
-    ]) {
-      expect(typeof logger[method]).toBe('function')
+  it.each(['info', 'error', 'warn', 'debug', 'trace', 'fatal', 'child'])(
+    'exposes %s on the singleton logger import',
+    (method) => {
+      expect(logger[method]).toBeTypeOf('function')
     }
-  })
+  )
 })
