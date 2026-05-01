@@ -95,43 +95,18 @@ describe('SQS command executor integration', () => {
   })
 
   describe('submit', () => {
-    it(
-      'sends submit command message to queue',
-      { timeout: TEST_TIMEOUT },
-      async ({ sqsClient }) => {
-        const executor = await createSqsCommandExecutor({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger
-        })
-
-        const summaryLogId = `submit-test-${Date.now()}`
-        await executor.summaryLogsWorker.submit(summaryLogId)
-
-        // Verify message was sent by receiving it from the queue
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
-        )
-
-        const response = await sqsClient.send(
-          new ReceiveMessageCommand({
-            QueueUrl: queueUrl,
-            WaitTimeSeconds: 5
-          })
-        )
-
-        expect(response.Messages).toHaveLength(1)
-
-        const message = JSON.parse(response.Messages[0].Body)
-        expect(message).toEqual({
-          command: 'submit',
-          summaryLogId
-        })
+    const mockRequest = {
+      auth: {
+        credentials: {
+          id: 'user-123',
+          email: 'test@example.com',
+          scope: ['admin']
+        }
       }
-    )
+    }
 
     it(
-      'includes user context in submit message when request has credentials',
+      'sends submit command message to queue with user context',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
         const executor = await createSqsCommandExecutor({
@@ -141,16 +116,6 @@ describe('SQS command executor integration', () => {
         })
 
         const summaryLogId = `submit-user-test-${Date.now()}`
-        const mockRequest = {
-          auth: {
-            credentials: {
-              id: 'user-123',
-              email: 'test@example.com',
-              scope: ['admin']
-            }
-          }
-        }
-
         await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         const { QueueUrl: queueUrl } = await sqsClient.send(
@@ -180,6 +145,37 @@ describe('SQS command executor integration', () => {
     )
 
     it(
+      'rejects machine credentials at the boundary',
+      { timeout: TEST_TIMEOUT },
+      async ({ sqsClient }) => {
+        const executor = await createSqsCommandExecutor({
+          sqsClient,
+          queueName: sqsClient.queueName,
+          logger
+        })
+
+        const machineRequest = {
+          auth: {
+            credentials: {
+              id: 'machine-1',
+              isMachine: true,
+              name: 'machine-1'
+            }
+          }
+        }
+
+        await expect(
+          executor.summaryLogsWorker.submit(
+            `submit-machine-${Date.now()}`,
+            machineRequest
+          )
+        ).rejects.toThrow(
+          /Machine credentials cannot drive a summary-log submit/
+        )
+      }
+    )
+
+    it(
       'logs message send success',
       { timeout: TEST_TIMEOUT },
       async ({ sqsClient }) => {
@@ -190,7 +186,7 @@ describe('SQS command executor integration', () => {
         })
 
         const summaryLogId = 'submit-log-456'
-        await executor.summaryLogsWorker.submit(summaryLogId)
+        await executor.summaryLogsWorker.submit(summaryLogId, mockRequest)
 
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({

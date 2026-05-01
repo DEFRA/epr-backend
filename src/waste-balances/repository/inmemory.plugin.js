@@ -1,19 +1,26 @@
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
+import { createInMemoryLedgerRepository } from './ledger-inmemory.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Object[]} [initialWasteBalances]
- * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryWasteBalancesRepositoryPlugin(
   initialWasteBalances
 ) {
-  const factory = createInMemoryWasteBalancesRepository(initialWasteBalances)
-  const repository = factory()
-
   return {
     name: 'wasteBalancesRepository',
+    dependencies: ['feature-flags'],
     register: (server) => {
+      const ledgerRepository = createInMemoryLedgerRepository()()
+      const factory = createInMemoryWasteBalancesRepository(
+        initialWasteBalances,
+        {
+          ledgerRepository,
+          featureFlags: server.featureFlags
+        }
+      )
+      const repository = factory()
       registerRepository(server, 'wasteBalancesRepository', () => repository)
     }
   }

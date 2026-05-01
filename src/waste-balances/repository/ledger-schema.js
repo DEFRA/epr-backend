@@ -4,8 +4,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 export const LEDGER_TRANSACTION_TYPE = Object.freeze({
   CREDIT: 'credit',
-  DEBIT: 'debit',
-  PENDING_DEBIT: 'pending_debit'
+  DEBIT: 'debit'
 })
 
 /**
@@ -13,29 +12,15 @@ export const LEDGER_TRANSACTION_TYPE = Object.freeze({
  */
 
 export const LEDGER_SOURCE_KIND = Object.freeze({
-  SUMMARY_LOG_ROW: 'summary-log-row',
-  PRN_OPERATION: 'prn-operation'
+  SUMMARY_LOG_ROW: 'summary-log-row'
 })
 
 /**
  * @typedef {typeof LEDGER_SOURCE_KIND[keyof typeof LEDGER_SOURCE_KIND]} LedgerSourceKind
  */
 
-export const LEDGER_PRN_OPERATION_TYPE = Object.freeze({
-  CREATION: 'creation',
-  ISSUANCE: 'issuance',
-  ACCEPTANCE: 'acceptance',
-  CANCELLATION: 'cancellation',
-  ISSUED_CANCELLATION: 'issued_cancellation'
-})
-
-/**
- * @typedef {typeof LEDGER_PRN_OPERATION_TYPE[keyof typeof LEDGER_PRN_OPERATION_TYPE]} LedgerPrnOperationType
- */
-
 const typeValues = Object.values(LEDGER_TRANSACTION_TYPE)
 const sourceKindValues = Object.values(LEDGER_SOURCE_KIND)
-const prnOperationTypeValues = Object.values(LEDGER_PRN_OPERATION_TYPE)
 const rowTypeValues = Object.values(WASTE_RECORD_TYPE)
 
 const userSummarySchema = Joi.object({
@@ -43,59 +28,49 @@ const userSummarySchema = Joi.object({
   name: Joi.string().required()
 })
 
-const summaryLogRowSourceSchema = Joi.object({
-  summaryLogId: Joi.string().required(),
-  rowId: Joi.string().required(),
-  rowType: Joi.string()
+const wasteRecordSchema = Joi.object({
+  type: Joi.string()
     .valid(...rowTypeValues)
     .required(),
-  wasteRecordId: Joi.string().required(),
-  wasteRecordVersionId: Joi.string().required()
+  rowId: Joi.string().required(),
+  versionId: Joi.string().required(),
+  creditedAmount: Joi.number().required()
 })
 
-const prnOperationSourceSchema = Joi.object({
-  prnId: Joi.string().required(),
-  operationType: Joi.string()
-    .valid(...prnOperationTypeValues)
-    .required()
+const summaryLogRowSourceSchema = Joi.object({
+  summaryLogId: Joi.string().required(),
+  wasteRecord: wasteRecordSchema.required()
 })
 
 const sourceSchema = Joi.object({
   kind: Joi.string()
     .valid(...sourceKindValues)
     .required(),
-  summaryLogRow: Joi.when('kind', {
-    is: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW,
-    then: summaryLogRowSourceSchema.required(),
-    otherwise: Joi.forbidden()
-  }),
-  prnOperation: Joi.when('kind', {
-    is: LEDGER_SOURCE_KIND.PRN_OPERATION,
-    then: prnOperationSourceSchema.required(),
-    otherwise: Joi.forbidden()
-  })
+  summaryLogRow: summaryLogRowSourceSchema.required()
 })
+
+/**
+ * @typedef {Object} LedgerWasteRecord
+ * @property {import('#domain/waste-records/model.js').WasteRecordType} type
+ * @property {string} rowId
+ * @property {string} versionId
+ * @property {number} creditedAmount
+ *   Running net credit total on this waste record after this transaction.
+ *   `previousCreditedAmount + delta = creditedAmount`, where
+ *   `previousCreditedAmount` comes from the latest prior matching
+ *   transaction or zero if none.
+ */
 
 /**
  * @typedef {Object} LedgerSummaryLogRow
  * @property {string} summaryLogId
- * @property {string} rowId
- * @property {import('#domain/waste-records/model.js').WasteRecordType} rowType
- * @property {string} wasteRecordId
- * @property {string} wasteRecordVersionId
- */
-
-/**
- * @typedef {Object} LedgerPrnOperation
- * @property {string} prnId
- * @property {LedgerPrnOperationType} operationType
+ * @property {LedgerWasteRecord} wasteRecord
  */
 
 /**
  * Discriminated union — `kind` selects which variant carries the payload.
  *
- * @typedef {{ kind: (typeof LEDGER_SOURCE_KIND)['SUMMARY_LOG_ROW'], summaryLogRow: LedgerSummaryLogRow }
- *   | { kind: (typeof LEDGER_SOURCE_KIND)['PRN_OPERATION'], prnOperation: LedgerPrnOperation }} LedgerSource
+ * @typedef {{ kind: (typeof LEDGER_SOURCE_KIND)['SUMMARY_LOG_ROW'], summaryLogRow: LedgerSummaryLogRow }} LedgerSource
  */
 
 /**

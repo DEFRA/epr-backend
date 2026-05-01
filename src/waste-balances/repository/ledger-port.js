@@ -43,6 +43,18 @@ export class LedgerSlotConflictError extends Error {
  */
 
 /**
+ * @typedef {{ type: string, rowId: string }} WasteRecordKey
+ *   The compound identity of a waste record within an accreditation —
+ *   `(type, rowId)`.
+ */
+
+/**
+ * @typedef {(record: WasteRecordKey) => number} CreditedAmountLookup
+ *   Returns the running net credited amount on the given waste record under
+ *   the resolved accreditation. Records with no prior transaction return 0.
+ */
+
+/**
  * @typedef {Object} LedgerRepository
  * @property {(transactions: LedgerTransactionInsert[]) => Promise<LedgerTransaction[]>} insertTransactions
  *   Persist a batch of transactions in input order. Returns the stored
@@ -62,6 +74,22 @@ export class LedgerSlotConflictError extends Error {
  * @property {(accreditationId: string) => Promise<LedgerTransaction | null>} findLatestByAccreditationId
  *   Return the highest-numbered transaction for the accreditation, or `null`
  *   if none exist.
+ * @property {(accreditationId: string, wasteRecords: WasteRecordKey[]) => Promise<CreditedAmountLookup>} findLatestCreditedAmountsByWasteRecords
+ *   For each waste record `(type, rowId)` in the input, resolve the
+ *   `wasteRecord.creditedAmount` on the latest prior `summary-log-row`
+ *   transaction matching it under the given accreditation. Returns a
+ *   lookup function: `lookup({type, rowId})` yields the credited amount,
+ *   or `0` if no prior transaction exists for that record.
+ *
+ *   Empty input resolves to a lookup that returns `0` for every record.
+ *   The accreditation filter is load-bearing: `(type, rowId)` is unique
+ *   within an accreditation but not globally, so two accreditations can
+ *   legitimately use the same `(exported, "1")` pair.
+ *
+ *   This is the read primitive that drives the per-row delta
+ *   reconciliation invariant on the ledger write path: a re-upload of
+ *   identical data converges to zero new transactions because every row's
+ *   target amount equals its already-credited amount.
  */
 
 /**

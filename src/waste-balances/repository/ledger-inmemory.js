@@ -19,6 +19,15 @@ import { validateLedgerTransactionInsert } from './ledger-validation.js'
  */
 
 /**
+ * Stable map key for a waste record `(type, rowId)`. Private to this
+ * adapter — Maps need primitive-or-reference equality, so we synthesise a
+ * string for lookup. Never persisted.
+ *
+ * @param {{ type: string, rowId: string }} record
+ */
+const wasteRecordKey = ({ type, rowId }) => `${type}:${rowId}`
+
+/**
  * @param {Array<LedgerTransaction>} [initialTransactions]
  * @returns {import('./ledger-port.js').LedgerRepositoryFactory}
  */
@@ -79,6 +88,39 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
       )
 
       return structuredClone(latest)
+    },
+    /**
+     * @param {string} accreditationId
+     * @param {Array<{ type: string, rowId: string }>} wasteRecords
+     * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
+     */
+    findLatestCreditedAmountsByWasteRecords: async (
+      accreditationId,
+      wasteRecords
+    ) => {
+      const requested = new Set(wasteRecords.map(wasteRecordKey))
+      const latestByKey = new Map()
+
+      for (const transaction of storage) {
+        if (transaction.accreditationId !== accreditationId) {
+          continue
+        }
+
+        const key = wasteRecordKey(transaction.source.summaryLogRow.wasteRecord)
+        if (!requested.has(key)) {
+          continue
+        }
+
+        const existing = latestByKey.get(key)
+        if (!existing || transaction.number > existing.number) {
+          latestByKey.set(key, transaction)
+        }
+      }
+
+      return (record) => {
+        const found = latestByKey.get(wasteRecordKey(record))
+        return found ? found.source.summaryLogRow.wasteRecord.creditedAmount : 0
+      }
     }
   })
 }

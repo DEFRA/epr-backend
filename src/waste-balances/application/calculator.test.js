@@ -42,18 +42,12 @@ const buildWasteRecord = (overrides = {}) => {
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No'
   }
 
-  const testUser = {
-    id: 'user-1',
-    name: 'Test User'
-  }
-
   return {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     accreditationId: 'acc-1',
     rowId: 'row-1',
     type: WASTE_RECORD_TYPE.EXPORTED,
-    updatedBy: testUser,
     versions: [
       {
         id: 'v1',
@@ -83,8 +77,10 @@ describe('Waste Balance Calculator', () => {
 
   const testUser = {
     id: 'user-1',
-    name: 'Test User'
+    email: 'user-1@example.test',
+    scope: ['standard_user']
   }
+  const expectedCreatedBy = { id: testUser.id, name: testUser.email }
 
   const emptyBalance = {
     id: 'bal-1',
@@ -111,6 +107,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -134,6 +131,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -156,6 +154,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -176,6 +175,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -205,6 +205,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record1, record2],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -235,6 +236,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -256,6 +258,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -276,6 +279,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -297,6 +301,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -317,6 +322,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -346,7 +352,7 @@ describe('Waste Balance Calculator', () => {
         }
       ],
       createdAt: '2023-01-01T00:00:00.000Z',
-      createdBy: { id: 'user-1', name: 'Test User' },
+      createdBy: expectedCreatedBy,
       openingAmount: 0,
       closingAmount: 10.0,
       openingAvailableAmount: 0,
@@ -362,6 +368,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -398,7 +405,7 @@ describe('Waste Balance Calculator', () => {
         }
       ],
       createdAt: '2023-01-01T00:00:00.000Z',
-      createdBy: { id: 'user-1', name: 'Test User' },
+      createdBy: expectedCreatedBy,
       openingAmount: 0,
       closingAmount: 30.0,
       openingAvailableAmount: 0,
@@ -417,7 +424,7 @@ describe('Waste Balance Calculator', () => {
         }
       ],
       createdAt: '2023-01-02T00:00:00.000Z',
-      createdBy: { id: 'user-1', name: 'Test User' },
+      createdBy: expectedCreatedBy,
       openingAmount: 30.0,
       closingAmount: 20.0,
       openingAvailableAmount: 30.0,
@@ -433,6 +440,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -455,6 +463,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: balance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -485,7 +494,7 @@ describe('Waste Balance Calculator', () => {
         }
       ],
       createdAt: '2023-01-01T00:00:00.000Z',
-      createdBy: { id: 'user-1', name: 'Test User' },
+      createdBy: expectedCreatedBy,
       openingAmount: 0,
       closingAmount: 20.0,
       openingAvailableAmount: 0,
@@ -501,6 +510,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -525,7 +535,7 @@ describe('Waste Balance Calculator', () => {
       type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
       amount: 10.0,
       createdAt: '2023-06-01T10:00:00.000Z',
-      createdBy: testUser,
+      createdBy: expectedCreatedBy,
       openingAmount: 0,
       closingAmount: 10.0,
       openingAvailableAmount: 0,
@@ -549,6 +559,7 @@ describe('Waste Balance Calculator', () => {
       },
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -580,7 +591,7 @@ describe('Waste Balance Calculator', () => {
         }
       ],
       createdAt: '2023-01-01T00:00:00.000Z',
-      createdBy: { id: 'user-1', name: 'Test User' },
+      createdBy: expectedCreatedBy,
       openingAmount: 0,
       closingAmount: 100.0,
       openingAvailableAmount: 0,
@@ -598,6 +609,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -626,6 +638,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -650,6 +663,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -672,6 +686,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: emptyBalance,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -706,6 +721,7 @@ describe('Waste Balance Calculator', () => {
       currentBalance: balanceWithTransaction,
       wasteRecords: [record],
       accreditation,
+      user: testUser,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -761,6 +777,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [exportedRecord, sentOnRecord],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
@@ -792,7 +809,7 @@ describe('Waste Balance Calculator', () => {
           }
         ],
         createdAt: '2023-07-01T00:00:00.000Z',
-        createdBy: { id: 'user-1', name: 'Test User' },
+        createdBy: expectedCreatedBy,
         openingAmount: 10.0,
         closingAmount: 7.0,
         openingAvailableAmount: 10.0,
@@ -810,6 +827,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
@@ -857,6 +875,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
@@ -888,7 +907,7 @@ describe('Waste Balance Calculator', () => {
           }
         ],
         createdAt: '2023-07-01T00:00:00.000Z',
-        createdBy: { id: 'user-1', name: 'Test User' },
+        createdBy: expectedCreatedBy,
         openingAmount: 10.0,
         closingAmount: 10.0,
         openingAvailableAmount: 10.0,
@@ -906,6 +925,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
@@ -925,6 +945,7 @@ describe('Waste Balance Calculator', () => {
         100,
         500,
         500,
+        testUser,
         WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
       )
 
@@ -942,6 +963,7 @@ describe('Waste Balance Calculator', () => {
         100,
         500,
         500,
+        testUser,
         WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
       )
 
@@ -961,6 +983,7 @@ describe('Waste Balance Calculator', () => {
           100,
           0,
           0,
+          testUser,
           WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
         )
 
@@ -972,6 +995,7 @@ describe('Waste Balance Calculator', () => {
           30,
           creditTx.closingAmount,
           creditTx.closingAvailableAmount,
+          testUser,
           WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
         )
 
@@ -986,6 +1010,7 @@ describe('Waste Balance Calculator', () => {
           50,
           0,
           0,
+          testUser,
           WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
         )
 
@@ -994,6 +1019,7 @@ describe('Waste Balance Calculator', () => {
           100,
           creditTx.closingAmount,
           creditTx.closingAvailableAmount,
+          testUser,
           WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
         )
 
@@ -1019,6 +1045,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: { '002': { validFrom: new Date('2023-01-01') } }
       })
 
@@ -1040,6 +1067,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: { '001': { validFrom: new Date('2023-01-01') } }
       })
 
@@ -1061,6 +1089,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
@@ -1087,6 +1116,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
@@ -1110,6 +1140,7 @@ describe('Waste Balance Calculator', () => {
         currentBalance: emptyBalance,
         wasteRecords: [record],
         accreditation,
+        user: testUser,
         overseasSites: ORS_VALIDATION_DISABLED
       })
 
