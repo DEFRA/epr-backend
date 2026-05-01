@@ -186,10 +186,11 @@ const runCascade = async (db, steps) => {
 export const createNonProdDataReset = (db, { isProduction = false } = {}) => ({
   async deleteByOrgId(orgId) {
     if (isProduction) {
-      logger.error(
-        { event: { reference: String(orgId) } },
-        'Refusing to run non-prod cascade delete in production environment.'
-      )
+      logger.error({
+        message:
+          'Refusing to run non-prod cascade delete in production environment.',
+        event: { reference: `organisationId=${orgId}` }
+      })
       throw new Error('Non-prod data reset is disabled in production.')
     }
     const organisation = await findOrganisationForCleanup(db, orgId)
