@@ -54,6 +54,6 @@ export const runFormsDataMigration = async (server) => {
       await lock.free()
     }
   } catch (error) {
-    logger.error(error, 'Failed to run form data migration')
+    logger.error({ message: 'Failed to run form data migration', err: error })
   }
 }

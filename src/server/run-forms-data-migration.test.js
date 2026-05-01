@@ -88,10 +88,10 @@ describe('runFormsDataMigration', () => {
 
     await runFormsDataMigration(mockServer)
 
-    expect(logger.error).toHaveBeenCalledWith(
-      error,
-      'Failed to run form data migration'
-    )
+    expect(logger.error).toHaveBeenCalledWith({
+      message: 'Failed to run form data migration',
+      err: error
+    })
     expect(mockLock.free).toHaveBeenCalled()
   })
 
