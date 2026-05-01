@@ -79,4 +79,17 @@ describe('createConfigFeatureFlags', () => {
     const flags = createConfigFeatureFlags(config)
     expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
   })
+
+  it('returns true when reportUnsubmit flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isReportUnsubmitEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith('featureFlags.reportUnsubmit')
+  })
+
+  it('returns false when reportUnsubmit flag is disabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isReportUnsubmitEnabled()).toBe(false)
+  })
 })

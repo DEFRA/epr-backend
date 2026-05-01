@@ -4,6 +4,7 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
+  validateUnsubmitReport,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -23,6 +24,7 @@ import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
+ *   UnsubmitReportParams,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
@@ -38,6 +40,27 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
  */
 const reportsCollection = (db) =>
   /** @type {Collection<Report>} */ (db.collection(REPORTS_COLLECTION))
+
+/**
+ * Resolves a failed findOneAndUpdate into a 404 (report missing) or 409 (version mismatch).
+ *
+ * @param {Db} db
+ * @param {string} reportId
+ * @param {number} version
+ * @returns {Promise<never>}
+ */
+const throwNotFoundOrConflict = async (db, reportId, version) => {
+  const existing = await reportsCollection(db).findOne(
+    { id: reportId },
+    { projection: { _id: 0, version: 1 } }
+  )
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${reportId}`)
+  }
+  throw Boom.conflict(
+    `Version conflict: expected version ${version} for report ${reportId}`
+  )
+}
 
 /**
  * Ensures the reports collection exists with required indexes.
@@ -137,16 +160,7 @@ const performUpdateReport = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc
@@ -182,16 +196,7 @@ const performUpdateReportStatus = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc
@@ -331,6 +336,43 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
+ * @param {Db} db
+ * @param {UnsubmitReportParams} params
+ * @returns {Promise<Report>}
+ */
+const performUnsubmitReport = async (db, params) => {
+  const { reportId, version, changedBy } = validateUnsubmitReport(params)
+  const now = new Date().toISOString()
+
+  const doc = await reportsCollection(db).findOneAndUpdate(
+    { id: reportId, version },
+    {
+      $set: {
+        'status.currentStatus': REPORT_STATUS.READY_TO_SUBMIT,
+        'status.currentStatusAt': now,
+        'status.unsubmitted': { at: now, by: changedBy }
+      },
+      $push: /** @type {any} */ ({
+        'status.history': {
+          status: REPORT_STATUS.READY_TO_SUBMIT,
+          at: now,
+          by: changedBy
+        }
+      }),
+      $inc: { version: 1 }
+    },
+    { returnDocument: 'after', projection: { _id: 0 } }
+  )
+
+  if (!doc) {
+    return throwNotFoundOrConflict(db, reportId, version)
+  }
+
+  const { _id, ...report } = doc
+  return report
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -343,6 +385,7 @@ export const createReportsRepository = async (db) => {
     createReport: (params) => performCreateReport(db, params),
     updateReport: (params) => performUpdateReport(db, params),
     updateReportStatus: (params) => performUpdateReportStatus(db, params),
+    unsubmitReport: (params) => performUnsubmitReport(db, params),
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),

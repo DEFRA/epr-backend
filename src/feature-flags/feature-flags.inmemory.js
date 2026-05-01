@@ -20,5 +20,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isRegistrationContactsMigrationEnabled() {
     return flags.registrationContactsMigration ?? false
+  },
+  isReportUnsubmitEnabled() {
+    return flags.reportUnsubmit ?? false
   }
 })

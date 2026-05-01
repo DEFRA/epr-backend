@@ -5,6 +5,7 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
+  validateUnsubmitReport,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -23,6 +24,7 @@ import {
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
+ *   UnsubmitReportParams,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
@@ -253,6 +255,47 @@ const findAllPeriodicReports = async (reports) => {
 }
 
 /**
+ * @param {Map<string, Object>} reports
+ * @param {UnsubmitReportParams} params
+ * @returns {Promise<Report>}
+ */
+const unsubmitReport = async (reports, params) => {
+  const { reportId, version, changedBy } = validateUnsubmitReport(params)
+
+  const existing = reports.get(reportId)
+
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${reportId}`)
+  }
+
+  if (existing.version !== version) {
+    throw Boom.conflict(
+      `Version conflict: expected version ${version} for report ${reportId}`
+    )
+  }
+
+  const now = new Date().toISOString()
+
+  const updated = {
+    ...existing,
+    version: existing.version + 1,
+    status: {
+      ...existing.status,
+      currentStatus: REPORT_STATUS.READY_TO_SUBMIT,
+      currentStatusAt: now,
+      unsubmitted: { at: now, by: changedBy },
+      history: [
+        ...existing.status.history,
+        { status: REPORT_STATUS.READY_TO_SUBMIT, at: now, by: changedBy }
+      ]
+    }
+  }
+
+  reports.set(reportId, updated)
+  return structuredClone(updated)
+}
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -267,6 +310,7 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     createReport: (params) => createReport(reports, params),
     updateReport: (params) => updateReport(reports, params),
     updateReportStatus: (params) => updateReportStatus(reports, params),
+    unsubmitReport: (params) => unsubmitReport(reports, params),
     deleteReport: (params) => deleteReport(reports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params),
