@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import unzipper from 'unzipper'
 
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
@@ -62,22 +63,16 @@ describe('ExcelJSSummaryLogsParser', () => {
     )
   })
 
-  it('should rethrow unrecognised errors from the load call unchanged', async () => {
+  it('should rethrow unrecognised errors from the underlying reader unchanged', async () => {
     const unexpected = new RangeError('this looks like a bug, not bad data')
-    function MockWorkbook() {
-      return {
-        xlsx: { load: vi.fn().mockRejectedValue(unexpected) },
-        worksheets: []
-      }
-    }
-    const workbookSpy = vi
-      .spyOn(ExcelJS, 'Workbook')
-      .mockImplementation(MockWorkbook)
+    const openSpy = vi
+      .spyOn(unzipper.Open, 'buffer')
+      .mockRejectedValueOnce(unexpected)
 
     try {
       await expect(parse(Buffer.from('anything'))).rejects.toBe(unexpected)
     } finally {
-      workbookSpy.mockRestore()
+      openSpy.mockRestore()
     }
   })
 
@@ -128,7 +123,6 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should throw SpreadsheetValidationError when worksheet count exceeds limit', async () => {
       const workbook = new ExcelJS.Workbook()
 
-      // Add 4 worksheets (exceeds limit of 3)
       for (let i = 1; i <= 4; i++) {
         workbook.addWorksheet(`Sheet${i}`)
       }
@@ -2086,6 +2080,40 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.meta.PHANTOM).toBeUndefined()
       expect(result.data.SECOND).toBeUndefined()
     })
+
+    it('should not terminate a data section on a styled-but-empty row', async () => {
+      // Excel/LibreOffice frequently emit `<row><c r="A5" s="14"/></row>`
+      // for rows the user formatted but never wrote to. The DOM path's
+      // `worksheet.eachRow({includeEmpty: false})` filters these via
+      // `row.hasValues`. The streaming WorksheetReader emits them. They
+      // must not push nulls into an active collection's currentRow and
+      // terminate the section prematurely.
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getRow(1).values = ['__EPR_DATA_SECTION', 'COL_A', 'COL_B']
+      worksheet.getRow(2).values = [null, 'before-1a', 'before-1b']
+      worksheet.getRow(3).values = [null, 'before-2a', 'before-2b']
+
+      // Row 4: styled cells, no values. ExcelJS emits `<c r="A4" s="N"/>`
+      // and `<c r="B4" s="N"/>` - both type=Null on read.
+      worksheet.getCell('A4').style = { font: { bold: true } }
+      worksheet.getCell('B4').style = { font: { bold: true } }
+
+      worksheet.getRow(5).values = [null, 'after-1a', 'after-1b']
+      worksheet.getRow(6).values = [null, 'after-2a', 'after-2b']
+      worksheet.getRow(7).values = [null, ''] // real terminator
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.data.SECTION.rows).toEqual([
+        { rowNumber: 2, values: ['before-1a', 'before-1b'] },
+        { rowNumber: 3, values: ['before-2a', 'before-2b'] },
+        { rowNumber: 5, values: ['after-1a', 'after-1b'] },
+        { rowNumber: 6, values: ['after-2a', 'after-2b'] }
+      ])
+    })
   })
 
   describe('phantom column protection', () => {
@@ -2520,6 +2548,19 @@ describe('shouldWrapAsSpreadsheetError', () => {
     )
 
     expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap unzipper FILE_ENDED errors from non-zip buffers', () => {
+    const error = new Error('FILE_ENDED')
+
+    expect(shouldWrapAsSpreadsheetError(error)).toBe(true)
+  })
+
+  it('should wrap unzipper password-required errors from encrypted xlsx', () => {
+    expect(shouldWrapAsSpreadsheetError(new Error('MISSING_PASSWORD'))).toBe(
+      true
+    )
+    expect(shouldWrapAsSpreadsheetError(new Error('BAD_PASSWORD'))).toBe(true)
   })
 
   it('should wrap SaxesError by name', () => {

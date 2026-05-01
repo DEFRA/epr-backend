@@ -6,7 +6,10 @@ import { generateReportingPeriods } from '#reports/domain/generate-reporting-per
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import {
+  REG_ACC_STATUS,
+  REGULATOR_DISPLAY
+} from '#domain/organisations/model.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
@@ -33,6 +36,7 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @typedef {Object} SubmissionBaseFields
+ * @property {import('#domain/organisations/model.js').RegulatorDisplay} regulator
  * @property {string} organisationName
  * @property {string} submitterPhone
  * @property {string} approvedPersonsPhone
@@ -180,6 +184,7 @@ function buildRow(
   submittedBy
 ) {
   return {
+    regulator: REGULATOR_DISPLAY[registration.submittedToRegulator],
     organisationName: org.companyDetails.name,
     submitterPhone: registration.submitterContactDetails.phone,
     approvedPersonsPhone: registration.approvedPersons

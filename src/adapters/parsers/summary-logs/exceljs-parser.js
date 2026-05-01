@@ -1,5 +1,10 @@
-import ExcelJS from 'exceljs'
-import { produce } from 'immer'
+import unzipper from 'unzipper'
+import { createDraft, finishDraft } from 'immer'
+import WorksheetReader from 'exceljs/lib/stream/xlsx/worksheet-reader.js'
+import WorkbookXform from 'exceljs/lib/xlsx/xform/book/workbook-xform.js'
+import RelationshipsXform from 'exceljs/lib/xlsx/xform/core/relationships-xform.js'
+import SharedStringsXform from 'exceljs/lib/xlsx/xform/strings/shared-strings-xform.js'
+import StylesXform from 'exceljs/lib/xlsx/xform/style/styles-xform.js'
 import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
@@ -8,6 +13,7 @@ import {
   SKIP_COLUMN,
   SKIP_EXAMPLE_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
+import { extractCellValue, isCellEmpty } from './cell-extractor.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
@@ -43,11 +49,11 @@ const DEREFERENCE_UNDEFINED_MESSAGE =
   /cannot read (?:properties|property\s+\S+) of (?:undefined|null)/i
 
 /**
- * Error messages from yauzl / jszip for non-zip buffers or corrupt-zip
- * streams (an xlsx is a zip archive under the hood).
+ * Error messages from yauzl / jszip / unzipper for non-zip buffers or
+ * corrupt-zip streams (an xlsx is a zip archive under the hood).
  */
 const CORRUPT_ZIP_MESSAGE =
-  /central directory|invalid signature|compressed\/uncompressed size|corrupted zip|end of data reached/i
+  /central directory|invalid signature|compressed\/uncompressed size|corrupted zip|end of data reached|FILE_ENDED|MISSING_PASSWORD|BAD_PASSWORD/i
 
 /**
  * Error messages from exceljs' own XML layer when an xlsx's XML parts are
@@ -140,141 +146,42 @@ const CollectionState = {
 }
 
 /**
- * Validates workbook structure before parsing begins.
- * Throws SpreadsheetValidationError if the workbook fails any validation check.
+ * Asserts the streamed worksheet count has not exceeded the configured limit.
+ * Called once per worksheet as it arrives from the stream.
  *
- * @param {Object} workbook - ExcelJS workbook instance
- * @param {Object} options - Validation options
- * @param {string|null} options.requiredWorksheet - Name of required worksheet, or null to skip check
- * @param {number} options.maxWorksheets - Maximum allowed worksheets
- * @param {number} options.maxRowsPerSheet - Maximum allowed rows per worksheet
- * @param {number} options.maxColumnsPerSheet - Maximum allowed columns per worksheet
+ * @param {number} count - Worksheets seen so far (including this one)
+ * @param {number} max
  */
-const validateWorkbookStructure = (workbook, options) => {
-  const {
-    requiredWorksheet,
-    maxWorksheets,
-    maxRowsPerSheet,
-    maxColumnsPerSheet
-  } = options
-
-  if (requiredWorksheet) {
-    const worksheetNames = workbook.worksheets.map((ws) => ws.name)
-
-    if (!worksheetNames.includes(requiredWorksheet)) {
-      throw new SpreadsheetValidationError(
-        `Missing required '${requiredWorksheet}' worksheet`
-      )
-    }
-  }
-
-  if (workbook.worksheets.length > maxWorksheets) {
+const assertWorksheetCountWithinLimit = (count, max) => {
+  if (count > max) {
     throw new SpreadsheetValidationError(
-      `Too many worksheets (${workbook.worksheets.length}, maximum ${maxWorksheets})`
+      `Too many worksheets (${count}, maximum ${max})`
     )
   }
+}
 
-  for (const worksheet of workbook.worksheets) {
-    if (worksheet.rowCount > maxRowsPerSheet) {
-      throw new SpreadsheetValidationError(
-        `Worksheet '${worksheet.name}' has too many rows (${worksheet.rowCount}, maximum ${maxRowsPerSheet})`
-      )
-    }
-
-    if (worksheet.columnCount > maxColumnsPerSheet) {
-      throw new SpreadsheetValidationError(
-        `Worksheet '${worksheet.name}' has too many columns (${worksheet.columnCount}, maximum ${maxColumnsPerSheet})`
-      )
-    }
+/**
+ * Asserts the streamed row index has not exceeded the configured limit.
+ * Called for each row as it streams in (via row.number, the 1-based index from XML).
+ */
+const assertRowWithinLimit = (worksheetName, rowNumber, max) => {
+  if (rowNumber > max) {
+    throw new SpreadsheetValidationError(
+      `Worksheet '${worksheetName}' has too many rows (${rowNumber}, maximum ${max})`
+    )
   }
 }
 
 /**
- * Checks if the cell value is a formula cell (regular or shared).
+ * Asserts the streamed column index has not exceeded the configured limit.
+ * Called for each cell as it streams in.
  */
-const isFormulaCell = (cellValue) =>
-  'formula' in cellValue || 'sharedFormula' in cellValue
-
-/**
- * Checks if the cell value is a richText cell.
- */
-const isRichTextCell = (cellValue) =>
-  'richText' in cellValue && Array.isArray(cellValue.richText)
-
-/**
- * Checks if the cell value is a hyperlink cell.
- */
-const isHyperlinkCell = (cellValue) =>
-  'text' in cellValue && 'hyperlink' in cellValue
-
-/**
- * Checks if the cell value is an error cell.
- */
-const isErrorCell = (cellValue) => 'error' in cellValue
-
-/**
- * Extracts value from an object cell type.
- * Returns undefined if not a recognised object type.
- */
-const extractObjectCellValue = (cellValue, recursiveExtract) => {
-  // Date objects - extract date-only (YYYY-MM-DD)
-  // We only care about dates, not times, in this system
-  if (cellValue instanceof Date) {
-    if (isNaN(cellValue.getTime())) {
-      return null
-    }
-    return cellValue.toISOString().slice(0, 10)
+const assertColumnWithinLimit = (worksheetName, colNumber, max) => {
+  if (colNumber > max) {
+    throw new SpreadsheetValidationError(
+      `Worksheet '${worksheetName}' has too many columns (${colNumber}, maximum ${max})`
+    )
   }
-
-  // Formula cells with result - recursively extract
-  if ('result' in cellValue && isFormulaCell(cellValue)) {
-    return recursiveExtract(cellValue.result)
-  }
-
-  // Formula cells without result
-  if (isFormulaCell(cellValue)) {
-    return null
-  }
-
-  // RichText cells - concatenate all text segments
-  if (isRichTextCell(cellValue)) {
-    return cellValue.richText.map((segment) => segment.text).join('')
-  }
-
-  // Hyperlink cells - extract just the text
-  if (isHyperlinkCell(cellValue)) {
-    return cellValue.text
-  }
-
-  // Error cells - treat as no valid value
-  if (isErrorCell(cellValue)) {
-    return null
-  }
-
-  return undefined
-}
-
-/**
- * Extracts a primitive value from an ExcelJS cell value.
- * Handles all ExcelJS ValueTypes: Null, Merge, Number, String, Date,
- * Hyperlink, Formula, SharedString, RichText, Boolean, Error.
- */
-const extractCellValue = (cellValue) => {
-  if (!cellValue || typeof cellValue !== 'object') {
-    return cellValue
-  }
-
-  const extracted = extractObjectCellValue(cellValue, extractCellValue)
-
-  if (extracted !== undefined) {
-    return extracted
-  }
-
-  // Unknown object type - fail fast so we can add explicit handling
-  throw new Error(
-    `Unknown cell value type: ${JSON.stringify(cellValue)}. ` +
-      'This may indicate a new ExcelJS cell type that needs explicit handling.'
-  )
 }
 
 const processCellForMetadata = (
@@ -449,23 +356,6 @@ const emitCollectionsToResult = (draftResult, collections) => {
   }
 }
 
-const collectRowsFromWorksheet = (worksheet) => {
-  const rows = []
-  worksheet.eachRow((row, rowNumber) => {
-    rows.push({ row, rowNumber })
-  })
-  return rows
-}
-
-/**
- * Checks if a cell value is considered empty.
- * Used for phantom column detection.
- */
-const isCellEmpty = (cellValue) => {
-  const value = extractCellValue(cellValue)
-  return value === null || value === undefined || value === ''
-}
-
 /**
  * Collects cells from a row, stopping after MAX_CONSECUTIVE_EMPTY_COLUMNS
  * consecutive empty cells to avoid iterating through phantom columns.
@@ -562,7 +452,26 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
 }
 
 /**
- * Checks if a row contains any non-empty content.
+ * Mirrors the DOM-mode `worksheet.eachRow({includeEmpty: false})` filter:
+ * a row whose cells are all `ValueType.Null` (style only, no value) is
+ * skipped entirely rather than fed to a collection. Without this, a styled-
+ * but-empty row mid-data pushes nulls into the active collection's
+ * currentRow and terminates the section prematurely.
+ */
+const rowIsStructurallyEmpty = (row) => {
+  let hasContentCell = false
+  row.eachCell((_cell) => {
+    hasContentCell = true
+  })
+  return !hasContentCell
+}
+
+/**
+ * Stricter than `rowIsStructurallyEmpty`: also treats cells whose
+ * extracted value is null, undefined or '' as empty. Used for phantom-row
+ * detection between data sections - long runs of empty-string rows
+ * between sections (e.g. row-formatted-but-cleared user input) count
+ * toward the phantom limit just like styled-empty rows do.
  */
 const rowHasContent = (row) => {
   const cells = collectCellsFromRow(row)
@@ -573,38 +482,36 @@ const rowHasContent = (row) => {
 }
 
 /**
- * Determines whether a row should be skipped during phantom row detection.
- *
- * A row should be processed (not skipped) if:
- * - There are active data collections that need this row for termination detection
- * - It contains any non-empty content (markers or otherwise)
+ * @typedef {{number: number, eachCell: any}} StreamingRow
+ * @typedef {AsyncIterable<StreamingRow> & {name: string}} StreamingWorksheet
  */
-const shouldSkipForPhantomDetection = (row, hasActiveCollections) => {
-  if (hasActiveCollections) {
-    return false
-  }
 
-  return !rowHasContent(row)
-}
+/**
+ * Streams rows from a worksheet, applying validation limits and phantom-row
+ * detection. Structurally empty rows (every cell `ValueType.Null`) are
+ * skipped to match the DOM path's `eachRow({includeEmpty: false})`
+ * semantics; a long stretch of them trips phantom-row detection and stops
+ * processing for the remainder of the sheet.
+ *
+ * Once phantom-row detection trips, remaining rows in this worksheet are
+ * still consumed from the stream (to keep the underlying zip pipeline
+ * draining cleanly) but not processed.
+ *
+ * @param {object} draftState - Immer draft of the parser state
+ * @param {StreamingWorksheet} worksheet - WorksheetReader instance
+ * @param {StreamWorksheetOptions} options
+ */
+const streamWorksheet = async (draftState, worksheet, options) => {
+  const { maxRowsPerSheet, maxColumnsPerSheet } = options
+  const counters = { consecutiveEmptyRows: 0, phantomRowsTripped: false }
 
-const processWorksheet = (draftState, worksheet) => {
-  let consecutiveEmptyRows = 0
-
-  const rows = collectRowsFromWorksheet(worksheet)
-
-  for (const { row, rowNumber } of rows) {
-    const hasActiveCollections = draftState.activeCollections.length > 0
-
-    if (shouldSkipForPhantomDetection(row, hasActiveCollections)) {
-      consecutiveEmptyRows++
-
-      if (consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
-        break
-      }
-    } else {
-      consecutiveEmptyRows = 0
-      processRow(draftState, row, rowNumber, worksheet)
-    }
+  for await (const row of worksheet) {
+    const rowNumber = row.number
+    assertRowWithinLimit(worksheet.name, rowNumber, maxRowsPerSheet)
+    processRowAgainstPhantomState(draftState, worksheet, row, rowNumber, {
+      maxColumnsPerSheet,
+      counters
+    })
   }
 
   emitCollectionsToResult(draftState.result.data, draftState.activeCollections)
@@ -612,8 +519,60 @@ const processWorksheet = (draftState, worksheet) => {
   draftState.activeCollections = []
 }
 
+/**
+ * @param {object} draftState
+ * @param {StreamingWorksheet} worksheet
+ * @param {StreamingRow} row
+ * @param {number} rowNumber
+ * @param {{maxColumnsPerSheet: number, counters: {consecutiveEmptyRows: number, phantomRowsTripped: boolean}}} ctx
+ */
+const processRowAgainstPhantomState = (
+  draftState,
+  worksheet,
+  row,
+  rowNumber,
+  ctx
+) => {
+  const { maxColumnsPerSheet, counters } = ctx
+  if (counters.phantomRowsTripped) {
+    return
+  }
+
+  if (rowIsStructurallyEmpty(row)) {
+    counters.consecutiveEmptyRows++
+    if (counters.consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
+      counters.phantomRowsTripped = true
+    }
+    return
+  }
+
+  const hasActiveCollections = draftState.activeCollections.length > 0
+  if (!hasActiveCollections && !rowHasContent(row)) {
+    counters.consecutiveEmptyRows++
+    if (counters.consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
+      counters.phantomRowsTripped = true
+    }
+    return
+  }
+
+  counters.consecutiveEmptyRows = 0
+  assertWorksheetColumnsWithinLimit(worksheet, row, maxColumnsPerSheet)
+  processRow(draftState, row, rowNumber, worksheet)
+}
+
+/**
+ * @param {{name: string}} worksheet
+ * @param {{eachCell: (cb: (cell: object, colNumber: number) => void) => void}} row
+ * @param {number} max
+ */
+const assertWorksheetColumnsWithinLimit = (worksheet, row, max) => {
+  row.eachCell((_cell, colNumber) => {
+    assertColumnWithinLimit(worksheet.name, colNumber, max)
+  })
+}
+
 // Exported for testing - allows direct unit testing of cell value extraction
-export { extractCellValue }
+export { extractCellValue } from './cell-extractor.js'
 
 /**
  * @typedef {Object} ParseOptions
@@ -625,7 +584,127 @@ export { extractCellValue }
  */
 
 /**
+ * Minimal shape of the workbook-like object that ExcelJS's `WorksheetReader`
+ * destructures once at the start of each parse. We provide exactly that
+ * surface and nothing more - the SAX path never reaches back into the
+ * workbook for anything else.
+ *
+ * @typedef {Object} WorkbookShim
+ * @property {string[]} sharedStrings - Shared strings table indexed by sst index; `[]` when sharedStrings.xml is absent
+ * @property {{getStyleModel: (id: number) => object}} styles - Looked up per styled cell to resolve numFmt and format
+ * @property {{model?: {date1904?: boolean}}} properties - `model` is undefined when the workbook has no `workbookPr` element
+ */
+
+/**
+ * @typedef {Object} StreamWorksheetOptions
+ * @property {number} maxRowsPerSheet
+ * @property {number} maxColumnsPerSheet
+ */
+
+const WORKBOOK_RELS_PATH = 'xl/_rels/workbook.xml.rels'
+const WORKBOOK_PATH = 'xl/workbook.xml'
+const SHARED_STRINGS_PATH = 'xl/sharedStrings.xml'
+const STYLES_PATH = 'xl/styles.xml'
+
+/**
+ * @param {string} relTarget - Sheet target from the workbook relationships XML (e.g. `worksheets/sheet1.xml` or `/xl/worksheets/sheet1.xml`)
+ * @returns {string} Path within the zip archive
+ */
+const resolveSheetPath = (relTarget) =>
+  `xl/${relTarget.replace(/^(\s|\/xl\/)+/, '')}`
+
+/**
+ * @typedef {Object} WorkbookParts
+ * @property {Map<string, any>} filesByPath - Zip entries indexed by archive path; values expose `.stream()` (unzipper has no published types)
+ * @property {Array<any>} workbookRels - Workbook relationships from RelationshipsXform; entries carry `Id`/`Target` strings
+ * @property {Array<any>} sheets - Worksheet descriptors from the workbook XML; entries carry `name`/`id`/`rId`
+ * @property {WorkbookShim} workbookShim - Tightly typed shim consumed by WorksheetReader
+ */
+
+/**
+ * Opens the xlsx zip and parses workbook metadata, relationships, styles and
+ * shared strings into the structures needed by `WorksheetReader`. Asserts the
+ * worksheet count limit before any sheet streaming begins.
+ *
+ * @param {Buffer} buffer
+ * @param {number} maxWorksheets
+ * @returns {Promise<WorkbookParts>}
+ */
+const loadWorkbookParts = async (buffer, maxWorksheets) => {
+  const directory = await unzipper.Open.buffer(buffer)
+  const filesByPath = new Map(
+    directory.files.map((entry) => [entry.path, entry])
+  )
+
+  const relsXform = new RelationshipsXform()
+  const workbookRels = await relsXform.parseStream(
+    filesByPath.get(WORKBOOK_RELS_PATH).stream()
+  )
+
+  const workbookXform = new WorkbookXform()
+  await workbookXform.parseStream(filesByPath.get(WORKBOOK_PATH).stream())
+  const workbookModel = workbookXform.model
+  const workbookProperties = workbookXform.map.workbookPr
+
+  const sheets = workbookModel.sheets
+  assertWorksheetCountWithinLimit(sheets.length, maxWorksheets)
+
+  const stylesXform = new StylesXform()
+  stylesXform.init()
+  await stylesXform.parseStream(filesByPath.get(STYLES_PATH).stream())
+
+  const sharedStringsXform = new SharedStringsXform()
+  const sharedStringsFile = filesByPath.get(SHARED_STRINGS_PATH)
+  if (sharedStringsFile) {
+    await sharedStringsXform.parseStream(sharedStringsFile.stream())
+  }
+
+  /** @type {WorkbookShim} */
+  const workbookShim = {
+    sharedStrings: sharedStringsXform.values,
+    styles: stylesXform,
+    properties: workbookProperties
+  }
+
+  return { filesByPath, workbookRels, sheets, workbookShim }
+}
+
+/**
+ * @param {WorkbookParts} parts
+ * @param {any} sheet - Worksheet descriptor with `name`, `id`, `rId`
+ * @returns {StreamingWorksheet}
+ */
+const createWorksheetReader = (parts, sheet) => {
+  const rel = parts.workbookRels.find((r) => r.Id === sheet.rId)
+  const sheetFile = parts.filesByPath.get(resolveSheetPath(rel.Target))
+
+  const reader = new WorksheetReader({
+    workbook: parts.workbookShim,
+    id: sheet.id,
+    iterator: sheetFile.stream(),
+    options: {
+      worksheets: 'emit',
+      hyperlinks: 'ignore'
+    }
+  })
+  reader.name = sheet.name
+  return reader
+}
+
+/**
  * Parses an Excel buffer and extracts metadata and data sections.
+ *
+ * Reads the zip central directory eagerly via `unzipper.Open.buffer` so we
+ * can parse workbook metadata, relationships, styles and shared strings in
+ * a known order before any worksheet streaming begins. Each worksheet is
+ * then streamed through ExcelJS's internal `WorksheetReader`, which SAX-
+ * parses the inflated entry without holding the whole worksheet DOM in
+ * memory.
+ *
+ * Bypasses ExcelJS's `WorkbookReader` to avoid the `iterateStream` race
+ * (exceljs#1558) that drops the workbook descriptor when shared strings
+ * are written after worksheets - the entry order Microsoft Office and
+ * LibreOffice always use.
  *
  * @param {Buffer} buffer - Excel file buffer
  * @param {ParseOptions} [options] - Validation options
@@ -633,6 +712,10 @@ export { extractCellValue }
  * @throws {SpreadsheetValidationError} If the spreadsheet fails structural validation
  */
 export const parse = async (buffer, options = {}) => {
+  if (buffer.length === 0) {
+    throw new SpreadsheetValidationError('Spreadsheet buffer is empty')
+  }
+
   const {
     requiredWorksheet = null,
     maxWorksheets = PARSE_DEFAULTS.maxWorksheets,
@@ -641,12 +724,29 @@ export const parse = async (buffer, options = {}) => {
     unfilledValues = {}
   } = options
 
-  const workbook = new ExcelJS.Workbook()
+  const draft = createDraft({
+    result: { meta: {}, data: {} },
+    activeCollections: [],
+    metadataContext: null,
+    unfilledValues
+  })
+
+  const seenWorksheetNames = []
+
   try {
-    await workbook.xlsx.load(
-      /** @type {import('exceljs').Buffer} */ (/** @type {unknown} */ (buffer))
-    )
+    const parts = await loadWorkbookParts(buffer, maxWorksheets)
+    for (const sheet of parts.sheets) {
+      seenWorksheetNames.push(sheet.name)
+      const reader = createWorksheetReader(parts, sheet)
+      await streamWorksheet(draft, reader, {
+        maxRowsPerSheet,
+        maxColumnsPerSheet
+      })
+    }
   } catch (error) {
+    if (error instanceof SpreadsheetValidationError) {
+      throw error
+    }
     if (shouldWrapAsSpreadsheetError(error)) {
       throw new SpreadsheetValidationError(
         `Failed to parse spreadsheet: ${error.message}`,
@@ -654,27 +754,14 @@ export const parse = async (buffer, options = {}) => {
         { cause: error }
       )
     }
-
     throw error
   }
 
-  validateWorkbookStructure(workbook, {
-    requiredWorksheet,
-    maxWorksheets,
-    maxRowsPerSheet,
-    maxColumnsPerSheet
-  })
-
-  const initialState = {
-    result: { meta: {}, data: {} },
-    activeCollections: [],
-    metadataContext: null,
-    unfilledValues
+  if (requiredWorksheet && !seenWorksheetNames.includes(requiredWorksheet)) {
+    throw new SpreadsheetValidationError(
+      `Missing required '${requiredWorksheet}' worksheet`
+    )
   }
 
-  return produce(initialState, (draft) => {
-    for (const worksheet of workbook.worksheets) {
-      processWorksheet(draft, worksheet)
-    }
-  }).result
+  return finishDraft(draft).result
 }

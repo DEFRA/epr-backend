@@ -44,6 +44,7 @@ describe('generateReportSubmissions (integration)', () => {
     const result = await generateReportSubmissions(orgRepo, reportsRepo)
 
     const baseRow = {
+      regulator: 'EA',
       organisationName: 'ACME ltd',
       submitterPhone: '1234567890',
       approvedPersonsPhone: '1234567890',
@@ -219,6 +220,7 @@ const buildRegistrationMock = (overrides = {}) => ({
   accreditationId: null,
   glassRecyclingProcess: null,
   registrationNumber: 'REG-001',
+  submittedToRegulator: 'ea',
   submitterContactDetails: {
     phone: '01234567890',
     email: 'submitter@example.com'
@@ -392,6 +394,32 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(row.registrationNumber).toBe('REG-001')
     expect(row.accreditationNumber).toBe('')
   })
+
+  it.each([
+    ['ea', 'EA'],
+    ['niea', 'NIEA'],
+    ['sepa', 'SEPA'],
+    ['nrw', 'NRW']
+  ])(
+    'uppercases regulator %s to %s',
+    async (submittedToRegulator, expected) => {
+      const org = buildOrg({
+        registrations: [
+          buildRegistrationMock({
+            status: 'approved',
+            submittedToRegulator
+          })
+        ]
+      })
+
+      const result = await generateReportSubmissions(
+        makeOrgsRepo([org]),
+        makeReportsRepo()
+      )
+
+      expect(result.reportSubmissions[0].regulator).toBe(expected)
+    }
+  )
 
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
