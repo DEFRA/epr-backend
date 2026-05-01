@@ -2,6 +2,7 @@ import Joi from 'joi'
 
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { generateReportSubmissions } from '#reports/application/report-submissions.js'
 
 /**
@@ -24,6 +25,9 @@ export const getReportSubmissions = {
         reportSubmissions: Joi.array()
           .items(
             Joi.object({
+              regulator: Joi.string()
+                .valid(...Object.values(REGULATOR_DISPLAY))
+                .required(),
               organisationName: Joi.string().required(),
               submitterPhone: Joi.string().required(),
               approvedPersonsPhone: Joi.string().required(),

@@ -36,13 +36,15 @@ import { createInMemoryWasteBalancesRepositoryPlugin } from '#waste-balances/rep
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { LogMethod } from '#common/helpers/logging/logger.js' */
+/** @import { Mock } from 'vitest' */
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
  *   loggerMocks: {
- *     info: ReturnType<typeof vi.fn>
- *     error: ReturnType<typeof vi.fn>
- *     warn: ReturnType<typeof vi.fn>
+ *     info: Mock<LogMethod>
+ *     error: Mock<LogMethod>
+ *     warn: Mock<LogMethod>
  *   }
  * }} TestServer
  */
@@ -193,9 +195,9 @@ function createHapiServer(config) {
  */
 function attachLoggerMocks(testServer) {
   testServer.loggerMocks = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn()
+    info: /** @type {Mock<LogMethod>} */ (vi.fn()),
+    error: /** @type {Mock<LogMethod>} */ (vi.fn()),
+    warn: /** @type {Mock<LogMethod>} */ (vi.fn())
   }
 
   vi.spyOn(testServer.logger, 'info').mockImplementation(

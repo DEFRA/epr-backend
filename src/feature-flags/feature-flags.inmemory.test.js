@@ -80,4 +80,23 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
   })
+
+  it('returns true when registrationContactsMigration flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      registrationContactsMigration: true
+    })
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(true)
+  })
+
+  it('returns false when registrationContactsMigration flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      registrationContactsMigration: false
+    })
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
+  })
+
+  it('returns false when registrationContactsMigration flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
+  })
 })

@@ -1,7 +1,7 @@
 {
   "id": "6507f1f77bcf86cd79943901",
   "orgId": 50002,
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "version": 1,
   "statusHistory": [
     {
@@ -133,6 +133,12 @@
         "jobTitle": "Director",
         "phone": "1234567890"
       },
+      "applicationContactDetails": {
+        "fullName": "Luke Skywalker",
+        "email": "luke.skywalker@starwars.com",
+        "jobTitle": "Director",
+        "phone": "1234567890"
+      },
       "samplingInspectionPlanPart1FileUploads": [
         {
           "defraFormUploadedFileId": "file-123",
@@ -177,6 +183,12 @@
       "suppliers": "Plastic packaging suppliers",
       "exportPorts": ["Dover", "Southampton"],
       "submitterContactDetails": {
+        "fullName": "Anakin Skywalker",
+        "email": "anakin.skywalker@starwars.com",
+        "jobTitle": "Partner",
+        "phone": "823456789"
+      },
+      "applicationContactDetails": {
         "fullName": "Anakin Skywalker",
         "email": "anakin.skywalker@starwars.com",
         "jobTitle": "Partner",
