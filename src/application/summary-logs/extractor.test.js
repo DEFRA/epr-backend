@@ -158,48 +158,32 @@ describe('SummaryLogExtractor', () => {
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      {
-        event: {
-          action: 'summary-log-parsed',
-          category: 'file-processing'
-        }
-      },
-      'Summary log parsing completed: %d metadata entries, %d data tables',
-      1,
-      1
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Summary log parsing completed',
+      event: {
+        action: 'summary-log-parsed',
+        category: 'file-processing',
+        reason: 'metadataEntries=1 dataTables=1'
+      }
+    })
 
-    expect(logger.info).toHaveBeenCalledWith(
-      {
-        event: {
-          action: 'metadata-parsed',
-          category: 'file-processing'
-        }
-      },
-      'Metadata: %s = %s (at %s:%d:%s)',
-      'DateSubmitted',
-      '2024-01-15',
-      'Sheet1',
-      1,
-      'B'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Metadata: DateSubmitted = 2024-01-15',
+      event: {
+        action: 'metadata-parsed',
+        category: 'file-processing',
+        reason: 'at Sheet1:1:B'
+      }
+    })
 
-    expect(logger.info).toHaveBeenCalledWith(
-      {
-        event: {
-          action: 'data-table-parsed',
-          category: 'file-processing'
-        }
-      },
-      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
-      'OrganisationDetails',
-      2,
-      2,
-      'Sheet1',
-      5,
-      'A'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Data table: OrganisationDetails',
+      event: {
+        action: 'data-table-parsed',
+        category: 'file-processing',
+        reason: 'headers=2 rows=2 at Sheet1:5:A'
+      }
+    })
   })
 
   it('should log parsing summary with empty data', async () => {
@@ -211,17 +195,14 @@ describe('SummaryLogExtractor', () => {
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      {
-        event: {
-          action: 'summary-log-parsed',
-          category: 'file-processing'
-        }
-      },
-      'Summary log parsing completed: %d metadata entries, %d data tables',
-      0,
-      0
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Summary log parsing completed',
+      event: {
+        action: 'summary-log-parsed',
+        category: 'file-processing',
+        reason: 'metadataEntries=0 dataTables=0'
+      }
+    })
   })
 
   it('should handle data table with no rows', async () => {
@@ -239,21 +220,14 @@ describe('SummaryLogExtractor', () => {
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      {
-        event: {
-          action: 'data-table-parsed',
-          category: 'file-processing'
-        }
-      },
-      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
-      'EmptyTable',
-      2,
-      0,
-      'Sheet1',
-      1,
-      'A'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Data table: EmptyTable',
+      event: {
+        action: 'data-table-parsed',
+        category: 'file-processing',
+        reason: 'headers=2 rows=0 at Sheet1:1:A'
+      }
+    })
   })
 
   it('should handle data table with only one row', async () => {
@@ -271,20 +245,13 @@ describe('SummaryLogExtractor', () => {
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      {
-        event: {
-          action: 'data-table-parsed',
-          category: 'file-processing'
-        }
-      },
-      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
-      'SingleRowTable',
-      2,
-      1,
-      'Sheet1',
-      1,
-      'A'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Data table: SingleRowTable',
+      event: {
+        action: 'data-table-parsed',
+        category: 'file-processing',
+        reason: 'headers=2 rows=1 at Sheet1:1:A'
+      }
+    })
   })
 })
