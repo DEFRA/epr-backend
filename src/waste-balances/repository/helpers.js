@@ -179,7 +179,7 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   const validatedAccreditationId = validateAccreditationId(accreditation.id)
 
-  if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled?.()) {
+  if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
     await performUpdateViaLedger({
       wasteRecords: annotatedRecords,
       accreditation: { ...accreditation, id: validatedAccreditationId },

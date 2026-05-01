@@ -172,8 +172,8 @@ export const performUpdateViaLedger = async ({
     return
   }
 
-  const organisationId = wasteRecords[0]?.organisationId
-  const registrationId = wasteRecords[0]?.registrationId
+  const organisationId = wasteRecords[0].organisationId
+  const registrationId = wasteRecords[0].registrationId
 
   const newTransactions = await appendToLedger(
     {
