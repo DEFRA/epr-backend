@@ -13,13 +13,17 @@ import { loggerOptions } from './logger-options.js'
  */
 
 /**
+ * @typedef {(obj: IndexedLogProperties) => void} LogMethod
+ */
+
+/**
  * @typedef {object} TypedLogger
- * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} info
- * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} error
- * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} warn
- * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} debug
- * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} trace
- * @property {(obj: IndexedLogProperties, msg?: string, ...args: any[]) => void} fatal
+ * @property {LogMethod} info
+ * @property {LogMethod} error
+ * @property {LogMethod} warn
+ * @property {LogMethod} debug
+ * @property {LogMethod} trace
+ * @property {LogMethod} fatal
  * @property {(bindings: Record<string, unknown>) => TypedLogger} child
  */
 
