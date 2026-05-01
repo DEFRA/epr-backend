@@ -38,6 +38,16 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://signed.example')
 }))
 
+const productionLoggerError = vi.fn()
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    error: (...args) => productionLoggerError(...args),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+}))
+
 const DATABASE_NAME = 'epr-backend'
 
 const COLLECTIONS = [
@@ -384,6 +394,22 @@ describe('non-prod data reset (mongo)', () => {
       const counts = await reset.deleteByOrgId(999999)
 
       expect(counts).toEqual(EMPTY_COUNTS)
+    })
+
+    it('logs the refusal with the orgId reference when run in production', async ({
+      database
+    }) => {
+      const productionReset = createNonProdDataReset(database, {
+        isProduction: true
+      })
+
+      await expect(productionReset.deleteByOrgId(123)).rejects.toThrow()
+
+      expect(productionLoggerError).toHaveBeenCalledWith({
+        message:
+          'Refusing to run non-prod cascade delete in production environment.',
+        event: { reference: 'organisationId=123' }
+      })
     })
 
     it('is idempotent: a second call returns all zeros', async ({

@@ -1,4 +1,6 @@
 import Boom from '@hapi/boom'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   validateCreateReport,
@@ -66,6 +68,18 @@ const createReport = async (reports, params) => {
     submissionNumber
   } = validated
 
+  const conflictBoom = () =>
+    conflict(
+      `An active report already exists for cadence ${cadence} and period ${period}`,
+      errorCodes.reportAlreadyExists,
+      {
+        event: {
+          action: 'create_report',
+          reason: `cadence=${cadence} period=${period} submissionNumber=${submissionNumber}`
+        }
+      }
+    )
+
   // Mirror compound unique index: no active report for this exact submission slot
   const existingSlot = findActiveBySlot(reports, {
     organisationId,
@@ -76,9 +90,7 @@ const createReport = async (reports, params) => {
     submissionNumber
   })
   if (existingSlot) {
-    throw Boom.conflict(
-      `An active report already exists for cadence ${cadence} and period ${period}`
-    )
+    throw conflictBoom()
   }
 
   // Mirror partial unique index: no active draft for this period slot regardless of submissionNumber
@@ -90,9 +102,7 @@ const createReport = async (reports, params) => {
     period
   })
   if (activeDraft) {
-    throw Boom.conflict(
-      `An active report already exists for cadence ${cadence} and period ${period}`
-    )
+    throw conflictBoom()
   }
   const report = prepareCreateReportParams(validated)
   reports.set(report.id, report)

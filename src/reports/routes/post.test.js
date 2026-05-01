@@ -306,10 +306,11 @@ describe(`POST ${reportsPostPath}`, () => {
           message:
             "Cadence 'monthly' does not match registration type — expected 'quarterly'",
           error: {
-            code: 'CADENCE_MISMATCH',
+            code: 'cadence_mismatch',
             id: expect.any(String),
             message:
               "Cadence 'monthly' does not match registration type — expected 'quarterly'",
+            stack_trace: expect.any(String),
             type: 'Bad Request'
           },
           event: {
@@ -341,9 +342,10 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Invalid period 5 for cadence quarterly',
           error: {
-            code: 'INVALID_PERIOD',
+            code: 'invalid_period',
             id: expect.any(String),
             message: 'Invalid period 5 for cadence quarterly',
+            stack_trace: expect.any(String),
             type: 'Bad Request'
           },
           event: {
@@ -376,10 +378,11 @@ describe(`POST ${reportsPostPath}`, () => {
           message:
             'Cannot create report for period 1 — period has not yet ended',
           error: {
-            code: 'PERIOD_NOT_ENDED',
+            code: 'period_not_ended',
             id: expect.any(String),
             message:
               'Cannot create report for period 1 — period has not yet ended',
+            stack_trace: expect.any(String),
             type: 'Bad Request'
           },
           event: {
@@ -408,9 +411,10 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Report already exists for quarterly period 1 of 2025',
           error: {
-            code: 'REPORT_ALREADY_EXISTS',
+            code: 'report_already_exists',
             id: expect.any(String),
             message: 'Report already exists for quarterly period 1 of 2025',
+            stack_trace: expect.any(String),
             type: 'Conflict'
           },
           event: {
@@ -496,9 +500,10 @@ describe(`POST ${reportsPostPath}`, () => {
         expect(server.loggerMocks.warn).toHaveBeenCalledWith({
           message: 'Report already exists for quarterly period 1 of 2025',
           error: {
-            code: 'REPORT_ALREADY_EXISTS',
+            code: 'report_already_exists',
             id: expect.any(String),
             message: 'Report already exists for quarterly period 1 of 2025',
+            stack_trace: expect.any(String),
             type: 'Conflict'
           },
           event: {

@@ -106,6 +106,10 @@ describe('MongoDB organisations repository', () => {
           payload: {
             message: expect.stringContaining('orgId')
           }
+        },
+        event: {
+          action: 'update_organisation',
+          reason: 'fields=orgId type=Error code=11000'
         }
       })
 

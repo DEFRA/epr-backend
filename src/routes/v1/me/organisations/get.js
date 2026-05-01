@@ -7,7 +7,7 @@ import {
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 
 /**
  * @typedef {{
@@ -60,7 +60,7 @@ const getLoggableOrgInfo = (orgInfo) =>
  * Get current Defra ID details from token relationships
  *
  * @param {import('#common/helpers/auth/types.js').DefraIdRelationship[]} defraIdRelationships
- * @param {*} logger
+ * @param {TypedLogger} logger
  * @returns {DefraOrgSummary}
  */
 const getCurrentDetailsFromToken = (defraIdRelationships, logger) => {

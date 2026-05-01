@@ -1,9 +1,9 @@
-import Boom from '@hapi/boom'
+import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
  */
 
 /**
@@ -20,20 +20,17 @@ export const assertCadence = (cadence, registration) => {
     ? CADENCE.monthly
     : CADENCE.quarterly
 
-  if (cadence === expected) {
-    return
-  }
-
-  const boom = /** @type {EnrichedBoom} */ (
-    Boom.badRequest(
-      `Cadence '${cadence}' does not match registration type — expected '${expected}'`
+  if (cadence !== expected) {
+    throw badRequest(
+      `Cadence '${cadence}' does not match registration type — expected '${expected}'`,
+      errorCodes.cadenceMismatch,
+      {
+        event: {
+          action: 'create_report',
+          reason: `actual=${cadence} expected=${expected}`
+        },
+        payload: { cadence: { actual: cadence, expected } }
+      }
     )
-  )
-  boom.code = 'CADENCE_MISMATCH'
-  boom.event = {
-    action: 'create_report',
-    reason: `actual=${cadence} expected=${expected}`
   }
-  boom.output.payload.cadence = { actual: cadence, expected }
-  throw boom
 }

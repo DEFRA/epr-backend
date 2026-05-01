@@ -161,7 +161,10 @@ describe('prnMetrics', () => {
         toStatus: PRN_STATUS.AWAITING_AUTHORISATION
       })
 
-      expect(mockLoggerError).toHaveBeenCalledWith(mockError, 'flush failed')
+      expect(mockLoggerError).toHaveBeenCalledWith({
+        message: 'flush failed',
+        err: mockError
+      })
     })
   })
 })

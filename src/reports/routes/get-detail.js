@@ -5,6 +5,16 @@ import { periodParamsSchema, withRegistrationDetails } from './shared.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 
+/**
+ * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { PeriodPathParams } from './shared.js'
+ */
+
 export const reportsGetDetailPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
 
@@ -18,6 +28,17 @@ export const reportsGetDetail = {
       params: periodParamsSchema
     }
   },
+  /**
+   * @param {HapiRequest & {
+   *   params: PeriodPathParams,
+   *   organisationsRepository: OrganisationsRepository,
+   *   wasteRecordsRepository: WasteRecordsRepository,
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   reportsRepository: ReportsRepository,
+   *   overseasSitesRepository: OverseasSitesRepository
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
     const {
       organisationsRepository,
@@ -55,15 +76,14 @@ export const reportsGetDetail = {
       report.diagnostics.wasteReceivedRecordsExcluded > 0
     ) {
       const { wasteReceivedRecordsExcluded } = report.diagnostics
-      request.logger.warn(
-        {
-          organisationId,
-          registrationId,
-          operatorCategory: report.operatorCategory,
-          wasteReceivedRecordsExcluded
-        },
-        'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)'
-      )
+      request.logger.warn({
+        message:
+          'Waste records excluded from report due to mismatched date field — possible registered-only to accredited transition (ADR 0030)',
+        event: {
+          action: 'fetch_or_generate_report',
+          reason: `organisationId=${organisationId} registrationId=${registrationId} operatorCategory=${report.operatorCategory} wasteReceivedRecordsExcluded=${wasteReceivedRecordsExcluded}`
+        }
+      })
     }
 
     return h

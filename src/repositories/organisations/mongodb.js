@@ -1,6 +1,8 @@
+import { classifierTail, conflict } from '#common/helpers/logging/cdp-boom.js'
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
+import { errorCodes } from './enums/error-codes.js'
 import {
   createInitialStatusHistory,
   escapeRegex,
@@ -9,9 +11,9 @@ import {
   performFindPageForOrsAdminList,
   prepareForReplace
 } from './helpers.js'
-import { getCurrentStatus } from './status.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
+import { getCurrentStatus } from './status.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -79,15 +81,26 @@ const performInsert = (db) => async (organisation) => {
   }
 }
 
+/**
+ * @param {Error & { code: number, keyPattern?: Record<string, number> }} error
+ * @param {string} id
+ * @returns {never}
+ */
 const throwCuratedDuplicateKeyBoom = (error, id) => {
   const conflictFields = error.keyPattern
     ? Object.keys(error.keyPattern).join(', ')
     : 'unknown'
-  const boom = Boom.conflict(
-    `Duplicate key conflict updating organisation ${id} (${conflictFields})`
+
+  throw conflict(
+    `Duplicate key conflict updating organisation ${id} (${conflictFields})`,
+    errorCodes.organisationDuplicateKey,
+    {
+      event: {
+        action: 'update_organisation',
+        reason: `fields=${conflictFields} ${classifierTail(error)}`
+      }
+    }
   )
-  boom.cause = error
-  throw boom
 }
 
 const performReplace = (db) => async (id, version, updates) => {

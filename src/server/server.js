@@ -44,6 +44,8 @@ import { runRegistrationContactsMigration } from '#server/run-registration-conta
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
 
+/** @import { Lifecycle } from '@hapi/hapi' */
+
 function getServerConfig(config) {
   return {
     host: config.get('host'),
@@ -54,7 +56,10 @@ function getServerConfig(config) {
         options: {
           abortEarly: false
         },
-        failAction
+        // Cast bridges HapiRequest (typed logger) to Hapi's plain Request signature.
+        failAction: /** @type {Lifecycle.FailAction} */ (
+          /** @type {unknown} */ (failAction)
+        )
       },
       security: {
         hsts: {

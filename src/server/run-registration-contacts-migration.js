@@ -45,6 +45,9 @@ export const runRegistrationContactsMigration = async (server) => {
       await lock?.free()
     }
   } catch (error) {
-    logger.error(error, 'Failed to run registration contacts migration')
+    logger.error({
+      message: 'Failed to run registration contacts migration',
+      err: error
+    })
   }
 }

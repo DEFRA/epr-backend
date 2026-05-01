@@ -18,9 +18,14 @@ import {
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
 
-/** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
-/** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/**
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
+ * @import { WasteBalancesRepository } from '#waste-balances/repository/port.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { HapiRequest } from '#common/hapi-types.js'
+ */
 
 export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/packaging-recycling-notes/{id}/status'
@@ -80,7 +85,12 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#packaging-recycling-notes/domain/model.js').PrnStatus}> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository, systemLogsRepository: SystemLogsRepository}} request
+   * @param {HapiRequest<{ status: PrnStatus }> & {
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   wasteBalancesRepository: WasteBalancesRepository,
+   *   organisationsRepository: OrganisationsRepository,
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -90,7 +100,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       organisationsRepository,
       params,
       payload,
-      logger /** @type {import('#common/hapi-types.js').TypedLogger} */,
+      logger,
       auth
     } = request
     const { organisationId, accreditationId, id } = params

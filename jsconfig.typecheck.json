@@ -16,7 +16,6 @@
     "strictNullChecks": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
-    "baseUrl": ".",
     "paths": {
       "#adapters/*": ["./src/adapters/*"],
       "#application/*": ["./src/application/*"],

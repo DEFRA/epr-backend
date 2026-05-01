@@ -1,4 +1,6 @@
 import Boom from '@hapi/boom'
+import { conflict } from '#common/helpers/logging/cdp-boom.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 import {
   validateCreateReport,
   validateDeleteReportParams,
@@ -83,15 +85,22 @@ async function ensureCollections(db) {
  * */
 const performCreateReport = async (db, params) => {
   const validated = validateCreateReport(params)
-  const { cadence, period } = validated
+  const { cadence, period, submissionNumber } = validated
   const report = prepareCreateReportParams(validated)
 
   try {
     await reportsCollection(db).insertOne({ ...report })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throw Boom.conflict(
-        `An active report already exists for cadence ${cadence} and period ${period}`
+      throw conflict(
+        `An active report already exists for cadence ${cadence} and period ${period}`,
+        errorCodes.reportAlreadyExists,
+        {
+          event: {
+            action: 'create_report',
+            reason: `cadence=${cadence} period=${period} submissionNumber=${submissionNumber}`
+          }
+        }
       )
     }
     throw error

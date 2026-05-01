@@ -1,11 +1,13 @@
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/event.js'
 
+/** @import { TypedLogger } from '#common/hapi-types.js' */
+
 /**
  * Logs the configured state of every feature flag so operators can check
  * which flags are active in a given environment.
  *
  * @param {{ get: (key: string) => unknown }} config
- * @param {{ info: (obj: object) => void }} logger
+ * @param {TypedLogger} logger
  */
 export const logFeatureFlagStates = (config, logger) => {
   const flags = /** @type {Record<string, unknown>} */ (

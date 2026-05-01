@@ -13,6 +13,12 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { processImportFile } from './process-import-file.js'
 
 /**
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { TypedLogger } from '#common/hapi-types.js'
+ * @import { OrsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
+ */
+
+/**
  * Processes an ORS import batch: fetches each file from S3, parses it,
  * creates overseas site records, and records per-file results.
  *
@@ -24,9 +30,9 @@ import { processImportFile } from './process-import-file.js'
  * @param {object} deps.uploadsRepository
  * @param {object} deps.overseasSitesRepository
  * @param {object} deps.organisationsRepository
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} deps.systemLogsRepository
- * @param {object} deps.logger
- * @param {import('#overseas-sites/metrics/ors-imports.js').OrsImportMetrics} deps.orsImportMetrics
+ * @param {SystemLogsRepository} deps.systemLogsRepository
+ * @param {TypedLogger} deps.logger
+ * @param {OrsImportMetrics} deps.orsImportMetrics
  * @param {{ id: string, email: string, scope: string[] }} deps.user
  */
 export const processOrsImport = async (importId, deps) => {

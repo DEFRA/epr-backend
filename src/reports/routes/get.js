@@ -8,6 +8,12 @@ import { generateReportingPeriods } from '#reports/domain/generate-reporting-per
 import { isRegistrationAccredited } from '#reports/domain/is-registration-accredited.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 
+/**
+ * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ */
+
 export const reportsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/calendar'
 
@@ -24,6 +30,13 @@ export const reportsGet = {
       })
     }
   },
+  /**
+   * @param {HapiRequest & {
+   *   organisationsRepository: OrganisationsRepository,
+   *   reportsRepository: ReportsRepository
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
     const { organisationsRepository, reportsRepository, params } = request
     const { organisationId, registrationId } = params

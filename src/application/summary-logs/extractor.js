@@ -7,6 +7,10 @@ import {
   aggregateUnfilledValues
 } from '#domain/summary-logs/table-schemas/index.js'
 
+/**
+ * @import { TypedLogger } from '#common/helpers/logging/logger.js'
+ */
+
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
@@ -25,6 +29,10 @@ const SUMMARY_LOG_PARSE_OPTIONS = {
   unfilledValues: aggregateUnfilledValues(PROCESSING_TYPE_TABLES)
 }
 
+/**
+ * @param {TypedLogger} logger
+ * @param {ParsedSummaryLog} parsedData
+ */
 const logParsingSummary = (logger, parsedData) => {
   const metadataEntries = Object.entries(parsedData.meta).map(
     ([key, value]) => ({
@@ -41,51 +49,35 @@ const logParsingSummary = (logger, parsedData) => {
     location: value.location
   }))
 
-  logger.info(
-    {
-      event: {
-        action: 'summary-log-parsed',
-        category: FILE_PROCESSING_CATEGORY
-      }
-    },
-    'Summary log parsing completed: %d metadata entries, %d data tables',
-    metadataEntries.length,
-    dataEntries.length
-  )
+  logger.info({
+    message: 'Summary log parsing completed',
+    event: {
+      action: 'summary-log-parsed',
+      category: FILE_PROCESSING_CATEGORY,
+      reason: `metadataEntries=${metadataEntries.length} dataTables=${dataEntries.length}`
+    }
+  })
 
   for (const meta of metadataEntries) {
-    logger.info(
-      {
-        event: {
-          action: 'metadata-parsed',
-          category: FILE_PROCESSING_CATEGORY
-        }
-      },
-      'Metadata: %s = %s (at %s:%d:%s)',
-      meta.name,
-      meta.value,
-      meta.location.sheet,
-      meta.location.row,
-      meta.location.column
-    )
+    logger.info({
+      message: `Metadata: ${meta.name} = ${meta.value}`,
+      event: {
+        action: 'metadata-parsed',
+        category: FILE_PROCESSING_CATEGORY,
+        reason: `at ${meta.location.sheet}:${meta.location.row}:${meta.location.column}`
+      }
+    })
   }
 
   for (const data of dataEntries) {
-    logger.info(
-      {
-        event: {
-          action: 'data-table-parsed',
-          category: FILE_PROCESSING_CATEGORY
-        }
-      },
-      'Data table: %s - %d headers, %d rows (at %s:%d:%s)',
-      data.tableName,
-      data.headerCount,
-      data.rowCount,
-      data.location.sheet,
-      data.location.row,
-      data.location.column
-    )
+    logger.info({
+      message: `Data table: ${data.tableName}`,
+      event: {
+        action: 'data-table-parsed',
+        category: FILE_PROCESSING_CATEGORY,
+        reason: `headers=${data.headerCount} rows=${data.rowCount} at ${data.location.sheet}:${data.location.row}:${data.location.column}`
+      }
+    })
   }
 }
 

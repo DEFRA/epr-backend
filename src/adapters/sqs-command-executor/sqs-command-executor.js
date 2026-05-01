@@ -9,9 +9,12 @@ import { resolveQueueUrl } from '#common/helpers/sqs/sqs-client.js'
 import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 import { ORS_IMPORT_COMMAND } from '#overseas-sites/domain/import-status.js'
 
-/** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
-/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
-/** @typedef {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} OrsImportsCommandExecutor */
+/**
+ * @import { SQSClient } from '@aws-sdk/client-sqs'
+ * @import { TypedLogger } from '#common/hapi-types.js'
+ * @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js'
+ * @import { OrsImportsCommandExecutor } from '#overseas-sites/imports/worker/port.js'
+ */
 
 /**
  * @typedef {object} ExecutorDependencies
@@ -61,7 +64,7 @@ const buildContext = () => {
  * Sends a command message to the SQS queue.
  * @param {string} queueUrl
  * @param {SQSClient} sqsClient
- * @param {object} logger
+ * @param {TypedLogger} logger
  * @param {string} command
  * @param {object} payload
  * @param {string} description

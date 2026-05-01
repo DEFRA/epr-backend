@@ -9,6 +9,19 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
+/**
+ * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ *
+ * @typedef {{
+ *   organisationId?: string,
+ *   email?: string,
+ *   subCategory?: string,
+ *   limit?: number,
+ *   cursor?: string
+ * }} SystemLogsSearchPayload
+ */
+
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 500
 
@@ -30,6 +43,12 @@ export const systemLogsPostSearch = {
       }).or('organisationId', 'email')
     }
   },
+  /**
+   * @param {HapiRequest<SystemLogsSearchPayload> & {
+   *   systemLogsRepository: SystemLogsRepository
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
     const { systemLogsRepository, logger } = request
     const { organisationId, email, subCategory, limit, cursor } =

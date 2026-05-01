@@ -5,7 +5,10 @@ import {
   transitionStatus
 } from './status.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/**
+ * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
+ * @import { TypedLogger } from '#common/hapi-types.js'
+ */
 
 /**
  * Marks a summary log as validation_failed if it's still in a processing state.
@@ -13,7 +16,7 @@ import {
  *
  * @param {string} summaryLogId
  * @param {SummaryLogsRepository} repository
- * @param {object} logger
+ * @param {TypedLogger} logger
  * @returns {Promise<void>}
  */
 export const markAsValidationFailed = async (
@@ -56,7 +59,7 @@ export const markAsValidationFailed = async (
  *
  * @param {string} summaryLogId
  * @param {SummaryLogsRepository} repository
- * @param {object} logger
+ * @param {TypedLogger} logger
  * @returns {Promise<void>}
  */
 export const markAsSubmissionFailed = async (

@@ -157,11 +157,11 @@ describe('assertReportComplete', () => {
   })
 
   describe('code and event for indexed logging', () => {
-    /** @import { EnrichedBoom } from '#common/types/enriched-boom.js' */
+    /** @import { CdpBoom } from '#common/helpers/logging/cdp-boom.js' */
     /**
      * @param {SparseReport} report
      * @param {OperatorCategory} category
-     * @returns {EnrichedBoom}
+     * @returns {CdpBoom}
      */
     const captureBoom = (report, category) => {
       try {
@@ -171,7 +171,7 @@ describe('assertReportComplete', () => {
         )
         throw new Error('expected throw')
       } catch (err) {
-        return /** @type {EnrichedBoom} */ (err)
+        return /** @type {CdpBoom} */ (err)
       }
     }
 
@@ -184,7 +184,7 @@ describe('assertReportComplete', () => {
         OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY
       )
 
-      expect(boom.code).toBe('REPORT_INCOMPLETE')
+      expect(boom.code).toBe('report_incomplete')
       expect(boom.event).toEqual({
         action: 'update_report_status',
         reason:

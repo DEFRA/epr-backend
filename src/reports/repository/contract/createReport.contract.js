@@ -88,7 +88,15 @@ export const testCreateReportBehaviour = (it) => {
         repository.createReport(
           buildCreateReportParams({ period: MONTHLY_PERIODS.February })
         )
-      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 409 } })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 },
+        code: 'report_already_exists',
+        event: {
+          action: 'create_report',
+          reason: 'cadence=monthly period=2 submissionNumber=1'
+        }
+      })
     })
 
     it('throws conflict when creating a second active draft for the same slot with a different submissionNumber', async () => {

@@ -1,16 +1,16 @@
+import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
+import { errorCodes } from '#reports/enums/error-codes.js'
 import {
   exportManualFields,
   prnManualFields,
   recyclingManualFields
 } from '#reports/repository/schema.js'
-import Boom from '@hapi/boom'
 import Joi from 'joi'
 
 /**
  * @import { OperatorCategory } from '#reports/domain/operator-category.js'
  * @import { Report } from '#reports/repository/port.js'
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
  */
 
 const required = (/** @type {Record<string, Joi.Schema>} */ fields) =>
@@ -80,21 +80,18 @@ const findMissingFields = (report, operatorCategory) => {
  */
 export const assertReportComplete = (report, operatorCategory) => {
   const missingFields = findMissingFields(report, operatorCategory)
-  if (!missingFields.length) {
-    return
-  }
-
-  const boom = /** @type {EnrichedBoom} */ (
-    Boom.badRequest(
-      `Report is incomplete; ${missingFields.length} required field(s) not populated`
+  if (missingFields.length) {
+    throw badRequest(
+      `Report is incomplete; ${missingFields.length} required field(s) not populated`,
+      errorCodes.reportIncomplete,
+      {
+        event: {
+          action: 'update_report_status',
+          reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
+          reference: report.id
+        },
+        payload: { missingFields }
+      }
     )
-  )
-  boom.code = 'REPORT_INCOMPLETE'
-  boom.event = {
-    action: 'update_report_status',
-    reason: `missingCount=${missingFields.length} missingFields=[${missingFields.join(',')}]`,
-    reference: report.id
   }
-  boom.output.payload.missingFields = missingFields
-  throw boom
 }

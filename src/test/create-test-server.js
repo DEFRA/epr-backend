@@ -35,12 +35,16 @@ import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-l
 import { createInMemoryWasteBalancesRepositoryPlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryWasteRecordsRepositoryPlugin } from '#repositories/waste-records/inmemory.plugin.js'
 
+/** @import { Lifecycle } from '@hapi/hapi' */
+/** @import { LogMethod } from '#common/helpers/logging/logger.js' */
+/** @import { Mock } from 'vitest' */
+
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
  *   loggerMocks: {
- *     info: ReturnType<typeof vi.fn>
- *     error: ReturnType<typeof vi.fn>
- *     warn: ReturnType<typeof vi.fn>
+ *     info: Mock<LogMethod>
+ *     error: Mock<LogMethod>
+ *     warn: Mock<LogMethod>
  *   }
  * }} TestServer
  */
@@ -165,7 +169,12 @@ function createHapiServer(config) {
     port: config.get('port'),
     debug: config.get('debug'),
     routes: {
-      validate: { options: { abortEarly: false }, failAction },
+      validate: {
+        options: { abortEarly: false },
+        failAction: /** @type {Lifecycle.FailAction} */ (
+          /** @type {unknown} */ (failAction)
+        )
+      },
       security: {
         hsts: { maxAge: 31536000, includeSubDomains: true, preload: false },
         xss: /** @type {'enabled'} */ ('enabled'),
@@ -179,14 +188,27 @@ function createHapiServer(config) {
 
 /**
  * Attaches logger mocks to the test server for assertion in tests.
+ * Spies both the singleton `server.logger` (eagerly, so onRequest-time logs
+ * from earlier-registered extensions are captured) and per-request
+ * `request.logger` (via onRequest extension).
  * @param {TestServer} testServer
  */
 function attachLoggerMocks(testServer) {
   testServer.loggerMocks = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn()
+    info: /** @type {Mock<LogMethod>} */ (vi.fn()),
+    error: /** @type {Mock<LogMethod>} */ (vi.fn()),
+    warn: /** @type {Mock<LogMethod>} */ (vi.fn())
   }
+
+  vi.spyOn(testServer.logger, 'info').mockImplementation(
+    testServer.loggerMocks.info
+  )
+  vi.spyOn(testServer.logger, 'error').mockImplementation(
+    testServer.loggerMocks.error
+  )
+  vi.spyOn(testServer.logger, 'warn').mockImplementation(
+    testServer.loggerMocks.warn
+  )
 
   testServer.ext('onRequest', (request, h) => {
     vi.spyOn(request.logger, 'info').mockImplementation(

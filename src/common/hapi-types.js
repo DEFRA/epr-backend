@@ -38,8 +38,13 @@
  */
 
 /**
+ * Omit the base `logger` so our TypedLogger overrides hapi-pino's augmented
+ * pino.Logger instead of intersecting with it. Without the Omit, calls like
+ * `request.logger.warn({ ...non-allowlisted fields })` resolve to pino's
+ * permissive overload and slip past tsc.
+ *
  * @template [T=unknown]
- * @typedef {import('@hapi/hapi').Request & {
+ * @typedef {Omit<import('@hapi/hapi').Request, 'logger'> & {
  *  auth: RequestAuth,
  *  db: Db,
  *  locker: LockManager,

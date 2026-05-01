@@ -1,4 +1,4 @@
-import { config } from '#root/config.js'
+import { config, isProductionEnvironment } from '#root/config.js'
 import { getTraceId } from '@defra/hapi-tracing'
 import { ecsFormat } from '@elastic/ecs-pino-format'
 
@@ -6,12 +6,27 @@ const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
 
+const ecsOptions = ecsFormat({ serviceVersion, serviceName })
+const ecsLog =
+  /** @type {(obj: object) => { error?: { stack_trace?: string } }} */ (
+    ecsOptions.formatters?.log
+  )
+
+const stripStackTraceInProd = (/** @type {object} */ obj) => {
+  const out = ecsLog(obj)
+  if (isProductionEnvironment() && out.error?.stack_trace) {
+    delete out.error.stack_trace
+  }
+  return out
+}
+
 const formatters = {
   ecs: {
-    ...ecsFormat({
-      serviceVersion,
-      serviceName
-    })
+    ...ecsOptions,
+    formatters: {
+      ...ecsOptions.formatters,
+      log: stripStackTraceInProd
+    }
   },
   'pino-pretty': { transport: { target: 'pino-pretty' } }
 }
@@ -29,39 +44,6 @@ export const loggerOptions = {
   nesting: true,
   logEvents: ['onPostStart', 'onPostStop', 'response', 'request-error'],
   serializers: {
-    /** @param {unknown} err */
-    err: (err) => {
-      if (!(err instanceof Error)) {
-        return err
-      }
-
-      const errorObj = {
-        message: err.message,
-        stack_trace: err.stack,
-        type: err.name
-      }
-
-      // @ts-ignore - err.code is a convention on Error subclasses
-      if (err.code) {
-        // @ts-ignore
-        errorObj.code = err.code
-      }
-
-      // Surface bounded classifiers from the .cause chain — name and code are
-      // enum-shaped identifiers (ECONNREFUSED, AbortError, etc.) that classify
-      // the failure without leaking cause.message or cause.stack content.
-      if (err.cause instanceof Error) {
-        const cause = /** @type {Error & { code?: string | number }} */ (
-          err.cause
-        )
-        errorObj.cause = {
-          type: cause.name,
-          code: cause.code
-        }
-      }
-
-      return errorObj
-    },
     res: (res) => {
       if (!res) {
         return res

@@ -95,10 +95,8 @@ const performReplace =
 const performFindById = (staleCache) => (id) => {
   try {
     validateId(id)
-  } catch (validationError) {
-    throw Boom.notFound(`Organisation with id ${id} not found`, {
-      cause: validationError
-    })
+  } catch {
+    throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
   const found = staleCache.find((o) => o._id === id)

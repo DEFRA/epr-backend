@@ -8,6 +8,8 @@ import {
 } from '#common/enums/index.js'
 import { tonnageMonitoringResponseSchema } from './response.schema.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+
 export const tonnageMonitoringPath = '/v1/tonnage-monitoring'
 
 export const getTonnageMonitoring = {
@@ -22,11 +24,12 @@ export const getTonnageMonitoring = {
       schema: tonnageMonitoringResponseSchema
     }
   },
+  /**
+   * @param {HapiRequest} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
-    const {
-      db,
-      logger /** @type {import('#common/hapi-types.js').TypedLogger} */
-    } = request
+    const { db, logger } = request
 
     try {
       const result = await aggregateTonnageByMaterial(db)

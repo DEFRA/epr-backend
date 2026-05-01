@@ -7,7 +7,7 @@ import {
 
 /**
  * @import { HapiServer, HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { EnrichedBoom } from '#common/types/enriched-boom.js'
+ * @import { CdpBoom } from '#common/helpers/logging/cdp-boom.js'
  */
 
 const SERVER_ERROR_THRESHOLD = 500
@@ -31,7 +31,7 @@ export const boomErrorLogger = {
             return h.continue
           }
 
-          const boom = /** @type {EnrichedBoom} */ (response)
+          const boom = /** @type {CdpBoom} */ (response)
           const statusCode = boom.output.statusCode
 
           // 401 is already logged by authFailureLogger; skip to avoid duplicates
@@ -46,20 +46,21 @@ export const boomErrorLogger = {
             : LOGGING_EVENT_ACTIONS.REQUEST_FAILURE
 
           // Boom messages are PII-safe by convention (see PAE-1384). We do not
-          // read boom.output.payload (Joi validation echoes input), boom.data
-          // (arbitrary developer-attached payload), or boom.stack (the first
-          // line of a stack trace echoes the error message, which can leak
-          // PII when an upstream Error was constructed from user input).
+          // read boom.output.payload (Joi validation echoes input) or boom.data
+          // (arbitrary developer-attached payload). boom.stack is included
+          // here so non-prod debugging has frame info; the logger-options
+          // formatter strips error.stack_trace when cdpEnvironment is prod.
           //
           // Helpers may enrich a Boom with `code` (semantic classifier) and
           // `event` fields (action/reason/reference) for indexed search — see
-          // EnrichedBoom. These override the defaults when present.
+          // CdpBoom. These override the defaults when present.
           request.logger[level]({
             message: boom.message,
             error: {
               code: boom.code ?? String(statusCode),
               id: request.info.id,
               message: boom.message,
+              stack_trace: boom.stack,
               type: boom.output.payload.error
             },
             event: {

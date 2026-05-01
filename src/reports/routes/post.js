@@ -15,9 +15,23 @@ import {
   withRegistrationDetails
 } from './shared.js'
 
+/**
+ * @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
+ * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
+ * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import { WasteRecordsRepository } from '#repositories/waste-records/port.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
+ * @import { PeriodPathParams } from './shared.js'
+ */
+
 export const reportsPostPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/{year}/{cadence}/{period}'
 
+/**
+ * @param {TypedLogger} logger
+ * @param {Error} error
+ */
 const logUnexpectedError = (logger, error) => {
   logger.error({
     err: error,
@@ -44,6 +58,17 @@ export const reportsPost = {
       params: periodParamsSchema
     }
   },
+  /**
+   * @param {HapiRequest & {
+   *   params: PeriodPathParams,
+   *   organisationsRepository: OrganisationsRepository,
+   *   wasteRecordsRepository: WasteRecordsRepository,
+   *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
+   *   reportsRepository: ReportsRepository,
+   *   overseasSitesRepository: OverseasSitesRepository
+   * }} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
     const {
       organisationsRepository,

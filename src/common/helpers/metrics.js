@@ -28,7 +28,7 @@ const recordMetric = async (metricName, value, unit, dimensions) => {
     metricsLogger.putMetric(metricName, value, unit, StorageResolution.Standard)
     await metricsLogger.flush()
   } catch (error) {
-    logger.error(error, error.message)
+    logger.error({ message: error.message, err: error })
   }
 }
 

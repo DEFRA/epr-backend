@@ -8,6 +8,8 @@ import {
 } from '#common/enums/index.js'
 import { wasteBalanceAvailabilityResponseSchema } from './response.schema.js'
 
+/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+
 export const wasteBalanceAvailabilityPath = '/v1/waste-balance-availability'
 
 export const getWasteBalanceAvailability = {
@@ -22,11 +24,12 @@ export const getWasteBalanceAvailability = {
       schema: wasteBalanceAvailabilityResponseSchema
     }
   },
+  /**
+   * @param {HapiRequest} request
+   * @param {HapiResponseToolkit} h
+   */
   handler: async (request, h) => {
-    const {
-      db,
-      logger /** @type {import('#common/hapi-types.js').TypedLogger} */
-    } = request
+    const { db, logger } = request
 
     try {
       const result = await aggregateAvailableBalance(db)

@@ -165,7 +165,10 @@ describe('summaryLogMetrics', () => {
         processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
       })
 
-      expect(mockLoggerError).toHaveBeenCalledWith(mockError, 'flush failed')
+      expect(mockLoggerError).toHaveBeenCalledWith({
+        message: 'flush failed',
+        err: mockError
+      })
     })
   })
 

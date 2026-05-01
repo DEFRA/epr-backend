@@ -107,7 +107,10 @@ describe('orsImportMetrics', () => {
         status: ORS_IMPORT_STATUS.PROCESSING
       })
 
-      expect(mockLoggerError).toHaveBeenCalledWith(mockError, 'flush failed')
+      expect(mockLoggerError).toHaveBeenCalledWith({
+        message: 'flush failed',
+        err: mockError
+      })
     })
   })
 

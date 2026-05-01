@@ -110,9 +110,9 @@ describe('runRegistrationContactsMigration', () => {
     await runRegistrationContactsMigration(mockServer)
 
     expect(mockLock.free).toHaveBeenCalled()
-    expect(logger.error).toHaveBeenCalledWith(
-      error,
-      'Failed to run registration contacts migration'
-    )
+    expect(logger.error).toHaveBeenCalledWith({
+      message: 'Failed to run registration contacts migration',
+      err: error
+    })
   })
 })
