@@ -203,6 +203,10 @@ export const USER_ROLES = Object.freeze({
  */
 
 /**
+ * @typedef {typeof REGULATOR_DISPLAY[keyof typeof REGULATOR_DISPLAY]} RegulatorDisplay
+ */
+
+/**
  * @typedef {typeof BUSINESS_TYPE[keyof typeof BUSINESS_TYPE]} BusinessTypeValue
  */
 

@@ -20,7 +20,7 @@ export const getReportSubmissions = {
           .items(
             Joi.object({
               regulator: Joi.string()
-                .valid(...Object.values(REGULATOR_DISPLAY), '')
+                .valid(...Object.values(REGULATOR_DISPLAY))
                 .required(),
               organisationName: Joi.string().required(),
               submitterPhone: Joi.string().required(),

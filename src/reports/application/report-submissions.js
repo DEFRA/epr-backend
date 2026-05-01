@@ -36,7 +36,7 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @typedef {Object} SubmissionBaseFields
- * @property {string} regulator
+ * @property {import('#domain/organisations/model.js').RegulatorDisplay} regulator
  * @property {string} organisationName
  * @property {string} submitterPhone
  * @property {string} approvedPersonsPhone
@@ -184,7 +184,7 @@ function buildRow(
   submittedBy
 ) {
   return {
-    regulator: REGULATOR_DISPLAY[registration.submittedToRegulator] ?? '',
+    regulator: REGULATOR_DISPLAY[registration.submittedToRegulator],
     organisationName: org.companyDetails.name,
     submitterPhone: registration.submitterContactDetails.phone,
     approvedPersonsPhone: registration.approvedPersons

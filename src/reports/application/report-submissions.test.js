@@ -220,6 +220,7 @@ const buildRegistrationMock = (overrides = {}) => ({
   accreditationId: null,
   glassRecyclingProcess: null,
   registrationNumber: 'REG-001',
+  submittedToRegulator: 'ea',
   submitterContactDetails: {
     phone: '01234567890',
     email: 'submitter@example.com'
@@ -419,37 +420,6 @@ describe('generateReportSubmissions (edge cases)', () => {
       expect(result.reportSubmissions[0].regulator).toBe(expected)
     }
   )
-
-  it('returns empty regulator when submittedToRegulator is missing', async () => {
-    const org = buildOrg({
-      registrations: [buildRegistrationMock({ status: 'approved' })]
-    })
-
-    const result = await generateReportSubmissions(
-      makeOrgsRepo([org]),
-      makeReportsRepo()
-    )
-
-    expect(result.reportSubmissions[0].regulator).toBe('')
-  })
-
-  it('returns empty regulator for an unknown submittedToRegulator value', async () => {
-    const org = buildOrg({
-      registrations: [
-        buildRegistrationMock({
-          status: 'approved',
-          submittedToRegulator: 'foo'
-        })
-      ]
-    })
-
-    const result = await generateReportSubmissions(
-      makeOrgsRepo([org]),
-      makeReportsRepo()
-    )
-
-    expect(result.reportSubmissions[0].regulator).toBe('')
-  })
 
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
