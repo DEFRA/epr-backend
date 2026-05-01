@@ -371,6 +371,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_REGISTRATION_CONTACTS_MIGRATION'
+    },
+    reportUnsubmit: {
+      doc: 'Feature Flag: Enable admin unsubmit endpoint for reports',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REPORT_UNSUBMIT'
     }
   },
   formSubmissionOverrides: {

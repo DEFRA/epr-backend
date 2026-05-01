@@ -6,6 +6,7 @@
  * @property {() => boolean} isOrsWasteBalanceValidationEnabled
  * @property {() => boolean} isWasteBalanceLedgerEnabled
  * @property {() => boolean} isRegistrationContactsMigrationEnabled
+ * @property {() => boolean} isReportUnsubmitEnabled
  */
 
 /**
@@ -16,6 +17,7 @@
  * @property {boolean} [orsWasteBalanceValidation]
  * @property {boolean} [wasteBalanceLedger]
  * @property {boolean} [registrationContactsMigration]
+ * @property {boolean} [reportUnsubmit]
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

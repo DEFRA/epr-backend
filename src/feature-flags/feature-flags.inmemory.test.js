@@ -99,4 +99,19 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
   })
+
+  it('returns true when reportUnsubmit flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ reportUnsubmit: true })
+    expect(flags.isReportUnsubmitEnabled()).toBe(true)
+  })
+
+  it('returns false when reportUnsubmit flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ reportUnsubmit: false })
+    expect(flags.isReportUnsubmitEnabled()).toBe(false)
+  })
+
+  it('returns false when reportUnsubmit flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isReportUnsubmitEnabled()).toBe(false)
+  })
 })

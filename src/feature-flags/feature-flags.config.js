@@ -19,5 +19,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isRegistrationContactsMigrationEnabled() {
     return config.get('featureFlags.registrationContactsMigration')
+  },
+  isReportUnsubmitEnabled() {
+    return config.get('featureFlags.reportUnsubmit')
   }
 })
