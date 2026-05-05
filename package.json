@@ -102,10 +102,8 @@
     "unzipper": "0.10.14"
   },
   "overrides": {
-    "axios": "1.15.2",
     "fast-xml-parser": "5.7.1",
     "glob": "11.1.0",
-    "postcss": "8.5.10",
     "uuid": "14.0.0"
   },
   "devDependencies": {
