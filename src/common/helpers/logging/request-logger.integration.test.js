@@ -53,6 +53,52 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
   })
 
+  it('should bind ECS http.* and url.* on the per-request child logger (no flat req)', async () => {
+    config.set('cdpEnvironment', 'dev')
+    const { server, lines } = await newServer()
+    server.route({
+      method: 'GET',
+      path: '/test',
+      handler: (request) => {
+        request.logger.info({ message: 'handler entered' })
+        return 'ok'
+      }
+    })
+
+    await server.inject('/test')
+    const out = findLine(lines, (l) => l.message === 'handler entered')
+
+    expect(out).toMatchObject({
+      http: { request: { method: 'GET' } },
+      url: { path: '/test' }
+    })
+    expect(out.http.request.id).toStrictEqual(expect.any(String))
+    expect(out).not.toHaveProperty('req')
+  })
+
+  it('should emit ECS http.response.* and url.path on the hapi-pino response auto-log', async () => {
+    config.set('cdpEnvironment', 'dev')
+    const { server, lines } = await newServer()
+    server.route({
+      method: 'GET',
+      path: '/test',
+      handler: () => 'ok'
+    })
+
+    await server.inject('/test')
+    const out = findLine(
+      lines,
+      (l) => l.url?.path === '/test' && l.http?.response
+    )
+
+    expect(out).toMatchObject({
+      http: { response: { status_code: 200 } },
+      url: { path: '/test' }
+    })
+    expect(out).not.toHaveProperty('req')
+    expect(out).not.toHaveProperty('res')
+  })
+
   it('should map a logged err to ECS error.* when cdpEnvironment is non-prod', async () => {
     config.set('cdpEnvironment', 'dev')
     const { server, lines } = await newServer()
