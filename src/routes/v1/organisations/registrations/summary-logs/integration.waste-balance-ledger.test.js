@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
 
 import {
@@ -5,6 +6,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { LEDGER_SOURCE_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import {
@@ -98,11 +100,27 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     await submitAndPoll(env, summaryLogId)
   }
 
-  const setupV2 = () =>
-    setupWasteBalanceIntegrationEnvironment({
+  const seedV2Balance = (organisationId) => ({
+    id: 'seeded-balance',
+    accreditationId: 'ACC-123',
+    organisationId,
+    schemaVersion: 1,
+    version: 0,
+    amount: 0,
+    availableAmount: 0,
+    transactions: [],
+    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2
+  })
+
+  const setupV2 = () => {
+    const organisationId = new ObjectId().toString()
+    return setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
-      featureFlagOverrides: { wasteBalanceLedger: true }
+      organisationId,
+      featureFlagOverrides: { wasteBalanceLedger: true },
+      existingWasteBalances: [seedV2Balance(organisationId)]
     })
+  }
 
   it('appends one ledger transaction per included row on first upload', async () => {
     const env = await setupV2()

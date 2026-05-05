@@ -1,4 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
 
 export const testFindByAccreditationIdBehaviour = (it) => {
@@ -75,6 +76,36 @@ export const testFindByAccreditationIdBehaviour = (it) => {
 
     it('throws error when accreditationId is empty string', async () => {
       await expect(repository.findByAccreditationId('')).rejects.toThrow()
+    })
+
+    it('returns canonicalSource v1 when stored as v1', async ({
+      insertWasteBalance
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-marker-v1',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const result = await repository.findByAccreditationId('acc-marker-v1')
+
+      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V1)
+    })
+
+    it('returns canonicalSource v2 when stored as v2', async ({
+      insertWasteBalance
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-marker-v2',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const result = await repository.findByAccreditationId('acc-marker-v2')
+
+      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V2)
     })
 
     it('returns waste balance with all transaction fields intact', async ({

@@ -1,4 +1,5 @@
 import { validateAccreditationId } from './validation.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
@@ -124,6 +125,17 @@ export const createInMemoryWasteBalancesRepository = (
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage)
       })
+    },
+    flipCanonicalSourceToV2: async ({ accreditationId, capturedVersion }) => {
+      const balance = wasteBalanceStorage.find(
+        (b) =>
+          b.accreditationId === accreditationId && b.version === capturedVersion
+      )
+      if (!balance) {
+        return { flipped: false }
+      }
+      balance.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.V2
+      return { flipped: true }
     },
     // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage

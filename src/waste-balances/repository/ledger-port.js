@@ -90,6 +90,11 @@ export class LedgerSlotConflictError extends Error {
  *   reconciliation invariant on the ledger write path: a re-upload of
  *   identical data converges to zero new transactions because every row's
  *   target amount equals its already-credited amount.
+ * @property {(accreditationId: string) => Promise<void>} deleteAllForAccreditationId
+ *   Remove every ledger transaction belonging to the accreditation. Idempotent
+ *   — resolves cleanly when no transactions exist. Used as the first step of a
+ *   per-accreditation rebuild to clear residue from any prior interrupted
+ *   attempt before replaying authoritative history.
  */
 
 /**

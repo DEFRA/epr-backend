@@ -94,6 +94,14 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
      * @param {Array<{ type: string, rowId: string }>} wasteRecords
      * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
      */
+    /** @param {string} accreditationId */
+    deleteAllForAccreditationId: async (accreditationId) => {
+      for (let index = storage.length - 1; index >= 0; index -= 1) {
+        if (storage[index].accreditationId === accreditationId) {
+          storage.splice(index, 1)
+        }
+      }
+    },
     findLatestCreditedAmountsByWasteRecords: async (
       accreditationId,
       wasteRecords

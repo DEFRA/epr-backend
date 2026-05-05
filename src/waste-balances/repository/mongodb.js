@@ -1,4 +1,5 @@
 import { validateAccreditationId } from './validation.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
@@ -96,7 +97,8 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
       },
       $setOnInsert: {
         _id: updatedBalance.id,
-        organisationId: updatedBalance.organisationId
+        organisationId: updatedBalance.organisationId,
+        canonicalSource: updatedBalance.canonicalSource
       }
     }),
     { upsert: true }
@@ -160,6 +162,15 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
+    },
+    flipCanonicalSourceToV2: async ({ accreditationId, capturedVersion }) => {
+      const result = await db
+        .collection(WASTE_BALANCE_COLLECTION_NAME)
+        .updateOne(
+          { accreditationId, version: capturedVersion },
+          { $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2 } }
+        )
+      return { flipped: result.matchedCount === 1 }
     }
   })
 }

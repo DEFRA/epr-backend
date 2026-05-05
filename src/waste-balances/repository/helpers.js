@@ -12,6 +12,7 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../domain/model.js'
@@ -52,7 +53,8 @@ export const createNewWasteBalance = (accreditationId, organisationId) => ({
   availableAmount: 0,
   transactions: [],
   version: 0,
-  schemaVersion: 1
+  schemaVersion: 1,
+  canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
 })
 
 /**
@@ -146,9 +148,15 @@ const calculateAndApplyUpdates = async (
 /**
  * Shared logic for updating waste balance transactions.
  *
- * Dispatches on the `wasteBalanceLedger` feature flag: ON routes through the
- * ledger-append path (ADR 0031), OFF stays on the embedded `transactions[]`
- * array. Both paths preserve audit emission.
+ * Dispatches on the `wasteBalanceLedger` feature flag and the
+ * per-accreditation `canonicalSource` marker:
+ * - flag OFF — embedded `transactions[]` array (v1)
+ * - flag ON, marker `'v2'` — ledger-append path (ADR 0031)
+ * - flag ON, marker `'v1'` or no balance yet — embedded `transactions[]` array (v1)
+ *
+ * The marker drives per-accreditation rollout: a freshly enabled environment
+ * keeps every accreditation on v1 until a rebuild migrates it to v2 and flips
+ * the marker. Both paths preserve audit emission.
  *
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
@@ -180,20 +188,25 @@ export const performUpdateWasteBalanceTransactions = async ({
   const validatedAccreditationId = validateAccreditationId(accreditation.id)
 
   if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
-    await performUpdateViaLedger({
-      wasteRecords: annotatedRecords,
-      accreditation: { ...accreditation, id: validatedAccreditationId },
-      ledgerRepository:
-        /** @type {import('./ledger-port.js').LedgerRepository} */ (
-          dependencies.ledgerRepository
-        ),
-      dependencies: {
-        systemLogsRepository: dependencies.systemLogsRepository
-      },
-      user,
-      overseasSites
-    })
-    return
+    const existingBalance = await findBalance(validatedAccreditationId)
+    if (
+      existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.V2
+    ) {
+      await performUpdateViaLedger({
+        wasteRecords: annotatedRecords,
+        accreditation: { ...accreditation, id: validatedAccreditationId },
+        ledgerRepository:
+          /** @type {import('./ledger-port.js').LedgerRepository} */ (
+            dependencies.ledgerRepository
+          ),
+        dependencies: {
+          systemLogsRepository: dependencies.systemLogsRepository
+        },
+        user,
+        overseasSites
+      })
+      return
+    }
   }
 
   const result = await calculateAndApplyUpdates(
