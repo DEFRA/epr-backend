@@ -61,11 +61,13 @@
  * @property {(params: CreditAvailableBalanceParams) => Promise<void>} creditAvailableBalanceForPrnCancellation
  * @property {(params: CreditFullBalanceParams) => Promise<void>} creditFullBalanceForIssuedPrnCancellation
  * @property {(params: FlipCanonicalSourceToV2Params) => Promise<FlipCanonicalSourceToV2Result>} flipCanonicalSourceToV2
- *   Atomically set `canonicalSource` to `'v2'` for an accreditation, gated on
- *   `version` matching the captured value. Used as the final step of a
- *   per-accreditation rebuild after authoritative history has been replayed
- *   into the ledger; the version filter ensures concurrent v1 writes abort
- *   the flip rather than corrupting the marker.
+ *   Promote a `'v1'` accreditation to `'v2'`, gated on `version` matching the
+ *   captured value. The filter is `{ accreditationId, version: capturedVersion,
+ *   canonicalSource: 'v1' }` so the call strictly promotes — already-`'v2'`
+ *   documents return `{ flipped: false }` and a concurrent v1 write that
+ *   bumped `version` between capture and flip also returns `{ flipped: false }`.
+ *   Used as the final step of a per-accreditation rebuild after authoritative
+ *   history has been replayed into the ledger.
  */
 
 /**

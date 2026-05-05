@@ -89,11 +89,6 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
 
       return structuredClone(latest)
     },
-    /**
-     * @param {string} accreditationId
-     * @param {Array<{ type: string, rowId: string }>} wasteRecords
-     * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
-     */
     /** @param {string} accreditationId */
     deleteAllForAccreditationId: async (accreditationId) => {
       for (let index = storage.length - 1; index >= 0; index -= 1) {
@@ -102,6 +97,11 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
         }
       }
     },
+    /**
+     * @param {string} accreditationId
+     * @param {Array<{ type: string, rowId: string }>} wasteRecords
+     * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
+     */
     findLatestCreditedAmountsByWasteRecords: async (
       accreditationId,
       wasteRecords

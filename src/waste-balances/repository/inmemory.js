@@ -33,8 +33,13 @@ export const saveBalance =
 
     if (existingIndex === -1) {
       wasteBalanceStorage.push(updatedBalance)
-    } else {
-      wasteBalanceStorage[existingIndex] = updatedBalance
+      return
+    }
+
+    const existing = wasteBalanceStorage[existingIndex]
+    wasteBalanceStorage[existingIndex] = {
+      ...updatedBalance,
+      canonicalSource: existing.canonicalSource
     }
   }
 
@@ -129,7 +134,9 @@ export const createInMemoryWasteBalancesRepository = (
     flipCanonicalSourceToV2: async ({ accreditationId, capturedVersion }) => {
       const balance = wasteBalanceStorage.find(
         (b) =>
-          b.accreditationId === accreditationId && b.version === capturedVersion
+          b.accreditationId === accreditationId &&
+          b.version === capturedVersion &&
+          b.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.V1
       )
       if (!balance) {
         return { flipped: false }

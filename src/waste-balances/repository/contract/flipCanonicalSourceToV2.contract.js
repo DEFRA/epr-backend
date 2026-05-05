@@ -62,7 +62,7 @@ export const testFlipCanonicalSourceToV2Behaviour = (it) => {
       expect(result).toEqual({ flipped: false })
     })
 
-    it('is a no-op when the marker is already v2 (filter matches accreditationId+version)', async ({
+    it('returns flipped: false when the marker is already v2 — only promotes v1', async ({
       insertWasteBalance
     }) => {
       const balance = buildWasteBalance({
@@ -77,7 +77,7 @@ export const testFlipCanonicalSourceToV2Behaviour = (it) => {
         capturedVersion: 3
       })
 
-      expect(result).toEqual({ flipped: true })
+      expect(result).toEqual({ flipped: false })
 
       const after = await repository.findByAccreditationId(
         'acc-flip-already-v2'
