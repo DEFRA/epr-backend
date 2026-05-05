@@ -215,6 +215,18 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
     })
 
     describe('authorisation', () => {
+      it('returns 401 for an unauthenticated request', async () => {
+        const { server, organisationId, registrationId } =
+          await buildServerWithSubmittedReport()
+
+        const response = await server.inject({
+          method: 'POST',
+          url: makeUrl(organisationId, registrationId)
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+
       it('returns 403 for a standard user', async () => {
         const { server, organisationId, registrationId } =
           await buildServerWithSubmittedReport()
