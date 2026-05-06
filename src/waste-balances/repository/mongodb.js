@@ -55,7 +55,7 @@ const performFindByAccreditationIds = (db) => async (accreditationIds) => {
   })
 }
 
-const performFlipCanonicalSourceToLedger =
+const performFlipCanonicalSourceToMigrating =
   (db) =>
   async ({ accreditationId, capturedVersion }) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
@@ -66,7 +66,71 @@ const performFlipCanonicalSourceToLedger =
         version: capturedVersion,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       },
-      { $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER } },
+      {
+        $set: {
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+          migratingSince: new Date().toISOString()
+        }
+      },
+      { returnDocument: 'after' }
+    )
+    if (updated) {
+      return { canonicalSource: updated.canonicalSource }
+    }
+    const current = await collection.findOne(
+      { accreditationId: validatedAccreditationId },
+      { projection: { canonicalSource: 1 } }
+    )
+    if (!current) {
+      return null
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performFlipCanonicalSourceToLedger =
+  (db) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const updated = await collection.findOneAndUpdate(
+      {
+        accreditationId: validatedAccreditationId,
+        version: capturedVersion,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      },
+      {
+        $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER },
+        $unset: { migratingSince: '' }
+      },
+      { returnDocument: 'after' }
+    )
+    if (updated) {
+      return { canonicalSource: updated.canonicalSource }
+    }
+    const current = await collection.findOne(
+      { accreditationId: validatedAccreditationId },
+      { projection: { canonicalSource: 1 } }
+    )
+    if (!current) {
+      return null
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performResetCanonicalSourceToEmbedded =
+  (db) =>
+  async ({ accreditationId }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const updated = await collection.findOneAndUpdate(
+      {
+        accreditationId: validatedAccreditationId,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      },
+      {
+        $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED },
+        $unset: { migratingSince: '' }
+      },
       { returnDocument: 'after' }
     )
     if (updated) {
@@ -107,8 +171,11 @@ export const findBalance = (db) => async (id) => {
  * Save a waste balance.
  *
  * The persisted `canonicalSource` is set only on insert via `$setOnInsert` and
- * never on update. Only `flipCanonicalSourceToLedger` is allowed to mutate the
- * marker; every other write path is `canonicalSource`-blind.
+ * never on update. The marker is mutated solely by the dedicated lifecycle
+ * primitives — `flipCanonicalSourceToMigrating`, `flipCanonicalSourceToLedger`,
+ * and `resetCanonicalSourceToEmbedded` — which also own `migratingSince`. Every
+ * other write path is `canonicalSource`-blind and never touches
+ * `migratingSince`.
  *
  * @param {import('mongodb').Db} db
  * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
@@ -194,6 +261,8 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         saveBalance: saveBalance(db)
       })
     },
-    flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db)
+    flipCanonicalSourceToMigrating: performFlipCanonicalSourceToMigrating(db),
+    flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db),
+    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db)
   })
 }

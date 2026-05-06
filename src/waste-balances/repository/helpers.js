@@ -152,7 +152,17 @@ const calculateAndApplyUpdates = async (
  * per-accreditation `canonicalSource` marker:
  * - flag OFF — embedded `transactions[]` array
  * - flag ON, marker `'ledger'` — ledger-append path (ADR 0031)
- * - flag ON, marker `'embedded'` or no balance yet — embedded `transactions[]` array
+ * - flag ON, marker `'embedded'`, `'migrating'`, or no balance yet — embedded
+ *   `transactions[]` array
+ *
+ * `'migrating'` deliberately routes to the embedded path: a per-accreditation
+ * rebuild that flipped the marker via `flipCanonicalSourceToMigrating` keeps
+ * the embedded write path live for PRN operations during the replay window —
+ * the version-conditional `flipCanonicalSourceToLedger` catches concurrent
+ * writes and forces a retry. Summary-log submissions are kept off this path
+ * during the migrating window by `transitionToSubmittingExclusive`'s 409
+ * exclusion, so the only writes that legitimately reach this dispatch under
+ * `'migrating'` are PRN operations.
  *
  * The marker drives per-accreditation rollout: a freshly enabled environment
  * keeps every accreditation on the embedded array until a rebuild replays

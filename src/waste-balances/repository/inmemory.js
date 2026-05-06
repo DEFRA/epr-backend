@@ -22,11 +22,13 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
 /**
  * Save a waste balance.
  *
- * The persisted `canonicalSource` is the existing document's value, ignoring
- * whatever the caller supplies. Only `flipCanonicalSourceToLedger` is allowed
- * to mutate the marker; every other write path is `canonicalSource`-blind.
- * Inserts take the caller's value verbatim so the initial marker (`'embedded'`
- * for fresh balances) lands on the new doc.
+ * On update, both `canonicalSource` and `migratingSince` are taken from the
+ * existing document, ignoring whatever the caller supplies. The marker
+ * lifecycle is mutated solely by `flipCanonicalSourceToMigrating`,
+ * `flipCanonicalSourceToLedger`, and `resetCanonicalSourceToEmbedded`; every
+ * other write path is marker-blind. Inserts take the caller's
+ * `canonicalSource` verbatim so the initial marker (`'embedded'` for fresh
+ * balances) lands on the new doc.
  *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
  * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
@@ -43,10 +45,16 @@ export const saveBalance =
     }
 
     const existing = wasteBalanceStorage[existingIndex]
-    wasteBalanceStorage[existingIndex] = {
+    const preserved = {
       ...updatedBalance,
       canonicalSource: existing.canonicalSource
     }
+    if (existing.migratingSince !== undefined) {
+      preserved.migratingSince = existing.migratingSince
+    } else {
+      delete preserved.migratingSince
+    }
+    wasteBalanceStorage[existingIndex] = preserved
   }
 
 /**
@@ -137,7 +145,7 @@ export const createInMemoryWasteBalancesRepository = (
         saveBalance: saveBalance(wasteBalanceStorage)
       })
     },
-    flipCanonicalSourceToLedger: async ({
+    flipCanonicalSourceToMigrating: async ({
       accreditationId,
       capturedVersion
     }) => {
@@ -152,7 +160,44 @@ export const createInMemoryWasteBalancesRepository = (
         current.version === capturedVersion &&
         current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       ) {
+        current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+        current.migratingSince = new Date().toISOString()
+      }
+      return { canonicalSource: current.canonicalSource }
+    },
+    flipCanonicalSourceToLedger: async ({
+      accreditationId,
+      capturedVersion
+    }) => {
+      const validatedAccreditationId = validateAccreditationId(accreditationId)
+      const current = wasteBalanceStorage.find(
+        (b) => b.accreditationId === validatedAccreditationId
+      )
+      if (!current) {
+        return null
+      }
+      if (
+        current.version === capturedVersion &&
+        current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      ) {
         current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        delete current.migratingSince
+      }
+      return { canonicalSource: current.canonicalSource }
+    },
+    resetCanonicalSourceToEmbedded: async ({ accreditationId }) => {
+      const validatedAccreditationId = validateAccreditationId(accreditationId)
+      const current = wasteBalanceStorage.find(
+        (b) => b.accreditationId === validatedAccreditationId
+      )
+      if (!current) {
+        return null
+      }
+      if (
+        current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      ) {
+        current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+        delete current.migratingSince
       }
       return { canonicalSource: current.canonicalSource }
     },

@@ -9,6 +9,7 @@ export const WASTE_BALANCE_TRANSACTION_TYPE = Object.freeze({
 
 export const WASTE_BALANCE_CANONICAL_SOURCE = Object.freeze({
   EMBEDDED: 'embedded',
+  MIGRATING: 'migrating',
   LEDGER: 'ledger'
 })
 
@@ -84,5 +85,20 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * @property {number} amount - Total balance (credits minus debits, stored as Decimal128)
  * @property {number} availableAmount - Available balance (amount minus pending debits, stored as Decimal128)
  * @property {WasteBalanceTransaction[]} transactions - Transaction history (append-only)
- * @property {WasteBalanceCanonicalSource} canonicalSource - Per-accreditation marker. `'embedded'` means this document is the source of truth and reads/writes target the embedded `transactions[]` array; `'ledger'` means the ledger collection is the source of truth. New documents default to `'embedded'`; the marker flips to `'ledger'` once a per-accreditation rebuild from authoritative sources has completed.
+ * @property {WasteBalanceCanonicalSource} canonicalSource - Per-accreditation marker.
+ *   `'embedded'` means this document is the source of truth and reads/writes target
+ *   the embedded `transactions[]` array. `'migrating'` means a per-accreditation
+ *   rebuild from authoritative sources is in flight: writes that would otherwise
+ *   land on the embedded array still do (PRN write path treats `'migrating'` as
+ *   `'embedded'`), but summary-log submissions are 409-excluded by
+ *   `transitionToSubmittingExclusive` until the rebuild lands. `'ledger'` means
+ *   the ledger collection is the source of truth and embedded reads/writes are
+ *   bypassed. New documents default to `'embedded'`. Lifecycle:
+ *   `embedded → migrating → ledger` (forward sweep) with
+ *   `migrating → embedded` available as the stuck-marker recovery reset.
+ * @property {string} [migratingSince] - ISO8601 timestamp of when the marker
+ *   flipped to `'migrating'`. Set by `flipCanonicalSourceToMigrating` and
+ *   cleared by either `flipCanonicalSourceToLedger` (forward) or
+ *   `resetCanonicalSourceToEmbedded` (recovery). Drives the stuck-marker
+ *   recovery threshold check; absent on every other marker state.
  */

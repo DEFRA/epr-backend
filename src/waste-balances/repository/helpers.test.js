@@ -442,6 +442,52 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
+      it('uses the embedded path when flag is ON and canonicalSource is migrating — PRN writes during a rebuild treat migrating as embedded', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+          migratingSince: '2025-01-01T00:00:00.000Z'
+        }
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
+            ledgerRepository: { insertTransactions: vi.fn() }
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
       it('uses the embedded path when flag is ON but canonicalSource is still embedded', async () => {
         const wasteRecords = [
           {
