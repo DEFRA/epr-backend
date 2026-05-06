@@ -23,7 +23,7 @@ import {
  */
 
 const DEFAULT_LIMIT = 50
-const MAX_LIMIT = 500
+const MAX_LIMIT = 200
 
 const systemLogsSearchPath = '/v1/system-logs/search'
 
@@ -40,7 +40,7 @@ export const systemLogsPostSearch = {
         subCategory: Joi.string().optional(),
         limit: Joi.number().integer().min(1).optional(),
         cursor: Joi.string().hex().length(24).optional()
-      }).or('organisationId', 'email')
+      }).or('organisationId', 'email', 'subCategory')
     }
   },
   /**
@@ -67,11 +67,8 @@ export const systemLogsPostSearch = {
 
       const response = {
         systemLogs: result.systemLogs,
-        hasMore: result.hasMore
-      }
-
-      if (result.nextCursor) {
-        response.nextCursor = result.nextCursor
+        hasMore: result.hasMore,
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {})
       }
 
       logger.info({

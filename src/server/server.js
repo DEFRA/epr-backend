@@ -135,10 +135,7 @@ function getProductionPlugins(config) {
     orsImportsRepositoryPlugin
   ]
 
-  /* istanbul ignore next -- gated by feature flag, tested via createTestServer */
-  if (config.get('featureFlags.reports')) {
-    plugins.push(mongoReportsRepositoryPlugin)
-  }
+  plugins.push(mongoReportsRepositoryPlugin)
 
   /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
   if (config.get('featureFlags.devEndpoints')) {

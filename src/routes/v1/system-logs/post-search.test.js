@@ -76,7 +76,7 @@ describe('POST /v1/system-logs/search', () => {
       await addSystemLog({ email, subCategory: 'summary-log', id: 1 })
       await addSystemLog({ email, subCategory: 'epr-organisations', id: 2 })
 
-      const response = await makeRequest({ email, subCategory: 'summary-log' })
+      const response = await makeRequest({ subCategory: 'summary-log' })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
@@ -191,12 +191,6 @@ describe('POST /v1/system-logs/search', () => {
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('returns 422 when only subCategory is provided', async () => {
-      const response = await makeRequest({ subCategory: 'summary-log' })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    })
-
     it('returns 422 when cursor is not a valid hex string', async () => {
       const response = await makeRequest({
         email: 'test@example.com',
@@ -216,7 +210,9 @@ describe('POST /v1/system-logs/search', () => {
     })
 
     it('silently caps limit at the maximum when exceeded', async () => {
-      await addSystemLog({ email: 'alice@example.com', id: 1 })
+      ;[...Array(250).keys()].forEach(async (i) => {
+        await addSystemLog({ email: 'alice@example.com', id: i + 1 })
+      })
 
       const response = await makeRequest({
         email: 'alice@example.com',
@@ -224,6 +220,9 @@ describe('POST /v1/system-logs/search', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+
+      expect(result.systemLogs).toHaveLength(200)
     })
   })
 
