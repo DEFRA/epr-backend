@@ -18,12 +18,14 @@ export async function buildSubmittedReport(reportsRepository, overrides = {}) {
     reportId: id,
     version: 1,
     status: REPORT_STATUS.READY_TO_SUBMIT,
+    slot: 'ready',
     changedBy: SUBMITTER
   })
   await reportsRepository.updateReportStatus({
     reportId: id,
     version: 2,
     status: REPORT_STATUS.SUBMITTED,
+    slot: 'submitted',
     changedBy: SUBMITTER
   })
   return id

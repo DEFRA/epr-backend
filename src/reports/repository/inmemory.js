@@ -12,7 +12,6 @@ import {
 } from './validation.js'
 import {
   prepareCreateReportParams,
-  STATUS_TO_SLOT,
   groupAsPeriodicReports,
   transformToPeriodicReports
 } from '#root/reports/repository/helpers.js'
@@ -147,8 +146,9 @@ const updateReport = async (reports, params) => {
  * @returns {Promise<Report>}
  */
 const updateReportStatus = async (reports, params) => {
-  const validated = validateUpdateReportStatus(params)
-  const { reportId, version, status, changedBy } = validated
+  const { slot, ...statusParams } = params
+  const { reportId, version, status, changedBy } =
+    validateUpdateReportStatus(statusParams)
 
   const existing = reports.get(reportId)
 
@@ -163,7 +163,6 @@ const updateReportStatus = async (reports, params) => {
   }
 
   const now = new Date().toISOString()
-  const slot = STATUS_TO_SLOT[status]
 
   const updated = {
     ...existing,

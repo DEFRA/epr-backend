@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
@@ -127,6 +130,7 @@ export const testCreateReportBehaviour = (it) => {
         reportId: firstId,
         version: 1,
         status: REPORT_STATUS.SUBMITTED,
+        slot: REPORT_STATUS_SLOT.SUBMITTED,
         changedBy
       })
 

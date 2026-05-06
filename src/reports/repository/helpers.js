@@ -1,12 +1,8 @@
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 import { randomUUID } from 'node:crypto'
-
-/** @type {Record<string, string>} */
-export const STATUS_TO_SLOT = {
-  [REPORT_STATUS.IN_PROGRESS]: 'created',
-  [REPORT_STATUS.READY_TO_SUBMIT]: 'ready',
-  [REPORT_STATUS.SUBMITTED]: 'submitted'
-}
 
 /**
  * Groups `arr` by `keyFn`, then maps each group through `valueFn`.
@@ -151,7 +147,7 @@ export const prepareCreateReportParams = (validatedParams) => {
     status: {
       currentStatus: REPORT_STATUS.IN_PROGRESS,
       currentStatusAt: now,
-      [STATUS_TO_SLOT[REPORT_STATUS.IN_PROGRESS]]: { at: now, by: changedBy },
+      [REPORT_STATUS_SLOT.CREATED]: { at: now, by: changedBy },
       history: [{ status: REPORT_STATUS.IN_PROGRESS, at: now, by: changedBy }]
     }
   })

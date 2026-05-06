@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { ObjectId } from 'mongodb'
 import { MONTHLY_PERIODS } from '#root/reports/domain/period-labels.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 
 export const DEFAULT_ORG_ID = new ObjectId().toString()
 export const DEFAULT_REG_ID = new ObjectId().toString()
@@ -45,12 +48,14 @@ export const createAndSubmitReport = async (repository, overrides = {}) => {
     reportId: id,
     version: 1,
     status: REPORT_STATUS.READY_TO_SUBMIT,
+    slot: REPORT_STATUS_SLOT.READY,
     changedBy: DEFAULT_CHANGED_BY
   })
   await repository.updateReportStatus({
     reportId: id,
     version: 2,
     status: REPORT_STATUS.SUBMITTED,
+    slot: REPORT_STATUS_SLOT.SUBMITTED,
     changedBy: DEFAULT_CHANGED_BY
   })
   return id
