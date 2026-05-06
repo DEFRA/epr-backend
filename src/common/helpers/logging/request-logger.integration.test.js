@@ -1,27 +1,10 @@
-import hapi from '@hapi/hapi'
-import hapiPino from 'hapi-pino'
 import pino from 'pino'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { logger } from './logger.js'
 import { loggerOptions } from './logger-options.js'
 import { config } from '#root/config.js'
-
-const newServer = async () => {
-  const lines = []
-  const stream = { write: (s) => lines.push(s) }
-
-  const server = hapi.server({ port: 0 })
-  await server.register({
-    plugin: hapiPino,
-    options: { ...loggerOptions, enabled: true, level: 'trace', stream }
-  })
-
-  return { server, lines }
-}
-
-const findLine = (lines, predicate) =>
-  lines.map((s) => JSON.parse(s)).find(predicate)
+import { createLogCaptureServer } from '#test/log-capture-server.js'
 
 describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
   afterEach(() => {
@@ -30,7 +13,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
 
   it('should emit a canonical IndexedLogProperties payload through hapi-pino unchanged', async () => {
     config.set('cdpEnvironment', 'dev')
-    const { server, lines } = await newServer()
+    const { server, findLine } = await createLogCaptureServer()
     server.route({
       method: 'GET',
       path: '/test',
@@ -44,7 +27,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
 
     await server.inject('/test')
-    const out = findLine(lines, (l) => l.message === 'test event')
+    const out = findLine((l) => l.message === 'test event')
 
     expect(out).toMatchObject({
       message: 'test event',
@@ -55,7 +38,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
 
   it('should bind ECS http.* and url.* on the per-request child logger (no flat req)', async () => {
     config.set('cdpEnvironment', 'dev')
-    const { server, lines } = await newServer()
+    const { server, findLine } = await createLogCaptureServer()
     server.route({
       method: 'GET',
       path: '/test',
@@ -66,7 +49,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
 
     await server.inject('/test')
-    const out = findLine(lines, (l) => l.message === 'handler entered')
+    const out = findLine((l) => l.message === 'handler entered')
 
     expect(out).toMatchObject({
       http: { request: { method: 'GET' } },
@@ -78,7 +61,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
 
   it('should emit ECS http.response.* and url.path on the hapi-pino response auto-log', async () => {
     config.set('cdpEnvironment', 'dev')
-    const { server, lines } = await newServer()
+    const { server, findLine } = await createLogCaptureServer()
     server.route({
       method: 'GET',
       path: '/test',
@@ -86,10 +69,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
 
     await server.inject('/test')
-    const out = findLine(
-      lines,
-      (l) => l.url?.path === '/test' && l.http?.response
-    )
+    const out = findLine((l) => l.url?.path === '/test' && l.http?.response)
 
     expect(out).toMatchObject({
       http: { response: { status_code: 200 } },
@@ -101,7 +81,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
 
   it('should map a logged err to ECS error.* when cdpEnvironment is non-prod', async () => {
     config.set('cdpEnvironment', 'dev')
-    const { server, lines } = await newServer()
+    const { server, findLine } = await createLogCaptureServer()
     server.route({
       method: 'GET',
       path: '/test',
@@ -112,7 +92,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
 
     await server.inject('/test')
-    const out = findLine(lines, (l) => l.message === 'boom path')
+    const out = findLine((l) => l.message === 'boom path')
 
     expect(out?.error).toStrictEqual(
       expect.objectContaining({
@@ -125,7 +105,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
 
   it('should strip error.stack_trace when cdpEnvironment is prod', async () => {
     config.set('cdpEnvironment', 'prod')
-    const { server, lines } = await newServer()
+    const { server, findLine } = await createLogCaptureServer()
     server.route({
       method: 'GET',
       path: '/test',
@@ -136,7 +116,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     })
 
     await server.inject('/test')
-    const out = findLine(lines, (l) => l.message === 'boom path')
+    const out = findLine((l) => l.message === 'boom path')
 
     expect(out?.error).toBeDefined()
     expect(out?.error).not.toHaveProperty('stack_trace')
