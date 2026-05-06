@@ -81,7 +81,8 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
-    featureFlags
+    featureFlags,
+    logger
   })
 
   const { created, updated } = await summaryLogMetrics.timedSubmission(

@@ -36,8 +36,7 @@ describe('SummaryLogExtractor', () => {
     }
 
     summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository,
-      logger
+      uploadsRepository
     })
 
     summaryLog = {
@@ -52,7 +51,7 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should fetch file from uploads repository', async () => {
-    await summaryLogExtractor.extract(summaryLog)
+    await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(uploadsRepository.findByLocation).toHaveBeenCalledWith(
       's3://test-bucket/test-key'
@@ -63,7 +62,7 @@ describe('SummaryLogExtractor', () => {
     uploadsRepository.findByLocation.mockResolvedValue(null)
 
     const result = await summaryLogExtractor
-      .extract(summaryLog)
+      .extract(summaryLog, { logger })
       .catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
@@ -76,7 +75,7 @@ describe('SummaryLogExtractor', () => {
     const buffer = Buffer.from('test content')
     uploadsRepository.findByLocation.mockResolvedValue(buffer)
 
-    await summaryLogExtractor.extract(summaryLog)
+    await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(parse).toHaveBeenCalledWith(buffer, {
       requiredWorksheet: 'Cover',
@@ -108,7 +107,7 @@ describe('SummaryLogExtractor', () => {
     }
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
-    const result = await summaryLogExtractor.extract(summaryLog)
+    const result = await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(result).toEqual(parsedData)
   })
@@ -117,7 +116,7 @@ describe('SummaryLogExtractor', () => {
     uploadsRepository.findByLocation.mockRejectedValue(new Error('S3 error'))
 
     const result = await summaryLogExtractor
-      .extract(summaryLog)
+      .extract(summaryLog, { logger })
       .catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
@@ -128,7 +127,7 @@ describe('SummaryLogExtractor', () => {
     vi.mocked(parse).mockRejectedValueOnce(new Error('Parse error'))
 
     const result = await summaryLogExtractor
-      .extract(summaryLog)
+      .extract(summaryLog, { logger })
       .catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
@@ -156,7 +155,7 @@ describe('SummaryLogExtractor', () => {
     }
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
-    await summaryLogExtractor.extract(summaryLog)
+    await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Summary log parsing completed',
@@ -193,7 +192,7 @@ describe('SummaryLogExtractor', () => {
     }
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
-    await summaryLogExtractor.extract(summaryLog)
+    await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Summary log parsing completed',
@@ -218,7 +217,7 @@ describe('SummaryLogExtractor', () => {
     }
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
-    await summaryLogExtractor.extract(summaryLog)
+    await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Data table: EmptyTable',
@@ -228,6 +227,32 @@ describe('SummaryLogExtractor', () => {
         reason: 'headers=2 rows=0 at Sheet1:1:A'
       }
     })
+  })
+
+  it('should emit through the logger passed to extract', async () => {
+    const callLogger = { info: vi.fn() }
+    const otherLogger = { info: vi.fn() }
+    const parsedData = {
+      meta: {},
+      data: {
+        SomeTable: {
+          headers: ['c'],
+          rows: [['x']],
+          location: { sheet: 'Sheet1', row: 1, column: 'A' }
+        }
+      }
+    }
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
+
+    await summaryLogExtractor.extract(summaryLog, { logger: callLogger })
+
+    expect(callLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Summary log parsing completed' })
+    )
+    expect(callLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Data table: SomeTable' })
+    )
+    expect(otherLogger.info).not.toHaveBeenCalled()
   })
 
   it('should handle data table with only one row', async () => {
@@ -243,7 +268,7 @@ describe('SummaryLogExtractor', () => {
     }
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
-    await summaryLogExtractor.extract(summaryLog)
+    await summaryLogExtractor.extract(summaryLog, { logger })
 
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Data table: SingleRowTable',

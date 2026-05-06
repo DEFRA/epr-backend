@@ -56,7 +56,7 @@ const extractSummaryLog = async ({
   loggingContext,
   logger
 }) => {
-  const parsed = await summaryLogExtractor.extract(summaryLog)
+  const parsed = await summaryLogExtractor.extract(summaryLog, { logger })
 
   logger.info({
     message: `Extracted summary log file: ${loggingContext}`,

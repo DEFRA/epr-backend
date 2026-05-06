@@ -1,3 +1,7 @@
+/**
+ * @import { TypedLogger } from '#common/helpers/logging/logger.js'
+ */
+
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 
 /**
@@ -46,7 +50,7 @@
 
 /**
  * @typedef {Object} SummaryLogExtractor
- * @property {(summaryLog: SummaryLog) => Promise<ParsedSummaryLog>} extract
+ * @property {(summaryLog: SummaryLog, options: { logger: TypedLogger }) => Promise<ParsedSummaryLog>} extract
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
