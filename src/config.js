@@ -506,5 +506,6 @@ function getConfig(overrides = {}) {
 }
 
 const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
+const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
 
-export { config, getConfig, isProductionEnvironment }
+export { config, getConfig, isLocalEnvironment, isProductionEnvironment }
