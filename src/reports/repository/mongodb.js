@@ -12,8 +12,7 @@ import {
 import {
   transformToPeriodicReports,
   groupAsPeriodicReports,
-  prepareCreateReportParams,
-  STATUS_TO_SLOT
+  prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
 
@@ -40,6 +39,29 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
  */
 const reportsCollection = (db) =>
   /** @type {Collection<Report>} */ (db.collection(REPORTS_COLLECTION))
+
+/**
+ * Resolves a failed findOneAndUpdate into a 404 (report missing) or 409 (version mismatch).
+ *
+ * @param {Db} db
+ * @param {string} reportId
+ * @param {number} version
+ * @returns {Promise<never>}
+ * @throws {Boom.Payload} 404 Not Found if the report does not exist.
+ * @throws {Boom.Payload} 409 Conflict if the version numbers do not match.
+ */
+const throwNotFoundOrConflict = async (db, reportId, version) => {
+  const existing = await reportsCollection(db).findOne(
+    { id: reportId },
+    { projection: { _id: 0, version: 1 } }
+  )
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${reportId}`)
+  }
+  throw Boom.conflict(
+    `Version conflict: expected version ${version} for report ${reportId}`
+  )
+}
 
 /**
  * Ensures the reports collection exists with required indexes.
@@ -146,16 +168,7 @@ const performUpdateReport = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc
@@ -168,11 +181,11 @@ const performUpdateReport = async (db, params) => {
  * @returns {Promise<Report>}
  */
 const performUpdateReportStatus = async (db, params) => {
-  const validated = validateUpdateReportStatus(params)
-  const { reportId, version, status, changedBy } = validated
+  const { slot, ...statusParams } = params
+  const { reportId, version, status, changedBy } =
+    validateUpdateReportStatus(statusParams)
 
   const now = new Date().toISOString()
-  const slot = STATUS_TO_SLOT[status]
 
   const doc = await reportsCollection(db).findOneAndUpdate(
     { id: reportId, version },
@@ -191,16 +204,7 @@ const performUpdateReportStatus = async (db, params) => {
   )
 
   if (!doc) {
-    const existing = await reportsCollection(db).findOne(
-      { id: reportId },
-      { projection: { _id: 0, version: 1 } }
-    )
-    if (!existing) {
-      throw Boom.notFound(`Report not found: ${reportId}`)
-    }
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
-    )
+    return throwNotFoundOrConflict(db, reportId, version)
   }
 
   const { _id, ...report } = doc

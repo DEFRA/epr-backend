@@ -24,6 +24,7 @@
  * @property {ReportOperation} created
  * @property {ReportOperation} [ready]
  * @property {ReportOperation} [submitted]
+ * @property {ReportOperation} [unsubmitted]
  * @property {ReportStatusHistoryItem[]} history
  */
 
@@ -193,6 +194,7 @@
  * @property {string} reportId
  * @property {number} version - current version for optimistic locking
  * @property {ReportStatus} status
+ * @property {string} slot - the status object key to record this transition (e.g. 'ready', 'submitted', 'unsubmitted')
  * @property {UserSummary} [changedBy]
  */
 
