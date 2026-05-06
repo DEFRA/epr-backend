@@ -61,7 +61,10 @@ export const reportsUnsubmit = {
       version: report.version,
       status: REPORT_STATUS.READY_TO_SUBMIT,
       slot: REPORT_STATUS_SLOT.UNSUBMITTED,
-      changedBy: extractChangedBy(request.auth.credentials)
+      changedBy: {
+        ...extractChangedBy(request.auth.credentials),
+        position: 'Service Maintainer'
+      }
     })
 
     await auditReportStatusTransition(request, {
