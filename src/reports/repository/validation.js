@@ -41,8 +41,8 @@ export const validateUpdateReport = (params) => {
 }
 
 /**
- * @param {import('./port.js').UpdateReportStatusParams} params
- * @returns {import('./port.js').UpdateReportStatusParams}
+ * @param {Omit<import('./port.js').UpdateReportStatusParams, 'slot'>} params
+ * @returns {Omit<import('./port.js').UpdateReportStatusParams, 'slot'>}
  */
 export const validateUpdateReportStatus = (params) => {
   const { error, value } = updateReportStatusSchema.validate(params, {

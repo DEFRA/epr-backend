@@ -42,7 +42,6 @@ const router = {
           ? [reportsUnsubmit]
           : []
 
-
         server.route([
           health,
           ...apply,
