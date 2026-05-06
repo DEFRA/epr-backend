@@ -6,6 +6,7 @@ import {
 } from '../enums/event.js'
 
 const mockLoggerError = vi.fn()
+const mockLoggerDebug = vi.fn()
 const secretFixture = 'secret'
 
 vi.mock('fs')
@@ -16,7 +17,8 @@ vi.mock('./logging/logger.js', async (importOriginal) => {
     logger: {
       info: vi.fn(),
       error: (...args) => mockLoggerError(...args),
-      warn: vi.fn()
+      warn: vi.fn(),
+      debug: (...args) => mockLoggerDebug(...args)
     }
   }
 })
@@ -73,5 +75,26 @@ describe('getLocalSecret', () => {
     const result = getLocalSecret('nonexistent.configKey')
     expect(result).toBeNull()
     expect(mockLoggerError).toHaveBeenCalled()
+  })
+
+  it('logs at debug (not error) when the secret file is missing (ENOENT)', () => {
+    const error = Object.assign(new Error('ENOENT: no such file'), {
+      code: 'ENOENT'
+    })
+    vi.mocked(fs).readFileSync.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const result = getLocalSecret(configKey)
+
+    expect(result).toBeNull()
+    expect(mockLoggerError).not.toHaveBeenCalled()
+    expect(mockLoggerDebug).toHaveBeenCalledWith({
+      message: `Local secret not present for config key: ${configKey}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SECRET,
+        action: LOGGING_EVENT_ACTIONS.NOT_FOUND
+      }
+    })
   })
 })

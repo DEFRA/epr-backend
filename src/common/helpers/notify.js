@@ -13,14 +13,16 @@ import {
 } from '../enums/event.js'
 
 async function sendEmail(templateId, emailAddress, personalisation = {}) {
-  const apiKey = config.get('isDevelopment')
+  const isDevelopment = config.get('isDevelopment')
+  const apiKey = isDevelopment
     ? getLocalSecret('govukNotifyApiKeyPath')
     : config.get('govukNotifyApiKeyPath')
 
   let notifyClient = {}
 
   if (!apiKey) {
-    logger.warn({
+    const level = isDevelopment ? 'debug' : 'warn'
+    logger[level]({
       message:
         'Missing GOVUK_NOTIFY_API_KEY in environment, notifyClient will not be available',
       event: {

@@ -14,6 +14,7 @@ const mockSendEmail = vi.fn()
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
+const mockLoggerDebug = vi.fn()
 const mockAudit = vi.fn()
 
 vi.mock('notifications-node-client', () => ({
@@ -26,7 +27,8 @@ vi.mock('./logging/logger.js', () => ({
   logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
+    warn: (...args) => mockLoggerWarn(...args),
+    debug: (...args) => mockLoggerDebug(...args)
   }
 }))
 
@@ -92,7 +94,7 @@ describe('sendEmail', () => {
     expect(NotifyClient).toHaveBeenCalledWith('prod-config-key')
   })
 
-  it('calls logger.warn if apiKey is not set', async () => {
+  it('calls logger.warn if apiKey is not set in non-development', async () => {
     config.get.mockImplementation((key) => {
       if (key === 'isDevelopment') return false
       return null
@@ -105,6 +107,31 @@ describe('sendEmail', () => {
         action: LOGGING_EVENT_ACTIONS.NOT_FOUND
       }
     })
+    expect(mockLoggerDebug).not.toHaveBeenCalled()
+  })
+
+  it('calls logger.debug (not warn) if apiKey is not set in development', async () => {
+    getLocalSecret.mockReturnValue(null)
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return true
+      return null
+    })
+    await sendEmail(templateId, emailAddress, personalisation)
+    expect(mockLoggerDebug).toHaveBeenCalledWith({
+      message: expect.any(String),
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.CONFIG,
+        action: LOGGING_EVENT_ACTIONS.NOT_FOUND
+      }
+    })
+    expect(mockLoggerWarn).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.CONFIG,
+          action: LOGGING_EVENT_ACTIONS.NOT_FOUND
+        }
+      })
+    )
   })
 
   it('calls notifyClient.sendEmail with correct arguments', async () => {
