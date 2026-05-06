@@ -54,7 +54,7 @@ export const createNewWasteBalance = (accreditationId, organisationId) => ({
   transactions: [],
   version: 0,
   schemaVersion: 1,
-  canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+  canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
 })
 
 /**
@@ -150,13 +150,14 @@ const calculateAndApplyUpdates = async (
  *
  * Dispatches on the `wasteBalanceLedger` feature flag and the
  * per-accreditation `canonicalSource` marker:
- * - flag OFF — embedded `transactions[]` array (v1)
- * - flag ON, marker `'v2'` — ledger-append path (ADR 0031)
- * - flag ON, marker `'v1'` or no balance yet — embedded `transactions[]` array (v1)
+ * - flag OFF — embedded `transactions[]` array
+ * - flag ON, marker `'ledger'` — ledger-append path (ADR 0031)
+ * - flag ON, marker `'embedded'` or no balance yet — embedded `transactions[]` array
  *
  * The marker drives per-accreditation rollout: a freshly enabled environment
- * keeps every accreditation on v1 until a rebuild migrates it to v2 and flips
- * the marker. Both paths preserve audit emission.
+ * keeps every accreditation on the embedded array until a rebuild replays
+ * authoritative history into the ledger and flips the marker. Both paths
+ * preserve audit emission.
  *
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
@@ -190,7 +191,7 @@ export const performUpdateWasteBalanceTransactions = async ({
   if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
     const existingBalance = await findBalance(validatedAccreditationId)
     if (
-      existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.V2
+      existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
     ) {
       await performUpdateViaLedger({
         wasteRecords: annotatedRecords,

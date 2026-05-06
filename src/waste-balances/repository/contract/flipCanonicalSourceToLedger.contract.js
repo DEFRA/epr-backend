@@ -3,89 +3,97 @@ import { describe, beforeEach, expect } from 'vitest'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
 
-export const testFlipCanonicalSourceToV2Behaviour = (it) => {
-  describe('flipCanonicalSourceToV2', () => {
+export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
+  describe('flipCanonicalSourceToLedger', () => {
     let repository
 
     beforeEach(async ({ wasteBalancesRepository }) => {
       repository = await wasteBalancesRepository()
     })
 
-    it('flips the marker when the captured version matches', async ({
+    it('flips the marker to ledger when the captured version matches', async ({
       insertWasteBalance
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-ok',
         version: 7,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
       await insertWasteBalance(balance)
 
-      const result = await repository.flipCanonicalSourceToV2({
+      const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-ok',
         capturedVersion: 7
       })
 
-      expect(result).toEqual({ flipped: true })
+      expect(result).toEqual({
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
 
       const after = await repository.findByAccreditationId('acc-flip-ok')
-      expect(after.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V2)
+      expect(after.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
     })
 
-    it('returns flipped: false and leaves the marker alone when versions diverge', async ({
+    it('returns the embedded post-state and leaves the marker alone when versions diverge', async ({
       insertWasteBalance
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-stale',
         version: 8,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
       await insertWasteBalance(balance)
 
-      const result = await repository.flipCanonicalSourceToV2({
+      const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-stale',
         capturedVersion: 7
       })
 
-      expect(result).toEqual({ flipped: false })
+      expect(result).toEqual({
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
 
       const after = await repository.findByAccreditationId('acc-flip-stale')
-      expect(after.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V1)
+      expect(after.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
     })
 
-    it('returns flipped: false when the accreditation has no balance document', async () => {
-      const result = await repository.flipCanonicalSourceToV2({
+    it('returns null when the accreditation has no balance document', async () => {
+      const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-missing',
         capturedVersion: 1
       })
 
-      expect(result).toEqual({ flipped: false })
+      expect(result).toBeNull()
     })
 
-    it('returns flipped: false when the marker is already v2 — only promotes v1', async ({
+    it('returns the ledger post-state when the marker is already on ledger — only promotes embedded', async ({
       insertWasteBalance
     }) => {
       const balance = buildWasteBalance({
-        accreditationId: 'acc-flip-already-v2',
+        accreditationId: 'acc-flip-already-ledger',
         version: 3,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
       await insertWasteBalance(balance)
 
-      const result = await repository.flipCanonicalSourceToV2({
-        accreditationId: 'acc-flip-already-v2',
+      const result = await repository.flipCanonicalSourceToLedger({
+        accreditationId: 'acc-flip-already-ledger',
         capturedVersion: 3
       })
 
-      expect(result).toEqual({ flipped: false })
+      expect(result).toEqual({
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
 
       const after = await repository.findByAccreditationId(
-        'acc-flip-already-v2'
+        'acc-flip-already-ledger'
       )
-      expect(after.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V2)
+      expect(after.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
     })
 
-    it('no-ops when a concurrent PRN write bumps version between capture and flip', async ({
+    it('returns embedded post-state when a concurrent PRN write bumps version between capture and flip', async ({
       insertWasteBalance
     }) => {
       const accreditationId = 'acc-concurrent-prn-write'
@@ -95,7 +103,7 @@ export const testFlipCanonicalSourceToV2Behaviour = (it) => {
         version: 4,
         amount: 100,
         availableAmount: 100,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
       await insertWasteBalance(balance)
 
@@ -110,15 +118,19 @@ export const testFlipCanonicalSourceToV2Behaviour = (it) => {
         userId: 'user-1'
       })
 
-      const result = await repository.flipCanonicalSourceToV2({
+      const result = await repository.flipCanonicalSourceToLedger({
         accreditationId,
         capturedVersion
       })
 
-      expect(result).toEqual({ flipped: false })
+      expect(result).toEqual({
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
 
       const after = await repository.findByAccreditationId(accreditationId)
-      expect(after.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V1)
+      expect(after.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
       expect(after.version).toBe(capturedVersion + 1)
     })
   })

@@ -22,7 +22,7 @@ export const buildWasteBalance = (overrides = {}) => {
   const amount = overrides.amount ?? 100
   const availableAmount = overrides.availableAmount ?? 100
   const canonicalSource =
-    overrides.canonicalSource ?? WASTE_BALANCE_CANONICAL_SOURCE.V1
+    overrides.canonicalSource ?? WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
 
   const transaction = {
     id: randomUUID(),

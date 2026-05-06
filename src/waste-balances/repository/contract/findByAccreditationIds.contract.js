@@ -132,28 +132,28 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
     it('preserves canonicalSource per balance across the batch', async ({
       insertWasteBalances
     }) => {
-      const onV1 = buildWasteBalance({
-        accreditationId: 'acc-mixed-v1',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+      const onEmbedded = buildWasteBalance({
+        accreditationId: 'acc-mixed-embedded',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
-      const onV2 = buildWasteBalance({
-        accreditationId: 'acc-mixed-v2',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2
+      const onLedger = buildWasteBalance({
+        accreditationId: 'acc-mixed-ledger',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
 
-      await insertWasteBalances([onV1, onV2])
+      await insertWasteBalances([onEmbedded, onLedger])
 
       const result = await repository.findByAccreditationIds([
-        'acc-mixed-v1',
-        'acc-mixed-v2'
+        'acc-mixed-embedded',
+        'acc-mixed-ledger'
       ])
 
       const byId = Object.fromEntries(result.map((b) => [b.accreditationId, b]))
-      expect(byId['acc-mixed-v1'].canonicalSource).toBe(
-        WASTE_BALANCE_CANONICAL_SOURCE.V1
+      expect(byId['acc-mixed-embedded'].canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       )
-      expect(byId['acc-mixed-v2'].canonicalSource).toBe(
-        WASTE_BALANCE_CANONICAL_SOURCE.V2
+      expect(byId['acc-mixed-ledger'].canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       )
     })
 

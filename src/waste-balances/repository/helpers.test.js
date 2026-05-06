@@ -352,7 +352,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     describe('feature flag dispatch', () => {
-      it('routes to the ledger path when flag is ON and canonicalSource is v2', async () => {
+      it('routes to the ledger path when flag is ON and canonicalSource is ledger', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -370,7 +370,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           availableAmount: 0,
           transactions: [],
           version: 1,
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
         })
         const saveBalance = vi.fn()
         vi.mocked(performUpdateViaLedger).mockClear()
@@ -399,7 +399,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(findBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the v1 path when flag is ON but the existing balance has no marker (legacy doc)', async () => {
+      it('uses the embedded path when flag is ON but the existing balance has no marker (legacy doc)', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -442,7 +442,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the v1 path when flag is ON but canonicalSource is still v1', async () => {
+      it('uses the embedded path when flag is ON but canonicalSource is still embedded', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -458,7 +458,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           availableAmount: 0,
           transactions: [],
           version: 1,
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue()
@@ -487,7 +487,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the v1 path when flag is ON and no balance exists yet', async () => {
+      it('uses the embedded path when flag is ON and no balance exists yet', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -522,11 +522,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
         const savedBalance = vi.mocked(saveBalance).mock.calls[0][0]
         expect(savedBalance.canonicalSource).toBe(
-          WASTE_BALANCE_CANONICAL_SOURCE.V1
+          WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
         )
       })
 
-      it('uses the v1 embedded-array path when flag is OFF', async () => {
+      it('uses the embedded-array path when flag is OFF', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',

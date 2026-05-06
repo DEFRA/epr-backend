@@ -79,6 +79,10 @@ export const findBalance = (db) => async (id) => {
 /**
  * Save a waste balance.
  *
+ * The persisted `canonicalSource` is set only on insert via `$setOnInsert` and
+ * never on update. Only `flipCanonicalSourceToLedger` is allowed to mutate the
+ * marker; every other write path is `canonicalSource`-blind.
+ *
  * @param {import('mongodb').Db} db
  * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
@@ -163,18 +167,32 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         saveBalance: saveBalance(db)
       })
     },
-    flipCanonicalSourceToV2: async ({ accreditationId, capturedVersion }) => {
-      const result = await db
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .updateOne(
-          {
-            accreditationId,
-            version: capturedVersion,
-            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
-          },
-          { $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2 } }
-        )
-      return { flipped: result.matchedCount === 1 }
+    flipCanonicalSourceToLedger: async ({
+      accreditationId,
+      capturedVersion
+    }) => {
+      const validatedAccreditationId = validateAccreditationId(accreditationId)
+      const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+      const updated = await collection.findOneAndUpdate(
+        {
+          accreditationId: validatedAccreditationId,
+          version: capturedVersion,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+        },
+        { $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER } },
+        { returnDocument: 'after' }
+      )
+      if (updated) {
+        return { canonicalSource: updated.canonicalSource }
+      }
+      const current = await collection.findOne(
+        { accreditationId: validatedAccreditationId },
+        { projection: { canonicalSource: 1 } }
+      )
+      if (!current) {
+        return null
+      }
+      return { canonicalSource: current.canonicalSource }
     }
   })
 }

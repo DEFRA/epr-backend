@@ -22,6 +22,12 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
 /**
  * Save a waste balance.
  *
+ * The persisted `canonicalSource` is the existing document's value, ignoring
+ * whatever the caller supplies. Only `flipCanonicalSourceToLedger` is allowed
+ * to mutate the marker; every other write path is `canonicalSource`-blind.
+ * Inserts take the caller's value verbatim so the initial marker (`'embedded'`
+ * for fresh balances) lands on the new doc.
+ *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
  * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
@@ -131,18 +137,24 @@ export const createInMemoryWasteBalancesRepository = (
         saveBalance: saveBalance(wasteBalanceStorage)
       })
     },
-    flipCanonicalSourceToV2: async ({ accreditationId, capturedVersion }) => {
-      const balance = wasteBalanceStorage.find(
-        (b) =>
-          b.accreditationId === accreditationId &&
-          b.version === capturedVersion &&
-          b.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.V1
+    flipCanonicalSourceToLedger: async ({
+      accreditationId,
+      capturedVersion
+    }) => {
+      const validatedAccreditationId = validateAccreditationId(accreditationId)
+      const current = wasteBalanceStorage.find(
+        (b) => b.accreditationId === validatedAccreditationId
       )
-      if (!balance) {
-        return { flipped: false }
+      if (!current) {
+        return null
       }
-      balance.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.V2
-      return { flipped: true }
+      if (
+        current.version === capturedVersion &&
+        current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      ) {
+        current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      return { canonicalSource: current.canonicalSource }
     },
     // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage

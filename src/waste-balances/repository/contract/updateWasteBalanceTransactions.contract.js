@@ -203,7 +203,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       expect(balance.amount).toBe(10.5)
     })
 
-    it('marks newly created balance as canonicalSource v1', async ({
+    it('marks newly created balance as canonicalSource embedded', async ({
       wasteBalancesRepository
     }) => {
       const repository = await wasteBalancesRepository()
@@ -230,10 +230,12 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       const balance = await repository.findByAccreditationId(accreditation.id)
-      expect(balance.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V1)
+      expect(balance.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
     })
 
-    it('preserves existing canonicalSource v1 across updates', async ({
+    it('preserves existing canonicalSource embedded across updates', async ({
       wasteBalancesRepository,
       insertWasteBalance
     }) => {
@@ -247,7 +249,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const existingBalance = buildWasteBalance({
         accreditationId: accreditation.id,
         organisationId: 'org-1',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
       await insertWasteBalance(existingBalance)
 
@@ -268,7 +270,9 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       const balance = await repository.findByAccreditationId(accreditation.id)
-      expect(balance.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V1)
+      expect(balance.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
     })
 
     it('Should ignore records with outcome other than INCLUDED', async ({

@@ -8,8 +8,8 @@ export const WASTE_BALANCE_TRANSACTION_TYPE = Object.freeze({
  */
 
 export const WASTE_BALANCE_CANONICAL_SOURCE = Object.freeze({
-  V1: 'v1',
-  V2: 'v2'
+  EMBEDDED: 'embedded',
+  LEDGER: 'ledger'
 })
 
 /**
@@ -84,5 +84,5 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * @property {number} amount - Total balance (credits minus debits, stored as Decimal128)
  * @property {number} availableAmount - Available balance (amount minus pending debits, stored as Decimal128)
  * @property {WasteBalanceTransaction[]} transactions - Transaction history (append-only)
- * @property {WasteBalanceCanonicalSource} canonicalSource - Per-accreditation marker. `'v1'` means this document is the source of truth and reads/writes target the embedded `transactions[]` array; `'v2'` means the ledger collection is the source of truth. New documents default to `'v1'`; the marker flips to `'v2'` once a per-accreditation rebuild from authoritative sources has completed.
+ * @property {WasteBalanceCanonicalSource} canonicalSource - Per-accreditation marker. `'embedded'` means this document is the source of truth and reads/writes target the embedded `transactions[]` array; `'ledger'` means the ledger collection is the source of truth. New documents default to `'embedded'`; the marker flips to `'ledger'` once a per-accreditation rebuild from authoritative sources has completed.
  */

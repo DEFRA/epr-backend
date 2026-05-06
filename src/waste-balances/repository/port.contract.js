@@ -5,7 +5,7 @@ import { testDeductAvailableBalanceForPrnCreationBehaviour } from './contract/de
 import { testDeductTotalBalanceForPrnIssueBehaviour } from './contract/deductTotalBalanceForPrnIssue.contract.js'
 import { testCreditAvailableBalanceForPrnCancellationBehaviour } from './contract/creditAvailableBalanceForPrnCancellation.contract.js'
 import { testCreditFullBalanceForIssuedPrnCancellationBehaviour } from './contract/creditFullBalanceForIssuedPrnCancellation.contract.js'
-import { testFlipCanonicalSourceToV2Behaviour } from './contract/flipCanonicalSourceToV2.contract.js'
+import { testFlipCanonicalSourceToLedgerBehaviour } from './contract/flipCanonicalSourceToLedger.contract.js'
 
 export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testFindByAccreditationIdBehaviour(repositoryFactory)
@@ -15,5 +15,5 @@ export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
   testDeductTotalBalanceForPrnIssueBehaviour(repositoryFactory)
   testCreditAvailableBalanceForPrnCancellationBehaviour(repositoryFactory)
   testCreditFullBalanceForIssuedPrnCancellationBehaviour(repositoryFactory)
-  testFlipCanonicalSourceToV2Behaviour(repositoryFactory)
+  testFlipCanonicalSourceToLedgerBehaviour(repositoryFactory)
 }

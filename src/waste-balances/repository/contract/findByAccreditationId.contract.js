@@ -78,34 +78,38 @@ export const testFindByAccreditationIdBehaviour = (it) => {
       await expect(repository.findByAccreditationId('')).rejects.toThrow()
     })
 
-    it('returns canonicalSource v1 when stored as v1', async ({
+    it('returns canonicalSource embedded when stored as embedded', async ({
       insertWasteBalance
     }) => {
       const wasteBalance = buildWasteBalance({
-        accreditationId: 'acc-marker-v1',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V1
+        accreditationId: 'acc-marker-embedded',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
 
       await insertWasteBalance(wasteBalance)
 
-      const result = await repository.findByAccreditationId('acc-marker-v1')
+      const result = await repository.findByAccreditationId(
+        'acc-marker-embedded'
+      )
 
-      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V1)
+      expect(result.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
     })
 
-    it('returns canonicalSource v2 when stored as v2', async ({
+    it('returns canonicalSource ledger when stored as ledger', async ({
       insertWasteBalance
     }) => {
       const wasteBalance = buildWasteBalance({
-        accreditationId: 'acc-marker-v2',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.V2
+        accreditationId: 'acc-marker-ledger',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
 
       await insertWasteBalance(wasteBalance)
 
-      const result = await repository.findByAccreditationId('acc-marker-v2')
+      const result = await repository.findByAccreditationId('acc-marker-ledger')
 
-      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.V2)
+      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
     })
 
     it('returns waste balance with all transaction fields intact', async ({
