@@ -364,12 +364,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_WASTE_BALANCE_LEDGER'
     },
-    registrationContactsMigration: {
-      doc: 'Feature Flag: Re-migrate existing registrations to fix contact details and add applicationContactDetails',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REGISTRATION_CONTACTS_MIGRATION'
-    },
     reportUnsubmit: {
       doc: 'Feature Flag: Enable admin unsubmit endpoint for reports',
       format: Boolean,

@@ -4,7 +4,6 @@
  * @property {() => boolean} isCopyFormFilesToS3Enabled
  * @property {() => boolean} isOrsWasteBalanceValidationEnabled
  * @property {() => boolean} isWasteBalanceLedgerEnabled
- * @property {() => boolean} isRegistrationContactsMigrationEnabled
  * @property {() => boolean} isReportUnsubmitEnabled
  */
 
@@ -14,7 +13,6 @@
  * @property {boolean} [copyFormFilesToS3]
  * @property {boolean} [orsWasteBalanceValidation]
  * @property {boolean} [wasteBalanceLedger]
- * @property {boolean} [registrationContactsMigration]
  * @property {boolean} [reportUnsubmit]
  */
 

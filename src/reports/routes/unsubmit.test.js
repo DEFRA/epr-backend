@@ -159,7 +159,10 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         expect(updated.status[REPORT_STATUS_SLOT.SUBMITTED]).toBeDefined()
         expect(updated.status[REPORT_STATUS_SLOT.UNSUBMITTED]).toMatchObject({
           at: expect.any(String),
-          by: expect.objectContaining({ id: 'test-maintainer-id' })
+          by: expect.objectContaining({
+            id: 'test-maintainer-id',
+            position: 'Service Maintainer'
+          })
         })
       })
 
