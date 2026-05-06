@@ -55,6 +55,33 @@ const performFindByAccreditationIds = (db) => async (accreditationIds) => {
   })
 }
 
+const performFlipCanonicalSourceToLedger =
+  (db) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const updated = await collection.findOneAndUpdate(
+      {
+        accreditationId: validatedAccreditationId,
+        version: capturedVersion,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      },
+      { $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER } },
+      { returnDocument: 'after' }
+    )
+    if (updated) {
+      return { canonicalSource: updated.canonicalSource }
+    }
+    const current = await collection.findOne(
+      { accreditationId: validatedAccreditationId },
+      { projection: { canonicalSource: 1 } }
+    )
+    if (!current) {
+      return null
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
 /**
  * Find a waste balance by accreditation ID.
  *
@@ -167,32 +194,6 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         saveBalance: saveBalance(db)
       })
     },
-    flipCanonicalSourceToLedger: async ({
-      accreditationId,
-      capturedVersion
-    }) => {
-      const validatedAccreditationId = validateAccreditationId(accreditationId)
-      const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
-      const updated = await collection.findOneAndUpdate(
-        {
-          accreditationId: validatedAccreditationId,
-          version: capturedVersion,
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-        },
-        { $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER } },
-        { returnDocument: 'after' }
-      )
-      if (updated) {
-        return { canonicalSource: updated.canonicalSource }
-      }
-      const current = await collection.findOne(
-        { accreditationId: validatedAccreditationId },
-        { projection: { canonicalSource: 1 } }
-      )
-      if (!current) {
-        return null
-      }
-      return { canonicalSource: current.canonicalSource }
-    }
+    flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db)
   })
 }
