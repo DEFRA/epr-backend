@@ -5,7 +5,7 @@ import { tracing } from '@defra/hapi-tracing'
 import { config, isLocalEnvironment } from '#root/config.js'
 
 /**
- * @import { HapiServer, HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { Server } from '@hapi/hapi'
  */
 
 /**
@@ -17,22 +17,19 @@ export const getTracingHeaderName = () => config.get('tracing.header')
 const localTraceIdFallback = {
   name: 'local-trace-id-fallback',
   /**
-   * @param {HapiServer} server
+   * @param {Server} server
    * @param {TracingOptions} options
    */
   register: (server, { tracingHeader }) => {
     server.ext(
       'onRequest',
-      /**
-       * @param {HapiRequest} request
-       * @param {HapiResponseToolkit} h
-       */
       (request, h) => {
         if (!request.headers[tracingHeader]) {
           request.headers[tracingHeader] = randomUUID()
         }
         return h.continue
-      }
+      },
+      { before: 'hapi-pino' }
     )
   }
 }
@@ -41,7 +38,7 @@ export const requestTracing = {
   plugin: {
     name: 'request-tracing',
     /**
-     * @param {HapiServer} server
+     * @param {Server} server
      * @param {TracingOptions} options
      */
     register: async (server, options) => {

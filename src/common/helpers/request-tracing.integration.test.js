@@ -75,4 +75,54 @@ describe('#request-tracing', () => {
       expect(out?.trace?.id).toBe('incoming-trace-xyz')
     })
   })
+
+  describe('trace.id on auto-emit access logs', () => {
+    afterEach(() => {
+      config.reset('cdpEnvironment')
+    })
+
+    it('should land trace.id on the request-start auto-log when an incoming header is present', async () => {
+      config.set('cdpEnvironment', 'prod')
+      const { server, findLine } = await newServer()
+
+      await server.inject({
+        method: 'GET',
+        url: '/test',
+        headers: { 'x-cdp-request-id': 'incoming-trace-req' }
+      })
+      const out = findLine((l) => l.message === 'request start')
+
+      expect(out?.trace?.id).toBe('incoming-trace-req')
+    })
+
+    it('should land trace.id on the response auto-log when an incoming header is present', async () => {
+      config.set('cdpEnvironment', 'prod')
+      const { server, findLine } = await newServer()
+
+      await server.inject({
+        method: 'GET',
+        url: '/test',
+        headers: { 'x-cdp-request-id': 'incoming-trace-resp' }
+      })
+      const out = findLine((l) => l.url?.path === '/test' && l.http?.response)
+
+      expect(out?.trace?.id).toBe('incoming-trace-resp')
+    })
+
+    it('should share the same trace.id across request-start, handler, and response logs', async () => {
+      config.set('cdpEnvironment', 'local')
+      const { server, findLine } = await newServer()
+
+      await server.inject('/test')
+      const reqStart = findLine((l) => l.message === 'request start')
+      const handler = findLine((l) => l.message === 'inside handler')
+      const response = findLine(
+        (l) => l.url?.path === '/test' && l.http?.response
+      )
+
+      expect(reqStart?.trace?.id).toMatch(UUID_V4)
+      expect(handler?.trace?.id).toBe(reqStart?.trace?.id)
+      expect(response?.trace?.id).toBe(reqStart?.trace?.id)
+    })
+  })
 })
