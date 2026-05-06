@@ -213,9 +213,3 @@ export const findPeriodicReportsSchema = Joi.object({
 export const findReportByIdSchema = Joi.string()
   .guid({ version: 'uuidv4' })
   .required()
-
-export const unsubmitReportSchema = Joi.object({
-  reportId: Joi.string().required(),
-  version: Joi.number().integer().min(1).required(),
-  changedBy: userSummarySchema.required()
-})

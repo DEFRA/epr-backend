@@ -6,15 +6,13 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
-  validateUnsubmitReport,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
 import {
   transformToPeriodicReports,
   groupAsPeriodicReports,
-  prepareCreateReportParams,
-  STATUS_TO_SLOT
+  prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
 
@@ -26,7 +24,6 @@ import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
- *   UnsubmitReportParams,
  *   UpdateReportParams,
  *   UpdateReportStatusParams
  * } from './port.js'
@@ -50,6 +47,8 @@ const reportsCollection = (db) =>
  * @param {string} reportId
  * @param {number} version
  * @returns {Promise<never>}
+ * @throws {Boom.Payload} 404 Not Found if the report does not exist.
+ * @throws {Boom.Payload} 409 Conflict if the version numbers do not match.
  */
 const throwNotFoundOrConflict = async (db, reportId, version) => {
   const existing = await reportsCollection(db).findOne(
@@ -182,11 +181,11 @@ const performUpdateReport = async (db, params) => {
  * @returns {Promise<Report>}
  */
 const performUpdateReportStatus = async (db, params) => {
-  const validated = validateUpdateReportStatus(params)
-  const { reportId, version, status, changedBy } = validated
+  const { slot, ...statusParams } = params
+  const { reportId, version, status, changedBy } =
+    validateUpdateReportStatus(statusParams)
 
   const now = new Date().toISOString()
-  const slot = STATUS_TO_SLOT[status]
 
   const doc = await reportsCollection(db).findOneAndUpdate(
     { id: reportId, version },
@@ -345,43 +344,6 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
- * @param {Db} db
- * @param {UnsubmitReportParams} params
- * @returns {Promise<Report>}
- */
-const performUnsubmitReport = async (db, params) => {
-  const { reportId, version, changedBy } = validateUnsubmitReport(params)
-  const now = new Date().toISOString()
-
-  const doc = await reportsCollection(db).findOneAndUpdate(
-    { id: reportId, version },
-    {
-      $set: {
-        'status.currentStatus': REPORT_STATUS.READY_TO_SUBMIT,
-        'status.currentStatusAt': now,
-        'status.unsubmitted': { at: now, by: changedBy }
-      },
-      $push: /** @type {any} */ ({
-        'status.history': {
-          status: REPORT_STATUS.READY_TO_SUBMIT,
-          at: now,
-          by: changedBy
-        }
-      }),
-      $inc: { version: 1 }
-    },
-    { returnDocument: 'after', projection: { _id: 0 } }
-  )
-
-  if (!doc) {
-    return throwNotFoundOrConflict(db, reportId, version)
-  }
-
-  const { _id, ...report } = doc
-  return report
-}
-
-/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -394,7 +356,6 @@ export const createReportsRepository = async (db) => {
     createReport: (params) => performCreateReport(db, params),
     updateReport: (params) => performUpdateReport(db, params),
     updateReportStatus: (params) => performUpdateReportStatus(db, params),
-    unsubmitReport: (params) => performUnsubmitReport(db, params),
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),

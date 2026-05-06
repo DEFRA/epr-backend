@@ -3,7 +3,6 @@ import {
   createReportSchema,
   updateReportSchema,
   updateReportStatusSchema,
-  unsubmitReportSchema,
   deleteReportParamsSchema,
   findPeriodicReportsSchema,
   findReportByIdSchema
@@ -95,22 +94,6 @@ export const validateFindPeriodicReports = (params) => {
  */
 export const validateFindReportById = (reportId) => {
   const { error, value } = findReportByIdSchema.validate(reportId)
-
-  if (error) {
-    throw Boom.badRequest(error.message)
-  }
-
-  return value
-}
-
-/**
- * @param {import('./port.js').UnsubmitReportParams} params
- * @returns {import('./port.js').UnsubmitReportParams}
- */
-export const validateUnsubmitReport = (params) => {
-  const { error, value } = unsubmitReportSchema.validate(params, {
-    abortEarly: false
-  })
 
   if (error) {
     throw Boom.badRequest(error.message)

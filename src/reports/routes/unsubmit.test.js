@@ -16,6 +16,7 @@ import {
   createAndSubmitReport,
   DEFAULT_CHANGED_BY
 } from '#reports/repository/contract/test-data.js'
+import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import { reportsUnsubmitPath } from './unsubmit.js'
 import * as reportAudit from '#reports/application/audit.js'
 
@@ -96,6 +97,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         reportId: report.id,
         version: 1,
         status: 'ready_to_submit',
+        slot: REPORT_STATUS_SLOT.READY,
         changedBy: DEFAULT_CHANGED_BY
       })
     }
@@ -152,10 +154,10 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
 
         const updated = await reportsRepository.findReportById(reportId)
         expect(updated.status.currentStatus).toBe('ready_to_submit')
-        expect(updated.status.created).toBeDefined()
-        expect(updated.status.ready).toBeDefined()
-        expect(updated.status.submitted).toBeDefined()
-        expect(updated.status.unsubmitted).toMatchObject({
+        expect(updated.status[REPORT_STATUS_SLOT.CREATED]).toBeDefined()
+        expect(updated.status[REPORT_STATUS_SLOT.READY]).toBeDefined()
+        expect(updated.status[REPORT_STATUS_SLOT.SUBMITTED]).toBeDefined()
+        expect(updated.status[REPORT_STATUS_SLOT.UNSUBMITTED]).toMatchObject({
           at: expect.any(String),
           by: expect.objectContaining({ id: 'test-maintainer-id' })
         })

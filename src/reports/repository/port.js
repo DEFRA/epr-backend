@@ -24,6 +24,7 @@
  * @property {ReportOperation} created
  * @property {ReportOperation} [ready]
  * @property {ReportOperation} [submitted]
+ * @property {ReportOperation} [unsubmitted]
  * @property {ReportStatusHistoryItem[]} history
  */
 
@@ -193,6 +194,7 @@
  * @property {string} reportId
  * @property {number} version - current version for optimistic locking
  * @property {ReportStatus} status
+ * @property {string} slot - the status object key to record this transition (e.g. 'ready', 'submitted', 'unsubmitted')
  * @property {UserSummary} [changedBy]
  */
 
@@ -214,18 +216,10 @@
  */
 
 /**
- * @typedef {Object} UnsubmitReportParams
- * @property {string} reportId
- * @property {number} version - current version for optimistic locking
- * @property {UserSummary} changedBy
- */
-
-/**
  * @typedef {Object} ReportsRepository
  * @property {(params: CreateReportParams) => Promise<Report>} createReport
  * @property {(params: UpdateReportParams) => Promise<Report>} updateReport
  * @property {(params: UpdateReportStatusParams) => Promise<Report>} updateReportStatus
- * @property {(params: UnsubmitReportParams) => Promise<Report>} unsubmitReport
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports

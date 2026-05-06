@@ -6,7 +6,7 @@ import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { assertReportComplete } from '#reports/application/assert-report-complete.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { REPORT_STATUS, STATUS_TO_SLOT } from '#reports/domain/report-status.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import {
   periodParamsSchema,
@@ -83,6 +83,7 @@ export const reportsStatus = {
       reportId: report.id,
       version,
       status,
+      slot: STATUS_TO_SLOT[status],
       changedBy: extractChangedBy(request.auth.credentials)
     })
 

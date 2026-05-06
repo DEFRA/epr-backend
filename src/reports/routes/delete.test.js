@@ -12,6 +12,7 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
+import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import { reportsDeletePath } from './delete.js'
 import * as reportAudit from '#reports/application/audit.js'
 
@@ -147,6 +148,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           reportId,
           version: 1,
           status: 'ready_to_submit',
+          slot: REPORT_STATUS_SLOT.READY,
           changedBy: { id: 'test', name: 'Test', position: 'Officer' }
         })
 
@@ -209,6 +211,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           reportId,
           version: 1,
           status: 'ready_to_submit',
+          slot: REPORT_STATUS_SLOT.READY,
           changedBy: { id: 'test', name: 'Test', position: 'Officer' }
         })
 
@@ -216,6 +219,7 @@ describe(`DELETE ${reportsDeletePath}`, () => {
           reportId,
           version: 2,
           status: 'submitted',
+          slot: REPORT_STATUS_SLOT.SUBMITTED,
           changedBy: { id: 'test', name: 'Test', position: 'Officer' }
         })
 

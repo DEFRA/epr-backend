@@ -4,7 +4,10 @@ import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
 import { periodParamsSchema, extractChangedBy } from './shared.js'
 
 export const reportsUnsubmitPath =
@@ -53,9 +56,11 @@ export const reportsUnsubmit = {
       )
     }
 
-    const updated = await reportsRepository.unsubmitReport({
+    const updated = await reportsRepository.updateReportStatus({
       reportId: report.id,
       version: report.version,
+      status: REPORT_STATUS.READY_TO_SUBMIT,
+      slot: REPORT_STATUS_SLOT.UNSUBMITTED,
       changedBy: extractChangedBy(request.auth.credentials)
     })
 
