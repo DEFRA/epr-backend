@@ -34,10 +34,6 @@ const router = {
           ? Object.values(devRoutes)
           : []
 
-        const reportsBehindFeatureFlag = featureFlags.isReportsEnabled()
-          ? Object.values(reportsRoutes)
-          : []
-
         server.route([
           health,
           ...apply,
@@ -60,7 +56,7 @@ const router = {
           ...summaryLogUploadsReportRoutes,
           adminPackagingRecyclingNotesList,
           ...Object.values(overseasSitesRoutes),
-          ...reportsBehindFeatureFlag,
+          ...Object.values(reportsRoutes),
           dlqMessagesGet,
           dlqPurgePost
         ])
