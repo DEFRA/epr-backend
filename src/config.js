@@ -342,12 +342,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
     },
-    reports: {
-      doc: 'Feature Flag: Enable reports',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REPORTS'
-    },
     orsWasteBalanceValidation: {
       doc: 'Feature Flag: Validate ORS approval status during exporter waste balance classification',
       format: Boolean,
