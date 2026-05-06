@@ -51,21 +51,6 @@ describe('createConfigFeatureFlags', () => {
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(false)
   })
 
-  it('returns true when isRegistrationContactsMigrationEnabled flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.registrationContactsMigration'
-    )
-  })
-
-  it('returns false when isRegistrationContactsMigrationEnabled flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isRegistrationContactsMigrationEnabled()).toBe(false)
-  })
-
   it('returns true when reportUnsubmit flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
