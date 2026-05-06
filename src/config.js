@@ -127,8 +127,12 @@ const baseConfig = {
       doc: 'Log paths to redact',
       format: Array,
       default: isProduction
-        ? ['req.headers.authorization', 'req.headers.cookie', 'res.headers']
-        : ['req.headers.authorization', 'req.headers.cookie']
+        ? [
+            'http.request.headers.authorization',
+            'http.request.headers.cookie',
+            'http.response.headers'
+          ]
+        : []
     }
   },
   mongo: {
