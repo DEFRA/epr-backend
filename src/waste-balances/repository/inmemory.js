@@ -49,10 +49,10 @@ export const saveBalance =
       ...updatedBalance,
       canonicalSource: existing.canonicalSource
     }
-    if (existing.migratingSince !== undefined) {
-      preserved.migratingSince = existing.migratingSince
-    } else {
+    if (existing.migratingSince === undefined) {
       delete preserved.migratingSince
+    } else {
+      preserved.migratingSince = existing.migratingSince
     }
     wasteBalanceStorage[existingIndex] = preserved
   }
@@ -81,6 +81,63 @@ const performFindByAccreditationIds =
     )
 
     return balances.map((balance) => structuredClone(balance))
+  }
+
+const performFlipCanonicalSourceToMigrating =
+  (wasteBalanceStorage) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (!current) {
+      return null
+    }
+    if (
+      current.version === capturedVersion &&
+      current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    ) {
+      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      current.migratingSince = new Date().toISOString()
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performFlipCanonicalSourceToLedger =
+  (wasteBalanceStorage) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (!current) {
+      return null
+    }
+    if (
+      current.version === capturedVersion &&
+      current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+    ) {
+      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      delete current.migratingSince
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performResetCanonicalSourceToEmbedded =
+  (wasteBalanceStorage) =>
+  async ({ accreditationId }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (!current) {
+      return null
+    }
+    if (current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING) {
+      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      delete current.migratingSince
+    }
+    return { canonicalSource: current.canonicalSource }
   }
 
 /**
@@ -145,62 +202,12 @@ export const createInMemoryWasteBalancesRepository = (
         saveBalance: saveBalance(wasteBalanceStorage)
       })
     },
-    flipCanonicalSourceToMigrating: async ({
-      accreditationId,
-      capturedVersion
-    }) => {
-      const validatedAccreditationId = validateAccreditationId(accreditationId)
-      const current = wasteBalanceStorage.find(
-        (b) => b.accreditationId === validatedAccreditationId
-      )
-      if (!current) {
-        return null
-      }
-      if (
-        current.version === capturedVersion &&
-        current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      ) {
-        current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-        current.migratingSince = new Date().toISOString()
-      }
-      return { canonicalSource: current.canonicalSource }
-    },
-    flipCanonicalSourceToLedger: async ({
-      accreditationId,
-      capturedVersion
-    }) => {
-      const validatedAccreditationId = validateAccreditationId(accreditationId)
-      const current = wasteBalanceStorage.find(
-        (b) => b.accreditationId === validatedAccreditationId
-      )
-      if (!current) {
-        return null
-      }
-      if (
-        current.version === capturedVersion &&
-        current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-      ) {
-        current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-        delete current.migratingSince
-      }
-      return { canonicalSource: current.canonicalSource }
-    },
-    resetCanonicalSourceToEmbedded: async ({ accreditationId }) => {
-      const validatedAccreditationId = validateAccreditationId(accreditationId)
-      const current = wasteBalanceStorage.find(
-        (b) => b.accreditationId === validatedAccreditationId
-      )
-      if (!current) {
-        return null
-      }
-      if (
-        current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-      ) {
-        current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-        delete current.migratingSince
-      }
-      return { canonicalSource: current.canonicalSource }
-    },
+    flipCanonicalSourceToMigrating:
+      performFlipCanonicalSourceToMigrating(wasteBalanceStorage),
+    flipCanonicalSourceToLedger:
+      performFlipCanonicalSourceToLedger(wasteBalanceStorage),
+    resetCanonicalSourceToEmbedded:
+      performResetCanonicalSourceToEmbedded(wasteBalanceStorage),
     // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage
   })
