@@ -93,6 +93,7 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
             })
           }),
           updateOne: vi.fn().mockResolvedValue(undefined),
+          updateMany: vi.fn().mockResolvedValue({ matchedCount: 0 }),
           indexes: vi.fn().mockResolvedValue([])
         }
         server.decorate('server', 'db', {

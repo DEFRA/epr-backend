@@ -1,9 +1,15 @@
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { registerRepository } from '#plugins/register-repository.js'
+import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert } from './validation.js'
 
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
 /** @import { FindByStatusParams, PaginatedResult, UpdateStatusParams } from './port.js' */
@@ -43,6 +49,11 @@ const performCreate = (storage) => async (prn) => {
   storage.set(id, structuredClone(prnWithId))
   return structuredClone(prnWithId)
 }
+
+const buildVersionConflictError = (id, expected, actual) =>
+  new Error(
+    `Version conflict: attempted to update PRN ${id} with version ${expected} but current version is ${actual}`
+  )
 
 /**
  * @param {Storage} storage
@@ -140,14 +151,37 @@ const performFindByStatus = (storage, excludeOrganisationIds) => {
 
 /**
  * @param {Storage} storage
+ * @param {TypedLogger} logger
  * @returns {(params: UpdateStatusParams) => Promise<PackagingRecyclingNote | null>}
  */
 const performUpdateStatus =
-  (storage) =>
-  async ({ id, status, updatedBy, updatedAt, prnNumber, operation }) => {
+  (storage, logger) =>
+  async ({
+    id,
+    version,
+    status,
+    updatedBy,
+    updatedAt,
+    prnNumber,
+    operation
+  }) => {
     const prn = storage.get(id)
     if (!prn) {
       return null
+    }
+
+    if (prn.version !== version) {
+      const conflictError = buildVersionConflictError(id, version, prn.version)
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for PRN ${id}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: id
+        }
+      })
+      throw Boom.conflict(conflictError.message)
     }
 
     if (prnNumber) {
@@ -171,6 +205,7 @@ const performUpdateStatus =
 
     const updated = {
       ...prn,
+      version: prn.version + 1,
       updatedBy,
       updatedAt,
       status: statusUpdate
@@ -197,16 +232,16 @@ export function createInMemoryPackagingRecyclingNotesRepository(
 
   for (const prn of initialData) {
     const id = prn.id
-    storage.set(id, structuredClone({ ...prn, id }))
+    storage.set(id, structuredClone({ ...prn, version: prn.version ?? 1, id }))
   }
 
-  return () => ({
+  return (/** @type {TypedLogger} */ logger) => ({
     create: performCreate(storage),
     findByAccreditation: performFindByAccreditation(storage),
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
-    updateStatus: performUpdateStatus(storage)
+    updateStatus: performUpdateStatus(storage, logger)
   })
 }
 
@@ -217,7 +252,6 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
     initialPrns,
     []
   )
-  const repository = factory()
 
   return {
     name: 'packagingRecyclingNotesRepository',
@@ -225,7 +259,7 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
       registerRepository(
         server,
         'packagingRecyclingNotesRepository',
-        () => repository
+        (request) => factory(request.logger)
       )
     }
   }

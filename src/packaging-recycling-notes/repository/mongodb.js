@@ -1,5 +1,10 @@
+import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
@@ -8,6 +13,7 @@ import { validatePrnInsert, validatePrnRead } from './validation.js'
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, UpdateStatusParams } from './port.js' */
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -244,13 +250,51 @@ const performFindByStatus = (db, excludeOrganisationIds) => {
 }
 
 /**
+ * Resolves a missed CAS update into a 404 (PRN missing) or 409 (version conflict).
+ * Logs the version conflict for observability before throwing.
+ *
  * @param {Db} db
+ * @param {string} id
+ * @param {number} expectedVersion
+ * @param {TypedLogger} logger
+ * @returns {Promise<null>}
+ */
+const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
+  const objectId = ObjectId.createFromHexString(id)
+  const existing = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ _id: objectId }, { projection: { version: 1 } })
+
+  if (!existing) {
+    return null
+  }
+
+  const actualVersion = existing.version ?? 1
+  const conflictError = new Error(
+    `Version conflict: attempted to update PRN ${id} with version ${expectedVersion} but current version is ${actualVersion}`
+  )
+  logger.error({
+    err: conflictError,
+    message: `Version conflict detected for PRN ${id}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.DB,
+      action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+      reference: id
+    }
+  })
+  throw Boom.conflict(conflictError.message)
+}
+
+/**
+ * @param {Db} db
+ * @param {TypedLogger} logger
  * @param {UpdateStatusParams} params
  * @returns {Promise<PackagingRecyclingNote | null>}
  */
 const performUpdateStatus = async (
   db,
-  { id, status, updatedBy, updatedAt, prnNumber, operation }
+  logger,
+  { id, version, status, updatedBy, updatedAt, prnNumber, operation }
 ) => {
   const setFields = {
     'status.currentStatus': status,
@@ -272,9 +316,12 @@ const performUpdateStatus = async (
 
   try {
     const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-      { _id: ObjectId.createFromHexString(id) },
       {
-        $set: setFields,
+        _id: ObjectId.createFromHexString(id),
+        $expr: { $eq: [{ $ifNull: ['$version', 1] }, version] }
+      },
+      {
+        $set: { ...setFields, version: version + 1 },
         $push: /** @type {*} */ ({
           'status.history': { status, at: updatedAt, by: updatedBy }
         })
@@ -283,7 +330,7 @@ const performUpdateStatus = async (
     )
 
     if (!result) {
-      return null
+      return resolveMissedUpdate(db, id, version, logger)
     }
 
     return validatePrnRead({ ...result, id: result._id.toHexString() })
@@ -309,13 +356,13 @@ export const createPackagingRecyclingNotesRepository = async (
 ) => {
   await ensureCollection(db)
 
-  return () => ({
+  return (/** @type {TypedLogger} */ logger) => ({
     create: (prn) => performCreate(db, prn),
     findByAccreditation: (accreditationId) =>
       performFindByAccreditation(db, accreditationId),
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
-    updateStatus: (params) => performUpdateStatus(db, params)
+    updateStatus: (params) => performUpdateStatus(db, logger, params)
   })
 }

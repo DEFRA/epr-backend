@@ -1,6 +1,8 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildAwaitingAuthorisationPrn } from './contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
@@ -21,7 +23,13 @@ const it = mongoIt.extend({
   },
 
   prnRepository: async ({ prnRepositoryFactory }, use) => {
-    const repository = prnRepositoryFactory()
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    const repository = prnRepositoryFactory(mockLogger)
     await use(repository)
   }
 })
@@ -59,6 +67,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       await expect(
         repository.updateStatus({
           id: hexId,
+          version: 1,
           status: 'awaiting_acceptance',
           updatedBy: { id: 'user-123', name: 'Test User' },
           updatedAt: new Date(),
@@ -96,6 +105,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       await expect(
         repository.updateStatus({
           id: hexId,
+          version: 1,
           status: 'awaiting_acceptance',
           updatedBy: { id: 'user-123', name: 'Test User' },
           updatedAt: new Date(),
@@ -577,6 +587,74 @@ describe('MongoDB packaging recycling notes repository', () => {
       await expect(
         createPackagingRecyclingNotesRepository(mockDb, [])
       ).rejects.toThrow('Connection refused')
+    })
+  })
+
+  describe('legacy documents without a version field', () => {
+    const seedVersionlessPrn = async (mongoClient) => {
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection('packaging-recycling-notes')
+      const { version: _version, ...prnWithoutVersion } =
+        buildAwaitingAuthorisationPrn()
+      const result = await collection.insertOne(prnWithoutVersion)
+      return result.insertedId.toHexString()
+    }
+
+    it('reads back as version 1', async ({ mongoClient, prnRepository }) => {
+      const id = await seedVersionlessPrn(mongoClient)
+
+      const found = await prnRepository.findById(id)
+
+      expect(found.version).toBe(1)
+    })
+
+    it('accepts a CAS update with version 1 and bumps to version 2', async ({
+      mongoClient,
+      prnRepository
+    }) => {
+      const id = await seedVersionlessPrn(mongoClient)
+
+      const updated = await prnRepository.updateStatus({
+        id,
+        version: 1,
+        status: PRN_STATUS.AWAITING_ACCEPTANCE,
+        updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+        updatedAt: new Date(),
+        prnNumber: `TT2699999`
+      })
+
+      expect(updated.version).toBe(2)
+      expect(updated.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      const reread = await prnRepository.findById(id)
+      expect(reread.version).toBe(2)
+    })
+
+    it('reports actual version as 1 when conflict is detected', async ({
+      mongoClient,
+      prnRepository
+    }) => {
+      const id = await seedVersionlessPrn(mongoClient)
+
+      const staleVersion = 5
+      await expect(
+        prnRepository.updateStatus({
+          id,
+          version: staleVersion,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: new Date()
+        })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: `Version conflict: attempted to update PRN ${id} with version ${staleVersion} but current version is 1`
+          }
+        }
+      })
     })
   })
 })

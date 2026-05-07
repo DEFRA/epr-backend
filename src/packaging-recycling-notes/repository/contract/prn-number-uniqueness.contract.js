@@ -19,6 +19,7 @@ export const testPrnNumberUniqueness = (it) => {
 
         await repository.updateStatus({
           id: prn1.id,
+          version: prn1.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
@@ -28,6 +29,7 @@ export const testPrnNumberUniqueness = (it) => {
         await expect(
           repository.updateStatus({
             id: prn2.id,
+            version: prn2.version,
             status: PRN_STATUS.AWAITING_ACCEPTANCE,
             updatedBy: { id: 'user-issuer', name: 'Issuer User' },
             updatedAt: new Date(),
@@ -43,6 +45,7 @@ export const testPrnNumberUniqueness = (it) => {
 
         const updated1 = await repository.updateStatus({
           id: prn1.id,
+          version: prn1.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
@@ -51,6 +54,7 @@ export const testPrnNumberUniqueness = (it) => {
 
         const updated2 = await repository.updateStatus({
           id: prn2.id,
+          version: prn2.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
@@ -67,6 +71,7 @@ export const testPrnNumberUniqueness = (it) => {
 
         const updated1 = await repository.updateStatus({
           id: prn1.id,
+          version: prn1.version,
           status: PRN_STATUS.CANCELLED,
           updatedBy: { id: 'user-canceller', name: 'Canceller User' },
           updatedAt: new Date()
@@ -74,6 +79,7 @@ export const testPrnNumberUniqueness = (it) => {
 
         const updated2 = await repository.updateStatus({
           id: prn2.id,
+          version: prn2.version,
           status: PRN_STATUS.CANCELLED,
           updatedBy: { id: 'user-canceller', name: 'Canceller User' },
           updatedAt: new Date()
@@ -92,6 +98,7 @@ export const testPrnNumberUniqueness = (it) => {
 
         await repository.updateStatus({
           id: prn1.id,
+          version: prn1.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
@@ -101,6 +108,7 @@ export const testPrnNumberUniqueness = (it) => {
         const error = await repository
           .updateStatus({
             id: prn2.id,
+            version: prn2.version,
             status: PRN_STATUS.AWAITING_ACCEPTANCE,
             updatedBy: { id: 'user-issuer', name: 'Issuer User' },
             updatedAt: new Date(),
