@@ -110,6 +110,7 @@ describe('updatePrnStatus concurrency', () => {
       isBoom: true,
       output: { statusCode: 409 }
     })
+    expect(rejected[0].reason.message).toMatch(/Version conflict/)
 
     expect(deductSpy).toHaveBeenCalledTimes(1)
   })

@@ -251,6 +251,26 @@ export async function updatePrnStatus({
   const currentStatus = prn.status.currentStatus
   validateTransition(currentStatus, newStatus, actor)
 
+  const balanceEffectsParams = {
+    currentStatus,
+    newStatus,
+    accreditationId,
+    organisationId,
+    prnId: id,
+    tonnage: prn.tonnage,
+    userId: user.id
+  }
+
+  // Issuance debits the balance AFTER the CAS so concurrent issues can't
+  // double-debit. Other transitions keep the pre-flight check so an
+  // insufficient balance never produces a phantom PRN.
+  if (newStatus !== PRN_STATUS.AWAITING_ACCEPTANCE) {
+    await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      balanceEffectsParams
+    )
+  }
+
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
@@ -280,6 +300,11 @@ export async function updatePrnStatus({
       isExport: prn.isExport,
       accreditationYear: prn.accreditation.accreditationYear
     })
+
+    await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      balanceEffectsParams
+    )
   } else {
     const operationSlot = STATUS_OPERATION_SLOT[newStatus]
     if (operationSlot) {
@@ -292,16 +317,6 @@ export async function updatePrnStatus({
       throw Boom.badImplementation('Failed to update PRN status')
     }
   }
-
-  await applyWasteBalanceEffects(wasteBalancesRepository, {
-    currentStatus,
-    newStatus,
-    accreditationId,
-    organisationId,
-    prnId: id,
-    tonnage: prn.tonnage,
-    userId: user.id
-  })
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,
