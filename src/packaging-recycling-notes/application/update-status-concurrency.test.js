@@ -8,7 +8,10 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildAwaitingAuthorisationPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  buildAwaitingAuthorisationPrn,
+  buildAwaitingAcceptancePrn
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -28,27 +31,36 @@ const noopLogger = () => ({
 const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
+const TONNAGE = 50
+const RINGFENCED_AVAILABLE = 950
+const ISSUED_AMOUNT = 950
 
-const buildIssuableSeed = () =>
-  buildAwaitingAuthorisationPrn({
-    id: PRN_ID,
-    organisation: {
-      id: ORG_ID,
-      name: 'Test Reprocessor',
-      tradingName: 'Trading Name'
-    },
-    accreditation: {
-      id: ACC_ID,
-      accreditationNumber: 'ACC-1',
-      accreditationYear: 2026,
-      material: 'plastic',
-      submittedToRegulator: REGULATOR.EA,
-      siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
-    },
-    tonnage: 50
+const PRN_BASE = {
+  id: PRN_ID,
+  organisation: {
+    id: ORG_ID,
+    name: 'Test Reprocessor',
+    tradingName: 'Trading Name'
+  },
+  accreditation: {
+    id: ACC_ID,
+    accreditationNumber: 'ACC-1',
+    accreditationYear: 2026,
+    material: 'plastic',
+    submittedToRegulator: REGULATOR.EA,
+    siteAddress: { line1: '1 Test Street', postcode: 'SW1A 1AA' }
+  },
+  tonnage: TONNAGE
+}
+
+const buildIssuableSeed = () => buildAwaitingAuthorisationPrn(PRN_BASE)
+const buildAwaitingCancellationSeed = () =>
+  buildAwaitingAcceptancePrn({
+    ...PRN_BASE,
+    status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
   })
 
-const buildBalanceSeed = () => ({
+const buildBalanceSeed = (overrides = {}) => ({
   id: 'wb-1',
   accreditationId: ACC_ID,
   organisationId: ORG_ID,
@@ -57,7 +69,8 @@ const buildBalanceSeed = () => ({
   transactions: [],
   version: 0,
   schemaVersion: 1,
-  canonicalSource: 'embedded'
+  canonicalSource: 'embedded',
+  ...overrides
 })
 
 const buildOrganisationsRepository = () => ({
@@ -65,6 +78,19 @@ const buildOrganisationsRepository = () => ({
     submittedToRegulator: REGULATOR.EA
   })
 })
+
+const expectOneWinsOneVersionConflict = (results) => {
+  const fulfilled = results.filter((r) => r.status === 'fulfilled')
+  const rejected = results.filter((r) => r.status === 'rejected')
+
+  expect(fulfilled).toHaveLength(1)
+  expect(rejected).toHaveLength(1)
+  expect(rejected[0].reason).toMatchObject({
+    isBoom: true,
+    output: { statusCode: 409 }
+  })
+  expect(rejected[0].reason.message).toMatch(/Version conflict/)
+}
 
 describe('updatePrnStatus concurrency', () => {
   it('debits the waste balance only once when two issuances race for the same PRN', async () => {
@@ -103,17 +129,92 @@ describe('updatePrnStatus concurrency', () => {
 
     const results = await Promise.allSettled([issue(), issue()])
 
-    const fulfilled = results.filter((r) => r.status === 'fulfilled')
-    const rejected = results.filter((r) => r.status === 'rejected')
-
-    expect(fulfilled).toHaveLength(1)
-    expect(rejected).toHaveLength(1)
-    expect(rejected[0].reason).toMatchObject({
-      isBoom: true,
-      output: { statusCode: 409 }
-    })
-    expect(rejected[0].reason.message).toMatch(/Version conflict/)
-
+    expectOneWinsOneVersionConflict(results)
     expect(deductSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('credits the waste balance only once when two deletes race for an awaiting_authorisation PRN', async () => {
+    const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
+      buildIssuableSeed()
+    ])
+    const prnRepository = prnFactory(noopLogger())
+
+    const wasteFactory = createInMemoryWasteBalancesRepository(
+      [buildBalanceSeed({ availableAmount: RINGFENCED_AVAILABLE })],
+      { ledgerRepository: createInMemoryLedgerRepository()() }
+    )
+    const realWasteBalancesRepository = wasteFactory()
+    const creditSpy = vi.fn(
+      realWasteBalancesRepository.creditAvailableBalanceForPrnCancellation
+    )
+    const wasteBalancesRepository = {
+      ...realWasteBalancesRepository,
+      creditAvailableBalanceForPrnCancellation: creditSpy
+    }
+
+    const organisationsRepository = buildOrganisationsRepository()
+
+    const cancel = () =>
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository,
+        id: PRN_ID,
+        organisationId: ORG_ID,
+        accreditationId: ACC_ID,
+        newStatus: PRN_STATUS.DELETED,
+        actor: PRN_ACTOR.SIGNATORY,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+
+    const results = await Promise.allSettled([cancel(), cancel()])
+
+    expectOneWinsOneVersionConflict(results)
+    expect(creditSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('credits the waste balance only once when two cancels race for an awaiting_cancellation PRN', async () => {
+    const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
+      buildAwaitingCancellationSeed()
+    ])
+    const prnRepository = prnFactory(noopLogger())
+
+    const wasteFactory = createInMemoryWasteBalancesRepository(
+      [
+        buildBalanceSeed({
+          availableAmount: RINGFENCED_AVAILABLE,
+          amount: ISSUED_AMOUNT
+        })
+      ],
+      { ledgerRepository: createInMemoryLedgerRepository()() }
+    )
+    const realWasteBalancesRepository = wasteFactory()
+    const creditSpy = vi.fn(
+      realWasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation
+    )
+    const wasteBalancesRepository = {
+      ...realWasteBalancesRepository,
+      creditFullBalanceForIssuedPrnCancellation: creditSpy
+    }
+
+    const organisationsRepository = buildOrganisationsRepository()
+
+    const cancel = () =>
+      updatePrnStatus({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository,
+        id: PRN_ID,
+        organisationId: ORG_ID,
+        accreditationId: ACC_ID,
+        newStatus: PRN_STATUS.CANCELLED,
+        actor: PRN_ACTOR.SIGNATORY,
+        user: { id: 'user-789', name: 'Test User' }
+      })
+
+    const results = await Promise.allSettled([cancel(), cancel()])
+
+    expectOneWinsOneVersionConflict(results)
+    expect(creditSpy).toHaveBeenCalledTimes(1)
   })
 })

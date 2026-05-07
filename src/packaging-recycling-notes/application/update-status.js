@@ -261,10 +261,14 @@ export async function updatePrnStatus({
     userId: user.id
   }
 
-  // Issuance debits the balance AFTER the CAS so concurrent issues can't
-  // double-debit. Other transitions keep the pre-flight check so an
-  // insufficient balance never produces a phantom PRN.
-  if (newStatus !== PRN_STATUS.AWAITING_ACCEPTANCE) {
+  const isCreation = newStatus === PRN_STATUS.AWAITING_AUTHORISATION
+
+  // Pre-flight balance effect is kept only for new-PRN creation, where a
+  // post-CAS balance failure would strand the PRN in a state with no
+  // legal user exit. For transitions on an existing PRN (issuance,
+  // cancellation, deletion) the per-PRN CAS gates the balance write so
+  // concurrent writers cannot double-debit or double-credit.
+  if (isCreation) {
     await applyWasteBalanceEffects(
       wasteBalancesRepository,
       balanceEffectsParams
@@ -300,11 +304,6 @@ export async function updatePrnStatus({
       isExport: prn.isExport,
       accreditationYear: prn.accreditation.accreditationYear
     })
-
-    await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      balanceEffectsParams
-    )
   } else {
     const operationSlot = STATUS_OPERATION_SLOT[newStatus]
     if (operationSlot) {
@@ -316,6 +315,13 @@ export async function updatePrnStatus({
     if (!updatedPrn) {
       throw Boom.badImplementation('Failed to update PRN status')
     }
+  }
+
+  if (!isCreation) {
+    await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      balanceEffectsParams
+    )
   }
 
   await prnMetrics.recordStatusTransition({

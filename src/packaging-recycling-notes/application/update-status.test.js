@@ -1387,7 +1387,10 @@ describe('updatePrnStatus', () => {
           tonnage: 60,
           status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
         }),
-        updateStatus: vi.fn()
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.CANCELLED }
+        })
       })
       const wasteBalancesRepository = {
         findByAccreditationId: vi.fn().mockResolvedValue(null)
@@ -1466,7 +1469,10 @@ describe('updatePrnStatus', () => {
           isExport: false,
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         }),
-        updateStatus: vi.fn()
+        updateStatus: vi.fn().mockResolvedValue({
+          id: '507f1f77bcf86cd799439011',
+          status: { currentStatus: PRN_STATUS.DELETED }
+        })
       }
       const wasteBalancesRepository = {
         findByAccreditationId: vi.fn().mockResolvedValue(null)
