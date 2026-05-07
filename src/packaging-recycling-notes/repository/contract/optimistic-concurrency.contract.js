@@ -163,6 +163,36 @@ export const testOptimisticConcurrency = (it) => {
           PRN_STATUS.DELETED
         ]).toContain(final.status.currentStatus)
       })
+
+      it('surfaces 409 (not a duplicate-key 500) when two issues race for the same PRN', async () => {
+        const created = await repository.create(buildAwaitingAuthorisationPrn())
+        const baseSuffix = Date.now().toString().slice(-5)
+        const issueWithSuffix = (suffix) =>
+          repository.updateStatus({
+            id: created.id,
+            version: created.version,
+            status: PRN_STATUS.AWAITING_ACCEPTANCE,
+            updatedBy: issuerUser,
+            updatedAt: new Date(),
+            prnNumber: `ER26${baseSuffix}${suffix}`,
+            operation: { slot: 'issued', at: new Date(), by: issuerUser }
+          })
+
+        const results = await Promise.allSettled([
+          issueWithSuffix('A'),
+          issueWithSuffix('B')
+        ])
+
+        const fulfilled = results.filter((r) => r.status === 'fulfilled')
+        const rejected = results.filter((r) => r.status === 'rejected')
+
+        expect(fulfilled).toHaveLength(1)
+        expect(rejected).toHaveLength(1)
+        expect(rejected[0].reason).toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
+        })
+      })
     })
 
     describe('conflict logging', () => {
