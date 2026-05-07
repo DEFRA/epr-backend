@@ -7,6 +7,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
+import { resolveBalanceAmounts } from './marker-aware-read.js'
 
 /**
  * Find a waste balance by accreditation ID.
@@ -61,26 +62,35 @@ export const saveBalance =
  * Find a waste balance by accreditation ID.
  *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
+ * @param {import('./ledger-port.js').LedgerRepository} ledgerRepository
  * @returns {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const performFindByAccreditationId =
-  (wasteBalanceStorage) => async (accreditationId) => {
+  (wasteBalanceStorage, ledgerRepository) => async (accreditationId) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
 
     const balance = wasteBalanceStorage.find(
       (b) => b.accreditationId === validatedAccreditationId
     )
 
-    return balance ? structuredClone(balance) : null
+    if (!balance) {
+      return null
+    }
+
+    return resolveBalanceAmounts(structuredClone(balance), ledgerRepository)
   }
 
 const performFindByAccreditationIds =
-  (wasteBalanceStorage) => async (accreditationIds) => {
+  (wasteBalanceStorage, ledgerRepository) => async (accreditationIds) => {
     const balances = wasteBalanceStorage.filter((b) =>
       accreditationIds.includes(b.accreditationId)
     )
 
-    return balances.map((balance) => structuredClone(balance))
+    return Promise.all(
+      balances.map((balance) =>
+        resolveBalanceAmounts(structuredClone(balance), ledgerRepository)
+      )
+    )
   }
 
 const performFlipCanonicalSourceToMigrating =
@@ -144,22 +154,30 @@ const performResetCanonicalSourceToEmbedded =
  * Create an in-memory waste balances repository.
  * Ensures data isolation by deep-cloning on read.
  *
- * @param {Array} [initialWasteBalances=[]]
- * @param {Object} [dependencies]
+ * @param {Array} initialWasteBalances
+ * @param {Object} dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('./ledger-port.js').LedgerRepository} [dependencies.ledgerRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
 export const createInMemoryWasteBalancesRepository = (
-  initialWasteBalances = [],
-  dependencies = {}
+  initialWasteBalances,
+  dependencies
 ) => {
   const wasteBalanceStorage = initialWasteBalances
 
+  const { ledgerRepository } = dependencies
+
   return () => ({
-    findByAccreditationId: performFindByAccreditationId(wasteBalanceStorage),
-    findByAccreditationIds: performFindByAccreditationIds(wasteBalanceStorage),
+    findByAccreditationId: performFindByAccreditationId(
+      wasteBalanceStorage,
+      ledgerRepository
+    ),
+    findByAccreditationIds: performFindByAccreditationIds(
+      wasteBalanceStorage,
+      ledgerRepository
+    ),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       { user, accreditation, overseasSites }
