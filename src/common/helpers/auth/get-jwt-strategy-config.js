@@ -1,7 +1,18 @@
 import { config } from '#root/config.js'
 import Boom from '@hapi/boom'
+import { ROLES } from './constants.js'
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
+
+/**
+ * Roles that retain access via the legacy `service_maintainer` Hapi scope
+ * during the route re-scoping transition. Removed once every admin route
+ * declares an explicit `admin.*` scope.
+ */
+const LEGACY_SERVICE_MAINTAINER_ROLES = new Set([
+  'service_maintainer_write',
+  'service_maintainer'
+])
 
 /** @typedef {import('./types.js').TokenPayload} TokenPayload */
 /** @typedef {import('./types.js').EntraIdTokenPayload} EntraIdTokenPayload */
@@ -48,7 +59,10 @@ export function getJwtStrategyConfig(oidcConfigs) {
 
         const email = tokenPayload.preferred_username
 
-        const scope = await getEntraUserRoles(email)
+        const { role, scopes } = await getEntraUserRoles(email)
+        const scope = LEGACY_SERVICE_MAINTAINER_ROLES.has(role)
+          ? [...scopes, ROLES.serviceMaintainer]
+          : scopes
 
         return {
           isValid: true,
@@ -56,6 +70,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
             id: tokenPayload.oid,
             email,
             issuer,
+            role,
             scope
           }
         }
