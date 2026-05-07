@@ -60,9 +60,10 @@ export function getJwtStrategyConfig(oidcConfigs) {
         const email = tokenPayload.preferred_username
 
         const { role, scopes } = await getEntraUserRoles(email)
-        const scope = LEGACY_SERVICE_MAINTAINER_ROLES.has(role)
-          ? [...scopes, ROLES.serviceMaintainer]
-          : scopes
+        const scope =
+          role !== null && LEGACY_SERVICE_MAINTAINER_ROLES.has(role)
+            ? [...scopes, ROLES.serviceMaintainer]
+            : scopes
 
         return {
           isValid: true,

@@ -37,6 +37,10 @@ export const asStandardUser = ({ linkedOrgId, ...overrides }) => {
   }
 }
 
+/**
+ * @param {string} role
+ * @param {{ id?: string, email?: string, overrides?: object }} [opts]
+ */
 const adminCredential = (
   role,
   {
