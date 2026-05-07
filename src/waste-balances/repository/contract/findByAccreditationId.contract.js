@@ -99,7 +99,8 @@ export const testFindByAccreditationIdBehaviour = (it) => {
     })
 
     it('returns canonicalSource ledger when stored as ledger', async ({
-      insertWasteBalance
+      insertWasteBalance,
+      ledgerRepository
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-marker-ledger',
@@ -107,6 +108,13 @@ export const testFindByAccreditationIdBehaviour = (it) => {
       })
 
       await insertWasteBalance(wasteBalance)
+      await ledgerRepository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-marker-ledger',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      ])
 
       const result = await repository.findByAccreditationId('acc-marker-ledger')
 
@@ -206,7 +214,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         expect(result.availableAmount).toBe(150)
       })
 
-      it('returns zero amounts when marker is ledger and no ledger transactions exist', async ({
+      it('throws when marker is ledger and no ledger transactions exist', async ({
         insertWasteBalance
       }) => {
         await insertWasteBalance(
@@ -218,12 +226,11 @@ export const testFindByAccreditationIdBehaviour = (it) => {
           })
         )
 
-        const result = await repository.findByAccreditationId(
-          'acc-marker-ledger-empty'
+        await expect(
+          repository.findByAccreditationId('acc-marker-ledger-empty')
+        ).rejects.toThrow(
+          /acc-marker-ledger-empty.*canonicalSource 'ledger' but no ledger transactions/
         )
-
-        expect(result.amount).toBe(0)
-        expect(result.availableAmount).toBe(0)
       })
 
       it('preserves the canonicalSource marker on the returned document', async ({

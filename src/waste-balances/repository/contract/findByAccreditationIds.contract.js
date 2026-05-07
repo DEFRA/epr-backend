@@ -131,7 +131,8 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
     })
 
     it('preserves canonicalSource per balance across the batch', async ({
-      insertWasteBalances
+      insertWasteBalances,
+      ledgerRepository
     }) => {
       const onEmbedded = buildWasteBalance({
         accreditationId: 'acc-mixed-embedded',
@@ -143,6 +144,13 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       })
 
       await insertWasteBalances([onEmbedded, onLedger])
+      await ledgerRepository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-mixed-ledger',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      ])
 
       const result = await repository.findByAccreditationIds([
         'acc-mixed-embedded',

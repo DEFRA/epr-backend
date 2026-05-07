@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 
 /**
@@ -7,9 +9,9 @@ import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
  * `'embedded'` and `'migrating'` markers leave the document unchanged because
  * the embedded write path is still authoritative for them.
  *
- * Marker `'ledger'` with an empty ledger should not occur in practice — the
- * sweep populates the ledger before flipping the marker — but is treated as a
- * zero balance to keep the read path safe.
+ * Marker `'ledger'` with an empty ledger is an invariant violation — the sweep
+ * must populate the ledger before flipping the marker. Throws so the
+ * inconsistency surfaces instead of being masked as a zero balance.
  *
  * @param {import('../domain/model.js').WasteBalance} balance
  * @param {import('./ledger-port.js').LedgerRepository} ledgerRepository
@@ -25,7 +27,9 @@ export const resolveBalanceAmounts = async (balance, ledgerRepository) => {
   )
 
   if (!latest) {
-    return { ...balance, amount: 0, availableAmount: 0 }
+    throw Boom.internal(
+      `Waste balance ${balance.accreditationId} has canonicalSource 'ledger' but no ledger transactions`
+    )
   }
 
   return {

@@ -68,18 +68,18 @@ describe('resolveBalanceAmounts', () => {
     expect(result.availableAmount).toBe(175)
   })
 
-  it('returns zero amounts when marker is ledger but no ledger transaction exists', async () => {
+  it('throws when marker is ledger but no ledger transaction exists', async () => {
     const balance = buildBalance({
+      accreditationId: 'acc-empty-ledger',
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
       amount: 999,
       availableAmount: 999
     })
     const ledger = buildLedger(null)
 
-    const result = await resolveBalanceAmounts(balance, ledger)
-
-    expect(result.amount).toBe(0)
-    expect(result.availableAmount).toBe(0)
+    await expect(resolveBalanceAmounts(balance, ledger)).rejects.toThrow(
+      /acc-empty-ledger.*canonicalSource 'ledger' but no ledger transactions/
+    )
   })
 
   it('preserves all non-amount fields', async () => {
