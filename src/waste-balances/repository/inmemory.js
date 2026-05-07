@@ -62,7 +62,7 @@ export const saveBalance =
  * Find a waste balance by accreditation ID.
  *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
- * @param {import('./ledger-port.js').LedgerRepository | undefined} ledgerRepository
+ * @param {import('./ledger-port.js').LedgerRepository} ledgerRepository
  * @returns {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const performFindByAccreditationId =
@@ -154,16 +154,16 @@ const performResetCanonicalSourceToEmbedded =
  * Create an in-memory waste balances repository.
  * Ensures data isolation by deep-cloning on read.
  *
- * @param {Array} [initialWasteBalances=[]]
- * @param {Object} [dependencies]
+ * @param {Array} initialWasteBalances
+ * @param {Object} dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('./ledger-port.js').LedgerRepository} [dependencies.ledgerRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
 export const createInMemoryWasteBalancesRepository = (
-  initialWasteBalances = [],
-  dependencies = {}
+  initialWasteBalances,
+  dependencies
 ) => {
   const wasteBalanceStorage = initialWasteBalances
 

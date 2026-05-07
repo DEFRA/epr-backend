@@ -56,19 +56,25 @@ const it = mongoIt.extend({
 
 describe('MongoDB waste balances repository', () => {
   describe('repository creation', () => {
-    it('should create repository instance', async ({ mongoClient }) => {
+    it('should create repository instance', async ({
+      mongoClient,
+      ledgerRepository
+    }) => {
       const database = mongoClient.db(DATABASE_NAME)
-      const repository = await createWasteBalancesRepository(database)
+      const repository = await createWasteBalancesRepository(database, {
+        ledgerRepository
+      })
       const instance = repository()
       expect(instance).toBeDefined()
       expect(instance.findByAccreditationId).toBeTypeOf('function')
     })
 
     it('ensures the ledger collection indexes exist', async ({
-      mongoClient
+      mongoClient,
+      ledgerRepository
     }) => {
       const database = mongoClient.db(DATABASE_NAME)
-      await createWasteBalancesRepository(database)
+      await createWasteBalancesRepository(database, { ledgerRepository })
 
       const indexes = await database
         .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)

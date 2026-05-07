@@ -11,24 +11,13 @@ import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
  * sweep populates the ledger before flipping the marker — but is treated as a
  * zero balance to keep the read path safe.
  *
- * `ledgerRepository` is optional so tests that exercise embedded/migrating
- * paths can wire the waste-balances repository without a ledger; an undefined
- * ledger combined with marker `'ledger'` is a wiring bug and trips an explicit
- * error rather than silently returning stale embedded amounts.
- *
  * @param {import('../domain/model.js').WasteBalance} balance
- * @param {import('./ledger-port.js').LedgerRepository | undefined} ledgerRepository
+ * @param {import('./ledger-port.js').LedgerRepository} ledgerRepository
  * @returns {Promise<import('../domain/model.js').WasteBalance>}
  */
 export const resolveBalanceAmounts = async (balance, ledgerRepository) => {
   if (balance.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
     return balance
-  }
-
-  if (!ledgerRepository) {
-    throw new Error(
-      `Cannot resolve marker 'ledger' without a ledger repository (accreditationId=${balance.accreditationId})`
-    )
   }
 
   const latest = await ledgerRepository.findLatestByAccreditationId(

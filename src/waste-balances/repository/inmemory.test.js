@@ -41,7 +41,9 @@ const extendedIt = base.extend({
 
 describe('waste-balances repository - in-memory implementation', () => {
   it('should create repository instance', () => {
-    const repository = createInMemoryWasteBalancesRepository()
+    const repository = createInMemoryWasteBalancesRepository([], {
+      ledgerRepository: createInMemoryLedgerRepository()()
+    })
     const instance = repository()
     expect(instance).toBeDefined()
     expect(instance.findByAccreditationId).toBeTypeOf('function')
@@ -49,7 +51,9 @@ describe('waste-balances repository - in-memory implementation', () => {
 
   it('should expose internal storage for testing', () => {
     const initialStorage = [{ accreditationId: 'acc-1' }]
-    const repository = createInMemoryWasteBalancesRepository(initialStorage)()
+    const repository = createInMemoryWasteBalancesRepository(initialStorage, {
+      ledgerRepository: createInMemoryLedgerRepository()()
+    })()
     expect(repository._getStorageForTesting()).toBe(initialStorage)
   })
 

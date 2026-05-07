@@ -217,13 +217,13 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
 /**
  * Creates a MongoDB-backed waste balances repository
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @param {Object} [dependencies] - Optional dependencies
+ * @param {Object} dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('./ledger-port.js').LedgerRepository} [dependencies.ledgerRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
-export const createWasteBalancesRepository = async (db, dependencies = {}) => {
+export const createWasteBalancesRepository = async (db, dependencies) => {
   await ensureCollection(db)
   await ensureLedgerCollection(db)
 

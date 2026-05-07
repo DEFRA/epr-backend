@@ -82,30 +82,6 @@ describe('resolveBalanceAmounts', () => {
     expect(result.availableAmount).toBe(0)
   })
 
-  it('throws when marker is ledger and no ledger repository is wired', async () => {
-    const balance = buildBalance({
-      accreditationId: 'acc-no-ledger',
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-    })
-
-    await expect(resolveBalanceAmounts(balance, undefined)).rejects.toThrow(
-      /acc-no-ledger/
-    )
-  })
-
-  it('does not require a ledger repository when marker is embedded', async () => {
-    const balance = buildBalance({
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED,
-      amount: 42,
-      availableAmount: 21
-    })
-
-    const result = await resolveBalanceAmounts(balance, undefined)
-
-    expect(result.amount).toBe(42)
-    expect(result.availableAmount).toBe(21)
-  })
-
   it('preserves all non-amount fields', async () => {
     const balance = buildBalance({
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
