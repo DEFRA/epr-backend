@@ -209,6 +209,59 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
 }
 
 /**
+ * Performs the repository write for a status transition.
+ * Issuance (AWAITING_ACCEPTANCE) verifies the accreditation and
+ * generates a unique PRN number; all other transitions just stamp
+ * an operation slot and update.
+ *
+ * @param {Object} params
+ * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
+ */
+async function applyStatusUpdate({
+  prnRepository,
+  organisationsRepository,
+  prn,
+  updateParams,
+  newStatus,
+  organisationId,
+  accreditationId,
+  user,
+  now
+}) {
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    updateParams.operation = {
+      slot: 'issued',
+      at: now,
+      by: { id: user.id, name: user.name }
+    }
+
+    const accreditation = await organisationsRepository.findAccreditationById(
+      organisationId,
+      accreditationId
+    )
+
+    assertAccreditationNotSuspended(accreditation)
+
+    return issuePrnWithRetry(prnRepository, updateParams, {
+      regulator: accreditation.submittedToRegulator,
+      isExport: prn.isExport,
+      accreditationYear: prn.accreditation.accreditationYear
+    })
+  }
+
+  const operationSlot = STATUS_OPERATION_SLOT[newStatus]
+  if (operationSlot) {
+    updateParams.operation = { slot: operationSlot, at: now, by: user }
+  }
+
+  const updatedPrn = await prnRepository.updateStatus(updateParams)
+  if (!updatedPrn) {
+    throw Boom.badImplementation('Failed to update PRN status')
+  }
+  return updatedPrn
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -284,38 +337,17 @@ export async function updatePrnStatus({
     updatedAt: now
   }
 
-  let updatedPrn
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    updateParams.operation = {
-      slot: 'issued',
-      at: now,
-      by: { id: user.id, name: user.name }
-    }
-
-    const accreditation = await organisationsRepository.findAccreditationById(
-      organisationId,
-      accreditationId
-    )
-
-    assertAccreditationNotSuspended(accreditation)
-
-    updatedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
-      regulator: accreditation.submittedToRegulator,
-      isExport: prn.isExport,
-      accreditationYear: prn.accreditation.accreditationYear
-    })
-  } else {
-    const operationSlot = STATUS_OPERATION_SLOT[newStatus]
-    if (operationSlot) {
-      updateParams.operation = { slot: operationSlot, at: now, by: user }
-    }
-
-    updatedPrn = await prnRepository.updateStatus(updateParams)
-
-    if (!updatedPrn) {
-      throw Boom.badImplementation('Failed to update PRN status')
-    }
-  }
+  const updatedPrn = await applyStatusUpdate({
+    prnRepository,
+    organisationsRepository,
+    prn,
+    updateParams,
+    newStatus,
+    organisationId,
+    accreditationId,
+    user,
+    now
+  })
 
   if (!isCreation) {
     await applyWasteBalanceEffects(
