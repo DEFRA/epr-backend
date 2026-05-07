@@ -45,6 +45,7 @@ async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
 
   return repo.updateStatus({
     id: draft.id,
+    version: draft.version,
     status: PRN_STATUS.AWAITING_ACCEPTANCE,
     updatedAt: issuedAt,
     updatedBy: ACTOR,
@@ -60,8 +61,10 @@ async function issuePrn(repo, { tonnage, issuedAt = IN_PERIOD }) {
  * @param {{ acceptedAt?: Date }} options
  */
 async function acceptPrn(repo, id, { acceptedAt = IN_PERIOD } = {}) {
+  const current = await repo.findById(id)
   return repo.updateStatus({
     id,
+    version: current.version,
     status: PRN_STATUS.ACCEPTED,
     updatedAt: acceptedAt,
     updatedBy: ACTOR,

@@ -264,6 +264,7 @@ export async function updatePrnStatus({
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
+    version: prn.version,
     status: newStatus,
     updatedBy: user,
     updatedAt: now

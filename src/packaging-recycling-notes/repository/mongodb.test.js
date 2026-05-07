@@ -1,6 +1,6 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
@@ -21,7 +21,13 @@ const it = mongoIt.extend({
   },
 
   prnRepository: async ({ prnRepositoryFactory }, use) => {
-    const repository = prnRepositoryFactory()
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    const repository = prnRepositoryFactory(mockLogger)
     await use(repository)
   }
 })
@@ -48,6 +54,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         find: function () {
           return { toArray: async () => [] }
         },
+        updateMany: async () => ({ matchedCount: 0 }),
         findOneAndUpdate: async () => {
           throw otherError
         }
@@ -59,6 +66,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       await expect(
         repository.updateStatus({
           id: hexId,
+          version: 1,
           status: 'awaiting_acceptance',
           updatedBy: { id: 'user-123', name: 'Test User' },
           updatedAt: new Date(),
@@ -85,6 +93,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         find: function () {
           return { toArray: async () => [] }
         },
+        updateMany: async () => ({ matchedCount: 0 }),
         findOneAndUpdate: async () => {
           throw duplicateKeyError
         }
@@ -96,6 +105,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       await expect(
         repository.updateStatus({
           id: hexId,
+          version: 1,
           status: 'awaiting_acceptance',
           updatedBy: { id: 'user-123', name: 'Test User' },
           updatedAt: new Date(),
@@ -123,7 +133,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -164,7 +175,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -203,7 +215,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -238,7 +251,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -273,7 +287,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await expect(
@@ -308,7 +323,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await expect(
@@ -335,7 +351,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -375,7 +392,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -406,7 +424,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await expect(
@@ -433,7 +452,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -469,7 +489,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -508,7 +529,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -540,7 +562,8 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -571,12 +594,69 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        }
+        },
+        updateMany: async () => ({ matchedCount: 0 })
       }
 
       await expect(
         createPackagingRecyclingNotesRepository(mockDb, [])
       ).rejects.toThrow('Connection refused')
+    })
+  })
+
+  describe('backfillVersionField error handling', () => {
+    it('swallows NamespaceNotFound errors when collection does not exist', async () => {
+      const nsError = new Error('ns does not exist')
+      nsError.codeName = 'NamespaceNotFound'
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [],
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        updateMany: async () => {
+          throw nsError
+        }
+      }
+
+      await expect(
+        createPackagingRecyclingNotesRepository(mockDb, [])
+      ).resolves.toBeDefined()
+    })
+
+    it('re-throws non-NamespaceNotFound errors from updateMany', async () => {
+      const writeError = new Error('Write conflict')
+      writeError.codeName = 'WriteConflict'
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [],
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        updateMany: async () => {
+          throw writeError
+        }
+      }
+
+      await expect(
+        createPackagingRecyclingNotesRepository(mockDb, [])
+      ).rejects.toThrow('Write conflict')
     })
   })
 })

@@ -196,6 +196,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  * @typedef {{
  *   id: string;
  *   schemaVersion: number;
+ *   version: number;
  *   prnNumber?: string | null;
  *   organisation: OrganisationNameAndId;
  *   registrationId: string;

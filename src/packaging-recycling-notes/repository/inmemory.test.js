@@ -1,14 +1,24 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { it as base, describe, expect } from 'vitest'
+import { it as base, describe, expect, vi } from 'vitest'
 import { buildCancelledPrn } from './contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.plugin.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  prnRepository: async ({}, use) => {
+  prnRepositoryFactory: async ({}, use) => {
     const factory = createInMemoryPackagingRecyclingNotesRepository([])
-    const repository = factory()
+    await use(factory)
+  },
+
+  prnRepository: async ({ prnRepositoryFactory }, use) => {
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    const repository = prnRepositoryFactory(mockLogger)
     await use(repository)
   }
 })

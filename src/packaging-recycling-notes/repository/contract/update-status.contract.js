@@ -16,6 +16,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
@@ -31,6 +32,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
@@ -52,6 +54,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: updateTime
@@ -66,6 +69,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: updateTime
@@ -79,6 +83,7 @@ export const testUpdateStatusBehaviour = (it) => {
       it('returns null when PRN not found', async () => {
         const result = await repository.updateStatus({
           id: '000000000000000000000000',
+          version: 1,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-test', name: 'Test User' },
           updatedAt: new Date()
@@ -92,6 +97,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-test', name: 'Test User' },
           updatedAt: new Date()
@@ -105,6 +111,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-test', name: 'Test User' },
           updatedAt: new Date()
@@ -121,6 +128,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
@@ -136,6 +144,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),
@@ -151,6 +160,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
@@ -168,6 +178,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: actor,
           updatedAt: now,
@@ -190,6 +201,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: now,
@@ -207,6 +219,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const updated = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
@@ -220,8 +233,9 @@ export const testUpdateStatusBehaviour = (it) => {
       it('tracks full status history across transitions', async () => {
         const created = await repository.create(buildDraftPrn())
 
-        await repository.updateStatus({
+        const intermediate = await repository.updateStatus({
           id: created.id,
+          version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date()
@@ -229,6 +243,7 @@ export const testUpdateStatusBehaviour = (it) => {
 
         const final = await repository.updateStatus({
           id: created.id,
+          version: intermediate.version,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,
           updatedBy: { id: 'user-issuer', name: 'Issuer User' },
           updatedAt: new Date(),

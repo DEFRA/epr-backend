@@ -13,6 +13,7 @@ export class PrnNumberConflictError extends Error {
 /**
  * @typedef {Object} UpdateStatusParams
  * @property {string} id - PRN ID
+ * @property {number} version - Expected current document version (compare-and-set token for OCC)
  * @property {import('#packaging-recycling-notes/domain/model.js').PrnStatus} status - New status
  * @property {{ id: string; name: string }} updatedBy - User making the change
  * @property {Date} updatedAt - Timestamp of the change
