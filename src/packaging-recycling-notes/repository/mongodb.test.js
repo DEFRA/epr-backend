@@ -1,6 +1,8 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
+import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { buildAwaitingAuthorisationPrn } from './contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
@@ -54,7 +56,6 @@ describe('MongoDB packaging recycling notes repository', () => {
         find: function () {
           return { toArray: async () => [] }
         },
-        updateMany: async () => ({ matchedCount: 0 }),
         findOneAndUpdate: async () => {
           throw otherError
         }
@@ -93,7 +94,6 @@ describe('MongoDB packaging recycling notes repository', () => {
         find: function () {
           return { toArray: async () => [] }
         },
-        updateMany: async () => ({ matchedCount: 0 }),
         findOneAndUpdate: async () => {
           throw duplicateKeyError
         }
@@ -133,8 +133,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -175,8 +174,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -215,8 +213,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -251,8 +248,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -287,8 +283,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await expect(
@@ -323,8 +318,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await expect(
@@ -351,8 +345,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -392,8 +385,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -424,8 +416,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await expect(
@@ -452,8 +443,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -489,8 +479,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -529,8 +518,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -562,8 +550,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await createPackagingRecyclingNotesRepository(mockDb, [])
@@ -594,8 +581,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }),
         find: function () {
           return { toArray: async () => [] }
-        },
-        updateMany: async () => ({ matchedCount: 0 })
+        }
       }
 
       await expect(
@@ -604,59 +590,71 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
   })
 
-  describe('backfillVersionField error handling', () => {
-    it('swallows NamespaceNotFound errors when collection does not exist', async () => {
-      const nsError = new Error('ns does not exist')
-      nsError.codeName = 'NamespaceNotFound'
+  describe('legacy documents without a version field', () => {
+    const seedVersionlessPrn = async (mongoClient) => {
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection('packaging-recycling-notes')
+      const { version: _version, ...prnWithoutVersion } =
+        buildAwaitingAuthorisationPrn()
+      const result = await collection.insertOne(prnWithoutVersion)
+      return result.insertedId.toHexString()
+    }
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => [],
-        createIndex: async () => {},
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        },
-        updateMany: async () => {
-          throw nsError
-        }
-      }
+    it('reads back as version 1', async ({ mongoClient, prnRepository }) => {
+      const id = await seedVersionlessPrn(mongoClient)
 
-      await expect(
-        createPackagingRecyclingNotesRepository(mockDb, [])
-      ).resolves.toBeDefined()
+      const found = await prnRepository.findById(id)
+
+      expect(found.version).toBe(1)
     })
 
-    it('re-throws non-NamespaceNotFound errors from updateMany', async () => {
-      const writeError = new Error('Write conflict')
-      writeError.codeName = 'WriteConflict'
+    it('accepts a CAS update with version 1 and bumps to version 2', async ({
+      mongoClient,
+      prnRepository
+    }) => {
+      const id = await seedVersionlessPrn(mongoClient)
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
-        indexes: async () => [],
-        createIndex: async () => {},
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        },
-        updateMany: async () => {
-          throw writeError
-        }
-      }
+      const updated = await prnRepository.updateStatus({
+        id,
+        version: 1,
+        status: PRN_STATUS.AWAITING_ACCEPTANCE,
+        updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+        updatedAt: new Date(),
+        prnNumber: `TT2699999`
+      })
 
+      expect(updated.version).toBe(2)
+      expect(updated.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      const reread = await prnRepository.findById(id)
+      expect(reread.version).toBe(2)
+    })
+
+    it('reports actual version as 1 when conflict is detected', async ({
+      mongoClient,
+      prnRepository
+    }) => {
+      const id = await seedVersionlessPrn(mongoClient)
+
+      const staleVersion = 5
       await expect(
-        createPackagingRecyclingNotesRepository(mockDb, [])
-      ).rejects.toThrow('Write conflict')
+        prnRepository.updateStatus({
+          id,
+          version: staleVersion,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: new Date()
+        })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: `Version conflict: attempted to update PRN ${id} with version ${staleVersion} but current version is 1`
+          }
+        }
+      })
     })
   })
 })

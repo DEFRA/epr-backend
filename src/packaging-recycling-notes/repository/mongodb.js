@@ -96,25 +96,6 @@ async function ensureStatusDateIndex(collection) {
 }
 
 /**
- * Backfills the version field on legacy documents that pre-date OCC.
- * Idempotent: documents that already carry a version are not touched.
- *
- * @param {Collection} collection
- */
-async function backfillVersionField(collection) {
-  try {
-    await collection.updateMany(
-      { version: { $exists: false } },
-      { $set: { version: 1 } }
-    )
-  } catch (error) {
-    if (error.codeName !== 'NamespaceNotFound') {
-      throw error
-    }
-  }
-}
-
-/**
  * @param {Db} db
  * @returns {Promise<Collection>}
  */
@@ -128,8 +109,6 @@ async function ensureCollection(db) {
   await ensurePrnNumberIndex(collection)
 
   await ensureStatusDateIndex(collection)
-
-  await backfillVersionField(collection)
 
   return collection
 }
@@ -290,8 +269,9 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
     return null
   }
 
+  const actualVersion = existing.version ?? 1
   const conflictError = new Error(
-    `Version conflict: attempted to update PRN ${id} with version ${expectedVersion} but current version is ${existing.version}`
+    `Version conflict: attempted to update PRN ${id} with version ${expectedVersion} but current version is ${actualVersion}`
   )
   logger.error({
     err: conflictError,
@@ -336,10 +316,12 @@ const performUpdateStatus = async (
 
   try {
     const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-      { _id: ObjectId.createFromHexString(id), version },
       {
-        $set: setFields,
-        $inc: { version: 1 },
+        _id: ObjectId.createFromHexString(id),
+        $expr: { $eq: [{ $ifNull: ['$version', 1] }, version] }
+      },
+      {
+        $set: { ...setFields, version: version + 1 },
         $push: /** @type {*} */ ({
           'status.history': { status, at: updatedAt, by: updatedBy }
         })
