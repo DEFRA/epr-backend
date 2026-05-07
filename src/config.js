@@ -312,6 +312,18 @@ const baseConfig = {
       format: String,
       env: 'SERVICE_MAINTAINER_EMAILS',
       default: '["me@example.com", "you@example.com"]'
+    },
+    serviceMaintainersWrite: {
+      doc: 'JSON array of admin emails granted the service_maintainer_write tier (admin.read + admin.write + admin.dlq.purge). Empty in production by default; populated for dev/test.',
+      format: String,
+      env: 'SERVICE_MAINTAINER_WRITE_EMAILS',
+      default: '[]'
+    },
+    support: {
+      doc: 'JSON array of admin emails granted the support tier (admin.read only). Empty in production by default; populated for dev/test.',
+      format: String,
+      env: 'SUPPORT_EMAILS',
+      default: '[]'
     }
   },
   packagingRecyclingNotesExternalApi: {
