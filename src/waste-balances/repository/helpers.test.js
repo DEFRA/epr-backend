@@ -62,6 +62,15 @@ vi.mock('../application/append-prn-operation-to-ledger.js', () => ({
   appendPrnOperationToLedger: vi.fn().mockResolvedValue(undefined)
 }))
 
+const buildPrnDependencies = () => ({
+  ledgerRepository: {
+    insertTransactions: vi.fn(),
+    findLatestByAccreditationId: vi.fn(),
+    findLatestCreditedAmountsByWasteRecords: vi.fn(),
+    deleteAllForAccreditationId: vi.fn()
+  }
+})
+
 describe('src/waste-balances/repository/helpers.js', () => {
   describe('markExcludedRecords', () => {
     it('should return empty array when wasteRecords is empty', () => {
@@ -1071,6 +1080,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 50.5,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1103,6 +1113,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 50.5,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1139,6 +1150,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 25,
           user: { id: 'user-xyz', email: 'user-xyz@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1176,6 +1188,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 10,
           user: { id: 'user-123', email: 'user-123@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1256,6 +1269,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 50,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1288,6 +1302,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 50,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1324,6 +1339,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 25,
           user: { id: 'user-xyz', email: 'user-xyz@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1361,6 +1377,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 10,
           user: { id: 'user-123', email: 'user-123@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1442,6 +1459,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 50,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1475,6 +1493,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             tonnage: 50,
             user: { id: 'user-abc', email: 'user-abc@example.com' }
           },
+          dependencies: buildPrnDependencies(),
           findBalance,
           saveBalance
         })
@@ -1512,6 +1531,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 25,
           user: { id: 'user-xyz', email: 'user-xyz@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1549,6 +1569,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 10,
           user: { id: 'user-123', email: 'user-123@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1631,6 +1652,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 60,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1664,6 +1686,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             tonnage: 60,
             user: { id: 'user-abc', email: 'user-abc@example.com' }
           },
+          dependencies: buildPrnDependencies(),
           findBalance,
           saveBalance
         })
@@ -1696,6 +1719,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           tonnage: 60,
           user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
+        dependencies: buildPrnDependencies(),
         findBalance,
         saveBalance
       })
@@ -1835,28 +1859,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
 
         expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
-      })
-
-      it('throws when flag is ON and marker is ledger but no ledgerRepository provided', async () => {
-        const findBalance = vi
-          .fn()
-          .mockResolvedValue(
-            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
-          )
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(appendPrnOperationToLedger).mockClear()
-
-        await expect(
-          helper({
-            [paramsKey]: baseDeductParams(),
-            dependencies: { featureFlags: featureFlagsOn },
-            findBalance,
-            saveBalance
-          })
-        ).rejects.toThrow(/no ledgerRepository was provided/)
-
-        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
-        expect(saveBalance).not.toHaveBeenCalled()
       })
     }
 

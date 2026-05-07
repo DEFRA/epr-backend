@@ -261,8 +261,8 @@ export const performUpdateWasteBalanceTransactions = async ({
  * array so the rebuild's version-conditional flip can detect them and retry.
  *
  * @param {Object} params
- * @param {Object} [params.dependencies]
- * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {Object} params.dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} params.dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {import('../domain/model.js').WasteBalance} params.wasteBalance
@@ -282,17 +282,11 @@ const tryDispatchPrnToLedger = async ({
   prnParams,
   operationType
 }) => {
-  if (!dependencies?.featureFlags?.isWasteBalanceLedgerEnabled()) {
+  if (!dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
     return false
   }
   if (wasteBalance.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
     return false
-  }
-
-  if (!dependencies.ledgerRepository) {
-    throw Boom.badImplementation(
-      `wasteBalanceLedger flag is ON for accreditation ${wasteBalance.accreditationId} but no ledgerRepository was provided`
-    )
   }
 
   await appendPrnOperationToLedger({
@@ -358,8 +352,8 @@ export const buildPrnCreationTransaction = ({
  *
  * @param {Object} params
  * @param {import('./port.js').DeductAvailableBalanceParams} params.deductParams
- * @param {Object} [params.dependencies]
- * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {Object} params.dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} params.dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
@@ -467,8 +461,8 @@ export const buildPrnIssuedTransaction = ({
  *
  * @param {Object} params
  * @param {import('./port.js').DeductTotalBalanceParams} params.deductParams
- * @param {Object} [params.dependencies]
- * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {Object} params.dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} params.dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
@@ -618,8 +612,8 @@ export const buildIssuedPrnCancellationTransaction = ({
  *
  * @param {Object} params
  * @param {import('./port.js').CreditFullBalanceParams} params.creditParams
- * @param {Object} [params.dependencies]
- * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {Object} params.dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} params.dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
@@ -694,8 +688,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
  *
  * @param {Object} params
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
- * @param {Object} [params.dependencies]
- * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {Object} params.dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} params.dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
