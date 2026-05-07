@@ -7,6 +7,7 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildAwaitingAuthorisationPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 
 vi.mock('./metrics.js', () => ({
@@ -72,9 +73,10 @@ describe('updatePrnStatus concurrency', () => {
     ])
     const prnRepository = prnFactory(noopLogger())
 
-    const wasteFactory = createInMemoryWasteBalancesRepository([
-      buildBalanceSeed()
-    ])
+    const wasteFactory = createInMemoryWasteBalancesRepository(
+      [buildBalanceSeed()],
+      { ledgerRepository: createInMemoryLedgerRepository()() }
+    )
     const realWasteBalancesRepository = wasteFactory()
     const deductSpy = vi.fn(
       realWasteBalancesRepository.deductTotalBalanceForPrnIssue
