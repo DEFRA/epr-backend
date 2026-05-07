@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { aggregatePrnTonnage } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -17,7 +17,7 @@ export const getPrnTonnage = {
   path: prnTonnagePath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
     response: {

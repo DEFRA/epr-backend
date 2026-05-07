@@ -1,4 +1,4 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
@@ -67,7 +67,7 @@ export const organisationsPutById = {
   path: organisationsPutByIdPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminWrite]
     },
     tags: ['api', 'admin'],
     validate: {

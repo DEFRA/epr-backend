@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
@@ -52,7 +52,7 @@ export const adminPackagingRecyclingNotesList = {
   method: 'GET',
   path: adminPackagingRecyclingNotesListPath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api'],
     validate: {
       query: Joi.object({

@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -11,7 +11,7 @@ export const organisationsGetById = {
   path: organisationsGetByIdPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer, ROLES.standardUser]
+      scope: [ROLES.standardUser, SCOPES.adminRead]
     },
     tags: ['api', 'admin']
   },

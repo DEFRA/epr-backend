@@ -147,6 +147,7 @@ describe('PUT /v1/organisations/{id}', () => {
         expect(payload.email).toEqual('me@example.com')
         expect(payload.scope).toEqual([
           'admin.read',
+          'admin.write',
           'admin.dlq.purge',
           'service_maintainer'
         ])

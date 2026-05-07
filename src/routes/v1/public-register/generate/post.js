@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { generatePublicRegister } from '#application/public-register/generate-public-register.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -21,7 +21,7 @@ export const generateLatestPublicRegister = {
   path: publicRegisterGeneratePath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminWrite]
     },
     tags: ['api', 'admin']
   },

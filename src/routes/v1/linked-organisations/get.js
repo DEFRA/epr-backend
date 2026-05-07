@@ -1,6 +1,6 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import { linkedOrganisationsResponseSchema } from './response.schema.js'
 
@@ -15,7 +15,7 @@ export const linkedOrganisationsGetAll = {
   path: linkedOrganisationsGetAllPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
     validate: {

@@ -36,16 +36,19 @@ export const adminMeGet = {
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { role, scope } = request.auth.credentials
+    const credentials =
+      /** @type {{ role: string | null, scope: string[] }} */ (
+        /** @type {unknown} */ (request.auth.credentials)
+      )
     // Strip the legacy `service_maintainer` Hapi scope from the public response;
     // it is an internal transitional artefact and not part of the documented
     // SCOPES enum.
-    const scopes = scope.filter(
+    const scopes = credentials.scope.filter(
       (s) =>
         s === SCOPES.adminRead ||
         s === SCOPES.adminWrite ||
         s === SCOPES.adminDlqPurge
     )
-    return h.response({ role, scopes }).code(StatusCodes.OK)
+    return h.response({ role: credentials.role, scopes }).code(StatusCodes.OK)
   }
 }

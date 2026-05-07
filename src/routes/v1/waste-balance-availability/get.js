@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { aggregateAvailableBalance } from '#application/waste-balance-availability/aggregate-available-balance.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -17,7 +17,7 @@ export const getWasteBalanceAvailability = {
   path: wasteBalanceAvailabilityPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
     response: {

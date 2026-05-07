@@ -14,7 +14,14 @@ process.env.PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL =
   'https://cognito-idp.eu-west-2.amazonaws.com/eu-west-2_test/.well-known/jwks.json'
 
 // Roles
+// In test, the existing service-maintainer emails are also placed in the
+// write list. First-match-wins resolution (see getEntraUserRoles) gives them
+// the `service_maintainer_write` tier so existing integration tests that
+// exercise mutating admin routes continue to pass.
 process.env.SERVICE_MAINTAINER_EMAILS = '["me@example.com", "you@example.com"]'
+process.env.SERVICE_MAINTAINER_WRITE_EMAILS =
+  '["me@example.com", "you@example.com"]'
+process.env.SUPPORT_EMAILS = '[]'
 
 // AWS - test credentials
 process.env.AWS_ACCESS_KEY_ID = 'test'

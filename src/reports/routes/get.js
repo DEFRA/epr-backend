@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
@@ -21,7 +21,7 @@ export const reportsGet = {
   method: 'GET',
   path: reportsGetPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser, ROLES.serviceMaintainer]),
+    auth: getAuthConfig([ROLES.standardUser, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
       params: Joi.object({
