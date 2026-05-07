@@ -1,29 +1,40 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
 import { getConfig } from '#root/config.js'
 
-/** @typedef {import('./types.js').EntraIdTokenPayload} EntraIdTokenPayload */
+/**
+ * Email lists are evaluated in this order; first match wins.
+ * A user appearing in multiple lists silently takes the highest tier.
+ */
+const ADMIN_ROLE_RESOLUTION_ORDER = [
+  ['service_maintainer_write', 'roles.serviceMaintainersWrite'],
+  ['service_maintainer', 'roles.serviceMaintainers'],
+  ['support', 'roles.support']
+]
 
 /**
- * Determines the roles for an Entra ID user based on their token
- * @param {string} userEmail - The user's email address (taken from Entra ID access token)
- * @returns {Promise<string[]>} Array of role strings
+ * @typedef {{ role: string | null, scopes: string[] }} ResolvedAdminRole
+ */
+
+/**
+ * Resolves an Entra ID user's admin role and bundled scopes from
+ * email-list config. Email comparison is case-insensitive.
+ * @param {string | undefined | null} userEmail - Email from the validated Entra access token.
+ * @returns {Promise<ResolvedAdminRole>}
  */
 export async function getEntraUserRoles(userEmail) {
-  const stringifiedServiceMaintainersList = getConfig().get(
-    'roles.serviceMaintainers'
-  )
-
-  const thisUserRoles = []
-  // This should never thrown an error as the config is validated when the server is started
-  const serviceMaintainersList = JSON.parse(stringifiedServiceMaintainersList)
-
-  if (
-    serviceMaintainersList.some(
-      (email) => email.toLowerCase() === userEmail?.toLowerCase()
-    )
-  ) {
-    thisUserRoles.push(ROLES.serviceMaintainer)
+  if (!userEmail) {
+    return { role: null, scopes: [] }
   }
 
-  return thisUserRoles
+  const config = getConfig()
+  const lowerEmail = userEmail.toLowerCase()
+
+  for (const [role, configKey] of ADMIN_ROLE_RESOLUTION_ORDER) {
+    const list = JSON.parse(config.get(configKey))
+    if (list.some((email) => email.toLowerCase() === lowerEmail)) {
+      return { role, scopes: [...ADMIN_ROLES[role]] }
+    }
+  }
+
+  return { role: null, scopes: [] }
 }

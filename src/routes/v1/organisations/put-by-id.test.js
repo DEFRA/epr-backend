@@ -145,7 +145,11 @@ describe('PUT /v1/organisations/{id}', () => {
       const verifyCreatedBy = (payload) => {
         expect(payload.id).toEqual('test-user-id')
         expect(payload.email).toEqual('me@example.com')
-        expect(payload.scope).toEqual(['service_maintainer'])
+        expect(payload.scope).toEqual([
+          'admin.read',
+          'admin.dlq.purge',
+          'service_maintainer'
+        ])
       }
 
       const verifyEvent = (payload) => {

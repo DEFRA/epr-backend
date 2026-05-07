@@ -9,8 +9,17 @@ import {
 } from '#vite/helpers/mock-entra-oidc.js'
 import Boom from '@hapi/boom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ROLES } from './constants.js'
+import { ROLES, SCOPES, ADMIN_ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
+
+const maintainerCredential = {
+  role: 'service_maintainer',
+  scopes: [...ADMIN_ROLES.service_maintainer]
+}
+const expectedMaintainerScope = [
+  ...ADMIN_ROLES.service_maintainer,
+  ROLES.serviceMaintainer
+]
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -46,7 +55,7 @@ describe('#getJwtStrategyConfig', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetEntraUserRoles.mockResolvedValue([ROLES.serviceMaintainer])
+    mockGetEntraUserRoles.mockResolvedValue(maintainerCredential)
   })
 
   afterEach(() => {
@@ -133,7 +142,8 @@ describe('#getJwtStrategyConfig', () => {
           id: 'contact-123',
           email: 'user@example.com',
           issuer: entraIdMockOidcWellKnownResponse.issuer,
-          scope: [ROLES.serviceMaintainer]
+          role: 'service_maintainer',
+          scope: expectedMaintainerScope
         }
       })
     })
@@ -208,9 +218,11 @@ describe('#getJwtStrategyConfig', () => {
       )
     })
 
-    test('uses scope from getEntraUserRoles', async () => {
-      const customScope = ['custom-role-1', 'custom-role-2']
-      mockGetEntraUserRoles.mockResolvedValue(customScope)
+    test('write tier credential carries all admin scopes plus the legacy service_maintainer scope', async () => {
+      mockGetEntraUserRoles.mockResolvedValue({
+        role: 'service_maintainer_write',
+        scopes: [...ADMIN_ROLES.service_maintainer_write]
+      })
 
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
@@ -227,11 +239,40 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.scope).toEqual(customScope)
+      expect(result.credentials.role).toBe('service_maintainer_write')
+      expect(result.credentials.scope).toEqual([
+        ...ADMIN_ROLES.service_maintainer_write,
+        ROLES.serviceMaintainer
+      ])
     })
 
-    test('handles Entra ID token with empty scope from getEntraUserRoles', async () => {
-      mockGetEntraUserRoles.mockResolvedValue([])
+    test('support tier credential carries only admin.read with no legacy scope', async () => {
+      mockGetEntraUserRoles.mockResolvedValue({
+        role: 'support',
+        scopes: [...ADMIN_ROLES.support]
+      })
+
+      const config = getJwtStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockOidcWellKnownResponse.issuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            email: 'support@example.com'
+          }
+        }
+      }
+
+      const result = await config.validate(artifacts)
+
+      expect(result.credentials.role).toBe('support')
+      expect(result.credentials.scope).toEqual([SCOPES.adminRead])
+    })
+
+    test('handles Entra ID token where user matches no admin tier (empty scope, null role)', async () => {
+      mockGetEntraUserRoles.mockResolvedValue({ role: null, scopes: [] })
 
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
@@ -248,6 +289,7 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
+      expect(result.credentials.role).toBeNull()
       expect(result.credentials.scope).toEqual([])
     })
 
@@ -788,7 +830,7 @@ describe('#getJwtStrategyConfig', () => {
         ])
 
         expect(entraResult.credentials.id).toBe('entra-contact')
-        expect(entraResult.credentials.scope).toEqual([ROLES.serviceMaintainer])
+        expect(entraResult.credentials.scope).toEqual(expectedMaintainerScope)
         expect(defraResult.credentials.id).toBe('defra-contact')
         expect(defraResult.credentials.scope).toEqual([ROLES.inquirer])
       })
