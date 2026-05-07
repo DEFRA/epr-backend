@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
+import { buildLedgerTransaction } from '../ledger-test-data.js'
 
 export const testFindByAccreditationIdsBehaviour = (it) => {
   describe('findByAccreditationIds', () => {
@@ -155,6 +156,73 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       expect(byId['acc-mixed-ledger'].canonicalSource).toBe(
         WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       )
+    })
+
+    describe('marker-aware amount resolution per balance', () => {
+      it('substitutes amounts only for balances whose marker is ledger', async ({
+        insertWasteBalances,
+        ledgerRepository
+      }) => {
+        await insertWasteBalances([
+          buildWasteBalance({
+            accreditationId: 'acc-batch-embedded',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED,
+            amount: 100,
+            availableAmount: 80
+          }),
+          buildWasteBalance({
+            accreditationId: 'acc-batch-migrating',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+            amount: 200,
+            availableAmount: 150
+          }),
+          buildWasteBalance({
+            accreditationId: 'acc-batch-ledger',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+            amount: 999,
+            availableAmount: 999
+          })
+        ])
+
+        await ledgerRepository.insertTransactions([
+          buildLedgerTransaction({
+            accreditationId: 'acc-batch-embedded',
+            number: 1,
+            closingBalance: { amount: 999, availableAmount: 999 }
+          }),
+          buildLedgerTransaction({
+            accreditationId: 'acc-batch-migrating',
+            number: 1,
+            closingBalance: { amount: 999, availableAmount: 999 }
+          }),
+          buildLedgerTransaction({
+            accreditationId: 'acc-batch-ledger',
+            number: 1,
+            closingBalance: { amount: 50, availableAmount: 40 }
+          }),
+          buildLedgerTransaction({
+            accreditationId: 'acc-batch-ledger',
+            number: 2,
+            closingBalance: { amount: 75, availableAmount: 60 }
+          })
+        ])
+
+        const result = await repository.findByAccreditationIds([
+          'acc-batch-embedded',
+          'acc-batch-migrating',
+          'acc-batch-ledger'
+        ])
+
+        const byId = Object.fromEntries(
+          result.map((b) => [b.accreditationId, b])
+        )
+        expect(byId['acc-batch-embedded'].amount).toBe(100)
+        expect(byId['acc-batch-embedded'].availableAmount).toBe(80)
+        expect(byId['acc-batch-migrating'].amount).toBe(200)
+        expect(byId['acc-batch-migrating'].availableAmount).toBe(150)
+        expect(byId['acc-batch-ledger'].amount).toBe(75)
+        expect(byId['acc-batch-ledger'].availableAmount).toBe(60)
+      })
     })
 
     it('returns waste balance with all fields intact', async ({

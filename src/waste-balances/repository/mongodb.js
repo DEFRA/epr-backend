@@ -8,6 +8,7 @@ import {
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 import { ensureLedgerCollection } from './ledger-mongodb.js'
+import { resolveBalanceAmounts } from './marker-aware-read.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
@@ -28,32 +29,42 @@ async function ensureCollection(db) {
   return collection
 }
 
-const performFindByAccreditationId = (db) => async (accreditationId) => {
-  const validatedAccreditationId = validateAccreditationId(accreditationId)
+const performFindByAccreditationId =
+  (db, ledgerRepository) => async (accreditationId) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const doc = await db
-    .collection(WASTE_BALANCE_COLLECTION_NAME)
-    .findOne({ accreditationId: validatedAccreditationId })
+    const doc = await db
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .findOne({ accreditationId: validatedAccreditationId })
 
-  if (!doc) {
-    return null
+    if (!doc) {
+      return null
+    }
+
+    const { _id, ...domainFields } = doc
+    return resolveBalanceAmounts(
+      structuredClone({ id: _id.toString(), ...domainFields }),
+      ledgerRepository
+    )
   }
 
-  const { _id, ...domainFields } = doc
-  return structuredClone({ id: _id.toString(), ...domainFields })
-}
+const performFindByAccreditationIds =
+  (db, ledgerRepository) => async (accreditationIds) => {
+    const docs = await db
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .find({ accreditationId: { $in: accreditationIds } })
+      .toArray()
 
-const performFindByAccreditationIds = (db) => async (accreditationIds) => {
-  const docs = await db
-    .collection(WASTE_BALANCE_COLLECTION_NAME)
-    .find({ accreditationId: { $in: accreditationIds } })
-    .toArray()
-
-  return docs.map((doc) => {
-    const { _id, ...domainFields } = doc
-    return structuredClone({ id: _id.toString(), ...domainFields })
-  })
-}
+    return Promise.all(
+      docs.map((doc) => {
+        const { _id, ...domainFields } = doc
+        return resolveBalanceAmounts(
+          structuredClone({ id: _id.toString(), ...domainFields }),
+          ledgerRepository
+        )
+      })
+    )
+  }
 
 const performFlipCanonicalSourceToMigrating =
   (db) =>
@@ -216,9 +227,11 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
   await ensureCollection(db)
   await ensureLedgerCollection(db)
 
+  const { ledgerRepository } = dependencies
+
   return () => ({
-    findByAccreditationId: performFindByAccreditationId(db),
-    findByAccreditationIds: performFindByAccreditationIds(db),
+    findByAccreditationId: performFindByAccreditationId(db, ledgerRepository),
+    findByAccreditationIds: performFindByAccreditationIds(db, ledgerRepository),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       { user, accreditation, overseasSites }

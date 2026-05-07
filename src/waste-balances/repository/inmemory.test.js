@@ -1,5 +1,6 @@
 import { describe, it as base, expect, it } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
+import { createInMemoryLedgerRepository } from './ledger-inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
 const extendedIt = base.extend({
@@ -8,8 +9,22 @@ const extendedIt = base.extend({
     const storage = []
     await use(storage)
   },
-  wasteBalancesRepository: async ({ wasteBalanceStorage }, use) => {
-    const factory = createInMemoryWasteBalancesRepository(wasteBalanceStorage)
+  // eslint-disable-next-line no-empty-pattern
+  ledgerStorage: async ({}, use) => {
+    const storage = []
+    await use(storage)
+  },
+  ledgerRepository: async ({ ledgerStorage }, use) => {
+    const repository = createInMemoryLedgerRepository(ledgerStorage)()
+    await use(repository)
+  },
+  wasteBalancesRepository: async (
+    { wasteBalanceStorage, ledgerRepository },
+    use
+  ) => {
+    const factory = createInMemoryWasteBalancesRepository(wasteBalanceStorage, {
+      ledgerRepository
+    })
     await use(factory)
   },
   insertWasteBalance: async ({ wasteBalanceStorage }, use) => {

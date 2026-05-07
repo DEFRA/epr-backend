@@ -7,6 +7,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
+import { resolveBalanceAmounts } from './marker-aware-read.js'
 
 /**
  * Find a waste balance by accreditation ID.
@@ -61,26 +62,35 @@ export const saveBalance =
  * Find a waste balance by accreditation ID.
  *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
+ * @param {import('./ledger-port.js').LedgerRepository | undefined} ledgerRepository
  * @returns {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const performFindByAccreditationId =
-  (wasteBalanceStorage) => async (accreditationId) => {
+  (wasteBalanceStorage, ledgerRepository) => async (accreditationId) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
 
     const balance = wasteBalanceStorage.find(
       (b) => b.accreditationId === validatedAccreditationId
     )
 
-    return balance ? structuredClone(balance) : null
+    if (!balance) {
+      return null
+    }
+
+    return resolveBalanceAmounts(structuredClone(balance), ledgerRepository)
   }
 
 const performFindByAccreditationIds =
-  (wasteBalanceStorage) => async (accreditationIds) => {
+  (wasteBalanceStorage, ledgerRepository) => async (accreditationIds) => {
     const balances = wasteBalanceStorage.filter((b) =>
       accreditationIds.includes(b.accreditationId)
     )
 
-    return balances.map((balance) => structuredClone(balance))
+    return Promise.all(
+      balances.map((balance) =>
+        resolveBalanceAmounts(structuredClone(balance), ledgerRepository)
+      )
+    )
   }
 
 const performFlipCanonicalSourceToMigrating =
@@ -157,9 +167,17 @@ export const createInMemoryWasteBalancesRepository = (
 ) => {
   const wasteBalanceStorage = initialWasteBalances
 
+  const { ledgerRepository } = dependencies
+
   return () => ({
-    findByAccreditationId: performFindByAccreditationId(wasteBalanceStorage),
-    findByAccreditationIds: performFindByAccreditationIds(wasteBalanceStorage),
+    findByAccreditationId: performFindByAccreditationId(
+      wasteBalanceStorage,
+      ledgerRepository
+    ),
+    findByAccreditationIds: performFindByAccreditationIds(
+      wasteBalanceStorage,
+      ledgerRepository
+    ),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       { user, accreditation, overseasSites }
