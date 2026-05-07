@@ -33,7 +33,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-123',
         tonnage: 50,
-        userId: 'user-abc'
+        user: { id: 'user-abc', email: 'user-abc@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-1')
@@ -60,7 +60,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-456',
         tonnage: 25.5,
-        userId: 'user-xyz'
+        user: { id: 'user-xyz', email: 'user-xyz@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-2')
@@ -91,7 +91,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-789',
         tonnage: 30,
-        userId: 'user-123'
+        user: { id: 'user-123', email: 'user-123@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-3')
@@ -109,7 +109,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-999',
         tonnage: 10,
-        userId: 'user-456'
+        user: { id: 'user-456', email: 'user-456@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-nonexistent')
@@ -140,7 +140,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-marker',
         tonnage: 1,
-        userId: 'user-1'
+        user: { id: 'user-1', email: 'user-1@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-marker')
@@ -161,7 +161,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-111',
         tonnage: 10,
-        userId: 'user-789'
+        user: { id: 'user-789', email: 'user-789@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-4')

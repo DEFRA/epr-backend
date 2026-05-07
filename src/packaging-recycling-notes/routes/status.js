@@ -105,10 +105,10 @@ export const packagingRecyclingNotesUpdateStatus = {
     } = request
     const { organisationId, accreditationId, id } = params
     const { status: newStatus } = payload
-    const user = {
-      id: auth.credentials?.id ?? 'unknown',
-      name: auth.credentials?.name ?? 'unknown'
-    }
+    const credentials = /** @type {{ id: string, email: string }} */ (
+      auth.credentials
+    )
+    const user = { id: credentials.id, email: credentials.email }
 
     try {
       // Fetch PRN before update to capture previous state for audit

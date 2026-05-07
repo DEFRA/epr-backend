@@ -58,7 +58,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('PRN not found')
   })
@@ -84,7 +84,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('PRN not found')
   })
@@ -110,7 +110,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('PRN not found')
   })
@@ -137,7 +137,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow(StatusConflictError)
   })
@@ -164,7 +164,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow(UnauthorisedTransitionError)
   })
@@ -190,7 +190,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.ACCEPTED,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow(UnauthorisedTransitionError)
   })
@@ -227,7 +227,7 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-      user: { id: 'user-789', name: 'Test User' }
+      user: { id: 'user-789', email: 'test@example.com' }
     })
 
     expect(
@@ -237,7 +237,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       prnId: '507f1f77bcf86cd799439011',
       tonnage: 100,
-      userId: 'user-789'
+      user: { id: 'user-789', email: 'test@example.com' }
     })
   })
 
@@ -265,7 +265,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
   })
@@ -307,7 +307,7 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-      user: { id: 'user-789', name: 'Test User' },
+      user: { id: 'user-789', email: 'test@example.com' },
       updatedAt: explicitTimestamp
     })
 
@@ -353,19 +353,19 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-      user: { id: 'user-789', name: 'Test User' }
+      user: { id: 'user-789', email: 'test@example.com' }
     })
 
     expect(result).toBe(updatedPrn)
     expect(prnRepository.updateStatus).toHaveBeenCalledWith({
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_AUTHORISATION,
-      updatedBy: { id: 'user-789', name: 'Test User' },
+      updatedBy: { id: 'user-789', name: 'test@example.com' },
       updatedAt: expect.any(Date),
       operation: {
         slot: 'created',
         at: expect.any(Date),
-        by: { id: 'user-789', name: 'Test User' }
+        by: { id: 'user-789', name: 'test@example.com' }
       }
     })
   })
@@ -405,19 +405,19 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
+      user: { id: 'user-789', email: 'test@example.com' }
     })
 
     expect(result).toBe(updatedPrn)
     expect(prnRepository.updateStatus).toHaveBeenCalledWith({
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
-      updatedBy: { id: 'user-789', name: 'Test User' },
+      updatedBy: { id: 'user-789', name: 'test@example.com' },
       updatedAt: expect.any(Date),
       operation: {
         slot: 'issued',
         at: expect.any(Date),
-        by: { id: 'user-789', name: 'Test User' }
+        by: { id: 'user-789', name: 'test@example.com' }
       },
       prnNumber: expect.stringMatching(/^ER26\d{5}$/)
     })
@@ -457,7 +457,7 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
+      user: { id: 'user-789', email: 'test@example.com' }
     })
 
     const updateCall = prnRepository.updateStatus.mock.calls[0][0]
@@ -499,7 +499,7 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
+      user: { id: 'user-789', email: 'test@example.com' }
     })
 
     expect(
@@ -509,7 +509,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       prnId: '507f1f77bcf86cd799439011',
       tonnage: 75,
-      userId: 'user-789'
+      user: { id: 'user-789', email: 'test@example.com' }
     })
   })
 
@@ -543,7 +543,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('No waste balance found for accreditation: acc-456')
   })
@@ -586,7 +586,7 @@ describe('updatePrnStatus', () => {
       accreditationId: 'acc-456',
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
-      user: { id: 'user-789', name: 'Test User' }
+      user: { id: 'user-789', email: 'test@example.com' }
     })
 
     expect(result).toBe(updatedPrn)
@@ -595,12 +595,12 @@ describe('updatePrnStatus', () => {
     expect(prnRepository.updateStatus).toHaveBeenLastCalledWith({
       id: '507f1f77bcf86cd799439011',
       status: PRN_STATUS.AWAITING_ACCEPTANCE,
-      updatedBy: { id: 'user-789', name: 'Test User' },
+      updatedBy: { id: 'user-789', name: 'test@example.com' },
       updatedAt: expect.any(Date),
       operation: {
         slot: 'issued',
         at: expect.any(Date),
-        by: { id: 'user-789', name: 'Test User' }
+        by: { id: 'user-789', name: 'test@example.com' }
       },
       prnNumber: expect.stringMatching(/^ER26\d{5}A$/)
     })
@@ -640,7 +640,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('Unable to generate unique PRN number after all retries')
 
@@ -681,7 +681,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow()
 
@@ -725,7 +725,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow(SuspendedAccreditationError)
 
@@ -764,7 +764,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('Database connection failed')
 
@@ -801,7 +801,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('Failed to update PRN status')
   })
@@ -837,7 +837,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     ).rejects.toThrow('Failed to update PRN status')
   })
@@ -873,7 +873,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('Insufficient available waste balance')
 
@@ -918,7 +918,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('Insufficient total waste balance')
 
@@ -960,7 +960,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(
@@ -996,7 +996,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('Insufficient available waste balance')
     })
@@ -1034,7 +1034,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('Insufficient total waste balance')
     })
@@ -1073,7 +1073,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(
@@ -1116,7 +1116,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith({
@@ -1165,7 +1165,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith({
@@ -1192,7 +1192,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('PRN not found')
 
@@ -1220,7 +1220,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow(StatusConflictError)
 
@@ -1256,14 +1256,14 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DISCARDED,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.DISCARDED)
       expect(prnRepository.updateStatus).toHaveBeenCalledWith({
         id: '507f1f77bcf86cd799439011',
         status: PRN_STATUS.DISCARDED,
-        updatedBy: { id: 'user-789', name: 'Test User' },
+        updatedBy: { id: 'user-789', name: 'test@example.com' },
         updatedAt: expect.any(Date)
       })
     })
@@ -1297,7 +1297,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DISCARDED,
         actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(
@@ -1327,7 +1327,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.DISCARDED,
           actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow(StatusConflictError)
     })
@@ -1364,7 +1364,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(
@@ -1374,7 +1374,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         prnId: '507f1f77bcf86cd799439011',
         tonnage: 60,
-        userId: 'user-789'
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     })
 
@@ -1406,7 +1406,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.CANCELLED,
           actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })
@@ -1444,7 +1444,7 @@ describe('updatePrnStatus', () => {
         accreditationId: 'acc-456',
         newStatus: PRN_STATUS.DELETED,
         actor: PRN_ACTOR.SIGNATORY,
-        user: { id: 'user-789', name: 'Test User' }
+        user: { id: 'user-789', email: 'test@example.com' }
       })
 
       expect(
@@ -1454,7 +1454,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         prnId: '507f1f77bcf86cd799439011',
         tonnage: 75,
-        userId: 'user-789'
+        user: { id: 'user-789', email: 'test@example.com' }
       })
     })
 
@@ -1487,7 +1487,7 @@ describe('updatePrnStatus', () => {
           accreditationId: 'acc-456',
           newStatus: PRN_STATUS.DELETED,
           actor: PRN_ACTOR.SIGNATORY,
-          user: { id: 'user-789', name: 'Test User' }
+          user: { id: 'user-789', email: 'test@example.com' }
         })
       ).rejects.toThrow('No waste balance found for accreditation: acc-456')
     })

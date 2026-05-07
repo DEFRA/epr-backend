@@ -503,7 +503,7 @@ describe('Waste balance arithmetic integration tests', () => {
         organisationId: env.organisationId,
         prnId: 'other-prn',
         tonnage: 80,
-        userId: 'test-user'
+        user: { id: 'test-user', email: 'test-user@example.com' }
       })
 
       balance =

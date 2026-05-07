@@ -78,9 +78,10 @@ export function createExternalTransitionHandler({
           ? new Date(payload[timestampField])
           : new Date()
 
-        const user = /** @type {{ id: string; name: string }} */ (
+        const credentials = /** @type {{ id: string, name: string }} */ (
           request.auth.credentials
         )
+        const user = { id: credentials.id, email: credentials.name }
 
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,

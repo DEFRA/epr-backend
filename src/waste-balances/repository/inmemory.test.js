@@ -27,6 +27,16 @@ const extendedIt = base.extend({
     })
     await use(factory)
   },
+  ledgerEnabledWasteBalancesRepository: async (
+    { wasteBalanceStorage, ledgerRepository },
+    use
+  ) => {
+    const factory = createInMemoryWasteBalancesRepository(wasteBalanceStorage, {
+      ledgerRepository,
+      featureFlags: { isWasteBalanceLedgerEnabled: () => true }
+    })
+    await use(factory)
+  },
   insertWasteBalance: async ({ wasteBalanceStorage }, use) => {
     await use(async (wasteBalance) => {
       wasteBalanceStorage.push(wasteBalance)

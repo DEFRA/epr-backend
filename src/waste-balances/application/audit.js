@@ -4,6 +4,15 @@ import {
 } from '#root/auditing/helpers.js'
 
 /**
+ * Identity recorded against a waste-balance update. The audit stream and the
+ * back-office system-logs view only need to attribute the change to a user —
+ * scope and other authentication context are not consumed downstream, so this
+ * helper takes the minimum shape both consumers actually use.
+ *
+ * @typedef {{ id: string, email: string }} AuditUser
+ */
+
+/**
  * Emit the back-office system-log entry and the CDP audit event for a waste
  * balance update. Both write paths — the embedded-array path in
  * `repository/helpers.js` and the ledger-append path in
@@ -20,7 +29,7 @@ import {
  * @param {number} params.amount
  * @param {number} params.availableAmount
  * @param {Array<Object>} params.newTransactions
- * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
+ * @param {AuditUser} params.user
  */
 export const recordWasteBalanceUpdateAudit = async ({
   systemLogsRepository,

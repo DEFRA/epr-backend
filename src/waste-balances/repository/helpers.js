@@ -3,6 +3,7 @@ import { validateAccreditationId } from './validation.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { recordWasteBalanceUpdateAudit } from '../application/audit.js'
 import { performUpdateViaLedger } from '../application/update-via-ledger.js'
+import { appendPrnOperationToLedger } from '../application/append-prn-operation-to-ledger.js'
 import { randomUUID } from 'node:crypto'
 import {
   classifyRow,
@@ -16,6 +17,7 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../domain/model.js'
+import { LEDGER_PRN_OPERATION_TYPE } from './ledger-schema.js'
 import { add, subtract, toNumber } from '#common/helpers/decimal-utils.js'
 
 /**
@@ -248,26 +250,86 @@ export const performUpdateWasteBalanceTransactions = async ({
 }
 
 /**
+ * Returns true if the v2 ledger path should handle this PRN operation. Loads
+ * the balance once, dispatches when the global flag is ON and the
+ * accreditation's `canonicalSource` marker is `'ledger'`, and emits the audit
+ * event after the append. Callers handle the v1 embedded-array path when this
+ * returns false.
+ *
+ * `'embedded'` and `'migrating'` markers always fall through to v1 — PRN
+ * writes during a per-accreditation rebuild deliberately stay on the embedded
+ * array so the rebuild's version-conditional flip can detect them and retry.
+ *
+ * @param {Object} params
+ * @param {Object} [params.dependencies]
+ * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
+ * @param {import('../domain/model.js').WasteBalance} params.wasteBalance
+ * @param {Object} params.prnParams
+ * @param {string} params.prnParams.accreditationId
+ * @param {string} params.prnParams.organisationId
+ * @param {string} params.prnParams.registrationId
+ * @param {string} params.prnParams.prnId
+ * @param {number} params.prnParams.tonnage
+ * @param {{ id: string, email: string }} params.prnParams.user
+ * @param {import('./ledger-schema.js').LedgerPrnOperationType} params.operationType
+ * @returns {Promise<boolean>}
+ */
+const tryDispatchPrnToLedger = async ({
+  dependencies,
+  wasteBalance,
+  prnParams,
+  operationType
+}) => {
+  if (!dependencies?.featureFlags?.isWasteBalanceLedgerEnabled()) {
+    return false
+  }
+  if (wasteBalance.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+    return false
+  }
+
+  if (!dependencies.ledgerRepository) {
+    throw Boom.badImplementation(
+      `wasteBalanceLedger flag is ON for accreditation ${wasteBalance.accreditationId} but no ledgerRepository was provided`
+    )
+  }
+
+  await appendPrnOperationToLedger({
+    ledgerRepository: dependencies.ledgerRepository,
+    systemLogsRepository: dependencies.systemLogsRepository,
+    accreditationId: wasteBalance.accreditationId,
+    organisationId: prnParams.organisationId,
+    registrationId: prnParams.registrationId,
+    prnId: prnParams.prnId,
+    operationType,
+    tonnage: prnParams.tonnage,
+    user: prnParams.user
+  })
+  return true
+}
+
+/**
  * Build a transaction for PRN creation that deducts from availableAmount only.
  * This "ringfences" the tonnage without affecting the total amount.
  *
  * @param {Object} params
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to deduct
- * @param {string} params.userId - User performing the action
+ * @param {{ id: string, email: string }} params.user - User performing the action
  * @param {import('../domain/model.js').WasteBalance} params.currentBalance
  * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildPrnCreationTransaction = ({
   prnId,
   tonnage,
-  userId,
+  user,
   currentBalance
 }) => ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: user.id, name: user.email },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: currentBalance.amount, // Total unchanged
@@ -288,17 +350,35 @@ export const buildPrnCreationTransaction = ({
 /**
  * Deduct available balance for PRN creation (ringfencing tonnage).
  *
+ * Dispatches on the `wasteBalanceLedger` feature flag and the
+ * per-accreditation `canonicalSource` marker per the table in
+ * `performUpdateWasteBalanceTransactions`. Flag-on `'ledger'` accreditations
+ * append a `prn-operation` ledger transaction and bypass the embedded
+ * `transactions[]` array; every other state stays on the embedded path.
+ *
  * @param {Object} params
  * @param {import('./port.js').DeductAvailableBalanceParams} params.deductParams
+ * @param {Object} [params.dependencies]
+ * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
   deductParams,
+  dependencies,
   findBalance,
   saveBalance
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = deductParams
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
@@ -307,10 +387,27 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
     return
   }
 
+  const dispatchedToLedger = await tryDispatchPrnToLedger({
+    dependencies,
+    wasteBalance,
+    prnParams: {
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      registrationId,
+      prnId,
+      tonnage,
+      user
+    },
+    operationType: LEDGER_PRN_OPERATION_TYPE.CREATED
+  })
+  if (dispatchedToLedger) {
+    return
+  }
+
   const transaction = buildPrnCreationTransaction({
     prnId,
     tonnage,
-    userId,
+    user,
     currentBalance: wasteBalance
   })
 
@@ -331,20 +428,20 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
  * @param {Object} params
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to deduct
- * @param {string} params.userId - User performing the action
+ * @param {{ id: string, email: string }} params.user - User performing the action
  * @param {import('../domain/model.js').WasteBalance} params.currentBalance
  * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildPrnIssuedTransaction = ({
   prnId,
   tonnage,
-  userId,
+  user,
   currentBalance
 }) => ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: user.id, name: user.email },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: toNumber(subtract(currentBalance.amount, tonnage)), // Total deducted
@@ -363,17 +460,34 @@ export const buildPrnIssuedTransaction = ({
 /**
  * Deduct total balance for PRN issue (finalising the deduction).
  *
+ * Dispatches on the `wasteBalanceLedger` feature flag and the
+ * per-accreditation `canonicalSource` marker. Flag-on `'ledger'` accreditations
+ * append a `prn-operation` ledger transaction; every other state stays on the
+ * embedded path.
+ *
  * @param {Object} params
  * @param {import('./port.js').DeductTotalBalanceParams} params.deductParams
+ * @param {Object} [params.dependencies]
+ * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performDeductTotalBalanceForPrnIssue = async ({
   deductParams,
+  dependencies,
   findBalance,
   saveBalance
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = deductParams
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
@@ -382,10 +496,27 @@ export const performDeductTotalBalanceForPrnIssue = async ({
     return
   }
 
+  const dispatchedToLedger = await tryDispatchPrnToLedger({
+    dependencies,
+    wasteBalance,
+    prnParams: {
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      registrationId,
+      prnId,
+      tonnage,
+      user
+    },
+    operationType: LEDGER_PRN_OPERATION_TYPE.ISSUED
+  })
+  if (dispatchedToLedger) {
+    return
+  }
+
   const transaction = buildPrnIssuedTransaction({
     prnId,
     tonnage,
-    userId,
+    user,
     currentBalance: wasteBalance
   })
 
@@ -406,20 +537,20 @@ export const performDeductTotalBalanceForPrnIssue = async ({
  * @param {Object} params
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to restore
- * @param {string} params.userId - User performing the action
+ * @param {{ id: string, email: string }} params.user - User performing the action
  * @param {import('../domain/model.js').WasteBalance} params.currentBalance
  * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildPrnCancellationTransaction = ({
   prnId,
   tonnage,
-  userId,
+  user,
   currentBalance
 }) => ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: user.id, name: user.email },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: currentBalance.amount, // Total unchanged
@@ -445,20 +576,20 @@ export const buildPrnCancellationTransaction = ({
  * @param {Object} params
  * @param {string} params.prnId - PRN identifier
  * @param {number} params.tonnage - Tonnage to restore
- * @param {string} params.userId - User performing the action
+ * @param {{ id: string, email: string }} params.user - User performing the action
  * @param {import('../domain/model.js').WasteBalance} params.currentBalance
  * @returns {import('../domain/model.js').WasteBalanceTransaction}
  */
 export const buildIssuedPrnCancellationTransaction = ({
   prnId,
   tonnage,
-  userId,
+  user,
   currentBalance
 }) => ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: user.id, name: user.email },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: toNumber(add(currentBalance.amount, tonnage)),
@@ -480,17 +611,34 @@ export const buildIssuedPrnCancellationTransaction = ({
  * Credit both amount and available balance for issued PRN cancellation.
  * Reverses both the creation ringfence and the issue deduction.
  *
+ * Dispatches on the `wasteBalanceLedger` feature flag and the
+ * per-accreditation `canonicalSource` marker. Flag-on `'ledger'` accreditations
+ * append a `prn-operation` ledger transaction; every other state stays on the
+ * embedded path.
+ *
  * @param {Object} params
- * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
+ * @param {import('./port.js').CreditFullBalanceParams} params.creditParams
+ * @param {Object} [params.dependencies]
+ * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   creditParams,
+  dependencies,
   findBalance,
   saveBalance
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = creditParams
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
@@ -501,10 +649,27 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     )
   }
 
+  const dispatchedToLedger = await tryDispatchPrnToLedger({
+    dependencies,
+    wasteBalance,
+    prnParams: {
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      registrationId,
+      prnId,
+      tonnage,
+      user
+    },
+    operationType: LEDGER_PRN_OPERATION_TYPE.ISSUED_CANCELLED
+  })
+  if (dispatchedToLedger) {
+    return
+  }
+
   const transaction = buildIssuedPrnCancellationTransaction({
     prnId,
     tonnage,
-    userId,
+    user,
     currentBalance: wasteBalance
   })
 
@@ -522,17 +687,34 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
 /**
  * Credit available balance for PRN cancellation (reversing the ringfenced tonnage).
  *
+ * Dispatches on the `wasteBalanceLedger` feature flag and the
+ * per-accreditation `canonicalSource` marker. Flag-on `'ledger'` accreditations
+ * append a `prn-operation` ledger transaction; every other state stays on the
+ * embedded path.
+ *
  * @param {Object} params
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
+ * @param {Object} [params.dependencies]
+ * @param {import('./ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */
 export const performCreditAvailableBalanceForPrnCancellation = async ({
   creditParams,
+  dependencies,
   findBalance,
   saveBalance
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = creditParams
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
@@ -543,10 +725,27 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
     )
   }
 
+  const dispatchedToLedger = await tryDispatchPrnToLedger({
+    dependencies,
+    wasteBalance,
+    prnParams: {
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      registrationId,
+      prnId,
+      tonnage,
+      user
+    },
+    operationType: LEDGER_PRN_OPERATION_TYPE.CANCELLED
+  })
+  if (dispatchedToLedger) {
+    return
+  }
+
   const transaction = buildPrnCancellationTransaction({
     prnId,
     tonnage,
-    userId,
+    user,
     currentBalance: wasteBalance
   })
 

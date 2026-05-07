@@ -1,7 +1,13 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildLedgerTransaction } from '../ledger-test-data.js'
-import { LEDGER_SOURCE_KIND } from '../ledger-schema.js'
+import {
+  buildLedgerTransaction,
+  buildPrnOperationLedgerTransaction
+} from '../ledger-test-data.js'
+import {
+  LEDGER_PRN_OPERATION_TYPE,
+  LEDGER_SOURCE_KIND
+} from '../ledger-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const buildSummaryLogRowTransaction = ({
@@ -287,6 +293,35 @@ export const testFindLatestCreditedAmountsByWasteRecordsBehaviour = (it) => {
 
       expect(lookup({ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 'wr-a' })).toBe(
         250
+      )
+    })
+
+    it('skips prn-operation transactions stored under the same accreditation', async () => {
+      await repository.insertTransactions([
+        buildSummaryLogRowTransaction({
+          number: 1,
+          amount: 100,
+          closingBalance: { amount: 100, availableAmount: 100 },
+          rowId: 'wr-a',
+          creditedAmount: 100
+        }),
+        buildPrnOperationLedgerTransaction({
+          accreditationId: 'acc-1',
+          number: 2,
+          amount: 30,
+          closingBalance: { amount: 100, availableAmount: 70 },
+          prnId: 'prn-1',
+          operationType: LEDGER_PRN_OPERATION_TYPE.CREATED
+        })
+      ])
+
+      const lookup = await repository.findLatestCreditedAmountsByWasteRecords(
+        'acc-1',
+        [{ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 'wr-a' }]
+      )
+
+      expect(lookup({ type: WASTE_RECORD_TYPE.RECEIVED, rowId: 'wr-a' })).toBe(
+        100
       )
     })
 

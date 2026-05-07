@@ -15,12 +15,14 @@ import {
 } from './helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { performUpdateViaLedger } from '../application/update-via-ledger.js'
+import { appendPrnOperationToLedger } from '../application/append-prn-operation-to-ledger.js'
 import { audit } from '@defra/cdp-auditing'
 import {
   WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../domain/model.js'
+import { LEDGER_PRN_OPERATION_TYPE } from './ledger-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -54,6 +56,10 @@ vi.mock('../application/calculator.js', () => ({
 
 vi.mock('../application/update-via-ledger.js', () => ({
   performUpdateViaLedger: vi.fn().mockResolvedValue(undefined)
+}))
+
+vi.mock('../application/append-prn-operation-to-ledger.js', () => ({
+  appendPrnOperationToLedger: vi.fn().mockResolvedValue(undefined)
 }))
 
 describe('src/waste-balances/repository/helpers.js', () => {
@@ -1017,7 +1023,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const transaction = buildPrnCreationTransaction({
         prnId: 'prn-123',
         tonnage: 50.5,
-        userId: 'user-abc',
+        user: { id: 'user-abc', email: 'user-abc@example.com' },
         currentBalance
       })
 
@@ -1034,7 +1040,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       )
       expect(transaction.createdBy).toEqual({
         id: 'user-abc',
-        name: 'user-abc'
+        name: 'user-abc@example.com'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1063,7 +1069,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50.5,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1095,7 +1101,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50.5,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1131,7 +1137,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
-          userId: 'user-xyz'
+          user: { id: 'user-xyz', email: 'user-xyz@example.com' }
         },
         findBalance,
         saveBalance
@@ -1168,7 +1174,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          user: { id: 'user-123', email: 'user-123@example.com' }
         },
         findBalance,
         saveBalance
@@ -1202,7 +1208,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const transaction = buildPrnIssuedTransaction({
         prnId: 'prn-123',
         tonnage: 50,
-        userId: 'user-abc',
+        user: { id: 'user-abc', email: 'user-abc@example.com' },
         currentBalance
       })
 
@@ -1219,7 +1225,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       )
       expect(transaction.createdBy).toEqual({
         id: 'user-abc',
-        name: 'user-abc'
+        name: 'user-abc@example.com'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1248,7 +1254,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1280,7 +1286,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1316,7 +1322,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
-          userId: 'user-xyz'
+          user: { id: 'user-xyz', email: 'user-xyz@example.com' }
         },
         findBalance,
         saveBalance
@@ -1353,7 +1359,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          user: { id: 'user-123', email: 'user-123@example.com' }
         },
         findBalance,
         saveBalance
@@ -1388,7 +1394,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const transaction = buildPrnCancellationTransaction({
         prnId: 'prn-123',
         tonnage: 50,
-        userId: 'user-abc',
+        user: { id: 'user-abc', email: 'user-abc@example.com' },
         currentBalance
       })
 
@@ -1405,7 +1411,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       )
       expect(transaction.createdBy).toEqual({
         id: 'user-abc',
-        name: 'user-abc'
+        name: 'user-abc@example.com'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1434,7 +1440,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1467,7 +1473,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             organisationId: 'org-1',
             prnId: 'prn-123',
             tonnage: 50,
-            userId: 'user-abc'
+            user: { id: 'user-abc', email: 'user-abc@example.com' }
           },
           findBalance,
           saveBalance
@@ -1504,7 +1510,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
-          userId: 'user-xyz'
+          user: { id: 'user-xyz', email: 'user-xyz@example.com' }
         },
         findBalance,
         saveBalance
@@ -1541,7 +1547,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          user: { id: 'user-123', email: 'user-123@example.com' }
         },
         findBalance,
         saveBalance
@@ -1577,7 +1583,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const transaction = buildIssuedPrnCancellationTransaction({
         prnId: 'prn-123',
         tonnage: 60,
-        userId: 'user-abc',
+        user: { id: 'user-abc', email: 'user-abc@example.com' },
         currentBalance
       })
 
@@ -1594,7 +1600,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       )
       expect(transaction.createdBy).toEqual({
         id: 'user-abc',
-        name: 'user-abc'
+        name: 'user-abc@example.com'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1623,7 +1629,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1656,7 +1662,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             organisationId: 'org-1',
             prnId: 'prn-123',
             tonnage: 60,
-            userId: 'user-abc'
+            user: { id: 'user-abc', email: 'user-abc@example.com' }
           },
           findBalance,
           saveBalance
@@ -1688,7 +1694,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
-          userId: 'user-abc'
+          user: { id: 'user-abc', email: 'user-abc@example.com' }
         },
         findBalance,
         saveBalance
@@ -1704,6 +1710,204 @@ describe('src/waste-balances/repository/helpers.js', () => {
           version: 1
         }),
         expect.any(Array)
+      )
+    })
+  })
+
+  describe('PRN write path dispatch', () => {
+    const baseDeductParams = () => ({
+      accreditationId: 'acc-1',
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      prnId: 'prn-1',
+      tonnage: 25,
+      user: { id: 'user-1', email: 'user-1@example.com' }
+    })
+
+    const buildBalance = (canonicalSource) => ({
+      id: 'bal-1',
+      organisationId: 'org-1',
+      accreditationId: 'acc-1',
+      amount: 500,
+      availableAmount: 400,
+      transactions: [],
+      version: 1,
+      schemaVersion: 1,
+      canonicalSource
+    })
+
+    const ledgerRepository = { insertTransactions: vi.fn() }
+    const featureFlagsOn = { isWasteBalanceLedgerEnabled: () => true }
+    const featureFlagsOff = { isWasteBalanceLedgerEnabled: () => false }
+
+    const dispatchTests = (helper, paramsKey, operationType) => {
+      it('routes to the ledger when flag is ON and canonicalSource is ledger', async () => {
+        const findBalance = vi
+          .fn()
+          .mockResolvedValue(
+            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
+          )
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(appendPrnOperationToLedger).mockClear()
+
+        await helper({
+          [paramsKey]: baseDeductParams(),
+          dependencies: {
+            featureFlags: featureFlagsOn,
+            ledgerRepository,
+            systemLogsRepository: { insert: vi.fn() }
+          },
+          findBalance,
+          saveBalance
+        })
+
+        expect(appendPrnOperationToLedger).toHaveBeenCalledTimes(1)
+        const call = vi.mocked(appendPrnOperationToLedger).mock.calls[0][0]
+        expect(call.ledgerRepository).toBe(ledgerRepository)
+        expect(call.accreditationId).toBe('acc-1')
+        expect(call.organisationId).toBe('org-1')
+        expect(call.registrationId).toBe('reg-1')
+        expect(call.prnId).toBe('prn-1')
+        expect(call.tonnage).toBe(25)
+        expect(call.user).toEqual({
+          id: 'user-1',
+          email: 'user-1@example.com'
+        })
+        expect(call.operationType).toBe(operationType)
+        expect(saveBalance).not.toHaveBeenCalled()
+      })
+
+      it('uses the embedded path when flag is ON but canonicalSource is embedded', async () => {
+        const findBalance = vi
+          .fn()
+          .mockResolvedValue(
+            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED)
+          )
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(appendPrnOperationToLedger).mockClear()
+
+        await helper({
+          [paramsKey]: baseDeductParams(),
+          dependencies: { featureFlags: featureFlagsOn, ledgerRepository },
+          findBalance,
+          saveBalance
+        })
+
+        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the embedded path when flag is ON but canonicalSource is migrating', async () => {
+        const findBalance = vi
+          .fn()
+          .mockResolvedValue(
+            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING)
+          )
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(appendPrnOperationToLedger).mockClear()
+
+        await helper({
+          [paramsKey]: baseDeductParams(),
+          dependencies: { featureFlags: featureFlagsOn, ledgerRepository },
+          findBalance,
+          saveBalance
+        })
+
+        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the embedded path when flag is OFF even with ledger marker', async () => {
+        const findBalance = vi
+          .fn()
+          .mockResolvedValue(
+            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
+          )
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(appendPrnOperationToLedger).mockClear()
+
+        await helper({
+          [paramsKey]: baseDeductParams(),
+          dependencies: { featureFlags: featureFlagsOff, ledgerRepository },
+          findBalance,
+          saveBalance
+        })
+
+        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the embedded path when no dependencies are provided (legacy callers)', async () => {
+        const findBalance = vi
+          .fn()
+          .mockResolvedValue(
+            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
+          )
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(appendPrnOperationToLedger).mockClear()
+
+        await helper({
+          [paramsKey]: baseDeductParams(),
+          findBalance,
+          saveBalance
+        })
+
+        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('throws when flag is ON and marker is ledger but no ledgerRepository provided', async () => {
+        const findBalance = vi
+          .fn()
+          .mockResolvedValue(
+            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
+          )
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(appendPrnOperationToLedger).mockClear()
+
+        await expect(
+          helper({
+            [paramsKey]: baseDeductParams(),
+            dependencies: { featureFlags: featureFlagsOn },
+            findBalance,
+            saveBalance
+          })
+        ).rejects.toThrow(/no ledgerRepository was provided/)
+
+        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
+        expect(saveBalance).not.toHaveBeenCalled()
+      })
+    }
+
+    describe('performDeductAvailableBalanceForPrnCreation', () => {
+      dispatchTests(
+        performDeductAvailableBalanceForPrnCreation,
+        'deductParams',
+        LEDGER_PRN_OPERATION_TYPE.CREATED
+      )
+    })
+
+    describe('performDeductTotalBalanceForPrnIssue', () => {
+      dispatchTests(
+        performDeductTotalBalanceForPrnIssue,
+        'deductParams',
+        LEDGER_PRN_OPERATION_TYPE.ISSUED
+      )
+    })
+
+    describe('performCreditAvailableBalanceForPrnCancellation', () => {
+      dispatchTests(
+        performCreditAvailableBalanceForPrnCancellation,
+        'creditParams',
+        LEDGER_PRN_OPERATION_TYPE.CANCELLED
+      )
+    })
+
+    describe('performCreditFullBalanceForIssuedPrnCancellation', () => {
+      dispatchTests(
+        performCreditFullBalanceForIssuedPrnCancellation,
+        'creditParams',
+        LEDGER_PRN_OPERATION_TYPE.ISSUED_CANCELLED
       )
     })
   })

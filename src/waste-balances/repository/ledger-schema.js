@@ -12,16 +12,28 @@ export const LEDGER_TRANSACTION_TYPE = Object.freeze({
  */
 
 export const LEDGER_SOURCE_KIND = Object.freeze({
-  SUMMARY_LOG_ROW: 'summary-log-row'
+  SUMMARY_LOG_ROW: 'summary-log-row',
+  PRN_OPERATION: 'prn-operation'
 })
 
 /**
  * @typedef {typeof LEDGER_SOURCE_KIND[keyof typeof LEDGER_SOURCE_KIND]} LedgerSourceKind
  */
 
+export const LEDGER_PRN_OPERATION_TYPE = Object.freeze({
+  CREATED: 'created',
+  ISSUED: 'issued',
+  CANCELLED: 'cancelled',
+  ISSUED_CANCELLED: 'issued-cancelled'
+})
+
+/**
+ * @typedef {typeof LEDGER_PRN_OPERATION_TYPE[keyof typeof LEDGER_PRN_OPERATION_TYPE]} LedgerPrnOperationType
+ */
+
 const typeValues = Object.values(LEDGER_TRANSACTION_TYPE)
-const sourceKindValues = Object.values(LEDGER_SOURCE_KIND)
 const rowTypeValues = Object.values(WASTE_RECORD_TYPE)
+const prnOperationTypeValues = Object.values(LEDGER_PRN_OPERATION_TYPE)
 
 const userSummarySchema = Joi.object({
   id: Joi.string().required(),
@@ -42,12 +54,32 @@ const summaryLogRowSourceSchema = Joi.object({
   wasteRecord: wasteRecordSchema.required()
 })
 
+const prnOperationSourceSchema = Joi.object({
+  prnId: Joi.string().required(),
+  operationType: Joi.string()
+    .valid(...prnOperationTypeValues)
+    .required()
+})
+
 const sourceSchema = Joi.object({
   kind: Joi.string()
-    .valid(...sourceKindValues)
+    .valid(...Object.values(LEDGER_SOURCE_KIND))
     .required(),
-  summaryLogRow: summaryLogRowSourceSchema.required()
+  summaryLogRow: summaryLogRowSourceSchema,
+  prnOperation: prnOperationSourceSchema
 })
+  .when(Joi.object({ kind: LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW }).unknown(), {
+    then: Joi.object({
+      summaryLogRow: summaryLogRowSourceSchema.required(),
+      prnOperation: Joi.forbidden()
+    })
+  })
+  .when(Joi.object({ kind: LEDGER_SOURCE_KIND.PRN_OPERATION }).unknown(), {
+    then: Joi.object({
+      prnOperation: prnOperationSourceSchema.required(),
+      summaryLogRow: Joi.forbidden()
+    })
+  })
 
 /**
  * @typedef {Object} LedgerWasteRecord
@@ -68,9 +100,28 @@ const sourceSchema = Joi.object({
  */
 
 /**
+ * @typedef {Object} LedgerPrnOperation
+ * @property {string} prnId
+ * @property {LedgerPrnOperationType} operationType
+ *   The PRN lifecycle event that produced this transaction:
+ *   - `created` — ringfences `tonnage` against availableAmount on PRN draft
+ *   - `issued` — realises the ringfence by deducting `tonnage` from the total
+ *     amount (availableAmount unchanged because it was already debited at
+ *     creation)
+ *   - `cancelled` — releases the ringfence on PRN cancellation from the
+ *     awaiting-authorisation state
+ *   - `issued-cancelled` — full reversal when an issued PRN is cancelled
+ *     (restores both amount and availableAmount)
+ */
+
+/**
  * Discriminated union — `kind` selects which variant carries the payload.
+ * Exactly one of `summaryLogRow` / `prnOperation` is populated per transaction.
  *
- * @typedef {{ kind: (typeof LEDGER_SOURCE_KIND)['SUMMARY_LOG_ROW'], summaryLogRow: LedgerSummaryLogRow }} LedgerSource
+ * @typedef {(
+ *   { kind: (typeof LEDGER_SOURCE_KIND)['SUMMARY_LOG_ROW'], summaryLogRow: LedgerSummaryLogRow }
+ *   | { kind: (typeof LEDGER_SOURCE_KIND)['PRN_OPERATION'], prnOperation: LedgerPrnOperation }
+ * )} LedgerSource
  */
 
 /**

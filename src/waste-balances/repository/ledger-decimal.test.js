@@ -5,7 +5,14 @@ import {
   ledgerDocumentFromMongo,
   ledgerInsertToMongo
 } from './ledger-decimal.js'
-import { buildLedgerTransaction } from './ledger-test-data.js'
+import {
+  buildLedgerTransaction,
+  buildPrnOperationLedgerTransaction
+} from './ledger-test-data.js'
+import {
+  LEDGER_PRN_OPERATION_TYPE,
+  LEDGER_SOURCE_KIND
+} from './ledger-schema.js'
 
 describe('ledgerInsertToMongo', () => {
   it('converts the top-level amount to BSON Decimal128', () => {
@@ -139,5 +146,27 @@ describe('ledgerDocumentFromMongo', () => {
     )
     expect(decoded.amount).toBe(-42.5)
     expect(decoded.closingBalance.amount).toBe(-42.5)
+  })
+
+  it('passes prn-operation source through unchanged — no nested amount fields', () => {
+    const original = buildPrnOperationLedgerTransaction({
+      source: {
+        kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
+        prnOperation: {
+          prnId: 'prn-9',
+          operationType: LEDGER_PRN_OPERATION_TYPE.ISSUED_CANCELLED
+        }
+      }
+    })
+    const persistable = ledgerInsertToMongo(original)
+    expect(persistable.source).toEqual({
+      kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
+      prnOperation: {
+        prnId: 'prn-9',
+        operationType: LEDGER_PRN_OPERATION_TYPE.ISSUED_CANCELLED
+      }
+    })
+    const decoded = ledgerDocumentFromMongo(persistable)
+    expect(decoded.source).toEqual(original.source)
   })
 })

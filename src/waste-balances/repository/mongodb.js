@@ -249,6 +249,7 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
     deductAvailableBalanceForPrnCreation: async (deductParams) => {
       return performDeductAvailableBalanceForPrnCreation({
         deductParams,
+        dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
@@ -256,6 +257,7 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
     deductTotalBalanceForPrnIssue: async (deductParams) => {
       return performDeductTotalBalanceForPrnIssue({
         deductParams,
+        dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
@@ -263,6 +265,7 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
     creditAvailableBalanceForPrnCancellation: async (creditParams) => {
       return performCreditAvailableBalanceForPrnCancellation({
         creditParams,
+        dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
@@ -270,6 +273,7 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
     creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
       return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
+        dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })

@@ -168,7 +168,7 @@ export const testFlipCanonicalSourceToMigratingBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-during-rebuild',
         tonnage: 5,
-        userId: 'user-1'
+        user: { id: 'user-1', email: 'user-1@example.com' }
       })
 
       const result = await repository.flipCanonicalSourceToMigrating({

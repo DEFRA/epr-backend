@@ -2,36 +2,52 @@
  * @typedef {Object} DeductAvailableBalanceParams
  * @property {string} accreditationId
  * @property {string} organisationId
+ * @property {string} registrationId
+ *   Denormalised onto every ledger transaction so registration-level balance
+ *   queries resolve in a single indexed lookup. Immutable for the lifetime of
+ *   an accreditation.
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {{ id: string, email: string }} user
  */
 
 /**
  * @typedef {Object} DeductTotalBalanceParams
  * @property {string} accreditationId
  * @property {string} organisationId
+ * @property {string} registrationId
+ *   Denormalised onto every ledger transaction so registration-level balance
+ *   queries resolve in a single indexed lookup. Immutable for the lifetime of
+ *   an accreditation.
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {{ id: string, email: string }} user
  */
 
 /**
  * @typedef {Object} CreditAvailableBalanceParams
  * @property {string} accreditationId
  * @property {string} organisationId
+ * @property {string} registrationId
+ *   Denormalised onto every ledger transaction so registration-level balance
+ *   queries resolve in a single indexed lookup. Immutable for the lifetime of
+ *   an accreditation.
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {{ id: string, email: string }} user
  */
 
 /**
  * @typedef {Object} CreditFullBalanceParams
  * @property {string} accreditationId
  * @property {string} organisationId
+ * @property {string} registrationId
+ *   Denormalised onto every ledger transaction so registration-level balance
+ *   queries resolve in a single indexed lookup. Immutable for the lifetime of
+ *   an accreditation.
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {{ id: string, email: string }} user
  */
 
 /**

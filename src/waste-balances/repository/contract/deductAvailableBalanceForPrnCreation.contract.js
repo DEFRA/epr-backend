@@ -27,7 +27,7 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-123',
         tonnage: 50,
-        userId: 'user-abc'
+        user: { id: 'user-abc', email: 'user-abc@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-prn-1')
@@ -54,7 +54,7 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-456',
         tonnage: 25.5,
-        userId: 'user-xyz'
+        user: { id: 'user-xyz', email: 'user-xyz@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-prn-2')
@@ -73,7 +73,7 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-789',
         tonnage: 10,
-        userId: 'user-123'
+        user: { id: 'user-123', email: 'user-123@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-nonexistent')
@@ -94,7 +94,7 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-999',
         tonnage: 10,
-        userId: 'user-456'
+        user: { id: 'user-456', email: 'user-456@example.com' }
       })
 
       const result = await repository.findByAccreditationId('acc-prn-3')

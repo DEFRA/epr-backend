@@ -68,7 +68,14 @@ async function issuePrnWithRetry(repository, updateParams, prnParams) {
  * @param {Object} params
  */
 async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -80,9 +87,10 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
       accreditationId,
       organisationId,
+      registrationId,
       prnId,
       tonnage,
-      userId
+      user
     })
   } else {
     throw Boom.badRequest(
@@ -98,7 +106,14 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -110,9 +125,10 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
       accreditationId,
       organisationId,
+      registrationId,
       prnId,
       tonnage,
-      userId
+      user
     })
   } else {
     throw Boom.badRequest(
@@ -129,7 +145,14 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -137,9 +160,10 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
       accreditationId,
       organisationId,
+      registrationId,
       prnId,
       tonnage,
-      userId
+      user
     })
   } else {
     throw Boom.badRequest(
@@ -156,7 +180,14 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    organisationId,
+    registrationId,
+    prnId,
+    tonnage,
+    user
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -164,9 +195,10 @@ async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
       accreditationId,
       organisationId,
+      registrationId,
       prnId,
       tonnage,
-      userId
+      user
     })
   } else {
     throw Boom.badRequest(
@@ -225,14 +257,14 @@ async function applyStatusUpdate({
   newStatus,
   organisationId,
   accreditationId,
-  user,
+  actorRecord,
   now
 }) {
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     updateParams.operation = {
       slot: 'issued',
       at: now,
-      by: { id: user.id, name: user.name }
+      by: actorRecord
     }
 
     const accreditation = await organisationsRepository.findAccreditationById(
@@ -251,7 +283,7 @@ async function applyStatusUpdate({
 
   const operationSlot = STATUS_OPERATION_SLOT[newStatus]
   if (operationSlot) {
-    updateParams.operation = { slot: operationSlot, at: now, by: user }
+    updateParams.operation = { slot: operationSlot, at: now, by: actorRecord }
   }
 
   const updatedPrn = await prnRepository.updateStatus(updateParams)
@@ -273,7 +305,7 @@ async function applyStatusUpdate({
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
- * @param {{ id: string; name: string }} params.user
+ * @param {{ id: string, email: string }} params.user
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
  * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
@@ -309,9 +341,10 @@ export async function updatePrnStatus({
     newStatus,
     accreditationId,
     organisationId,
+    registrationId: prn.registrationId,
     prnId: id,
     tonnage: prn.tonnage,
-    userId: user.id
+    user
   }
 
   const isCreation = newStatus === PRN_STATUS.AWAITING_AUTHORISATION
@@ -328,12 +361,13 @@ export async function updatePrnStatus({
     )
   }
 
+  const actorRecord = { id: user.id, name: user.email }
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
     version: prn.version,
     status: newStatus,
-    updatedBy: user,
+    updatedBy: actorRecord,
     updatedAt: now
   }
 
@@ -345,7 +379,7 @@ export async function updatePrnStatus({
     newStatus,
     organisationId,
     accreditationId,
-    user,
+    actorRecord,
     now
   })
 

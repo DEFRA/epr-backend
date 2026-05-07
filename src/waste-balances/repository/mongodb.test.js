@@ -35,6 +35,18 @@ const it = mongoIt.extend({
     await use(factory)
   },
 
+  ledgerEnabledWasteBalancesRepository: async (
+    { mongoClient, ledgerRepository },
+    use
+  ) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const factory = await createWasteBalancesRepository(database, {
+      ledgerRepository,
+      featureFlags: { isWasteBalanceLedgerEnabled: () => true }
+    })
+    await use(factory)
+  },
+
   insertWasteBalance: async ({ mongoClient }, use) => {
     await use(async (wasteBalance) => {
       await mongoClient

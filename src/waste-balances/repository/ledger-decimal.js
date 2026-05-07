@@ -1,6 +1,7 @@
 import { Decimal128 } from 'mongodb'
 
 import { toDecimalString, toNumber } from '#common/helpers/decimal-utils.js'
+import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 
 /**
  * Storage encoding for ledger amount fields.
@@ -46,31 +47,43 @@ const snapshotFromMongo = (snapshot) => ({
 /**
  * @param {import('./ledger-schema.js').LedgerSource} source
  */
-const sourceToMongo = (source) => ({
-  ...source,
-  summaryLogRow: {
-    ...source.summaryLogRow,
-    wasteRecord: {
-      ...source.summaryLogRow.wasteRecord,
-      creditedAmount: toDecimal128(
-        source.summaryLogRow.wasteRecord.creditedAmount
-      )
+const sourceToMongo = (source) => {
+  if (source.kind === LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
+    return {
+      ...source,
+      summaryLogRow: {
+        ...source.summaryLogRow,
+        wasteRecord: {
+          ...source.summaryLogRow.wasteRecord,
+          creditedAmount: toDecimal128(
+            source.summaryLogRow.wasteRecord.creditedAmount
+          )
+        }
+      }
     }
   }
-})
 
-const sourceFromMongo = (source) => ({
-  ...source,
-  summaryLogRow: {
-    ...source.summaryLogRow,
-    wasteRecord: {
-      ...source.summaryLogRow.wasteRecord,
-      creditedAmount: toNumber(
-        /** @type {*} */ (source.summaryLogRow.wasteRecord.creditedAmount)
-      )
+  return source
+}
+
+const sourceFromMongo = (source) => {
+  if (source.kind === LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
+    return {
+      ...source,
+      summaryLogRow: {
+        ...source.summaryLogRow,
+        wasteRecord: {
+          ...source.summaryLogRow.wasteRecord,
+          creditedAmount: toNumber(
+            /** @type {*} */ (source.summaryLogRow.wasteRecord.creditedAmount)
+          )
+        }
+      }
     }
   }
-})
+
+  return source
+}
 
 /**
  * Convert the amount fields of a ledger transaction insert document to BSON

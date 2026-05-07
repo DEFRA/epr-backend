@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { LedgerSlotConflictError } from './ledger-port.js'
+import { LEDGER_SOURCE_KIND } from './ledger-schema.js'
 import { validateLedgerTransactionInsert } from './ledger-validation.js'
 
 /**
@@ -111,6 +112,10 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
 
       for (const transaction of storage) {
         if (transaction.accreditationId !== accreditationId) {
+          continue
+        }
+
+        if (transaction.source.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
           continue
         }
 

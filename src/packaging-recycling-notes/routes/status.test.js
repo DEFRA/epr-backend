@@ -500,7 +500,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('sets updatedBy to the authenticated user', async () => {
         const userId = 'specific-test-user-id'
-        const userName = 'Test User Name'
+        const userEmail = 'specific-test-user@example.com'
 
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
@@ -514,8 +514,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             credentials: {
               scope: ['standard_user'],
               id: userId,
-              name: userName,
-              email: 'test@example.com',
+              email: userEmail,
               linkedOrgId: organisationId
             }
           },
@@ -526,34 +525,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           packagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            updatedBy: { id: userId, name: userName }
-          })
-        )
-      })
-
-      it('falls back to unknown when credentials have no id or name', async () => {
-        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
-          createMockPrn()
-        )
-
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-          auth: {
-            strategy: 'access-token',
-            credentials: {
-              scope: ['standard_user'],
-              linkedOrgId: organisationId
-            }
-          },
-          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-        })
-
-        expect(
-          packagingRecyclingNotesRepository.updateStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            updatedBy: { id: 'unknown', name: 'unknown' }
+            updatedBy: { id: userId, name: userEmail }
           })
         )
       })
@@ -939,9 +911,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       ).toHaveBeenCalledWith({
         accreditationId,
         organisationId,
+        registrationId,
         prnId,
         tonnage: 50.5,
-        userId: expect.any(String)
+        user: { id: expect.any(String), email: expect.any(String) }
       })
     })
 

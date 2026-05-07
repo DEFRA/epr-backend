@@ -1,4 +1,8 @@
-import { LEDGER_TRANSACTION_TYPE, LEDGER_SOURCE_KIND } from './ledger-schema.js'
+import {
+  LEDGER_PRN_OPERATION_TYPE,
+  LEDGER_SOURCE_KIND,
+  LEDGER_TRANSACTION_TYPE
+} from './ledger-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
@@ -36,3 +40,24 @@ export const buildLedgerTransaction = (overrides = {}) => ({
   },
   ...overrides
 })
+
+/**
+ * Build a valid prn-operation ledger transaction (insert shape — no `id`).
+ * @param {object} [overrides]
+ */
+export const buildPrnOperationLedgerTransaction = ({
+  prnId = 'prn-1',
+  operationType = LEDGER_PRN_OPERATION_TYPE.CREATED,
+  ...overrides
+} = {}) =>
+  buildLedgerTransaction({
+    type: LEDGER_TRANSACTION_TYPE.DEBIT,
+    amount: 5,
+    openingBalance: { amount: 100, availableAmount: 100 },
+    closingBalance: { amount: 100, availableAmount: 95 },
+    source: {
+      kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
+      prnOperation: { prnId, operationType }
+    },
+    ...overrides
+  })

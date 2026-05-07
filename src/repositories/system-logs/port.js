@@ -4,7 +4,6 @@
  *   createdBy: {
  *     id: string
  *     email: string
- *     scope: string[]
  *   }
  *   event: {
  *     category: string
