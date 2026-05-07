@@ -89,6 +89,14 @@ export const createInMemoryLedgerRepository = (initialTransactions = []) => {
 
       return structuredClone(latest)
     },
+    /** @param {string} accreditationId */
+    deleteAllForAccreditationId: async (accreditationId) => {
+      for (let index = storage.length - 1; index >= 0; index -= 1) {
+        if (storage[index].accreditationId === accreditationId) {
+          storage.splice(index, 1)
+        }
+      }
+    },
     /**
      * @param {string} accreditationId
      * @param {Array<{ type: string, rowId: string }>} wasteRecords

@@ -1,4 +1,5 @@
 import { validateAccreditationId } from './validation.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
@@ -21,6 +22,14 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
 /**
  * Save a waste balance.
  *
+ * On update, both `canonicalSource` and `migratingSince` are taken from the
+ * existing document, ignoring whatever the caller supplies. The marker
+ * lifecycle is mutated solely by `flipCanonicalSourceToMigrating`,
+ * `flipCanonicalSourceToLedger`, and `resetCanonicalSourceToEmbedded`; every
+ * other write path is marker-blind. Inserts take the caller's
+ * `canonicalSource` verbatim so the initial marker (`'embedded'` for fresh
+ * balances) lands on the new doc.
+ *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
  * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
@@ -32,9 +41,20 @@ export const saveBalance =
 
     if (existingIndex === -1) {
       wasteBalanceStorage.push(updatedBalance)
-    } else {
-      wasteBalanceStorage[existingIndex] = updatedBalance
+      return
     }
+
+    const existing = wasteBalanceStorage[existingIndex]
+    const preserved = {
+      ...updatedBalance,
+      canonicalSource: existing.canonicalSource
+    }
+    if (existing.migratingSince === undefined) {
+      delete preserved.migratingSince
+    } else {
+      preserved.migratingSince = existing.migratingSince
+    }
+    wasteBalanceStorage[existingIndex] = preserved
   }
 
 /**
@@ -61,6 +81,63 @@ const performFindByAccreditationIds =
     )
 
     return balances.map((balance) => structuredClone(balance))
+  }
+
+const performFlipCanonicalSourceToMigrating =
+  (wasteBalanceStorage) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (!current) {
+      return null
+    }
+    if (
+      current.version === capturedVersion &&
+      current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    ) {
+      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      current.migratingSince = new Date().toISOString()
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performFlipCanonicalSourceToLedger =
+  (wasteBalanceStorage) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (!current) {
+      return null
+    }
+    if (
+      current.version === capturedVersion &&
+      current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+    ) {
+      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      delete current.migratingSince
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performResetCanonicalSourceToEmbedded =
+  (wasteBalanceStorage) =>
+  async ({ accreditationId }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (!current) {
+      return null
+    }
+    if (current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING) {
+      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      delete current.migratingSince
+    }
+    return { canonicalSource: current.canonicalSource }
   }
 
 /**
@@ -125,6 +202,12 @@ export const createInMemoryWasteBalancesRepository = (
         saveBalance: saveBalance(wasteBalanceStorage)
       })
     },
+    flipCanonicalSourceToMigrating:
+      performFlipCanonicalSourceToMigrating(wasteBalanceStorage),
+    flipCanonicalSourceToLedger:
+      performFlipCanonicalSourceToLedger(wasteBalanceStorage),
+    resetCanonicalSourceToEmbedded:
+      performResetCanonicalSourceToEmbedded(wasteBalanceStorage),
     // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage
   })

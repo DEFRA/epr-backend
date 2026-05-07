@@ -12,6 +12,7 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../domain/model.js'
@@ -52,7 +53,8 @@ export const createNewWasteBalance = (accreditationId, organisationId) => ({
   availableAmount: 0,
   transactions: [],
   version: 0,
-  schemaVersion: 1
+  schemaVersion: 1,
+  canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
 })
 
 /**
@@ -146,9 +148,26 @@ const calculateAndApplyUpdates = async (
 /**
  * Shared logic for updating waste balance transactions.
  *
- * Dispatches on the `wasteBalanceLedger` feature flag: ON routes through the
- * ledger-append path (ADR 0031), OFF stays on the embedded `transactions[]`
- * array. Both paths preserve audit emission.
+ * Dispatches on the `wasteBalanceLedger` feature flag and the
+ * per-accreditation `canonicalSource` marker:
+ * - flag OFF — embedded `transactions[]` array
+ * - flag ON, marker `'ledger'` — ledger-append path (ADR 0031)
+ * - flag ON, marker `'embedded'`, `'migrating'`, or no balance yet — embedded
+ *   `transactions[]` array
+ *
+ * `'migrating'` deliberately routes to the embedded path: a per-accreditation
+ * rebuild that flipped the marker via `flipCanonicalSourceToMigrating` keeps
+ * the embedded write path live for PRN operations during the replay window —
+ * the version-conditional `flipCanonicalSourceToLedger` catches concurrent
+ * writes and forces a retry. Summary-log submissions are kept off this path
+ * during the migrating window by `transitionToSubmittingExclusive`'s 409
+ * exclusion, so the only writes that legitimately reach this dispatch under
+ * `'migrating'` are PRN operations.
+ *
+ * The marker drives per-accreditation rollout: a freshly enabled environment
+ * keeps every accreditation on the embedded array until a rebuild replays
+ * authoritative history into the ledger and flips the marker. Both paths
+ * preserve audit emission.
  *
  * @param {Object} params
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
@@ -180,20 +199,25 @@ export const performUpdateWasteBalanceTransactions = async ({
   const validatedAccreditationId = validateAccreditationId(accreditation.id)
 
   if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
-    await performUpdateViaLedger({
-      wasteRecords: annotatedRecords,
-      accreditation: { ...accreditation, id: validatedAccreditationId },
-      ledgerRepository:
-        /** @type {import('./ledger-port.js').LedgerRepository} */ (
-          dependencies.ledgerRepository
-        ),
-      dependencies: {
-        systemLogsRepository: dependencies.systemLogsRepository
-      },
-      user,
-      overseasSites
-    })
-    return
+    const existingBalance = await findBalance(validatedAccreditationId)
+    if (
+      existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+    ) {
+      await performUpdateViaLedger({
+        wasteRecords: annotatedRecords,
+        accreditation: { ...accreditation, id: validatedAccreditationId },
+        ledgerRepository:
+          /** @type {import('./ledger-port.js').LedgerRepository} */ (
+            dependencies.ledgerRepository
+          ),
+        dependencies: {
+          systemLogsRepository: dependencies.systemLogsRepository
+        },
+        user,
+        overseasSites
+      })
+      return
+    }
   }
 
   const result = await calculateAndApplyUpdates(

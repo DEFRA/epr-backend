@@ -1,4 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
 
 export const testFindByAccreditationIdsBehaviour = (it) => {
@@ -126,6 +127,34 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       const result = await repository.findByAccreditationIds([])
 
       expect(result).toEqual([])
+    })
+
+    it('preserves canonicalSource per balance across the batch', async ({
+      insertWasteBalances
+    }) => {
+      const onEmbedded = buildWasteBalance({
+        accreditationId: 'acc-mixed-embedded',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
+      const onLedger = buildWasteBalance({
+        accreditationId: 'acc-mixed-ledger',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
+
+      await insertWasteBalances([onEmbedded, onLedger])
+
+      const result = await repository.findByAccreditationIds([
+        'acc-mixed-embedded',
+        'acc-mixed-ledger'
+      ])
+
+      const byId = Object.fromEntries(result.map((b) => [b.accreditationId, b]))
+      expect(byId['acc-mixed-embedded'].canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
+      expect(byId['acc-mixed-ledger'].canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      )
     })
 
     it('returns waste balance with all fields intact', async ({

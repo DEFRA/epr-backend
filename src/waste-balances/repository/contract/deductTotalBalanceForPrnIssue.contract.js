@@ -1,6 +1,9 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '../../domain/model.js'
+import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+} from '../../domain/model.js'
 
 export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
   describe('deductTotalBalanceForPrnIssue', () => {
@@ -110,6 +113,29 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
 
       const result = await repository.findByAccreditationId('acc-nonexistent')
       expect(result).toBeNull()
+    })
+
+    it('preserves canonicalSource on update — only the flip method may mutate it', async ({
+      insertWasteBalance
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-issue-marker',
+        organisationId: 'org-1',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      await repository.deductTotalBalanceForPrnIssue({
+        accreditationId: 'acc-issue-marker',
+        organisationId: 'org-1',
+        prnId: 'prn-marker',
+        tonnage: 1,
+        userId: 'user-1'
+      })
+
+      const result = await repository.findByAccreditationId('acc-issue-marker')
+      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
     })
 
     it('increments version number', async ({ insertWasteBalance }) => {

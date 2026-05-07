@@ -1,4 +1,5 @@
 import { describe, expect, vi } from 'vitest'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance, buildWasteRecord } from './test-data.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -200,6 +201,78 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const balance = await repository.findByAccreditationId(accreditation.id)
       expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(10.5)
+    })
+
+    it('marks newly created balance as canonicalSource embedded', async ({
+      wasteBalancesRepository
+    }) => {
+      const repository = await wasteBalancesRepository()
+      const user = {
+        id: 'user-1',
+        email: 'user-1@example.test',
+        scope: ['standard_user']
+      }
+
+      const record = buildWasteRecord({
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
+        }
+      })
+
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
+
+      const balance = await repository.findByAccreditationId(accreditation.id)
+      expect(balance.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
+    })
+
+    it('preserves existing canonicalSource embedded across updates', async ({
+      wasteBalancesRepository,
+      insertWasteBalance
+    }) => {
+      const repository = await wasteBalancesRepository()
+      const user = {
+        id: 'user-1',
+        email: 'user-1@example.test',
+        scope: ['standard_user']
+      }
+
+      const existingBalance = buildWasteBalance({
+        accreditationId: accreditation.id,
+        organisationId: 'org-1',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
+      await insertWasteBalance(existingBalance)
+
+      const record = buildWasteRecord({
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
+        }
+      })
+
+      await repository.updateWasteBalanceTransactions([record], {
+        user,
+        accreditation,
+        overseasSites: ORS_VALIDATION_DISABLED
+      })
+
+      const balance = await repository.findByAccreditationId(accreditation.id)
+      expect(balance.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
     })
 
     it('Should ignore records with outcome other than INCLUDED', async ({

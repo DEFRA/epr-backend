@@ -189,6 +189,15 @@ const performFindLatestCreditedAmountsByWasteRecords =
   }
 
 /**
+ * @param {Collection} collection
+ * @returns {(accreditationId: string) => Promise<void>}
+ */
+const performDeleteAllForAccreditationId =
+  (collection) => async (accreditationId) => {
+    await collection.deleteMany({ accreditationId })
+  }
+
+/**
  * Creates a MongoDB-backed ledger repository.
  *
  * @param {Db} db
@@ -201,6 +210,7 @@ export const createMongoLedgerRepository = async (db) => {
     insertTransactions: performInsertTransactions(collection),
     findLatestByAccreditationId: performFindLatestByAccreditationId(collection),
     findLatestCreditedAmountsByWasteRecords:
-      performFindLatestCreditedAmountsByWasteRecords(collection)
+      performFindLatestCreditedAmountsByWasteRecords(collection),
+    deleteAllForAccreditationId: performDeleteAllForAccreditationId(collection)
   })
 }

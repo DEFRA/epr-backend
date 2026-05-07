@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
 
 import {
@@ -5,6 +6,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { LEDGER_SOURCE_KIND } from '#waste-balances/repository/ledger-schema.js'
 
 import {
@@ -98,14 +100,30 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     await submitAndPoll(env, summaryLogId)
   }
 
-  const setupV2 = () =>
-    setupWasteBalanceIntegrationEnvironment({
+  const seedLedgerBalance = (organisationId) => ({
+    id: 'seeded-balance',
+    accreditationId: 'ACC-123',
+    organisationId,
+    schemaVersion: 1,
+    version: 0,
+    amount: 0,
+    availableAmount: 0,
+    transactions: [],
+    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+  })
+
+  const setupLedger = () => {
+    const organisationId = new ObjectId().toString()
+    return setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
-      featureFlagOverrides: { wasteBalanceLedger: true }
+      organisationId,
+      featureFlagOverrides: { wasteBalanceLedger: true },
+      existingWasteBalances: [seedLedgerBalance(organisationId)]
     })
+  }
 
   it('appends one ledger transaction per included row on first upload', async () => {
-    const env = await setupV2()
+    const env = await setupLedger()
     const { ledgerRepository, accreditationId, wasteBalancesRepository } = env
 
     await performSubmission(
@@ -144,13 +162,13 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     expect(lookupCredited({ type: 'exported', rowId: '1001' })).toBe(100)
     expect(lookupCredited({ type: 'exported', rowId: '1002' })).toBe(200)
 
-    const v1Balance =
+    const embeddedBalance =
       await wasteBalancesRepository.findByAccreditationId(accreditationId)
-    expect(v1Balance?.transactions ?? []).toHaveLength(0)
+    expect(embeddedBalance?.transactions ?? []).toHaveLength(0)
   })
 
   it('appends nothing on a re-upload of identical data (idempotency invariant)', async () => {
-    const env = await setupV2()
+    const env = await setupLedger()
     const { ledgerRepository, accreditationId } = env
     const data = createUploadData([{ rowId: 2001, exportTonnage: 50 }])
 
@@ -167,7 +185,7 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
   })
 
   it('emits a single delta when one row is corrected on re-upload', async () => {
-    const env = await setupV2()
+    const env = await setupLedger()
     const { ledgerRepository, accreditationId } = env
 
     await performSubmission(
@@ -220,7 +238,7 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
   })
 
   it('audits each successful ledger append into the system-logs repository', async () => {
-    const env = await setupV2()
+    const env = await setupLedger()
     const { systemLogsForBalanceAudit } = env
 
     systemLogsForBalanceAudit.insert.mockClear()

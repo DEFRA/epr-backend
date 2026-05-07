@@ -489,7 +489,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   material = 'paper',
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
-  featureFlagOverrides = {}
+  featureFlagOverrides = {},
+  existingWasteBalances = []
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -530,7 +531,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   }
 
   const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    [],
+    existingWasteBalances,
     {
       ledgerRepository,
       featureFlags,
