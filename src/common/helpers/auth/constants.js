@@ -7,3 +7,12 @@ export const ROLES = {
   inquirer: 'inquirer',
   linker: 'linker'
 }
+
+/**
+ * @typedef {typeof SCOPES[keyof typeof SCOPES]} Scopes
+ */
+export const SCOPES = {
+  adminRead: 'admin.read',
+  adminWrite: 'admin.write',
+  adminDlqPurge: 'admin.dlq.purge'
+}
