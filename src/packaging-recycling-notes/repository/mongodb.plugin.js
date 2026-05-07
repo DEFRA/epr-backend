@@ -22,10 +22,8 @@ export const packagingRecyclingNotesRepositoryPlugin = {
       excludeOrganisationIds
     )
 
-    registerRepository(
-      server,
-      'packagingRecyclingNotesRepository',
-      createRepository
+    registerRepository(server, 'packagingRecyclingNotesRepository', (request) =>
+      createRepository(request.logger)
     )
   }
 }

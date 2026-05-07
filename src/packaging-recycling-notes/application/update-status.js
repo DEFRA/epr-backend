@@ -209,6 +209,59 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
 }
 
 /**
+ * Performs the repository write for a status transition.
+ * Issuance (AWAITING_ACCEPTANCE) verifies the accreditation and
+ * generates a unique PRN number; all other transitions just stamp
+ * an operation slot and update.
+ *
+ * @param {Object} params
+ * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
+ */
+async function applyStatusUpdate({
+  prnRepository,
+  organisationsRepository,
+  prn,
+  updateParams,
+  newStatus,
+  organisationId,
+  accreditationId,
+  user,
+  now
+}) {
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    updateParams.operation = {
+      slot: 'issued',
+      at: now,
+      by: { id: user.id, name: user.name }
+    }
+
+    const accreditation = await organisationsRepository.findAccreditationById(
+      organisationId,
+      accreditationId
+    )
+
+    assertAccreditationNotSuspended(accreditation)
+
+    return issuePrnWithRetry(prnRepository, updateParams, {
+      regulator: accreditation.submittedToRegulator,
+      isExport: prn.isExport,
+      accreditationYear: prn.accreditation.accreditationYear
+    })
+  }
+
+  const operationSlot = STATUS_OPERATION_SLOT[newStatus]
+  if (operationSlot) {
+    updateParams.operation = { slot: operationSlot, at: now, by: user }
+  }
+
+  const updatedPrn = await prnRepository.updateStatus(updateParams)
+  if (!updatedPrn) {
+    throw Boom.badImplementation('Failed to update PRN status')
+  }
+  return updatedPrn
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -251,7 +304,7 @@ export async function updatePrnStatus({
   const currentStatus = prn.status.currentStatus
   validateTransition(currentStatus, newStatus, actor)
 
-  await applyWasteBalanceEffects(wasteBalancesRepository, {
+  const balanceEffectsParams = {
     currentStatus,
     newStatus,
     accreditationId,
@@ -259,58 +312,48 @@ export async function updatePrnStatus({
     prnId: id,
     tonnage: prn.tonnage,
     userId: user.id
-  })
+  }
+
+  const isCreation = newStatus === PRN_STATUS.AWAITING_AUTHORISATION
+
+  // Pre-flight balance effect is kept only for new-PRN creation, where a
+  // post-CAS balance failure would strand the PRN in a state with no
+  // legal user exit. For transitions on an existing PRN (issuance,
+  // cancellation, deletion) the per-PRN CAS gates the balance write so
+  // concurrent writers cannot double-debit or double-credit.
+  if (isCreation) {
+    await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      balanceEffectsParams
+    )
+  }
 
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
+    version: prn.version,
     status: newStatus,
     updatedBy: user,
     updatedAt: now
   }
 
-  // Issue with PRN number generation and collision retry
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    updateParams.operation = {
-      slot: 'issued',
-      at: now,
-      by: { id: user.id, name: user.name }
-    }
+  const updatedPrn = await applyStatusUpdate({
+    prnRepository,
+    organisationsRepository,
+    prn,
+    updateParams,
+    newStatus,
+    organisationId,
+    accreditationId,
+    user,
+    now
+  })
 
-    const accreditation = await organisationsRepository.findAccreditationById(
-      organisationId,
-      accreditationId
+  if (!isCreation) {
+    await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      balanceEffectsParams
     )
-
-    assertAccreditationNotSuspended(accreditation)
-
-    const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
-      regulator: accreditation.submittedToRegulator,
-      isExport: prn.isExport,
-      accreditationYear: prn.accreditation.accreditationYear
-    })
-
-    await prnMetrics.recordStatusTransition({
-      fromStatus: currentStatus,
-      toStatus: newStatus,
-      material: prn.accreditation.material,
-      isExport: prn.isExport
-    })
-
-    return issuedPrn
-  }
-
-  // Add business operation slot for transitions that have one
-  const operationSlot = STATUS_OPERATION_SLOT[newStatus]
-  if (operationSlot) {
-    updateParams.operation = { slot: operationSlot, at: now, by: user }
-  }
-
-  // Simple status update without PRN number
-  const updatedPrn = await prnRepository.updateStatus(updateParams)
-
-  if (!updatedPrn) {
-    throw Boom.badImplementation('Failed to update PRN status')
   }
 
   await prnMetrics.recordStatusTransition({

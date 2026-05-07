@@ -1,14 +1,28 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { it as base, describe, expect } from 'vitest'
-import { buildCancelledPrn } from './contract/test-data.js'
+import { ObjectId } from 'mongodb'
+import { it as base, describe, expect, vi } from 'vitest'
+import {
+  buildAwaitingAuthorisationPrn,
+  buildCancelledPrn
+} from './contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.plugin.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  prnRepository: async ({}, use) => {
+  prnRepositoryFactory: async ({}, use) => {
     const factory = createInMemoryPackagingRecyclingNotesRepository([])
-    const repository = factory()
+    await use(factory)
+  },
+
+  prnRepository: async ({ prnRepositoryFactory }, use) => {
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    const repository = prnRepositoryFactory(mockLogger)
     await use(repository)
   }
 })
@@ -132,6 +146,56 @@ describe('in-memory adapter organisation exclusion', () => {
       expect(result.hasMore).toBe(true)
       expect(result.nextCursor).toBe(realPrn1.id)
       expect(result.items.map((p) => p.id)).not.toContain(realPrn2.id)
+    }
+  )
+})
+
+describe('in-memory adapter legacy documents without a version field', () => {
+  const buildVersionlessSeed = () => {
+    const id = new ObjectId().toHexString()
+    const { version: _version, ...prnWithoutVersion } =
+      buildAwaitingAuthorisationPrn()
+    return { id, prn: { ...prnWithoutVersion, id } }
+  }
+
+  base('reads back as version 1', async () => {
+    const { id, prn } = buildVersionlessSeed()
+    const repository = createInMemoryPackagingRecyclingNotesRepository([prn])({
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    })
+
+    const found = await repository.findById(id)
+
+    expect(found.version).toBe(1)
+  })
+
+  base(
+    'accepts a CAS update with version 1 and bumps to version 2',
+    async () => {
+      const { id, prn } = buildVersionlessSeed()
+      const repository = createInMemoryPackagingRecyclingNotesRepository([prn])(
+        {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
+      )
+
+      const updated = await repository.updateStatus({
+        id,
+        version: 1,
+        status: PRN_STATUS.AWAITING_ACCEPTANCE,
+        updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+        updatedAt: new Date(),
+        prnNumber: `TT2688888`
+      })
+
+      expect(updated.version).toBe(2)
+      expect(updated.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     }
   )
 })
