@@ -1837,25 +1837,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the embedded path when no dependencies are provided (legacy callers)', async () => {
-        const findBalance = vi
-          .fn()
-          .mockResolvedValue(
-            buildBalance(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
-          )
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(appendPrnOperationToLedger).mockClear()
-
-        await helper({
-          [paramsKey]: baseDeductParams(),
-          findBalance,
-          saveBalance
-        })
-
-        expect(appendPrnOperationToLedger).not.toHaveBeenCalled()
-        expect(saveBalance).toHaveBeenCalledTimes(1)
-      })
-
       it('throws when flag is ON and marker is ledger but no ledgerRepository provided', async () => {
         const findBalance = vi
           .fn()

@@ -74,9 +74,21 @@ export const testPrnLedgerDispatchBehaviour = (it) => {
         await ledgerRepository.findLatestByAccreditationId('acc-prn-ledger')
       expect(latest.number).toBe(2)
       expect(latest.type).toBe(LEDGER_TRANSACTION_TYPE.DEBIT)
+      expect(latest.amount).toBe(50)
+      expect(latest.openingBalance).toEqual({
+        amount: 200,
+        availableAmount: 200
+      })
       expect(latest.closingBalance).toEqual({
         amount: 200,
         availableAmount: 150
+      })
+      expect(latest.accreditationId).toBe('acc-prn-ledger')
+      expect(latest.organisationId).toBe('org-1')
+      expect(latest.registrationId).toBe('reg-1')
+      expect(latest.createdBy).toEqual({
+        id: 'user-1',
+        name: 'user-1@example.com'
       })
       expect(latest.source).toEqual({
         kind: LEDGER_SOURCE_KIND.PRN_OPERATION,
