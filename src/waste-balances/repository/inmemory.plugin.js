@@ -14,7 +14,7 @@ export function createInMemoryWasteBalancesRepositoryPlugin(
     register: (server) => {
       const ledgerRepository = createInMemoryLedgerRepository()()
       const factory = createInMemoryWasteBalancesRepository(
-        initialWasteBalances,
+        initialWasteBalances ?? [],
         {
           ledgerRepository,
           featureFlags: server.featureFlags

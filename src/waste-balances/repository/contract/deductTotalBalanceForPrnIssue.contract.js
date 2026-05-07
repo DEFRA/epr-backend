@@ -1,5 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
+import { buildLedgerTransaction } from '../ledger-test-data.js'
 import {
   WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -116,7 +117,8 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
     })
 
     it('preserves canonicalSource on update — only the flip method may mutate it', async ({
-      insertWasteBalance
+      insertWasteBalance,
+      ledgerRepository
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-issue-marker',
@@ -125,6 +127,13 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
       })
 
       await insertWasteBalance(wasteBalance)
+      await ledgerRepository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-issue-marker',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      ])
 
       await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-issue-marker',

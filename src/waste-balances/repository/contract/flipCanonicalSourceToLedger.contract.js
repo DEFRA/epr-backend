@@ -2,6 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
+import { buildLedgerTransaction } from '../ledger-test-data.js'
 
 export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
   describe('flipCanonicalSourceToLedger', () => {
@@ -12,7 +13,8 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
     })
 
     it('flips the marker from migrating to ledger when the captured version matches and clears migratingSince', async ({
-      insertWasteBalance
+      insertWasteBalance,
+      ledgerRepository
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-ok',
@@ -21,6 +23,13 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
         migratingSince: '2025-01-01T00:00:00.000Z'
       })
       await insertWasteBalance(balance)
+      await ledgerRepository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-flip-ok',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      ])
 
       const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-ok',
@@ -74,7 +83,8 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
     })
 
     it('returns the ledger post-state when the marker is already on ledger — only promotes migrating', async ({
-      insertWasteBalance
+      insertWasteBalance,
+      ledgerRepository
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-already-ledger',
@@ -82,6 +92,13 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
       await insertWasteBalance(balance)
+      await ledgerRepository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-flip-already-ledger',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      ])
 
       const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-already-ledger',

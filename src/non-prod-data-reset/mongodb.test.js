@@ -20,6 +20,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
+import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import {
   createWasteBalancesRepository,
   saveBalance
@@ -93,7 +94,10 @@ const it = mongoIt.extend({
       database,
       []
     )
-    const wasteBalancesFactory = await createWasteBalancesRepository(database)
+    const ledgerFactory = await createMongoLedgerRepository(database)
+    const wasteBalancesFactory = await createWasteBalancesRepository(database, {
+      ledgerRepository: ledgerFactory()
+    })
     const reportsFactory = await createReportsRepository(database)
     const wasteRecordsFactory = await createWasteRecordsRepository(database)
     const summaryLogsFactory = await createSummaryLogsRepository(
