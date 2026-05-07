@@ -21,6 +21,7 @@ import * as packagingRecyclingNotesRoutes from '#packaging-recycling-notes/route
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
 import * as reportsRoutes from '#reports/routes/index.js'
 import { reportsUnsubmit } from '#reports/routes/unsubmit.js'
+import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
@@ -66,6 +67,7 @@ const router = {
           ...Object.values(overseasSitesRoutes),
           ...Object.values(coreReportsRoutes),
           ...unsubmitBehindFeatureFlag,
+          adminMeGet,
           dlqMessagesGet,
           dlqPurgePost
         ])
