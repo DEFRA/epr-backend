@@ -6,7 +6,7 @@
  * use the full auth stack with setupAuthContext() and real tokens.
  */
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ADMIN_ROLES, ROLES } from '#common/helpers/auth/constants.js'
 
 const ACCESS_TOKEN_STRATEGY = 'access-token'
 
@@ -38,18 +38,94 @@ export const asStandardUser = ({ linkedOrgId, ...overrides }) => {
 }
 
 /**
- * Creates auth injection options for a service maintainer
+ * @param {string} role
+ * @param {{ id?: string, email?: string, overrides?: object }} [opts]
+ */
+const adminCredential = (
+  role,
+  {
+    id = 'test-maintainer-id',
+    email = 'maintainer@example.com',
+    overrides
+  } = {}
+) => {
+  // While the route re-scoping is in progress, the JWT strategy adds the
+  // legacy `service_maintainer` Hapi scope to the write/maintainer tiers so
+  // routes that have not yet adopted SCOPES.* keep working. Test helpers
+  // mirror that production behaviour.
+  const legacy =
+    role === 'service_maintainer_write' || role === 'service_maintainer'
+      ? [ROLES.serviceMaintainer]
+      : []
+  return {
+    auth: {
+      strategy: ACCESS_TOKEN_STRATEGY,
+      credentials: {
+        scope: [...ADMIN_ROLES[role], ...legacy],
+        role,
+        id,
+        email,
+        ...overrides
+      }
+    }
+  }
+}
+
+/**
+ * Creates auth injection options for a service maintainer (legacy alias).
+ *
+ * Maps to the write-tier (`service_maintainer_write`) bundle so existing
+ * tests that depended on a maintainer having full admin access continue to
+ * pass after routes are re-scoped to explicit `admin.*` requirements.
+ *
+ * For matrix-style four-tier tests use the explicit per-tier helpers below.
  * @param {object} [overrides] - Optional credential overrides
  * @returns {object} Auth options for server.inject()
  */
-export const asServiceMaintainer = (overrides = {}) => ({
+export const asServiceMaintainer = (overrides = {}) =>
+  adminCredential('service_maintainer_write', { overrides })
+
+/**
+ * Carries admin.read, admin.write, and admin.dlq.purge.
+ */
+export const asServiceMaintainerWrite = (overrides = {}) =>
+  adminCredential('service_maintainer_write', { overrides })
+
+/**
+ * Carries admin.read and admin.dlq.purge (no admin.write).
+ */
+export const asServiceMaintainerRead = (overrides = {}) =>
+  adminCredential('service_maintainer', { overrides })
+
+/**
+ * Carries only admin.read.
+ */
+export const asSupport = (overrides = {}) =>
+  adminCredential('support', {
+    id: 'test-support-id',
+    email: 'support@example.com',
+    overrides
+  })
+
+/**
+ * Authenticated identity with no admin tier — every admin-scoped route 403s.
+ */
+export const asUnscopedAdminUser = (overrides = {}) => ({
   auth: {
     strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
-      scope: [ROLES.serviceMaintainer],
-      id: 'test-maintainer-id',
-      email: 'maintainer@example.com',
+      scope: [],
+      role: null,
+      id: 'test-unscoped-id',
+      email: 'unscoped@example.com',
       ...overrides
     }
   }
 })
+
+export const ADMIN_TIER_HELPERS = {
+  service_maintainer_write: asServiceMaintainerWrite,
+  service_maintainer: asServiceMaintainerRead,
+  support: asSupport,
+  unscoped: asUnscopedAdminUser
+}

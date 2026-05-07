@@ -5,6 +5,7 @@ import {
   it,
   expect,
   beforeAll,
+  beforeEach,
   afterAll,
   afterEach
 } from 'vitest'
@@ -30,6 +31,7 @@ const prnId = '507f1f77bcf86cd799439011'
 
 const createMockPrn = (overrides = {}) => ({
   id: prnId,
+  version: 1,
   schemaVersion: 2,
   organisation: { id: organisationId, name: 'Test Organisation' },
   registrationId,
@@ -88,11 +90,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     beforeAll(async () => {
-      packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
-      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
-      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
-
       wasteBalancesRepository = {
         findByAccreditationId: vi
           .fn()
@@ -120,6 +117,18 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       await server.initialize()
+    })
+
+    beforeEach(() => {
+      packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        })
+      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
+      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
 
     afterEach(() => {
@@ -566,6 +575,35 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
 
+      it('returns 409 when a concurrent writer has already bumped the version', async () => {
+        const stale = await packagingRecyclingNotesRepository.findById(prnId)
+
+        await packagingRecyclingNotesRepository.updateStatus({
+          id: prnId,
+          version: stale.version,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'other-writer', name: 'Other Writer' },
+          updatedAt: new Date(),
+          operation: {
+            slot: 'created',
+            at: new Date(),
+            by: { id: 'other-writer', name: 'Other Writer' }
+          }
+        })
+
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(stale)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(response.payload).toContain('Version conflict')
+      })
+
       it('returns 404 when PRN belongs to different organisation', async () => {
         const differentOrgId = 'different-org'
 
@@ -829,11 +867,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     beforeAll(async () => {
-      packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
-      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
-      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
-
       wasteBalancesRepository = {
         findByAccreditationId: vi
           .fn()
@@ -861,6 +894,18 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       await server.initialize()
+    })
+
+    beforeEach(() => {
+      packagingRecyclingNotesRepository =
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        })
+      vi.spyOn(packagingRecyclingNotesRepository, 'findById')
+      vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
 
     afterEach(() => {

@@ -17,6 +17,7 @@ import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { performUpdateViaLedger } from '../application/update-via-ledger.js'
 import { audit } from '@defra/cdp-auditing'
 import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../domain/model.js'
@@ -351,7 +352,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     describe('feature flag dispatch', () => {
-      it('routes to the ledger path when wasteBalanceLedger flag is ON', async () => {
+      it('routes to the ledger path when flag is ON and canonicalSource is ledger', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -362,7 +363,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
         ]
         const accreditation = { id: 'acc-1' }
         const ledgerRepository = { insertTransactions: vi.fn() }
-        const findBalance = vi.fn()
+        const findBalance = vi.fn().mockResolvedValue({
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        })
         const saveBalance = vi.fn()
         vi.mocked(performUpdateViaLedger).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockClear()
@@ -386,11 +395,184 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(call.accreditation.id).toBe('acc-1')
         expect(call.user).toEqual({ id: 'user-1' })
         expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
-        expect(findBalance).not.toHaveBeenCalled()
         expect(saveBalance).not.toHaveBeenCalled()
+        expect(findBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the v1 embedded-array path when flag is OFF', async () => {
+      it('uses the embedded path when flag is ON but the existing balance has no marker (legacy doc)', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1
+        }
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
+            ledgerRepository: { insertTransactions: vi.fn() }
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the embedded path when flag is ON and canonicalSource is migrating — PRN writes during a rebuild treat migrating as embedded', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+          migratingSince: '2025-01-01T00:00:00.000Z'
+        }
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
+            ledgerRepository: { insertTransactions: vi.fn() }
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the embedded path when flag is ON but canonicalSource is still embedded', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const wasteBalance = {
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 1,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+        }
+        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
+            ledgerRepository: { insertTransactions: vi.fn() }
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+      })
+
+      it('uses the embedded path when flag is ON and no balance exists yet', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const findBalance = vi.fn().mockResolvedValue(null)
+        const saveBalance = vi.fn().mockResolvedValue()
+        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
+          newTransactions: [{ id: 't1' }],
+          newAmount: 100,
+          newAvailableAmount: 100
+        })
+
+        await performUpdateWasteBalanceTransactions({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
+            ledgerRepository: { insertTransactions: vi.fn() }
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+
+        expect(performUpdateViaLedger).not.toHaveBeenCalled()
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+        const savedBalance = vi.mocked(saveBalance).mock.calls[0][0]
+        expect(savedBalance.canonicalSource).toBe(
+          WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+        )
+      })
+
+      it('uses the embedded-array path when flag is OFF', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',

@@ -2,71 +2,87 @@ import { describe, test, expect, vi } from 'vitest'
 
 import { validateConfig } from './validate-config.js'
 
+const ROLE_KEYS = [
+  'roles.serviceMaintainers',
+  'roles.serviceMaintainersWrite',
+  'roles.support'
+]
+
+function mockConfigForKeys(values) {
+  return {
+    get: vi.fn((key) => values[key])
+  }
+}
+
+function mockConfigAllValid() {
+  return mockConfigForKeys({
+    'roles.serviceMaintainers': '["user1", "user2"]',
+    'roles.serviceMaintainersWrite': '["writer1"]',
+    'roles.support': '[]'
+  })
+}
+
 describe('#validateConfig', () => {
-  describe('when roles.serviceMaintainers is valid', () => {
-    test('does not throw when provided with a valid JSON array', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('["user1", "user2", "user3"]')
-      }
-
-      expect(() => validateConfig(mockConfig)).not.toThrow()
-      expect(mockConfig.get).toHaveBeenCalledWith('roles.serviceMaintainers')
+  describe('when all role lists are valid', () => {
+    test('does not throw when all keys are valid JSON arrays', () => {
+      expect(() => validateConfig(mockConfigAllValid())).not.toThrow()
     })
 
-    test('does not throw when provided with an empty array', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('[]')
-      }
+    test('does not throw when all lists are empty', () => {
+      const mockConfig = mockConfigForKeys({
+        'roles.serviceMaintainers': '[]',
+        'roles.serviceMaintainersWrite': '[]',
+        'roles.support': '[]'
+      })
 
       expect(() => validateConfig(mockConfig)).not.toThrow()
     })
 
-    test('does not throw when provided with an array of objects', () => {
-      const mockConfig = {
-        get: vi
-          .fn()
-          .mockReturnValue(
-            '[{"id": 1, "name": "user1"}, {"id": 2, "name": "user2"}]'
-          )
-      }
+    test('does not throw for arrays of objects or mixed types', () => {
+      const mockConfig = mockConfigForKeys({
+        'roles.serviceMaintainers':
+          '[{"id": 1, "name": "user1"}, {"id": 2, "name": "user2"}]',
+        'roles.serviceMaintainersWrite': '[1, "string", true, null]',
+        'roles.support': '[]'
+      })
 
       expect(() => validateConfig(mockConfig)).not.toThrow()
     })
 
-    test('does not throw when provided with an array containing mixed types', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('[1, "string", true, null]')
-      }
+    test('reads all three role list keys', () => {
+      const mockConfig = mockConfigAllValid()
 
-      expect(() => validateConfig(mockConfig)).not.toThrow()
+      validateConfig(mockConfig)
+
+      for (const key of ROLE_KEYS) {
+        expect(mockConfig.get).toHaveBeenCalledWith(key)
+      }
+      expect(mockConfig.get).toHaveBeenCalledTimes(ROLE_KEYS.length)
     })
   })
 
-  describe('when roles.serviceMaintainers contains malformed JSON', () => {
-    test('throws when JSON is invalid', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('not valid json')
+  describe('when a role list contains malformed JSON', () => {
+    test.each(ROLE_KEYS)('throws naming the offending key (%s)', (key) => {
+      const values = {
+        'roles.serviceMaintainers': '[]',
+        'roles.serviceMaintainersWrite': '[]',
+        'roles.support': '[]'
       }
+      values[key] = 'not valid json'
+
+      const mockConfig = mockConfigForKeys(values)
 
       expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: malformed JSON'
+        `Invalid ${key} configuration: malformed JSON`
       )
     })
 
     test('throws when JSON is incomplete', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('["user1", "user2"')
-      }
-
-      expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: malformed JSON'
-      )
-    })
-
-    test('throws when JSON has trailing comma', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('["user1", "user2",]')
-      }
+      const mockConfig = mockConfigForKeys({
+        'roles.serviceMaintainers': '["user1", "user2"',
+        'roles.serviceMaintainersWrite': '[]',
+        'roles.support': '[]'
+      })
 
       expect(() => validateConfig(mockConfig)).toThrow(
         'Invalid roles.serviceMaintainers configuration: malformed JSON'
@@ -74,92 +90,63 @@ describe('#validateConfig', () => {
     })
   })
 
-  describe('when roles.serviceMaintainers is not an array', () => {
-    test('throws error when value is a string', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('"just a string"')
+  describe('when a role list is not an array', () => {
+    test.each(ROLE_KEYS)('throws naming the offending key (%s)', (key) => {
+      const values = {
+        'roles.serviceMaintainers': '[]',
+        'roles.serviceMaintainersWrite': '[]',
+        'roles.support': '[]'
       }
+      values[key] = '{"key": "value"}'
+
+      const mockConfig = mockConfigForKeys(values)
 
       expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: not an array'
+        `Invalid ${key} configuration: not an array`
       )
     })
 
-    test('throws error when value is an object', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('{"key": "value"}')
+    test.each(['"just a string"', '123', 'true', 'null'])(
+      'throws when serviceMaintainers value is %s',
+      (jsonValue) => {
+        const mockConfig = mockConfigForKeys({
+          'roles.serviceMaintainers': jsonValue,
+          'roles.serviceMaintainersWrite': '[]',
+          'roles.support': '[]'
+        })
+
+        expect(() => validateConfig(mockConfig)).toThrow(
+          'Invalid roles.serviceMaintainers configuration: not an array'
+        )
       }
-
-      expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: not an array'
-      )
-    })
-
-    test('throws error when value is a number', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('123')
-      }
-
-      expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: not an array'
-      )
-    })
-
-    test('throws error when value is boolean', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('true')
-      }
-
-      expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: not an array'
-      )
-    })
-
-    test('throws error when value is null', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('null')
-      }
-
-      expect(() => validateConfig(mockConfig)).toThrow(
-        'Invalid roles.serviceMaintainers configuration: not an array'
-      )
-    })
+    )
   })
 
   describe('edge cases', () => {
     test('handles array with nested arrays', () => {
-      const mockConfig = {
-        get: vi
-          .fn()
-          .mockReturnValue('[["nested", "array"], ["another", "one"]]')
-      }
+      const mockConfig = mockConfigForKeys({
+        'roles.serviceMaintainers': '[["nested", "array"], ["another", "one"]]',
+        'roles.serviceMaintainersWrite': '[]',
+        'roles.support': '[]'
+      })
 
       expect(() => validateConfig(mockConfig)).not.toThrow()
     })
 
-    test('handles array with whitespace in JSON', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue(`
+    test('handles whitespace in JSON', () => {
+      const mockConfig = mockConfigForKeys({
+        'roles.serviceMaintainers': `
           [
             "user1",
             "user2",
             "user3"
           ]
-        `)
-      }
+        `,
+        'roles.serviceMaintainersWrite': '[]',
+        'roles.support': '[]'
+      })
 
       expect(() => validateConfig(mockConfig)).not.toThrow()
-    })
-
-    test('calls config.get with correct parameter', () => {
-      const mockConfig = {
-        get: vi.fn().mockReturnValue('[]')
-      }
-
-      validateConfig(mockConfig)
-
-      expect(mockConfig.get).toHaveBeenCalledTimes(1)
-      expect(mockConfig.get).toHaveBeenCalledWith('roles.serviceMaintainers')
     })
   })
 })

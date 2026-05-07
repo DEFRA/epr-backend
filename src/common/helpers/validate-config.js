@@ -1,16 +1,20 @@
-export function validateConfig(config) {
-  let serviceMaintainers
-  try {
-    serviceMaintainers = JSON.parse(config.get('roles.serviceMaintainers'))
-  } catch {
-    throw new Error(
-      'Invalid roles.serviceMaintainers configuration: malformed JSON'
-    )
-  }
+const ROLE_EMAIL_LIST_KEYS = [
+  'roles.serviceMaintainers',
+  'roles.serviceMaintainersWrite',
+  'roles.support'
+]
 
-  if (!Array.isArray(serviceMaintainers)) {
-    throw new Error(
-      'Invalid roles.serviceMaintainers configuration: not an array'
-    )
+export function validateConfig(config) {
+  for (const key of ROLE_EMAIL_LIST_KEYS) {
+    let parsed
+    try {
+      parsed = JSON.parse(config.get(key))
+    } catch {
+      throw new Error(`Invalid ${key} configuration: malformed JSON`)
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new Error(`Invalid ${key} configuration: not an array`)
+    }
   }
 }

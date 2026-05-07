@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../../domain/model.js'
@@ -20,6 +21,8 @@ export const buildWasteBalance = (overrides = {}) => {
   const version = overrides.version ?? 1
   const amount = overrides.amount ?? 100
   const availableAmount = overrides.availableAmount ?? 100
+  const canonicalSource =
+    overrides.canonicalSource ?? WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
 
   const transaction = {
     id: randomUUID(),
@@ -53,6 +56,7 @@ export const buildWasteBalance = (overrides = {}) => {
     version,
     amount,
     availableAmount,
+    canonicalSource,
     transactions: overrides.transactions || [transaction]
   }
 }

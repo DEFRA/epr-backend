@@ -1,5 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
+import { buildLedgerTransaction } from '../ledger-test-data.js'
 
 export const testFindByAccreditationIdBehaviour = (it) => {
   describe('findByAccreditationId', () => {
@@ -75,6 +77,189 @@ export const testFindByAccreditationIdBehaviour = (it) => {
 
     it('throws error when accreditationId is empty string', async () => {
       await expect(repository.findByAccreditationId('')).rejects.toThrow()
+    })
+
+    it('returns canonicalSource embedded when stored as embedded', async ({
+      insertWasteBalance
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-marker-embedded',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const result = await repository.findByAccreditationId(
+        'acc-marker-embedded'
+      )
+
+      expect(result.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      )
+    })
+
+    it('returns canonicalSource ledger when stored as ledger', async ({
+      insertWasteBalance,
+      ledgerRepository
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-marker-ledger',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
+
+      await insertWasteBalance(wasteBalance)
+      await ledgerRepository.insertTransactions([
+        buildLedgerTransaction({
+          accreditationId: 'acc-marker-ledger',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      ])
+
+      const result = await repository.findByAccreditationId('acc-marker-ledger')
+
+      expect(result.canonicalSource).toBe(WASTE_BALANCE_CANONICAL_SOURCE.LEDGER)
+    })
+
+    describe('marker-aware amount resolution', () => {
+      it('returns embedded amount and availableAmount when marker is embedded', async ({
+        insertWasteBalance,
+        ledgerRepository
+      }) => {
+        await insertWasteBalance(
+          buildWasteBalance({
+            accreditationId: 'acc-marker-embedded-amounts',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED,
+            amount: 250,
+            availableAmount: 200
+          })
+        )
+
+        await ledgerRepository.insertTransactions([
+          buildLedgerTransaction({
+            accreditationId: 'acc-marker-embedded-amounts',
+            number: 1,
+            closingBalance: { amount: 999, availableAmount: 999 }
+          })
+        ])
+
+        const result = await repository.findByAccreditationId(
+          'acc-marker-embedded-amounts'
+        )
+
+        expect(result.amount).toBe(250)
+        expect(result.availableAmount).toBe(200)
+      })
+
+      it('returns embedded amount and availableAmount when marker is migrating', async ({
+        insertWasteBalance,
+        ledgerRepository
+      }) => {
+        await insertWasteBalance(
+          buildWasteBalance({
+            accreditationId: 'acc-marker-migrating-amounts',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+            amount: 75,
+            availableAmount: 50
+          })
+        )
+
+        await ledgerRepository.insertTransactions([
+          buildLedgerTransaction({
+            accreditationId: 'acc-marker-migrating-amounts',
+            number: 1,
+            closingBalance: { amount: 999, availableAmount: 999 }
+          })
+        ])
+
+        const result = await repository.findByAccreditationId(
+          'acc-marker-migrating-amounts'
+        )
+
+        expect(result.amount).toBe(75)
+        expect(result.availableAmount).toBe(50)
+      })
+
+      it('substitutes amount and availableAmount from the latest ledger transaction when marker is ledger', async ({
+        insertWasteBalance,
+        ledgerRepository
+      }) => {
+        await insertWasteBalance(
+          buildWasteBalance({
+            accreditationId: 'acc-marker-ledger-amounts',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+            amount: 999,
+            availableAmount: 999
+          })
+        )
+
+        await ledgerRepository.insertTransactions([
+          buildLedgerTransaction({
+            accreditationId: 'acc-marker-ledger-amounts',
+            number: 1,
+            closingBalance: { amount: 100, availableAmount: 90 }
+          }),
+          buildLedgerTransaction({
+            accreditationId: 'acc-marker-ledger-amounts',
+            number: 2,
+            closingBalance: { amount: 175, availableAmount: 150 }
+          })
+        ])
+
+        const result = await repository.findByAccreditationId(
+          'acc-marker-ledger-amounts'
+        )
+
+        expect(result.amount).toBe(175)
+        expect(result.availableAmount).toBe(150)
+      })
+
+      it('throws when marker is ledger and no ledger transactions exist', async ({
+        insertWasteBalance
+      }) => {
+        await insertWasteBalance(
+          buildWasteBalance({
+            accreditationId: 'acc-marker-ledger-empty',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+            amount: 999,
+            availableAmount: 999
+          })
+        )
+
+        await expect(
+          repository.findByAccreditationId('acc-marker-ledger-empty')
+        ).rejects.toThrow(
+          /acc-marker-ledger-empty.*canonicalSource 'ledger' but no ledger transactions/
+        )
+      })
+
+      it('preserves the canonicalSource marker on the returned document', async ({
+        insertWasteBalance,
+        ledgerRepository
+      }) => {
+        await insertWasteBalance(
+          buildWasteBalance({
+            accreditationId: 'acc-marker-ledger-preserved',
+            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+          })
+        )
+
+        await ledgerRepository.insertTransactions([
+          buildLedgerTransaction({
+            accreditationId: 'acc-marker-ledger-preserved',
+            number: 1,
+            closingBalance: { amount: 10, availableAmount: 10 }
+          })
+        ])
+
+        const result = await repository.findByAccreditationId(
+          'acc-marker-ledger-preserved'
+        )
+
+        expect(result.canonicalSource).toBe(
+          WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        )
+      })
     })
 
     it('returns waste balance with all transaction fields intact', async ({

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -21,24 +22,27 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     let wasteBalancesRepositoryFactory
 
     beforeEach(async () => {
-      wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository([
-        {
-          accreditationId: accreditationId1,
-          organisationId,
-          amount: 1000,
-          availableAmount: 750,
-          transactions: [],
-          version: 1
-        },
-        {
-          accreditationId: accreditationId2,
-          organisationId,
-          amount: 2500,
-          availableAmount: 2500,
-          transactions: [],
-          version: 1
-        }
-      ])
+      wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
+        [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            amount: 1000,
+            availableAmount: 750,
+            transactions: [],
+            version: 1
+          },
+          {
+            accreditationId: accreditationId2,
+            organisationId,
+            amount: 2500,
+            availableAmount: 2500,
+            transactions: [],
+            version: 1
+          }
+        ],
+        { ledgerRepository: createInMemoryLedgerRepository()() }
+      )
 
       const featureFlags = createInMemoryFeatureFlags({})
 
@@ -150,16 +154,19 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
 
     beforeEach(async () => {
       const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([
-          {
-            accreditationId: accreditationId1,
-            organisationId,
-            amount: 1000,
-            availableAmount: 750,
-            transactions: [],
-            version: 1
-          }
-        ])
+        createInMemoryWasteBalancesRepository(
+          [
+            {
+              accreditationId: accreditationId1,
+              organisationId,
+              amount: 1000,
+              availableAmount: 750,
+              transactions: [],
+              version: 1
+            }
+          ],
+          { ledgerRepository: createInMemoryLedgerRepository()() }
+        )
 
       const featureFlags = createInMemoryFeatureFlags({})
 
@@ -213,16 +220,19 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
 
     beforeEach(async () => {
       const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([
-          {
-            accreditationId: accreditationId1,
-            organisationId,
-            amount: 1000,
-            availableAmount: 750,
-            transactions: [],
-            version: 1
-          }
-        ])
+        createInMemoryWasteBalancesRepository(
+          [
+            {
+              accreditationId: accreditationId1,
+              organisationId,
+              amount: 1000,
+              availableAmount: 750,
+              transactions: [],
+              version: 1
+            }
+          ],
+          { ledgerRepository: createInMemoryLedgerRepository()() }
+        )
 
       const featureFlags = createInMemoryFeatureFlags({})
 
@@ -248,16 +258,19 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     it('defaults null amount values to zero', async () => {
       const accreditationIdWithNulls = 'aaaaaaaaaaaaaaaaaaaaaaaa'
       const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([
-          {
-            accreditationId: accreditationIdWithNulls,
-            organisationId,
-            amount: null,
-            availableAmount: null,
-            transactions: [],
-            version: 1
-          }
-        ])
+        createInMemoryWasteBalancesRepository(
+          [
+            {
+              accreditationId: accreditationIdWithNulls,
+              organisationId,
+              amount: null,
+              availableAmount: null,
+              transactions: [],
+              version: 1
+            }
+          ],
+          { ledgerRepository: createInMemoryLedgerRepository()() }
+        )
 
       const featureFlags = createInMemoryFeatureFlags({})
       const server = await createTestServer({
@@ -292,16 +305,19 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
 
       const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([
-          {
-            accreditationId: accreditationIdDifferentOrg,
-            organisationId: differentOrgId,
-            amount: 1000,
-            availableAmount: 750,
-            transactions: [],
-            version: 1
-          }
-        ])
+        createInMemoryWasteBalancesRepository(
+          [
+            {
+              accreditationId: accreditationIdDifferentOrg,
+              organisationId: differentOrgId,
+              amount: 1000,
+              availableAmount: 750,
+              transactions: [],
+              version: 1
+            }
+          ],
+          { ledgerRepository: createInMemoryLedgerRepository()() }
+        )
 
       const featureFlags = createInMemoryFeatureFlags({})
       const server = await createTestServer({
@@ -331,24 +347,27 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
 
       const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository([
-          {
-            accreditationId: accreditationId1,
-            organisationId,
-            amount: 1000,
-            availableAmount: 750,
-            transactions: [],
-            version: 1
-          },
-          {
-            accreditationId: accreditationIdDifferentOrg,
-            organisationId: differentOrgId,
-            amount: 2000,
-            availableAmount: 1500,
-            transactions: [],
-            version: 1
-          }
-        ])
+        createInMemoryWasteBalancesRepository(
+          [
+            {
+              accreditationId: accreditationId1,
+              organisationId,
+              amount: 1000,
+              availableAmount: 750,
+              transactions: [],
+              version: 1
+            },
+            {
+              accreditationId: accreditationIdDifferentOrg,
+              organisationId: differentOrgId,
+              amount: 2000,
+              availableAmount: 1500,
+              transactions: [],
+              version: 1
+            }
+          ],
+          { ledgerRepository: createInMemoryLedgerRepository()() }
+        )
 
       const featureFlags = createInMemoryFeatureFlags({})
       const server = await createTestServer({

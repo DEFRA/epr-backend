@@ -1,4 +1,5 @@
 import { validateAccreditationId } from './validation.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import {
   performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
@@ -7,6 +8,7 @@ import {
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 import { ensureLedgerCollection } from './ledger-mongodb.js'
+import { resolveBalanceAmounts } from './marker-aware-read.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
@@ -27,32 +29,133 @@ async function ensureCollection(db) {
   return collection
 }
 
-const performFindByAccreditationId = (db) => async (accreditationId) => {
-  const validatedAccreditationId = validateAccreditationId(accreditationId)
+const performFindByAccreditationId =
+  (db, ledgerRepository) => async (accreditationId) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-  const doc = await db
-    .collection(WASTE_BALANCE_COLLECTION_NAME)
-    .findOne({ accreditationId: validatedAccreditationId })
+    const doc = await db
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .findOne({ accreditationId: validatedAccreditationId })
 
-  if (!doc) {
-    return null
+    if (!doc) {
+      return null
+    }
+
+    const { _id, ...domainFields } = doc
+    return resolveBalanceAmounts(
+      structuredClone({ id: _id.toString(), ...domainFields }),
+      ledgerRepository
+    )
   }
 
-  const { _id, ...domainFields } = doc
-  return structuredClone({ id: _id.toString(), ...domainFields })
-}
+const performFindByAccreditationIds =
+  (db, ledgerRepository) => async (accreditationIds) => {
+    const docs = await db
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .find({ accreditationId: { $in: accreditationIds } })
+      .toArray()
 
-const performFindByAccreditationIds = (db) => async (accreditationIds) => {
-  const docs = await db
-    .collection(WASTE_BALANCE_COLLECTION_NAME)
-    .find({ accreditationId: { $in: accreditationIds } })
-    .toArray()
+    return Promise.all(
+      docs.map((doc) => {
+        const { _id, ...domainFields } = doc
+        return resolveBalanceAmounts(
+          structuredClone({ id: _id.toString(), ...domainFields }),
+          ledgerRepository
+        )
+      })
+    )
+  }
 
-  return docs.map((doc) => {
-    const { _id, ...domainFields } = doc
-    return structuredClone({ id: _id.toString(), ...domainFields })
-  })
-}
+const performFlipCanonicalSourceToMigrating =
+  (db) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const updated = await collection.findOneAndUpdate(
+      {
+        accreditationId: validatedAccreditationId,
+        version: capturedVersion,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      },
+      {
+        $set: {
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+          migratingSince: new Date().toISOString()
+        }
+      },
+      { returnDocument: 'after' }
+    )
+    if (updated) {
+      return { canonicalSource: updated.canonicalSource }
+    }
+    const current = await collection.findOne(
+      { accreditationId: validatedAccreditationId },
+      { projection: { canonicalSource: 1 } }
+    )
+    if (!current) {
+      return null
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performFlipCanonicalSourceToLedger =
+  (db) =>
+  async ({ accreditationId, capturedVersion }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const updated = await collection.findOneAndUpdate(
+      {
+        accreditationId: validatedAccreditationId,
+        version: capturedVersion,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      },
+      {
+        $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER },
+        $unset: { migratingSince: '' }
+      },
+      { returnDocument: 'after' }
+    )
+    if (updated) {
+      return { canonicalSource: updated.canonicalSource }
+    }
+    const current = await collection.findOne(
+      { accreditationId: validatedAccreditationId },
+      { projection: { canonicalSource: 1 } }
+    )
+    if (!current) {
+      return null
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
+
+const performResetCanonicalSourceToEmbedded =
+  (db) =>
+  async ({ accreditationId }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const updated = await collection.findOneAndUpdate(
+      {
+        accreditationId: validatedAccreditationId,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      },
+      {
+        $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED },
+        $unset: { migratingSince: '' }
+      },
+      { returnDocument: 'after' }
+    )
+    if (updated) {
+      return { canonicalSource: updated.canonicalSource }
+    }
+    const current = await collection.findOne(
+      { accreditationId: validatedAccreditationId },
+      { projection: { canonicalSource: 1 } }
+    )
+    if (!current) {
+      return null
+    }
+    return { canonicalSource: current.canonicalSource }
+  }
 
 /**
  * Find a waste balance by accreditation ID.
@@ -78,6 +181,13 @@ export const findBalance = (db) => async (id) => {
 /**
  * Save a waste balance.
  *
+ * The persisted `canonicalSource` is set only on insert via `$setOnInsert` and
+ * never on update. The marker is mutated solely by the dedicated lifecycle
+ * primitives — `flipCanonicalSourceToMigrating`, `flipCanonicalSourceToLedger`,
+ * and `resetCanonicalSourceToEmbedded` — which also own `migratingSince`. Every
+ * other write path is `canonicalSource`-blind and never touches
+ * `migratingSince`.
+ *
  * @param {import('mongodb').Db} db
  * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
@@ -96,7 +206,8 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
       },
       $setOnInsert: {
         _id: updatedBalance.id,
-        organisationId: updatedBalance.organisationId
+        organisationId: updatedBalance.organisationId,
+        canonicalSource: updatedBalance.canonicalSource
       }
     }),
     { upsert: true }
@@ -106,19 +217,21 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
 /**
  * Creates a MongoDB-backed waste balances repository
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @param {Object} [dependencies] - Optional dependencies
+ * @param {Object} dependencies
+ * @param {import('./ledger-port.js').LedgerRepository} dependencies.ledgerRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('./ledger-port.js').LedgerRepository} [dependencies.ledgerRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
-export const createWasteBalancesRepository = async (db, dependencies = {}) => {
+export const createWasteBalancesRepository = async (db, dependencies) => {
   await ensureCollection(db)
   await ensureLedgerCollection(db)
 
+  const { ledgerRepository } = dependencies
+
   return () => ({
-    findByAccreditationId: performFindByAccreditationId(db),
-    findByAccreditationIds: performFindByAccreditationIds(db),
+    findByAccreditationId: performFindByAccreditationId(db, ledgerRepository),
+    findByAccreditationIds: performFindByAccreditationIds(db, ledgerRepository),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       { user, accreditation, overseasSites }
@@ -160,6 +273,9 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         findBalance: findBalance(db),
         saveBalance: saveBalance(db)
       })
-    }
+    },
+    flipCanonicalSourceToMigrating: performFlipCanonicalSourceToMigrating(db),
+    flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db),
+    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db)
   })
 }
