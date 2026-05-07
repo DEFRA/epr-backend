@@ -232,7 +232,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
 
   for (const prn of initialData) {
     const id = prn.id
-    storage.set(id, structuredClone({ version: 1, ...prn, id }))
+    storage.set(id, structuredClone({ ...prn, version: prn.version ?? 1, id }))
   }
 
   return (/** @type {TypedLogger} */ logger) => ({

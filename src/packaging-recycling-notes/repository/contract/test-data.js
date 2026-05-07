@@ -32,6 +32,7 @@ export const buildPrn = (overrides = {}) => {
 
   return {
     schemaVersion: 2,
+    version: 1,
     organisation: {
       id: `org-${randomUUID()}`,
       name: 'Test Organisation',

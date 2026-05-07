@@ -48,7 +48,7 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
- * @typedef {() => PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepositoryFactory
+ * @typedef {(logger: import('#common/hapi-types.js').TypedLogger) => PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepositoryFactory
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
