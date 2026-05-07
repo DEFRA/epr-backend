@@ -53,9 +53,17 @@ export const loggerOptions = {
       ...(traceId ? { trace: { id: traceId } } : {})
     }
   },
-  redact: {
-    paths: logConfig.redact,
-    remove: true
+  get redact() {
+    return {
+      paths: isProductionEnvironment()
+        ? [
+            'http.request.headers.authorization',
+            'http.request.headers.cookie',
+            'http.response.headers'
+          ]
+        : [],
+      remove: true
+    }
   },
   level: logConfig.level,
   ...formatters[logConfig.format],

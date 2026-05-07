@@ -8,15 +8,15 @@ vi.mock('#root/config.js', () => ({
         log: {
           isEnabled: true,
           level: 'info',
-          format: 'pino-pretty',
-          redact: []
+          format: 'pino-pretty'
         },
         serviceName: 'test-service',
         serviceVersion: '1.0.0'
       }
       return values[key]
     })
-  }
+  },
+  isProductionEnvironment: () => false
 }))
 
 describe('loggerOptions.serializers.res', () => {
