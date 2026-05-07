@@ -100,19 +100,5 @@ describe('GET /v1/admin/me', () => {
         scopes: [SCOPES.adminRead]
       })
     })
-
-    it('does not surface the legacy service_maintainer scope in the response', async () => {
-      // The JWT strategy adds the legacy `service_maintainer` Hapi scope to
-      // write/maintainer credentials during the route re-scoping transition.
-      // The /v1/admin/me payload must reflect only the documented SCOPES enum.
-      const response = await server.inject({
-        method: 'GET',
-        url: ADMIN_ME_PATH,
-        ...asServiceMaintainerWrite()
-      })
-
-      const payload = JSON.parse(response.payload)
-      expect(payload.scopes).not.toContain('service_maintainer')
-    })
   })
 })

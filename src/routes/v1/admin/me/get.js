@@ -30,8 +30,8 @@ export const adminMeGet = {
   },
   /**
    * Echoes the validated token's resolved admin role and scope bundle.
-   * No DB call — the JWT strategy has already resolved both onto the
-   * credential and the route's auth.scope guarantees an admin tier reached us.
+   * No DB call — the JWT strategy resolves both onto the credential and the
+   * route's auth.scope guarantees an admin tier reached us.
    * @param {import('#common/hapi-types.js').HapiRequest} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
@@ -40,15 +40,8 @@ export const adminMeGet = {
       /** @type {{ role: string | null, scope: string[] }} */ (
         /** @type {unknown} */ (request.auth.credentials)
       )
-    // Strip the legacy `service_maintainer` Hapi scope from the public response;
-    // it is an internal transitional artefact and not part of the documented
-    // SCOPES enum.
-    const scopes = credentials.scope.filter(
-      (s) =>
-        s === SCOPES.adminRead ||
-        s === SCOPES.adminWrite ||
-        s === SCOPES.adminDlqPurge
-    )
-    return h.response({ role: credentials.role, scopes }).code(StatusCodes.OK)
+    return h
+      .response({ role: credentials.role, scopes: credentials.scope })
+      .code(StatusCodes.OK)
   }
 }

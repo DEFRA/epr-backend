@@ -7,6 +7,7 @@
  */
 
 import { ADMIN_ROLES, ROLES } from '#common/helpers/auth/constants.js'
+// ROLES is imported only for the operator-side `asStandardUser` helper below.
 
 const ACCESS_TOKEN_STRATEGY = 'access-token'
 
@@ -48,28 +49,18 @@ const adminCredential = (
     email = 'maintainer@example.com',
     overrides
   } = {}
-) => {
-  // While the route re-scoping is in progress, the JWT strategy adds the
-  // legacy `service_maintainer` Hapi scope to the write/maintainer tiers so
-  // routes that have not yet adopted SCOPES.* keep working. Test helpers
-  // mirror that production behaviour.
-  const legacy =
-    role === 'service_maintainer_write' || role === 'service_maintainer'
-      ? [ROLES.serviceMaintainer]
-      : []
-  return {
-    auth: {
-      strategy: ACCESS_TOKEN_STRATEGY,
-      credentials: {
-        scope: [...ADMIN_ROLES[role], ...legacy],
-        role,
-        id,
-        email,
-        ...overrides
-      }
+) => ({
+  auth: {
+    strategy: ACCESS_TOKEN_STRATEGY,
+    credentials: {
+      scope: [...ADMIN_ROLES[role]],
+      role,
+      id,
+      email,
+      ...overrides
     }
   }
-}
+})
 
 /**
  * Creates auth injection options for a service maintainer (legacy alias).

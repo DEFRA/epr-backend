@@ -115,12 +115,7 @@ describe(`${orsImportCreatePath} route`, () => {
         expect(stored.createdBy).toEqual({
           id: 'test-maintainer-id',
           email: 'maintainer@example.com',
-          scope: [
-            'admin.read',
-            'admin.write',
-            'admin.dlq.purge',
-            'service_maintainer'
-          ]
+          scope: ['admin.read', 'admin.write', 'admin.dlq.purge']
         })
       })
 

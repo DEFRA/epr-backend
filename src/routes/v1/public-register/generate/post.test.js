@@ -74,7 +74,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
       const [request, context] = mockAuditPublicRegisterGenerate.mock.calls[0]
       expect(request.auth.credentials.id).toBeDefined()
       expect(request.auth.credentials.email).toBeDefined()
-      expect(request.auth.credentials.scope).toContain('service_maintainer')
+      expect(request.auth.credentials.scope).toContain('admin.write')
       expect(context.url).toBe(result.downloadUrl)
       expect(context.expiresAt).toBe(result.expiresAt)
       expect(context.generatedAt).toBe(result.generatedAt)

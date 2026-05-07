@@ -16,10 +16,7 @@ const maintainerCredential = {
   role: 'service_maintainer',
   scopes: [...ADMIN_ROLES.service_maintainer]
 }
-const expectedMaintainerScope = [
-  ...ADMIN_ROLES.service_maintainer,
-  ROLES.serviceMaintainer
-]
+const expectedMaintainerScope = [...ADMIN_ROLES.service_maintainer]
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -218,7 +215,7 @@ describe('#getJwtStrategyConfig', () => {
       )
     })
 
-    test('write tier credential carries all admin scopes plus the legacy service_maintainer scope', async () => {
+    test('write tier credential carries the full admin scope bundle', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'service_maintainer_write',
         scopes: [...ADMIN_ROLES.service_maintainer_write]
@@ -241,12 +238,11 @@ describe('#getJwtStrategyConfig', () => {
 
       expect(result.credentials.role).toBe('service_maintainer_write')
       expect(result.credentials.scope).toEqual([
-        ...ADMIN_ROLES.service_maintainer_write,
-        ROLES.serviceMaintainer
+        ...ADMIN_ROLES.service_maintainer_write
       ])
     })
 
-    test('support tier credential carries only admin.read with no legacy scope', async () => {
+    test('support tier credential carries only admin.read', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'support',
         scopes: [...ADMIN_ROLES.support]

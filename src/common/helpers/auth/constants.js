@@ -1,8 +1,9 @@
 /**
+ * Per-request operator-side gates (issued by `getDefraUserRoles` from the
+ * request context). Distinct from the durable admin scopes in `SCOPES` below.
  * @typedef {typeof ROLES[keyof typeof ROLES]} Roles
  */
 export const ROLES = {
-  serviceMaintainer: 'service_maintainer',
   standardUser: 'standard_user',
   inquirer: 'inquirer',
   linker: 'linker'
