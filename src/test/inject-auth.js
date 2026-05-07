@@ -54,7 +54,6 @@ const adminCredential = (
     strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
       scope: [...ADMIN_ROLES[role]],
-      role,
       id,
       email,
       ...overrides
@@ -106,7 +105,6 @@ export const asUnscopedAdminUser = (overrides = {}) => ({
     strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
       scope: [],
-      role: null,
       id: 'test-unscoped-id',
       email: 'unscoped@example.com',
       ...overrides

@@ -139,7 +139,6 @@ describe('#getJwtStrategyConfig', () => {
           id: 'contact-123',
           email: 'user@example.com',
           issuer: entraIdMockOidcWellKnownResponse.issuer,
-          role: 'service_maintainer',
           scope: expectedMaintainerScope
         }
       })
@@ -236,7 +235,6 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.role).toBe('service_maintainer_write')
       expect(result.credentials.scope).toEqual([
         ...ADMIN_ROLES.service_maintainer_write
       ])
@@ -263,11 +261,10 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.role).toBe('support')
       expect(result.credentials.scope).toEqual([SCOPES.adminRead])
     })
 
-    test('handles Entra ID token where user matches no admin tier (empty scope, null role)', async () => {
+    test('handles Entra ID token where user matches no admin tier (empty scope)', async () => {
       mockGetEntraUserRoles.mockResolvedValue({ role: null, scopes: [] })
 
       const config = getJwtStrategyConfig(mockOidcConfigs)
@@ -285,7 +282,6 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.role).toBeNull()
       expect(result.credentials.scope).toEqual([])
     })
 

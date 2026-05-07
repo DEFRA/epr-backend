@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
-import { ADMIN_ROLES, SCOPES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   asServiceMaintainerRead,
@@ -59,7 +59,7 @@ describe('GET /v1/admin/me', () => {
   })
 
   describe('payload by tier', () => {
-    it('returns the write tier role and full scope bundle', async () => {
+    it('returns the write tier scope bundle (admin.read + admin.write + admin.dlq.purge)', async () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
@@ -68,12 +68,11 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        role: 'service_maintainer_write',
-        scopes: [...ADMIN_ROLES.service_maintainer_write]
+        scopes: [SCOPES.adminRead, SCOPES.adminWrite, SCOPES.adminDlqPurge]
       })
     })
 
-    it('returns the maintainer tier role and admin.read + admin.dlq.purge', async () => {
+    it('returns the maintainer tier scope bundle (admin.read + admin.dlq.purge)', async () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
@@ -82,12 +81,11 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        role: 'service_maintainer',
-        scopes: [...ADMIN_ROLES.service_maintainer]
+        scopes: [SCOPES.adminRead, SCOPES.adminDlqPurge]
       })
     })
 
-    it('returns the support tier role with only admin.read', async () => {
+    it('returns the support tier scope bundle (admin.read only)', async () => {
       const response = await server.inject({
         method: 'GET',
         url: ADMIN_ME_PATH,
@@ -96,7 +94,6 @@ describe('GET /v1/admin/me', () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        role: 'support',
         scopes: [SCOPES.adminRead]
       })
     })
