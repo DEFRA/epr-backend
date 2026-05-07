@@ -29,111 +29,136 @@ import { validateLedgerTransactionInsert } from './ledger-validation.js'
 const wasteRecordKey = ({ type, rowId }) => `${type}:${rowId}`
 
 /**
+ * @param {Array<LedgerTransaction>} haystack
+ * @param {string} accreditationId
+ * @param {number} number
+ */
+const slotTakenIn = (haystack, accreditationId, number) =>
+  haystack.some(
+    (existing) =>
+      existing.accreditationId === accreditationId && existing.number === number
+  )
+
+/**
+ * @param {Array<LedgerTransaction>} storage
+ * @param {LedgerTransactionInsert[]} transactions
+ */
+const insertTransactionsInto = async (storage, transactions) => {
+  /** @type {LedgerTransaction[]} */
+  const stored = []
+
+  for (const transaction of transactions) {
+    const validated = validateLedgerTransactionInsert(transaction)
+
+    if (slotTakenIn(storage, validated.accreditationId, validated.number)) {
+      throw new LedgerSlotConflictError(
+        validated.accreditationId,
+        validated.number
+      )
+    }
+
+    const persisted = { id: randomUUID(), ...validated }
+    storage.push(persisted)
+    stored.push(structuredClone(persisted))
+  }
+
+  return stored
+}
+
+/**
+ * @param {Array<LedgerTransaction>} storage
+ * @param {string} accreditationId
+ */
+const findLatestByAccreditationIdIn = async (storage, accreditationId) => {
+  const matches = storage.filter(
+    (existing) => existing.accreditationId === accreditationId
+  )
+
+  const [first, ...rest] = matches
+
+  if (!first) {
+    return null
+  }
+
+  const latest = rest.reduce(
+    (highest, current) => (current.number > highest.number ? current : highest),
+    first
+  )
+
+  return structuredClone(latest)
+}
+
+/**
+ * @param {Array<LedgerTransaction>} storage
+ * @param {string} accreditationId
+ */
+const deleteAllForAccreditationIdIn = async (storage, accreditationId) => {
+  for (let index = storage.length - 1; index >= 0; index -= 1) {
+    if (storage[index].accreditationId === accreditationId) {
+      storage.splice(index, 1)
+    }
+  }
+}
+
+/**
+ * @param {Array<LedgerTransaction>} storage
+ * @param {string} accreditationId
+ * @param {Array<{ type: string, rowId: string }>} wasteRecords
+ * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
+ */
+const findLatestCreditedAmountsByWasteRecordsIn = async (
+  storage,
+  accreditationId,
+  wasteRecords
+) => {
+  const requested = new Set(wasteRecords.map(wasteRecordKey))
+  const latestByKey = new Map()
+
+  for (const transaction of storage) {
+    if (transaction.accreditationId !== accreditationId) {
+      continue
+    }
+
+    if (transaction.source.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
+      continue
+    }
+
+    const key = wasteRecordKey(transaction.source.summaryLogRow.wasteRecord)
+    if (!requested.has(key)) {
+      continue
+    }
+
+    const existing = latestByKey.get(key)
+    if (!existing || transaction.number > existing.number) {
+      latestByKey.set(key, transaction)
+    }
+  }
+
+  return (record) => {
+    const found = latestByKey.get(wasteRecordKey(record))
+    return found ? found.source.summaryLogRow.wasteRecord.creditedAmount : 0
+  }
+}
+
+/**
  * @param {Array<LedgerTransaction>} [initialTransactions]
  * @returns {import('./ledger-port.js').LedgerRepositoryFactory}
  */
 export const createInMemoryLedgerRepository = (initialTransactions = []) => {
   const storage = initialTransactions
 
-  /**
-   * @param {Array<LedgerTransaction>} haystack
-   * @param {string} accreditationId
-   * @param {number} number
-   */
-  const slotTakenIn = (haystack, accreditationId, number) =>
-    haystack.some(
-      (existing) =>
-        existing.accreditationId === accreditationId &&
-        existing.number === number
-    )
-
   return () => ({
-    /** @param {LedgerTransactionInsert[]} transactions */
-    insertTransactions: async (transactions) => {
-      /** @type {LedgerTransaction[]} */
-      const stored = []
-
-      for (const transaction of transactions) {
-        const validated = validateLedgerTransactionInsert(transaction)
-
-        if (slotTakenIn(storage, validated.accreditationId, validated.number)) {
-          throw new LedgerSlotConflictError(
-            validated.accreditationId,
-            validated.number
-          )
-        }
-
-        const persisted = { id: randomUUID(), ...validated }
-        storage.push(persisted)
-        stored.push(structuredClone(persisted))
-      }
-
-      return stored
-    },
-    /** @param {string} accreditationId */
-    findLatestByAccreditationId: async (accreditationId) => {
-      const matches = storage.filter(
-        (existing) => existing.accreditationId === accreditationId
+    insertTransactions: (transactions) =>
+      insertTransactionsInto(storage, transactions),
+    findLatestByAccreditationId: (accreditationId) =>
+      findLatestByAccreditationIdIn(storage, accreditationId),
+    deleteAllForAccreditationId: (accreditationId) =>
+      deleteAllForAccreditationIdIn(storage, accreditationId),
+    findLatestCreditedAmountsByWasteRecords: (accreditationId, wasteRecords) =>
+      findLatestCreditedAmountsByWasteRecordsIn(
+        storage,
+        accreditationId,
+        wasteRecords
       )
-
-      const [first, ...rest] = matches
-
-      if (!first) {
-        return null
-      }
-
-      const latest = rest.reduce(
-        (highest, current) =>
-          current.number > highest.number ? current : highest,
-        first
-      )
-
-      return structuredClone(latest)
-    },
-    /** @param {string} accreditationId */
-    deleteAllForAccreditationId: async (accreditationId) => {
-      for (let index = storage.length - 1; index >= 0; index -= 1) {
-        if (storage[index].accreditationId === accreditationId) {
-          storage.splice(index, 1)
-        }
-      }
-    },
-    /**
-     * @param {string} accreditationId
-     * @param {Array<{ type: string, rowId: string }>} wasteRecords
-     * @returns {Promise<import('./ledger-port.js').CreditedAmountLookup>}
-     */
-    findLatestCreditedAmountsByWasteRecords: async (
-      accreditationId,
-      wasteRecords
-    ) => {
-      const requested = new Set(wasteRecords.map(wasteRecordKey))
-      const latestByKey = new Map()
-
-      for (const transaction of storage) {
-        if (transaction.accreditationId !== accreditationId) {
-          continue
-        }
-
-        if (transaction.source.kind !== LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW) {
-          continue
-        }
-
-        const key = wasteRecordKey(transaction.source.summaryLogRow.wasteRecord)
-        if (!requested.has(key)) {
-          continue
-        }
-
-        const existing = latestByKey.get(key)
-        if (!existing || transaction.number > existing.number) {
-          latestByKey.set(key, transaction)
-        }
-      }
-
-      return (record) => {
-        const found = latestByKey.get(wasteRecordKey(record))
-        return found ? found.source.summaryLogRow.wasteRecord.creditedAmount : 0
-      }
-    }
   })
 }
