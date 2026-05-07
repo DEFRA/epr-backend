@@ -251,16 +251,6 @@ export async function updatePrnStatus({
   const currentStatus = prn.status.currentStatus
   validateTransition(currentStatus, newStatus, actor)
 
-  await applyWasteBalanceEffects(wasteBalancesRepository, {
-    currentStatus,
-    newStatus,
-    accreditationId,
-    organisationId,
-    prnId: id,
-    tonnage: prn.tonnage,
-    userId: user.id
-  })
-
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
@@ -270,7 +260,7 @@ export async function updatePrnStatus({
     updatedAt: now
   }
 
-  // Issue with PRN number generation and collision retry
+  let updatedPrn
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     updateParams.operation = {
       slot: 'issued',
@@ -285,34 +275,33 @@ export async function updatePrnStatus({
 
     assertAccreditationNotSuspended(accreditation)
 
-    const issuedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
+    updatedPrn = await issuePrnWithRetry(prnRepository, updateParams, {
       regulator: accreditation.submittedToRegulator,
       isExport: prn.isExport,
       accreditationYear: prn.accreditation.accreditationYear
     })
+  } else {
+    const operationSlot = STATUS_OPERATION_SLOT[newStatus]
+    if (operationSlot) {
+      updateParams.operation = { slot: operationSlot, at: now, by: user }
+    }
 
-    await prnMetrics.recordStatusTransition({
-      fromStatus: currentStatus,
-      toStatus: newStatus,
-      material: prn.accreditation.material,
-      isExport: prn.isExport
-    })
+    updatedPrn = await prnRepository.updateStatus(updateParams)
 
-    return issuedPrn
+    if (!updatedPrn) {
+      throw Boom.badImplementation('Failed to update PRN status')
+    }
   }
 
-  // Add business operation slot for transitions that have one
-  const operationSlot = STATUS_OPERATION_SLOT[newStatus]
-  if (operationSlot) {
-    updateParams.operation = { slot: operationSlot, at: now, by: user }
-  }
-
-  // Simple status update without PRN number
-  const updatedPrn = await prnRepository.updateStatus(updateParams)
-
-  if (!updatedPrn) {
-    throw Boom.badImplementation('Failed to update PRN status')
-  }
+  await applyWasteBalanceEffects(wasteBalancesRepository, {
+    currentStatus,
+    newStatus,
+    accreditationId,
+    organisationId,
+    prnId: id,
+    tonnage: prn.tonnage,
+    userId: user.id
+  })
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,
