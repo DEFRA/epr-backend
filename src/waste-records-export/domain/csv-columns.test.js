@@ -68,9 +68,10 @@ describe('csv-columns', () => {
 
   describe('buildDataRow', () => {
     const baseInput = {
-      org: { regulator: 'ea', companyDetails: { name: 'Acme Ltd' } },
+      org: { companyDetails: { name: 'Acme Ltd' } },
       registration: {
         material: 'plastic',
+        submittedToRegulator: 'ea',
         accreditation: { status: 'approved' }
       },
       record: {

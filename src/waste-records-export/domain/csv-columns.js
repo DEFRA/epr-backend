@@ -87,7 +87,7 @@ export const buildDataRow = ({
   const data = record.data
 
   const metadata = [
-    uppercaseString(org.regulator),
+    uppercaseString(registration.submittedToRegulator),
     org.companyDetails.name,
     registration.material,
     data.processingType,
