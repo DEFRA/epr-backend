@@ -1,7 +1,6 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
-import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { getTargetAmount } from './target-amount.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -84,30 +83,6 @@ const PRN_DELTAS = Object.freeze({
   })
 })
 
-/**
- * @param {WasteRecord} record
- * @param {Accreditation} accreditation
- * @param {OverseasSitesContext} overseasSites
- * @returns {number}
- */
-const targetAmountFor = (record, accreditation, overseasSites) => {
-  if (record.excludedFromWasteBalance) {
-    return 0
-  }
-  const schema = findSchemaForProcessingType(
-    record.data?.processingType,
-    record.type
-  )
-  if (!schema?.classifyForWasteBalance) {
-    return 0
-  }
-  const result = schema.classifyForWasteBalance(record.data, {
-    accreditation,
-    overseasSites
-  })
-  return result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
-}
-
 const PRN_KIND_FROM_TRANSITION = (prevStatus, newStatus) => {
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
     return REBUILT_TRANSACTION_KIND.PRN_CREATED
@@ -183,7 +158,7 @@ export const computeRebuiltTotals = ({
   let availableAmount = 0
 
   for (const record of wasteRecords) {
-    const tonnage = targetAmountFor(record, accreditation, overseasSites)
+    const tonnage = getTargetAmount(record, accreditation, overseasSites)
     if (tonnage === 0) {
       continue
     }
@@ -202,7 +177,7 @@ export const computeRebuiltTotals = ({
 }
 
 const wasteRecordEvent = (record, accreditation, overseasSites) => {
-  const tonnage = targetAmountFor(record, accreditation, overseasSites)
+  const tonnage = getTargetAmount(record, accreditation, overseasSites)
   if (tonnage === 0) {
     return null
   }

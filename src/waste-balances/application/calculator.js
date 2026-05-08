@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { getTargetAmount } from './target-amount.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -145,35 +144,6 @@ const sumPrnTransactionAdjustments = (transactions) => {
     )
   }
   return { amount, availableAmount }
-}
-
-/**
- * Calculates the target amount for a waste record based on accreditation.
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
- * @param {Object} accreditation
- * @param {OverseasSitesContext} overseasSites
- * @returns {number}
- */
-const getTargetAmount = (record, accreditation, overseasSites) => {
-  if (record.excludedFromWasteBalance) {
-    return 0
-  }
-
-  const schema = findSchemaForProcessingType(
-    record.data?.processingType,
-    record.type
-  )
-
-  if (!schema?.classifyForWasteBalance) {
-    return 0
-  }
-
-  /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} */
-  const result = schema.classifyForWasteBalance(record.data, {
-    accreditation,
-    overseasSites
-  })
-  return result.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
 }
 
 /**
