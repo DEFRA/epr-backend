@@ -5,7 +5,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { computeRebuiltTotals } from '#waste-balances/application/rebuild-from-authoritative-sources.js'
+import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
@@ -32,7 +32,7 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @param {import('mongodb').Db} db
  * @returns {Promise<EmbeddedBalanceRow[]>}
  */
-export const findEmbeddedWasteBalances = async (db) => {
+const findEmbeddedWasteBalances = async (db) => {
   const docs = await db
     .collection(WASTE_BALANCES_COLLECTION)
     .find(

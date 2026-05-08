@@ -5,7 +5,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { computeRebuiltTotals } from '#waste-balances/application/rebuild-from-authoritative-sources.js'
+import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 
@@ -29,12 +29,9 @@ vi.mock('#packaging-recycling-notes/repository/mongodb.js', () => ({
 vi.mock('#overseas-sites/repository/mongodb.js', () => ({
   createOverseasSitesRepository: vi.fn()
 }))
-vi.mock(
-  '#waste-balances/application/rebuild-from-authoritative-sources.js',
-  () => ({
-    computeRebuiltTotals: vi.fn()
-  })
-)
+vi.mock('#waste-balances/application/compute-rebuilt-totals.js', () => ({
+  computeRebuiltTotals: vi.fn()
+}))
 vi.mock('#application/waste-records/resolve-overseas-sites.js', () => ({
   resolveOverseasSites: vi.fn()
 }))
