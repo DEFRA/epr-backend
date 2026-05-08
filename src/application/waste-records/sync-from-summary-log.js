@@ -13,6 +13,10 @@ import { WASTE_RECORD_CHANGE } from '#domain/waste-records/model.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 /**
+ * @import { TypedLogger } from '#common/helpers/logging/logger.js'
+ */
+
+/**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
  */
 
@@ -237,6 +241,7 @@ const calculateMetrics = (wasteRecords) => {
  * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @param {import('#overseas-sites/repository/port.js').OverseasSitesRepository} dependencies.overseasSitesRepository - The overseas sites repository
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags] - Feature flags for controlling ORS validation
+ * @param {TypedLogger} dependencies.logger - Logger forwarded to extractor for trace correlation
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
@@ -246,7 +251,8 @@ export const syncFromSummaryLog = (dependencies) => {
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
-    featureFlags
+    featureFlags,
+    logger
   } = dependencies
 
   /**
@@ -264,7 +270,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const timestamp = new Date().toISOString()
 
     // 1. Extract/parse the summary log
-    const parsedData = await extractor.extract(summaryLog)
+    const parsedData = await extractor.extract(summaryLog, { logger })
 
     // 2. Extract row IDs for transformation
     const preparedData = prepareRowsForTransformation(parsedData)

@@ -82,19 +82,22 @@ const logParsingSummary = (logger, parsedData) => {
 }
 
 /**
- * Creates a production summary log extractor that fetches from S3 and parses with ExcelJS
+ * Creates a production summary log extractor that fetches from S3 and parses with ExcelJS.
+ * The logger is provided per-call to extract() so the caller can forward a request-
+ * or message-bound child logger (carrying trace.id, http.request.id, etc).
+ *
  * @param {Object} params
  * @param {UploadsRepository} params.uploadsRepository
- * @param {import('#common/helpers/logging/logger.js').TypedLogger} params.logger
  * @returns {SummaryLogExtractor}
  */
-export const createSummaryLogExtractor = ({ uploadsRepository, logger }) => {
+export const createSummaryLogExtractor = ({ uploadsRepository }) => {
   return {
     /**
      * @param {StoredSummaryLog} summaryLog
+     * @param {{ logger: TypedLogger }} options
      * @returns {Promise<ParsedSummaryLog>}
      */
-    extract: async (summaryLog) => {
+    extract: async (summaryLog, { logger }) => {
       const {
         file: { uri }
       } = summaryLog

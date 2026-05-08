@@ -5,8 +5,13 @@ import { ecsFormat } from '@elastic/ecs-pino-format'
 const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
+const tracingHeader = config.get('tracing.header')
 
-const ecsOptions = ecsFormat({ serviceVersion, serviceName })
+const ecsOptions = ecsFormat({
+  serviceVersion,
+  serviceName,
+  convertReqRes: true
+})
 const ecsLog =
   /** @type {(obj: object) => { error?: { stack_trace?: string } }} */ (
     ecsOptions.formatters?.log
@@ -35,6 +40,19 @@ export const loggerOptions = {
   enabled: logConfig.isEnabled,
   logRequestStart: true,
   ignorePaths: ['/health'],
+  getChildBindings: (request) => {
+    const traceId = request.headers[tracingHeader]
+    return {
+      http: {
+        request: {
+          id: request.info.id,
+          method: request.method.toUpperCase()
+        }
+      },
+      url: { path: request.path },
+      ...(traceId ? { trace: { id: traceId } } : {})
+    }
+  },
   redact: {
     paths: logConfig.redact,
     remove: true

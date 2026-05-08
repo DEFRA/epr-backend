@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { config } from '#root/config.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -6,6 +7,7 @@ import {
 } from '../enums/event.js'
 
 const mockLoggerError = vi.fn()
+const mockLoggerDebug = vi.fn()
 const secretFixture = 'secret'
 
 vi.mock('fs')
@@ -16,48 +18,36 @@ vi.mock('./logging/logger.js', async (importOriginal) => {
     logger: {
       info: vi.fn(),
       error: (...args) => mockLoggerError(...args),
-      warn: vi.fn()
+      warn: vi.fn(),
+      debug: (...args) => mockLoggerDebug(...args)
     }
   }
 })
-vi.mock('#root/config.js', () => ({
-  config: {
-    get: vi.fn((key) => {
-      const values = {
-        'some.configKey': 'path/to/secret/file',
-        log: {
-          isEnabled: true,
-          level: 'info',
-          format: 'pino-pretty',
-          redact: []
-        },
-        serviceName: 'test-service',
-        serviceVersion: '1.0.0',
-        cdpEnvironment: 'test'
-      }
-      return values[key]
-    })
-  }
-}))
 
 describe('getLocalSecret', () => {
-  const configKey = 'some.configKey'
+  const configKey = 'govukNotifyApiKeyPath'
 
   afterEach(() => {
+    config.reset(configKey)
     vi.clearAllMocks()
   })
 
   it('returns a value from file', () => {
+    config.set(configKey, 'path/to/secret/file')
     vi.mocked(fs).readFileSync.mockReturnValueOnce(secretFixture)
+
     expect(getLocalSecret(configKey)).toEqual(secretFixture)
   })
 
   it('returns null if secret file not found', () => {
+    config.set(configKey, 'path/to/secret/file')
     const error = new Error('file not found')
     vi.mocked(fs).readFileSync.mockImplementationOnce(() => {
       throw error
     })
+
     const result = getLocalSecret(configKey)
+
     expect(result).toEqual(null)
     expect(mockLoggerError).toHaveBeenCalledWith({
       err: error,
@@ -69,9 +59,32 @@ describe('getLocalSecret', () => {
     })
   })
 
-  it('returns null if config key is not set', () => {
-    const result = getLocalSecret('nonexistent.configKey')
+  it('returns null when the configured path is empty', () => {
+    const result = getLocalSecret(configKey)
+
     expect(result).toBeNull()
     expect(mockLoggerError).toHaveBeenCalled()
+  })
+
+  it('logs at debug (not error) when the secret file is missing (ENOENT)', () => {
+    config.set(configKey, 'path/to/secret/file')
+    const error = Object.assign(new Error('ENOENT: no such file'), {
+      code: 'ENOENT'
+    })
+    vi.mocked(fs).readFileSync.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const result = getLocalSecret(configKey)
+
+    expect(result).toBeNull()
+    expect(mockLoggerError).not.toHaveBeenCalled()
+    expect(mockLoggerDebug).toHaveBeenCalledWith({
+      message: `Local secret not present for config key: ${configKey}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SECRET,
+        action: LOGGING_EVENT_ACTIONS.NOT_FOUND
+      }
+    })
   })
 })
