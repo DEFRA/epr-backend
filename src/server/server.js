@@ -41,6 +41,7 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
+import { runBalanceDivergenceDiagnostic } from '#server/run-balance-divergence-diagnostic.js'
 import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -213,10 +214,15 @@ async function createServer(options = {}) {
 
   await server.register(plugins)
 
+  const balanceDivergenceCap = config.get(
+    'wasteBalances.divergenceDiagnosticCap'
+  )
+
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
     runRowIdCollisionDiagnostic(server)
+    runBalanceDivergenceDiagnostic(server, { cap: balanceDivergenceCap })
   })
 
   return server

@@ -383,6 +383,14 @@ const baseConfig = {
       env: 'FEATURE_FLAG_REPORT_UNSUBMIT'
     }
   },
+  wasteBalances: {
+    divergenceDiagnosticCap: {
+      doc: 'Maximum per-accreditation log lines emitted by the waste-balance divergence diagnostic before further divergent rows are counted but not logged',
+      format: 'nat',
+      default: 5000,
+      env: 'WASTE_BALANCE_DIVERGENCE_DIAGNOSTIC_CAP'
+    }
+  },
   formSubmissionOverrides: {
     doc: 'JSON configuration for form submission field overrides (registrations and accreditations) on migration to epr-organisations',
     format: String,
