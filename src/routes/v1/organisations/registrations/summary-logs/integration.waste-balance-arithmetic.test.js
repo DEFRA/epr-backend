@@ -1015,4 +1015,127 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(cancellationTransactions[0].entities[0].id).toBe(prn1.id)
     })
   })
+
+  describe('post-CAS balance failure leaves PRNs phantom-issued', () => {
+    it.fails(
+      'leaves the PRN in awaiting_authorisation when the post-CAS balance debit fails',
+      async () => {
+        const env = await setupWasteBalanceIntegrationEnvironment({
+          processingType: 'exporter'
+        })
+        const {
+          packagingRecyclingNotesRepository,
+          wasteBalancesRepository,
+          accreditationId,
+          organisationId
+        } = env
+
+        await performSummaryLogSubmission(
+          env,
+          'log-phantom-1',
+          'file-phantom-1',
+          'waste-phantom-1.xlsx',
+          createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+        )
+
+        const prn = await createPrn(env, 50)
+        await transitionPrnStatus(
+          env,
+          prn.id,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+          accreditationId,
+          organisationId,
+          prnId: 'other-prn',
+          tonnage: 80,
+          userId: 'test-user'
+        })
+
+        const result = await transitionPrnStatus(
+          env,
+          prn.id,
+          PRN_STATUS.AWAITING_ACCEPTANCE
+        )
+        expect(result.statusCode).toBe(409)
+
+        const refetched = await packagingRecyclingNotesRepository.findById(
+          prn.id
+        )
+
+        expect(refetched.status.currentStatus).toBe(
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+        expect(refetched.prnNumber).toBeUndefined()
+        expect(refetched.status.issued).toBeUndefined()
+      }
+    )
+
+    it.fails(
+      'leaves only one PRN issued when two concurrent issuances race for the same accreditation',
+      async () => {
+        const env = await setupWasteBalanceIntegrationEnvironment({
+          processingType: 'exporter'
+        })
+        const {
+          packagingRecyclingNotesRepository,
+          wasteBalancesRepository,
+          accreditationId,
+          organisationId
+        } = env
+
+        await performSummaryLogSubmission(
+          env,
+          'log-cross-prn',
+          'file-cross-prn',
+          'waste-cross-prn.xlsx',
+          createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+        )
+
+        const prnA = await createPrn(env, 50)
+        await transitionPrnStatus(
+          env,
+          prnA.id,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        const prnB = await createPrn(env, 50)
+        await transitionPrnStatus(
+          env,
+          prnB.id,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+          accreditationId,
+          organisationId,
+          prnId: 'other-prn',
+          tonnage: 20,
+          userId: 'test-user'
+        })
+
+        await Promise.allSettled([
+          transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_ACCEPTANCE),
+          transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+        ])
+
+        const refetchedA = await packagingRecyclingNotesRepository.findById(
+          prnA.id
+        )
+        const refetchedB = await packagingRecyclingNotesRepository.findById(
+          prnB.id
+        )
+
+        const issuedCount = [refetchedA, refetchedB].filter(
+          (p) => p.status.currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+        ).length
+        expect(issuedCount).toBe(1)
+
+        const balance =
+          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+        expect(balance.amount).toBe(30)
+      }
+    )
+  })
 })
