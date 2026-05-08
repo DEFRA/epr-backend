@@ -1016,9 +1016,9 @@ describe('Waste balance arithmetic integration tests', () => {
     })
   })
 
-  describe('post-CAS balance failure leaves PRNs phantom-issued', () => {
+  describe('rejected issuance does not transition the PRN', () => {
     it.fails(
-      'leaves the PRN in awaiting_authorisation when the post-CAS balance debit fails',
+      'keeps the PRN in awaiting_authorisation when total balance is insufficient at issue time',
       async () => {
         const env = await setupWasteBalanceIntegrationEnvironment({
           processingType: 'exporter'
@@ -1073,7 +1073,7 @@ describe('Waste balance arithmetic integration tests', () => {
     )
 
     it.fails(
-      'leaves only one PRN issued when two concurrent issuances race for the same accreditation',
+      'issues only one PRN when two concurrent issuances exceed the total balance',
       async () => {
         const env = await setupWasteBalanceIntegrationEnvironment({
           processingType: 'exporter'
