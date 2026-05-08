@@ -169,9 +169,9 @@ describe('#getJwtStrategyConfig', () => {
     test.each([
       ['b@email.com', 'b@email.com'],
       [undefined, undefined],
-      [null, null]
+      [null, undefined]
     ])(
-      'When token.preferred_username is %s, parsed email is %s',
+      'When token.preferred_username is %s and email claim is absent, parsed email is %s',
       async (preferredUsername, expected) => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
@@ -194,6 +194,47 @@ describe('#getJwtStrategyConfig', () => {
         expect(mockGetEntraUserRoles).toHaveBeenCalledTimes(1)
       }
     )
+
+    test('Falls back to the email claim when preferred_username is absent (entra-stub compat)', async () => {
+      const config = getJwtStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockOidcWellKnownResponse.issuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            email: 'stubbed@test.gov.uk'
+          }
+        }
+      }
+
+      const result = await config.validate(artifacts)
+
+      expect(result.credentials.email).toBe('stubbed@test.gov.uk')
+      expect(mockGetEntraUserRoles).toHaveBeenCalledWith('stubbed@test.gov.uk')
+    })
+
+    test('Prefers preferred_username over email when both are present (real Entra)', async () => {
+      const config = getJwtStrategyConfig(mockOidcConfigs)
+
+      const artifacts = {
+        decoded: {
+          payload: {
+            iss: entraIdMockOidcWellKnownResponse.issuer,
+            aud: mockEntraClientId,
+            oid: 'contact-123',
+            preferred_username: 'real@example.com',
+            email: 'wrong@example.com'
+          }
+        }
+      }
+
+      const result = await config.validate(artifacts)
+
+      expect(result.credentials.email).toBe('real@example.com')
+      expect(mockGetEntraUserRoles).toHaveBeenCalledWith('real@example.com')
+    })
 
     test('throws forbidden error for Entra ID token with invalid audience', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)

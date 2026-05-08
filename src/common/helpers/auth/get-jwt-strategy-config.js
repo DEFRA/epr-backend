@@ -46,7 +46,10 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
-        const email = tokenPayload.preferred_username
+        // Real Entra ID tokens carry the user's email under `preferred_username`.
+        // The local `epr-re-ex-entra-stub` emits it under `email` instead. Accept
+        // either so admin RBAC resolution works for both real and stubbed tokens.
+        const email = tokenPayload.preferred_username ?? tokenPayload.email
 
         const { scopes } = await getEntraUserRoles(email)
 
