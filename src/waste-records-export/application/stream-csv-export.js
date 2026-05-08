@@ -1,7 +1,11 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
-import { buildHeaderRow, buildDataRow } from '../domain/csv-columns.js'
+import {
+  buildHeaderRow,
+  buildDataRow,
+  buildDataFieldColumns
+} from '../domain/csv-columns.js'
 import { isIncludedInWasteBalance } from '../domain/is-included-in-waste-balance.js'
 import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
@@ -37,6 +41,13 @@ const encodeRow = async (cells) => {
  * Yields CSV-encoded lines (header first, then one per waste record).
  * Hard-fails on any iterator error — caller must close the response stream.
  *
+ * The header row is dynamically composed from the union of schema-declared
+ * field constants and any keys observed on actual `record.data` objects.
+ * To know all observed keys before emitting the header, the orchestrator
+ * loads each registration's records and per-registration context (ORS,
+ * summary logs, accreditation) into an in-memory buffer during a single
+ * pass, then iterates the buffer to emit rows.
+ *
  * @param {StreamCsvExportDeps} deps
  * @returns {AsyncGenerator<string>}
  */
@@ -51,10 +62,21 @@ export async function* streamCsvExport(deps) {
   const allSites = await overseasSitesRepository.findAll()
   const sitesById = new Map(allSites.map((s) => [s.id, s]))
 
-  yield await encodeRow(buildHeaderRow())
-
   const orgs = await organisationsRepository.findAll()
   const orgsSorted = [...orgs].sort((a, b) => a.id.localeCompare(b.id))
+
+  /**
+   * @typedef {Object} BufferedRegistration
+   * @property {import('#domain/organisations/model.js').Organisation} org
+   * @property {import('#domain/organisations/registration.js').Registration} registration
+   * @property {import('#domain/organisations/accreditation.js').Accreditation | null} accreditation
+   * @property {Record<string, { validFrom: Date | null }>} overseasSites
+   * @property {Map<string, { submittedAt: string }>} summaryLogMap
+   * @property {import('#domain/waste-records/model.js').WasteRecord[]} records
+   */
+  /** @type {BufferedRegistration[]} */
+  const buffered = []
+  const observedKeys = new Set()
 
   for (const org of orgsSorted) {
     const registrations = [...(org.registrations ?? [])].sort((a, b) =>
@@ -80,26 +102,50 @@ export async function* streamCsvExport(deps) {
       })
 
       for (const record of recordsSorted) {
-        const lastVersion = record.versions.at(-1)
-        const summaryLogId = lastVersion.summaryLog.id
-        const summaryLogEntry = summaryLogMap.get(summaryLogId) ?? null
-
-        const includedInWasteBalance = isIncludedInWasteBalance(
-          record,
-          accreditation,
-          overseasSites
-        )
-
-        yield await encodeRow(
-          buildDataRow({
-            org,
-            registration,
-            record,
-            summaryLogEntry,
-            includedInWasteBalance
-          })
-        )
+        for (const key of Object.keys(record.data)) {
+          observedKeys.add(key)
+        }
       }
+
+      buffered.push({
+        org,
+        registration,
+        accreditation,
+        overseasSites,
+        summaryLogMap,
+        records: recordsSorted
+      })
+    }
+  }
+
+  const dataFieldColumns = buildDataFieldColumns(observedKeys)
+  yield await encodeRow(buildHeaderRow(dataFieldColumns))
+
+  for (const item of buffered) {
+    const { org, registration, accreditation, overseasSites, summaryLogMap } =
+      item
+
+    for (const record of item.records) {
+      const lastVersion = record.versions.at(-1)
+      const summaryLogId = lastVersion.summaryLog.id
+      const summaryLogEntry = summaryLogMap.get(summaryLogId) ?? null
+
+      const includedInWasteBalance = isIncludedInWasteBalance(
+        record,
+        accreditation,
+        overseasSites
+      )
+
+      yield await encodeRow(
+        buildDataRow({
+          org,
+          registration,
+          record,
+          summaryLogEntry,
+          includedInWasteBalance,
+          dataFieldColumns
+        })
+      )
     }
   }
 }

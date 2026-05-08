@@ -2,7 +2,11 @@ import {
   streamCsvExport,
   streamCsvExportToReadable
 } from './stream-csv-export.js'
-import { ALL_COLUMNS } from '../domain/csv-columns.js'
+import {
+  METADATA_COLUMNS,
+  buildDataFieldColumns,
+  buildHeaderRow
+} from '../domain/csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
@@ -67,7 +71,10 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(1)
     // The header row is CSV-encoded and ends with a newline
     expect(out[0].endsWith('\n')).toBe(true)
-    for (const column of ALL_COLUMNS) {
+    for (const column of METADATA_COLUMNS) {
+      expect(out[0]).toContain(column)
+    }
+    for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
       expect(out[0]).toContain(column)
     }
   })
@@ -338,8 +345,28 @@ describe('streamCsvExportToReadable', () => {
       chunks.push(chunk.toString('utf8'))
     }
     expect(chunks).toHaveLength(1)
-    for (const column of ALL_COLUMNS) {
+    for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
       expect(chunks[0]).toContain(column)
     }
+  })
+
+  it('includes runtime-observed data keys in the header even when not in any schema constant', async () => {
+    const org = baseOrg({ registrations: [baseRegistration()] })
+    const record = reprocessorReceivedRecord({
+      data: {
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+        DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+        BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
+      }
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record])
+      }
+    })
+    const out = await collect(streamCsvExport(deps))
+    expect(out[0]).toContain('BILL_OF_LANDING_REFERENCE_NUMBER')
+    expect(out[1]).toContain('BL-99')
   })
 })
