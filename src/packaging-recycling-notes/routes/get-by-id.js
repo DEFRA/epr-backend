@@ -73,10 +73,9 @@ export const packagingRecyclingNoteById = {
       // Verify the PRN exists, belongs to the requested organisation/accreditation,
       // and treat deleted PRNs as not found (soft delete)
       if (
-        !prn ||
-        prn.organisation.id !== organisationId ||
-        prn.accreditation.id !== accreditationId ||
-        prn.status.currentStatus === PRN_STATUS.DELETED
+        prn?.organisation.id !== organisationId ||
+        prn?.accreditation.id !== accreditationId ||
+        prn?.status.currentStatus === PRN_STATUS.DELETED
       ) {
         throw Boom.notFound('PRN not found')
       }
