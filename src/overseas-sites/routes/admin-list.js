@@ -165,10 +165,7 @@ export const adminOverseasSitesList = {
    */
   handler: async (request, h) => {
     const { logger, organisationsRepository, overseasSitesRepository } = request
-    const all =
-      /** @type {boolean | undefined} */ (
-        /** @type {unknown} */ (request.query.all)
-      ) === true
+    const all = Boolean(request.query.all)
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
     const registrationNumber = normaliseRegistrationNumberFilter(
