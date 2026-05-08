@@ -226,7 +226,7 @@ describe('decimal-utils', () => {
     it('should handle floating point precision issues', () => {
       // In JavaScript: 0.1 + 0.2 !== 0.3
       const sum = 0.1 + 0.2
-      expect(sum === 0.3).toBe(false) // JavaScript fails
+      expect(sum === 0.3).toBe(false) // NOSONAR(javascript:S5914) demonstrates JS floating-point quirk
       expect(equals(add(0.1, 0.2), 0.3)).toBe(true) // Our function succeeds
     })
 
