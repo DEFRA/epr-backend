@@ -50,6 +50,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
   let mockFind
   let collectionByName
   let registrations
+  let accreditations
 
   const setEmbeddedBalances = (rows) => {
     mockToArray.mockResolvedValue(rows)
@@ -83,15 +84,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
     }
 
     registrations = {}
+    accreditations = {}
 
     organisationsRepository = {
-      findAccreditationById: vi.fn(async (orgId, accId) => ({
-        id: accId,
-        accreditationNumber: `ACC-${accId}`
-      })),
       findById: vi.fn(async (orgId) => ({
         id: orgId,
-        registrations: registrations[orgId] ?? []
+        registrations: registrations[orgId] ?? [],
+        accreditations: accreditations[orgId] ?? []
       }))
     }
     createOrganisationsRepository.mockResolvedValue(
@@ -182,6 +181,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
     registrations['org-1'] = [
       { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
     ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
+    ]
     computeRebuiltTotals.mockReturnValue({ amount: 7, availableAmount: 5 })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -208,6 +210,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
     registrations['org-1'] = [
       { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
     ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
+    ]
     computeRebuiltTotals.mockReturnValue({ amount: 95, availableAmount: 80 })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -227,9 +232,6 @@ describe('runBalanceDivergenceDiagnostic', () => {
       id: 'acc-1',
       accreditationNumber: 'ACC-001'
     }
-    organisationsRepository.findAccreditationById.mockResolvedValue(
-      accreditation
-    )
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
@@ -241,6 +243,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     registrations['org-1'] = [
       { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
     ]
+    accreditations['org-1'] = [accreditation]
     const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
     const prns = [{ id: 'prn-1' }]
     wasteRecordsRepository.findByRegistration.mockResolvedValue(wasteRecords)
@@ -276,6 +279,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
     registrations['org-1'] = [
       { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
     ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
+    ]
     resolveOverseasSites.mockResolvedValue({ '099': { validFrom: null } })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -293,6 +299,33 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
   })
 
+  it('logs accreditationNumber=<none> for accreditations that have not been issued one yet', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-pending',
+        organisationId: 'org-1',
+        amount: 10,
+        availableAmount: 10
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-pending',
+        registrationNumber: 'REG-1'
+      }
+    ]
+    accreditations['org-1'] = [{ id: 'acc-pending' }]
+    computeRebuiltTotals.mockReturnValue({ amount: 7, availableAmount: 7 })
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3'
+    })
+  })
+
   it('caps per-accreditation log lines at the configured cap but keeps scanning past it', async () => {
     setEmbeddedBalances(
       Array.from({ length: 5 }, (_, i) => ({
@@ -307,6 +340,10 @@ describe('runBalanceDivergenceDiagnostic', () => {
       accreditationId: `acc-${i}`,
       registrationNumber: `REG-${i}`
     }))
+    accreditations['org-1'] = Array.from({ length: 5 }, (_, i) => ({
+      id: `acc-${i}`,
+      accreditationNumber: `ACC-${i}`
+    }))
     computeRebuiltTotals.mockReturnValue({ amount: 50, availableAmount: 50 })
 
     await runBalanceDivergenceDiagnostic(mockServer, { cap: 2 })
@@ -319,6 +356,38 @@ describe('runBalanceDivergenceDiagnostic', () => {
       message:
         'Waste-balance divergence diagnostic: scanned=5 changed=5 logged=2 failed=0 cap=2'
     })
+  })
+
+  it('logs a tagged error line when an accreditation has no matching registration', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-orphan',
+        organisationId: 'org-1',
+        amount: 10,
+        availableAmount: 10
+      }
+    ])
+    accreditations['org-1'] = [
+      { id: 'acc-orphan', accreditationNumber: 'ACC-orphan' }
+    ]
+    registrations['org-1'] = []
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'Waste-balance divergence rebuild failed: organisationId=org-1 accreditationId=acc-orphan'
+        )
+      })
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'No registration links to accreditation acc-orphan'
+        )
+      })
+    )
   })
 
   it('logs a tagged error line and continues scanning when one accreditation fails to rebuild', async () => {
@@ -343,6 +412,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
         accreditationId: 'acc-good',
         registrationNumber: 'REG-2'
       }
+    ]
+    accreditations['org-2'] = [
+      { id: 'acc-good', accreditationNumber: 'ACC-good' }
     ]
     computeRebuiltTotals.mockReturnValue({ amount: 5, availableAmount: 5 })
 

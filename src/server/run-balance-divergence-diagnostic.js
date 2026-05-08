@@ -74,14 +74,17 @@ const compareForEmbedded = async (embedded, deps) => {
     orsValidationEnabled
   } = deps
 
-  const accreditation = await organisationsRepository.findAccreditationById(
-    embedded.organisationId,
-    embedded.accreditationId
-  )
-
   const organisation = await organisationsRepository.findById(
     embedded.organisationId
   )
+  const accreditation = organisation.accreditations.find(
+    (a) => a.id === embedded.accreditationId
+  )
+  if (!accreditation) {
+    throw new Error(
+      `Accreditation ${embedded.accreditationId} not found on organisation ${embedded.organisationId}`
+    )
+  }
   const registration = organisation.registrations.find(
     (r) => r.accreditationId === embedded.accreditationId
   )
@@ -116,7 +119,7 @@ const compareForEmbedded = async (embedded, deps) => {
   return {
     organisationId: embedded.organisationId,
     registrationNumber: registration.registrationNumber,
-    accreditationNumber: accreditation.accreditationNumber,
+    accreditationNumber: accreditation.accreditationNumber ?? '<none>',
     currentAmount: embedded.amount,
     rebuiltAmount: rebuilt.amount,
     deltaAmount: formatDelta(embedded.amount, rebuilt.amount),
