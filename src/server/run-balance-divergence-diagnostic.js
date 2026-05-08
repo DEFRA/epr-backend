@@ -173,19 +173,16 @@ const runDiagnostic = async (db, deps) => {
 
   for (const row of embedded) {
     scanned += 1
-    let comparison
     try {
-      comparison = await compareForEmbedded(row, deps)
+      const comparison = await compareForEmbedded(row, deps)
+      if (isDivergent(comparison)) {
+        changed += 1
+        logger.info({ message: formatDivergenceLine(comparison) })
+      }
     } catch (error) {
       failed += 1
       logger.info({ message: formatErrorLine(row, error) })
-      continue
     }
-    if (!isDivergent(comparison)) {
-      continue
-    }
-    changed += 1
-    logger.info({ message: formatDivergenceLine(comparison) })
   }
 
   logger.info({

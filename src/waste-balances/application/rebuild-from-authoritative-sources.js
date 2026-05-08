@@ -83,7 +83,7 @@ const PRN_DELTAS = Object.freeze({
   })
 })
 
-const PRN_KIND_FROM_TRANSITION = (prevStatus, newStatus) => {
+const prnKindFromTransition = (prevStatus, newStatus) => {
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
     return REBUILT_TRANSACTION_KIND.PRN_CREATED
   }
@@ -120,7 +120,7 @@ function* prnEventsOf(prn) {
   for (let i = 0; i < history.length; i++) {
     const prevStatus = i === 0 ? null : history[i - 1].status
     const entry = history[i]
-    const kind = PRN_KIND_FROM_TRANSITION(prevStatus, entry.status)
+    const kind = prnKindFromTransition(prevStatus, entry.status)
     if (!kind) {
       continue
     }
