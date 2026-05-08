@@ -46,7 +46,7 @@ export const DATA_FIELD_COLUMNS = Object.freeze(
     )
   )
     .filter((f) => !FIELDS_NEVER_EXPORTED.has(f))
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
 )
 
 export const ALL_COLUMNS = Object.freeze([
@@ -99,7 +99,9 @@ export const buildDataRow = ({
 
   const dataCells = DATA_FIELD_COLUMNS.map((field) => {
     const value = data[field]
-    if (value === null || value === undefined) return ''
+    if (value === null || value === undefined) {
+      return ''
+    }
     return String(value)
   })
 

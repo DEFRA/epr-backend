@@ -13,7 +13,7 @@ export const getWasteRecordsExportPath = '/v1/admin/waste-records/export.csv'
 const buildFilename = () => {
   const stamp = new Date()
     .toISOString()
-    .replace(/:/g, '-')
+    .replaceAll(':', '-')
     .replace(/\.\d{3}Z$/, 'Z')
   return `waste-records-${stamp}.csv`
 }

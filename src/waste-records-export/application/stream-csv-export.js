@@ -76,11 +76,11 @@ export async function* streamCsvExport(deps) {
       )
       const recordsSorted = [...records].sort((a, b) => {
         const t = a.type.localeCompare(b.type)
-        return t !== 0 ? t : String(a.rowId).localeCompare(String(b.rowId))
+        return t || String(a.rowId).localeCompare(String(b.rowId))
       })
 
       for (const record of recordsSorted) {
-        const lastVersion = record.versions[record.versions.length - 1]
+        const lastVersion = record.versions.at(-1)
         const summaryLogId = lastVersion.summaryLog.id
         const summaryLogEntry = summaryLogMap.get(summaryLogId) ?? null
 
