@@ -335,7 +335,7 @@ describe('streamCsvExportToReadable', () => {
     const readable = streamCsvExportToReadable(baseDeps())
     const chunks = []
     for await (const chunk of readable) {
-      chunks.push(chunk)
+      chunks.push(chunk.toString('utf8'))
     }
     expect(chunks).toHaveLength(1)
     for (const column of ALL_COLUMNS) {

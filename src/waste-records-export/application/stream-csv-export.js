@@ -108,8 +108,12 @@ export async function* streamCsvExport(deps) {
  * Convenience: turn the generator into a Node Readable stream so a Hapi
  * route handler can return it directly.
  *
+ * Using `objectMode: false` ensures Hapi treats each yielded string as
+ * an HTTP body chunk (rather than as a JavaScript value), which is what
+ * `Readable.from` would default to.
+ *
  * @param {StreamCsvExportDeps} deps
  * @returns {Readable}
  */
 export const streamCsvExportToReadable = (deps) =>
-  Readable.from(streamCsvExport(deps))
+  Readable.from(streamCsvExport(deps), { objectMode: false })
