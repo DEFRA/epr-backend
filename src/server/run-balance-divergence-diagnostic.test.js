@@ -138,12 +138,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
-  it('queries waste-balances filtered to canonicalSource=embedded with a projection', async () => {
+  it('queries waste-balances for any document whose canonicalSource is not ledger so legacy docs without the marker are scanned too', async () => {
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(collectionByName).toHaveBeenCalledWith('waste-balances')
     expect(mockFind).toHaveBeenCalledWith(
-      { canonicalSource: 'embedded' },
+      { canonicalSource: { $ne: 'ledger' } },
       expect.objectContaining({
         projection: expect.objectContaining({
           accreditationId: 1,

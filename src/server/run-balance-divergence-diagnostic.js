@@ -36,7 +36,9 @@ const findEmbeddedWasteBalances = async (db) => {
   const docs = await db
     .collection(WASTE_BALANCES_COLLECTION)
     .find(
-      { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED },
+      {
+        canonicalSource: { $ne: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER }
+      },
       {
         projection: {
           _id: 0,
