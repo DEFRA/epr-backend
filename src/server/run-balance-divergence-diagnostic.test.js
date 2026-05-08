@@ -165,7 +165,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=0 changed=0 logged=0 failed=0 cap=5000'
+        'Waste-balance divergence diagnostic: scanned=0 changed=0 failed=0'
     })
   })
 
@@ -194,7 +194,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(perAccreditationLines).toHaveLength(0)
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 logged=0 failed=0 cap=5000'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0'
     })
   })
 
@@ -223,7 +223,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=1 logged=1 failed=0 cap=5000'
+        'Waste-balance divergence diagnostic: scanned=1 changed=1 failed=0'
     })
   })
 
@@ -326,38 +326,6 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
-  it('caps per-accreditation log lines at the configured cap but keeps scanning past it', async () => {
-    setEmbeddedBalances(
-      Array.from({ length: 5 }, (_, i) => ({
-        accreditationId: `acc-${i}`,
-        organisationId: 'org-1',
-        amount: 100,
-        availableAmount: 100
-      }))
-    )
-    registrations['org-1'] = Array.from({ length: 5 }, (_, i) => ({
-      id: `reg-${i}`,
-      accreditationId: `acc-${i}`,
-      registrationNumber: `REG-${i}`
-    }))
-    accreditations['org-1'] = Array.from({ length: 5 }, (_, i) => ({
-      id: `acc-${i}`,
-      accreditationNumber: `ACC-${i}`
-    }))
-    computeRebuiltTotals.mockReturnValue({ amount: 50, availableAmount: 50 })
-
-    await runBalanceDivergenceDiagnostic(mockServer, { cap: 2 })
-
-    const perAccreditationLines = logger.info.mock.calls.filter(([arg]) =>
-      arg.message.startsWith('Waste-balance divergence affected accreditation:')
-    )
-    expect(perAccreditationLines).toHaveLength(2)
-    expect(logger.info).toHaveBeenCalledWith({
-      message:
-        'Waste-balance divergence diagnostic: scanned=5 changed=5 logged=2 failed=0 cap=2'
-    })
-  })
-
   it('logs a tagged error line when an accreditation has no matching registration', async () => {
     setEmbeddedBalances([
       {
@@ -429,7 +397,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=2 changed=0 logged=0 failed=1 cap=5000'
+        'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1'
     })
   })
 

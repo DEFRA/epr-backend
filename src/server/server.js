@@ -214,15 +214,11 @@ async function createServer(options = {}) {
 
   await server.register(plugins)
 
-  const balanceDivergenceCap = config.get(
-    'wasteBalances.divergenceDiagnosticCap'
-  )
-
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
     runRowIdCollisionDiagnostic(server)
-    runBalanceDivergenceDiagnostic(server, { cap: balanceDivergenceCap })
+    runBalanceDivergenceDiagnostic(server)
   })
 
   return server

@@ -10,7 +10,6 @@ import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const LOCK_NAME = 'balance-divergence-diagnostic'
-const DEFAULT_CAP = 5000
 
 /**
  * @typedef {Object} EmbeddedBalanceRow
@@ -160,9 +159,8 @@ const formatErrorLine = (embedded, error) =>
 /**
  * @param {import('mongodb').Db} db
  * @param {DiagnosticDependencies} deps
- * @param {{ cap: number }} options
  */
-const runDiagnostic = async (db, deps, { cap }) => {
+const runDiagnostic = async (db, deps) => {
   logger.info({
     message: 'Running waste-balance divergence diagnostic'
   })
@@ -171,7 +169,6 @@ const runDiagnostic = async (db, deps, { cap }) => {
 
   let scanned = 0
   let changed = 0
-  let logged = 0
   let failed = 0
 
   for (const row of embedded) {
@@ -188,14 +185,11 @@ const runDiagnostic = async (db, deps, { cap }) => {
       continue
     }
     changed += 1
-    if (logged < cap) {
-      logger.info({ message: formatDivergenceLine(comparison) })
-      logged += 1
-    }
+    logger.info({ message: formatDivergenceLine(comparison) })
   }
 
   logger.info({
-    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} logged=${logged} failed=${failed} cap=${cap}`
+    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed}`
   })
 }
 
@@ -230,9 +224,6 @@ const buildDependencies = async (server) => {
   })
 }
 
-const resolveCap = (cap) =>
-  Number.isFinite(cap) && cap > 0 ? cap : DEFAULT_CAP
-
 /**
  * Pre-cutover diagnostic for PAE-1382 / PAE-1441: rebuilds each embedded
  * accreditation's waste balance from authoritative sources (waste records +
@@ -251,10 +242,8 @@ const resolveCap = (cap) =>
  * embedded population.
  *
  * @param {Object} server - Hapi server instance
- * @param {Object} [options]
- * @param {number} [options.cap] - Maximum per-accreditation log lines (default 5000)
  */
-export const runBalanceDivergenceDiagnostic = async (server, options = {}) => {
+export const runBalanceDivergenceDiagnostic = async (server) => {
   try {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
@@ -266,7 +255,7 @@ export const runBalanceDivergenceDiagnostic = async (server, options = {}) => {
     }
     try {
       const deps = await buildDependencies(server)
-      await runDiagnostic(server.db, deps, { cap: resolveCap(options.cap) })
+      await runDiagnostic(server.db, deps)
     } finally {
       await lock.free()
     }
