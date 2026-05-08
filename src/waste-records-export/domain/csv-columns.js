@@ -19,7 +19,6 @@ export const METADATA_COLUMNS = Object.freeze([
   'Operator Processing Type',
   'Accredited',
   'Waste Record Type',
-  'Reported Period',
   'Submitted At',
   'Included in Waste Balance',
   'Row ID'
@@ -65,7 +64,7 @@ export const buildHeaderRow = () => ALL_COLUMNS
  * @property {Organisation} org
  * @property {Registration} registration
  * @property {WasteRecord} record
- * @property {{ reportingPeriod: string, submittedAt: string } | null | undefined} summaryLogEntry
+ * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
  * @property {boolean} includedInWasteBalance
  */
 
@@ -93,7 +92,6 @@ export const buildDataRow = ({
     data.processingType,
     accredited,
     record.type,
-    summaryLogEntry?.reportingPeriod ?? '',
     summaryLogEntry?.submittedAt ?? '',
     includedInWasteBalance ? 'true' : 'false',
     String(record.rowId)

@@ -18,7 +18,6 @@ describe('csv-columns', () => {
         'Operator Processing Type',
         'Accredited',
         'Waste Record Type',
-        'Reported Period',
         'Submitted At',
         'Included in Waste Balance',
         'Row ID'
@@ -86,7 +85,6 @@ describe('csv-columns', () => {
         versions: [{ summaryLog: { id: 'sl-1' } }]
       },
       summaryLogEntry: {
-        reportingPeriod: 'Jan-Mar 2026',
         submittedAt: '2026-04-15T09:00:00Z'
       },
       includedInWasteBalance: true
@@ -105,10 +103,9 @@ describe('csv-columns', () => {
       expect(row[3]).toBe('REPROCESSOR_INPUT') // Operator Processing Type
       expect(row[4]).toBe('Yes') // Accredited
       expect(row[5]).toBe('received') // Waste Record Type
-      expect(row[6]).toBe('Jan-Mar 2026') // Reported Period
-      expect(row[7]).toBe('2026-04-15T09:00:00Z') // Submitted At
-      expect(row[8]).toBe('true') // Included in Waste Balance
-      expect(row[9]).toBe('1001') // Row ID
+      expect(row[6]).toBe('2026-04-15T09:00:00Z') // Submitted At
+      expect(row[7]).toBe('true') // Included in Waste Balance
+      expect(row[8]).toBe('1001') // Row ID
     })
 
     it('emits empty string when a data field is absent on the record', () => {
@@ -131,15 +128,14 @@ describe('csv-columns', () => {
       expect(row[4]).toBe('No')
     })
 
-    it('emits empty Reported Period and Submitted At when no summary log entry is found', () => {
+    it('emits empty Submitted At when no summary log entry is found', () => {
       const row = buildDataRow({ ...baseInput, summaryLogEntry: null })
       expect(row[6]).toBe('')
-      expect(row[7]).toBe('')
     })
 
     it('emits "false" for Included in Waste Balance when input is false', () => {
       const row = buildDataRow({ ...baseInput, includedInWasteBalance: false })
-      expect(row[8]).toBe('false')
+      expect(row[7]).toBe('false')
     })
   })
 })
