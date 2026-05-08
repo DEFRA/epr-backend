@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { config } from '#root/config.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -22,44 +23,31 @@ vi.mock('./logging/logger.js', async (importOriginal) => {
     }
   }
 })
-vi.mock('#root/config.js', () => ({
-  config: {
-    get: vi.fn((key) => {
-      const values = {
-        'some.configKey': 'path/to/secret/file',
-        log: {
-          isEnabled: true,
-          level: 'info',
-          format: 'pino-pretty'
-        },
-        serviceName: 'test-service',
-        serviceVersion: '1.0.0',
-        cdpEnvironment: 'test'
-      }
-      return values[key]
-    })
-  },
-  isProductionEnvironment: () => false
-}))
 
 describe('getLocalSecret', () => {
-  const configKey = 'some.configKey'
+  const configKey = 'govukNotifyApiKeyPath'
 
   afterEach(() => {
+    config.reset(configKey)
     vi.clearAllMocks()
   })
 
   it('returns a value from file', () => {
+    config.set(configKey, 'path/to/secret/file')
     vi.mocked(fs).readFileSync.mockReturnValueOnce(secretFixture)
+
     expect(getLocalSecret(configKey)).toEqual(secretFixture)
   })
 
   it('returns null if secret file not found', () => {
+    config.set(configKey, 'path/to/secret/file')
     const error = new Error('file not found')
     vi.mocked(fs).readFileSync.mockImplementationOnce(() => {
       throw error
     })
+
     const result = getLocalSecret(configKey)
+
     expect(result).toEqual(null)
     expect(mockLoggerError).toHaveBeenCalledWith({
       err: error,
@@ -71,13 +59,15 @@ describe('getLocalSecret', () => {
     })
   })
 
-  it('returns null if config key is not set', () => {
-    const result = getLocalSecret('nonexistent.configKey')
+  it('returns null when the configured path is empty', () => {
+    const result = getLocalSecret(configKey)
+
     expect(result).toBeNull()
     expect(mockLoggerError).toHaveBeenCalled()
   })
 
   it('logs at debug (not error) when the secret file is missing (ENOENT)', () => {
+    config.set(configKey, 'path/to/secret/file')
     const error = Object.assign(new Error('ENOENT: no such file'), {
       code: 'ENOENT'
     })

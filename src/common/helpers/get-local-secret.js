@@ -6,6 +6,10 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../enums/event.js'
 
+/**
+ * @param {string} configKey
+ * @returns {string | null}
+ */
 export function getLocalSecret(configKey) {
   try {
     const path = config.get(configKey)
