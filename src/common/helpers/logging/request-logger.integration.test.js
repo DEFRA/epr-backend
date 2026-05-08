@@ -1,5 +1,5 @@
 import pino from 'pino'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { logger } from './logger.js'
 import { loggerOptions } from './logger-options.js'
@@ -153,10 +153,13 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     }
   )
 
-  it('should redact authorization, cookie, and response headers in production', async () => {
-    config.set('cdpEnvironment', 'prod')
+  it('should redact authorization, cookie, and response headers when NODE_ENV is production', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.resetModules()
 
-    const { server, lines } = await createLogCaptureServer()
+    const { createLogCaptureServer: createServer } =
+      await import('#test/log-capture-server.js')
+    const { server, lines } = await createServer()
     server.route({
       method: 'GET',
       path: '/test',
@@ -177,5 +180,7 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     expect(emitted).not.toContain('LEAKED_JWT_TOKEN')
     expect(emitted).not.toContain('LEAKED_SESSION_VALUE')
     expect(emitted).not.toContain('LEAKED_RESPONSE_HEADER')
+
+    vi.unstubAllEnvs()
   })
 })

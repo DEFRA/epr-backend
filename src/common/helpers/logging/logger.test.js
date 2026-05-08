@@ -8,7 +8,8 @@ vi.mock('#root/config.js', () => ({
         log: {
           isEnabled: true,
           level: 'info',
-          format: 'pino-pretty'
+          format: 'pino-pretty',
+          redact: []
         },
         serviceName: 'test-service',
         serviceVersion: '1.0.0'
