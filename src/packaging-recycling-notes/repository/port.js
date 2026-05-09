@@ -38,6 +38,18 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
+ * Reverses a forward status transition that has already been committed by
+ * updateStatus, when a follow-on side-effect failed and the document needs
+ * to be returned to its prior state.
+ *
+ * @typedef {Object} RollbackParams
+ * @property {string} id - PRN ID
+ * @property {number} expectedVersion - Document version after the forward write (CAS gate)
+ * @property {{ id: string; name: string }} updatedBy - Actor recorded against the rollback history entry
+ * @property {Date} updatedAt - Timestamp of the rollback
+ */
+
+/**
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
@@ -45,6 +57,9 @@ export class PrnNumberConflictError extends Error {
  * @property {(accreditationId: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
+ * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuance
+ * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackPendingCancellation
+ * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuedCancellation
  */
 
 /**
