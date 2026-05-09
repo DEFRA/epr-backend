@@ -86,6 +86,7 @@ export function createExternalTransitionHandler({
           prnRepository: packagingRecyclingNotesRepository,
           wasteBalancesRepository,
           organisationsRepository,
+          logger,
           id: prn.id,
           organisationId: prn.organisation.id,
           accreditationId: prn.accreditation.id,

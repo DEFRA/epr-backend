@@ -2,6 +2,10 @@ import Boom from '@hapi/boom'
 
 import { prnMetrics } from './metrics.js'
 import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
+import {
   PRN_STATUS,
   validateTransition,
   assertAccreditationNotSuspended
@@ -18,6 +22,21 @@ const STATUS_OPERATION_SLOT = Object.freeze({
   [PRN_STATUS.AWAITING_CANCELLATION]: 'rejected',
   [PRN_STATUS.DELETED]: 'deleted',
   [PRN_STATUS.CANCELLED]: 'cancelled'
+})
+
+/**
+ * Maps a (currentStatus -> newStatus) transition to the rollback method on the
+ * PRN repository that reverses the forward write. Only post-CAS transitions
+ * with a follow-on balance side-effect appear here; creation is handled by
+ * crediting the balance back rather than rolling the PRN.
+ */
+const ROLLBACK_METHOD_BY_TRANSITION = Object.freeze({
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]:
+    'rollbackIssuance',
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]:
+    'rollbackPendingCancellation',
+  [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]:
+    'rollbackIssuedCancellation'
 })
 
 /**
@@ -262,12 +281,49 @@ async function applyStatusUpdate({
 }
 
 /**
+ * Runs `compensator` to undo a forward write that has already committed.
+ * If the compensator itself throws, the failure is logged with full context
+ * (the original forward error and the compensation error) but not rethrown —
+ * the caller always sees the original forward error so the user-visible
+ * outcome stays coherent. The log entry is what ops use to find PRNs left
+ * in an inconsistent state for manual reconciliation.
+ *
+ * @param {() => Promise<unknown>} compensator
+ * @param {Object} context
+ * @param {Error} context.forwardError
+ * @param {import('#common/hapi-types.js').TypedLogger} context.logger
+ * @param {string} context.prnId
+ * @param {string} context.fromStatus
+ * @param {string} context.toStatus
+ */
+async function tryCompensate(compensator, context) {
+  try {
+    await compensator()
+  } catch (compensationError) {
+    context.logger.error({
+      err: context.forwardError,
+      compensationError,
+      prnId: context.prnId,
+      fromStatus: context.fromStatus,
+      toStatus: context.toStatus,
+      message: `Compensation failed for PRN ${context.prnId} (${context.fromStatus} -> ${context.toStatus}); manual reconciliation required`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.COMPENSATION_FAILURE,
+        reference: context.prnId
+      }
+    })
+  }
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.prnRepository
  * @param {WasteBalancesRepository} params.wasteBalancesRepository
  * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
  * @param {string} params.organisationId
  * @param {string} params.accreditationId
@@ -282,6 +338,7 @@ export async function updatePrnStatus({
   prnRepository,
   wasteBalancesRepository,
   organisationsRepository,
+  logger,
   id,
   organisationId,
   accreditationId,
@@ -337,23 +394,69 @@ export async function updatePrnStatus({
     updatedAt: now
   }
 
-  const updatedPrn = await applyStatusUpdate({
-    prnRepository,
-    organisationsRepository,
-    prn,
-    updateParams,
-    newStatus,
-    organisationId,
-    accreditationId,
-    user,
-    now
-  })
+  let updatedPrn
+  try {
+    updatedPrn = await applyStatusUpdate({
+      prnRepository,
+      organisationsRepository,
+      prn,
+      updateParams,
+      newStatus,
+      organisationId,
+      accreditationId,
+      user,
+      now
+    })
+  } catch (forwardError) {
+    if (isCreation) {
+      await tryCompensate(
+        () =>
+          wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
+            accreditationId,
+            organisationId,
+            prnId: id,
+            tonnage: prn.tonnage,
+            userId: user.id
+          }),
+        {
+          forwardError,
+          logger,
+          prnId: id,
+          fromStatus: currentStatus,
+          toStatus: newStatus
+        }
+      )
+    }
+    throw forwardError
+  }
 
   if (!isCreation) {
-    await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      balanceEffectsParams
-    )
+    try {
+      await applyWasteBalanceEffects(
+        wasteBalancesRepository,
+        balanceEffectsParams
+      )
+    } catch (forwardError) {
+      const rollbackMethod =
+        ROLLBACK_METHOD_BY_TRANSITION[`${currentStatus}|${newStatus}`]
+      await tryCompensate(
+        () =>
+          prnRepository[rollbackMethod]({
+            id,
+            expectedVersion: updatedPrn.version,
+            updatedBy: user,
+            updatedAt: now
+          }),
+        {
+          forwardError,
+          logger,
+          prnId: id,
+          fromStatus: currentStatus,
+          toStatus: newStatus
+        }
+      )
+      throw forwardError
+    }
   }
 
   await prnMetrics.recordStatusTransition({

@@ -126,6 +126,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         prnRepository: packagingRecyclingNotesRepository,
         wasteBalancesRepository,
         organisationsRepository,
+        logger,
         id,
         organisationId,
         accreditationId,
