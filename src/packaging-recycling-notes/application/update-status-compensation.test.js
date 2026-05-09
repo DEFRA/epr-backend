@@ -311,14 +311,25 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(forwardError)
 
-      expect(logger.error).toHaveBeenCalledTimes(1)
-      const [logEntry] = logger.error.mock.calls[0]
-      expect(logEntry.err).toBe(forwardError)
-      expect(logEntry.compensationError).toBe(compensationError)
-      expect(logEntry.prnId).toBe(PRN_ID)
-      expect(logEntry.fromStatus).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
-      expect(logEntry.toStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-      expect(logEntry.event.action).toBe('compensation_failure')
+      expect(logger.error).toHaveBeenCalledTimes(2)
+      const [forwardLog] = logger.error.mock.calls[0]
+      const [compensationLog] = logger.error.mock.calls[1]
+
+      expect(forwardLog.err).toBe(forwardError)
+      expect(forwardLog.event.action).toBe('compensation_failure')
+      expect(forwardLog.event.reference).toBe(PRN_ID)
+      expect(forwardLog.message).toContain(PRN_ID)
+      expect(forwardLog.message).toContain(PRN_STATUS.AWAITING_AUTHORISATION)
+      expect(forwardLog.message).toContain(PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      expect(compensationLog.err).toBe(compensationError)
+      expect(compensationLog.event.action).toBe('compensation_failure')
+      expect(compensationLog.event.reference).toBe(PRN_ID)
+      expect(compensationLog.message).toContain(PRN_ID)
+      expect(compensationLog.message).toContain(
+        PRN_STATUS.AWAITING_AUTHORISATION
+      )
+      expect(compensationLog.message).toContain(PRN_STATUS.AWAITING_ACCEPTANCE)
     })
   })
 })

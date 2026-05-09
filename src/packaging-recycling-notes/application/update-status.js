@@ -208,6 +208,9 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
     await deductWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
   }
 
+  // AWAITING_AUTHORISATION -> CANCELLED is rejected by validateTransition; only the
+  // DELETED leg is reachable here, but the OR is kept defensively as the credit
+  // semantics are identical for both targets.
   if (
     (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
@@ -296,23 +299,52 @@ async function applyStatusUpdate({
  * @param {string} context.fromStatus
  * @param {string} context.toStatus
  */
+/**
+ * CDP ingest drops fields outside its allowlist (see cdp-log-types.js),
+ * including bespoke top-level fields and any second error on the same entry.
+ * Both errors are therefore logged as paired entries that share the same
+ * event.reference (the prnId) and event.action so ops can correlate them,
+ * with each entry's `err` populated for indexing.
+ */
+function logCompensationFailure(
+  logger,
+  prnId,
+  fromStatus,
+  toStatus,
+  err,
+  kind
+) {
+  logger.error({
+    err,
+    message: `${kind} for PRN ${prnId} (${fromStatus} -> ${toStatus})`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.DB,
+      action: LOGGING_EVENT_ACTIONS.COMPENSATION_FAILURE,
+      reference: prnId
+    }
+  })
+}
+
 async function tryCompensate(compensator, context) {
   try {
     await compensator()
   } catch (compensationError) {
-    context.logger.error({
-      err: context.forwardError,
+    logCompensationFailure(
+      context.logger,
+      context.prnId,
+      context.fromStatus,
+      context.toStatus,
+      context.forwardError,
+      'Forward write failed; compensation triggered'
+    )
+    logCompensationFailure(
+      context.logger,
+      context.prnId,
+      context.fromStatus,
+      context.toStatus,
       compensationError,
-      prnId: context.prnId,
-      fromStatus: context.fromStatus,
-      toStatus: context.toStatus,
-      message: `Compensation failed for PRN ${context.prnId} (${context.fromStatus} -> ${context.toStatus}); manual reconciliation required`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.DB,
-        action: LOGGING_EVENT_ACTIONS.COMPENSATION_FAILURE,
-        reference: context.prnId
-      }
-    })
+      'Compensation failed; manual reconciliation required'
+    )
   }
 }
 
@@ -409,6 +441,8 @@ export async function updatePrnStatus({
     })
   } catch (forwardError) {
     if (isCreation) {
+      // Pre-flight debit already proved the balance exists; skip the wrapper's
+      // existence check and call the credit primitive directly.
       await tryCompensate(
         () =>
           wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
