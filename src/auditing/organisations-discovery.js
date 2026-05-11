@@ -93,10 +93,7 @@ export async function auditOrganisationsDiscovery(
   }
   const user = extractUserDetails(request)
 
-  safeAudit({ event, user }, () => ({
-    organisationId: linked?.id ?? null,
-    defraIdOrg
-  }))
+  safeAudit({ event, user }, () => context)
   await recordSystemLog(request, { event, context, user })
 }
 

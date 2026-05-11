@@ -150,20 +150,30 @@ describe('auditOrganisationsDiscovery', () => {
     )
   })
 
-  it('sends only organisationId and defraIdOrg to CDP audit', async () => {
+  it('sends full context to CDP audit', async () => {
     await auditOrganisationsDiscovery(createMockRequest(), baseParams)
 
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         context: {
           organisationId: 'epr-org-1',
-          defraIdOrg: baseParams.defraIdOrg
+          defraIdOrg: baseParams.defraIdOrg,
+          defraIdRelationships,
+          linked: {
+            id: 'epr-org-1',
+            name: 'Linked Ltd',
+            orgId: 1001,
+            status: 'approved',
+            linkedBy: { email: 'linker@example.com', id: 'linker-id' },
+            linkedAt: '2026-01-01T00:00:00.000Z'
+          },
+          unlinked: []
         }
       })
     )
   })
 
-  it('keeps small factory output in CDP audit even when full context is oversized', async () => {
+  it('strips context from CDP audit when payload exceeds size limit', async () => {
     const oversizedParams = {
       ...baseParams,
       defraIdRelationships: Array.from({ length: 500 }, (_, i) => ({
@@ -175,15 +185,19 @@ describe('auditOrganisationsDiscovery', () => {
 
     await auditOrganisationsDiscovery(createMockRequest(), oversizedParams)
 
-    // CDP audit receives factory output (organisationId + defraIdOrg only)
-    expect(mockAudit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        context: {
-          organisationId: 'epr-org-1',
-          defraIdOrg: baseParams.defraIdOrg
-        }
-      })
-    )
+    // CDP audit falls back to event + user only
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: 'identity',
+        subCategory: 'defra-id-reconciliation',
+        action: 'organisations-discovered'
+      },
+      user: {
+        id: 'contact-123',
+        email: 'user@example.com',
+        scope: ['inquirer']
+      }
+    })
 
     // System log always gets full context
     expect(mockInsert).toHaveBeenCalledWith(
