@@ -1,6 +1,5 @@
 import { auditOrganisationUpdate } from './organisations.js'
 import { vi, describe, it, beforeEach, afterEach } from 'vitest'
-import { randomBytes } from 'crypto'
 
 const mockAudit = vi.fn()
 const mockInsert = vi.fn()
@@ -31,9 +30,19 @@ describe('auditOrganisationUpdate', () => {
   })
 
   describe('large payload handling', () => {
-    it('sends full context to CDP audit and system log', async () => {
-      const previous = { version: '1' }
-      const next = { version: '2' }
+    it('sends cherry-picked context to CDP audit and full context to system log', async () => {
+      const previous = {
+        status: 'created',
+        version: 1,
+        registrations: [{ id: 'reg-1' }],
+        accreditations: [{ id: 'acc-1' }, { id: 'acc-2' }]
+      }
+      const next = {
+        status: 'approved',
+        version: 2,
+        registrations: [{ id: 'reg-1' }],
+        accreditations: [{ id: 'acc-1' }, { id: 'acc-2' }]
+      }
 
       await auditOrganisationUpdate(
         createMockRequest(),
@@ -49,45 +58,23 @@ describe('auditOrganisationUpdate', () => {
             category: 'entity',
             subCategory: 'epr-organisations'
           },
-          context: { organisationId, previous, next }
-        })
-      )
-
-      expect(mockInsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: {
-            action: 'update',
-            category: 'entity',
-            subCategory: 'epr-organisations'
-          },
-          context: { organisationId, previous, next }
-        })
-      )
-    })
-
-    it('strips context from CDP audit when payload exceeds size limit', async () => {
-      const veryLongString = randomBytes(1e6).toString('hex')
-      const previous = { version: '1', veryLongString }
-      const next = { version: '2', veryLongString }
-
-      await auditOrganisationUpdate(
-        createMockRequest(),
-        organisationId,
-        previous,
-        next
-      )
-
-      // CDP audit falls back to event + user only
-      expect(mockAudit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: {
-            action: 'update',
-            category: 'entity',
-            subCategory: 'epr-organisations'
+          context: {
+            organisationId,
+            previous: {
+              status: 'created',
+              version: 1,
+              registrationCount: 1,
+              accreditationCount: 2
+            },
+            next: {
+              status: 'approved',
+              version: 2,
+              registrationCount: 1,
+              accreditationCount: 2
+            }
           }
         })
       )
-      expect(mockAudit.mock.calls[0][0]).not.toHaveProperty('context')
 
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({

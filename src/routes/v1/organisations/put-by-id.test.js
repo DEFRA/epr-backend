@@ -178,8 +178,18 @@ describe('PUT /v1/organisations/{id}', () => {
       verifyCreatedBy(auditPayload.user)
       verifyEvent(auditPayload)
       expect(auditPayload.context.organisationId).toEqual(organisationId)
-      expect(auditPayload.context.previous).toEqual(initialOrg)
-      expect(auditPayload.context.next).toEqual(updatedOrgResponseBody)
+      expect(auditPayload.context.previous).toEqual({
+        status: initialOrg.status,
+        version: initialOrg.version,
+        registrationCount: initialOrg.registrations?.length,
+        accreditationCount: initialOrg.accreditations?.length
+      })
+      expect(auditPayload.context.next).toEqual({
+        status: updatedOrgResponseBody.status,
+        version: updatedOrgResponseBody.version,
+        registrationCount: updatedOrgResponseBody.registrations?.length,
+        accreditationCount: updatedOrgResponseBody.accreditations?.length
+      })
     })
   })
 

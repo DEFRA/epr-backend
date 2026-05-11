@@ -30,8 +30,18 @@ async function auditIncrementalFormMigration(
 
   safeAudit({ event, user: SYSTEM_USER }, () => ({
     organisationId,
-    previous,
-    next
+    previous: {
+      status: previous.status,
+      version: previous.version,
+      registrationCount: previous.registrations?.length,
+      accreditationCount: previous.accreditations?.length
+    },
+    next: {
+      status: next.status,
+      version: next.version,
+      registrationCount: next.registrations?.length,
+      accreditationCount: next.accreditations?.length
+    }
   }))
 
   // System logs have no size limit - always store full state

@@ -46,8 +46,10 @@ describe('auditIncrementalFormMigration', () => {
     insert: mockInsert
   })
 
-  it('sends full context to CDP audit and system log', async () => {
+  it('sends cherry-picked context to CDP audit and full state to system log', async () => {
     const previous = {
+      status: 'created',
+      version: 1,
       registrations: [
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-01' }
       ],
@@ -56,6 +58,8 @@ describe('auditIncrementalFormMigration', () => {
       ]
     }
     const next = {
+      status: 'approved',
+      version: 2,
       registrations: [
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-01' },
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-02' }
@@ -79,7 +83,21 @@ describe('auditIncrementalFormMigration', () => {
         subCategory: 'epr-organisations',
         action: 'incremental-form-migration'
       },
-      context: { organisationId, previous, next },
+      context: {
+        organisationId,
+        previous: {
+          status: 'created',
+          version: 1,
+          registrationCount: 1,
+          accreditationCount: 1
+        },
+        next: {
+          status: 'approved',
+          version: 2,
+          registrationCount: 2,
+          accreditationCount: 2
+        }
+      },
       user: systemUser
     })
 
@@ -100,9 +118,11 @@ describe('auditIncrementalFormMigration', () => {
     })
   })
 
-  it('strips context from CDP audit when payload exceeds size limit', async () => {
+  it('always fits in CDP audit because context is cherry-picked', async () => {
     const largeData = 'x'.repeat(15000)
     const previous = {
+      status: 'created',
+      version: 1,
       registrations: [
         {
           id: new ObjectId().toString(),
@@ -113,6 +133,8 @@ describe('auditIncrementalFormMigration', () => {
       accreditations: []
     }
     const next = {
+      status: 'approved',
+      version: 2,
       registrations: [
         {
           id: new ObjectId().toString(),
@@ -135,12 +157,27 @@ describe('auditIncrementalFormMigration', () => {
       next
     )
 
-    // CDP audit falls back to event + user only
+    // CDP audit receives cherry-picked context (not full documents)
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'entity',
         subCategory: 'epr-organisations',
         action: 'incremental-form-migration'
+      },
+      context: {
+        organisationId,
+        previous: {
+          status: 'created',
+          version: 1,
+          registrationCount: 1,
+          accreditationCount: 0
+        },
+        next: {
+          status: 'approved',
+          version: 2,
+          registrationCount: 2,
+          accreditationCount: 0
+        }
       },
       user: systemUser
     })
