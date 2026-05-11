@@ -59,8 +59,7 @@ export const commandQueueConsumerPlugin = {
     } = /** @type {QueueConsumerRepositories} */ (server.app)
 
     const summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository,
-      logger: server.logger
+      uploadsRepository
     })
 
     // Consumer created lazily on server start to avoid SQS connection during tests
