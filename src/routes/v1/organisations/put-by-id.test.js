@@ -171,7 +171,6 @@ describe('PUT /v1/organisations/{id}', () => {
       expect(systemLogPayload.context.previous).toEqual(initialOrg)
       expect(systemLogPayload.context.next).toEqual(updatedOrgResponseBody)
 
-      // CDP audit event gets only organisationId (no previous/next)
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
       const auditPayload = JSON.parse(
         JSON.stringify(mockCdpAuditing.mock.calls[0][0])
@@ -179,6 +178,8 @@ describe('PUT /v1/organisations/{id}', () => {
       verifyCreatedBy(auditPayload.user)
       verifyEvent(auditPayload)
       expect(auditPayload.context.organisationId).toEqual(organisationId)
+      expect(auditPayload.context.previous).toEqual(initialOrg)
+      expect(auditPayload.context.next).toEqual(updatedOrgResponseBody)
     })
   })
 

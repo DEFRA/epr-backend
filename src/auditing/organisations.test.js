@@ -31,7 +31,7 @@ describe('auditOrganisationUpdate', () => {
   })
 
   describe('large payload handling', () => {
-    it('sends only organisationId to CDP audit but full context to system log', async () => {
+    it('sends full context to CDP audit and system log', async () => {
       const previous = { version: '1' }
       const next = { version: '2' }
 
@@ -49,7 +49,7 @@ describe('auditOrganisationUpdate', () => {
             category: 'entity',
             subCategory: 'epr-organisations'
           },
-          context: { organisationId }
+          context: { organisationId, previous, next }
         })
       )
 
@@ -65,7 +65,7 @@ describe('auditOrganisationUpdate', () => {
       )
     })
 
-    it('keeps only organisationId in CDP audit even when previous/next are large', async () => {
+    it('strips context from CDP audit when payload exceeds size limit', async () => {
       const veryLongString = randomBytes(1e6).toString('hex')
       const previous = { version: '1', veryLongString }
       const next = { version: '2', veryLongString }
@@ -77,16 +77,17 @@ describe('auditOrganisationUpdate', () => {
         next
       )
 
+      // CDP audit falls back to event + user only
       expect(mockAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           event: {
             action: 'update',
             category: 'entity',
             subCategory: 'epr-organisations'
-          },
-          context: { organisationId }
+          }
         })
       )
+      expect(mockAudit.mock.calls[0][0]).not.toHaveProperty('context')
 
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({

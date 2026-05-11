@@ -28,7 +28,11 @@ async function auditIncrementalFormMigration(
     action: 'incremental-form-migration'
   }
 
-  safeAudit({ event, user: SYSTEM_USER }, () => ({ organisationId }))
+  safeAudit({ event, user: SYSTEM_USER }, () => ({
+    organisationId,
+    previous,
+    next
+  }))
 
   // System logs have no size limit - always store full state
   await systemLogsRepository.insert({

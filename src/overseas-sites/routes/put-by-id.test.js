@@ -109,7 +109,7 @@ describe(`${overseasSiteUpdatePath} route`, () => {
         expect(body.updatedAt).toBeDefined()
       })
 
-      it('records audit event with siteId only', async () => {
+      it('records audit event with full context', async () => {
         const created =
           await overseasSitesRepository.create(buildOverseasSite())
 
@@ -129,7 +129,14 @@ describe(`${overseasSiteUpdatePath} route`, () => {
               subCategory: 'overseas-sites',
               action: 'update'
             },
-            context: { siteId: created.id }
+            context: expect.objectContaining({
+              siteId: created.id,
+              previous: expect.objectContaining({ id: created.id }),
+              next: expect.objectContaining({
+                id: created.id,
+                name: 'Audited Update'
+              })
+            })
           })
         )
       })

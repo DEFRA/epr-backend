@@ -23,7 +23,7 @@ async function auditOrganisationUpdate(
   }
   const user = extractUserDetails(request)
 
-  safeAudit({ event, user }, () => ({ organisationId }))
+  safeAudit({ event, user }, () => ({ organisationId, previous, next }))
 
   await recordSystemLog(request, {
     event,

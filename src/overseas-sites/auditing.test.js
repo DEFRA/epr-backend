@@ -81,7 +81,7 @@ describe('overseas sites auditing', () => {
   })
 
   describe('auditOverseasSiteUpdate', () => {
-    it('sends only siteId to CDP audit but full context to system log', async () => {
+    it('sends full context to CDP audit and system log', async () => {
       const siteId = 'site-001'
       const previous = { name: 'Old Name', country: 'India' }
       const next = { name: 'New Name', country: 'India' }
@@ -95,7 +95,7 @@ describe('overseas sites auditing', () => {
             subCategory: 'overseas-sites',
             action: 'update'
           },
-          context: { siteId },
+          context: { siteId, previous, next },
           user: expectedUser
         })
       )
@@ -114,7 +114,7 @@ describe('overseas sites auditing', () => {
       )
     })
 
-    it('omits previous and next from audit event for large payloads', async () => {
+    it('strips context from CDP audit when payload exceeds size limit', async () => {
       const siteId = 'site-001'
       const veryLongString = randomBytes(1e6).toString('hex')
       const previous = { name: 'Old Name', veryLongString }
@@ -122,6 +122,7 @@ describe('overseas sites auditing', () => {
 
       await auditOverseasSiteUpdate(createMockRequest(), siteId, previous, next)
 
+      // CDP audit falls back to event + user only
       expect(mockAudit).toHaveBeenCalledWith(
         expect.objectContaining({
           event: {
@@ -129,9 +130,10 @@ describe('overseas sites auditing', () => {
             subCategory: 'overseas-sites',
             action: 'update'
           },
-          context: { siteId }
+          user: expectedUser
         })
       )
+      expect(mockAudit.mock.calls[0][0]).not.toHaveProperty('context')
 
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({

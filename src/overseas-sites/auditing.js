@@ -47,7 +47,7 @@ async function auditOverseasSiteUpdate(request, siteId, previous, next) {
   }
   const user = extractUserDetails(request)
 
-  safeAudit({ event, user }, () => ({ siteId }))
+  safeAudit({ event, user }, () => ({ siteId, previous, next }))
   await recordSystemLog(request, {
     event,
     context: { siteId, previous, next },
