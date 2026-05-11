@@ -10,11 +10,17 @@ import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
 export const getWasteRecordsExportPath = '/v1/admin/waste-records/export.csv'
 
+// Drop the trailing `.sssZ` (5 chars) from `new Date().toISOString()` to keep
+// just second-precision and then re-add `Z` after swapping `:` for `-`.
+const ISO_MILLISECOND_SUFFIX_LENGTH = 5
+
 const buildFilename = () => {
   // ISO is `YYYY-MM-DDTHH:MM:SS.sssZ`; we want second precision and `:` swapped
-  // for `-` so the name is filesystem-safe. Slice off `.sssZ`, swap colons,
-  // re-add the `Z`.
-  const stamp = new Date().toISOString().slice(0, -5).replaceAll(':', '-')
+  // for `-` so the name is filesystem-safe.
+  const stamp = new Date()
+    .toISOString()
+    .slice(0, -ISO_MILLISECOND_SUFFIX_LENGTH)
+    .replaceAll(':', '-')
   return `waste-records-${stamp}Z.csv`
 }
 
