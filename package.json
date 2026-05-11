@@ -102,7 +102,7 @@
     "unzipper": "0.10.14"
   },
   "overrides": {
-    "fast-xml-parser": "5.7.1",
+    "fast-xml-parser": "5.7.3",
     "glob": "11.1.0",
     "uuid": "14.0.0"
   },
