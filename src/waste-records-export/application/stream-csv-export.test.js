@@ -352,6 +352,41 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(1) // header only
   })
 
+  it('excludes organisations configured as test organisations', async () => {
+    // 999999 is set as a test organisation via process.env.TEST_ORGANISATIONS
+    // in .vite/setup-files.js, matching the prod pattern of gating test orgs
+    // out of admin-visible data.
+    const testOrg = baseOrg({
+      id: 'org-test',
+      orgId: 999999,
+      companyDetails: { name: 'Test Org' },
+      registrations: [baseRegistration({ id: 'reg-test' })]
+    })
+    const realOrg = baseOrg({
+      id: 'org-real',
+      orgId: 123456,
+      companyDetails: { name: 'Real Org' },
+      registrations: [baseRegistration({ id: 'reg-real' })]
+    })
+    const findByRegistration = vi
+      .fn()
+      .mockResolvedValue([reprocessorReceivedRecord()])
+    const deps = baseDeps({
+      organisationsRepository: {
+        findAll: vi.fn().mockResolvedValue([testOrg, realOrg])
+      },
+      wasteRecordsRepository: { findByRegistration }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(out).toHaveLength(2) // header + one row for the real org only
+    expect(out[1]).toContain('Real Org')
+    expect(out[1]).not.toContain('Test Org')
+    expect(findByRegistration).toHaveBeenCalledTimes(1)
+    expect(findByRegistration).toHaveBeenCalledWith('org-real', 'reg-real')
+  })
+
   it('propagates errors from the waste records iterator', async () => {
     const org = baseOrg({ registrations: [baseRegistration()] })
     const deps = baseDeps({
