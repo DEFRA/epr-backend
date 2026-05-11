@@ -25,7 +25,8 @@
     "#server/*": "./src/server/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
-    "#waste-balances/*": "./src/waste-balances/*"
+    "#waste-balances/*": "./src/waste-balances/*",
+    "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
     "node": ">=24.14.0 <25",

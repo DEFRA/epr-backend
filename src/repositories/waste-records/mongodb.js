@@ -150,6 +150,30 @@ const performAppendVersions =
   }
 
 /**
+ * Discovers the union of every key seen on `record.data` across the whole
+ * collection. Used by the CSV export to compose its dynamic header columns
+ * without loading any record document into application memory.
+ *
+ * The pipeline projects each doc down to its `data` keys, unwinds the
+ * resulting array, and groups by key — so the result set is bounded by the
+ * count of distinct field names (typically <200) rather than the record count.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {() => Promise<string[]>}
+ */
+const performFindDistinctDataKeys = (db) => async () => {
+  const cursor = db
+    .collection(COLLECTION_NAME)
+    .aggregate([
+      { $project: { kv: { $objectToArray: '$data' } } },
+      { $unwind: '$kv' },
+      { $group: { _id: '$kv.k' } }
+    ])
+  const docs = await cursor.toArray()
+  return docs.map((doc) => /** @type {string} */ (doc._id))
+}
+
+/**
  * Creates a MongoDB-backed waste records repository
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {Promise<import('./port.js').WasteRecordsRepositoryFactory>}
@@ -160,7 +184,8 @@ export const createWasteRecordsRepository = async (db) => {
   return () => {
     return {
       findByRegistration: performFindByRegistration(db),
-      appendVersions: performAppendVersions(db)
+      appendVersions: performAppendVersions(db),
+      findDistinctDataKeys: performFindDistinctDataKeys(db)
     }
   }
 }
