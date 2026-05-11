@@ -11,11 +11,11 @@ import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 export const getWasteRecordsExportPath = '/v1/admin/waste-records/export.csv'
 
 const buildFilename = () => {
-  const stamp = new Date()
-    .toISOString()
-    .replaceAll(':', '-')
-    .replace(/\.\d{3}Z$/, 'Z')
-  return `waste-records-${stamp}.csv`
+  // ISO is `YYYY-MM-DDTHH:MM:SS.sssZ`; we want second precision and `:` swapped
+  // for `-` so the name is filesystem-safe. Slice off `.sssZ`, swap colons,
+  // re-add the `Z`.
+  const stamp = new Date().toISOString().slice(0, -5).replaceAll(':', '-')
+  return `waste-records-${stamp}Z.csv`
 }
 
 export const wasteRecordsExportRoute = {

@@ -14,6 +14,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {WasteRecordVersion} from '#domain/waste-records/model.js' */
 
 /**
  * @typedef {Object} StreamCsvExportDeps
@@ -126,7 +127,13 @@ export async function* streamCsvExport(deps) {
       item
 
     for (const record of item.records) {
-      const lastVersion = record.versions.at(-1)
+      // `record.versions` is a non-empty array per the WasteRecord schema, so
+      // `.at(-1)` is always defined here. The cast tells tsc to drop the
+      // `| undefined` from the .at() return type rather than adding a guard
+      // for a state that cannot occur.
+      const lastVersion = /** @type {WasteRecordVersion} */ (
+        record.versions.at(-1)
+      )
       const summaryLogId = lastVersion.summaryLog.id
       const summaryLogEntry = summaryLogMap.get(summaryLogId) ?? null
 
