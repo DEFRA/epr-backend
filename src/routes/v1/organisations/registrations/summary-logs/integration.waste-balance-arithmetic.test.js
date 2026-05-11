@@ -1015,4 +1015,245 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(cancellationTransactions[0].entities[0].id).toBe(prn1.id)
     })
   })
+
+  describe('rejected issuance does not transition the PRN', () => {
+    it.fails(
+      'keeps the PRN in awaiting_authorisation when total balance is insufficient at issue time',
+      async () => {
+        const env = await setupWasteBalanceIntegrationEnvironment({
+          processingType: 'exporter'
+        })
+        const {
+          packagingRecyclingNotesRepository,
+          wasteBalancesRepository,
+          accreditationId,
+          organisationId
+        } = env
+
+        await performSummaryLogSubmission(
+          env,
+          'log-phantom-1',
+          'file-phantom-1',
+          'waste-phantom-1.xlsx',
+          createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+        )
+
+        const prn = await createPrn(env, 50)
+        await transitionPrnStatus(
+          env,
+          prn.id,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+          accreditationId,
+          organisationId,
+          prnId: 'other-prn',
+          tonnage: 80,
+          userId: 'test-user'
+        })
+
+        const result = await transitionPrnStatus(
+          env,
+          prn.id,
+          PRN_STATUS.AWAITING_ACCEPTANCE
+        )
+        expect(result.statusCode).toBe(409)
+
+        const refetched = await packagingRecyclingNotesRepository.findById(
+          prn.id
+        )
+
+        expect(refetched.status.currentStatus).toBe(
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+        expect(refetched.prnNumber).toBeUndefined()
+        expect(refetched.status.issued).toBeUndefined()
+      }
+    )
+
+    it.fails(
+      'issues only one PRN when two concurrent issuances exceed the total balance',
+      async () => {
+        const env = await setupWasteBalanceIntegrationEnvironment({
+          processingType: 'exporter'
+        })
+        const {
+          packagingRecyclingNotesRepository,
+          wasteBalancesRepository,
+          accreditationId,
+          organisationId
+        } = env
+
+        await performSummaryLogSubmission(
+          env,
+          'log-cross-prn',
+          'file-cross-prn',
+          'waste-cross-prn.xlsx',
+          createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+        )
+
+        const prnA = await createPrn(env, 50)
+        await transitionPrnStatus(
+          env,
+          prnA.id,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        const prnB = await createPrn(env, 50)
+        await transitionPrnStatus(
+          env,
+          prnB.id,
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+
+        await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+          accreditationId,
+          organisationId,
+          prnId: 'other-prn',
+          tonnage: 20,
+          userId: 'test-user'
+        })
+
+        await Promise.allSettled([
+          transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_ACCEPTANCE),
+          transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+        ])
+
+        const refetchedA = await packagingRecyclingNotesRepository.findById(
+          prnA.id
+        )
+        const refetchedB = await packagingRecyclingNotesRepository.findById(
+          prnB.id
+        )
+
+        const issuedCount = [refetchedA, refetchedB].filter(
+          (p) => p.status.currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+        ).length
+        expect(issuedCount).toBe(1)
+
+        const balance =
+          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+        expect(balance.amount).toBe(30)
+      }
+    )
+  })
+
+  describe('balance integrity under contention and supersession', () => {
+    it('credits availableAmount for both PRNs when two concurrent pending cancellations race', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-pending-cancel-race',
+        'file-pending-cancel-race',
+        'waste-pending-cancel-race.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      const prnA = await createPrn(env, 50)
+      await transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      const prnB = await createPrn(env, 50)
+      await transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      await Promise.allSettled([
+        transitionPrnStatus(env, prnA.id, PRN_STATUS.DELETED),
+        transitionPrnStatus(env, prnB.id, PRN_STATUS.DELETED)
+      ])
+
+      const balanceAfter =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balanceAfter.amount).toBe(200)
+      expect(balanceAfter.availableAmount).toBe(200)
+    })
+
+    it('does not strand a balance debit when two concurrent creations race on the same PRN', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-same-prn-create-race',
+        'file-same-prn-create-race',
+        'waste-same-prn-create-race.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      const prn = await createPrn(env, 50)
+
+      await Promise.allSettled([
+        transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION),
+        transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      ])
+
+      const balanceAfter =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balanceAfter.amount).toBe(100)
+      expect(balanceAfter.availableAmount).toBe(50)
+    })
+
+    it('debits availableAmount for both PRNs when two concurrent creations race on the same accreditation with sufficient balance', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-create-race-sufficient',
+        'file-create-race-sufficient',
+        'waste-create-race-sufficient.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      const prnA = await createPrn(env, 30)
+      const prnB = await createPrn(env, 30)
+
+      await Promise.allSettled([
+        transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_AUTHORISATION),
+        transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      ])
+
+      const balanceAfter =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balanceAfter.amount).toBe(200)
+      expect(balanceAfter.availableAmount).toBe(140)
+    })
+
+    it('debits the balance once when the same waste records are submitted via two summary logs', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter'
+      })
+      const { wasteBalancesRepository, accreditationId } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-supersede-a',
+        'file-supersede-a',
+        'waste-supersede-a.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      const balanceAfterA =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balanceAfterA.amount).toBe(100)
+
+      await performSummaryLogSubmission(
+        env,
+        'log-supersede-b',
+        'file-supersede-b',
+        'waste-supersede-b.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      const balanceAfterB =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balanceAfterB.amount).toBe(100)
+    })
+  })
 })

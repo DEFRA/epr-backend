@@ -91,8 +91,7 @@ describe('commandQueueConsumerPlugin', () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
       expect(createSummaryLogExtractor).toHaveBeenCalledWith({
-        uploadsRepository: expect.any(Object),
-        logger: server.logger
+        uploadsRepository: expect.any(Object)
       })
     })
 

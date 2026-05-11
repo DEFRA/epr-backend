@@ -16,7 +16,8 @@ vi.mock('#root/config.js', () => ({
       }
       return values[key]
     })
-  }
+  },
+  isProductionEnvironment: () => false
 }))
 
 describe('loggerOptions.serializers.res', () => {

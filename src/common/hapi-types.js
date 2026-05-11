@@ -117,6 +117,7 @@
  * @property {ServerApp} app - Server application state
  * @property {Function} decorate - Decorate server/request with additional properties
  * @property {Function} dependency - Declare plugin dependencies
+ * @property {Function} register - Register a plugin
  * @property {Function} start - Start the server
  * @property {Function} stop - Stop the server
  * @property {Function} initialize - Initialize the server without starting

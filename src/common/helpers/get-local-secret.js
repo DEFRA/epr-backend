@@ -6,6 +6,10 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../enums/event.js'
 
+/**
+ * @param {string} configKey
+ * @returns {string | null}
+ */
 export function getLocalSecret(configKey) {
   try {
     const path = config.get(configKey)
@@ -14,6 +18,16 @@ export function getLocalSecret(configKey) {
     }
     return fs.readFileSync(path, 'utf8').toString().trim()
   } catch (error) {
+    if (error.code === 'ENOENT') {
+      logger.debug({
+        message: `Local secret not present for config key: ${configKey}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SECRET,
+          action: LOGGING_EVENT_ACTIONS.NOT_FOUND
+        }
+      })
+      return null
+    }
     logger.error({
       err: error,
       message: `An error occurred while trying to read the secret: ${configKey}.\n${error}`,
