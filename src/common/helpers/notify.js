@@ -53,7 +53,8 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
           minimumNameObfuscationLength: 3,
           visibleCharactersEndLength: 4,
           visibleCharactersStartLength: 4
-        })
+        }),
+        personalisation
       })
     )
   } catch (error) {

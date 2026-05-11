@@ -24,7 +24,12 @@ async function auditPrnStatusTransition(request, prnId, previous, next) {
   }
   const user = extractUserDetails(request)
 
-  safeAudit({ event, user }, () => ({ organisationId, prnId }))
+  safeAudit({ event, user }, () => ({
+    organisationId,
+    prnId,
+    previous: { status: previous.status.currentStatus },
+    next: { status: next.status.currentStatus }
+  }))
   await recordSystemLog(request, {
     event,
     context: { organisationId, prnId, previous, next },

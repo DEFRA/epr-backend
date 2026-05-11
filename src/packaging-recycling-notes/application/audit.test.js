@@ -57,7 +57,7 @@ describe('auditPrnStatusTransition', () => {
     vi.clearAllMocks()
   })
 
-  it('sends only organisationId and prnId to CDP audit', async () => {
+  it('sends identifiers and status transition to CDP audit', async () => {
     const request = createMockRequest()
 
     await auditPrnStatusTransition(request, prnId, previousPrn, nextPrn)
@@ -70,7 +70,9 @@ describe('auditPrnStatusTransition', () => {
       },
       context: {
         organisationId: 'org-456',
-        prnId
+        prnId,
+        previous: { status: 'awaiting_authorisation' },
+        next: { status: 'awaiting_acceptance' }
       },
       user: {
         id: userId,
@@ -116,7 +118,7 @@ describe('auditPrnStatusTransition', () => {
 
     await auditPrnStatusTransition(request, prnId, largePreviousPrn, nextPrn)
 
-    // CDP audit always receives only identifiers
+    // CDP audit receives identifiers and cherry-picked status, not the full docs
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: 'waste-reporting',
@@ -125,7 +127,9 @@ describe('auditPrnStatusTransition', () => {
       },
       context: {
         organisationId: 'org-456',
-        prnId
+        prnId,
+        previous: { status: 'awaiting_authorisation' },
+        next: { status: 'awaiting_acceptance' }
       },
       user: {
         id: userId,
