@@ -1,6 +1,7 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
+import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -9,6 +10,8 @@ import {
 import { isIncludedInWasteBalance } from '../domain/is-included-in-waste-balance.js'
 import { buildOverseasSitesContext } from '../domain/overseas-sites-context.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
+
+const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
@@ -182,7 +185,9 @@ export async function* streamCsvExport(deps) {
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  const orgsSorted = [...orgs].sort(sortById)
+  const orgsSorted = orgs
+    .filter((org) => !TEST_ORGANISATIONS.has(org.orgId))
+    .sort(sortById)
   for (const org of orgsSorted) {
     const registrations = [...(org.registrations ?? [])].sort(sortById)
     for (const registration of registrations) {
