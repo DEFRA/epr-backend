@@ -94,6 +94,16 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
           )
         }
       }
+    },
+
+    async findDistinctDataKeys() {
+      const keys = new Set()
+      for (const record of storage) {
+        for (const key of Object.keys(record.data)) {
+          keys.add(key)
+        }
+      }
+      return [...keys]
     }
   })
 }
