@@ -45,8 +45,15 @@ const createServerWithRepos = ({
   const organisationsRepository = {
     findAll: vi.fn().mockResolvedValue(organisations)
   }
+  const observedKeys = new Set()
+  for (const record of wasteRecords) {
+    for (const key of Object.keys(record.data ?? {})) {
+      observedKeys.add(key)
+    }
+  }
   const wasteRecordsRepository = {
-    findByRegistration: vi.fn().mockResolvedValue(wasteRecords)
+    findByRegistration: vi.fn().mockResolvedValue(wasteRecords),
+    findDistinctDataKeys: vi.fn().mockResolvedValue([...observedKeys])
   }
   const summaryLogsRepository = {
     findAllByOrgReg: vi.fn().mockResolvedValue(summaryLogs)

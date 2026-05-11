@@ -12,7 +12,6 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {WasteRecord, WasteRecordVersion} from '#domain/waste-records/model.js' */
 /** @import {OverseasSite} from '#overseas-sites/repository/port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -26,16 +25,6 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {OverseasSitesRepository} overseasSitesRepository
- */
-
-/**
- * @typedef {Object} BufferedRegistration
- * @property {Organisation} org
- * @property {Registration} registration
- * @property {Accreditation | null} accreditation
- * @property {Record<string, { validFrom: Date | null }>} overseasSites
- * @property {Map<string, { submittedAt: string }>} summaryLogMap
- * @property {WasteRecord[]} records
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -60,47 +49,70 @@ const encodeRow = async (cells) => {
 }
 
 /**
- * Collect the union of data-field keys observed across a list of records,
- * pushing them into a shared Set. Returns the records sorted by type+rowId
- * so the caller can buffer them in the order they will eventually be emitted.
+ * Build one CSV data row for a record under a given (org, registration) pair.
  *
- * @param {WasteRecord[]} records
- * @param {Set<string>} observedKeys
- * @returns {WasteRecord[]}
+ * @param {Object} input
+ * @param {Organisation} input.org
+ * @param {Registration} input.registration
+ * @param {import('#domain/organisations/accreditation.js').Accreditation | null} input.accreditation
+ * @param {Record<string, { validFrom: Date | null }>} input.overseasSites
+ * @param {Map<string, { submittedAt: string }>} input.summaryLogMap
+ * @param {WasteRecord} input.record
+ * @param {string[]} input.dataFieldColumns
+ * @returns {string[]}
  */
-const collectObservedKeys = (records, observedKeys) => {
-  const sorted = [...records].sort(sortRecords)
-  for (const record of sorted) {
-    for (const key of Object.keys(record.data)) {
-      observedKeys.add(key)
-    }
-  }
-  return sorted
+const rowForRecord = ({
+  org,
+  registration,
+  accreditation,
+  overseasSites,
+  summaryLogMap,
+  record,
+  dataFieldColumns
+}) => {
+  // `record.versions` is a non-empty array per the WasteRecord schema, so
+  // `.at(-1)` is always defined here. The cast tells tsc to drop the
+  // `| undefined` from the .at() return type rather than adding a guard
+  // for a state that cannot occur.
+  const lastVersion = /** @type {WasteRecordVersion} */ (record.versions.at(-1))
+  const summaryLogEntry = summaryLogMap.get(lastVersion.summaryLog.id) ?? null
+  const includedInWasteBalance = isIncludedInWasteBalance(
+    record,
+    accreditation,
+    overseasSites
+  )
+  return buildDataRow({
+    org,
+    registration,
+    record,
+    summaryLogEntry,
+    includedInWasteBalance,
+    dataFieldColumns
+  })
 }
 
 /**
- * Load all per-registration context (records, summary logs, overseas-site
- * validity, accreditation) into a buffer entry and union its observed keys
- * into the shared `observedKeys` Set so the eventual header row can include
- * any non-schema columns.
+ * Yield one CSV row per waste record under a single (org, registration) pair.
+ * Records for the pair are fetched into memory together (bounded by the count
+ * per registration, not the whole system) and yielded one row at a time.
  *
  * @param {Object} input
  * @param {Organisation} input.org
  * @param {Registration} input.registration
  * @param {Map<string, OverseasSite>} input.sitesById
- * @param {Set<string>} input.observedKeys
+ * @param {string[]} input.dataFieldColumns
  * @param {WasteRecordsRepository} input.wasteRecordsRepository
  * @param {SummaryLogsRepository} input.summaryLogsRepository
- * @returns {Promise<BufferedRegistration>}
+ * @returns {AsyncGenerator<string>}
  */
-const bufferRegistration = async ({
+async function* streamRegistrationRows({
   org,
   registration,
   sitesById,
-  observedKeys,
+  dataFieldColumns,
   wasteRecordsRepository,
   summaryLogsRepository
-}) => {
+}) {
   const accreditation = registration.accreditation ?? null
   const overseasSites = buildOverseasSitesContext(registration, sitesById)
   const summaryLogMap = await loadSummaryLogMap(
@@ -113,89 +125,21 @@ const bufferRegistration = async ({
     org.id,
     registration.id
   )
-  const recordsSorted = collectObservedKeys(records, observedKeys)
+  const recordsSorted = [...records].sort(sortRecords)
 
-  return {
-    org,
-    registration,
-    accreditation,
-    overseasSites,
-    summaryLogMap,
-    records: recordsSorted
+  for (const record of recordsSorted) {
+    yield await encodeRow(
+      rowForRecord({
+        org,
+        registration,
+        accreditation,
+        overseasSites,
+        summaryLogMap,
+        record,
+        dataFieldColumns
+      })
+    )
   }
-}
-
-/**
- * Walk every (org, registration) pair, buffer each one's data, and return the
- * buffer plus the union of data-field keys observed across all records.
- *
- * @param {Object} input
- * @param {Organisation[]} input.orgs
- * @param {Map<string, OverseasSite>} input.sitesById
- * @param {WasteRecordsRepository} input.wasteRecordsRepository
- * @param {SummaryLogsRepository} input.summaryLogsRepository
- * @returns {Promise<{ buffered: BufferedRegistration[], observedKeys: Set<string> }>}
- */
-const bufferAllRegistrations = async ({
-  orgs,
-  sitesById,
-  wasteRecordsRepository,
-  summaryLogsRepository
-}) => {
-  /** @type {BufferedRegistration[]} */
-  const buffered = []
-  /** @type {Set<string>} */
-  const observedKeys = new Set()
-  const orgsSorted = [...orgs].sort(sortById)
-
-  for (const org of orgsSorted) {
-    const registrations = [...(org.registrations ?? [])].sort(sortById)
-    for (const registration of registrations) {
-      buffered.push(
-        await bufferRegistration({
-          org,
-          registration,
-          sitesById,
-          observedKeys,
-          wasteRecordsRepository,
-          summaryLogsRepository
-        })
-      )
-    }
-  }
-
-  return { buffered, observedKeys }
-}
-
-/**
- * Build one CSV data row from a buffered registration and one of its records.
- *
- * @param {BufferedRegistration} item
- * @param {WasteRecord} record
- * @param {string[]} dataFieldColumns
- * @returns {string[]}
- */
-const rowForRecord = (item, record, dataFieldColumns) => {
-  // `record.versions` is a non-empty array per the WasteRecord schema, so
-  // `.at(-1)` is always defined here. The cast tells tsc to drop the
-  // `| undefined` from the .at() return type rather than adding a guard
-  // for a state that cannot occur.
-  const lastVersion = /** @type {WasteRecordVersion} */ (record.versions.at(-1))
-  const summaryLogEntry =
-    item.summaryLogMap.get(lastVersion.summaryLog.id) ?? null
-  const includedInWasteBalance = isIncludedInWasteBalance(
-    record,
-    item.accreditation,
-    item.overseasSites
-  )
-  return buildDataRow({
-    org: item.org,
-    registration: item.registration,
-    record,
-    summaryLogEntry,
-    includedInWasteBalance,
-    dataFieldColumns
-  })
 }
 
 /**
@@ -204,10 +148,11 @@ const rowForRecord = (item, record, dataFieldColumns) => {
  *
  * The header row is dynamically composed from the union of schema-declared
  * field constants and any keys observed on actual `record.data` objects.
- * To know all observed keys before emitting the header, the orchestrator
- * loads each registration's records and per-registration context (ORS,
- * summary logs, accreditation) into an in-memory buffer during a single
- * pass, then iterates the buffer to emit rows.
+ * Observed keys are discovered up-front via a server-side aggregation
+ * (`findDistinctDataKeys`) so the export does not need to materialise any
+ * waste-record document to compose the header. Rows are then streamed one
+ * registration at a time — memory is bounded by the largest single
+ * registration's record count, not the total record count in the system.
  *
  * @param {StreamCsvExportDeps} deps
  * @returns {AsyncGenerator<string>}
@@ -220,23 +165,28 @@ export async function* streamCsvExport(deps) {
     overseasSitesRepository
   } = deps
 
-  const allSites = await overseasSitesRepository.findAll()
+  const [allSites, orgs, observedKeys] = await Promise.all([
+    overseasSitesRepository.findAll(),
+    organisationsRepository.findAll(),
+    wasteRecordsRepository.findDistinctDataKeys()
+  ])
+
   const sitesById = new Map(allSites.map((s) => [s.id, s]))
-
-  const orgs = await organisationsRepository.findAll()
-  const { buffered, observedKeys } = await bufferAllRegistrations({
-    orgs,
-    sitesById,
-    wasteRecordsRepository,
-    summaryLogsRepository
-  })
-
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  for (const item of buffered) {
-    for (const record of item.records) {
-      yield await encodeRow(rowForRecord(item, record, dataFieldColumns))
+  const orgsSorted = [...orgs].sort(sortById)
+  for (const org of orgsSorted) {
+    const registrations = [...(org.registrations ?? [])].sort(sortById)
+    for (const registration of registrations) {
+      yield* streamRegistrationRows({
+        org,
+        registration,
+        sitesById,
+        dataFieldColumns,
+        wasteRecordsRepository,
+        summaryLogsRepository
+      })
     }
   }
 }

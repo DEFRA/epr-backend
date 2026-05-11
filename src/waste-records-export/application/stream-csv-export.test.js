@@ -49,21 +49,32 @@ const reprocessorReceivedRecord = (overrides = {}) => ({
   ...overrides
 })
 
-const baseDeps = (overrides = {}) => ({
+const defaultDeps = () => ({
   organisationsRepository: {
     findAll: vi.fn().mockResolvedValue([])
   },
   wasteRecordsRepository: {
-    findByRegistration: vi.fn().mockResolvedValue([])
+    findByRegistration: vi.fn().mockResolvedValue([]),
+    findDistinctDataKeys: vi.fn().mockResolvedValue([])
   },
   summaryLogsRepository: {
     findAllByOrgReg: vi.fn().mockResolvedValue([])
   },
   overseasSitesRepository: {
     findAll: vi.fn().mockResolvedValue([])
-  },
-  ...overrides
+  }
 })
+
+// Shallow-merges per-repo overrides so individual tests can swap a single
+// method (e.g. `findByRegistration`) without losing the default mocks for
+// other methods on the same repository.
+const baseDeps = (overrides = {}) => {
+  const merged = defaultDeps()
+  for (const [key, value] of Object.entries(overrides)) {
+    merged[key] = { ...merged[key], ...value }
+  }
+  return merged
+}
 
 describe('streamCsvExport', () => {
   it('emits the header row even when no organisations exist', async () => {
@@ -362,11 +373,37 @@ describe('streamCsvExportToReadable', () => {
     const deps = baseDeps({
       organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
       wasteRecordsRepository: {
-        findByRegistration: vi.fn().mockResolvedValue([record])
+        findByRegistration: vi.fn().mockResolvedValue([record]),
+        findDistinctDataKeys: vi
+          .fn()
+          .mockResolvedValue([
+            'processingType',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            'BILL_OF_LANDING_REFERENCE_NUMBER'
+          ])
       }
     })
     const out = await collect(streamCsvExport(deps))
     expect(out[0]).toContain('BILL_OF_LANDING_REFERENCE_NUMBER')
     expect(out[1]).toContain('BL-99')
+  })
+
+  it('uses findDistinctDataKeys to compose the header without buffering any record document', async () => {
+    const org = baseOrg({ registrations: [baseRegistration()] })
+    const record = reprocessorReceivedRecord()
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([record]),
+        findDistinctDataKeys: vi.fn().mockResolvedValue(['WASTE_TRANSFER_NOTE'])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(
+      deps.wasteRecordsRepository.findDistinctDataKeys
+    ).toHaveBeenCalledTimes(1)
+    expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
   })
 })
