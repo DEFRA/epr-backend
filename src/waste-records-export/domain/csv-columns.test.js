@@ -72,6 +72,12 @@ describe('csv-columns', () => {
       expect(cols).not.toContain('ROW_ID')
       expect(cols).toContain('OTHER')
     })
+
+    it('excludes processingType (already in the metadata prefix)', () => {
+      const cols = buildDataFieldColumns(['processingType', 'OTHER'])
+      expect(cols).not.toContain('processingType')
+      expect(cols).toContain('OTHER')
+    })
   })
 
   describe('buildHeaderRow', () => {

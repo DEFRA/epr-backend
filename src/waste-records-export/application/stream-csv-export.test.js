@@ -307,6 +307,23 @@ describe('streamCsvExport', () => {
     expect(out[2]).toContain('"2002"')
   })
 
+  it('orders rowIds naturally so "9" comes before "10"', async () => {
+    const org = baseOrg({ registrations: [baseRegistration()] })
+    const recordTen = reprocessorReceivedRecord({ rowId: '10' })
+    const recordNine = reprocessorReceivedRecord({ rowId: '9' })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi.fn().mockResolvedValue([recordTen, recordNine])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    expect(out).toHaveLength(3)
+    expect(out[1]).toContain('"9"')
+    expect(out[2]).toContain('"10"')
+  })
+
   it('treats a missing accreditation as registered-only', async () => {
     const org = baseOrg({
       registrations: [baseRegistration({ accreditation: undefined })]

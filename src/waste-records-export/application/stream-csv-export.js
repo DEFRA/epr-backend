@@ -31,7 +31,14 @@ const sortById = (a, b) => a.id.localeCompare(b.id)
 
 const sortRecords = (a, b) => {
   const t = a.type.localeCompare(b.type)
-  return t || String(a.rowId).localeCompare(String(b.rowId))
+  // `numeric: true` gives natural ordering ('9' before '10') while still
+  // working for non-numeric rowIds.
+  return (
+    t ||
+    String(a.rowId).localeCompare(String(b.rowId), undefined, {
+      numeric: true
+    })
+  )
 }
 
 /**

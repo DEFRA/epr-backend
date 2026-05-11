@@ -24,7 +24,12 @@ export const METADATA_COLUMNS = Object.freeze([
   'Row ID'
 ])
 
-const FIELDS_NEVER_EXPORTED = new Set(['ROW_ID']) // already in metadata prefix
+// Both fields are already rendered in the metadata prefix:
+//   ROW_ID            -> 'Row ID'
+//   processingType    -> 'Operator Processing Type'
+// `findDistinctDataKeys` surfaces every key on `record.data`, including
+// `processingType`, so exclude them here to avoid duplicate columns.
+const FIELDS_NEVER_EXPORTED = new Set(['ROW_ID', 'processingType'])
 
 const collectFieldNames = (mod) =>
   Object.values(mod)
