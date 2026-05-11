@@ -1,4 +1,4 @@
-import { isPayloadSmallEnoughToAudit, safeAudit } from './helpers.js'
+import { safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -28,32 +28,18 @@ async function auditFormSubmissionLineageMigration(
   previous,
   next
 ) {
-  const payload = {
-    event: EVENT,
-    context: {
-      organisationId,
-      previous,
-      next
-    },
-    user: SYSTEM_USER
-  }
-
-  // CDP audit has size limits - send reduced context if too big
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: { organisationId }
-      }
-
-  safeAudit(safeAuditingPayload)
+  safeAudit({ event: EVENT, user: SYSTEM_USER }, () => ({ organisationId }))
 
   // System logs have no size limit - always store full state
   await systemLogsRepository.insert({
     createdAt: new Date(),
     createdBy: SYSTEM_USER,
     event: EVENT,
-    context: payload.context
+    context: {
+      organisationId,
+      previous,
+      next
+    }
   })
 }
 

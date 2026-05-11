@@ -46,7 +46,7 @@ describe('auditFormSubmissionLineageMigration', () => {
     insert: mockInsert
   })
 
-  it('logs full previous/next state to both CDP audit and system log', async () => {
+  it('sends organisationId context to CDP audit and full state to system log', async () => {
     const previous = {
       registrations: [
         { id: new ObjectId().toString(), registrationNumber: 'REG-2025-01' }
@@ -64,71 +64,6 @@ describe('auditFormSubmissionLineageMigration', () => {
         { id: new ObjectId().toString(), accreditationNumber: 'ACC-2025-01' },
         { id: new ObjectId().toString(), accreditationNumber: 'ACC-2025-02' }
       ]
-    }
-
-    await auditFormSubmissionLineageMigration(
-      createMockSystemLogsRepository(),
-      organisationId,
-      previous,
-      next
-    )
-
-    expect(mockAudit).toHaveBeenCalledWith({
-      event: {
-        category: 'entity',
-        subCategory: 'epr-organisations',
-        action: 'migrate-form-submission-lineage'
-      },
-      context: {
-        organisationId,
-        previous,
-        next
-      },
-      user: systemUser
-    })
-
-    expect(mockInsert).toHaveBeenCalledWith({
-      createdAt: now,
-      createdBy: systemUser,
-      event: {
-        category: 'entity',
-        subCategory: 'epr-organisations',
-        action: 'migrate-form-submission-lineage'
-      },
-      context: {
-        organisationId,
-        previous,
-        next
-      }
-    })
-  })
-
-  it('sends reduced context to CDP audit but full state to system log when payload is too large', async () => {
-    const largeData = 'x'.repeat(15000)
-    const previous = {
-      registrations: [
-        {
-          id: new ObjectId().toString(),
-          registrationNumber: 'REG-2025-01',
-          data: largeData
-        }
-      ],
-      accreditations: []
-    }
-    const next = {
-      registrations: [
-        {
-          id: new ObjectId().toString(),
-          registrationNumber: 'REG-2025-01',
-          data: largeData
-        },
-        {
-          id: new ObjectId().toString(),
-          registrationNumber: 'REG-2025-02',
-          data: largeData
-        }
-      ],
-      accreditations: []
     }
 
     await auditFormSubmissionLineageMigration(
