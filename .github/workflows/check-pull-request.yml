@@ -104,7 +104,16 @@ jobs:
           EOF
           else
             ERRORS=$(echo "$OUTPUT" | grep -c "^src/" || true)
-            BY_CODE=$(echo "$OUTPUT" | grep -oE 'TS[0-9]+' | sort | uniq -c | sort -rn | head -10)
+            TOP_CODES=$(echo "$OUTPUT" | grep -oE 'TS[0-9]+' | sort | uniq -c | sort -rn | head -10)
+            BY_CODE_TABLE=$(
+              printf '| Count | Code | Description |\n'
+              printf '| ---: | --- | --- |\n'
+              while read -r count code; do
+                [ -z "$code" ] && continue
+                desc=$(echo "$OUTPUT" | grep -m1 -E "error $code:" | sed -E "s/^.*error $code: //; s/[|]/\\\\|/g")
+                printf '| %s | %s | %s |\n' "$count" "$code" "$desc"
+              done <<< "$TOP_CODES"
+            )
             BY_FILE=$(echo "$OUTPUT" | grep "^src/" | sed 's/(.*/:/' | sort | uniq -c | sort -rn)
             FULL=$(echo "$OUTPUT" | grep "^src/")
             cat <<EOF >> "$GITHUB_STEP_SUMMARY"
@@ -114,9 +123,7 @@ jobs:
 
           ### Top error codes
 
-          \`\`\`
-          ${BY_CODE}
-          \`\`\`
+          ${BY_CODE_TABLE}
 
           <details><summary>Errors by file (count)</summary>
 
