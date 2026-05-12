@@ -25,19 +25,41 @@ const STATUS_OPERATION_SLOT = Object.freeze({
 })
 
 /**
+ * Transition keys (currentStatus|newStatus) for the post-CAS path that needs a
+ * PRN rollback when the balance side-effect throws. Kept as a typed union so
+ * adding a new key without a matching entry in ROLLBACK_METHOD_BY_TRANSITION
+ * is a tsc error.
+ *
+ * @typedef {`${typeof PRN_STATUS.AWAITING_AUTHORISATION}|${typeof PRN_STATUS.AWAITING_ACCEPTANCE}`
+ *   | `${typeof PRN_STATUS.AWAITING_AUTHORISATION}|${typeof PRN_STATUS.DELETED}`
+ *   | `${typeof PRN_STATUS.AWAITING_CANCELLATION}|${typeof PRN_STATUS.CANCELLED}`} PostCasRollbackTransition
+ */
+
+/**
+ * @typedef {'rollbackIssuance' | 'rollbackPendingCancellation' | 'rollbackIssuedCancellation'} RollbackMethodName
+ */
+
+/**
  * Maps a (currentStatus -> newStatus) transition to the rollback method on the
  * PRN repository that reverses the forward write. Only post-CAS transitions
  * with a follow-on balance side-effect appear here; creation is handled by
  * crediting the balance back rather than rolling the PRN.
+ *
+ * tsc enforces:
+ *   - every key in PostCasRollbackTransition has an entry (exhaustiveness)
+ *   - no extra keys are present (no orphan rollback entries)
+ *   - every value is a valid RollbackMethodName
+ * Keys are literal strings so tsc can verify them — computed template-literal
+ * keys widen to string and lose the connection to the union. The keys are
+ * still tied to PRN_STATUS because PostCasRollbackTransition resolves via
+ * `typeof PRN_STATUS.*` — a value change in PRN_STATUS would tsc-error here.
  */
-const ROLLBACK_METHOD_BY_TRANSITION = Object.freeze({
-  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]:
-    'rollbackIssuance',
-  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]:
-    'rollbackPendingCancellation',
-  [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]:
-    'rollbackIssuedCancellation'
-})
+/** @type {Readonly<Record<PostCasRollbackTransition, RollbackMethodName>>} */
+const ROLLBACK_METHOD_BY_TRANSITION = {
+  'awaiting_authorisation|awaiting_acceptance': 'rollbackIssuance',
+  'awaiting_authorisation|deleted': 'rollbackPendingCancellation',
+  'awaiting_cancellation|cancelled': 'rollbackIssuedCancellation'
+}
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -284,22 +306,6 @@ async function applyStatusUpdate({
 }
 
 /**
- * Runs `compensator` to undo a forward write that has already committed.
- * If the compensator itself throws, the failure is logged with full context
- * (the original forward error and the compensation error) but not rethrown —
- * the caller always sees the original forward error so the user-visible
- * outcome stays coherent. The log entry is what ops use to find PRNs left
- * in an inconsistent state for manual reconciliation.
- *
- * @param {() => Promise<unknown>} compensator
- * @param {Object} context
- * @param {Error} context.forwardError
- * @param {import('#common/hapi-types.js').TypedLogger} context.logger
- * @param {string} context.prnId
- * @param {string} context.fromStatus
- * @param {string} context.toStatus
- */
-/**
  * CDP ingest drops fields outside its allowlist (see cdp-log-types.js),
  * including bespoke top-level fields and any second error on the same entry.
  * Both errors are therefore logged as paired entries that share the same
@@ -325,9 +331,52 @@ function logCompensationFailure(
   })
 }
 
+/**
+ * Records that a forward failure was caught and cleanly reversed. The forward
+ * error is attached as `err` so it's indexed, and the event.reference is the
+ * prnId so ops can find every compensation event for a given PRN regardless
+ * of whether it ultimately succeeded or failed.
+ */
+function logCompensationSuccess(logger, prnId, fromStatus, toStatus, err) {
+  logger.warn({
+    err,
+    message: `Forward write failed; compensation succeeded for PRN ${prnId} (${fromStatus} -> ${toStatus})`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.DB,
+      action: LOGGING_EVENT_ACTIONS.COMPENSATION_SUCCESS,
+      reference: prnId
+    }
+  })
+}
+
+/**
+ * Runs `compensator` to undo a forward write that has already committed.
+ * On success, logs a COMPENSATION_SUCCESS entry carrying the original forward
+ * error so ops can spot patterns of recovered failures. If the compensator
+ * itself throws, the failure is logged with full context (the original
+ * forward error and the compensation error) but not rethrown — the caller
+ * always sees the original forward error so the user-visible outcome stays
+ * coherent. The log entries are what ops use to find PRNs left in an
+ * inconsistent state for manual reconciliation.
+ *
+ * @param {() => Promise<unknown>} compensator
+ * @param {Object} context
+ * @param {Error} context.forwardError
+ * @param {import('#common/hapi-types.js').TypedLogger} context.logger
+ * @param {string} context.prnId
+ * @param {string} context.fromStatus
+ * @param {string} context.toStatus
+ */
 async function tryCompensate(compensator, context) {
   try {
     await compensator()
+    logCompensationSuccess(
+      context.logger,
+      context.prnId,
+      context.fromStatus,
+      context.toStatus,
+      context.forwardError
+    )
   } catch (compensationError) {
     logCompensationFailure(
       context.logger,
@@ -446,8 +495,10 @@ async function performTransition({
       balanceEffectsParams
     )
   } catch (forwardError) {
-    const rollbackMethod =
-      ROLLBACK_METHOD_BY_TRANSITION[`${currentStatus}|${newStatus}`]
+    const transitionKey = /** @type {PostCasRollbackTransition} */ (
+      `${currentStatus}|${newStatus}`
+    )
+    const rollbackMethod = ROLLBACK_METHOD_BY_TRANSITION[transitionKey]
     await tryCompensate(
       () =>
         prnRepository[rollbackMethod]({

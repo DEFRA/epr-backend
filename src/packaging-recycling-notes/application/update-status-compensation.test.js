@@ -97,6 +97,20 @@ const setupRepositories = ({ prnSeed, balanceSeed }) => {
 
 const issueUser = { id: 'user-789', name: 'Test User' }
 
+const expectCompensationSuccessLog = (
+  logger,
+  { forwardError, fromStatus, toStatus }
+) => {
+  expect(logger.warn).toHaveBeenCalledTimes(1)
+  const [successLog] = logger.warn.mock.calls[0]
+  expect(successLog.err).toBe(forwardError)
+  expect(successLog.event.action).toBe('compensation_success')
+  expect(successLog.event.reference).toBe(PRN_ID)
+  expect(successLog.message).toContain(PRN_ID)
+  expect(successLog.message).toContain(fromStatus)
+  expect(successLog.message).toContain(toStatus)
+}
+
 describe('updatePrnStatus compensation', () => {
   describe('post-CAS rollback when balance side-effect fails', () => {
     it('reverts an issuance to awaiting_authorisation if the total-balance debit throws', async () => {
@@ -140,6 +154,11 @@ describe('updatePrnStatus compensation', () => {
       expect(refetched.status.issued).toBeUndefined()
 
       expect(logger.error).not.toHaveBeenCalled()
+      expectCompensationSuccessLog(logger, {
+        forwardError: debitError,
+        fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        toStatus: PRN_STATUS.AWAITING_ACCEPTANCE
+      })
     })
 
     it('reverts a pending-cancellation (DELETED) if the available-balance credit throws', async () => {
@@ -183,6 +202,11 @@ describe('updatePrnStatus compensation', () => {
       expect(refetched.status.cancelled).toBeUndefined()
 
       expect(logger.error).not.toHaveBeenCalled()
+      expectCompensationSuccessLog(logger, {
+        forwardError: creditError,
+        fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        toStatus: PRN_STATUS.DELETED
+      })
     })
 
     it('reverts an issued cancellation to awaiting_cancellation if the full-balance credit throws', async () => {
@@ -230,6 +254,11 @@ describe('updatePrnStatus compensation', () => {
       expect(refetched.status.cancelled).toBeUndefined()
 
       expect(logger.error).not.toHaveBeenCalled()
+      expectCompensationSuccessLog(logger, {
+        forwardError: creditError,
+        fromStatus: PRN_STATUS.AWAITING_CANCELLATION,
+        toStatus: PRN_STATUS.CANCELLED
+      })
     })
   })
 
@@ -269,6 +298,11 @@ describe('updatePrnStatus compensation', () => {
       expect(balance.availableAmount).toBe(STARTING_TOTAL)
 
       expect(logger.error).not.toHaveBeenCalled()
+      expectCompensationSuccessLog(logger, {
+        forwardError: writeError,
+        fromStatus: PRN_STATUS.DRAFT,
+        toStatus: PRN_STATUS.AWAITING_AUTHORISATION
+      })
     })
   })
 
@@ -330,6 +364,8 @@ describe('updatePrnStatus compensation', () => {
         PRN_STATUS.AWAITING_AUTHORISATION
       )
       expect(compensationLog.message).toContain(PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      expect(logger.warn).not.toHaveBeenCalled()
     })
   })
 })
