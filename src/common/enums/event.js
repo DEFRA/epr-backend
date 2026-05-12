@@ -33,7 +33,8 @@ export const LOGGING_EVENT_ACTIONS = {
   DATA_MIGRATION_FAILURE: 'data_migration_failure',
   SUMMARY_LOG_SUPERSEDED: 'summary_log_superseded',
   COMPENSATION_FAILURE: 'compensation_failure',
-  COMPENSATION_SUCCESS: 'compensation_success'
+  COMPENSATION_SUCCESS: 'compensation_success',
+  WASTE_BALANCE_UPDATED: 'waste_balance_updated'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {

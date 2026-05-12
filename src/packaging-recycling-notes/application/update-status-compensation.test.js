@@ -369,3 +369,204 @@ describe('updatePrnStatus compensation', () => {
     })
   })
 })
+
+const findWasteBalanceLog = (logger) =>
+  logger.info.mock.calls
+    .map(([entry]) => entry)
+    .find((entry) => entry?.event?.action === 'waste_balance_updated')
+
+const expectWasteBalanceLog = (
+  logger,
+  { operation, fromStatus, toStatus, tonnage }
+) => {
+  const entry = findWasteBalanceLog(logger)
+  expect(entry).toBeDefined()
+  expect(entry.event.action).toBe('waste_balance_updated')
+  expect(entry.event.category).toBe('database')
+  expect(entry.event.reference).toBe(PRN_ID)
+  expect(entry.message).toContain(operation)
+  expect(entry.message).toContain(PRN_ID)
+  expect(entry.message).toContain(fromStatus)
+  expect(entry.message).toContain(toStatus)
+  expect(entry.message).toContain(String(tonnage))
+}
+
+describe('updatePrnStatus system logging on successful balance update', () => {
+  it('logs deduct_available when a PRN is created from draft', async () => {
+    const {
+      logger,
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository
+    } = setupRepositories({
+      prnSeed: buildDraftPrn(PRN_BASE),
+      balanceSeed: buildBalanceSeed()
+    })
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      logger,
+      id: PRN_ID,
+      organisationId: ORG_ID,
+      accreditationId: ACC_ID,
+      newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
+      user: issueUser
+    })
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
+    expectWasteBalanceLog(logger, {
+      operation: 'deduct_available',
+      fromStatus: PRN_STATUS.DRAFT,
+      toStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      tonnage: TONNAGE
+    })
+  })
+
+  it('logs deduct_total when a PRN is issued', async () => {
+    const {
+      logger,
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository
+    } = setupRepositories({
+      prnSeed: buildAwaitingAuthorisationPrn(PRN_BASE),
+      balanceSeed: buildBalanceSeed({
+        availableAmount: POST_DEDUCTION_AVAILABLE
+      })
+    })
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      logger,
+      id: PRN_ID,
+      organisationId: ORG_ID,
+      accreditationId: ACC_ID,
+      newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      actor: PRN_ACTOR.SIGNATORY,
+      user: issueUser
+    })
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
+    expectWasteBalanceLog(logger, {
+      operation: 'deduct_total',
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      toStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      tonnage: TONNAGE
+    })
+  })
+
+  it('logs credit_available when a pending PRN is deleted', async () => {
+    const {
+      logger,
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository
+    } = setupRepositories({
+      prnSeed: buildAwaitingAuthorisationPrn(PRN_BASE),
+      balanceSeed: buildBalanceSeed({
+        availableAmount: POST_DEDUCTION_AVAILABLE
+      })
+    })
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      logger,
+      id: PRN_ID,
+      organisationId: ORG_ID,
+      accreditationId: ACC_ID,
+      newStatus: PRN_STATUS.DELETED,
+      actor: PRN_ACTOR.SIGNATORY,
+      user: issueUser
+    })
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
+    expectWasteBalanceLog(logger, {
+      operation: 'credit_available',
+      fromStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      toStatus: PRN_STATUS.DELETED,
+      tonnage: TONNAGE
+    })
+  })
+
+  it('logs credit_full when an issued PRN cancellation completes', async () => {
+    const awaitingCancellationSeed = buildAwaitingAcceptancePrn({
+      ...PRN_BASE,
+      status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
+    })
+    const {
+      logger,
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository
+    } = setupRepositories({
+      prnSeed: awaitingCancellationSeed,
+      balanceSeed: buildBalanceSeed({
+        availableAmount: POST_DEDUCTION_AVAILABLE,
+        amount: POST_DEDUCTION_AVAILABLE
+      })
+    })
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      logger,
+      id: PRN_ID,
+      organisationId: ORG_ID,
+      accreditationId: ACC_ID,
+      newStatus: PRN_STATUS.CANCELLED,
+      actor: PRN_ACTOR.SIGNATORY,
+      user: issueUser
+    })
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
+    expectWasteBalanceLog(logger, {
+      operation: 'credit_full',
+      fromStatus: PRN_STATUS.AWAITING_CANCELLATION,
+      toStatus: PRN_STATUS.CANCELLED,
+      tonnage: TONNAGE
+    })
+  })
+
+  it('does not log when no balance side effect occurs', async () => {
+    const awaitingAcceptanceSeed = buildAwaitingAcceptancePrn(PRN_BASE)
+    const {
+      logger,
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository
+    } = setupRepositories({
+      prnSeed: awaitingAcceptanceSeed,
+      balanceSeed: buildBalanceSeed({
+        availableAmount: POST_DEDUCTION_AVAILABLE,
+        amount: POST_DEDUCTION_AVAILABLE
+      })
+    })
+
+    await updatePrnStatus({
+      prnRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      logger,
+      id: PRN_ID,
+      organisationId: ORG_ID,
+      accreditationId: ACC_ID,
+      newStatus: PRN_STATUS.AWAITING_CANCELLATION,
+      actor: PRN_ACTOR.PRODUCER,
+      user: issueUser
+    })
+
+    expect(findWasteBalanceLog(logger)).toBeUndefined()
+  })
+})

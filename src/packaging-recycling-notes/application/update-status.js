@@ -217,17 +217,65 @@ async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
 }
 
 /**
+ * Operational system log capturing that a waste balance write committed.
+ * Logged at info on the success path so ops can correlate a balance change
+ * with the PRN transition that drove it, and so a bug in the compensation
+ * path (firing when it shouldn't, or not firing when it should) is
+ * debuggable from the log trail alone. Failures are not logged here —
+ * they propagate to tryCompensate which already logs them with the
+ * forwardError attached.
+ *
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
+ * @param {string} operation
+ * @param {string} prnId
+ * @param {number} tonnage
+ * @param {string} fromStatus
+ * @param {string} toStatus
+ */
+function logWasteBalanceUpdate(
+  logger,
+  operation,
+  prnId,
+  tonnage,
+  fromStatus,
+  toStatus
+) {
+  logger.info({
+    message: `Waste balance ${operation} for PRN ${prnId} (${fromStatus} -> ${toStatus}), tonnage ${tonnage}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.DB,
+      action: LOGGING_EVENT_ACTIONS.WASTE_BALANCE_UPDATED,
+      reference: prnId
+    }
+  })
+}
+
+/**
  * Applies waste balance side effects for a status transition.
  * Each transition type is mutually exclusive based on newStatus.
  *
  * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {Object} params
  */
-async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
+async function applyWasteBalanceEffects(
+  wasteBalancesRepository,
+  logger,
+  params
+) {
   const { currentStatus, newStatus, ...balanceParams } = params
+  const { prnId, tonnage } = balanceParams
 
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
     await deductWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    logWasteBalanceUpdate(
+      logger,
+      'deduct_available',
+      prnId,
+      tonnage,
+      currentStatus,
+      newStatus
+    )
   }
 
   // AWAITING_AUTHORISATION -> CANCELLED is rejected by validateTransition; only the
@@ -238,6 +286,14 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
   ) {
     await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    logWasteBalanceUpdate(
+      logger,
+      'credit_available',
+      prnId,
+      tonnage,
+      currentStatus,
+      newStatus
+    )
   }
 
   if (
@@ -245,10 +301,26 @@ async function applyWasteBalanceEffects(wasteBalancesRepository, params) {
     currentStatus === PRN_STATUS.AWAITING_CANCELLATION
   ) {
     await creditFullBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    logWasteBalanceUpdate(
+      logger,
+      'credit_full',
+      prnId,
+      tonnage,
+      currentStatus,
+      newStatus
+    )
   }
 
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     await deductTotalBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    logWasteBalanceUpdate(
+      logger,
+      'deduct_total',
+      prnId,
+      tonnage,
+      currentStatus,
+      newStatus
+    )
   }
 }
 
@@ -419,7 +491,11 @@ async function performCreation({
   now,
   id
 }) {
-  await applyWasteBalanceEffects(wasteBalancesRepository, balanceEffectsParams)
+  await applyWasteBalanceEffects(
+    wasteBalancesRepository,
+    logger,
+    balanceEffectsParams
+  )
 
   try {
     return await applyStatusUpdate({
@@ -492,6 +568,7 @@ async function performTransition({
   try {
     await applyWasteBalanceEffects(
       wasteBalancesRepository,
+      logger,
       balanceEffectsParams
     )
   } catch (forwardError) {
