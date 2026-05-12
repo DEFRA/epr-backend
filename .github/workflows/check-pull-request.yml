@@ -105,13 +105,20 @@ jobs:
           else
             ERRORS=$(echo "$OUTPUT" | grep -c "^src/" || true)
             TOP_CODES=$(echo "$OUTPUT" | grep -oE 'TS[0-9]+' | sort | uniq -c | sort -rn | head -10)
+            TS_LIB=node_modules/typescript/lib/typescript.js
             BY_CODE_TABLE=$(
               printf '| Count | Code | Description |\n'
               printf '| ---: | --- | --- |\n'
               while read -r count code; do
                 [ -z "$code" ] && continue
-                desc=$(echo "$OUTPUT" | grep -m1 -E "error $code:" | sed -E "s/^.*error $code: //; s/[|]/\\\\|/g")
-                printf '| %s | %s | %s |\n' "$count" "$code" "$desc"
+                num=${code#TS}
+                desc=$(grep -oE "diag\\($num, [0-9]+[^,]*, \"[^\"]+\", \"[^\"]+\"\\)" "$TS_LIB" 2>/dev/null | head -1 | sed -E 's/^.*", "([^"]+)"\)$/\1/')
+                if [ -z "$desc" ]; then
+                  desc=$(echo "$OUTPUT" | grep -m1 -E "error $code:" | sed -E "s/^.*error $code: //")
+                fi
+                desc=$(echo "$desc" | sed -E 's/[|]/\\|/g')
+                slug=$(echo "$code" | tr '[:upper:]' '[:lower:]')
+                printf '| %s | [%s](https://typescript.tv/errors/%s/) | %s |\n' "$count" "$code" "$slug" "$desc"
               done <<< "$TOP_CODES"
             )
             BY_FILE=$(echo "$OUTPUT" | grep "^src/" | sed 's/(.*/:/' | sort | uniq -c | sort -rn)
