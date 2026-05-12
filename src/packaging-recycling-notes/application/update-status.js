@@ -349,6 +349,128 @@ async function tryCompensate(compensator, context) {
 }
 
 /**
+ * Pre-flight balance debit, forward PRN write, and credit-back compensation
+ * if the forward write fails. Pre-flight debit already proved the balance
+ * exists, so the compensator calls the credit primitive directly rather than
+ * going through the wrapper that would re-fetch.
+ */
+async function performCreation({
+  prnRepository,
+  organisationsRepository,
+  wasteBalancesRepository,
+  logger,
+  prn,
+  updateParams,
+  balanceEffectsParams,
+  newStatus,
+  organisationId,
+  accreditationId,
+  user,
+  currentStatus,
+  now,
+  id
+}) {
+  await applyWasteBalanceEffects(wasteBalancesRepository, balanceEffectsParams)
+
+  try {
+    return await applyStatusUpdate({
+      prnRepository,
+      organisationsRepository,
+      prn,
+      updateParams,
+      newStatus,
+      organisationId,
+      accreditationId,
+      user,
+      now
+    })
+  } catch (forwardError) {
+    await tryCompensate(
+      () =>
+        wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
+          accreditationId,
+          organisationId,
+          prnId: id,
+          tonnage: prn.tonnage,
+          userId: user.id
+        }),
+      {
+        forwardError,
+        logger,
+        prnId: id,
+        fromStatus: currentStatus,
+        toStatus: newStatus
+      }
+    )
+    throw forwardError
+  }
+}
+
+/**
+ * Forward PRN write followed by post-CAS balance effects, rolling the PRN
+ * back via the transition-specific rollback method if the balance write
+ * fails. The per-PRN CAS gates the balance write so concurrent writers
+ * cannot double-debit or double-credit.
+ */
+async function performTransition({
+  prnRepository,
+  organisationsRepository,
+  wasteBalancesRepository,
+  logger,
+  prn,
+  updateParams,
+  balanceEffectsParams,
+  newStatus,
+  organisationId,
+  accreditationId,
+  user,
+  currentStatus,
+  now,
+  id
+}) {
+  const updatedPrn = await applyStatusUpdate({
+    prnRepository,
+    organisationsRepository,
+    prn,
+    updateParams,
+    newStatus,
+    organisationId,
+    accreditationId,
+    user,
+    now
+  })
+
+  try {
+    await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      balanceEffectsParams
+    )
+  } catch (forwardError) {
+    const rollbackMethod =
+      ROLLBACK_METHOD_BY_TRANSITION[`${currentStatus}|${newStatus}`]
+    await tryCompensate(
+      () =>
+        prnRepository[rollbackMethod]({
+          id,
+          expectedVersion: updatedPrn.version,
+          updatedBy: user,
+          updatedAt: now
+        }),
+      {
+        forwardError,
+        logger,
+        prnId: id,
+        fromStatus: currentStatus,
+        toStatus: newStatus
+      }
+    )
+    throw forwardError
+  }
+
+  return updatedPrn
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -403,20 +525,6 @@ export async function updatePrnStatus({
     userId: user.id
   }
 
-  const isCreation = newStatus === PRN_STATUS.AWAITING_AUTHORISATION
-
-  // Pre-flight balance effect is kept only for new-PRN creation, where a
-  // post-CAS balance failure would strand the PRN in a state with no
-  // legal user exit. For transitions on an existing PRN (issuance,
-  // cancellation, deletion) the per-PRN CAS gates the balance write so
-  // concurrent writers cannot double-debit or double-credit.
-  if (isCreation) {
-    await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      balanceEffectsParams
-    )
-  }
-
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
@@ -426,72 +534,27 @@ export async function updatePrnStatus({
     updatedAt: now
   }
 
-  let updatedPrn
-  try {
-    updatedPrn = await applyStatusUpdate({
-      prnRepository,
-      organisationsRepository,
-      prn,
-      updateParams,
-      newStatus,
-      organisationId,
-      accreditationId,
-      user,
-      now
-    })
-  } catch (forwardError) {
-    if (isCreation) {
-      // Pre-flight debit already proved the balance exists; skip the wrapper's
-      // existence check and call the credit primitive directly.
-      await tryCompensate(
-        () =>
-          wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
-            accreditationId,
-            organisationId,
-            prnId: id,
-            tonnage: prn.tonnage,
-            userId: user.id
-          }),
-        {
-          forwardError,
-          logger,
-          prnId: id,
-          fromStatus: currentStatus,
-          toStatus: newStatus
-        }
-      )
-    }
-    throw forwardError
-  }
+  const perform =
+    newStatus === PRN_STATUS.AWAITING_AUTHORISATION
+      ? performCreation
+      : performTransition
 
-  if (!isCreation) {
-    try {
-      await applyWasteBalanceEffects(
-        wasteBalancesRepository,
-        balanceEffectsParams
-      )
-    } catch (forwardError) {
-      const rollbackMethod =
-        ROLLBACK_METHOD_BY_TRANSITION[`${currentStatus}|${newStatus}`]
-      await tryCompensate(
-        () =>
-          prnRepository[rollbackMethod]({
-            id,
-            expectedVersion: updatedPrn.version,
-            updatedBy: user,
-            updatedAt: now
-          }),
-        {
-          forwardError,
-          logger,
-          prnId: id,
-          fromStatus: currentStatus,
-          toStatus: newStatus
-        }
-      )
-      throw forwardError
-    }
-  }
+  const updatedPrn = await perform({
+    prnRepository,
+    organisationsRepository,
+    wasteBalancesRepository,
+    logger,
+    prn,
+    updateParams,
+    balanceEffectsParams,
+    newStatus,
+    organisationId,
+    accreditationId,
+    user,
+    currentStatus,
+    now,
+    id
+  })
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,
