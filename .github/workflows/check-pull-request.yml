@@ -67,13 +67,16 @@ jobs:
             mongodb-binaries-${{ runner.os }}-
 
   type-check-tests:
-    name: Lint Types - Tests (advisory)
+    name: Lint Types - Tests
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -88,67 +91,18 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Lint types (tests)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # disable setup-node's tsc problem matcher: we summarise below
-          # rather than wanting per-line pr annotations on every error
+          # disable setup-node's tsc problem matcher: we summarise via the script
           echo "::remove-matcher owner=tsc::"
 
-          OUTPUT=$(npm run lint:types:tests 2>&1) && STATUS=0 || STATUS=$?
+          OUTPUT=$(npm run lint:types:tests 2>&1) || true
           echo "$OUTPUT"
 
-          if [ "$STATUS" -eq 0 ]; then
-            cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          ## Lint Types - Tests
-
-          :white_check_mark: Test type check passed
-          EOF
-          else
-            ERRORS=$(echo "$OUTPUT" | grep -c "^src/" || true)
-            TOP_CODES=$(echo "$OUTPUT" | grep -oE 'TS[0-9]+' | sort | uniq -c | sort -rn | head -10)
-            TS_LIB=node_modules/typescript/lib/typescript.js
-            BY_CODE_TABLE=$(
-              printf '| Count | Code | Description |\n'
-              printf '| ---: | --- | --- |\n'
-              while read -r count code; do
-                [ -z "$code" ] && continue
-                num=${code#TS}
-                desc=$(grep -oE "diag\\($num, [0-9]+[^,]*, \"[^\"]+\", \"[^\"]+\"\\)" "$TS_LIB" 2>/dev/null | head -1 | sed -E 's/^.*", "([^"]+)"\)$/\1/')
-                if [ -z "$desc" ]; then
-                  desc=$(echo "$OUTPUT" | grep -m1 -E "error $code:" | sed -E "s/^.*error $code: //")
-                fi
-                desc=$(echo "$desc" | sed -E 's/[|]/\\|/g')
-                slug=$(echo "$code" | tr '[:upper:]' '[:lower:]')
-                printf '| %s | [%s](https://typescript.tv/errors/%s/) | %s |\n' "$count" "$code" "$slug" "$desc"
-              done <<< "$TOP_CODES"
-            )
-            BY_FILE=$(echo "$OUTPUT" | grep "^src/" | sed 's/(.*/:/' | sort | uniq -c | sort -rn)
-            FULL=$(echo "$OUTPUT" | grep "^src/")
-            cat <<EOF >> "$GITHUB_STEP_SUMMARY"
-          ## Lint Types - Tests
-
-          :warning: **${ERRORS} type errors found in tests** (advisory — not blocking)
-
-          ### Top error codes
-
-          ${BY_CODE_TABLE}
-
-          <details><summary>Errors by file (count)</summary>
-
-          \`\`\`
-          ${BY_FILE}
-          \`\`\`
-
-          </details>
-
-          <details><summary>Full error list</summary>
-
-          \`\`\`
-          ${FULL}
-          \`\`\`
-
-          </details>
-          EOF
-          fi
+          echo "$OUTPUT" \
+            | node scripts/lint-types-tests-summary.js \
+            >> "$GITHUB_STEP_SUMMARY"
 
   dependency-review:
     name: Dependency Review
