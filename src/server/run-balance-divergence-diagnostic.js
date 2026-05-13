@@ -129,7 +129,14 @@ const compareForEmbedded = async (embedded, deps) => {
     deltaAvailableAmount: formatDelta(
       embedded.availableAmount,
       rebuilt.availableAmount
-    )
+    ),
+    registrationStatus: registration.status,
+    accreditationStatus: accreditation.status,
+    wasteRecordCount: wasteRecords.length,
+    wasteRecordContribution: rebuilt.wasteRecordContribution,
+    prnCount: prns.length,
+    prnAmountContribution: rebuilt.prnAmountContribution,
+    prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution
   }
 }
 
@@ -147,7 +154,14 @@ const formatDivergenceLine = (comparison) =>
     `deltaAmount=${comparison.deltaAmount}`,
     `currentAvailableAmount=${comparison.currentAvailableAmount}`,
     `rebuiltAvailableAmount=${comparison.rebuiltAvailableAmount}`,
-    `deltaAvailableAmount=${comparison.deltaAvailableAmount}`
+    `deltaAvailableAmount=${comparison.deltaAvailableAmount}`,
+    `registrationStatus=${comparison.registrationStatus}`,
+    `accreditationStatus=${comparison.accreditationStatus}`,
+    `wasteRecordCount=${comparison.wasteRecordCount}`,
+    `wasteRecordContribution=${comparison.wasteRecordContribution}`,
+    `prnCount=${comparison.prnCount}`,
+    `prnAmountContribution=${comparison.prnAmountContribution}`,
+    `prnAvailableAmountContribution=${comparison.prnAvailableAmountContribution}`
   ].join(' ')
 
 const formatErrorLine = (embedded, error) =>

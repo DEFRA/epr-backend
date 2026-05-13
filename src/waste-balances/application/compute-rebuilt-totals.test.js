@@ -75,7 +75,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 0, availableAmount: 0 })
+    expect(result).toEqual({
+      amount: 0,
+      availableAmount: 0,
+      wasteRecordContribution: 0,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('credits both balance fields by the sum of waste-record target amounts', () => {
@@ -89,7 +95,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 10, availableAmount: 10 })
+    expect(result).toEqual({
+      amount: 10,
+      availableAmount: 10,
+      wasteRecordContribution: 10,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('skips records whose schema returns a non-INCLUDED outcome', () => {
@@ -103,7 +115,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 4, availableAmount: 4 })
+    expect(result).toEqual({
+      amount: 4,
+      availableAmount: 4,
+      wasteRecordContribution: 4,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('skips records flagged excludedFromWasteBalance', () => {
@@ -120,7 +138,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 0, availableAmount: 0 })
+    expect(result).toEqual({
+      amount: 0,
+      availableAmount: 0,
+      wasteRecordContribution: 0,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('skips records whose schema has no classifyForWasteBalance', () => {
@@ -135,7 +159,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 0, availableAmount: 0 })
+    expect(result).toEqual({
+      amount: 0,
+      availableAmount: 0,
+      wasteRecordContribution: 0,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('debits availableAmount only when a PRN is in AWAITING_AUTHORISATION', () => {
@@ -146,7 +176,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 10, availableAmount: 7 })
+    expect(result).toEqual({
+      amount: 10,
+      availableAmount: 7,
+      wasteRecordContribution: 10,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: -3
+    })
   })
 
   it('debits both fields when a PRN is in AWAITING_ACCEPTANCE', () => {
@@ -167,7 +203,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 7, availableAmount: 7 })
+    expect(result).toEqual({
+      amount: 7,
+      availableAmount: 7,
+      wasteRecordContribution: 10,
+      prnAmountContribution: -3,
+      prnAvailableAmountContribution: -3
+    })
   })
 
   it('keeps the issued debit through ACCEPTED', () => {
@@ -189,7 +231,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 6, availableAmount: 6 })
+    expect(result).toEqual({
+      amount: 6,
+      availableAmount: 6,
+      wasteRecordContribution: 10,
+      prnAmountContribution: -4,
+      prnAvailableAmountContribution: -4
+    })
   })
 
   it('reverses pre-issue PRN cancellations to net zero', () => {
@@ -210,7 +258,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 10, availableAmount: 10 })
+    expect(result).toEqual({
+      amount: 10,
+      availableAmount: 10,
+      wasteRecordContribution: 10,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('reverses pre-issue deletion to net zero', () => {
@@ -231,7 +285,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 10, availableAmount: 10 })
+    expect(result).toEqual({
+      amount: 10,
+      availableAmount: 10,
+      wasteRecordContribution: 10,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('reverses post-issue cancellation to net zero on both fields', () => {
@@ -254,7 +314,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 10, availableAmount: 10 })
+    expect(result).toEqual({
+      amount: 10,
+      availableAmount: 10,
+      wasteRecordContribution: 10,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('emits no balance effect for DRAFT-only or DISCARDED PRNs', () => {
@@ -279,7 +345,13 @@ describe('computeRebuiltTotals', () => {
       overseasSites
     })
 
-    expect(result).toEqual({ amount: 10, availableAmount: 10 })
+    expect(result).toEqual({
+      amount: 10,
+      availableAmount: 10,
+      wasteRecordContribution: 10,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
   })
 
   it('uses exact decimal arithmetic for the running totals', () => {
@@ -294,6 +366,40 @@ describe('computeRebuiltTotals', () => {
     })
 
     expect(result.amount).toBe(0.3)
+  })
+
+  it('breaks the rebuilt totals down by input so divergence diagnostics can attribute the rebuild to waste records vs PRN activity', () => {
+    const result = computeRebuiltTotals({
+      accreditation,
+      wasteRecords: [
+        wasteRecord({ rowId: 'r-1', data: { tonnage: 12 } }),
+        wasteRecord({ rowId: 'r-2', data: { tonnage: 8 } })
+      ],
+      prns: [
+        prn({
+          id: 'prn-issued',
+          tonnage: 5,
+          history: [
+            [PRN_STATUS.DRAFT, '2025-01-02T00:00:00.000Z'],
+            [PRN_STATUS.AWAITING_AUTHORISATION, '2025-01-03T00:00:00.000Z'],
+            [PRN_STATUS.AWAITING_ACCEPTANCE, '2025-01-04T00:00:00.000Z']
+          ]
+        }),
+        prn({
+          id: 'prn-pending',
+          tonnage: 2,
+          history: [
+            [PRN_STATUS.DRAFT, '2025-01-06T00:00:00.000Z'],
+            [PRN_STATUS.AWAITING_AUTHORISATION, '2025-01-07T00:00:00.000Z']
+          ]
+        })
+      ],
+      overseasSites
+    })
+
+    expect(result.wasteRecordContribution).toBe(20)
+    expect(result.prnAmountContribution).toBe(-5)
+    expect(result.prnAvailableAmountContribution).toBe(-7)
   })
 
   it('combines waste-record credits and PRN debits across lifecycle states', () => {
@@ -341,6 +447,12 @@ describe('computeRebuiltTotals', () => {
 
     // 20t credit; issued PRN debits both fields by 5t; pending PRN debits
     // available by 2t; cancelled-pre-issue nets to zero on both fields
-    expect(result).toEqual({ amount: 15, availableAmount: 13 })
+    expect(result).toEqual({
+      amount: 15,
+      availableAmount: 13,
+      wasteRecordContribution: 20,
+      prnAmountContribution: -5,
+      prnAvailableAmountContribution: -7
+    })
   })
 })
