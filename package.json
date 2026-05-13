@@ -106,6 +106,7 @@
   "overrides": {
     "fast-xml-parser": "5.7.3",
     "glob": "11.1.0",
+    "protobufjs": "7.5.6",
     "uuid": "14.0.0"
   },
   "devDependencies": {
