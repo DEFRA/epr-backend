@@ -38,7 +38,6 @@ const formatters = {
 
 export const loggerOptions = {
   enabled: logConfig.isEnabled,
-  logRequestStart: true,
   ignorePaths: ['/health'],
   getChildBindings: (request) => {
     const traceId = request.headers[tracingHeader]
