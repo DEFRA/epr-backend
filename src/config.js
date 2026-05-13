@@ -358,12 +358,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
     },
-    orsWasteBalanceValidation: {
-      doc: 'Feature Flag: Validate ORS approval status during exporter waste balance classification',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_ORS_WASTE_BALANCE_VALIDATION'
-    },
     allowFullErrorOutput: {
       doc: 'Feature Flag: Allow full error output (including potentially sensitive payload / stack detail)',
       format: Boolean,

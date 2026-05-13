@@ -9,9 +9,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
   },
-  isOrsWasteBalanceValidationEnabled() {
-    return flags.orsWasteBalanceValidation ?? false
-  },
   isWasteBalanceLedgerEnabled() {
     return flags.wasteBalanceLedger ?? false
   },
