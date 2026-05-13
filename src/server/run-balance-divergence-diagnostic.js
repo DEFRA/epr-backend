@@ -9,6 +9,7 @@ import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuil
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
+/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
 const ACTIVE_REGISTRATION_STATUSES = new Set([
   REG_ACC_STATUS.APPROVED,
   REG_ACC_STATUS.CANCELLED,
