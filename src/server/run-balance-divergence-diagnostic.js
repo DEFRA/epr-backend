@@ -133,7 +133,10 @@ const compareForEmbedded = async (embedded, deps) => {
     registrationStatus: registration.status,
     accreditationStatus: accreditation.status,
     wasteRecordCount: wasteRecords.length,
-    prnCount: prns.length
+    wasteRecordContribution: rebuilt.wasteRecordContribution,
+    prnCount: prns.length,
+    prnAmountContribution: rebuilt.prnAmountContribution,
+    prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution
   }
 }
 
@@ -155,7 +158,10 @@ const formatDivergenceLine = (comparison) =>
     `registrationStatus=${comparison.registrationStatus}`,
     `accreditationStatus=${comparison.accreditationStatus}`,
     `wasteRecordCount=${comparison.wasteRecordCount}`,
-    `prnCount=${comparison.prnCount}`
+    `wasteRecordContribution=${comparison.wasteRecordContribution}`,
+    `prnCount=${comparison.prnCount}`,
+    `prnAmountContribution=${comparison.prnAmountContribution}`,
+    `prnAvailableAmountContribution=${comparison.prnAvailableAmountContribution}`
   ].join(' ')
 
 const formatErrorLine = (embedded, error) =>

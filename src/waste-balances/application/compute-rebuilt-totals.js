@@ -90,7 +90,13 @@ function* prnDeltasOf(prn) {
  * @param {WasteRecord[]} params.wasteRecords
  * @param {PackagingRecyclingNote[]} params.prns
  * @param {OverseasSitesContext} params.overseasSites
- * @returns {{ amount: number, availableAmount: number }}
+ * @returns {{
+ *   amount: number,
+ *   availableAmount: number,
+ *   wasteRecordContribution: number,
+ *   prnAmountContribution: number,
+ *   prnAvailableAmountContribution: number
+ * }}
  */
 export const computeRebuiltTotals = ({
   accreditation,
@@ -98,24 +104,36 @@ export const computeRebuiltTotals = ({
   prns,
   overseasSites
 }) => {
-  let amount = 0
-  let availableAmount = 0
+  let wasteRecordContribution = 0
+  let prnAmountContribution = 0
+  let prnAvailableAmountContribution = 0
 
   for (const record of wasteRecords) {
     const tonnage = getTargetAmount(record, accreditation, overseasSites)
     if (tonnage === 0) {
       continue
     }
-    amount = toNumber(add(amount, tonnage))
-    availableAmount = toNumber(add(availableAmount, tonnage))
+    wasteRecordContribution = toNumber(add(wasteRecordContribution, tonnage))
   }
 
   for (const prn of prns) {
     for (const delta of prnDeltasOf(prn)) {
-      amount = toNumber(add(amount, delta.amount))
-      availableAmount = toNumber(add(availableAmount, delta.availableAmount))
+      prnAmountContribution = toNumber(
+        add(prnAmountContribution, delta.amount)
+      )
+      prnAvailableAmountContribution = toNumber(
+        add(prnAvailableAmountContribution, delta.availableAmount)
+      )
     }
   }
 
-  return { amount, availableAmount }
+  return {
+    amount: toNumber(add(wasteRecordContribution, prnAmountContribution)),
+    availableAmount: toNumber(
+      add(wasteRecordContribution, prnAvailableAmountContribution)
+    ),
+    wasteRecordContribution,
+    prnAmountContribution,
+    prnAvailableAmountContribution
+  }
 }

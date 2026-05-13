@@ -215,13 +215,19 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1', status: 'approved' }
     ]
-    computeRebuiltTotals.mockReturnValue({ amount: 95, availableAmount: 80 })
+    computeRebuiltTotals.mockReturnValue({
+      amount: 95,
+      availableAmount: 80,
+      wasteRecordContribution: 95,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: -15
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-acc-1 currentAmount=100 rebuiltAmount=95 deltaAmount=-5 currentAvailableAmount=80 rebuiltAvailableAmount=80 deltaAvailableAmount=0 registrationStatus=approved accreditationStatus=approved wasteRecordCount=0 prnCount=0'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-acc-1 currentAmount=100 rebuiltAmount=95 deltaAmount=-5 currentAvailableAmount=80 rebuiltAvailableAmount=80 deltaAvailableAmount=0 registrationStatus=approved accreditationStatus=approved wasteRecordCount=0 wasteRecordContribution=95 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=-15'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -319,13 +325,19 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ]
     accreditations['org-1'] = [{ id: 'acc-pending', status: 'created' }]
-    computeRebuiltTotals.mockReturnValue({ amount: 7, availableAmount: 7 })
+    computeRebuiltTotals.mockReturnValue({
+      amount: 7,
+      availableAmount: 7,
+      wasteRecordContribution: 7,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=created wasteRecordCount=0 prnCount=0'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=created wasteRecordCount=0 wasteRecordContribution=7 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=0'
     })
   })
 
@@ -351,13 +363,19 @@ describe('runBalanceDivergenceDiagnostic', () => {
     ]
     wasteRecordsRepository.findByRegistration.mockResolvedValue([{}, {}, {}])
     prnRepository.findByAccreditation.mockResolvedValue([{}, {}])
-    computeRebuiltTotals.mockReturnValue({ amount: 0, availableAmount: 0 })
+    computeRebuiltTotals.mockReturnValue({
+      amount: 0,
+      availableAmount: 0,
+      wasteRecordContribution: 0,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=null accreditationNumber=ACC-1 currentAmount=2084.27 rebuiltAmount=0 deltaAmount=-2084.27 currentAvailableAmount=2084.27 rebuiltAvailableAmount=0 deltaAvailableAmount=-2084.27 registrationStatus=cancelled accreditationStatus=cancelled wasteRecordCount=3 prnCount=2'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=null accreditationNumber=ACC-1 currentAmount=2084.27 rebuiltAmount=0 deltaAmount=-2084.27 currentAvailableAmount=2084.27 rebuiltAvailableAmount=0 deltaAvailableAmount=-2084.27 registrationStatus=cancelled accreditationStatus=cancelled wasteRecordCount=3 wasteRecordContribution=0 prnCount=2 prnAmountContribution=0 prnAvailableAmountContribution=0'
     })
   })
 
