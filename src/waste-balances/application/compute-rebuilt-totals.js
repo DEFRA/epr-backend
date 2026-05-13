@@ -118,9 +118,7 @@ export const computeRebuiltTotals = ({
 
   for (const prn of prns) {
     for (const delta of prnDeltasOf(prn)) {
-      prnAmountContribution = toNumber(
-        add(prnAmountContribution, delta.amount)
-      )
+      prnAmountContribution = toNumber(add(prnAmountContribution, delta.amount))
       prnAvailableAmountContribution = toNumber(
         add(prnAvailableAmountContribution, delta.availableAmount)
       )
