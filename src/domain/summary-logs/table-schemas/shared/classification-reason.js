@@ -7,8 +7,10 @@ export const CLASSIFICATION_REASON = Object.freeze({
 })
 
 /**
- * Sentinel indicating ORS validation is disabled by feature flag.
- * Pass this instead of an overseas sites map when the feature is off.
+ * Sentinel indicating no overseas-sites resolution applies for this caller —
+ * either because the processing type is not EXPORTER, or because the caller
+ * is reusing classification logic for a purpose that does not require ORS
+ * approval checks (e.g. date-range ignore detection).
  * @type {unique symbol}
  */
 export const ORS_VALIDATION_DISABLED = Symbol('ORS_VALIDATION_DISABLED')

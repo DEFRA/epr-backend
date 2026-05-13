@@ -23,21 +23,6 @@ describe('createConfigFeatureFlags', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags.copyFormFilesToS3')
   })
 
-  it('returns true when orsWasteBalanceValidation flag is enabled', () => {
-    const config = { get: vi.fn().mockReturnValue(true) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.orsWasteBalanceValidation'
-    )
-  })
-
-  it('returns false when orsWasteBalanceValidation flag is disabled', () => {
-    const config = { get: vi.fn().mockReturnValue(false) }
-    const flags = createConfigFeatureFlags(config)
-    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(false)
-  })
-
   it('returns true when wasteBalanceLedger flag is enabled', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)

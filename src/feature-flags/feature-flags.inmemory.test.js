@@ -32,25 +32,6 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isDevEndpointsEnabled()).toBe(false)
   })
 
-  it('returns true when orsWasteBalanceValidation flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      orsWasteBalanceValidation: true
-    })
-    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(true)
-  })
-
-  it('returns false when orsWasteBalanceValidation flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({
-      orsWasteBalanceValidation: false
-    })
-    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(false)
-  })
-
-  it('returns false when orsWasteBalanceValidation flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isOrsWasteBalanceValidationEnabled()).toBe(false)
-  })
-
   it('returns true when wasteBalanceLedger flag is enabled', () => {
     const flags = createInMemoryFeatureFlags({ wasteBalanceLedger: true })
     expect(flags.isWasteBalanceLedgerEnabled()).toBe(true)

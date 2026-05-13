@@ -8,9 +8,6 @@ export const createConfigFeatureFlags = (config) => ({
   isCopyFormFilesToS3Enabled() {
     return config.get('featureFlags.copyFormFilesToS3')
   },
-  isOrsWasteBalanceValidationEnabled() {
-    return config.get('featureFlags.orsWasteBalanceValidation')
-  },
   isWasteBalanceLedgerEnabled() {
     return config.get('featureFlags.wasteBalanceLedger')
   },

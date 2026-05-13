@@ -1,5 +1,4 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -33,7 +32,6 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
- * @property {boolean} orsValidationEnabled
  */
 
 /**
@@ -79,8 +77,7 @@ const compareForEmbedded = async (embedded, deps) => {
     organisationsRepository,
     prnRepository,
     wasteRecordsRepository,
-    overseasSitesRepository,
-    orsValidationEnabled
+    overseasSitesRepository
   } = deps
 
   const organisation = await organisationsRepository.findById(
@@ -111,14 +108,12 @@ const compareForEmbedded = async (embedded, deps) => {
   )
   const prns = await prnRepository.findByAccreditation(embedded.accreditationId)
 
-  const overseasSites = orsValidationEnabled
-    ? await resolveOverseasSites(
-        organisationsRepository,
-        overseasSitesRepository,
-        embedded.organisationId,
-        registration.id
-      )
-    : ORS_VALIDATION_DISABLED
+  const overseasSites = await resolveOverseasSites(
+    organisationsRepository,
+    overseasSitesRepository,
+    embedded.organisationId,
+    registration.id
+  )
 
   const rebuilt = computeRebuiltTotals({
     accreditation,
@@ -235,15 +230,12 @@ const buildDependencies = async (server) => {
   const overseasSitesRepository = (
     await createOverseasSitesRepository(server.db)
   )()
-  const orsValidationEnabled =
-    server.featureFlags.isOrsWasteBalanceValidationEnabled()
 
   return /** @type {DiagnosticDependencies} */ ({
     organisationsRepository,
     wasteRecordsRepository,
     prnRepository,
-    overseasSitesRepository,
-    orsValidationEnabled
+    overseasSitesRepository
   })
 }
 

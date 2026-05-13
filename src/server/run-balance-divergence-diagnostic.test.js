@@ -6,7 +6,6 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 
 import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnostic.js'
@@ -74,10 +73,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     mockServer = {
       db,
-      locker: { lock: vi.fn().mockResolvedValue(mockLock) },
-      featureFlags: {
-        isOrsWasteBalanceValidationEnabled: vi.fn().mockReturnValue(false)
-      }
+      locker: { lock: vi.fn().mockResolvedValue(mockLock) }
     }
 
     registrations = {}
@@ -278,14 +274,11 @@ describe('runBalanceDivergenceDiagnostic', () => {
       accreditation,
       wasteRecords,
       prns,
-      overseasSites: ORS_VALIDATION_DISABLED
+      overseasSites: {}
     })
   })
 
-  it('resolves overseas sites for the registration when the ORS validation flag is enabled', async () => {
-    mockServer.featureFlags.isOrsWasteBalanceValidationEnabled.mockReturnValue(
-      true
-    )
+  it('resolves overseas sites for the registration and passes them into the rebuild', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
