@@ -7,6 +7,14 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+
+/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
+const ACTIVE_REGISTRATION_STATUSES = new Set([
+  REG_ACC_STATUS.APPROVED,
+  REG_ACC_STATUS.CANCELLED,
+  REG_ACC_STATUS.SUSPENDED
+])
 
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const LOCK_NAME = 'balance-divergence-diagnostic'
@@ -87,7 +95,9 @@ const compareForEmbedded = async (embedded, deps) => {
     )
   }
   const registration = organisation.registrations.find(
-    (r) => r.accreditationId === embedded.accreditationId
+    (r) =>
+      r.accreditationId === embedded.accreditationId &&
+      ACTIVE_REGISTRATION_STATUSES.has(r.status)
   )
   if (!registration) {
     throw new Error(

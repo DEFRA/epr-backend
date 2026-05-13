@@ -176,7 +176,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
@@ -249,7 +254,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [accreditation]
     const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
@@ -285,7 +295,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
@@ -379,6 +394,40 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
+  it('logs a tagged error line when the only registration for an accreditation is in created or rejected state', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 10,
+        availableAmount: 10
+      }
+    ])
+    accreditations['org-1'] = [{ id: 'acc-1', accreditationNumber: 'ACC-1' }]
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'created'
+      }
+    ]
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'No registration links to accreditation acc-1'
+        )
+      })
+    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1'
+    })
+  })
+
   it('logs a tagged error line when an accreditation has no matching registration', async () => {
     setEmbeddedBalances([
       {
@@ -431,7 +480,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       {
         id: 'reg-good',
         accreditationId: 'acc-good',
-        registrationNumber: 'REG-2'
+        registrationNumber: 'REG-2',
+        status: 'approved'
       }
     ]
     accreditations['org-2'] = [
