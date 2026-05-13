@@ -1,5 +1,6 @@
 {
   "name": "epr-backend",
+  "private": true,
   "version": "0.0.0",
   "description": "epr-backend",
   "main": "src/index.js",
@@ -124,6 +125,7 @@
     "prettier": "3.8.1",
     "testcontainers": "11.12.0",
     "tinybench": "6.0.0",
+    "typescript": "5.9.3",
     "vitest": "4.0.18",
     "vitest-mongodb": "1.0.3"
   }
