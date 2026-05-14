@@ -361,7 +361,6 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january.report).toBeDefined()
         expect(january.report.id).toBeDefined()
         expect(january.report.status).toBe('in_progress')
-        expect(january.report.submissionNumber).toBe(1)
       })
 
       it('curates the report shape: excludes activity payloads', async () => {
@@ -417,13 +416,7 @@ describe(`GET ${reportsGetPath}`, () => {
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
         expect(Object.keys(january.report).sort()).toStrictEqual(
-          [
-            'id',
-            'status',
-            'submissionNumber',
-            'submittedAt',
-            'submittedBy'
-          ].sort()
+          ['id', 'status', 'submittedAt', 'submittedBy'].sort()
         )
       })
 
