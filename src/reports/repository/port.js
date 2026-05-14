@@ -131,12 +131,7 @@
 /**
  * Curated subset of ReportSummary used for list-style responses
  * (e.g. the reports calendar). Excludes heavy activity payloads.
- * @typedef {Object} ReportListItem
- * @property {string} id
- * @property {ReportStatus} status
- * @property {number} submissionNumber
- * @property {string|null} submittedAt
- * @property {UserSummary|null} submittedBy
+ * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submissionNumber' | 'submittedAt' | 'submittedBy'>} ReportListItem
  */
 
 /**
