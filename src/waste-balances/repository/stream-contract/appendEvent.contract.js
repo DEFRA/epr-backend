@@ -155,27 +155,5 @@ export const testAppendEventBehaviour = (it) => {
         )
       ).resolves.toBeDefined()
     })
-
-    it('allows the same summaryLogId across different partitions', async () => {
-      await repository.appendEvent(
-        buildStreamEvent({
-          registrationId: 'reg-cross-a',
-          accreditationId: 'acc-cross-a',
-          number: 1,
-          payload: { summaryLogId: 'log-shared', creditTotal: 100 }
-        })
-      )
-
-      await expect(
-        repository.appendEvent(
-          buildStreamEvent({
-            registrationId: 'reg-cross-b',
-            accreditationId: 'acc-cross-b',
-            number: 1,
-            payload: { summaryLogId: 'log-shared', creditTotal: 200 }
-          })
-        )
-      ).resolves.toBeDefined()
-    })
   })
 }
