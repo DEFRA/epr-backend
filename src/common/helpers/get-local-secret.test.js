@@ -1,3 +1,4 @@
+// TODO: PAE-1339 demo - touch this file to exercise the pr-comment workflow
 import fs from 'fs'
 import { config } from '#root/config.js'
 import { getLocalSecret } from './get-local-secret.js'
