@@ -1,7 +1,14 @@
 import { BSON } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 
-const BSON_DOCUMENT_MAX_SIZE_BYTES = 16 * 1024 * 1024
+export const BSON_DOCUMENT_MAX_SIZE_BYTES = 16 * 1024 * 1024
+
+/**
+ * @param {number} bsonSize
+ * @returns {number} percent of the 16MB BSON limit, rounded to 2 decimal places
+ */
+export const computePercentOfBsonLimit = (bsonSize) =>
+  Math.round((bsonSize / BSON_DOCUMENT_MAX_SIZE_BYTES) * 10000) / 100
 
 /**
  * Emit a structured log line capturing how close an embedded waste-balance
@@ -24,8 +31,7 @@ const BSON_DOCUMENT_MAX_SIZE_BYTES = 16 * 1024 * 1024
  */
 export const recordWasteBalanceGrowth = (updatedBalance, newTransactions) => {
   const bsonSize = BSON.calculateObjectSize(updatedBalance)
-  const percentOfBsonLimit =
-    Math.round((bsonSize / BSON_DOCUMENT_MAX_SIZE_BYTES) * 10000) / 100
+  const percentOfBsonLimit = computePercentOfBsonLimit(bsonSize)
   const transactionCount = updatedBalance.transactions.length
   const newTransactionCount = newTransactions.length
 

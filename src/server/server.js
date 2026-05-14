@@ -42,6 +42,7 @@ import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consume
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runBalanceDivergenceDiagnostic } from '#server/run-balance-divergence-diagnostic.js'
+import { runBalanceSizeDiagnostic } from '#server/run-balance-size-diagnostic.js'
 import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -219,6 +220,7 @@ async function createServer(options = {}) {
     copyFormFilesToS3(server)
     runRowIdCollisionDiagnostic(server)
     runBalanceDivergenceDiagnostic(server)
+    runBalanceSizeDiagnostic(server)
   })
 
   return server
