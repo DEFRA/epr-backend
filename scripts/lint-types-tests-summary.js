@@ -103,18 +103,21 @@ const buildPrSection = (changedFiles, errors) => {
   for (const file of [...changedFiles].sort()) {
     const lines = errorLinesFor(errors, file)
     if (lines.length === 0) {
-      blocks.push(`- :white_check_mark: \`${file}\` (0 errors)`)
-    } else {
-      prErrorTotal += lines.length
-      blocks.push(
-        `<details><summary><code>${file}</code> (${lines.length} errors)</summary>\n\n` +
-          '```\n' +
-          lines.join('\n') +
-          '\n```\n\n</details>'
-      )
+      continue
     }
+    prErrorTotal += lines.length
+    blocks.push(
+      `<details><summary><code>${file}</code> (${lines.length} errors)</summary>\n\n` +
+        '```\n' +
+        lines.join('\n') +
+        '\n```\n\n</details>'
+    )
   }
-  return { section: blocks.join('\n'), prErrorTotal }
+
+  if (blocks.length === 0) {
+    return { section: '_no type errors in test files changed in this PR_', prErrorTotal: 0 }
+  }
+  return { section: blocks.join('\n\n'), prErrorTotal }
 }
 
 /**
@@ -287,12 +290,12 @@ const readStdin = async () => {
  * @returns {string[]}
  */
 const changedFilesFromGit = () => {
-  const baseSha = process.env.BASE_SHA
-  if (!baseSha) {
+  const baseRef = process.env.BASE_REF
+  if (!baseRef) {
     return []
   }
   const out = execSync(
-    `git diff --name-only ${baseSha}...HEAD -- src/`
+    `git diff --name-only origin/${baseRef}...HEAD -- src/`
   ).toString()
   return filterTestFiles(out.split('\n').filter(Boolean))
 }

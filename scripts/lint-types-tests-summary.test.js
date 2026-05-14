@@ -94,22 +94,23 @@ describe('lint-types-tests-summary', () => {
         expect(markdown).toContain('_no test files changed in this PR_')
       })
 
-      it('should list each changed file with a green tick when clean', () => {
+      it('should omit clean files from the section', () => {
+        const tscOutput =
+          "src/server/foo/foo.test.js(1,1): error TS2304: Cannot find name 'a'."
+
         const { markdown } = buildSummary({
-          tscOutput: '',
+          tscOutput,
           changedFiles: [
             'src/server/foo/foo.test.js',
-            'src/server/bar/bar.test.js'
+            'src/server/clean/clean.test.js'
           ],
           tsCodeLookup: noopLookup
         })
 
         expect(markdown).toContain(
-          ':white_check_mark: `src/server/foo/foo.test.js` (0 errors)'
+          '<details><summary><code>src/server/foo/foo.test.js</code>'
         )
-        expect(markdown).toContain(
-          ':white_check_mark: `src/server/bar/bar.test.js` (0 errors)'
-        )
+        expect(markdown).not.toContain('src/server/clean/clean.test.js')
       })
 
       it('should emit collapsible details for files with errors', () => {

@@ -95,7 +95,7 @@ jobs:
 
       - name: Lint types (tests)
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           COMMENT_FILE: ${{ runner.temp }}/lint-types-tests-comment.md
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
