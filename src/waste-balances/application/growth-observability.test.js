@@ -51,9 +51,10 @@ describe('recordWasteBalanceGrowth', () => {
     vi.clearAllMocks()
   })
 
-  it('logs accreditationId and transaction counts', () => {
+  it('logs organisationId, accreditationId and transaction counts', () => {
     const transactions = [buildTransaction(), buildTransaction({ id: 'txn-2' })]
     const updatedBalance = buildBalance({
+      organisationId: 'org-abc',
       accreditationId: 'acc-xyz',
       transactions
     })
@@ -63,6 +64,7 @@ describe('recordWasteBalanceGrowth', () => {
     expect(logger.info).toHaveBeenCalledTimes(1)
     const message = messageOf()
     expect(message).toContain('Waste balance document growth')
+    expect(message).toContain('organisationId=org-abc')
     expect(message).toContain('accreditationId=acc-xyz')
     expect(message).toContain('transactionCount=2')
     expect(message).toContain('newTransactionCount=1')

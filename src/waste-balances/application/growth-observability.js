@@ -32,6 +32,7 @@ export const recordWasteBalanceGrowth = (updatedBalance, newTransactions) => {
   logger.info({
     message:
       `Waste balance document growth:` +
+      ` organisationId=${updatedBalance.organisationId}` +
       ` accreditationId=${updatedBalance.accreditationId}` +
       ` transactionCount=${transactionCount}` +
       ` newTransactionCount=${newTransactionCount}` +

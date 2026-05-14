@@ -134,7 +134,7 @@ describe('MongoDB waste balances repository', () => {
       const balance = {
         id: '00000000-0000-0000-0000-000000000010',
         accreditationId: 'acc-growth-1',
-        organisationId: 'org-1',
+        organisationId: 'org-growth-1',
         amount: 1,
         availableAmount: 1,
         transactions: [transaction],
@@ -151,6 +151,7 @@ describe('MongoDB waste balances repository', () => {
         })
       )
       const message = vi.mocked(logger.info).mock.calls[0][0].message
+      expect(message).toContain('organisationId=org-growth-1')
       expect(message).toContain('accreditationId=acc-growth-1')
       expect(message).toContain('transactionCount=1')
       expect(message).toContain('newTransactionCount=1')
