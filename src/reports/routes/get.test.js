@@ -407,13 +407,15 @@ describe(`GET ${reportsGetPath}`, () => {
         const payload = JSON.parse(response.payload)
 
         const january = payload.reportingPeriods.find((p) => p.period === 1)
-        expect(Object.keys(january.report).sort()).toStrictEqual([
-          'id',
-          'status',
-          'submissionNumber',
-          'submittedAt',
-          'submittedBy'
-        ].sort())
+        expect(Object.keys(january.report).sort()).toStrictEqual(
+          [
+            'id',
+            'status',
+            'submissionNumber',
+            'submittedAt',
+            'submittedBy'
+          ].sort()
+        )
       })
 
       it('handles deleted report (null currentReportId)', async () => {
