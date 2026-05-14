@@ -11,6 +11,10 @@ const BSON_DOCUMENT_MAX_SIZE_BYTES = 16 * 1024 * 1024
  *
  * The ledger-append path doesn't go through `saveBalance` and is out of scope.
  *
+ * `bsonSize` is the size of the in-memory `updatedBalance` rather than a query
+ * of the persisted document; it is an approximation suitable for tracking the
+ * trend toward the 16MB ceiling, not a precise on-disk measurement.
+ *
  * Fields are encoded into the `message` string as space-separated `key=value`
  * pairs to match the typed CdpIndexedLog schema while keeping each field
  * searchable in OpenSearch.
