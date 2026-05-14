@@ -486,7 +486,7 @@ describe('#getJwtStrategyConfig', () => {
               users: [],
               version: 1
             }),
-            replace: vi.fn().mockResolvedValue()
+            replace: vi.fn().mockResolvedValue(undefined)
           },
           path: '/any',
           params: {

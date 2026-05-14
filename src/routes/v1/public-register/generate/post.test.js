@@ -22,7 +22,7 @@ const { validToken, readOnlyMaintainerToken } = entraIdMockAuthTokens
 describe(`POST ${publicRegisterGeneratePath}`, () => {
   setupAuthContext()
   let server
-  /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository **/
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
   let inMemoryOrganisationsRepository
   let inMemoryOrganisationsRepositoryFactory
 
