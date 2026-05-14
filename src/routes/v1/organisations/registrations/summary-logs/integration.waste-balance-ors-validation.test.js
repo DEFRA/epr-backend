@@ -19,7 +19,7 @@ import {
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
 
-describe('ORS waste balance validation (VAL014) with feature flag enabled', () => {
+describe('ORS waste balance validation (VAL014)', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
@@ -93,8 +93,7 @@ describe('ORS waste balance validation (VAL014) with feature flag enabled', () =
 
   it('should include row with approved ORS in waste balance', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      featureFlagOverrides: { orsWasteBalanceValidation: true }
+      processingType: 'exporter'
     })
     const { wasteBalancesRepository, accreditationId } = env
 
@@ -115,8 +114,7 @@ describe('ORS waste balance validation (VAL014) with feature flag enabled', () =
 
   it('should exclude row with unapproved ORS from waste balance', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      featureFlagOverrides: { orsWasteBalanceValidation: true }
+      processingType: 'exporter'
     })
     const { wasteBalancesRepository, accreditationId } = env
 
