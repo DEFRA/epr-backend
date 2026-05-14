@@ -1,4 +1,3 @@
-// TODO: PAE-1339 demo - touch this file to exercise the pr-comment workflow
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   formatDate,

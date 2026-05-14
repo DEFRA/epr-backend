@@ -1,4 +1,3 @@
-// TODO: PAE-1339 demo - touch this file to exercise multi-error pr-comment output
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   createRejectedValidation,
