@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { text } from 'node:stream/consumers'
 
 import ts from 'typescript'
 
@@ -33,34 +34,37 @@ export const filterTestFiles = (paths) =>
 const errorLineRegex = /^(src\/[^(]+)\(\d+,\d+\): error (TS\d+): (.*)$/
 
 /**
+ * @typedef {{file: string, code: string, message: string, line: string}} ParsedError
+ */
+
+/**
  * @param {string} tscOutput
- * @returns {Array<{file: string, code: string, message: string, line: string}>}
+ * @returns {{errors: ParsedError[], byFile: Map<string, ParsedError[]>}}
  */
 const parseErrors = (tscOutput) => {
+  /** @type {ParsedError[]} */
   const errors = []
+  /** @type {Map<string, ParsedError[]>} */
+  const byFile = new Map()
   for (const line of tscOutput.split('\n')) {
     const match = line.match(errorLineRegex)
-    if (match) {
-      errors.push({ file: match[1], code: match[2], message: match[3], line })
+    if (!match) {
+      continue
+    }
+    const error = { file: match[1], code: match[2], message: match[3], line }
+    errors.push(error)
+    const list = byFile.get(error.file)
+    if (list) {
+      list.push(error)
+    } else {
+      byFile.set(error.file, [error])
     }
   }
-  return errors
+  return { errors, byFile }
 }
 
 /**
- * @param {Array<{file: string}>} errors
- * @returns {Map<string, number>}
- */
-const countByFile = (errors) => {
-  const counts = new Map()
-  for (const { file } of errors) {
-    counts.set(file, (counts.get(file) ?? 0) + 1)
-  }
-  return counts
-}
-
-/**
- * @param {Array<{code: string, message: string}>} errors
+ * @param {ParsedError[]} errors
  * @returns {Array<{code: string, count: number, message: string}>}
  */
 const topCodes = (errors) => {
@@ -81,19 +85,11 @@ const topCodes = (errors) => {
 }
 
 /**
- * @param {Array<{file: string, line: string}>} errors
- * @param {string} file
- * @returns {string[]}
- */
-const errorLinesFor = (errors, file) =>
-  errors.filter((e) => e.file === file).map((e) => e.line)
-
-/**
  * @param {string[]} changedFiles
- * @param {ReturnType<typeof parseErrors>} errors
+ * @param {Map<string, ParsedError[]>} byFile
  * @returns {{section: string, prErrorTotal: number}}
  */
-const buildPrSection = (changedFiles, errors) => {
+const buildPrSection = (changedFiles, byFile) => {
   if (changedFiles.length === 0) {
     return { section: '_no test files changed in this PR_', prErrorTotal: 0 }
   }
@@ -101,15 +97,15 @@ const buildPrSection = (changedFiles, errors) => {
   const blocks = []
   let prErrorTotal = 0
   for (const file of [...changedFiles].sort()) {
-    const lines = errorLinesFor(errors, file)
-    if (lines.length === 0) {
+    const fileErrors = byFile.get(file) ?? []
+    if (fileErrors.length === 0) {
       continue
     }
-    prErrorTotal += lines.length
+    prErrorTotal += fileErrors.length
     blocks.push(
-      `<details><summary><code>${file}</code> (${lines.length} errors)</summary>\n\n` +
+      `<details><summary><code>${file}</code> (${fileErrors.length} errors)</summary>\n\n` +
         '```\n' +
-        lines.join('\n') +
+        fileErrors.map((e) => e.line).join('\n') +
         '\n```\n\n</details>'
     )
   }
@@ -132,7 +128,7 @@ const prHeader = (prErrorTotal) => {
 }
 
 /**
- * @param {ReturnType<typeof parseErrors>} errors
+ * @param {ParsedError[]} errors
  * @param {(code: number) => string} tsCodeLookup
  * @returns {string}
  */
@@ -153,13 +149,13 @@ const topCodesTable = (errors, tsCodeLookup) => {
 }
 
 /**
- * @param {ReturnType<typeof parseErrors>} errors
+ * @param {Map<string, ParsedError[]>} byFile
  * @returns {string}
  */
-const errorsByFileBlock = (errors) => {
-  const counts = [...countByFile(errors).entries()].sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
-  )
+const errorsByFileBlock = (byFile) => {
+  const counts = [...byFile.entries()]
+    .map(([file, errs]) => /** @type {[string, number]} */ ([file, errs.length]))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
   return counts.map(([file, count]) => `${count} ${file}`).join('\n')
 }
 
@@ -175,8 +171,8 @@ const errorsByFileBlock = (errors) => {
  * @returns {BuildSummaryResult}
  */
 export const buildPrComment = ({ tscOutput, changedFiles, runUrl }) => {
-  const errors = parseErrors(tscOutput)
-  const { section, prErrorTotal } = buildPrSection(changedFiles, errors)
+  const { byFile } = parseErrors(tscOutput)
+  const { section, prErrorTotal } = buildPrSection(changedFiles, byFile)
 
   const lines = [
     '## Lint Types - Tests',
@@ -200,10 +196,10 @@ export const buildPrComment = ({ tscOutput, changedFiles, runUrl }) => {
  * @returns {BuildSummaryResult}
  */
 export const buildSummary = ({ tscOutput, changedFiles, tsCodeLookup }) => {
-  const errors = parseErrors(tscOutput)
+  const { errors, byFile } = parseErrors(tscOutput)
   const { section: section1, prErrorTotal } = buildPrSection(
     changedFiles,
-    errors
+    byFile
   )
 
   let section2
@@ -223,7 +219,7 @@ export const buildSummary = ({ tscOutput, changedFiles, tsCodeLookup }) => {
       '<details><summary>Errors by file (count)</summary>',
       '',
       '```',
-      errorsByFileBlock(errors),
+      errorsByFileBlock(byFile),
       '```',
       '',
       '</details>',
@@ -276,17 +272,6 @@ const tsCodeLookupFromPackage = (() => {
 })()
 
 /**
- * @returns {Promise<string>}
- */
-const readStdin = async () => {
-  const chunks = []
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk)
-  }
-  return Buffer.concat(chunks).toString('utf8')
-}
-
-/**
  * @returns {string[]}
  */
 const changedFilesFromGit = () => {
@@ -301,7 +286,7 @@ const changedFilesFromGit = () => {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const tscOutput = await readStdin()
+  const tscOutput = await text(process.stdin)
   const changedFiles = changedFilesFromGit()
 
   const summary = buildSummary({
