@@ -152,9 +152,6 @@ describe('MongoDB waste balances repository', () => {
       )
       const message = vi.mocked(logger.info).mock.calls[0][0].message
       expect(message).toContain('accreditationId=acc-growth-1')
-      expect(message).toContain(
-        `canonicalSource=${WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED}`
-      )
       expect(message).toContain('transactionCount=1')
       expect(message).toContain('newTransactionCount=1')
       expect(message).toMatch(/bsonSize=\d+/)

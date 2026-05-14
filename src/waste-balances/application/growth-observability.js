@@ -33,7 +33,6 @@ export const recordWasteBalanceGrowth = (updatedBalance, newTransactions) => {
     message:
       `Waste balance document growth:` +
       ` accreditationId=${updatedBalance.accreditationId}` +
-      ` canonicalSource=${updatedBalance.canonicalSource}` +
       ` transactionCount=${transactionCount}` +
       ` newTransactionCount=${newTransactionCount}` +
       ` bsonSize=${bsonSize}` +
