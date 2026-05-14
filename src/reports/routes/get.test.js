@@ -356,6 +356,66 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january.report.submissionNumber).toBe(1)
       })
 
+      it('curates the report shape: excludes activity payloads', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory,
+          'approved'
+        )
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${new Date().getUTCFullYear()}-01-01`,
+          endDate: `${new Date().getUTCFullYear()}-01-31`,
+          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          material: 'plastic',
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
+          }
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        const january = payload.reportingPeriods.find((p) => p.period === 1)
+        expect(Object.keys(january.report).sort()).toStrictEqual([
+          'id',
+          'status',
+          'submissionNumber',
+          'submittedAt',
+          'submittedBy'
+        ].sort())
+      })
+
       it('handles deleted report (null currentReportId)', async () => {
         const reportsRepositoryFactory = createInMemoryReportsRepository()
         const { server, organisationId, registrationId } = await createServer(

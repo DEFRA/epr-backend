@@ -129,6 +129,17 @@
  */
 
 /**
+ * Curated subset of ReportSummary used for list-style responses
+ * (e.g. the reports calendar). Excludes heavy activity payloads.
+ * @typedef {Object} ReportListItem
+ * @property {string} id
+ * @property {ReportStatus} status
+ * @property {number} submissionNumber
+ * @property {string|null} submittedAt
+ * @property {UserSummary|null} submittedBy
+ */
+
+/**
  * @typedef {Object} ReportPerPeriod
  * @property {string} startDate - ISO date string
  * @property {string} endDate - ISO date string
