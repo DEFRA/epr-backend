@@ -12,6 +12,10 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { reportsGetPath } from './get.js'
 
+/**
+ * @import { TestServer } from '#test/create-test-server.js'
+ */
+
 describe(`GET ${reportsGetPath}`, () => {
   setupAuthContext()
 
@@ -19,6 +23,9 @@ describe(`GET ${reportsGetPath}`, () => {
     `/v1/organisations/${orgId}/registrations/${regId}/reports/calendar`
 
   describe('when feature flag is enabled', () => {
+    /**
+     * @returns {Promise<{ server: TestServer, organisationId: string, registrationId: string }>}
+     */
     const createServer = async (
       registrationOverrides = {},
       reportsRepositoryFactory,
@@ -42,7 +49,7 @@ describe(`GET ${reportsGetPath}`, () => {
             reportsRepository: reportsRepositoryFactory
           })
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags({})
       })
 
       return {
@@ -321,6 +328,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -378,6 +386,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -440,6 +449,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -503,6 +513,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -559,6 +570,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -631,7 +643,7 @@ describe(`GET ${reportsGetPath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags({})
       })
 
       const response = await server.inject({
