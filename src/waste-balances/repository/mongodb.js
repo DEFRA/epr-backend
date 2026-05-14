@@ -9,6 +9,7 @@ import {
 } from './helpers.js'
 import { ensureLedgerCollection } from './ledger-mongodb.js'
 import { resolveBalanceAmounts } from './marker-aware-read.js'
+import { recordWasteBalanceGrowth } from '../application/growth-observability.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
@@ -212,6 +213,8 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
     }),
     { upsert: true }
   )
+
+  recordWasteBalanceGrowth(updatedBalance, newTransactions)
 }
 
 /**
