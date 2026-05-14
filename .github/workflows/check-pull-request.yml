@@ -72,6 +72,9 @@ jobs:
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
     continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -93,6 +96,8 @@ jobs:
       - name: Lint types (tests)
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          COMMENT_FILE: ${{ runner.temp }}/lint-types-tests-comment.md
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           # disable setup-node's tsc problem matcher: we summarise via the script
           echo "::remove-matcher owner=tsc::"
@@ -103,6 +108,13 @@ jobs:
           echo "$OUTPUT" \
             | node scripts/lint-types-tests-summary.js \
             >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post PR comment
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lint-types-tests
+          path: ${{ runner.temp }}/lint-types-tests-comment.md
 
   dependency-review:
     name: Dependency Review

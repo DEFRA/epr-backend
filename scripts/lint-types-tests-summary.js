@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
 
 import ts from 'typescript'
 
@@ -160,6 +161,38 @@ const errorsByFileBlock = (errors) => {
 }
 
 /**
+ * @typedef {object} BuildPrCommentInput
+ * @property {string} tscOutput
+ * @property {string[]} changedFiles
+ * @property {string} [runUrl]
+ */
+
+/**
+ * @param {BuildPrCommentInput} input
+ * @returns {BuildSummaryResult}
+ */
+export const buildPrComment = ({ tscOutput, changedFiles, runUrl }) => {
+  const errors = parseErrors(tscOutput)
+  const { section, prErrorTotal } = buildPrSection(changedFiles, errors)
+
+  const lines = [
+    '## Lint Types - Tests',
+    '',
+    '### Errors in this PR',
+    '',
+    prHeader(prErrorTotal),
+    '',
+    section
+  ]
+  if (runUrl) {
+    lines.push('', `[View full summary](${runUrl})`)
+  }
+  lines.push('')
+
+  return { markdown: lines.join('\n'), exitCode: prErrorTotal > 0 ? 1 : 0 }
+}
+
+/**
  * @param {BuildSummaryInput} input
  * @returns {BuildSummaryResult}
  */
@@ -267,12 +300,23 @@ const changedFilesFromGit = () => {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const tscOutput = await readStdin()
   const changedFiles = changedFilesFromGit()
-  const { markdown, exitCode } = buildSummary({
+
+  const summary = buildSummary({
     tscOutput,
     changedFiles,
     tsCodeLookup: tsCodeLookupFromPackage
   })
-  process.stdout.write(markdown)
-  process.exitCode = exitCode
+  process.stdout.write(summary.markdown)
+
+  if (process.env.COMMENT_FILE) {
+    const comment = buildPrComment({
+      tscOutput,
+      changedFiles,
+      runUrl: process.env.RUN_URL
+    })
+    writeFileSync(process.env.COMMENT_FILE, comment.markdown)
+  }
+
+  process.exitCode = summary.exitCode
 }
 /* v8 ignore stop */
