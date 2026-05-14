@@ -17,7 +17,7 @@ vi.mock('#root/auditing/public-register.js', () => ({
     mockAuditPublicRegisterGenerate(...args)
 }))
 
-const { validToken } = entraIdMockAuthTokens
+const { validToken, readOnlyMaintainerToken } = entraIdMockAuthTokens
 
 describe(`POST ${publicRegisterGeneratePath}`, () => {
   setupAuthContext()
@@ -74,10 +74,22 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
       const [request, context] = mockAuditPublicRegisterGenerate.mock.calls[0]
       expect(request.auth.credentials.id).toBeDefined()
       expect(request.auth.credentials.email).toBeDefined()
-      expect(request.auth.credentials.scope).toContain('admin.write')
+      expect(request.auth.credentials.scope).toContain('admin.read')
       expect(context.url).toBe(result.downloadUrl)
       expect(context.expiresAt).toBe(result.expiresAt)
       expect(context.generatedAt).toBe(result.generatedAt)
+    })
+
+    it('returns 201 for a read-only service maintainer', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: publicRegisterGeneratePath,
+        headers: {
+          Authorization: `Bearer ${readOnlyMaintainerToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
   })
 

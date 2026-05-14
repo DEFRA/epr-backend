@@ -18,7 +18,11 @@ process.env.PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL =
 // write list. First-match-wins resolution (see getEntraUserRoles) gives them
 // the `service_maintainer_write` tier so existing integration tests that
 // exercise mutating admin routes continue to pass.
-process.env.SERVICE_MAINTAINER_EMAILS = '["me@example.com", "you@example.com"]'
+// `readonly@example.com` is deliberately read-only — in the maintainer list
+// but not the write list — so tests can exercise the `service_maintainer`
+// (read) tier against routes that only require `admin.read`.
+process.env.SERVICE_MAINTAINER_EMAILS =
+  '["me@example.com", "you@example.com", "readonly@example.com"]'
 process.env.SERVICE_MAINTAINER_WRITE_EMAILS =
   '["me@example.com", "you@example.com"]'
 process.env.SUPPORT_EMAILS = '[]'

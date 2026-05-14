@@ -21,7 +21,7 @@ export const generateLatestPublicRegister = {
   path: publicRegisterGeneratePath,
   options: {
     auth: {
-      scope: [SCOPES.adminWrite]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin']
   },
