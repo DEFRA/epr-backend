@@ -1,5 +1,6 @@
 {
   "name": "epr-backend",
+  "private": true,
   "version": "0.0.0",
   "description": "epr-backend",
   "main": "src/index.js",
@@ -44,6 +45,7 @@
     "lint": "eslint --cache --cache-strategy content \"**/*.js\"",
     "lint:fix": "npm run lint -- --fix",
     "lint:types": "tsc -p jsconfig.typecheck.json",
+    "lint:types:tests": "tsc -p jsconfig.typecheck.tests.json",
     "postversion": "git add package.json package-lock.json && git commit -m $npm_package_version",
     "benchmark:file": "node benchmarks/parse-file.js",
     "test": "TZ=UTC vitest run --coverage",
@@ -123,6 +125,7 @@
     "prettier": "3.8.1",
     "testcontainers": "11.12.0",
     "tinybench": "6.0.0",
+    "typescript": "5.9.3",
     "vitest": "4.0.18",
     "vitest-mongodb": "1.0.3"
   }
