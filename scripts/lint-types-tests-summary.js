@@ -111,7 +111,10 @@ const buildPrSection = (changedFiles, byFile) => {
   }
 
   if (blocks.length === 0) {
-    return { section: '_no type errors in test files changed in this PR_', prErrorTotal: 0 }
+    return {
+      section: '_no type errors in test files changed in this PR_',
+      prErrorTotal: 0
+    }
   }
   return { section: blocks.join('\n\n'), prErrorTotal }
 }
@@ -154,7 +157,9 @@ const topCodesTable = (errors, tsCodeLookup) => {
  */
 const errorsByFileBlock = (byFile) => {
   const counts = [...byFile.entries()]
-    .map(([file, errs]) => /** @type {[string, number]} */ ([file, errs.length]))
+    .map(
+      ([file, errs]) => /** @type {[string, number]} */ ([file, errs.length])
+    )
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
   return counts.map(([file, count]) => `${count} ${file}`).join('\n')
 }

@@ -251,7 +251,6 @@ describe('lint-types-tests-summary', () => {
         expect(markdown).toContain(tscOutput)
       })
     })
-
   })
 
   describe('buildPrComment', () => {
