@@ -38,29 +38,36 @@ export class StreamSlotConflictError extends Error {
 }
 
 /**
- * Raised by `appendEvent` when the event's natural key already exists
- * in the stream — e.g. a duplicate `(registrationId, accreditationId, kind,
- * payload.summaryLogId)` or `(registrationId, accreditationId, kind,
- * payload.prnId)`. Distinct from slot conflict: the caller retried at a
- * new slot number but the event itself was already recorded.
+ * Raised by `appendEvent` when the event's `number` is not the next
+ * sequential value for its partition. The stream is strictly append-only
+ * with no gaps: event N requires event N-1 to exist (or N must be 1 for
+ * an empty stream).
  */
-export class StreamIdempotencyConflictError extends Error {
-  /** @type {import('./stream-schema.js').StreamEventKind} */
-  kind
+export class StreamSequenceError extends Error {
   /** @type {string} */
-  naturalKey
+  registrationId
+  /** @type {string | null} */
+  accreditationId
+  /** @type {number} */
+  providedNumber
+  /** @type {number} */
+  expectedNumber
 
   /**
-   * @param {import('./stream-schema.js').StreamEventKind} kind
-   * @param {string} naturalKey
+   * @param {string} registrationId
+   * @param {string | null} accreditationId
+   * @param {number} providedNumber
+   * @param {number} expectedNumber
    */
-  constructor(kind, naturalKey) {
+  constructor(registrationId, accreditationId, providedNumber, expectedNumber) {
     super(
-      `Stream idempotency conflict for kind ${kind} natural key ${naturalKey}`
+      `Stream sequence violation for registration ${registrationId} accreditation ${accreditationId}: expected number ${expectedNumber}, got ${providedNumber}`
     )
-    this.name = 'StreamIdempotencyConflictError'
-    this.kind = kind
-    this.naturalKey = naturalKey
+    this.name = 'StreamSequenceError'
+    this.registrationId = registrationId
+    this.accreditationId = accreditationId
+    this.providedNumber = providedNumber
+    this.expectedNumber = expectedNumber
   }
 }
 
@@ -77,12 +84,12 @@ export class StreamIdempotencyConflictError extends Error {
  * @property {(event: StreamEventInsert) => Promise<StreamEvent>} appendEvent
  *   Persist a single event. Returns the stored event with its assigned `id`.
  *
+ *   Throws `StreamSequenceError` if the event's `number` is not the next
+ *   sequential value for its partition (i.e. `currentMax + 1`, or `1` for
+ *   an empty stream). The stream is strictly sequential with no gaps.
+ *
  *   Throws `StreamSlotConflictError` if the
  *   `(registrationId, accreditationId, number)` slot is already occupied.
- *
- *   Throws `StreamIdempotencyConflictError` if the event's natural key
- *   already exists (e.g. duplicate `summaryLogId` or `prnId` within the
- *   same stream and kind).
  * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>} findLatestByPartition
  *   Return the highest-numbered event for the stream partition, or `null`
  *   if none exist.

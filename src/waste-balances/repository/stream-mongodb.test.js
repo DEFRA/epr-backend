@@ -62,53 +62,6 @@ describe('ensureStreamCollection', () => {
       expect(indexOptionFor(indexes, 'partition_number', 'unique')).toBe(true)
     })
 
-    it('creates the partial unique index for summary-log-submitted idempotency', async ({
-      streamCollection
-    }) => {
-      const indexes = await streamCollection.indexes()
-      expect(indexKeyFor(indexes, 'idempotency_summary_log')).toEqual({
-        registrationId: 1,
-        accreditationId: 1,
-        kind: 1,
-        'payload.summaryLogId': 1
-      })
-      expect(
-        indexOptionFor(indexes, 'idempotency_summary_log', 'unique')
-      ).toBe(true)
-      expect(
-        indexOptionFor(
-          indexes,
-          'idempotency_summary_log',
-          'partialFilterExpression'
-        )
-      ).toEqual({ kind: 'summary-log-submitted' })
-    })
-
-    it('creates the partial unique index for PRN kind idempotency', async ({
-      streamCollection
-    }) => {
-      const indexes = await streamCollection.indexes()
-      expect(indexKeyFor(indexes, 'idempotency_prn')).toEqual({
-        registrationId: 1,
-        accreditationId: 1,
-        kind: 1,
-        'payload.prnId': 1
-      })
-      expect(indexOptionFor(indexes, 'idempotency_prn', 'unique')).toBe(true)
-      expect(
-        indexOptionFor(indexes, 'idempotency_prn', 'partialFilterExpression')
-      ).toEqual({
-        kind: {
-          $in: [
-            'prn-created',
-            'prn-issued',
-            'prn-creation-cancelled',
-            'prn-cancelled-after-issue'
-          ]
-        }
-      })
-    })
-
     it('creates the partition_kind_latest index for findLatestByPartitionAndKind', async ({
       streamCollection
     }) => {
@@ -191,6 +144,7 @@ describe('MongoDB stream repository', () => {
       const upstream = new Error('connection lost')
       const stubCollection = {
         createIndex: () => Promise.resolve(),
+        findOne: () => Promise.resolve(null),
         insertOne: () => Promise.reject(upstream)
       }
       const stubDb = { collection: () => stubCollection }
@@ -202,6 +156,49 @@ describe('MongoDB stream repository', () => {
       await expect(
         repository.appendEvent(buildStreamEvent({ number: 1 }))
       ).rejects.toBe(upstream)
+    })
+
+    it('rethrows E11000 with unrecognised keyPattern as the raw error', async () => {
+      const mongoError = Object.assign(new Error('E11000'), {
+        code: 11000,
+        keyPattern: { unknownField: 1 }
+      })
+      const stubCollection = {
+        createIndex: () => Promise.resolve(),
+        findOne: () => Promise.resolve(null),
+        insertOne: () => Promise.reject(mongoError)
+      }
+      const stubDb = { collection: () => stubCollection }
+
+      const repository = (
+        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+      )()
+
+      await expect(
+        repository.appendEvent(buildStreamEvent({ number: 1 }))
+      ).rejects.toBe(mongoError)
+    })
+
+    it('classifies E11000 from writeErrors array', async () => {
+      const mongoError = Object.assign(new Error('E11000'), {
+        writeErrors: [{ code: 11000, keyPattern: { number: 1 } }]
+      })
+      const stubCollection = {
+        createIndex: () => Promise.resolve(),
+        findOne: () => Promise.resolve(null),
+        insertOne: () => Promise.reject(mongoError)
+      }
+      const stubDb = { collection: () => stubCollection }
+
+      const repository = (
+        await createMongoStreamRepository(/** @type {*} */ (stubDb))
+      )()
+
+      await expect(
+        repository.appendEvent(buildStreamEvent({ number: 1 }))
+      ).rejects.toMatchObject({
+        name: 'StreamSlotConflictError'
+      })
     })
   })
 })

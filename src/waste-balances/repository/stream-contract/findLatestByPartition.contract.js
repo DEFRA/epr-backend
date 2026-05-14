@@ -53,18 +53,18 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         buildStreamEvent({
           registrationId: 'reg-many',
           accreditationId: 'acc-many',
-          number: 3,
-          payload: { summaryLogId: 'log-3', creditTotal: 300 },
-          closingBalance: { amount: 30, availableAmount: 25 }
+          number: 2,
+          payload: { summaryLogId: 'log-2', creditTotal: 200 },
+          closingBalance: { amount: 20, availableAmount: 18 }
         })
       )
       await repository.appendEvent(
         buildStreamEvent({
           registrationId: 'reg-many',
           accreditationId: 'acc-many',
-          number: 2,
-          payload: { summaryLogId: 'log-2', creditTotal: 200 },
-          closingBalance: { amount: 20, availableAmount: 18 }
+          number: 3,
+          payload: { summaryLogId: 'log-3', creditTotal: 300 },
+          closingBalance: { amount: 30, availableAmount: 25 }
         })
       )
 
@@ -89,8 +89,8 @@ export const testFindLatestByPartitionBehaviour = (it) => {
         buildStreamEvent({
           registrationId: 'reg-y',
           accreditationId: 'acc-y',
-          number: 5,
-          payload: { summaryLogId: 'log-5', creditTotal: 500 }
+          number: 1,
+          payload: { summaryLogId: 'log-y', creditTotal: 500 }
         })
       )
 
@@ -98,7 +98,7 @@ export const testFindLatestByPartitionBehaviour = (it) => {
       const y = await repository.findLatestByPartition('reg-y', 'acc-y')
 
       expect(x.number).toBe(1)
-      expect(y.number).toBe(5)
+      expect(y.number).toBe(1)
     })
 
     it('treats null and non-null accreditationId as separate streams', async () => {

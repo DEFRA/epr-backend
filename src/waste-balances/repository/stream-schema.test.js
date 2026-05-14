@@ -1,10 +1,17 @@
 import { describe, it, expect } from 'vitest'
 
+import { streamEventInsertSchema, STREAM_EVENT_KIND } from './stream-schema.js'
 import {
-  streamEventInsertSchema,
-  STREAM_EVENT_KIND
-} from './stream-schema.js'
-import { buildStreamEvent, buildPrnCreatedEvent } from './stream-test-data.js'
+  buildStreamEvent,
+  buildPrnCreatedEvent,
+  buildPrnIssuedEvent,
+  buildPrnCreationCancelledEvent,
+  buildPrnCancelledAfterIssueEvent
+} from './stream-test-data.js'
+import {
+  validateStreamEventInsert,
+  validateStreamEventRead
+} from './stream-validation.js'
 
 const validate = (data) =>
   streamEventInsertSchema.validate(data, {
@@ -54,9 +61,7 @@ describe('stream event insert schema', () => {
   })
 
   it('rejects unknown kind values', () => {
-    const { error } = validate(
-      buildStreamEvent({ kind: 'unknown-kind' })
-    )
+    const { error } = validate(buildStreamEvent({ kind: 'unknown-kind' }))
     expect(error).toBeDefined()
   })
 
@@ -94,9 +99,7 @@ describe('stream event insert schema', () => {
   })
 
   it('accepts accreditationId: null for registered-only streams', () => {
-    const { error } = validate(
-      buildStreamEvent({ accreditationId: null })
-    )
+    const { error } = validate(buildStreamEvent({ accreditationId: null }))
     expect(error).toBeUndefined()
   })
 
@@ -123,5 +126,50 @@ describe('stream event insert schema', () => {
       })
     )
     expect(error).toBeUndefined()
+  })
+
+  it('accepts convenience builder output for prn-issued', () => {
+    const { error } = validate(buildPrnIssuedEvent())
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts convenience builder output for prn-creation-cancelled', () => {
+    const { error } = validate(buildPrnCreationCancelledEvent())
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts convenience builder output for prn-cancelled-after-issue', () => {
+    const { error } = validate(buildPrnCancelledAfterIssueEvent())
+    expect(error).toBeUndefined()
+  })
+})
+
+describe('stream event validation', () => {
+  describe('validateStreamEventInsert', () => {
+    it('returns the validated event for valid input', () => {
+      const event = buildStreamEvent()
+      const result = validateStreamEventInsert(event)
+      expect(result.registrationId).toBe(event.registrationId)
+    })
+
+    it('throws Boom.badData for invalid input', () => {
+      expect(() => validateStreamEventInsert({})).toThrow(
+        /Invalid stream event data/
+      )
+    })
+  })
+
+  describe('validateStreamEventRead', () => {
+    it('returns the validated event for valid input with id', () => {
+      const event = { id: 'evt-1', ...buildStreamEvent() }
+      const result = validateStreamEventRead(event)
+      expect(result.id).toBe('evt-1')
+    })
+
+    it('throws Boom.badImplementation for invalid input', () => {
+      expect(() => validateStreamEventRead({ id: 'bad' })).toThrow(
+        /Invalid stream event/
+      )
+    })
   })
 })

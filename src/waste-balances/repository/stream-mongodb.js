@@ -8,15 +8,11 @@
  * @typedef {import('./stream-schema.js').StreamEvent} StreamEvent
  */
 
-import { STREAM_EVENT_KIND } from './stream-schema.js'
 import {
   streamDocumentFromMongo,
   streamInsertToMongo
 } from './stream-decimal.js'
-import {
-  StreamSlotConflictError,
-  StreamIdempotencyConflictError
-} from './stream-port.js'
+import { StreamSlotConflictError, StreamSequenceError } from './stream-port.js'
 import {
   validateStreamEventInsert,
   validateStreamEventRead
@@ -26,16 +22,7 @@ export const WASTE_BALANCE_EVENTS_COLLECTION_NAME = 'waste-balance-events'
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
-const PRN_KINDS = [
-  STREAM_EVENT_KIND.PRN_CREATED,
-  STREAM_EVENT_KIND.PRN_ISSUED,
-  STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
-  STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
-]
-
 const INDEX_NAME_SLOT = 'partition_number'
-const INDEX_NAME_SUMMARY_LOG_IDEMPOTENCY = 'idempotency_summary_log'
-const INDEX_NAME_PRN_IDEMPOTENCY = 'idempotency_prn'
 
 /**
  * Ensures the stream collection exists with the indexes required by the
@@ -53,31 +40,6 @@ export async function ensureStreamCollection(db) {
   await collection.createIndex(
     { registrationId: 1, accreditationId: 1, number: 1 },
     { name: INDEX_NAME_SLOT, unique: true }
-  )
-
-  await collection.createIndex(
-    {
-      registrationId: 1,
-      accreditationId: 1,
-      kind: 1,
-      'payload.summaryLogId': 1
-    },
-    {
-      name: INDEX_NAME_SUMMARY_LOG_IDEMPOTENCY,
-      unique: true,
-      partialFilterExpression: {
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-      }
-    }
-  )
-
-  await collection.createIndex(
-    { registrationId: 1, accreditationId: 1, kind: 1, 'payload.prnId': 1 },
-    {
-      name: INDEX_NAME_PRN_IDEMPOTENCY,
-      unique: true,
-      partialFilterExpression: { kind: { $in: PRN_KINDS } }
-    }
   )
 
   await collection.createIndex(
@@ -114,27 +76,11 @@ const classifyDuplicateKeyError = (error, event) => {
     return undefined
   }
 
-  const keyPattern = writeError.keyPattern ?? {}
-
-  if (keyPattern.number) {
+  if (writeError.keyPattern?.number) {
     return new StreamSlotConflictError(
       event.registrationId,
       event.accreditationId,
       event.number
-    )
-  }
-
-  if (keyPattern['payload.summaryLogId']) {
-    return new StreamIdempotencyConflictError(
-      event.kind,
-      /** @type {*} */ (event.payload).summaryLogId
-    )
-  }
-
-  if (keyPattern['payload.prnId']) {
-    return new StreamIdempotencyConflictError(
-      event.kind,
-      /** @type {*} */ (event.payload).prnId
     )
   }
 
@@ -179,6 +125,33 @@ const findDuplicateKeyWriteError = (error) => {
  */
 const performAppendEvent = (collection) => async (event) => {
   const validated = validateStreamEventInsert(event)
+
+  const latest = await collection.findOne(
+    {
+      registrationId: validated.registrationId,
+      accreditationId: validated.accreditationId
+    },
+    { sort: { number: -1 }, projection: { number: 1 } }
+  )
+
+  const expectedNumber = (latest?.number ?? 0) + 1
+
+  if (validated.number !== expectedNumber) {
+    if (validated.number <= (latest?.number ?? 0)) {
+      throw new StreamSlotConflictError(
+        validated.registrationId,
+        validated.accreditationId,
+        validated.number
+      )
+    }
+    throw new StreamSequenceError(
+      validated.registrationId,
+      validated.accreditationId,
+      validated.number,
+      expectedNumber
+    )
+  }
+
   const persistable = streamInsertToMongo(validated)
 
   try {

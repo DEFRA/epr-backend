@@ -1,10 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { buildStreamEvent, buildPrnCreatedEvent } from '../stream-test-data.js'
-import {
-  StreamSlotConflictError,
-  StreamIdempotencyConflictError
-} from '../stream-port.js'
+import { buildStreamEvent } from '../stream-test-data.js'
+import { StreamSlotConflictError, StreamSequenceError } from '../stream-port.js'
 
 export const testAppendEventBehaviour = (it) => {
   describe('appendEvent', () => {
@@ -60,7 +57,7 @@ export const testAppendEventBehaviour = (it) => {
         buildStreamEvent({
           registrationId: 'reg-slot-err',
           accreditationId: 'acc-slot-err',
-          number: 3
+          number: 1
         })
       )
 
@@ -69,59 +66,74 @@ export const testAppendEventBehaviour = (it) => {
           buildStreamEvent({
             registrationId: 'reg-slot-err',
             accreditationId: 'acc-slot-err',
-            number: 3,
+            number: 1,
             payload: { summaryLogId: 'log-different', creditTotal: 200 }
           })
         )
       ).rejects.toMatchObject({
         registrationId: 'reg-slot-err',
         accreditationId: 'acc-slot-err',
-        slotNumber: 3
+        slotNumber: 1
       })
     })
 
-    it('rejects duplicate summaryLogId within the same stream and kind (idempotency)', async () => {
+    it('rejects the first event if its number is not 1', async () => {
+      await expect(
+        repository.appendEvent(
+          buildStreamEvent({
+            registrationId: 'reg-seq',
+            accreditationId: 'acc-seq',
+            number: 2
+          })
+        )
+      ).rejects.toBeInstanceOf(StreamSequenceError)
+    })
+
+    it('rejects an event that skips a number', async () => {
       await repository.appendEvent(
         buildStreamEvent({
-          registrationId: 'reg-idem',
-          accreditationId: 'acc-idem',
-          number: 1,
-          payload: { summaryLogId: 'log-dup', creditTotal: 100 }
+          registrationId: 'reg-gap',
+          accreditationId: 'acc-gap',
+          number: 1
         })
       )
 
       await expect(
         repository.appendEvent(
           buildStreamEvent({
-            registrationId: 'reg-idem',
-            accreditationId: 'acc-idem',
-            number: 2,
-            payload: { summaryLogId: 'log-dup', creditTotal: 100 }
+            registrationId: 'reg-gap',
+            accreditationId: 'acc-gap',
+            number: 3,
+            payload: { summaryLogId: 'log-3', creditTotal: 300 }
           })
         )
-      ).rejects.toBeInstanceOf(StreamIdempotencyConflictError)
+      ).rejects.toBeInstanceOf(StreamSequenceError)
     })
 
-    it('rejects duplicate prnId within the same stream and kind (idempotency)', async () => {
+    it('StreamSequenceError carries the provided and expected numbers', async () => {
       await repository.appendEvent(
-        buildPrnCreatedEvent({
-          registrationId: 'reg-prn-idem',
-          accreditationId: 'acc-prn-idem',
-          number: 1,
-          payload: { prnId: 'prn-dup', amount: 50 }
+        buildStreamEvent({
+          registrationId: 'reg-seq-err',
+          accreditationId: 'acc-seq-err',
+          number: 1
         })
       )
 
       await expect(
         repository.appendEvent(
-          buildPrnCreatedEvent({
-            registrationId: 'reg-prn-idem',
-            accreditationId: 'acc-prn-idem',
-            number: 2,
-            payload: { prnId: 'prn-dup', amount: 50 }
+          buildStreamEvent({
+            registrationId: 'reg-seq-err',
+            accreditationId: 'acc-seq-err',
+            number: 5,
+            payload: { summaryLogId: 'log-5', creditTotal: 500 }
           })
         )
-      ).rejects.toBeInstanceOf(StreamIdempotencyConflictError)
+      ).rejects.toMatchObject({
+        registrationId: 'reg-seq-err',
+        accreditationId: 'acc-seq-err',
+        providedNumber: 5,
+        expectedNumber: 2
+      })
     })
 
     it('allows the same slot number across different partitions', async () => {

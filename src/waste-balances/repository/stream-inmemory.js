@@ -1,10 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { STREAM_EVENT_KIND } from './stream-schema.js'
-import {
-  StreamSlotConflictError,
-  StreamIdempotencyConflictError
-} from './stream-port.js'
+import { StreamSlotConflictError, StreamSequenceError } from './stream-port.js'
 import { validateStreamEventInsert } from './stream-validation.js'
 
 /**
@@ -21,13 +17,6 @@ import { validateStreamEventInsert } from './stream-validation.js'
 /**
  * @typedef {import('./stream-schema.js').StreamEventInsert} StreamEventInsert
  */
-
-const PRN_KINDS = new Set([
-  STREAM_EVENT_KIND.PRN_CREATED,
-  STREAM_EVENT_KIND.PRN_ISSUED,
-  STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
-  STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
-])
 
 /**
  * @param {StreamEvent} event
@@ -50,59 +39,34 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
     appendEvent: async (event) => {
       const validated = validateStreamEventInsert(event)
 
-      const slotTaken = storage.some(
-        (existing) =>
-          matchesPartition(
-            existing,
-            validated.registrationId,
-            validated.accreditationId
-          ) && existing.number === validated.number
+      const partitionEvents = storage.filter((existing) =>
+        matchesPartition(
+          existing,
+          validated.registrationId,
+          validated.accreditationId
+        )
       )
 
-      if (slotTaken) {
-        throw new StreamSlotConflictError(
+      const currentMax =
+        partitionEvents.length > 0
+          ? partitionEvents[partitionEvents.length - 1].number
+          : 0
+      const expectedNumber = currentMax + 1
+
+      if (validated.number !== expectedNumber) {
+        if (partitionEvents.some((e) => e.number === validated.number)) {
+          throw new StreamSlotConflictError(
+            validated.registrationId,
+            validated.accreditationId,
+            validated.number
+          )
+        }
+        throw new StreamSequenceError(
           validated.registrationId,
           validated.accreditationId,
-          validated.number
+          validated.number,
+          expectedNumber
         )
-      }
-
-      if (validated.kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED) {
-        const idempotencyConflict = storage.some(
-          (existing) =>
-            matchesPartition(
-              existing,
-              validated.registrationId,
-              validated.accreditationId
-            ) &&
-            existing.kind === validated.kind &&
-            /** @type {*} */ (existing.payload).summaryLogId ===
-              /** @type {*} */ (validated.payload).summaryLogId
-        )
-        if (idempotencyConflict) {
-          throw new StreamIdempotencyConflictError(
-            validated.kind,
-            /** @type {*} */ (validated.payload).summaryLogId
-          )
-        }
-      } else if (PRN_KINDS.has(validated.kind)) {
-        const idempotencyConflict = storage.some(
-          (existing) =>
-            matchesPartition(
-              existing,
-              validated.registrationId,
-              validated.accreditationId
-            ) &&
-            existing.kind === validated.kind &&
-            /** @type {*} */ (existing.payload).prnId ===
-              /** @type {*} */ (validated.payload).prnId
-        )
-        if (idempotencyConflict) {
-          throw new StreamIdempotencyConflictError(
-            validated.kind,
-            /** @type {*} */ (validated.payload).prnId
-          )
-        }
       }
 
       const persisted = { id: randomUUID(), ...validated }
@@ -123,11 +87,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      const latest = matches.reduce((highest, current) =>
-        current.number > highest.number ? current : highest
-      )
-
-      return structuredClone(latest)
+      return structuredClone(matches[matches.length - 1])
     },
 
     /**
@@ -150,11 +110,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      const latest = matches.reduce((highest, current) =>
-        current.number > highest.number ? current : highest
-      )
-
-      return structuredClone(latest)
+      return structuredClone(matches[matches.length - 1])
     },
 
     /**

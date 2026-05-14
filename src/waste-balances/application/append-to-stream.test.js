@@ -128,11 +128,14 @@ describe('appendToStream', () => {
       }
 
       await expect(
-        appendToStream({ repository, ...buildContext() }, {
-          kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-          payload: { summaryLogId: 'log-1', creditTotal: 100 },
-          createdBy
-        })
+        appendToStream(
+          { repository, ...buildContext() },
+          {
+            kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+            payload: { summaryLogId: 'log-1', creditTotal: 100 },
+            createdBy
+          }
+        )
       ).rejects.toBe(slotConflict)
     })
   })
@@ -272,6 +275,27 @@ describe('appendToStream', () => {
         amount: 1000,
         availableAmount: 1000
       })
+    })
+  })
+
+  describe('unknown kind', () => {
+    it('throws for an unrecognised PRN event kind', async () => {
+      const repository = {
+        findLatestByPartition: vi.fn().mockResolvedValue(null),
+        findLatestByPartitionAndKind: vi.fn().mockResolvedValue(null),
+        appendEvent: vi.fn()
+      }
+
+      await expect(
+        appendToStream(
+          { repository, ...buildContext() },
+          {
+            kind: /** @type {*} */ ('unknown-kind'),
+            payload: { prnId: 'prn-1', amount: 100 },
+            createdBy
+          }
+        )
+      ).rejects.toThrow('Unknown PRN event kind: unknown-kind')
     })
   })
 })
