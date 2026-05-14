@@ -12,7 +12,7 @@ import { validatePrnInsert, validatePrnRead } from './validation.js'
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, RollbackParams, UpdateStatusParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
@@ -347,6 +347,61 @@ const performUpdateStatus = async (
 
 /**
  * @param {Db} db
+ * @param {TypedLogger} logger
+ * @param {RollbackParams} params
+ * @param {{ revertedStatus: import('#packaging-recycling-notes/domain/model.js').PrnStatus, slotsToUnset: Array<'issued' | 'cancelled' | 'deleted'>, unsetPrnNumber?: boolean }} options
+ * @returns {Promise<PackagingRecyclingNote | null>}
+ */
+const performRollback = async (
+  db,
+  logger,
+  { id, expectedVersion, updatedBy, updatedAt },
+  { revertedStatus, slotsToUnset, unsetPrnNumber }
+) => {
+  const setFields = {
+    'status.currentStatus': revertedStatus,
+    'status.currentStatusAt': updatedAt,
+    updatedAt,
+    updatedBy
+  }
+
+  /** @type {Record<string, ''>} */
+  const unsetFields = {}
+  for (const slot of slotsToUnset) {
+    unsetFields[`status.${slot}`] = ''
+  }
+  if (unsetPrnNumber) {
+    unsetFields.prnNumber = ''
+  }
+
+  const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+    {
+      _id: ObjectId.createFromHexString(id),
+      $expr: { $eq: [{ $ifNull: ['$version', 1] }, expectedVersion] }
+    },
+    {
+      $set: { ...setFields, version: expectedVersion + 1 },
+      $unset: unsetFields,
+      $push: /** @type {*} */ ({
+        'status.history': {
+          status: revertedStatus,
+          at: updatedAt,
+          by: updatedBy
+        }
+      })
+    },
+    { returnDocument: 'after' }
+  )
+
+  if (!result) {
+    return resolveMissedUpdate(db, id, expectedVersion, logger)
+  }
+
+  return validatePrnRead({ ...result, id: result._id.toHexString() })
+}
+
+/**
+ * @param {Db} db
  * @param {Organisation['id'][]} excludeOrganisationIds
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
@@ -363,6 +418,22 @@ export const createPackagingRecyclingNotesRepository = async (
     findById: (id) => performFindById(db, id),
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
-    updateStatus: (params) => performUpdateStatus(db, logger, params)
+    updateStatus: (params) => performUpdateStatus(db, logger, params),
+    rollbackIssuance: (params) =>
+      performRollback(db, logger, params, {
+        revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        slotsToUnset: ['issued'],
+        unsetPrnNumber: true
+      }),
+    rollbackPendingCancellation: (params) =>
+      performRollback(db, logger, params, {
+        revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        slotsToUnset: ['cancelled', 'deleted']
+      }),
+    rollbackIssuedCancellation: (params) =>
+      performRollback(db, logger, params, {
+        revertedStatus: PRN_STATUS.AWAITING_CANCELLATION,
+        slotsToUnset: ['cancelled']
+      })
   })
 }

@@ -25,7 +25,9 @@ const noopLogger = () => ({
   info: vi.fn(),
   error: vi.fn(),
   warn: vi.fn(),
-  debug: vi.fn()
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn()
 })
 
 const PRN_ID = '507f1f77bcf86cd799439011'
@@ -119,6 +121,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         wasteBalancesRepository,
         organisationsRepository,
+        logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
@@ -159,6 +162,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         wasteBalancesRepository,
         organisationsRepository,
+        logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
@@ -204,6 +208,7 @@ describe('updatePrnStatus concurrency', () => {
         prnRepository,
         wasteBalancesRepository,
         organisationsRepository,
+        logger: noopLogger(),
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,

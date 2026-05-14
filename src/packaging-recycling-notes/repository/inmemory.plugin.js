@@ -12,7 +12,7 @@ import { validatePrnInsert } from './validation.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { FindByStatusParams, PaginatedResult, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, PaginatedResult, RollbackParams, UpdateStatusParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -220,6 +220,68 @@ const performUpdateStatus =
   }
 
 /**
+ * @param {Storage} storage
+ * @param {TypedLogger} logger
+ * @param {{ revertedStatus: import('#packaging-recycling-notes/domain/model.js').PrnStatus, slotsToUnset: Array<'issued' | 'cancelled' | 'deleted'>, unsetPrnNumber?: boolean }} options
+ * @returns {(params: RollbackParams) => Promise<PackagingRecyclingNote | null>}
+ */
+const performRollback =
+  (storage, logger, { revertedStatus, slotsToUnset, unsetPrnNumber }) =>
+  async ({ id, expectedVersion, updatedBy, updatedAt }) => {
+    const prn = storage.get(id)
+    if (!prn) {
+      return null
+    }
+
+    if (prn.version !== expectedVersion) {
+      const conflictError = buildVersionConflictError(
+        id,
+        expectedVersion,
+        prn.version
+      )
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for PRN ${id}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: id
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    const statusUpdate = {
+      ...prn.status,
+      currentStatus: revertedStatus,
+      currentStatusAt: updatedAt,
+      history: [
+        ...prn.status.history,
+        { status: revertedStatus, at: updatedAt, by: updatedBy }
+      ]
+    }
+
+    for (const slot of slotsToUnset) {
+      delete statusUpdate[slot]
+    }
+
+    const updated = {
+      ...prn,
+      version: prn.version + 1,
+      updatedBy,
+      updatedAt,
+      status: statusUpdate
+    }
+
+    if (unsetPrnNumber) {
+      delete updated.prnNumber
+    }
+
+    storage.set(id, structuredClone(updated))
+    return structuredClone(updated)
+  }
+
+/**
  * @param {PackagingRecyclingNote[]} [initialData]
  * @param {Organisation['id'][]} [excludeOrganisationIds]
  */
@@ -241,7 +303,20 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findById: performFindById(storage),
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
-    updateStatus: performUpdateStatus(storage, logger)
+    updateStatus: performUpdateStatus(storage, logger),
+    rollbackIssuance: performRollback(storage, logger, {
+      revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      slotsToUnset: ['issued'],
+      unsetPrnNumber: true
+    }),
+    rollbackPendingCancellation: performRollback(storage, logger, {
+      revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+      slotsToUnset: ['cancelled', 'deleted']
+    }),
+    rollbackIssuedCancellation: performRollback(storage, logger, {
+      revertedStatus: PRN_STATUS.AWAITING_CANCELLATION,
+      slotsToUnset: ['cancelled']
+    })
   })
 }
 

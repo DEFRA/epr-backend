@@ -882,8 +882,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalancesRepository,
       organisationsRepository,
-      overseasSitesRepository,
-      featureFlags: { isOrsWasteBalanceValidationEnabled: () => true }
+      overseasSitesRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -965,8 +964,7 @@ describe('syncFromSummaryLog', () => {
       wasteRecordRepository,
       wasteBalancesRepository,
       organisationsRepository,
-      overseasSitesRepository,
-      featureFlags: { isOrsWasteBalanceValidationEnabled: () => true }
+      overseasSitesRepository
     })
 
     await sync(summaryLog, TEST_USER)
@@ -981,87 +979,6 @@ describe('syncFromSummaryLog', () => {
         validTo: '2023-12-31'
       },
       overseasSites: { '001': { validFrom } }
-    })
-  })
-
-  it('does not resolve overseas sites when orsWasteBalanceValidation flag is off', async () => {
-    const fileId = 'test-file-ors-flag-off'
-    const summaryLog = {
-      file: {
-        id: fileId,
-        uri: 's3://test-bucket/test-key'
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1'
-    }
-
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'EXPORTER'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED_FOR_REPROCESSING',
-            FIELD_GROSS_WEIGHT
-          ],
-          rows: [
-            {
-              rowNumber: 2,
-              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
-            }
-          ]
-        }
-      }
-    }
-
-    const extractor = createInMemorySummaryLogExtractor({
-      [fileId]: parsedData
-    })
-
-    const localOverseasSitesRepository = {
-      findByIds: vi
-        .fn()
-        .mockResolvedValue([
-          { id: 'site-aaa', validFrom: new Date('2024-01-01') }
-        ])
-    }
-
-    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
-      overseasSites: {
-        '001': { overseasSiteId: 'site-aaa' }
-      }
-    })
-
-    const featureFlags = { isOrsWasteBalanceValidationEnabled: () => false }
-
-    const sync = /** @type {any} */ (syncFromSummaryLog)({
-      extractor,
-      wasteRecordRepository,
-      wasteBalancesRepository,
-      organisationsRepository,
-      overseasSitesRepository: localOverseasSitesRepository,
-      featureFlags
-    })
-
-    await sync(summaryLog, TEST_USER)
-
-    expect(localOverseasSitesRepository.findByIds).not.toHaveBeenCalled()
-    expect(
-      wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), {
-      user: TEST_USER,
-      accreditation: {
-        id: 'acc-default',
-        validFrom: '2023-01-01',
-        validTo: '2023-12-31'
-      },
-      overseasSites: ORS_VALIDATION_DISABLED
     })
   })
 

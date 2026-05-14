@@ -6,7 +6,6 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 
 import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnostic.js'
@@ -74,10 +73,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     mockServer = {
       db,
-      locker: { lock: vi.fn().mockResolvedValue(mockLock) },
-      featureFlags: {
-        isOrsWasteBalanceValidationEnabled: vi.fn().mockReturnValue(false)
-      }
+      locker: { lock: vi.fn().mockResolvedValue(mockLock) }
     }
 
     registrations = {}
@@ -176,7 +172,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
@@ -205,18 +206,29 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [
-      { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
+      { id: 'acc-1', accreditationNumber: 'ACC-acc-1', status: 'approved' }
     ]
-    computeRebuiltTotals.mockReturnValue({ amount: 95, availableAmount: 80 })
+    computeRebuiltTotals.mockReturnValue({
+      amount: 95,
+      availableAmount: 80,
+      wasteRecordContribution: 95,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: -15
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-acc-1 currentAmount=100 rebuiltAmount=95 deltaAmount=-5 currentAvailableAmount=80 rebuiltAvailableAmount=80 deltaAvailableAmount=0'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-acc-1 currentAmount=100 rebuiltAmount=95 deltaAmount=-5 currentAvailableAmount=80 rebuiltAvailableAmount=80 deltaAvailableAmount=0 registrationStatus=approved accreditationStatus=approved wasteRecordCount=0 wasteRecordContribution=95 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=-15'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -238,7 +250,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [accreditation]
     const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
@@ -257,14 +274,11 @@ describe('runBalanceDivergenceDiagnostic', () => {
       accreditation,
       wasteRecords,
       prns,
-      overseasSites: ORS_VALIDATION_DISABLED
+      overseasSites: {}
     })
   })
 
-  it('resolves overseas sites for the registration when the ORS validation flag is enabled', async () => {
-    mockServer.featureFlags.isOrsWasteBalanceValidationEnabled.mockReturnValue(
-      true
-    )
+  it('resolves overseas sites for the registration and passes them into the rebuild', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
@@ -274,7 +288,12 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ])
     registrations['org-1'] = [
-      { id: 'reg-1', accreditationId: 'acc-1', registrationNumber: 'REG-1' }
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
     ]
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
@@ -309,17 +328,96 @@ describe('runBalanceDivergenceDiagnostic', () => {
       {
         id: 'reg-1',
         accreditationId: 'acc-pending',
-        registrationNumber: 'REG-1'
+        registrationNumber: 'REG-1',
+        status: 'approved'
       }
     ]
-    accreditations['org-1'] = [{ id: 'acc-pending' }]
-    computeRebuiltTotals.mockReturnValue({ amount: 7, availableAmount: 7 })
+    accreditations['org-1'] = [{ id: 'acc-pending', status: 'created' }]
+    computeRebuiltTotals.mockReturnValue({
+      amount: 7,
+      availableAmount: 7,
+      wasteRecordContribution: 7,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=created wasteRecordCount=0 wasteRecordContribution=7 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=0'
+    })
+  })
+
+  it('logs registration status, accreditation status and input counts so cancelled-registration zero-rebuilds are recognisable', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 2084.27,
+        availableAmount: 2084.27
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: null,
+        status: 'cancelled'
+      }
+    ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'cancelled' }
+    ]
+    wasteRecordsRepository.findByRegistration.mockResolvedValue([{}, {}, {}])
+    prnRepository.findByAccreditation.mockResolvedValue([{}, {}])
+    computeRebuiltTotals.mockReturnValue({
+      amount: 0,
+      availableAmount: 0,
+      wasteRecordContribution: 0,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: 0
+    })
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=null accreditationNumber=ACC-1 currentAmount=2084.27 rebuiltAmount=0 deltaAmount=-2084.27 currentAvailableAmount=2084.27 rebuiltAvailableAmount=0 deltaAvailableAmount=-2084.27 registrationStatus=cancelled accreditationStatus=cancelled wasteRecordCount=3 wasteRecordContribution=0 prnCount=2 prnAmountContribution=0 prnAvailableAmountContribution=0'
+    })
+  })
+
+  it('logs a tagged error line when the only registration for an accreditation is in created or rejected state', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 10,
+        availableAmount: 10
+      }
+    ])
+    accreditations['org-1'] = [{ id: 'acc-1', accreditationNumber: 'ACC-1' }]
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'created'
+      }
+    ]
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'No registration links to accreditation acc-1'
+        )
+      })
+    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1'
     })
   })
 
@@ -375,7 +473,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       {
         id: 'reg-good',
         accreditationId: 'acc-good',
-        registrationNumber: 'REG-2'
+        registrationNumber: 'REG-2',
+        status: 'approved'
       }
     ]
     accreditations['org-2'] = [

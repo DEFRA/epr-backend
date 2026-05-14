@@ -138,11 +138,14 @@ This project uses ADRs and `adr-tools`, to create new ADRs:
 
 ### Setup
 
-Install application dependencies:
+After cloning, install dependencies and configure git hooks:
 
 ```bash
-npm install
+npm ci
+npm run setup:husky
 ```
+
+`.npmrc` sets `ignore-scripts=true` (per the [Defra Node.js standard](https://defra.github.io/software-development-standards/standards/node_standards/)) to defend against compromised-package supply-chain attacks. That blocks the project's own `postinstall` step (which would otherwise wire husky's `core.hooksPath` into `.git/config`), so it's run explicitly as a second step. Running scripts via `npm run` directly is not affected by `ignore-scripts`.
 
 ### Testing endpoints
 

@@ -63,7 +63,7 @@
  * @typedef {RegistrationBase & {
  *  registrationNumber?: string;
  *  cbduNumber?: string;
- *  status: 'created'|'rejected'|'archived';
+ *  status: 'created'|'rejected'|'cancelled'|'suspended';
  *  validFrom?: string;
  *  validTo?: string
  * }} RegistrationOther

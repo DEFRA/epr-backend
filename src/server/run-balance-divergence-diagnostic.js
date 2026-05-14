@@ -1,5 +1,4 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -7,6 +6,14 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+
+/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
+const ACTIVE_REGISTRATION_STATUSES = new Set([
+  REG_ACC_STATUS.APPROVED,
+  REG_ACC_STATUS.CANCELLED,
+  REG_ACC_STATUS.SUSPENDED
+])
 
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const LOCK_NAME = 'balance-divergence-diagnostic'
@@ -25,7 +32,6 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
- * @property {boolean} orsValidationEnabled
  */
 
 /**
@@ -71,8 +77,7 @@ const compareForEmbedded = async (embedded, deps) => {
     organisationsRepository,
     prnRepository,
     wasteRecordsRepository,
-    overseasSitesRepository,
-    orsValidationEnabled
+    overseasSitesRepository
   } = deps
 
   const organisation = await organisationsRepository.findById(
@@ -87,7 +92,9 @@ const compareForEmbedded = async (embedded, deps) => {
     )
   }
   const registration = organisation.registrations.find(
-    (r) => r.accreditationId === embedded.accreditationId
+    (r) =>
+      r.accreditationId === embedded.accreditationId &&
+      ACTIVE_REGISTRATION_STATUSES.has(r.status)
   )
   if (!registration) {
     throw new Error(
@@ -101,14 +108,12 @@ const compareForEmbedded = async (embedded, deps) => {
   )
   const prns = await prnRepository.findByAccreditation(embedded.accreditationId)
 
-  const overseasSites = orsValidationEnabled
-    ? await resolveOverseasSites(
-        organisationsRepository,
-        overseasSitesRepository,
-        embedded.organisationId,
-        registration.id
-      )
-    : ORS_VALIDATION_DISABLED
+  const overseasSites = await resolveOverseasSites(
+    organisationsRepository,
+    overseasSitesRepository,
+    embedded.organisationId,
+    registration.id
+  )
 
   const rebuilt = computeRebuiltTotals({
     accreditation,
@@ -129,7 +134,14 @@ const compareForEmbedded = async (embedded, deps) => {
     deltaAvailableAmount: formatDelta(
       embedded.availableAmount,
       rebuilt.availableAmount
-    )
+    ),
+    registrationStatus: registration.status,
+    accreditationStatus: accreditation.status,
+    wasteRecordCount: wasteRecords.length,
+    wasteRecordContribution: rebuilt.wasteRecordContribution,
+    prnCount: prns.length,
+    prnAmountContribution: rebuilt.prnAmountContribution,
+    prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution
   }
 }
 
@@ -147,7 +159,14 @@ const formatDivergenceLine = (comparison) =>
     `deltaAmount=${comparison.deltaAmount}`,
     `currentAvailableAmount=${comparison.currentAvailableAmount}`,
     `rebuiltAvailableAmount=${comparison.rebuiltAvailableAmount}`,
-    `deltaAvailableAmount=${comparison.deltaAvailableAmount}`
+    `deltaAvailableAmount=${comparison.deltaAvailableAmount}`,
+    `registrationStatus=${comparison.registrationStatus}`,
+    `accreditationStatus=${comparison.accreditationStatus}`,
+    `wasteRecordCount=${comparison.wasteRecordCount}`,
+    `wasteRecordContribution=${comparison.wasteRecordContribution}`,
+    `prnCount=${comparison.prnCount}`,
+    `prnAmountContribution=${comparison.prnAmountContribution}`,
+    `prnAvailableAmountContribution=${comparison.prnAvailableAmountContribution}`
   ].join(' ')
 
 const formatErrorLine = (embedded, error) =>
@@ -211,15 +230,12 @@ const buildDependencies = async (server) => {
   const overseasSitesRepository = (
     await createOverseasSitesRepository(server.db)
   )()
-  const orsValidationEnabled =
-    server.featureFlags.isOrsWasteBalanceValidationEnabled()
 
   return /** @type {DiagnosticDependencies} */ ({
     organisationsRepository,
     wasteRecordsRepository,
     prnRepository,
-    overseasSitesRepository,
-    orsValidationEnabled
+    overseasSitesRepository
   })
 }
 
