@@ -6,9 +6,10 @@ import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
 /**
  * Generates a CSV string from transformed data
  * @param {PublicRegisterRow[]} rows - Output from transform function
+ * @param {import('#reports/domain/compliance-reporting-periods.js').CompliancePeriod[]} [periods] - Compliance periods for dynamic columns
  * @returns {Promise<string>} - CSV string with BOM
  */
-export async function generateCsv(rows) {
+export async function generateCsv(rows, periods = []) {
   const headerMapping = [
     ['type', 'Type'],
     ['businessName', 'Business name'],
@@ -28,7 +29,8 @@ export async function generateCsv(rows) {
     ['activeDate', 'Active Date'],
     ['accreditationStatus', 'Accreditation status'],
     ['dateLastChanged', 'Date status last changed'],
-    ['tonnageBand', 'Tonnage Band']
+    ['tonnageBand', 'Tonnage Band'],
+    ...periods.map((p) => [p.label, p.label])
   ]
 
   const generatedAtTimestamp = formatDateTimeDots(new Date())
