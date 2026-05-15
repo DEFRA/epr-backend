@@ -14,6 +14,8 @@ import { generateReportingPeriods } from './generate-reporting-periods.js'
  * }} CompliancePeriod
  */
 
+const MONTHS_PER_QUARTER = 3
+
 const MONTH_ABBR = [
   'Jan',
   'Feb',
@@ -60,7 +62,7 @@ function annotate(p, cadence) {
 
 /** @param {{ period: number }} p */
 function isQuarterEnd(p) {
-  return p.period % 3 === 0
+  return p.period % MONTHS_PER_QUARTER === 0
 }
 
 /**
@@ -93,7 +95,12 @@ export function generateComplianceReportingPeriods() {
   for (const p of generateReportingPeriods(CADENCE.monthly, year, now)) {
     result.push(annotate(p, CADENCE.monthly))
     if (isQuarterEnd(p)) {
-      result.push(annotate(quarterly.get(p.period / 3), CADENCE.quarterly))
+      result.push(
+        annotate(
+          quarterly.get(p.period / MONTHS_PER_QUARTER),
+          CADENCE.quarterly
+        )
+      )
     }
   }
   return result
