@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
@@ -16,7 +16,7 @@ export const orsImportStatus = {
   method: 'GET',
   path: orsImportStatusPath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api']
   },
   /**

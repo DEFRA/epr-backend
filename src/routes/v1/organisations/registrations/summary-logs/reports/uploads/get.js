@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { generateSummaryLogUploadsReport } from '#application/summary-log-uploads-report/generate-report.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -21,7 +21,7 @@ export const getSummaryLogUploadsReport = {
   path: summaryLogUploadsReportPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
     response: {

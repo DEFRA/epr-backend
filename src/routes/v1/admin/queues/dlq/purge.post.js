@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { dlqPurgeResponseSchema } from './response.schema.js'
 
@@ -11,7 +11,7 @@ export const dlqPurgePost = {
   method: 'POST',
   path: dlqPurgePath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminDlqPurge]),
     tags: ['api', 'admin'],
     response: {
       schema: dlqPurgeResponseSchema

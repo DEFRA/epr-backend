@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
@@ -13,7 +13,7 @@ export const wasteBalanceGet = {
   path: wasteBalanceGetPath,
   options: {
     auth: {
-      scope: [ROLES.standardUser, ROLES.serviceMaintainer]
+      scope: [ROLES.standardUser, SCOPES.adminRead]
     },
     tags: ['api'],
     validate: {

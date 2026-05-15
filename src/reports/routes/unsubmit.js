@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { auditReportStatusTransition } from '#reports/application/audit.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import {
@@ -18,7 +18,7 @@ export const reportsUnsubmit = {
   path: reportsUnsubmitPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminWrite]
     },
     tags: ['api', 'admin'],
     validate: {

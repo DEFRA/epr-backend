@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteUpdatePayloadSchema } from './put-by-id.schema.js'
 
@@ -19,7 +19,7 @@ export const overseasSiteUpdate = {
   method: 'PUT',
   path: overseasSiteUpdatePath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminWrite]),
     tags: ['api'],
     validate: {
       payload: overseasSiteUpdatePayloadSchema

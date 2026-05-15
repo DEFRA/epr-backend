@@ -7,6 +7,10 @@ const VALID_ENTRA_AUDIENCE = 'test'
 // Must match one of the configured service maintainer email in the app config env var
 const SERVICE_MAINTAINER_EMAIL = 'me@example.com'
 
+// Must match an email in the maintainer list but NOT the write list, so this
+// token resolves to the read-only `service_maintainer` tier.
+const READ_ONLY_MAINTAINER_EMAIL = 'readonly@example.com'
+
 // Generate key pair once at module load time
 // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
 const keyPair = generateKeyPairSync('rsa', {
@@ -122,10 +126,24 @@ const generateEntraIdTokenForUnauthorisedUser = () => {
   return mockEntraIdToken
 }
 
+const generateEntraIdTokenForReadOnlyMaintainer = () => {
+  const mockEntraIdToken = Jwt.token.generate(
+    {
+      ...baseValidObject,
+      preferred_username: READ_ONLY_MAINTAINER_EMAIL
+    },
+    validJwtSecretObject,
+    validGenerateTokenOptions
+  )
+
+  return mockEntraIdToken
+}
+
 export const entraIdMockAuthTokens = {
   validToken: generateValidEntraIdToken(),
   wrongSignatureToken: generateEntraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateEntraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateEntraIdTokenWithWrongAudience(),
-  nonServiceMaintainerUserToken: generateEntraIdTokenForUnauthorisedUser()
+  nonServiceMaintainerUserToken: generateEntraIdTokenForUnauthorisedUser(),
+  readOnlyMaintainerToken: generateEntraIdTokenForReadOnlyMaintainer()
 }
