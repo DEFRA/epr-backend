@@ -68,7 +68,7 @@ describe('stream event insert schema', () => {
   it('rejects missing required top-level fields', () => {
     const { error } = validate({})
     expect(error).toBeDefined()
-    const missingFields = error.details.map((d) => d.path[0])
+    const missingFields = error?.details.map((d) => d.path[0])
     expect(missingFields).toContain('registrationId')
     expect(missingFields).toContain('number')
     expect(missingFields).toContain('kind')

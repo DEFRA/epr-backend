@@ -121,11 +121,11 @@ describe('appendToStream', () => {
 
     it('slot conflict surfaces to caller', async () => {
       const slotConflict = new StreamSlotConflictError('reg-1', 'acc-1', 1)
-      const repository = {
+      const repository = /** @type {*} */ ({
         findLatestByPartition: vi.fn().mockResolvedValue(null),
         findLatestByPartitionAndKind: vi.fn().mockResolvedValue(null),
         appendEvent: vi.fn().mockRejectedValue(slotConflict)
-      }
+      })
 
       await expect(
         appendToStream(
@@ -280,11 +280,11 @@ describe('appendToStream', () => {
 
   describe('unknown kind', () => {
     it('throws for an unrecognised PRN event kind', async () => {
-      const repository = {
+      const repository = /** @type {*} */ ({
         findLatestByPartition: vi.fn().mockResolvedValue(null),
         findLatestByPartitionAndKind: vi.fn().mockResolvedValue(null),
         appendEvent: vi.fn()
-      }
+      })
 
       await expect(
         appendToStream(

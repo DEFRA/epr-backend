@@ -13,19 +13,19 @@ import { testStreamRepositoryContract } from './stream-port.contract.js'
 const DATABASE_NAME = 'epr-backend'
 
 const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
+  mongoClient: async (/** @type {*} */ { db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
     await client.close()
   },
 
-  streamCollection: async ({ mongoClient }, use) => {
+  streamCollection: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     await ensureStreamCollection(database)
     await use(database.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME))
   },
 
-  streamRepository: async ({ mongoClient }, use) => {
+  streamRepository: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database
       .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
@@ -42,7 +42,7 @@ const indexOptionFor = (indexes, name, option) =>
   indexes.find((idx) => idx.name === name)?.[option]
 
 describe('ensureStreamCollection', () => {
-  beforeEach(async ({ mongoClient }) => {
+  beforeEach(async (/** @type {*} */ { mongoClient }) => {
     await mongoClient
       .db(DATABASE_NAME)
       .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
@@ -50,7 +50,7 @@ describe('ensureStreamCollection', () => {
   })
 
   describe('indexes', () => {
-    it('creates the partition_number compound unique index', async ({
+    it('creates the partition_number compound unique index', async (/** @type {*} */ {
       streamCollection
     }) => {
       const indexes = await streamCollection.indexes()
@@ -62,7 +62,7 @@ describe('ensureStreamCollection', () => {
       expect(indexOptionFor(indexes, 'partition_number', 'unique')).toBe(true)
     })
 
-    it('creates the partition_kind_latest index for findLatestByPartitionAndKind', async ({
+    it('creates the partition_kind_latest index for findLatestByPartitionAndKind', async (/** @type {*} */ {
       streamCollection
     }) => {
       const indexes = await streamCollection.indexes()
@@ -74,7 +74,7 @@ describe('ensureStreamCollection', () => {
       })
     })
 
-    it('creates the prn_watermark_catchup index for findEventsByPrnIdAfter', async ({
+    it('creates the prn_watermark_catchup index for findEventsByPrnIdAfter', async (/** @type {*} */ {
       streamCollection
     }) => {
       const indexes = await streamCollection.indexes()
@@ -86,7 +86,9 @@ describe('ensureStreamCollection', () => {
   })
 
   describe('idempotency', () => {
-    it('is safe to call multiple times', async ({ mongoClient }) => {
+    it('is safe to call multiple times', async (/** @type {*} */ {
+      mongoClient
+    }) => {
       const database = mongoClient.db(DATABASE_NAME)
       await ensureStreamCollection(database)
       await expect(ensureStreamCollection(database)).resolves.toBeDefined()
@@ -95,7 +97,9 @@ describe('ensureStreamCollection', () => {
 })
 
 describe('MongoDB stream repository', () => {
-  it('exposes the stream port surface', async ({ mongoClient }) => {
+  it('exposes the stream port surface', async (/** @type {*} */ {
+    mongoClient
+  }) => {
     const database = mongoClient.db(DATABASE_NAME)
     const repository = (await createMongoStreamRepository(database))()
     expect(repository.appendEvent).toBeTypeOf('function')
@@ -110,7 +114,7 @@ describe('MongoDB stream repository', () => {
   })
 
   describe('amount field BSON typing', () => {
-    it('persists balance and payload amount fields as Decimal128', async ({
+    it('persists balance and payload amount fields as Decimal128', async (/** @type {*} */ {
       streamCollection,
       streamRepository
     }) => {

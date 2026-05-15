@@ -9,7 +9,7 @@ const extendedIt = base.extend({
     const storage = []
     await use(storage)
   },
-  streamRepository: async ({ streamStorage }, use) => {
+  streamRepository: async (/** @type {*} */ { streamStorage }, use) => {
     const factory = createInMemoryStreamRepository(streamStorage)
     await use(factory)
   }

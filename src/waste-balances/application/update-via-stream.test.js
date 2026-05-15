@@ -30,12 +30,12 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-const includingSchema = {
+const includingSchema = /** @type {*} */ ({
   classifyForWasteBalance: (data) => ({
     outcome: ROW_OUTCOME.INCLUDED,
     transactionAmount: data.tonnage
   })
-}
+})
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn()
@@ -49,7 +49,7 @@ const accreditation = {
   validTo: '2030-12-31'
 }
 
-const overseasSites = new Map()
+const overseasSites = /** @type {*} */ (new Map())
 const user = {
   id: 'user-1',
   email: 'user@example.test',
@@ -251,12 +251,14 @@ describe('performUpdateViaStream', () => {
     it('treats records with non-INCLUDED outcome as zero contribution', async () => {
       const { findSchemaForProcessingType } =
         await import('#domain/summary-logs/table-schemas/index.js')
-      vi.mocked(findSchemaForProcessingType).mockReturnValue({
-        classifyForWasteBalance: () => ({
-          outcome: 'ignored',
-          reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
+      vi.mocked(findSchemaForProcessingType).mockReturnValue(
+        /** @type {*} */ ({
+          classifyForWasteBalance: () => ({
+            outcome: 'ignored',
+            reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
+          })
         })
-      })
+      )
 
       await performUpdateViaStream({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
