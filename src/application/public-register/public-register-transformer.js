@@ -138,7 +138,7 @@ function processBatch(batch, reportComplianceData) {
  * Transforms organisations into public register row objects
  * Processes in chunks to avoid blocking event loop
  * @param {Organisation[]} organisations - Array of organisation entities
- * @param {ReportComplianceData} [reportComplianceData] - Compliance data to populate period columns
+ * @param {ReportComplianceData} reportComplianceData - Compliance data to populate period columns
  * @returns {Promise<PublicRegisterRow[]>} - Array of row objects ready for CSV export
  */
 export async function transform(organisations, reportComplianceData) {

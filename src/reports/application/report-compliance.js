@@ -78,7 +78,7 @@ export async function generateReportCompliance(
     const periodicReports =
       reportsByRegistration.get(`${org.id}::${registration.id}`) ?? []
 
-    /** @type {Map<string, string>} */
+    /** @type {Map<string, string | null>} */
     const submittedDates = new Map()
 
     for (const year of years) {
