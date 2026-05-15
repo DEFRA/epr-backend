@@ -44,7 +44,7 @@ const snapshotFromMongo = (snapshot) => ({
 const payloadToMongo = (event) => {
   if (event.kind === 'summary-log-submitted') {
     return {
-      summaryLogId: event.payload.summaryLogId,
+      summaryLogId: /** @type {*} */ (event.payload).summaryLogId,
       creditTotal: toDecimal128(/** @type {*} */ (event.payload).creditTotal)
     }
   }
