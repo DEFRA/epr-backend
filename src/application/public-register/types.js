@@ -1,5 +1,5 @@
 /**
- * @typedef {Object} PublicRegisterRow
+ * @typedef {Object} PublicRegisterRowBase
  * @property {string} type - Waste processing type (e.g., 'Reprocessor', 'Exporter')
  * @property {string} businessName - Business name
  * @property {string} registeredOffice - Registered office address
@@ -16,6 +16,20 @@
  * @property {string} tonnageBand - Tonnage band (empty string if no accreditation)
  * @property {string} activeDate - Active date in DD/MM/YYYY format (empty string if no accreditation)
  * @property {string} dateLastChanged - Date status last changed in DD/MM/YYYY format (empty string if no accreditation)
+ */
+
+/**
+ * @typedef {'Jan Report' | 'Feb Report' | 'Mar Report' | 'Apr Report' |
+ *           'May Report' | 'Jun Report' | 'Jul Report' | 'Aug Report' |
+ *           'Sep Report' | 'Oct Report' | 'Nov Report' | 'Dec Report' |
+ *           'Q1 Report' | 'Q2 Report' | 'Q3 Report' | 'Q4 Report'} CompliancePeriodLabel
+ */
+
+/**
+ * Dynamic compliance fields are keyed by period label (e.g. 'Jan Report', 'Q1 Report').
+ * Values: 'DD/MM/YYYY' if submitted, 'N/A' if the period cadence does not apply, '' otherwise.
+ *
+ * @typedef {PublicRegisterRowBase & Partial<Record<CompliancePeriodLabel, string>>} PublicRegisterRow
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

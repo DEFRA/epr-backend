@@ -6,13 +6,11 @@ import { generateReportingPeriods } from '#reports/domain/generate-reporting-per
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { formatMaterial, capitalize } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
+import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import {
-  REG_ACC_STATUS,
-  REGULATOR_DISPLAY
-} from '#domain/organisations/model.js'
-import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
-
-const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
+  getReportableRegistrations,
+  resolveAccreditationNumber
+} from '#domain/organisations/registration-utils.js'
 
 /**
  * @typedef {Object} TonnageFields
@@ -54,35 +52,6 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /** @typedef {SubmissionBaseFields & TonnageFields} ReportSubmissionsRow */
 
-/** @type {Set<string>} */
-const INCLUDED_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.SUSPENDED
-])
-
-/**
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
- * @returns {Promise<Array<{ org: Organisation, registration: RegistrationApproved }>>}
- */
-async function getRegistrations(organisationsRepository) {
-  const orgs = await organisationsRepository.findAll()
-  return orgs
-    .filter((org) => !TEST_ORGANISATIONS.has(org.orgId))
-    .flatMap((org) =>
-      org.registrations
-        .filter((registration) => INCLUDED_STATUSES.has(registration.status))
-        .map((registration) => ({
-          org,
-          registration: /** @type {RegistrationApproved} */ (registration)
-        }))
-    )
-}
-
-/**
- * @param {RegistrationApproved} registration
- * @param {Organisation} org
- * @returns {string}
- */
 /**
  * @param {number | null | undefined} value
  * @returns {string}
@@ -104,17 +73,6 @@ function sumSentOn(wasteSent) {
       wasteSent.tonnageSentToExporter +
       wasteSent.tonnageSentToAnotherSite
   )
-}
-
-function resolveAccreditationNumber(registration, org) {
-  if (!registration.accreditationId) {
-    return ''
-  }
-  const accreditation = org.accreditations.find(
-    (a) =>
-      a.id === registration.accreditationId && INCLUDED_STATUSES.has(a.status)
-  )
-  return accreditation?.accreditationNumber ?? ''
 }
 
 /**
@@ -218,7 +176,9 @@ async function buildSubmissionRows(
   currentYear,
   reportsByKey
 ) {
-  const registrations = await getRegistrations(organisationsRepository)
+  const registrations = getReportableRegistrations(
+    await organisationsRepository.findAll()
+  )
 
   /** @type {ReportSubmissionsRow[]} */
   return registrations.flatMap(({ org, registration }) => {

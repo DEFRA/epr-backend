@@ -4,6 +4,7 @@
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
+/** @import {ReportComplianceData} from '#reports/application/report-compliance.js' */
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import {
@@ -28,13 +29,32 @@ const INCLUDED_STATUSES = new Set([
 const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
+function buildReportComplianceFields(periods, registrationReportSubmissions) {
+  return Object.fromEntries(
+    periods.map((period) => {
+      if (!registrationReportSubmissions.submittedDates.has(period.key)) {
+        return [period.label, 'N/A']
+      }
+      const date = registrationReportSubmissions.submittedDates.get(period.key)
+      return [period.label, date ? formatDate(date) : '']
+    })
+  )
+}
+
 /**
  * @param {Organisation} org
  * @param {*} registration
  * @param {*} accreditation
+ * @param {Record<string, string>} reportComplianceFields
+
  * @returns {PublicRegisterRow}
  */
-function transformRegAcc(org, registration, accreditation) {
+function transformRegAcc(
+  org,
+  registration,
+  accreditation,
+  reportComplianceFields
+) {
   return {
     type: capitalize(registration.wasteProcessingType),
     businessName: org.companyDetails.name,
@@ -56,7 +76,8 @@ function transformRegAcc(org, registration, accreditation) {
     accreditationNo: accreditation?.accreditationNumber || '',
     tonnageBand: formatTonnageBand(accreditation?.prnIssuance?.tonnageBand),
     activeDate: formatDate(accreditation?.validFrom),
-    dateLastChanged: formatDate(getLastStatusUpdateDate(accreditation))
+    dateLastChanged: formatDate(getLastStatusUpdateDate(accreditation)),
+    ...reportComplianceFields
   }
 }
 
@@ -86,9 +107,11 @@ function isTestOrg(org) {
 
 /**
  * @param {Organisation[]} batch
+ * @param {ReportComplianceData} reportComplianceData
  * @returns {PublicRegisterRow[]}
  */
-function processBatch(batch) {
+function processBatch(batch, reportComplianceData) {
+  const { periods, entries } = reportComplianceData
   return batch
     .filter((org) => !isTestOrg(org))
     .flatMap((org) =>
@@ -97,7 +120,16 @@ function processBatch(batch) {
           registration,
           org.accreditations
         )
-        return transformRegAcc(org, registration, accreditation)
+        const entry = entries.get(registration.id)
+        const reportComplianceFields = entry
+          ? buildReportComplianceFields(periods, entry)
+          : {}
+        return transformRegAcc(
+          org,
+          registration,
+          accreditation,
+          reportComplianceFields
+        )
       })
     )
 }
@@ -106,13 +138,14 @@ function processBatch(batch) {
  * Transforms organisations into public register row objects
  * Processes in chunks to avoid blocking event loop
  * @param {Organisation[]} organisations - Array of organisation entities
+ * @param {ReportComplianceData} reportComplianceData - Compliance data to populate period columns
  * @returns {Promise<PublicRegisterRow[]>} - Array of row objects ready for CSV export
  */
-export async function transform(organisations) {
+export async function transform(organisations, reportComplianceData) {
   const results = []
 
   for (const batch of chunk(organisations, BATCH_SIZE)) {
-    results.push(...processBatch(batch))
+    results.push(...processBatch(batch, reportComplianceData))
     await new Promise((resolve) => setImmediate(resolve))
   }
 
