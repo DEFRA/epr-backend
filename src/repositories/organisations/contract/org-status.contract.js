@@ -144,6 +144,49 @@ export const testOrgStatusTransitionBehaviour = (it) => {
         expect(result.status).toBe(ORGANISATION_STATUS.APPROVED)
       })
 
+      it('allows transition from APPROVED back to CREATED', async () => {
+        const orgData = buildOrganisation()
+        await repository.insert(orgData)
+
+        const approvedUpdate = prepareOrgUpdate(orgData, {
+          status: ORGANISATION_STATUS.APPROVED,
+          registrations: [
+            {
+              ...orgData.registrations[0],
+              status: REG_ACC_STATUS.APPROVED,
+              registrationNumber: 'REG12345',
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ]
+        })
+
+        await repository.replace(orgData.id, 1, approvedUpdate)
+
+        let result = await repository.findById(orgData.id, 2)
+        expect(result.status).toBe(ORGANISATION_STATUS.APPROVED)
+
+        const createdUpdate = prepareOrgUpdate(orgData, {
+          status: ORGANISATION_STATUS.CREATED,
+          registrations: [
+            {
+              ...orgData.registrations[0],
+              status: REG_ACC_STATUS.APPROVED,
+              registrationNumber: 'REG12345',
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
+              reprocessingType: REPROCESSING_TYPE.INPUT
+            }
+          ]
+        })
+
+        await repository.replace(orgData.id, 2, createdUpdate)
+
+        result = await repository.findById(orgData.id, 3)
+        expect(result.status).toBe(ORGANISATION_STATUS.CREATED)
+      })
+
       it('allows transition from APPROVED to ACTIVE with linked defra organisation', async () => {
         const orgData = buildOrganisation()
         await repository.insert(orgData)
