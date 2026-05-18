@@ -188,7 +188,8 @@ describe('syncFromSummaryLog', () => {
     ).toHaveBeenCalledWith(expect.any(Array), {
       user: TEST_USER,
       accreditation,
-      overseasSites: ORS_VALIDATION_DISABLED
+      overseasSites: ORS_VALIDATION_DISABLED,
+      summaryLogId: expect.any(String)
     })
   })
 
@@ -903,7 +904,8 @@ describe('syncFromSummaryLog', () => {
           validFrom: '2023-01-01',
           validTo: '2023-12-31'
         },
-        overseasSites: {}
+        overseasSites: {},
+        summaryLogId: expect.any(String)
       }
     )
   })
@@ -978,7 +980,8 @@ describe('syncFromSummaryLog', () => {
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       },
-      overseasSites: { '001': { validFrom } }
+      overseasSites: { '001': { validFrom } },
+      summaryLogId: expect.any(String)
     })
   })
 

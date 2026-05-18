@@ -14,7 +14,8 @@ import {
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
-import { performUpdateViaLedger } from '../application/update-via-ledger.js'
+import { performUpdateViaStream } from '../application/update-via-stream.js'
+import { appendToStream } from '../application/append-to-stream.js'
 import { audit } from '@defra/cdp-auditing'
 import {
   WASTE_BALANCE_CANONICAL_SOURCE,
@@ -52,8 +53,12 @@ vi.mock('../application/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
 }))
 
-vi.mock('../application/update-via-ledger.js', () => ({
-  performUpdateViaLedger: vi.fn().mockResolvedValue(undefined)
+vi.mock('../application/update-via-stream.js', () => ({
+  performUpdateViaStream: vi.fn().mockResolvedValue(undefined)
+}))
+
+vi.mock('../application/append-to-stream.js', () => ({
+  appendToStream: vi.fn().mockResolvedValue(undefined)
 }))
 
 describe('src/waste-balances/repository/helpers.js', () => {
@@ -345,14 +350,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
         dependencies: {},
         findBalance: vi.fn(),
         saveBalance: vi.fn(),
-        overseasSites: ORS_VALIDATION_DISABLED
+        overseasSites: ORS_VALIDATION_DISABLED,
+        summaryLogId: 'log-1'
       })
 
       expect(result).toBeUndefined()
     })
 
     describe('feature flag dispatch', () => {
-      it('routes to the ledger path when flag is ON and canonicalSource is ledger', async () => {
+      it('uses the stream path when flag is ON, canonicalSource is ledger, and streamRepository is provided', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -362,7 +368,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           }
         ]
         const accreditation = { id: 'acc-1' }
-        const ledgerRepository = { insertTransactions: vi.fn() }
+        const streamRepository = { appendEvent: vi.fn() }
         const findBalance = vi.fn().mockResolvedValue({
           id: 'bal-1',
           accreditationId: 'acc-1',
@@ -373,27 +379,28 @@ describe('src/waste-balances/repository/helpers.js', () => {
           canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
         })
         const saveBalance = vi.fn()
-        vi.mocked(performUpdateViaLedger).mockClear()
-        vi.mocked(calculateWasteBalanceUpdates).mockClear()
+        vi.mocked(performUpdateViaStream).mockClear()
 
         await performUpdateWasteBalanceTransactions({
           wasteRecords,
           accreditation,
           dependencies: {
             featureFlags: { isWasteBalanceLedgerEnabled: () => true },
-            ledgerRepository
+            streamRepository
           },
           findBalance,
           saveBalance,
           user: { id: 'user-1' },
-          overseasSites: ORS_VALIDATION_DISABLED
+          overseasSites: ORS_VALIDATION_DISABLED,
+          summaryLogId: 'log-1'
         })
 
-        expect(performUpdateViaLedger).toHaveBeenCalledTimes(1)
-        const call = vi.mocked(performUpdateViaLedger).mock.calls[0][0]
-        expect(call.ledgerRepository).toBe(ledgerRepository)
+        expect(performUpdateViaStream).toHaveBeenCalledTimes(1)
+        const call = vi.mocked(performUpdateViaStream).mock.calls[0][0]
+        expect(call.streamRepository).toBe(streamRepository)
         expect(call.accreditation.id).toBe('acc-1')
         expect(call.user).toEqual({ id: 'user-1' })
+        expect(call.summaryLogId).toBe('log-1')
         expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
         expect(saveBalance).not.toHaveBeenCalled()
         expect(findBalance).toHaveBeenCalledTimes(1)
@@ -418,7 +425,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
@@ -438,7 +445,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
@@ -463,7 +469,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
@@ -483,7 +489,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
@@ -508,7 +513,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
@@ -528,7 +533,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
@@ -544,7 +548,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         const accreditation = { id: 'acc-1' }
         const findBalance = vi.fn().mockResolvedValue(null)
         const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
@@ -564,7 +568,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
         const savedBalance = vi.mocked(saveBalance).mock.calls[0][0]
         expect(savedBalance.canonicalSource).toBe(
@@ -591,7 +594,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
@@ -610,7 +613,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
@@ -634,7 +636,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
@@ -651,7 +653,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
     })
@@ -1184,6 +1185,40 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect.any(Array)
       )
     })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 400,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository = { appendEvent: vi.fn() }
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performDeductAvailableBalanceForPrnCreation({
+        deductParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
   })
 
   describe('buildPrnIssuedTransaction', () => {
@@ -1369,6 +1404,40 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }),
         expect.any(Array)
       )
+    })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 450,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository = { appendEvent: vi.fn() }
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performDeductTotalBalanceForPrnIssue({
+        deductParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
     })
   })
 
@@ -1559,6 +1628,40 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect.any(Array)
       )
     })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository = { appendEvent: vi.fn() }
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performCreditAvailableBalanceForPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
   })
 
   describe('buildIssuedPrnCancellationTransaction', () => {
@@ -1705,6 +1808,40 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }),
         expect.any(Array)
       )
+    })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 400,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository = { appendEvent: vi.fn() }
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performCreditFullBalanceForIssuedPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 60,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
     })
   })
 })

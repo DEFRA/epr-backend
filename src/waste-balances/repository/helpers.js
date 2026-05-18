@@ -2,7 +2,9 @@ import Boom from '@hapi/boom'
 import { validateAccreditationId } from './validation.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { recordWasteBalanceUpdateAudit } from '../application/audit.js'
-import { performUpdateViaLedger } from '../application/update-via-ledger.js'
+import { performUpdateViaStream } from '../application/update-via-stream.js'
+import { appendToStream } from '../application/append-to-stream.js'
+import { STREAM_EVENT_KIND } from './stream-schema.js'
 import { randomUUID } from 'node:crypto'
 import {
   classifyRow,
@@ -151,7 +153,8 @@ const calculateAndApplyUpdates = async (
  * Dispatches on the `wasteBalanceLedger` feature flag and the
  * per-accreditation `canonicalSource` marker:
  * - flag OFF — embedded `transactions[]` array
- * - flag ON, marker `'ledger'` — ledger-append path (ADR 0031)
+ * - flag ON, marker `'ledger'` — event stream path
+ * - flag ON, marker `'ledger'` (legacy ledger) — ledger-append path (ADR 0031)
  * - flag ON, marker `'embedded'`, `'migrating'`, or no balance yet — embedded
  *   `transactions[]` array
  *
@@ -166,7 +169,7 @@ const calculateAndApplyUpdates = async (
  *
  * The marker drives per-accreditation rollout: a freshly enabled environment
  * keeps every accreditation on the embedded array until a rebuild replays
- * authoritative history into the ledger and flips the marker. Both paths
+ * authoritative history into the stream and flips the marker. Both paths
  * preserve audit emission.
  *
  * @param {Object} params
@@ -175,12 +178,40 @@ const calculateAndApplyUpdates = async (
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('../repository/ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
+ * @param {import('../repository/stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
+ * @param {string} params.summaryLogId
  */
+
+const dispatchToStream = async ({
+  annotatedRecords,
+  accreditation,
+  validatedAccreditationId,
+  dependencies,
+  user,
+  overseasSites,
+  summaryLogId
+}) => {
+  await performUpdateViaStream({
+    wasteRecords: annotatedRecords,
+    accreditation: { ...accreditation, id: validatedAccreditationId },
+    streamRepository:
+      /** @type {import('./stream-port.js').StreamRepository} */ (
+        dependencies.streamRepository
+      ),
+    dependencies: {
+      systemLogsRepository: dependencies.systemLogsRepository
+    },
+    user,
+    overseasSites,
+    summaryLogId
+  })
+}
+
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
   accreditation,
@@ -188,7 +219,8 @@ export const performUpdateWasteBalanceTransactions = async ({
   findBalance,
   saveBalance,
   user,
-  overseasSites
+  overseasSites,
+  summaryLogId
 }) => {
   const annotatedRecords = markExcludedRecords(wasteRecords)
 
@@ -203,18 +235,14 @@ export const performUpdateWasteBalanceTransactions = async ({
     if (
       existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
     ) {
-      await performUpdateViaLedger({
-        wasteRecords: annotatedRecords,
-        accreditation: { ...accreditation, id: validatedAccreditationId },
-        ledgerRepository:
-          /** @type {import('./ledger-port.js').LedgerRepository} */ (
-            dependencies.ledgerRepository
-          ),
-        dependencies: {
-          systemLogsRepository: dependencies.systemLogsRepository
-        },
+      await dispatchToStream({
+        annotatedRecords,
+        accreditation,
+        validatedAccreditationId,
+        dependencies,
         user,
-        overseasSites
+        overseasSites,
+        summaryLogId
       })
       return
     }
@@ -286,24 +314,89 @@ export const buildPrnCreationTransaction = ({
 })
 
 /**
+ * Append a PRN event to the stream when the balance is on the stream path.
+ *
+ * @param {Object} params
+ * @param {import('../repository/stream-port.js').StreamRepository} params.streamRepository
+ * @param {string} params.registrationId
+ * @param {string} params.accreditationId
+ * @param {string} params.organisationId
+ * @param {string} params.prnId
+ * @param {number} params.tonnage
+ * @param {string} params.userId
+ * @param {import('./stream-schema.js').StreamEventKind} params.streamKind
+ */
+const appendPrnStreamEvent = async ({
+  streamRepository,
+  registrationId,
+  accreditationId,
+  organisationId,
+  prnId,
+  tonnage,
+  userId,
+  streamKind
+}) => {
+  await appendToStream(
+    {
+      repository: streamRepository,
+      registrationId,
+      accreditationId,
+      organisationId
+    },
+    {
+      kind: streamKind,
+      payload: { prnId, amount: tonnage },
+      createdBy: { id: userId, name: userId }
+    }
+  )
+}
+
+/**
  * Deduct available balance for PRN creation (ringfencing tonnage).
  *
  * @param {Object} params
  * @param {import('./port.js').DeductAvailableBalanceParams} params.deductParams
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {Object} [params.dependencies]
+ * @param {import('../repository/stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
   deductParams,
   findBalance,
-  saveBalance
+  saveBalance,
+  dependencies
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = deductParams
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
 
   if (!wasteBalance) {
+    return
+  }
+
+  if (
+    wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
+    dependencies.streamRepository
+  ) {
+    await appendPrnStreamEvent({
+      streamRepository: dependencies.streamRepository,
+      registrationId,
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId,
+      streamKind: STREAM_EVENT_KIND.PRN_CREATED
+    })
     return
   }
 
@@ -371,14 +464,39 @@ export const buildPrnIssuedTransaction = ({
 export const performDeductTotalBalanceForPrnIssue = async ({
   deductParams,
   findBalance,
-  saveBalance
+  saveBalance,
+  dependencies
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = deductParams
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
 
   if (!wasteBalance) {
+    return
+  }
+
+  if (
+    wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
+    dependencies.streamRepository
+  ) {
+    await appendPrnStreamEvent({
+      streamRepository: dependencies.streamRepository,
+      registrationId,
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId,
+      streamKind: STREAM_EVENT_KIND.PRN_ISSUED
+    })
     return
   }
 
@@ -488,9 +606,17 @@ export const buildIssuedPrnCancellationTransaction = ({
 export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   creditParams,
   findBalance,
-  saveBalance
+  saveBalance,
+  dependencies
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = creditParams
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
@@ -499,6 +625,23 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     throw Boom.internal(
       `Waste balance not found for accreditation ${validatedAccreditationId} during PRN cancellation`
     )
+  }
+
+  if (
+    wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
+    dependencies.streamRepository
+  ) {
+    await appendPrnStreamEvent({
+      streamRepository: dependencies.streamRepository,
+      registrationId,
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId,
+      streamKind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+    })
+    return
   }
 
   const transaction = buildIssuedPrnCancellationTransaction({
@@ -530,9 +673,17 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
 export const performCreditAvailableBalanceForPrnCancellation = async ({
   creditParams,
   findBalance,
-  saveBalance
+  saveBalance,
+  dependencies
 }) => {
-  const { accreditationId, prnId, tonnage, userId } = creditParams
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const wasteBalance = await findBalance(validatedAccreditationId)
@@ -541,6 +692,23 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
     throw Boom.internal(
       `Waste balance not found for accreditation ${validatedAccreditationId} during PRN cancellation`
     )
+  }
+
+  if (
+    wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
+    dependencies.streamRepository
+  ) {
+    await appendPrnStreamEvent({
+      streamRepository: dependencies.streamRepository,
+      registrationId,
+      accreditationId: validatedAccreditationId,
+      organisationId,
+      prnId,
+      tonnage,
+      userId,
+      streamKind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
+    })
+    return
   }
 
   const transaction = buildPrnCancellationTransaction({

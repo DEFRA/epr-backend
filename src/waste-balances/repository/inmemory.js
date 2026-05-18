@@ -180,7 +180,7 @@ export const createInMemoryWasteBalancesRepository = (
     ),
     updateWasteBalanceTransactions: async (
       wasteRecords,
-      { user, accreditation, overseasSites }
+      { user, accreditation, overseasSites, summaryLogId }
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
@@ -189,35 +189,40 @@ export const createInMemoryWasteBalancesRepository = (
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage),
         user,
-        overseasSites
+        overseasSites,
+        summaryLogId
       })
     },
     deductAvailableBalanceForPrnCreation: async (deductParams) => {
       return performDeductAvailableBalanceForPrnCreation({
         deductParams,
         findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage)
+        saveBalance: saveBalance(wasteBalanceStorage),
+        dependencies
       })
     },
     deductTotalBalanceForPrnIssue: async (deductParams) => {
       return performDeductTotalBalanceForPrnIssue({
         deductParams,
         findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage)
+        saveBalance: saveBalance(wasteBalanceStorage),
+        dependencies
       })
     },
     creditAvailableBalanceForPrnCancellation: async (creditParams) => {
       return performCreditAvailableBalanceForPrnCancellation({
         creditParams,
         findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage)
+        saveBalance: saveBalance(wasteBalanceStorage),
+        dependencies
       })
     },
     creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
       return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
         findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage)
+        saveBalance: saveBalance(wasteBalanceStorage),
+        dependencies
       })
     },
     flipCanonicalSourceToMigrating:

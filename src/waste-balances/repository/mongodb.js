@@ -237,7 +237,7 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
     findByAccreditationIds: performFindByAccreditationIds(db, ledgerRepository),
     updateWasteBalanceTransactions: async (
       wasteRecords,
-      { user, accreditation, overseasSites }
+      { user, accreditation, overseasSites, summaryLogId }
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
@@ -246,35 +246,40 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
         findBalance: findBalance(db),
         saveBalance: saveBalance(db),
         user,
-        overseasSites
+        overseasSites,
+        summaryLogId
       })
     },
     deductAvailableBalanceForPrnCreation: async (deductParams) => {
       return performDeductAvailableBalanceForPrnCreation({
         deductParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db)
+        saveBalance: saveBalance(db),
+        dependencies
       })
     },
     deductTotalBalanceForPrnIssue: async (deductParams) => {
       return performDeductTotalBalanceForPrnIssue({
         deductParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db)
+        saveBalance: saveBalance(db),
+        dependencies
       })
     },
     creditAvailableBalanceForPrnCancellation: async (creditParams) => {
       return performCreditAvailableBalanceForPrnCancellation({
         creditParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db)
+        saveBalance: saveBalance(db),
+        dependencies
       })
     },
     creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
       return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db)
+        saveBalance: saveBalance(db),
+        dependencies
       })
     },
     flipCanonicalSourceToMigrating: performFlipCanonicalSourceToMigrating(db),

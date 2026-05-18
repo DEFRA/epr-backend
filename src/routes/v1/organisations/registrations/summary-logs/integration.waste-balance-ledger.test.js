@@ -7,7 +7,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
-import { LEDGER_SOURCE_KIND } from '#waste-balances/repository/ledger-schema.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 import {
   asStandardUser,
@@ -22,7 +22,7 @@ import {
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
 
-describe('Waste balance ledger (Exporter, flag ON)', () => {
+describe('Waste balance stream (Exporter, flag ON)', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
@@ -48,7 +48,7 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
   })
 
   const uploadAndValidate = async (env, summaryLogId, fileId, uploadData) => {
-    const { server, fileDataMap, organisationId, registrationId } = env
+    const { server, organisationId, registrationId, fileDataMap } = env
     fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
 
     await server.inject({
@@ -59,8 +59,9 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
         registrationId,
         UPLOAD_STATUS.COMPLETE,
         fileId,
-        'waste-data.xlsx'
-      )
+        `${fileId}.xlsx`
+      ),
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     await pollForValidation(
@@ -100,7 +101,7 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     await submitAndPoll(env, summaryLogId)
   }
 
-  const seedLedgerBalance = (organisationId) => ({
+  const seedStreamBalance = (organisationId) => ({
     id: 'seeded-balance',
     accreditationId: 'ACC-123',
     organisationId,
@@ -112,19 +113,19 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
     canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
   })
 
-  const setupLedger = () => {
+  const setupStream = () => {
     const organisationId = new ObjectId().toString()
     return setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId,
       featureFlagOverrides: { wasteBalanceLedger: true },
-      existingWasteBalances: [seedLedgerBalance(organisationId)]
+      existingWasteBalances: [seedStreamBalance(organisationId)]
     })
   }
 
-  it('appends one ledger transaction per included row on first upload', async () => {
-    const env = await setupLedger()
-    const { ledgerRepository, accreditationId, wasteBalancesRepository } = env
+  it('appends a single stream event with aggregate creditTotal on first upload', async () => {
+    const env = await setupStream()
+    const { streamRepository, registrationId, wasteBalancesRepository } = env
 
     await performSubmission(
       env,
@@ -141,52 +142,48 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
       ])
     )
 
-    const latest =
-      await ledgerRepository.findLatestByAccreditationId(accreditationId)
+    const latest = await streamRepository.findLatestByPartition(
+      registrationId,
+      'ACC-123'
+    )
     expect(latest).not.toBeNull()
-    expect(latest.number).toBe(2)
+    expect(latest.number).toBe(1)
+    expect(latest.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
+    expect(latest.payload.creditTotal).toBe(300)
     expect(latest.closingBalance).toEqual({
       amount: 300,
       availableAmount: 300
     })
-    expect(latest.source.kind).toBe(LEDGER_SOURCE_KIND.SUMMARY_LOG_ROW)
 
-    const lookupCredited =
-      await ledgerRepository.findLatestCreditedAmountsByWasteRecords(
-        accreditationId,
-        [
-          { type: 'exported', rowId: '1001' },
-          { type: 'exported', rowId: '1002' }
-        ]
-      )
-    expect(lookupCredited({ type: 'exported', rowId: '1001' })).toBe(100)
-    expect(lookupCredited({ type: 'exported', rowId: '1002' })).toBe(200)
-
-    const embeddedBalance =
-      await wasteBalancesRepository.findByAccreditationId(accreditationId)
+    const storage = wasteBalancesRepository._getStorageForTesting()
+    const embeddedBalance = storage.find((b) => b.accreditationId === 'ACC-123')
     expect(embeddedBalance?.transactions ?? []).toHaveLength(0)
   })
 
-  it('appends nothing on a re-upload of identical data (idempotency invariant)', async () => {
-    const env = await setupLedger()
-    const { ledgerRepository, accreditationId } = env
+  it('computes correct delta on re-upload with identical data', async () => {
+    const env = await setupStream()
+    const { streamRepository, registrationId } = env
     const data = createUploadData([{ rowId: 2001, exportTonnage: 50 }])
 
     await performSubmission(env, 'log-a', 'file-a', data)
-    const afterFirst =
-      await ledgerRepository.findLatestByAccreditationId(accreditationId)
+    const afterFirst = await streamRepository.findLatestByPartition(
+      registrationId,
+      'ACC-123'
+    )
 
     await performSubmission(env, 'log-b', 'file-b', data)
-    const afterSecond =
-      await ledgerRepository.findLatestByAccreditationId(accreditationId)
+    const afterSecond = await streamRepository.findLatestByPartition(
+      registrationId,
+      'ACC-123'
+    )
 
-    expect(afterSecond.number).toBe(afterFirst.number)
+    expect(afterSecond.number).toBe(2)
     expect(afterSecond.closingBalance).toEqual(afterFirst.closingBalance)
   })
 
-  it('emits a single delta when one row is corrected on re-upload', async () => {
-    const env = await setupLedger()
-    const { ledgerRepository, accreditationId } = env
+  it('computes correct delta when a row is corrected on re-upload', async () => {
+    const env = await setupStream()
+    const { streamRepository, registrationId } = env
 
     await performSubmission(
       env,
@@ -222,23 +219,20 @@ describe('Waste balance ledger (Exporter, flag ON)', () => {
       ])
     )
 
-    const latest =
-      await ledgerRepository.findLatestByAccreditationId(accreditationId)
-    expect(latest.number).toBe(3)
-    expect(latest.type).toBe('debit')
-    expect(latest.amount).toBe(100)
+    const latest = await streamRepository.findLatestByPartition(
+      registrationId,
+      'ACC-123'
+    )
+    expect(latest.number).toBe(2)
+    expect(latest.payload.creditTotal).toBe(200)
     expect(latest.closingBalance).toEqual({
       amount: 200,
       availableAmount: 200
     })
-    expect(latest.source.summaryLogRow.wasteRecord).toMatchObject({
-      type: 'exported',
-      rowId: '3002'
-    })
   })
 
-  it('audits each successful ledger append into the system-logs repository', async () => {
-    const env = await setupLedger()
+  it('audits each successful stream append into the system-logs repository', async () => {
+    const env = await setupStream()
     const { systemLogsForBalanceAudit } = env
 
     systemLogsForBalanceAudit.insert.mockClear()

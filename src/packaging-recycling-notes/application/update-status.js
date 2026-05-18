@@ -109,7 +109,14 @@ async function issuePrnWithRetry(repository, updateParams, prnParams) {
  * @param {Object} params
  */
 async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -120,6 +127,7 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
 
     await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -139,7 +147,14 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -150,6 +165,7 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
 
     await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -170,13 +186,21 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
     await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -197,13 +221,21 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
     await wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -485,6 +517,7 @@ async function performCreation({
   balanceEffectsParams,
   newStatus,
   organisationId,
+  registrationId,
   accreditationId,
   user,
   currentStatus,
@@ -514,6 +547,7 @@ async function performCreation({
       () =>
         wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
           accreditationId,
+          registrationId,
           organisationId,
           prnId: id,
           tonnage: prn.tonnage,
@@ -608,6 +642,7 @@ async function performTransition({
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
  * @param {string} params.organisationId
+ * @param {string} params.registrationId
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
@@ -623,6 +658,7 @@ export async function updatePrnStatus({
   logger,
   id,
   organisationId,
+  registrationId,
   accreditationId,
   newStatus,
   actor,
@@ -647,6 +683,7 @@ export async function updatePrnStatus({
     currentStatus,
     newStatus,
     accreditationId,
+    registrationId,
     organisationId,
     prnId: id,
     tonnage: prn.tonnage,
@@ -677,6 +714,7 @@ export async function updatePrnStatus({
     balanceEffectsParams,
     newStatus,
     organisationId,
+    registrationId,
     accreditationId,
     user,
     currentStatus,
