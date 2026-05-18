@@ -147,6 +147,33 @@ const calculateAndApplyUpdates = async (
   }
 }
 
+const dispatchToStream = async ({
+  annotatedRecords,
+  accreditation,
+  validatedAccreditationId,
+  dependencies,
+  user,
+  overseasSites,
+  summaryLogId
+}) => {
+  await performUpdateViaStream({
+    wasteRecords: annotatedRecords,
+    accreditation: { ...accreditation, id: validatedAccreditationId },
+    streamRepository:
+      /** @type {import('./stream-port.js').StreamRepository} */ (
+        dependencies.streamRepository
+      ),
+    dependencies: {
+      systemLogsRepository: dependencies.systemLogsRepository
+    },
+    user: /** @type {import('#domain/summary-logs/worker/port.js').SubmitUser} */ (
+      user
+    ),
+    overseasSites,
+    summaryLogId: /** @type {string} */ (summaryLogId)
+  })
+}
+
 /**
  * Shared logic for updating waste balance transactions.
  *
@@ -173,7 +200,7 @@ const calculateAndApplyUpdates = async (
  * preserve audit emission.
  *
  * @param {Object} params
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
+ * @param {import('#domain/waste-records/model.js').WasteRecord[] | any[]} params.wasteRecords
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
@@ -182,36 +209,10 @@ const calculateAndApplyUpdates = async (
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
- * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
+ * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} [params.user]
  * @param {OverseasSitesContext} params.overseasSites - Resolved ORS lookup map or ORS_VALIDATION_DISABLED
- * @param {string} params.summaryLogId
+ * @param {string} [params.summaryLogId]
  */
-
-const dispatchToStream = async ({
-  annotatedRecords,
-  accreditation,
-  validatedAccreditationId,
-  dependencies,
-  user,
-  overseasSites,
-  summaryLogId
-}) => {
-  await performUpdateViaStream({
-    wasteRecords: annotatedRecords,
-    accreditation: { ...accreditation, id: validatedAccreditationId },
-    streamRepository:
-      /** @type {import('./stream-port.js').StreamRepository} */ (
-        dependencies.streamRepository
-      ),
-    dependencies: {
-      systemLogsRepository: dependencies.systemLogsRepository
-    },
-    user,
-    overseasSites,
-    summaryLogId
-  })
-}
-
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
   accreditation,
@@ -271,7 +272,9 @@ export const performUpdateWasteBalanceTransactions = async ({
     amount: updatedBalance.amount,
     availableAmount: updatedBalance.availableAmount,
     newTransactions,
-    user
+    user: /** @type {import('#domain/summary-logs/worker/port.js').SubmitUser} */ (
+      user
+    )
   })
 }
 
@@ -359,7 +362,7 @@ const appendPrnStreamEvent = async ({
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
- * @param {import('../repository/stream-port.js').StreamRepository} [params.dependencies.streamRepository]
+ * @param {import('./stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
   deductParams,
@@ -385,7 +388,7 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
 
   if (
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
-    dependencies.streamRepository
+    dependencies?.streamRepository
   ) {
     await appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
@@ -460,6 +463,8 @@ export const buildPrnIssuedTransaction = ({
  * @param {import('./port.js').DeductTotalBalanceParams} params.deductParams
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {Object} [params.dependencies]
+ * @param {import('./stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  */
 export const performDeductTotalBalanceForPrnIssue = async ({
   deductParams,
@@ -485,7 +490,7 @@ export const performDeductTotalBalanceForPrnIssue = async ({
 
   if (
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
-    dependencies.streamRepository
+    dependencies?.streamRepository
   ) {
     await appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
@@ -602,6 +607,8 @@ export const buildIssuedPrnCancellationTransaction = ({
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {Object} [params.dependencies]
+ * @param {import('./stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  */
 export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   creditParams,
@@ -629,7 +636,7 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
 
   if (
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
-    dependencies.streamRepository
+    dependencies?.streamRepository
   ) {
     await appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
@@ -669,6 +676,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
  * @param {import('./port.js').CreditAvailableBalanceParams} params.creditParams
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {Object} [params.dependencies]
+ * @param {import('./stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  */
 export const performCreditAvailableBalanceForPrnCancellation = async ({
   creditParams,
@@ -696,7 +705,7 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
 
   if (
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
-    dependencies.streamRepository
+    dependencies?.streamRepository
   ) {
     await appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,

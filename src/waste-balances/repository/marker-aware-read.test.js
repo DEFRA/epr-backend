@@ -4,6 +4,7 @@ import { resolveBalanceAmounts } from './marker-aware-read.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 
 const buildBalance = (overrides = {}) => ({
+  id: 'bal-1',
   accreditationId: 'acc-1',
   registrationId: 'reg-1',
   organisationId: 'org-1',
@@ -11,12 +12,15 @@ const buildBalance = (overrides = {}) => ({
   availableAmount: 80,
   canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED,
   transactions: [],
+  version: 1,
+  schemaVersion: 1,
   ...overrides
 })
 
-const buildStream = (latest) => ({
-  findLatestByPartition: vi.fn().mockResolvedValue(latest)
-})
+const buildStream = (latest) =>
+  /** @type {any} */ ({
+    findLatestByPartition: vi.fn().mockResolvedValue(latest)
+  })
 
 describe('resolveBalanceAmounts', () => {
   it('leaves an embedded balance unchanged', async () => {

@@ -117,13 +117,17 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
   const setupStream = () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
-    return setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      organisationId,
-      registrationId,
-      featureFlagOverrides: { wasteBalanceLedger: true },
-      existingWasteBalances: [seedStreamBalance(organisationId, registrationId)]
-    })
+    return setupWasteBalanceIntegrationEnvironment(
+      /** @type {any} */ ({
+        processingType: 'exporter',
+        organisationId,
+        registrationId,
+        featureFlagOverrides: { wasteBalanceLedger: true },
+        existingWasteBalances: [
+          seedStreamBalance(organisationId, registrationId)
+        ]
+      })
+    )
   }
 
   it('appends a single stream event with aggregate creditTotal on first upload', async () => {
@@ -150,15 +154,20 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
       'ACC-123'
     )
     expect(latest).not.toBeNull()
+    if (!latest) throw new Error('latest stream event is null')
     expect(latest.number).toBe(1)
     expect(latest.kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
-    expect(latest.payload.creditTotal).toBe(300)
+    expect(
+      /** @type {{ creditTotal: number }} */ (latest.payload).creditTotal
+    ).toBe(300)
     expect(latest.closingBalance).toEqual({
       amount: 300,
       availableAmount: 300
     })
 
-    const storage = wasteBalancesRepository._getStorageForTesting()
+    const storage = /** @type {any} */ (
+      wasteBalancesRepository
+    )._getStorageForTesting()
     const embeddedBalance = storage.find((b) => b.accreditationId === 'ACC-123')
     expect(embeddedBalance?.transactions ?? []).toHaveLength(0)
   })
@@ -180,6 +189,8 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
       'ACC-123'
     )
 
+    if (!afterSecond) throw new Error('afterSecond stream event is null')
+    if (!afterFirst) throw new Error('afterFirst stream event is null')
     expect(afterSecond.number).toBe(2)
     expect(afterSecond.closingBalance).toEqual(afterFirst.closingBalance)
   })
@@ -226,8 +237,11 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
       registrationId,
       'ACC-123'
     )
+    if (!latest) throw new Error('latest stream event is null')
     expect(latest.number).toBe(2)
-    expect(latest.payload.creditTotal).toBe(200)
+    expect(
+      /** @type {{ creditTotal: number }} */ (latest.payload).creditTotal
+    ).toBe(200)
     expect(latest.closingBalance).toEqual({
       amount: 200,
       availableAmount: 200

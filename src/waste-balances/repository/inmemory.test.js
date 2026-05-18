@@ -15,6 +15,7 @@ const extendedIt = base.extend({
     await use(repository)
   },
   wasteBalancesRepository: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
     { wasteBalanceStorage, streamRepository },
     use
   ) => {
@@ -23,12 +24,20 @@ const extendedIt = base.extend({
     })
     await use(factory)
   },
-  insertWasteBalance: async ({ wasteBalanceStorage }, use) => {
+  insertWasteBalance: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
+    { wasteBalanceStorage },
+    use
+  ) => {
     await use(async (wasteBalance) => {
       wasteBalanceStorage.push(wasteBalance)
     })
   },
-  insertWasteBalances: async ({ wasteBalanceStorage }, use) => {
+  insertWasteBalances: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
+    { wasteBalanceStorage },
+    use
+  ) => {
     await use(async (wasteBalances) => {
       wasteBalanceStorage.push(...wasteBalances)
     })
@@ -50,7 +59,9 @@ describe('waste-balances repository - in-memory implementation', () => {
     const repository = createInMemoryWasteBalancesRepository(initialStorage, {
       streamRepository: createInMemoryStreamRepository()()
     })()
-    expect(repository._getStorageForTesting()).toBe(initialStorage)
+    expect(/** @type {any} */ (repository)._getStorageForTesting()).toBe(
+      initialStorage
+    )
   })
 
   testWasteBalancesRepositoryContract(extendedIt)

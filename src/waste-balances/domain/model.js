@@ -80,6 +80,7 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * @property {string} id - Balance ID
  * @property {string} organisationId - Organisation ID
  * @property {string} accreditationId - Accreditation ID (unique)
+ * @property {string} [registrationId] - Registration ID
  * @property {number} schemaVersion - Schema version
  * @property {number} version - Document version for optimistic locking
  * @property {number} amount - Total balance (credits minus debits, stored as Decimal128)

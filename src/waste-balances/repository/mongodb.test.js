@@ -19,37 +19,57 @@ const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
+    const client = await MongoClient.connect(/** @type {any} */ (db))
     await use(client)
     await client.close()
   },
 
-  streamRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
+  streamRepository: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
+    { mongoClient },
+    use
+  ) => {
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
     const factory = await createMongoStreamRepository(database)
     await use(factory())
   },
 
-  wasteBalancesRepository: async ({ mongoClient, streamRepository }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
+  wasteBalancesRepository: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
+    { mongoClient, streamRepository },
+    use
+  ) => {
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
     const factory = await createWasteBalancesRepository(database, {
-      streamRepository
+      streamRepository: /** @type {any} */ (streamRepository)
     })
     await use(factory)
   },
 
-  insertWasteBalance: async ({ mongoClient }, use) => {
+  insertWasteBalance: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
+    { mongoClient },
+    use
+  ) => {
     await use(async (wasteBalance) => {
-      await mongoClient
+      await /** @type {import('mongodb').MongoClient} */ (mongoClient)
         .db(DATABASE_NAME)
         .collection(WASTE_BALANCE_COLLECTION_NAME)
         .insertOne(wasteBalance)
     })
   },
 
-  insertWasteBalances: async ({ mongoClient }, use) => {
+  insertWasteBalances: async (
+    // @ts-expect-error -- vitest .extend() fixture typing
+    { mongoClient },
+    use
+  ) => {
     await use(async (wasteBalances) => {
-      await mongoClient
+      await /** @type {import('mongodb').MongoClient} */ (mongoClient)
         .db(DATABASE_NAME)
         .collection(WASTE_BALANCE_COLLECTION_NAME)
         .insertMany(wasteBalances)
@@ -63,9 +83,11 @@ describe('MongoDB waste balances repository', () => {
       mongoClient,
       streamRepository
     }) => {
-      const database = mongoClient.db(DATABASE_NAME)
+      const database = /** @type {import('mongodb').MongoClient} */ (
+        mongoClient
+      ).db(DATABASE_NAME)
       const repository = await createWasteBalancesRepository(database, {
-        streamRepository
+        streamRepository: /** @type {any} */ (streamRepository)
       })
       const instance = repository()
       expect(instance).toBeDefined()
@@ -76,8 +98,12 @@ describe('MongoDB waste balances repository', () => {
       mongoClient,
       streamRepository
     }) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      await createWasteBalancesRepository(database, { streamRepository })
+      const database = /** @type {import('mongodb').MongoClient} */ (
+        mongoClient
+      ).db(DATABASE_NAME)
+      await createWasteBalancesRepository(database, {
+        streamRepository: /** @type {any} */ (streamRepository)
+      })
 
       const indexes = await database
         .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)
@@ -89,12 +115,17 @@ describe('MongoDB waste balances repository', () => {
   })
 
   describe('data management', () => {
-    beforeEach(async ({ mongoClient }) => {
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .deleteMany({})
-    })
+    beforeEach(
+      async (
+        // @ts-expect-error -- vitest .extend() fixture typing
+        { mongoClient }
+      ) => {
+        await /** @type {import('mongodb').MongoClient} */ (mongoClient)
+          .db(DATABASE_NAME)
+          .collection(WASTE_BALANCE_COLLECTION_NAME)
+          .deleteMany({})
+      }
+    )
 
     describe('waste balances repository contract', () => {
       testWasteBalancesRepositoryContract(it)
@@ -102,18 +133,25 @@ describe('MongoDB waste balances repository', () => {
   })
 
   describe('document growth observability', () => {
-    beforeEach(async ({ mongoClient }) => {
-      vi.mocked(logger.info).mockClear()
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .deleteMany({})
-    })
+    beforeEach(
+      async (
+        // @ts-expect-error -- vitest .extend() fixture typing
+        { mongoClient }
+      ) => {
+        vi.mocked(logger.info).mockClear()
+        await /** @type {import('mongodb').MongoClient} */ (mongoClient)
+          .db(DATABASE_NAME)
+          .collection(WASTE_BALANCE_COLLECTION_NAME)
+          .deleteMany({})
+      }
+    )
 
     it('emits a growth log line after persisting an embedded balance', async ({
       mongoClient
     }) => {
-      const db = mongoClient.db(DATABASE_NAME)
+      const db = /** @type {import('mongodb').MongoClient} */ (mongoClient).db(
+        DATABASE_NAME
+      )
       const transaction = {
         id: 'txn-1',
         type: 'credit',
@@ -126,9 +164,10 @@ describe('MongoDB waste balances repository', () => {
         closingAvailableAmount: 1,
         entities: []
       }
-      const balance = {
+      const balance = /** @type {any} */ ({
         id: '00000000-0000-0000-0000-000000000010',
         accreditationId: 'acc-growth-1',
+        registrationId: 'reg-growth-1',
         organisationId: 'org-growth-1',
         amount: 1,
         availableAmount: 1,
@@ -136,7 +175,7 @@ describe('MongoDB waste balances repository', () => {
         version: 1,
         schemaVersion: 1,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      }
+      })
 
       await saveBalance(db)(balance, [transaction])
 
