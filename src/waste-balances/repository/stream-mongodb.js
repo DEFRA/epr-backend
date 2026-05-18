@@ -8,10 +8,6 @@
  * @typedef {import('./stream-schema.js').StreamEvent} StreamEvent
  */
 
-import {
-  streamDocumentFromMongo,
-  streamInsertToMongo
-} from './stream-decimal.js'
 import { StreamSlotConflictError, StreamSequenceError } from './stream-port.js'
 import {
   validateStreamEventInsert,
@@ -59,7 +55,7 @@ const toStreamEvent = (doc) => {
   const { _id, ...rest } = doc
   return validateStreamEventRead({
     id: _id.toString(),
-    ...streamDocumentFromMongo(rest)
+    ...rest
   })
 }
 
@@ -152,11 +148,9 @@ const performAppendEvent = (collection) => async (event) => {
     )
   }
 
-  const persistable = streamInsertToMongo(validated)
-
   try {
-    const result = await collection.insertOne(persistable)
-    return toStreamEvent({ _id: result.insertedId, ...persistable })
+    const result = await collection.insertOne(validated)
+    return toStreamEvent({ _id: result.insertedId, ...validated })
   } catch (error) {
     const classified = classifyDuplicateKeyError(error, validated)
     if (classified) {

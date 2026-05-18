@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { Decimal128, MongoClient } from 'mongodb'
+import { MongoClient } from 'mongodb'
 
 import {
   createMongoStreamRepository,
@@ -111,36 +111,6 @@ describe('MongoDB stream repository', () => {
 
   describe('stream repository contract', () => {
     testStreamRepositoryContract(it)
-  })
-
-  describe('amount field BSON typing', () => {
-    it('persists balance and payload amount fields as Decimal128', async (/** @type {*} */ {
-      streamCollection,
-      streamRepository
-    }) => {
-      const repository = await streamRepository()
-      await repository.appendEvent(
-        buildStreamEvent({
-          registrationId: 'reg-decimal',
-          accreditationId: 'acc-decimal',
-          number: 1,
-          openingBalance: { amount: 0, availableAmount: 0 },
-          closingBalance: { amount: 1.5, availableAmount: 1.5 },
-          payload: { summaryLogId: 'log-decimal', creditTotal: 1.5 }
-        })
-      )
-
-      const raw = await streamCollection.findOne({
-        registrationId: 'reg-decimal'
-      })
-
-      expect(raw.openingBalance.amount).toBeInstanceOf(Decimal128)
-      expect(raw.openingBalance.availableAmount).toBeInstanceOf(Decimal128)
-      expect(raw.closingBalance.amount).toBeInstanceOf(Decimal128)
-      expect(raw.closingBalance.availableAmount).toBeInstanceOf(Decimal128)
-      expect(raw.payload.creditTotal).toBeInstanceOf(Decimal128)
-      expect(raw.closingBalance.amount.toString()).toBe('1.5')
-    })
   })
 
   describe('appendEvent error translation', () => {
