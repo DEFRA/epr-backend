@@ -31,7 +31,7 @@ async function ensureCollection(db) {
 }
 
 const performFindByAccreditationId =
-  (db, ledgerRepository) => async (accreditationId) => {
+  (db, streamRepository) => async (accreditationId) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
 
     const doc = await db
@@ -45,12 +45,12 @@ const performFindByAccreditationId =
     const { _id, ...domainFields } = doc
     return resolveBalanceAmounts(
       structuredClone({ id: _id.toString(), ...domainFields }),
-      ledgerRepository
+      streamRepository
     )
   }
 
 const performFindByAccreditationIds =
-  (db, ledgerRepository) => async (accreditationIds) => {
+  (db, streamRepository) => async (accreditationIds) => {
     const docs = await db
       .collection(WASTE_BALANCE_COLLECTION_NAME)
       .find({ accreditationId: { $in: accreditationIds } })
@@ -61,7 +61,7 @@ const performFindByAccreditationIds =
         const { _id, ...domainFields } = doc
         return resolveBalanceAmounts(
           structuredClone({ id: _id.toString(), ...domainFields }),
-          ledgerRepository
+          streamRepository
         )
       })
     )
@@ -221,7 +221,7 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  * Creates a MongoDB-backed waste balances repository
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} dependencies
- * @param {import('./ledger-port.js').LedgerRepository} dependencies.ledgerRepository
+ * @param {import('./stream-port.js').StreamRepository} dependencies.streamRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
@@ -230,11 +230,11 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
   await ensureCollection(db)
   await ensureLedgerCollection(db)
 
-  const { ledgerRepository } = dependencies
+  const { streamRepository } = dependencies
 
   return () => ({
-    findByAccreditationId: performFindByAccreditationId(db, ledgerRepository),
-    findByAccreditationIds: performFindByAccreditationIds(db, ledgerRepository),
+    findByAccreditationId: performFindByAccreditationId(db, streamRepository),
+    findByAccreditationIds: performFindByAccreditationIds(db, streamRepository),
     updateWasteBalanceTransactions: async (
       wasteRecords,
       { user, accreditation, overseasSites, summaryLogId }

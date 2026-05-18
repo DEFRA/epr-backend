@@ -3,10 +3,8 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createWasteBalancesRepository, saveBalance } from './mongodb.js'
-import {
-  createMongoLedgerRepository,
-  WASTE_BALANCE_LEDGER_COLLECTION_NAME
-} from './ledger-mongodb.js'
+import { WASTE_BALANCE_LEDGER_COLLECTION_NAME } from './ledger-mongodb.js'
+import { createMongoStreamRepository } from './stream-mongodb.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 
@@ -26,19 +24,16 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  ledgerRepository: async ({ mongoClient }, use) => {
+  streamRepository: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    await database
-      .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)
-      .deleteMany({})
-    const factory = await createMongoLedgerRepository(database)
+    const factory = await createMongoStreamRepository(database)
     await use(factory())
   },
 
-  wasteBalancesRepository: async ({ mongoClient, ledgerRepository }, use) => {
+  wasteBalancesRepository: async ({ mongoClient, streamRepository }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     const factory = await createWasteBalancesRepository(database, {
-      ledgerRepository
+      streamRepository
     })
     await use(factory)
   },
@@ -66,11 +61,11 @@ describe('MongoDB waste balances repository', () => {
   describe('repository creation', () => {
     it('should create repository instance', async ({
       mongoClient,
-      ledgerRepository
+      streamRepository
     }) => {
       const database = mongoClient.db(DATABASE_NAME)
       const repository = await createWasteBalancesRepository(database, {
-        ledgerRepository
+        streamRepository
       })
       const instance = repository()
       expect(instance).toBeDefined()
@@ -79,10 +74,10 @@ describe('MongoDB waste balances repository', () => {
 
     it('ensures the ledger collection indexes exist', async ({
       mongoClient,
-      ledgerRepository
+      streamRepository
     }) => {
       const database = mongoClient.db(DATABASE_NAME)
-      await createWasteBalancesRepository(database, { ledgerRepository })
+      await createWasteBalancesRepository(database, { streamRepository })
 
       const indexes = await database
         .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)

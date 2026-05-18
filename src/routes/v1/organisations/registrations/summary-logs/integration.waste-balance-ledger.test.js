@@ -101,9 +101,10 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
     await submitAndPoll(env, summaryLogId)
   }
 
-  const seedStreamBalance = (organisationId) => ({
+  const seedStreamBalance = (organisationId, registrationId) => ({
     id: 'seeded-balance',
     accreditationId: 'ACC-123',
+    registrationId,
     organisationId,
     schemaVersion: 1,
     version: 0,
@@ -115,11 +116,13 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
 
   const setupStream = () => {
     const organisationId = new ObjectId().toString()
+    const registrationId = new ObjectId().toString()
     return setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId,
+      registrationId,
       featureFlagOverrides: { wasteBalanceLedger: true },
-      existingWasteBalances: [seedStreamBalance(organisationId)]
+      existingWasteBalances: [seedStreamBalance(organisationId, registrationId)]
     })
   }
 

@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
-import { buildLedgerTransaction } from '../ledger-test-data.js'
+import { buildStreamEvent } from '../stream-test-data.js'
 
 export const testFindByAccreditationIdsBehaviour = (it) => {
   describe('findByAccreditationIds', () => {
@@ -132,7 +132,7 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
 
     it('preserves canonicalSource per balance across the batch', async ({
       insertWasteBalances,
-      ledgerRepository
+      streamRepository
     }) => {
       const onEmbedded = buildWasteBalance({
         accreditationId: 'acc-mixed-embedded',
@@ -140,17 +140,19 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       })
       const onLedger = buildWasteBalance({
         accreditationId: 'acc-mixed-ledger',
+        registrationId: 'reg-1',
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
 
       await insertWasteBalances([onEmbedded, onLedger])
-      await ledgerRepository.insertTransactions([
-        buildLedgerTransaction({
+      await streamRepository.appendEvent(
+        buildStreamEvent({
           accreditationId: 'acc-mixed-ledger',
+          registrationId: 'reg-1',
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      ])
+      )
 
       const result = await repository.findByAccreditationIds([
         'acc-mixed-embedded',
@@ -169,7 +171,7 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
     describe('marker-aware amount resolution per balance', () => {
       it('substitutes amounts only for balances whose marker is ledger', async ({
         insertWasteBalances,
-        ledgerRepository
+        streamRepository
       }) => {
         await insertWasteBalances([
           buildWasteBalance({
@@ -186,34 +188,29 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
           }),
           buildWasteBalance({
             accreditationId: 'acc-batch-ledger',
+            registrationId: 'reg-1',
             canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
             amount: 999,
             availableAmount: 999
           })
         ])
 
-        await ledgerRepository.insertTransactions([
-          buildLedgerTransaction({
-            accreditationId: 'acc-batch-embedded',
-            number: 1,
-            closingBalance: { amount: 999, availableAmount: 999 }
-          }),
-          buildLedgerTransaction({
-            accreditationId: 'acc-batch-migrating',
-            number: 1,
-            closingBalance: { amount: 999, availableAmount: 999 }
-          }),
-          buildLedgerTransaction({
+        await streamRepository.appendEvent(
+          buildStreamEvent({
             accreditationId: 'acc-batch-ledger',
+            registrationId: 'reg-1',
             number: 1,
             closingBalance: { amount: 50, availableAmount: 40 }
-          }),
-          buildLedgerTransaction({
+          })
+        )
+        await streamRepository.appendEvent(
+          buildStreamEvent({
             accreditationId: 'acc-batch-ledger',
+            registrationId: 'reg-1',
             number: 2,
             closingBalance: { amount: 75, availableAmount: 60 }
           })
-        ])
+        )
 
         const result = await repository.findByAccreditationIds([
           'acc-batch-embedded',
