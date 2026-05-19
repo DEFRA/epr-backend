@@ -32,7 +32,12 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
         })
       )
 
-      const result = await repository.findEventsByPrnIdAfter('prn-watermark', 0)
+      const result = await repository.findEventsByPrnIdAfter(
+        'reg-prn',
+        'acc-prn',
+        'prn-watermark',
+        0
+      )
 
       expect(result).toHaveLength(2)
       expect(result[0].number).toBe(1)
@@ -59,7 +64,12 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
         })
       )
 
-      const result = await repository.findEventsByPrnIdAfter('prn-filter', 1)
+      const result = await repository.findEventsByPrnIdAfter(
+        'reg-wm',
+        'acc-wm',
+        'prn-filter',
+        1
+      )
 
       expect(result).toHaveLength(1)
       expect(result[0].number).toBe(2)
@@ -75,18 +85,55 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
         })
       )
 
-      const result = await repository.findEventsByPrnIdAfter('prn-caught-up', 1)
+      const result = await repository.findEventsByPrnIdAfter(
+        'reg-caught-up',
+        'acc-caught-up',
+        'prn-caught-up',
+        1
+      )
 
       expect(result).toEqual([])
     })
 
     it('returns an empty array when no events exist for the prnId', async () => {
       const result = await repository.findEventsByPrnIdAfter(
+        'reg-none',
+        'acc-none',
         'prn-nonexistent',
         0
       )
 
       expect(result).toEqual([])
+    })
+
+    it('does not return events from a different partition', async () => {
+      await repository.appendEvent(
+        buildPrnCreatedEvent({
+          registrationId: 'reg-a',
+          accreditationId: 'acc-a',
+          number: 1,
+          payload: { prnId: 'prn-shared', amount: 50 }
+        })
+      )
+      await repository.appendEvent(
+        buildPrnCreatedEvent({
+          registrationId: 'reg-b',
+          accreditationId: 'acc-b',
+          number: 1,
+          payload: { prnId: 'prn-shared', amount: 30 }
+        })
+      )
+
+      const result = await repository.findEventsByPrnIdAfter(
+        'reg-a',
+        'acc-a',
+        'prn-shared',
+        0
+      )
+
+      expect(result).toHaveLength(1)
+      expect(result[0].registrationId).toBe('reg-a')
+      expect(result[0].accreditationId).toBe('acc-a')
     })
   })
 }

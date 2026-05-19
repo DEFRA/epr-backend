@@ -96,9 +96,10 @@ export class StreamSequenceError extends Error {
  * @property {(registrationId: string, accreditationId: string | null, kind: import('./stream-schema.js').StreamEventKind) => Promise<StreamEvent | null>} findLatestByPartitionAndKind
  *   Return the highest-numbered event of the given kind for the stream
  *   partition, or `null` if none of that kind exist.
- * @property {(prnId: string, afterNumber: number) => Promise<StreamEvent[]>} findEventsByPrnIdAfter
- *   Return events referencing the given `prnId` in `payload.prnId` with
- *   `number > afterNumber`, ordered by `number` ascending.
+ * @property {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<StreamEvent[]>} findEventsByPrnIdAfter
+ *   Return events referencing the given `prnId` in `payload.prnId` within
+ *   the specified partition, with `number > afterNumber`, ordered by
+ *   `number` ascending.
  * @property {(registrationId: string, accreditationId: string | null) => Promise<void>} deleteAllForPartition
  *   Remove every event belonging to the stream partition. Idempotent —
  *   resolves cleanly when no events exist.

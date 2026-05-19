@@ -79,6 +79,8 @@ describe('ensureStreamCollection', () => {
     }) => {
       const indexes = await streamCollection.indexes()
       expect(indexKeyFor(indexes, 'prn_watermark_catchup')).toEqual({
+        registrationId: 1,
+        accreditationId: 1,
         'payload.prnId': 1,
         number: 1
       })

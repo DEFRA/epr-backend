@@ -123,13 +123,21 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
     },
 
     /**
+     * @param {string} registrationId
+     * @param {string | null} accreditationId
      * @param {string} prnId
      * @param {number} afterNumber
      */
-    findEventsByPrnIdAfter: async (prnId, afterNumber) => {
+    findEventsByPrnIdAfter: async (
+      registrationId,
+      accreditationId,
+      prnId,
+      afterNumber
+    ) => {
       const matches = storage
         .filter(
           (event) =>
+            matchesPartition(event, registrationId, accreditationId) &&
             /** @type {*} */ (event.payload).prnId === prnId &&
             event.number > afterNumber
         )

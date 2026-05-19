@@ -44,7 +44,12 @@ export async function ensureStreamCollection(db) {
   )
 
   await collection.createIndex(
-    { 'payload.prnId': 1, number: 1 },
+    {
+      registrationId: 1,
+      accreditationId: 1,
+      'payload.prnId': 1,
+      number: 1
+    },
     { name: 'prn_watermark_catchup' }
   )
 
@@ -188,12 +193,15 @@ const performFindLatestByPartitionAndKind =
 
 /**
  * @param {Collection} collection
- * @returns {(prnId: string, afterNumber: number) => Promise<StreamEvent[]>}
+ * @returns {(registrationId: string, accreditationId: string | null, prnId: string, afterNumber: number) => Promise<StreamEvent[]>}
  */
 const performFindEventsByPrnIdAfter =
-  (collection) => async (prnId, afterNumber) => {
+  (collection) =>
+  async (registrationId, accreditationId, prnId, afterNumber) => {
     const docs = await collection
       .find({
+        registrationId,
+        accreditationId,
         'payload.prnId': prnId,
         number: { $gt: afterNumber }
       })
