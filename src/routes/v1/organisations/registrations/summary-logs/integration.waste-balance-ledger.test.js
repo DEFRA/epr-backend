@@ -165,10 +165,8 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
       availableAmount: 300
     })
 
-    const storage = /** @type {any} */ (
-      wasteBalancesRepository
-    )._getStorageForTesting()
-    const embeddedBalance = storage.find((b) => b.accreditationId === 'ACC-123')
+    const embeddedBalance =
+      await wasteBalancesRepository.findByAccreditationId('ACC-123')
     expect(embeddedBalance?.transactions ?? []).toHaveLength(0)
   })
 
