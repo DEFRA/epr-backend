@@ -46,7 +46,9 @@ const doAppend = (storage, event) => {
   )
 
   const currentMax =
-    partitionEvents.length > 0 ? partitionEvents.at(-1).number : 0
+    partitionEvents.length > 0
+      ? /** @type {StreamEvent} */ (partitionEvents.at(-1)).number
+      : 0
   const expectedNumber = currentMax + 1
 
   if (validated.number !== expectedNumber) {
@@ -94,7 +96,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      return structuredClone(matches.at(-1))
+      return structuredClone(/** @type {StreamEvent} */ (matches.at(-1)))
     },
 
     /**
@@ -117,7 +119,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      return structuredClone(matches.at(-1))
+      return structuredClone(/** @type {StreamEvent} */ (matches.at(-1)))
     },
 
     /**
