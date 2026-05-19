@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
-import { buildLedgerTransaction } from '../ledger-test-data.js'
+import { buildStreamEvent } from '../stream-test-data.js'
 
 export const testFlipCanonicalSourceToMigratingBehaviour = (it) => {
   describe('flipCanonicalSourceToMigrating', () => {
@@ -114,21 +114,23 @@ export const testFlipCanonicalSourceToMigratingBehaviour = (it) => {
 
     it('returns the ledger post-state and never demotes when the marker is already on ledger', async ({
       insertWasteBalance,
-      ledgerRepository
+      streamRepository
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-migrating-ledger',
+        registrationId: 'reg-1',
         version: 5,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
       await insertWasteBalance(balance)
-      await ledgerRepository.insertTransactions([
-        buildLedgerTransaction({
+      await streamRepository.appendEvent(
+        buildStreamEvent({
           accreditationId: 'acc-flip-migrating-ledger',
+          registrationId: 'reg-1',
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      ])
+      )
 
       const result = await repository.flipCanonicalSourceToMigrating({
         accreditationId: 'acc-flip-migrating-ledger',

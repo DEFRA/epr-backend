@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 
 import { prnMetrics } from './metrics.js'
+import { applyWasteBalanceEffects } from './update-status-balance-effects.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -100,228 +101,6 @@ async function issuePrnWithRetry(repository, updateParams, prnParams) {
   }
 
   throw new Error('Unable to generate unique PRN number after all retries')
-}
-
-/**
- * Deducts available waste balance when creating a PRN.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-  if (balance) {
-    if ((balance.availableAmount ?? 0) < tonnage) {
-      throw Boom.conflict('Insufficient available waste balance')
-    }
-
-    await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
-      accreditationId,
-      organisationId,
-      prnId,
-      tonnage,
-      userId
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Deducts total waste balance when issuing a PRN.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-  if (balance) {
-    if ((balance.amount ?? 0) < tonnage) {
-      throw Boom.conflict('Insufficient total waste balance')
-    }
-
-    await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
-      accreditationId,
-      organisationId,
-      prnId,
-      tonnage,
-      userId
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Credits available waste balance when cancelling a PRN from awaiting_authorisation.
- * Reverses the ringfencing that occurred when the PRN was created.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-  if (balance) {
-    await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
-      accreditationId,
-      organisationId,
-      prnId,
-      tonnage,
-      userId
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Credits both amount and availableAmount when cancelling an issued PRN.
- * Reverses both the creation ringfence and the issue deduction.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {Object} params
- */
-async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-  if (balance) {
-    await wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
-      accreditationId,
-      organisationId,
-      prnId,
-      tonnage,
-      userId
-    })
-  } else {
-    throw Boom.badRequest(
-      `No waste balance found for accreditation: ${accreditationId}`
-    )
-  }
-}
-
-/**
- * Operational system log capturing that a waste balance write committed.
- * Logged at info on the success path so ops can correlate a balance change
- * with the PRN transition that drove it, and so a bug in the compensation
- * path (firing when it shouldn't, or not firing when it should) is
- * debuggable from the log trail alone. Failures are not logged here —
- * they propagate to tryCompensate which already logs them with the
- * forwardError attached.
- *
- * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {string} operation
- * @param {string} prnId
- * @param {number} tonnage
- * @param {string} fromStatus
- * @param {string} toStatus
- */
-function logWasteBalanceUpdate(
-  logger,
-  operation,
-  prnId,
-  tonnage,
-  fromStatus,
-  toStatus
-) {
-  logger.info({
-    message: `Waste balance ${operation} for PRN ${prnId} (${fromStatus} -> ${toStatus}), tonnage ${tonnage}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.DB,
-      action: LOGGING_EVENT_ACTIONS.WASTE_BALANCE_UPDATED,
-      reference: prnId
-    }
-  })
-}
-
-/**
- * Applies waste balance side effects for a status transition.
- * Each transition type is mutually exclusive based on newStatus.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {Object} params
- */
-async function applyWasteBalanceEffects(
-  wasteBalancesRepository,
-  logger,
-  params
-) {
-  const { currentStatus, newStatus, ...balanceParams } = params
-  const { prnId, tonnage } = balanceParams
-
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    await deductWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
-    logWasteBalanceUpdate(
-      logger,
-      'deduct_available',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
-
-  // AWAITING_AUTHORISATION -> CANCELLED is rejected by validateTransition; only the
-  // DELETED leg is reachable here, but the OR is kept defensively as the credit
-  // semantics are identical for both targets.
-  if (
-    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
-    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
-    logWasteBalanceUpdate(
-      logger,
-      'credit_available',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
-
-  if (
-    newStatus === PRN_STATUS.CANCELLED &&
-    currentStatus === PRN_STATUS.AWAITING_CANCELLATION
-  ) {
-    await creditFullBalanceIfNeeded(wasteBalancesRepository, balanceParams)
-    logWasteBalanceUpdate(
-      logger,
-      'credit_full',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
-
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    await deductTotalBalanceIfNeeded(wasteBalancesRepository, balanceParams)
-    logWasteBalanceUpdate(
-      logger,
-      'deduct_total',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
 }
 
 /**
@@ -485,6 +264,7 @@ async function performCreation({
   balanceEffectsParams,
   newStatus,
   organisationId,
+  registrationId,
   accreditationId,
   user,
   currentStatus,
@@ -514,6 +294,7 @@ async function performCreation({
       () =>
         wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
           accreditationId,
+          registrationId,
           organisationId,
           prnId: id,
           tonnage: prn.tonnage,
@@ -608,6 +389,7 @@ async function performTransition({
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
  * @param {string} params.organisationId
+ * @param {string} params.registrationId
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
@@ -623,6 +405,7 @@ export async function updatePrnStatus({
   logger,
   id,
   organisationId,
+  registrationId,
   accreditationId,
   newStatus,
   actor,
@@ -647,6 +430,7 @@ export async function updatePrnStatus({
     currentStatus,
     newStatus,
     accreditationId,
+    registrationId,
     organisationId,
     prnId: id,
     tonnage: prn.tonnage,
@@ -677,6 +461,7 @@ export async function updatePrnStatus({
     balanceEffectsParams,
     newStatus,
     organisationId,
+    registrationId,
     accreditationId,
     user,
     currentStatus,

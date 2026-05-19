@@ -89,6 +89,7 @@ export function createExternalTransitionHandler({
           logger,
           id: prn.id,
           organisationId: prn.organisation.id,
+          registrationId: prn.registrationId,
           accreditationId: prn.accreditation.id,
           newStatus,
           actor: PRN_ACTOR.PRODUCER,
