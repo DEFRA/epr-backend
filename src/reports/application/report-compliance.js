@@ -2,6 +2,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   getReportableRegistrations,
   resolveAccreditationNumber
@@ -92,7 +93,12 @@ export async function generateReportCompliance(
       for (const mergedPeriod of merged) {
         submittedDates.set(
           `${mergedPeriod.year}:${cadence}:${mergedPeriod.period}`,
-          mergedPeriod.report?.submittedAt?.slice(0, 10) ?? null
+          mergedPeriod.report?.status === REPORT_STATUS.SUBMITTED
+            ? /** @type {string} */ (mergedPeriod.report.submittedAt).slice(
+                0,
+                10
+              )
+            : null
         )
       }
     }

@@ -6,10 +6,11 @@ const RETRY_DELAY_MS = 25
  * Polls repository until expected version appears or timeout occurs.
  * Works with both inmemory adapter (eventual consistency) and real MongoDB.
  *
- * @param {object} repository - Repository instance with findById method
+ * @template {{ version: number }} T
+ * @param {{ findById: (id: string) => Promise<T> }} repository - Repository instance with findById method
  * @param {string} id - Resource ID to poll
  * @param {number} expectedVersion - Version number to wait for
- * @returns {Promise<{version: number}>}
+ * @returns {Promise<T>}
  * @throws {Error} If expected version not reached after MAX_RETRIES
  */
 export const waitForVersion = async (repository, id, expectedVersion) => {

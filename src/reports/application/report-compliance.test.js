@@ -4,6 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS,
@@ -203,6 +204,38 @@ describe('generateReportCompliance', () => {
               ['2026:monthly:2', null],
               ['2026:monthly:3', null]
             ])
+          }
+        ]
+      ])
+    })
+  })
+
+  it('returns null submittedDate for a report that has been unsubmitted', async () => {
+    const orgRepo = createInMemoryOrganisationsRepository()()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = await buildApprovedOrg(orgRepo)
+    const reg = org.registrations[0]
+
+    await buildUnsubmittedReport(reportsRepo, {
+      organisationId: org.id,
+      registrationId: reg.id,
+      year: 2026,
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportCompliance(orgRepo, reportsRepo)
+
+    expect(result).toEqual({
+      periods: EXPECTED_PERIODS,
+      entries: new Map([
+        [
+          reg.id,
+          {
+            registrationId: reg.id,
+            organisationId: org.id,
+            submittedDates: MONTHLY_EMPTY_DATES
           }
         ]
       ])
