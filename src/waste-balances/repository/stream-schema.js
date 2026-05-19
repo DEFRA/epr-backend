@@ -14,12 +14,12 @@ export const STREAM_EVENT_KIND = Object.freeze({
 
 const kindValues = Object.values(STREAM_EVENT_KIND)
 
-const PRN_KINDS = [
+const PRN_KINDS = new Set([
   STREAM_EVENT_KIND.PRN_CREATED,
   STREAM_EVENT_KIND.PRN_ISSUED,
   STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
   STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
-]
+])
 
 /**
  * @typedef {Object} StreamBalanceSnapshot
@@ -104,7 +104,7 @@ export const streamEventInsertSchema = Joi.object({
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.required()
 }).custom((value, helpers) => {
-  if (value.accreditationId === null && PRN_KINDS.includes(value.kind)) {
+  if (value.accreditationId === null && PRN_KINDS.has(value.kind)) {
     return helpers.error('any.custom', {
       message:
         'PRN events are invalid in registered-only streams (accreditationId is null)'

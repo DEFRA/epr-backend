@@ -1,12 +1,12 @@
 import { validateAccreditationId } from './validation.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
+import { performUpdateWasteBalanceTransactions } from './helpers.js'
 import {
-  performUpdateWasteBalanceTransactions,
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
-} from './helpers.js'
+} from './helpers-prn.js'
 import { resolveBalanceAmounts } from './marker-aware-read.js'
 
 /**

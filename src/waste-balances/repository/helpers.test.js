@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   findOrCreateWasteBalance,
   performUpdateWasteBalanceTransactions,
-  markExcludedRecords,
+  markExcludedRecords
+} from './helpers.js'
+import {
   buildPrnCreationTransaction,
   performDeductAvailableBalanceForPrnCreation,
   buildPrnIssuedTransaction,
@@ -12,7 +14,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   buildIssuedPrnCancellationTransaction,
   performCreditFullBalanceForIssuedPrnCancellation
-} from './helpers.js'
+} from './helpers-prn.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
 import { performUpdateViaStream } from '../application/update-via-stream.js'
 import { appendToStream } from '../application/append-to-stream.js'

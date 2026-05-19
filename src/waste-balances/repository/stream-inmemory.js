@@ -28,6 +28,49 @@ const matchesPartition = (event, registrationId, accreditationId) =>
   event.accreditationId === accreditationId
 
 /**
+ * Validates and appends an event to the in-memory storage.
+ *
+ * @param {StreamEvent[]} storage
+ * @param {StreamEventInsert} event
+ * @returns {StreamEvent}
+ */
+const doAppend = (storage, event) => {
+  const validated = validateStreamEventInsert(event)
+
+  const partitionEvents = storage.filter((existing) =>
+    matchesPartition(
+      existing,
+      validated.registrationId,
+      validated.accreditationId
+    )
+  )
+
+  const currentMax =
+    partitionEvents.length > 0 ? partitionEvents.at(-1).number : 0
+  const expectedNumber = currentMax + 1
+
+  if (validated.number !== expectedNumber) {
+    if (partitionEvents.some((e) => e.number === validated.number)) {
+      throw new StreamSlotConflictError(
+        validated.registrationId,
+        validated.accreditationId,
+        validated.number
+      )
+    }
+    throw new StreamSequenceError(
+      validated.registrationId,
+      validated.accreditationId,
+      validated.number,
+      expectedNumber
+    )
+  }
+
+  const persisted = { id: randomUUID(), ...validated }
+  storage.push(persisted)
+  return structuredClone(persisted)
+}
+
+/**
  * @param {Array<StreamEvent>} [initialEvents]
  * @returns {import('./stream-port.js').StreamRepositoryFactory}
  */
@@ -36,43 +79,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
 
   return () => ({
     /** @param {StreamEventInsert} event */
-    appendEvent: async (event) => {
-      const validated = validateStreamEventInsert(event)
-
-      const partitionEvents = storage.filter((existing) =>
-        matchesPartition(
-          existing,
-          validated.registrationId,
-          validated.accreditationId
-        )
-      )
-
-      const currentMax =
-        partitionEvents.length > 0
-          ? partitionEvents[partitionEvents.length - 1].number
-          : 0
-      const expectedNumber = currentMax + 1
-
-      if (validated.number !== expectedNumber) {
-        if (partitionEvents.some((e) => e.number === validated.number)) {
-          throw new StreamSlotConflictError(
-            validated.registrationId,
-            validated.accreditationId,
-            validated.number
-          )
-        }
-        throw new StreamSequenceError(
-          validated.registrationId,
-          validated.accreditationId,
-          validated.number,
-          expectedNumber
-        )
-      }
-
-      const persisted = { id: randomUUID(), ...validated }
-      storage.push(persisted)
-      return structuredClone(persisted)
-    },
+    appendEvent: async (event) => doAppend(storage, event),
 
     /**
      * @param {string} registrationId
@@ -87,7 +94,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      return structuredClone(matches[matches.length - 1])
+      return structuredClone(matches.at(-1))
     },
 
     /**
@@ -110,7 +117,7 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         return null
       }
 
-      return structuredClone(matches[matches.length - 1])
+      return structuredClone(matches.at(-1))
     },
 
     /**
