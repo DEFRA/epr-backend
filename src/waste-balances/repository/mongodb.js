@@ -7,7 +7,6 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers-prn.js'
-import { ensureLedgerCollection } from './ledger-mongodb.js'
 import { resolveBalanceAmounts } from './marker-aware-read.js'
 import { recordWasteBalanceGrowth } from '../application/growth-observability.js'
 
@@ -228,7 +227,6 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  */
 export const createWasteBalancesRepository = async (db, dependencies) => {
   await ensureCollection(db)
-  await ensureLedgerCollection(db)
 
   const { streamRepository } = dependencies
 

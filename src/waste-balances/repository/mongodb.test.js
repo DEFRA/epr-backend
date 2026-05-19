@@ -3,7 +3,6 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createWasteBalancesRepository, saveBalance } from './mongodb.js'
-import { WASTE_BALANCE_LEDGER_COLLECTION_NAME } from './ledger-mongodb.js'
 import { createMongoStreamRepository } from './stream-mongodb.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
@@ -92,25 +91,6 @@ describe('MongoDB waste balances repository', () => {
       const instance = repository()
       expect(instance).toBeDefined()
       expect(instance.findByAccreditationId).toBeTypeOf('function')
-    })
-
-    it('ensures the ledger collection indexes exist', async ({
-      mongoClient,
-      streamRepository
-    }) => {
-      const database = /** @type {import('mongodb').MongoClient} */ (
-        mongoClient
-      ).db(DATABASE_NAME)
-      await createWasteBalancesRepository(database, {
-        streamRepository: /** @type {any} */ (streamRepository)
-      })
-
-      const indexes = await database
-        .collection(WASTE_BALANCE_LEDGER_COLLECTION_NAME)
-        .indexes()
-      const names = indexes.map((idx) => idx.name)
-      expect(names).toContain('accreditationId_number')
-      expect(names).toContain('summaryLogRow_wasteRecord_findLatest')
     })
   })
 

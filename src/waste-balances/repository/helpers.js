@@ -173,18 +173,12 @@ const dispatchToStream = async ({
  * per-accreditation `canonicalSource` marker:
  * - flag OFF — embedded `transactions[]` array
  * - flag ON, marker `'ledger'` — event stream path
- * - flag ON, marker `'ledger'` (legacy ledger) — ledger-append path (ADR 0031)
  * - flag ON, marker `'embedded'`, `'migrating'`, or no balance yet — embedded
  *   `transactions[]` array
  *
  * `'migrating'` deliberately routes to the embedded path: a per-accreditation
  * rebuild that flipped the marker via `flipCanonicalSourceToMigrating` keeps
- * the embedded write path live for PRN operations during the replay window —
- * the version-conditional `flipCanonicalSourceToLedger` catches concurrent
- * writes and forces a retry. Summary-log submissions are kept off this path
- * during the migrating window by `transitionToSubmittingExclusive`'s 409
- * exclusion, so the only writes that legitimately reach this dispatch under
- * `'migrating'` are PRN operations.
+ * the embedded write path live for PRN operations during the replay window.
  *
  * The marker drives per-accreditation rollout: a freshly enabled environment
  * keeps every accreditation on the embedded array until a rebuild replays
@@ -196,7 +190,6 @@ const dispatchToStream = async ({
  * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
- * @param {import('../repository/ledger-port.js').LedgerRepository} [params.dependencies.ledgerRepository]
  * @param {import('../repository/stream-port.js').StreamRepository} [params.dependencies.streamRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
