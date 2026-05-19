@@ -1,10 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import { STREAM_EVENT_KIND } from '../stream-schema.js'
-import {
-  buildStreamEvent,
-  buildPrnCreatedEvent
-} from '../stream-test-data.js'
+import { buildStreamEvent, buildPrnCreatedEvent } from '../stream-test-data.js'
 
 export const testFindLatestByPartitionAndKindBehaviour = (it) => {
   describe('findLatestByPartitionAndKind', () => {

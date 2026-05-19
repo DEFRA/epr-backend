@@ -53,9 +53,7 @@ const closingForPrn = (opening, kind, prnAmount) => {
     case STREAM_EVENT_KIND.PRN_CREATED:
       return {
         amount: opening.amount,
-        availableAmount: toNumber(
-          subtract(opening.availableAmount, prnAmount)
-        )
+        availableAmount: toNumber(subtract(opening.availableAmount, prnAmount))
       }
     case STREAM_EVENT_KIND.PRN_ISSUED:
       return {
@@ -122,12 +120,11 @@ export const appendToStream = async (
         payload
       )
 
-    const previousSubmission =
-      await repository.findLatestByPartitionAndKind(
-        registrationId,
-        accreditationId,
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-      )
+    const previousSubmission = await repository.findLatestByPartitionAndKind(
+      registrationId,
+      accreditationId,
+      STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    )
 
     const previousCreditTotal = previousSubmission
       ? /** @type {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
