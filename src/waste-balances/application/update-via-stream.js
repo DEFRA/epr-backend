@@ -1,6 +1,6 @@
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
-import { toNumber } from '#common/helpers/decimal-utils.js'
+import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { appendToStream } from './append-to-stream.js'
@@ -44,7 +44,7 @@ export const performUpdateViaStream = async ({
   let creditTotal = 0
   for (const record of wasteRecords) {
     creditTotal = toNumber(
-      creditTotal + getTargetAmount(record, accreditation, overseasSites)
+      add(creditTotal, getTargetAmount(record, accreditation, overseasSites))
     )
   }
 
