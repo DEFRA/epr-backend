@@ -33,9 +33,7 @@ export const validateStreamEventRead = (data) => {
 
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badImplementation(
-      `Invalid stream event ${data.id}: ${details}`
-    )
+    throw Boom.badImplementation(`Invalid stream event ${data.id}: ${details}`)
   }
 
   return value

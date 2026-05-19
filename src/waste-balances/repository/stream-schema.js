@@ -103,19 +103,15 @@ export const streamEventInsertSchema = Joi.object({
   closingBalance: balanceSnapshotSchema.required(),
   createdAt: Joi.date().required(),
   createdBy: userSummarySchema.required()
+}).custom((value, helpers) => {
+  if (value.accreditationId === null && PRN_KINDS.includes(value.kind)) {
+    return helpers.error('any.custom', {
+      message:
+        'PRN events are invalid in registered-only streams (accreditationId is null)'
+    })
+  }
+  return value
 })
-  .custom((value, helpers) => {
-    if (
-      value.accreditationId === null &&
-      PRN_KINDS.includes(value.kind)
-    ) {
-      return helpers.error('any.custom', {
-        message:
-          'PRN events are invalid in registered-only streams (accreditationId is null)'
-      })
-    }
-    return value
-  })
 
 export const streamEventReadSchema = streamEventInsertSchema.keys({
   id: Joi.string().required()
