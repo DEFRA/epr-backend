@@ -215,7 +215,7 @@ const performFindEventsByPrnIdAfter =
  * Creates a MongoDB-backed stream repository.
  *
  * @param {Db} db
- * @returns {Promise<import('./stream-port.js').StreamRepositoryFactory>}
+ * @returns {Promise<import('./stream-port.js').WasteBalanceStreamRepositoryFactory>}
  */
 export const createMongoStreamRepository = async (db) => {
   const collection = await ensureStreamCollection(db)

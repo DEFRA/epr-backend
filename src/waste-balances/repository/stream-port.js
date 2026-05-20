@@ -80,7 +80,7 @@ export class StreamSequenceError extends Error {
  */
 
 /**
- * @typedef {Object} StreamRepository
+ * @typedef {Object} WasteBalanceStreamRepository
  * @property {(event: StreamEventInsert) => Promise<StreamEvent>} appendEvent
  *   Persist a single event. Returns the stored event with its assigned `id`.
  *
@@ -103,7 +103,7 @@ export class StreamSequenceError extends Error {
  */
 
 /**
- * @typedef {() => StreamRepository} StreamRepositoryFactory
+ * @typedef {() => WasteBalanceStreamRepository} WasteBalanceWasteBalanceStreamRepositoryFactory
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

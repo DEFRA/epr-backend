@@ -74,7 +74,7 @@ const doAppend = (storage, event) => {
 
 /**
  * @param {Array<StreamEvent>} [initialEvents]
- * @returns {import('./stream-port.js').StreamRepositoryFactory}
+ * @returns {import('./stream-port.js').WasteBalanceStreamRepositoryFactory}
  */
 export const createInMemoryStreamRepository = (initialEvents = []) => {
   const storage = initialEvents

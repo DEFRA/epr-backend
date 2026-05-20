@@ -42,7 +42,7 @@ const PRN_KINDS = new Set([
  */
 
 /**
- * Shape accepted by `StreamRepository.appendEvent`. Mirrors
+ * Shape accepted by `WasteBalanceStreamRepository.appendEvent`. Mirrors
  * `streamEventInsertSchema` — keep the two in sync; the schema is the
  * runtime gate, this typedef is the check-time gate.
  *
@@ -60,7 +60,7 @@ const PRN_KINDS = new Set([
  */
 
 /**
- * Shape returned by `StreamRepository` reads — `StreamEventInsert` plus
+ * Shape returned by `WasteBalanceStreamRepository` reads — `StreamEventInsert` plus
  * the storage-assigned `id`.
  *
  * @typedef {StreamEventInsert & { id: string }} StreamEvent
@@ -96,8 +96,15 @@ export const streamEventInsertSchema = Joi.object({
     .required(),
   payload: Joi.when('kind', {
     is: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-    then: summaryLogPayloadSchema.required(),
-    otherwise: prnPayloadSchema.required()
+    then: summaryLogPayloadSchema.required()
+  }).when('kind', {
+    is: Joi.string().valid(
+      STREAM_EVENT_KIND.PRN_CREATED,
+      STREAM_EVENT_KIND.PRN_ISSUED,
+      STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+      STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+    ),
+    then: prnPayloadSchema.required()
   }),
   openingBalance: balanceSnapshotSchema.required(),
   closingBalance: balanceSnapshotSchema.required(),
