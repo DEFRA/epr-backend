@@ -12,6 +12,10 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { reportsGetPath } from './get.js'
 
+/**
+ * @import { TestServer } from '#test/create-test-server.js'
+ */
+
 describe(`GET ${reportsGetPath}`, () => {
   setupAuthContext()
 
@@ -19,6 +23,9 @@ describe(`GET ${reportsGetPath}`, () => {
     `/v1/organisations/${orgId}/registrations/${regId}/reports/calendar`
 
   describe('when feature flag is enabled', () => {
+    /**
+     * @returns {Promise<{ server: TestServer, organisationId: string, registrationId: string }>}
+     */
     const createServer = async (
       registrationOverrides = {},
       reportsRepositoryFactory,
@@ -42,7 +49,7 @@ describe(`GET ${reportsGetPath}`, () => {
             reportsRepository: reportsRepositoryFactory
           })
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags({})
       })
 
       return {
@@ -321,6 +328,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -353,7 +361,63 @@ describe(`GET ${reportsGetPath}`, () => {
         expect(january.report).toBeDefined()
         expect(january.report.id).toBeDefined()
         expect(january.report.status).toBe('in_progress')
-        expect(january.report.submissionNumber).toBe(1)
+      })
+
+      it('curates the report shape: excludes activity payloads', async () => {
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const { server, organisationId, registrationId } = await createServer(
+          {
+            wasteProcessingType: 'exporter',
+            accreditationId: new ObjectId().toString()
+          },
+          reportsRepositoryFactory,
+          'approved'
+        )
+
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport({
+          organisationId,
+          registrationId,
+          year: new Date().getUTCFullYear(),
+          cadence: 'monthly',
+          period: 1,
+          startDate: `${new Date().getUTCFullYear()}-01-01`,
+          endDate: `${new Date().getUTCFullYear()}-01-31`,
+          dueDate: `${new Date().getUTCFullYear()}-02-20`,
+          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
+          material: 'plastic',
+          wasteProcessingType: 'exporter',
+          source: {
+            summaryLogId: 'sl-1',
+            lastUploadedAt: '2024-01-15T00:00:00.000Z'
+          },
+          prn: null,
+          recyclingActivity: {
+            suppliers: [],
+            totalTonnageReceived: 0,
+            tonnageRecycled: null,
+            tonnageNotRecycled: null
+          },
+          wasteSent: {
+            tonnageSentToReprocessor: 0,
+            tonnageSentToExporter: 0,
+            tonnageSentToAnotherSite: 0,
+            finalDestinations: []
+          }
+        })
+
+        const response = await makeRequest(
+          server,
+          organisationId,
+          registrationId
+        )
+        const payload = JSON.parse(response.payload)
+
+        const january = payload.reportingPeriods.find((p) => p.period === 1)
+        expect(Object.keys(january.report).sort()).toStrictEqual(
+          ['id', 'status', 'submittedAt', 'submittedBy'].sort()
+        )
       })
 
       it('handles deleted report (null currentReportId)', async () => {
@@ -378,6 +442,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -441,6 +506,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -497,6 +563,7 @@ describe(`GET ${reportsGetPath}`, () => {
           endDate: `${new Date().getUTCFullYear()}-01-31`,
           dueDate: `${new Date().getUTCFullYear()}-02-20`,
           changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+          submissionNumber: 1,
           material: 'plastic',
           wasteProcessingType: 'exporter',
           source: {
@@ -569,7 +636,7 @@ describe(`GET ${reportsGetPath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags({})
       })
 
       const response = await server.inject({
