@@ -62,11 +62,11 @@ export const saveBalance =
  * Find a waste balance by accreditation ID.
  *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
- * @param {import('./ledger-port.js').LedgerRepository} ledgerRepository
+ * @param {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
  * @returns {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>}
  */
 export const performFindByAccreditationId =
-  (wasteBalanceStorage, ledgerRepository) => async (accreditationId) => {
+  (wasteBalanceStorage, streamRepository) => async (accreditationId) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
 
     const balance = wasteBalanceStorage.find(
@@ -77,18 +77,18 @@ export const performFindByAccreditationId =
       return null
     }
 
-    return resolveBalanceAmounts(structuredClone(balance), ledgerRepository)
+    return resolveBalanceAmounts(structuredClone(balance), streamRepository)
   }
 
 const performFindByAccreditationIds =
-  (wasteBalanceStorage, ledgerRepository) => async (accreditationIds) => {
+  (wasteBalanceStorage, streamRepository) => async (accreditationIds) => {
     const balances = wasteBalanceStorage.filter((b) =>
       accreditationIds.includes(b.accreditationId)
     )
 
     return Promise.all(
       balances.map((balance) =>
-        resolveBalanceAmounts(structuredClone(balance), ledgerRepository)
+        resolveBalanceAmounts(structuredClone(balance), streamRepository)
       )
     )
   }
@@ -156,7 +156,7 @@ const performResetCanonicalSourceToEmbedded =
  *
  * @param {Array} initialWasteBalances
  * @param {Object} dependencies
- * @param {import('./ledger-port.js').LedgerRepository} dependencies.ledgerRepository
+ * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
@@ -167,16 +167,16 @@ export const createInMemoryWasteBalancesRepository = (
 ) => {
   const wasteBalanceStorage = initialWasteBalances
 
-  const { ledgerRepository } = dependencies
+  const { streamRepository } = dependencies
 
   return () => ({
     findByAccreditationId: performFindByAccreditationId(
       wasteBalanceStorage,
-      ledgerRepository
+      streamRepository
     ),
     findByAccreditationIds: performFindByAccreditationIds(
       wasteBalanceStorage,
-      ledgerRepository
+      streamRepository
     ),
     updateWasteBalanceTransactions: async (
       wasteRecords,

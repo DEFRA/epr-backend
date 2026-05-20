@@ -264,6 +264,7 @@ async function performCreation({
   balanceEffectsParams,
   newStatus,
   organisationId,
+  registrationId,
   accreditationId,
   user,
   currentStatus,
@@ -293,6 +294,7 @@ async function performCreation({
       () =>
         wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
           accreditationId,
+          registrationId,
           organisationId,
           prnId: id,
           tonnage: prn.tonnage,
@@ -387,6 +389,7 @@ async function performTransition({
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {string} params.id
  * @param {string} params.organisationId
+ * @param {string} params.registrationId
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
@@ -402,6 +405,7 @@ export async function updatePrnStatus({
   logger,
   id,
   organisationId,
+  registrationId,
   accreditationId,
   newStatus,
   actor,
@@ -426,6 +430,7 @@ export async function updatePrnStatus({
     currentStatus,
     newStatus,
     accreditationId,
+    registrationId,
     organisationId,
     prnId: id,
     tonnage: prn.tonnage,
@@ -456,6 +461,7 @@ export async function updatePrnStatus({
     balanceEffectsParams,
     newStatus,
     organisationId,
+    registrationId,
     accreditationId,
     user,
     currentStatus,

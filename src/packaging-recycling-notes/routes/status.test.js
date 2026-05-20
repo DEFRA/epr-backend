@@ -938,6 +938,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         wasteBalancesRepository.deductAvailableBalanceForPrnCreation
       ).toHaveBeenCalledWith({
         accreditationId,
+        registrationId,
         organisationId,
         prnId,
         tonnage: 50.5,
