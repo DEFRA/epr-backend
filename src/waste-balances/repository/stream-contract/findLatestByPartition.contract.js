@@ -98,7 +98,9 @@ export const testFindLatestByPartitionBehaviour = (it) => {
       const y = await repository.findLatestByPartition('reg-y', 'acc-y')
 
       expect(x.number).toBe(1)
+      expect(x.accreditationId).toBe('acc-x')
       expect(y.number).toBe(1)
+      expect(y.accreditationId).toBe('acc-y')
     })
 
     it('treats null and non-null accreditationId as separate streams', async () => {
