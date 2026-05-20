@@ -103,7 +103,7 @@ export class StreamSequenceError extends Error {
  */
 
 /**
- * @typedef {() => WasteBalanceStreamRepository} WasteBalanceWasteBalanceStreamRepositoryFactory
+ * @typedef {() => WasteBalanceStreamRepository} WasteBalanceStreamRepositoryFactory
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
