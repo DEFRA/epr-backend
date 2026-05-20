@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -31,7 +31,7 @@ export const systemLogsPostSearch = {
   method: 'POST',
   path: systemLogsSearchPath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api', 'admin'],
     validate: {
       payload: Joi.object({

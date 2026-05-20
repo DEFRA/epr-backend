@@ -90,10 +90,6 @@ const topCodes = (errors) => {
  * @returns {{section: string, prErrorTotal: number}}
  */
 const buildPrSection = (changedFiles, byFile) => {
-  if (changedFiles.length === 0) {
-    return { section: '_no test files changed in this PR_', prErrorTotal: 0 }
-  }
-
   const blocks = []
   let prErrorTotal = 0
   for (const file of [...changedFiles].sort()) {
@@ -110,12 +106,6 @@ const buildPrSection = (changedFiles, byFile) => {
     )
   }
 
-  if (blocks.length === 0) {
-    return {
-      section: '_no type errors in test files changed in this PR_',
-      prErrorTotal: 0
-    }
-  }
   return { section: blocks.join('\n\n'), prErrorTotal }
 }
 
@@ -125,7 +115,7 @@ const buildPrSection = (changedFiles, byFile) => {
  */
 const prHeader = (prErrorTotal) => {
   if (prErrorTotal === 0) {
-    return ':white_check_mark: no type errors in test files changed in this PR'
+    return ':white_check_mark: No type errors in test files changed in this PR'
   }
   return `:warning: **${prErrorTotal} type error(s) in test files changed in this PR**`
 }
@@ -184,10 +174,11 @@ export const buildPrComment = ({ tscOutput, changedFiles, runUrl }) => {
     '',
     '### Errors in this PR',
     '',
-    prHeader(prErrorTotal),
-    '',
-    section
+    prHeader(prErrorTotal)
   ]
+  if (section) {
+    lines.push('', section)
+  }
   if (runUrl) {
     lines.push('', `[View full summary](${runUrl})`)
   }
@@ -239,18 +230,18 @@ export const buildSummary = ({ tscOutput, changedFiles, tsCodeLookup }) => {
     ].join('\n')
   }
 
-  const markdown = [
+  const lines = [
     '## Lint Types - Tests',
     '',
     '### Errors in this PR',
     '',
-    prHeader(prErrorTotal),
-    '',
-    section1,
-    '',
-    section2,
-    ''
-  ].join('\n')
+    prHeader(prErrorTotal)
+  ]
+  if (section1) {
+    lines.push('', section1)
+  }
+  lines.push('', section2, '')
+  const markdown = lines.join('\n')
 
   return { markdown, exitCode: prErrorTotal > 0 ? 1 : 0 }
 }

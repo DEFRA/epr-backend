@@ -1,4 +1,4 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -15,7 +15,7 @@ export const summaryLogFile = {
   path: summaryLogFilePath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin']
   },

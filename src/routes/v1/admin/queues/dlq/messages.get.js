@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { dlqMessagesResponseSchema } from './response.schema.js'
 
@@ -11,7 +11,7 @@ export const dlqMessagesGet = {
   method: 'GET',
   path: dlqMessagesPath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api', 'admin'],
     response: {
       schema: dlqMessagesResponseSchema

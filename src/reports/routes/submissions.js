@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { generateReportSubmissions } from '#reports/application/report-submissions.js'
@@ -17,7 +17,7 @@ export const getReportSubmissions = {
   method: 'GET',
   path: getReportSubmissionsPath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api', 'admin'],
     response: {
       schema: Joi.object({

@@ -1,4 +1,4 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 
@@ -28,7 +28,7 @@ export const wasteRecordsExportRoute = {
   method: 'GET',
   path: getWasteRecordsExportPath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api', 'admin']
   },
   /**

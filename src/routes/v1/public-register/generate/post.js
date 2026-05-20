@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { generatePublicRegister } from '#application/public-register/generate-public-register.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -12,6 +12,7 @@ import { auditPublicRegisterGenerate } from '#root/auditing/public-register.js'
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
  * @typedef {import('#domain/public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
  * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
+ * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  */
 
 export const publicRegisterGeneratePath = '/v1/public-register/generate'
@@ -21,21 +22,26 @@ export const generateLatestPublicRegister = {
   path: publicRegisterGeneratePath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, publicRegisterRepository: PublicRegisterRepository, systemLogsRepository: SystemLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, publicRegisterRepository: PublicRegisterRepository, systemLogsRepository: SystemLogsRepository, reportsRepository: ReportsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationsRepository, publicRegisterRepository, logger } =
-      request
+    const {
+      organisationsRepository,
+      publicRegisterRepository,
+      reportsRepository,
+      logger
+    } = request
     try {
       const result = await generatePublicRegister(
         organisationsRepository,
-        publicRegisterRepository
+        publicRegisterRepository,
+        reportsRepository
       )
 
       const generatedTime = new Date().toISOString()
