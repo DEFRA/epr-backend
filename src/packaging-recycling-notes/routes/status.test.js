@@ -52,6 +52,7 @@ const createMockPrn = (overrides = {}) => ({
   notes: 'Test notes',
   status: {
     currentStatus: PRN_STATUS.DRAFT,
+    currentStatusAt: new Date(),
     history: [
       {
         status: PRN_STATUS.DRAFT,
@@ -121,14 +122,15 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeEach(() => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository(
-          /** @type {any} */ ([mockPrn])
-        )(/** @type {any} */ ({
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
           info: vi.fn(),
           error: vi.fn(),
           warn: vi.fn(),
-          debug: vi.fn()
-        }))
+          debug: vi.fn(),
+          trace: vi.fn(),
+          fatal: vi.fn(),
+          child: vi.fn()
+        })
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
@@ -900,14 +902,15 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeEach(() => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository(
-          /** @type {any} */ ([mockPrn])
-        )(/** @type {any} */ ({
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
           info: vi.fn(),
           error: vi.fn(),
           warn: vi.fn(),
-          debug: vi.fn()
-        }))
+          debug: vi.fn(),
+          trace: vi.fn(),
+          fatal: vi.fn(),
+          child: vi.fn()
+        })
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
