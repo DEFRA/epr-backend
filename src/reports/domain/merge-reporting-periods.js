@@ -1,6 +1,10 @@
 /**
+ * @import { PeriodicReport, ReportSummary } from '../repository/port.js'
+ */
+
+/**
  * Indexes persisted periodic-report slots by "year:period" key for a given cadence.
- * @param {import('../repository/port.js').PeriodicReport[]} periodicReports
+ * @param {PeriodicReport[]} periodicReports
  * @param {string} cadence
  * @returns {Map<string, object>}
  */
@@ -32,7 +36,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  *   startDate: string;
  *   endDate: string;
  *   dueDate: string;
- *   report: import('../repository/port.js').ReportSummary | null;
+ *   report: ReportSummary | null;
  * }} MergedPeriod
  */
 
@@ -45,7 +49,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  * - Periods with active drafts that aren't in the computed set are appended
  *
  * @param {Array<{year: number, period: number, startDate: string, endDate: string, dueDate: string}>} computedPeriods
- * @param {import('../repository/port.js').PeriodicReport[]} periodicReports
+ * @param {PeriodicReport[]} periodicReports
  * @param {string} cadence
  * @returns {MergedPeriod[]}
  */
