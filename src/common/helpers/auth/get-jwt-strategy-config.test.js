@@ -16,10 +16,7 @@ const maintainerCredential = {
   role: 'service_maintainer',
   scopes: [...ADMIN_ROLES.service_maintainer]
 }
-const expectedMaintainerScope = [
-  ...ADMIN_ROLES.service_maintainer,
-  ROLES.serviceMaintainer
-]
+const expectedMaintainerScope = [...ADMIN_ROLES.service_maintainer]
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -142,7 +139,6 @@ describe('#getJwtStrategyConfig', () => {
           id: 'contact-123',
           email: 'user@example.com',
           issuer: entraIdMockOidcWellKnownResponse.issuer,
-          role: 'service_maintainer',
           scope: expectedMaintainerScope
         }
       })
@@ -218,7 +214,7 @@ describe('#getJwtStrategyConfig', () => {
       )
     })
 
-    test('write tier credential carries all admin scopes plus the legacy service_maintainer scope', async () => {
+    test('write tier credential carries the full admin scope bundle', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'service_maintainer_write',
         scopes: [...ADMIN_ROLES.service_maintainer_write]
@@ -239,14 +235,12 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.role).toBe('service_maintainer_write')
       expect(result.credentials.scope).toEqual([
-        ...ADMIN_ROLES.service_maintainer_write,
-        ROLES.serviceMaintainer
+        ...ADMIN_ROLES.service_maintainer_write
       ])
     })
 
-    test('support tier credential carries only admin.read with no legacy scope', async () => {
+    test('support tier credential carries only admin.read', async () => {
       mockGetEntraUserRoles.mockResolvedValue({
         role: 'support',
         scopes: [...ADMIN_ROLES.support]
@@ -267,11 +261,10 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.role).toBe('support')
       expect(result.credentials.scope).toEqual([SCOPES.adminRead])
     })
 
-    test('handles Entra ID token where user matches no admin tier (empty scope, null role)', async () => {
+    test('handles Entra ID token where user matches no admin tier (empty scope)', async () => {
       mockGetEntraUserRoles.mockResolvedValue({ role: null, scopes: [] })
 
       const config = getJwtStrategyConfig(mockOidcConfigs)
@@ -289,7 +282,6 @@ describe('#getJwtStrategyConfig', () => {
 
       const result = await config.validate(artifacts)
 
-      expect(result.credentials.role).toBeNull()
       expect(result.credentials.scope).toEqual([])
     })
 
@@ -494,7 +486,7 @@ describe('#getJwtStrategyConfig', () => {
               users: [],
               version: 1
             }),
-            replace: vi.fn().mockResolvedValue()
+            replace: vi.fn().mockResolvedValue(undefined)
           },
           path: '/any',
           params: {

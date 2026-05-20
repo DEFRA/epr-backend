@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateReportingPeriods } from '#reports/domain/generate-reporting-periods.js'
@@ -11,17 +11,35 @@ import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.j
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationsRepository } from '#repositories/organisations/port.js'
- * @import { ReportsRepository } from '#reports/repository/port.js'
+ * @import {
+ *   ReportsRepository,
+ *   ReportSummary,
+ *   ReportListItem
+ * } from '#reports/repository/port.js'
  */
 
 export const reportsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/reports/calendar'
 
+/**
+ * Curates the full report summary down to the list-response shape so the
+ * calendar endpoint doesn't leak heavy activity payloads.
+ * @param {ReportSummary | null} current
+ * @returns {ReportListItem | null}
+ */
+const toReportListItem = (current) => {
+  if (!current) {
+    return null
+  }
+  const { id, status, submittedAt, submittedBy } = current
+  return { id, status, submittedAt, submittedBy }
+}
+
 export const reportsGet = {
   method: 'GET',
   path: reportsGetPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser, ROLES.serviceMaintainer]),
+    auth: getAuthConfig([ROLES.standardUser, SCOPES.adminRead]),
     tags: ['api'],
     validate: {
       params: Joi.object({
@@ -63,11 +81,16 @@ export const reportsGet = {
       registrationId
     })
 
-    const reportingPeriods = mergeReportingPeriods(
+    const merged = mergeReportingPeriods(
       computedPeriods,
       periodicReports,
       cadence
     )
+
+    const reportingPeriods = merged.map((period) => ({
+      ...period,
+      report: toReportListItem(period.report)
+    }))
 
     return h.response({ cadence, reportingPeriods }).code(StatusCodes.OK)
   }

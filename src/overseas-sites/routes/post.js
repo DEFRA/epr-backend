@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { overseasSiteCreatePayloadSchema } from './post.schema.js'
 
@@ -19,7 +19,7 @@ export const overseasSitesCreate = {
   method: 'POST',
   path: overseasSitesCreatePath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminWrite]),
     tags: ['api'],
     validate: {
       payload: overseasSiteCreatePayloadSchema

@@ -101,7 +101,7 @@ describe('transform', () => {
       accreditations: [accreditation]
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toStrictEqual([
       {
@@ -146,7 +146,7 @@ describe('transform', () => {
       accreditations: [accreditation]
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toStrictEqual([
       {
@@ -189,7 +189,7 @@ describe('transform', () => {
       const registration = createTestRegistration({ status })
       const org = createTestOrganisation({ registrations: [registration] })
 
-      const rows = await transform([org])
+      const rows = await transform([org], { periods: [], entries: new Map() })
 
       expect(rows).toEqual([
         {
@@ -263,7 +263,7 @@ describe('transform', () => {
         accreditations: [accreditation]
       })
 
-      const rows = await transform([org])
+      const rows = await transform([org], { periods: [], entries: new Map() })
 
       expect(rows).toEqual([
         {
@@ -312,7 +312,7 @@ describe('transform', () => {
       ]
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toHaveLength(1)
     expect(rows[0].registrationNumber).toBe('R11111111PL')
@@ -354,7 +354,7 @@ describe('transform', () => {
       ]
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toEqual([
       {
@@ -384,7 +384,7 @@ describe('transform', () => {
       accreditations: []
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toHaveLength(0)
   })
@@ -461,7 +461,10 @@ describe('transform', () => {
       accreditations: []
     })
 
-    const rows = await transform([org1, org2, org3])
+    const rows = await transform([org1, org2, org3], {
+      periods: [],
+      entries: new Map()
+    })
 
     expect(rows).toEqual([
       {
@@ -532,7 +535,7 @@ describe('transform', () => {
       registrations: [registration]
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toHaveLength(1)
     expect(rows[0].businessName).toBe('Test Company Ltd')
@@ -550,12 +553,53 @@ describe('transform', () => {
       registrations: [registration]
     })
 
-    const rows = await transform([org])
+    const rows = await transform([org], { periods: [], entries: new Map() })
 
     expect(rows).toHaveLength(1)
     expect(rows[0].businessName).toBe('Test Company Ltd')
     expect(rows[0].companiesHouseNumber).toBe('')
     expect(rows[0].orgId).toBe(org.orgId)
+  })
+
+  describe('compliance fields', () => {
+    const buildEntry = (submittedDates) => {
+      const registration = createTestRegistration()
+      const org = createTestOrganisation({ registrations: [registration] })
+      const entries = new Map([
+        [
+          registration.id,
+          {
+            registrationId: registration.id,
+            organisationId: org.id,
+            submittedDates
+          }
+        ]
+      ])
+      return { org, entries }
+    }
+
+    const period = { label: 'Jan Report', key: '2026:monthly:1' }
+    const periods = [period]
+
+    it("returns 'N/A' when the period key is absent from submittedDates", async () => {
+      const { org, entries } = buildEntry(new Map())
+      const rows = await transform([org], { periods, entries })
+      expect(rows[0]['Jan Report']).toBe('N/A')
+    })
+
+    it("returns '' when the period key is present but not yet submitted", async () => {
+      const { org, entries } = buildEntry(new Map([['2026:monthly:1', null]]))
+      const rows = await transform([org], { periods, entries })
+      expect(rows[0]['Jan Report']).toBe('')
+    })
+
+    it('returns formatted date when the period has been submitted', async () => {
+      const { org, entries } = buildEntry(
+        new Map([['2026:monthly:1', '2026-01-15']])
+      )
+      const rows = await transform([org], { periods, entries })
+      expect(rows[0]['Jan Report']).toBe('15/01/2026')
+    })
   })
 
   it('should filter out test organisations from results', async () => {
@@ -602,7 +646,10 @@ describe('transform', () => {
       ]
     })
 
-    const rows = await transform([testOrg, normalOrg])
+    const rows = await transform([testOrg, normalOrg], {
+      periods: [],
+      entries: new Map()
+    })
 
     // Only the normal org should be in results, test org should be filtered out
     expect(rows).toHaveLength(1)

@@ -1,18 +1,28 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generatePublicRegister } from './generate-public-register.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
-import { formatDate } from '#common/helpers/date-formatter.js'
-import { getValidDateRange } from '#repositories/organisations/contract/test-data.js'
+import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
+
+const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
 describe('generatePublicRegister', () => {
   let organisationRepo
   let publicRegisterRepo
+  let reportsRepo
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(FIXED_DATE)
     organisationRepo = createInMemoryOrganisationsRepository()()
     publicRegisterRepo = createInMemoryPublicRegisterRepository()
+    reportsRepo = createInMemoryReportsRepository()()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('generates public register with approved registration and accreditation', async () => {
@@ -20,30 +30,24 @@ describe('generatePublicRegister', () => {
 
     const result = await generatePublicRegister(
       organisationRepo,
-      publicRegisterRepo
+      publicRegisterRepo,
+      reportsRepo
     )
 
     expect(result.url).toBeTruthy()
 
     const csvData = await publicRegisterRepo.fetchFromPresignedUrl(result.url)
+    const generatedAt = formatDateTimeDots(FIXED_DATE)
 
-    const { VALID_FROM } = getValidDateRange()
-    const activeDate = formatDate(VALID_FROM)
-    const dateLastUpdated = formatDate(new Date(Date.now()))
-
-    const lines = csvData.split('\n').filter((line) => line.length > 0)
-    expect(lines.length).toBe(5) // generated at row + header (3 lines) + data row
-
-    expect(lines[0]).toMatch(
-      /^(\uFEFF)?Generated at \d{2}\.\d{2}\.\d{2} \d{2}:\d{2}(,){15}$/
+    // At 2026-04-17: Jan, Feb, Mar (monthly) + Q1 (quarterly) → 20 columns total
+    // Accredited operator (monthly cadence): monthly periods show '' (not submitted), Q1 shows N/A
+    expect(csvData).toBe(
+      '﻿' +
+        `Generated at ${generatedAt},,,,,,,,,,,,,,,,,,,\n` +
+        'Type,Business name,Companies House Number,Org ID,"Registered office\n' +
+        'Head office\n' +
+        'Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band,Jan Report,Feb Report,Mar Report,Q1 Report\n' +
+        'Reprocessor,ACME ltd,AC012345,200001,"Palace of Westminster, London, SW1A 0AA",EA,REG1,ACME ltd,"7 Glass processing site, London, SW2A 0AA",Glass-remelt,R5,ACC1,17/04/2026,Approved,17/04/2026,"Over 10,000 tonnes",,,,N/A'
     )
-
-    // Verify header (starts on line 1)
-    expect(lines[1]).toContain('Type,Business name,Companies House Number')
-
-    // Verify data row
-    expect(lines[4]).toContain('Reprocessor,ACME ltd,AC012345,200001')
-    expect(lines[4]).toContain(activeDate)
-    expect(lines[4]).toContain(dateLastUpdated)
   })
 })

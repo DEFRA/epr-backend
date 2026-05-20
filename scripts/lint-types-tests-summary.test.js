@@ -83,15 +83,31 @@ describe('lint-types-tests-summary', () => {
     })
 
     describe('section 1 - errors in this PR', () => {
-      it('should show placeholder when no test files changed', () => {
+      it('should show the clean message exactly once when no test files changed', () => {
         const { markdown } = buildSummary({
           tscOutput: '',
           changedFiles: [],
           tsCodeLookup: noopLookup
         })
+        const occurrences =
+          markdown.split('No type errors in test files changed in this PR')
+            .length - 1
 
         expect(markdown).toContain('### Errors in this PR')
-        expect(markdown).toContain('_no test files changed in this PR_')
+        expect(occurrences).toBe(1)
+      })
+
+      it('should show the clean message exactly once when changed files have no errors', () => {
+        const { markdown } = buildSummary({
+          tscOutput: '',
+          changedFiles: ['src/server/foo/foo.test.js'],
+          tsCodeLookup: noopLookup
+        })
+        const occurrences =
+          markdown.split('No type errors in test files changed in this PR')
+            .length - 1
+
+        expect(occurrences).toBe(1)
       })
 
       it('should omit clean files from the section', () => {
@@ -289,6 +305,19 @@ describe('lint-types-tests-summary', () => {
       expect(markdown).toContain(
         '[View full summary](https://github.com/o/r/actions/runs/123)'
       )
+    })
+
+    it('should not duplicate the clean message when changed files have no errors', () => {
+      const { markdown } = buildPrComment({
+        tscOutput: '',
+        changedFiles: ['src/server/foo/foo.test.js'],
+        runUrl: 'https://github.com/o/r/actions/runs/123'
+      })
+      const occurrences =
+        markdown.split('No type errors in test files changed in this PR')
+          .length - 1
+
+      expect(occurrences).toBe(1)
     })
 
     it('should not include a run-url link when runUrl is omitted', () => {

@@ -1,8 +1,9 @@
 /**
+ * Per-request operator-side gates (issued by `getDefraUserRoles` from the
+ * request context). Distinct from the durable admin scopes in `SCOPES` below.
  * @typedef {typeof ROLES[keyof typeof ROLES]} Roles
  */
 export const ROLES = {
-  serviceMaintainer: 'service_maintainer',
   standardUser: 'standard_user',
   inquirer: 'inquirer',
   linker: 'linker'
@@ -18,9 +19,9 @@ export const SCOPES = {
 }
 
 /**
- * Admin role → scope-bundle map. Role names are deliberately snake_case strings:
- * they are stable wire identifiers (returned by GET /v1/admin/me) and i18n
- * lookup keys for the admin-frontend tier label.
+ * Admin role → scope-bundle map. Used internally by getEntraUserRoles to
+ * resolve an email-list match to its scope set; role names do not flow onto
+ * credentials or out over the wire.
  */
 export const ADMIN_ROLES = {
   service_maintainer_write: [

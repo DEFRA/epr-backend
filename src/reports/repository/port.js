@@ -129,6 +129,12 @@
  */
 
 /**
+ * Curated subset of ReportSummary used for list-style responses
+ * (e.g. the reports calendar). Excludes heavy activity payloads.
+ * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submittedAt' | 'submittedBy'>} ReportListItem
+ */
+
+/**
  * @typedef {Object} ReportPerPeriod
  * @property {string} startDate - ISO date string
  * @property {string} endDate - ISO date string

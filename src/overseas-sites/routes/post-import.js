@@ -8,7 +8,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { config } from '#root/config.js'
@@ -28,7 +28,7 @@ export const orsImportCreate = {
   method: 'POST',
   path: orsImportCreatePath,
   options: {
-    auth: getAuthConfig([ROLES.serviceMaintainer]),
+    auth: getAuthConfig([SCOPES.adminWrite]),
     tags: ['api'],
     validate: {
       payload: orsImportCreatePayloadSchema
@@ -52,7 +52,7 @@ export const orsImportCreate = {
         _id: importId,
         status: ORS_IMPORT_STATUS.PREPROCESSING,
         files: [],
-        // @ts-expect-error getAuthConfig([ROLES.serviceMaintainer]) guarantees human credentials with id, email, scope
+        // @ts-expect-error getAuthConfig([SCOPES.adminWrite]) guarantees human credentials with id, email, scope
         createdBy: extractUserDetails(request)
       })
 
