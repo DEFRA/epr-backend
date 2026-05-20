@@ -121,12 +121,14 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeEach(() => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
+        createInMemoryPackagingRecyclingNotesRepository(
+          /** @type {any} */ ([mockPrn])
+        )(/** @type {any} */ ({
           info: vi.fn(),
           error: vi.fn(),
           warn: vi.fn(),
           debug: vi.fn()
-        })
+        }))
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
@@ -898,12 +900,14 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeEach(() => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
+        createInMemoryPackagingRecyclingNotesRepository(
+          /** @type {any} */ ([mockPrn])
+        )(/** @type {any} */ ({
           info: vi.fn(),
           error: vi.fn(),
           warn: vi.fn(),
           debug: vi.fn()
-        })
+        }))
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
