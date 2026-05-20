@@ -144,18 +144,6 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         .sort((a, b) => a.number - b.number)
 
       return structuredClone(matches)
-    },
-
-    /**
-     * @param {string} registrationId
-     * @param {string | null} accreditationId
-     */
-    deleteAllForPartition: async (registrationId, accreditationId) => {
-      for (let index = storage.length - 1; index >= 0; index -= 1) {
-        if (matchesPartition(storage[index], registrationId, accreditationId)) {
-          storage.splice(index, 1)
-        }
-      }
     }
   })
 }

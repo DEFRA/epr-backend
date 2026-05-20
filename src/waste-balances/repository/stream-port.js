@@ -100,9 +100,6 @@ export class StreamSequenceError extends Error {
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified partition, with `number > afterNumber`, ordered by
  *   `number` ascending.
- * @property {(registrationId: string, accreditationId: string | null) => Promise<void>} deleteAllForPartition
- *   Remove every event belonging to the stream partition. Idempotent —
- *   resolves cleanly when no events exist.
  */
 
 /**

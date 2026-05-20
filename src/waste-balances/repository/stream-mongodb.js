@@ -212,15 +212,6 @@ const performFindEventsByPrnIdAfter =
   }
 
 /**
- * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<void>}
- */
-const performDeleteAllForPartition =
-  (collection) => async (registrationId, accreditationId) => {
-    await collection.deleteMany({ registrationId, accreditationId })
-  }
-
-/**
  * Creates a MongoDB-backed stream repository.
  *
  * @param {Db} db
@@ -234,7 +225,6 @@ export const createMongoStreamRepository = async (db) => {
     findLatestByPartition: performFindLatestByPartition(collection),
     findLatestByPartitionAndKind:
       performFindLatestByPartitionAndKind(collection),
-    findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
-    deleteAllForPartition: performDeleteAllForPartition(collection)
+    findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection)
   })
 }
