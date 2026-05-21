@@ -87,6 +87,9 @@ export const isFilled = (value, unfilledValues = []) => {
     return false
   }
   const trimmed = typeof value === 'string' ? value.trim() : value
+  if (trimmed === '') {
+    return false
+  }
   return !unfilledValues.includes(trimmed)
 }
 
