@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
