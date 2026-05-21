@@ -69,6 +69,7 @@ export const groupAsPeriodicReports = (
     prn: doc.prn
       ? {
           issuedTonnage: doc.prn.issuedTonnage,
+          freeTonnage: doc.prn.freeTonnage,
           totalRevenue: doc.prn.totalRevenue,
           averagePricePerTonne: doc.prn.averagePricePerTonne
         }

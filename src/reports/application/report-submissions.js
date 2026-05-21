@@ -22,6 +22,7 @@ import {
  * @property {string} tonnageSentOnToExporter
  * @property {string} tonnageSentOnToOtherFacilities
  * @property {string} tonnagePrnsPernsIssued
+ * @property {string} freeTonnagePrnsPerns
  * @property {string} totalRevenuePrnsPerns
  * @property {string} averagePrnPernPricePerTonne
  * @property {string} tonnageReceivedButNotRecycled
@@ -99,6 +100,7 @@ function buildTonnageFields(report) {
       report?.wasteSent?.tonnageSentToAnotherSite
     ),
     tonnagePrnsPernsIssued: formatTonnage(report?.prn?.issuedTonnage),
+    freeTonnagePrnsPerns: formatTonnage(report?.prn?.freeTonnage),
     totalRevenuePrnsPerns: formatTonnage(report?.prn?.totalRevenue),
     averagePrnPernPricePerTonne: formatTonnage(
       report?.prn?.averagePricePerTonne
