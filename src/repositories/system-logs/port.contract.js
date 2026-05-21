@@ -387,6 +387,72 @@ export const testSystemLogsRepositoryContract = (it) => {
 
         expect(backToPage1.hasPrev).toBe(false)
       })
+
+      it('direction=prev returns the page nearest the cursor when more newer rows exist', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 6; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const page1 = await repository.find({ userId, limit: 2 })
+        const page2 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page1.nextCursor,
+          direction: 'next'
+        })
+        const page3 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page2.nextCursor,
+          direction: 'next'
+        })
+        const backToPage2 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page3.prevCursor,
+          direction: 'prev'
+        })
+
+        expect(backToPage2.systemLogs.map((log) => log.context.id)).toEqual(
+          page2.systemLogs.map((log) => log.context.id)
+        )
+        expect(backToPage2.hasPrev).toBe(true)
+        expect(backToPage2.hasNext).toBe(true)
+      })
+
+      it('direction=prev returns an empty result with hasNext false when nothing is newer', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 3; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const newestPage = await repository.find({ userId, limit: 1 })
+        const result = await repository.find({
+          userId,
+          limit: 10,
+          cursor: newestPage.nextCursor,
+          direction: 'prev'
+        })
+
+        expect(result.systemLogs).toEqual([])
+        expect(result.hasNext).toBe(false)
+        expect(result.hasPrev).toBe(false)
+        expect(result.nextCursor).toBeNull()
+        expect(result.prevCursor).toBeNull()
+      })
     })
   })
 }

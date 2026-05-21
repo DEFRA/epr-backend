@@ -1,4 +1,3 @@
-import { describe, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -92,6 +91,34 @@ describe('GET /v1/system-logs/search', () => {
       const result = JSON.parse(response.payload)
       expect(result.systemLogs).toHaveLength(1)
       expect(result.systemLogs[0].context.organisationId).toBe(organisationId)
+    })
+
+    it('returns logs matching combined filters', async () => {
+      const organisationId = randomUUID()
+
+      await addSystemLog({
+        organisationId,
+        userId: 'alice',
+        subCategory: 'summary-log',
+        id: 1
+      })
+      await addSystemLog({
+        organisationId,
+        userId: 'bob',
+        subCategory: 'summary-log',
+        id: 2
+      })
+
+      const response = await makeRequest({
+        organisationId,
+        userId: 'alice',
+        subCategory: 'summary-log'
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.systemLogs).toHaveLength(1)
+      expect(result.systemLogs[0].context.id).toBe(1)
     })
 
     it('returns empty result when no logs match', async () => {
@@ -209,6 +236,12 @@ describe('GET /v1/system-logs/search', () => {
         cursor: 'abc123def456abc123def456',
         direction: 'sideways'
       })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 422 when direction is provided without a cursor', async () => {
+      const response = await makeRequest({ userId: 'test', direction: 'prev' })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })

@@ -67,7 +67,7 @@ export function createSystemLogsRepository() {
           page = page.reverse()
         }
 
-        const hasNext = isPrev ? true : hasExtra
+        const hasNext = isPrev ? page.length > 0 : hasExtra
         const hasPrev = isPrev ? hasExtra : Boolean(cursor)
 
         return {

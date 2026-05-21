@@ -42,7 +42,9 @@ export const systemLogsGetSearch = {
         limit: Joi.number().integer().min(1).optional(),
         cursor: Joi.string().hex().length(24).optional(),
         direction: Joi.string().valid('next', 'prev').optional()
-      }).or('organisationId', 'userId', 'subCategory')
+      })
+        .or('organisationId', 'userId', 'subCategory')
+        .with('direction', 'cursor')
     }
   },
   /**
