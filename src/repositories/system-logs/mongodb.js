@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { buildPage } from './pagination.js'
 
 export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 
@@ -51,7 +52,6 @@ export const createSystemLogsRepository = async (db) => {
       const isPrev = direction === 'prev'
 
       const filter = {}
-
       if (organisationId) {
         filter['context.organisationId'] = organisationId
       }
@@ -73,17 +73,15 @@ export const createSystemLogsRepository = async (db) => {
         .limit(limit + 1)
         .toArray()
 
-      const hasExtra = docs.length > limit
-      let page = hasExtra ? docs.slice(0, limit) : docs
-      if (isPrev) {
-        page = page.reverse()
-      }
-
-      const hasNext = isPrev ? page.length > 0 : hasExtra
-      const hasPrev = isPrev ? hasExtra : Boolean(cursor)
-
-      const firstRow = page[0]
-      const lastRow = page.at(-1)
+      const { page, hasNext, hasPrev, nextCursor, prevCursor } = buildPage(
+        docs,
+        {
+          limit,
+          isPrev,
+          hasCursor: Boolean(cursor),
+          toCursor: (doc) => doc._id.toHexString()
+        }
+      )
 
       return {
         systemLogs: page.map((doc) => ({
@@ -94,8 +92,8 @@ export const createSystemLogsRepository = async (db) => {
         })),
         hasNext,
         hasPrev,
-        nextCursor: hasNext && lastRow ? lastRow._id.toHexString() : null,
-        prevCursor: hasPrev && firstRow ? firstRow._id.toHexString() : null
+        nextCursor,
+        prevCursor
       }
     }
   })

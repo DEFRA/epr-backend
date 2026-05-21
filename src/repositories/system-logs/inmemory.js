@@ -1,5 +1,7 @@
 /** @import {SystemLog} from './port.js' */
 
+import { buildPage } from './pagination.js'
+
 /** Encode a numeric ID as a 24-char hex string (matching ObjectId format) */
 const toHexCursor = (id) => id.toString(16).padStart(24, '0')
 
@@ -61,26 +63,22 @@ export function createSystemLogsRepository() {
           isPrev ? a._internalId - b._internalId : b._internalId - a._internalId
         )
 
-        const hasExtra = results.length > limit
-        let page = hasExtra ? results.slice(0, limit) : results
-        if (isPrev) {
-          page = page.reverse()
-        }
-
-        const hasNext = isPrev ? page.length > 0 : hasExtra
-        const hasPrev = isPrev ? hasExtra : Boolean(cursor)
-
-        const firstRow = page[0]
-        const lastRow = page.at(-1)
+        const { page, hasNext, hasPrev, nextCursor, prevCursor } = buildPage(
+          results,
+          {
+            limit,
+            isPrev,
+            hasCursor: Boolean(cursor),
+            toCursor: (item) => toHexCursor(item._internalId)
+          }
+        )
 
         return {
           systemLogs: page.map(({ _internalId, ...rest }) => rest),
           hasNext,
           hasPrev,
-          nextCursor:
-            hasNext && lastRow ? toHexCursor(lastRow._internalId) : null,
-          prevCursor:
-            hasPrev && firstRow ? toHexCursor(firstRow._internalId) : null
+          nextCursor,
+          prevCursor
         }
       }
     }
