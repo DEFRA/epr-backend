@@ -2,6 +2,7 @@ import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -123,7 +124,7 @@ async function* streamRegistrationRows({
   wasteRecordsRepository,
   summaryLogsRepository
 }) {
-  const accreditation = registration.accreditation ?? null
+  const accreditation = resolveAccreditation(registration, org)
   const overseasSites = buildOverseasSitesContext(registration, sitesById)
   const summaryLogMap = await loadSummaryLogMap(
     summaryLogsRepository,

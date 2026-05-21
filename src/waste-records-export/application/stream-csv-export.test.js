@@ -21,6 +21,7 @@ const baseOrg = (overrides = {}) => ({
   companyDetails: { name: 'Acme Ltd' },
   submittedToRegulator: 'ea',
   registrations: [],
+  accreditations: [],
   ...overrides
 })
 
@@ -256,6 +257,113 @@ describe('streamCsvExport', () => {
     // "Included in Waste Balance" is the 8th metadata column (index 7) → "true"
     const cells = out[1].trim().split(',')
     expect(cells[7]).toBe('"true"')
+  })
+
+  const exporterAccreditation = {
+    id: 'acc-1',
+    status: 'approved',
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    statusHistory: []
+  }
+
+  const exportedRecordForAccreditationTests = (dateOfExport) => ({
+    type: WASTE_RECORD_TYPE.EXPORTED,
+    rowId: '5001',
+    data: {
+      processingType: PROCESSING_TYPES.EXPORTER,
+      ROW_ID: '5001',
+      DATE_RECEIVED_FOR_EXPORT: '2026-02-01',
+      EWC_CODE: '15 01 02',
+      DESCRIPTION_WASTE: 'Plastic packaging',
+      WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+      GROSS_WEIGHT: 10,
+      TARE_WEIGHT: 1,
+      PALLET_WEIGHT: 0,
+      NET_WEIGHT: 9,
+      BAILING_WIRE_PROTOCOL: 'No',
+      HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+      WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+      RECYCLABLE_PROPORTION_PERCENTAGE: 100,
+      TONNAGE_RECEIVED_FOR_EXPORT: 9,
+      TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9,
+      DATE_OF_EXPORT: dateOfExport,
+      BASEL_EXPORT_CODE: 'B3010',
+      CUSTOMS_CODES: '391510',
+      CONTAINER_NUMBER: 'CN-001',
+      DATE_RECEIVED_BY_OSR: '2026-04-01',
+      OSR_ID: '001',
+      DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
+    },
+    versions: [{ summaryLog: { id: 'sl-1' } }]
+  })
+
+  it('marks accredited exporter row as included when DATE_OF_EXPORT is within accreditation period', async () => {
+    const org = baseOrg({
+      accreditations: [exporterAccreditation],
+      registrations: [
+        baseRegistration({
+          accreditation: null,
+          accreditationId: 'acc-1',
+          overseasSites: { '001': { overseasSiteId: 'site-a' } }
+        })
+      ]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([
+            exportedRecordForAccreditationTests('2026-03-01')
+          ])
+      },
+      overseasSitesRepository: {
+        findAll: vi
+          .fn()
+          .mockResolvedValue([
+            { id: 'site-a', validFrom: new Date('2026-01-01') }
+          ])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[7]).toBe('"true"')
+  })
+
+  it('marks accredited exporter row as not included when DATE_OF_EXPORT is outside accreditation period', async () => {
+    const org = baseOrg({
+      accreditations: [exporterAccreditation],
+      registrations: [
+        baseRegistration({
+          accreditation: null,
+          accreditationId: 'acc-1',
+          overseasSites: { '001': { overseasSiteId: 'site-a' } }
+        })
+      ]
+    })
+    const deps = baseDeps({
+      organisationsRepository: { findAll: vi.fn().mockResolvedValue([org]) },
+      wasteRecordsRepository: {
+        findByRegistration: vi
+          .fn()
+          .mockResolvedValue([
+            exportedRecordForAccreditationTests('2025-06-01')
+          ])
+      },
+      overseasSitesRepository: {
+        findAll: vi
+          .fn()
+          .mockResolvedValue([
+            { id: 'site-a', validFrom: new Date('2026-01-01') }
+          ])
+      }
+    })
+
+    const out = await collect(streamCsvExport(deps))
+    const cells = out[1].trim().split(',')
+    expect(cells[7]).toBe('"false"')
   })
 
   it('iterates organisations and registrations sorted by id for deterministic output', async () => {

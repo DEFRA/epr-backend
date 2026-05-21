@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   getReportableRegistrations,
-  resolveAccreditationNumber
+  resolveAccreditationNumber,
+  resolveAccreditation
 } from './registration-utils.js'
 
 const buildOrg = (overrides = {}) => ({
@@ -162,5 +163,56 @@ describe('resolveAccreditationNumber', () => {
     const reg = buildReg({ accreditationId: 'acc-1' })
 
     expect(resolveAccreditationNumber(reg, org)).toBe('')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// resolveAccreditation
+// ---------------------------------------------------------------------------
+
+describe('resolveAccreditation', () => {
+  const accreditationFixture = {
+    id: 'acc-1',
+    status: 'approved',
+    validFrom: '2026-01-01',
+    validTo: '2026-12-31',
+    statusHistory: []
+  }
+
+  it('returns accreditation from org.accreditations when status is approved', () => {
+    const org = buildOrg({ accreditations: [accreditationFixture] })
+    const reg = buildReg({ accreditationId: 'acc-1' })
+
+    expect(resolveAccreditation(reg, org)).toBe(accreditationFixture)
+  })
+
+  it('returns accreditation from org.accreditations when status is suspended', () => {
+    const suspended = { ...accreditationFixture, status: 'suspended' }
+    const org = buildOrg({ accreditations: [suspended] })
+    const reg = buildReg({ accreditationId: 'acc-1' })
+
+    expect(resolveAccreditation(reg, org)).toBe(suspended)
+  })
+
+  it('returns null when registration has no accreditationId', () => {
+    const org = buildOrg({ accreditations: [accreditationFixture] })
+    const reg = buildReg({ accreditationId: null })
+
+    expect(resolveAccreditation(reg, org)).toBeNull()
+  })
+
+  it('returns null when accreditationId does not match any entry in org.accreditations', () => {
+    const org = buildOrg({ accreditations: [accreditationFixture] })
+    const reg = buildReg({ accreditationId: 'acc-unknown' })
+
+    expect(resolveAccreditation(reg, org)).toBeNull()
+  })
+
+  it('returns null when matched accreditation has a non-active status', () => {
+    const cancelled = { ...accreditationFixture, status: 'cancelled' }
+    const org = buildOrg({ accreditations: [cancelled] })
+    const reg = buildReg({ accreditationId: 'acc-1' })
+
+    expect(resolveAccreditation(reg, org)).toBeNull()
   })
 })
