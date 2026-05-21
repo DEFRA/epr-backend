@@ -61,7 +61,7 @@ export const basicAuthPlugin = {
               }
 
               const [username, password, ...rest] = Buffer.from(
-                authorization.slice(6),
+                authorization.replace('Basic ', ''),
                 'base64'
               )
                 .toString('utf-8')
