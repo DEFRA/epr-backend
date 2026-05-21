@@ -103,7 +103,7 @@ export const packagingRecyclingNotesUpdateStatus = {
       logger,
       auth
     } = request
-    const { organisationId, accreditationId, id } = params
+    const { organisationId, registrationId, accreditationId, id } = params
     const { status: newStatus } = payload
     const user = {
       id: auth.credentials?.id ?? 'unknown',
@@ -129,6 +129,7 @@ export const packagingRecyclingNotesUpdateStatus = {
         logger,
         id,
         organisationId,
+        registrationId,
         accreditationId,
         newStatus,
         actor,

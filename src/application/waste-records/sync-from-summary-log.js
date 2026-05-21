@@ -154,6 +154,7 @@ const resolveAccreditation = async (
  * @param {Array<{ record: import('#domain/waste-records/model.js').WasteRecord }>} params.wasteRecords
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
+ * @param {string} params.summaryLogId
  */
 const updateWasteBalances = async ({
   parsedData,
@@ -161,7 +162,8 @@ const updateWasteBalances = async ({
   wasteBalancesRepository,
   wasteRecords,
   user,
-  overseasSites
+  overseasSites,
+  summaryLogId
 }) => {
   // We only calculate waste balance for exporters and reprocessor inputs currently
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -173,7 +175,7 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
-      { user, accreditation, overseasSites }
+      { user, accreditation, overseasSites, summaryLogId }
     )
   }
 }
@@ -337,7 +339,8 @@ export const syncFromSummaryLog = (dependencies) => {
         wasteBalancesRepository,
         wasteRecords,
         user,
-        overseasSites
+        overseasSites,
+        summaryLogId: summaryLog.file.id
       })
     }
 

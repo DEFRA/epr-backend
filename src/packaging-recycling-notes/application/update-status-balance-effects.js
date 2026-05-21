@@ -17,7 +17,14 @@ import {
  * @param {Object} params
  */
 async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -28,6 +35,7 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
 
     await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -47,7 +55,14 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -58,6 +73,7 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
 
     await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -78,13 +94,21 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
     await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
@@ -105,13 +129,21 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {Object} params
  */
 async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
-  const { accreditationId, organisationId, prnId, tonnage, userId } = params
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId
+  } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
     await wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
       accreditationId,
+      registrationId,
       organisationId,
       prnId,
       tonnage,
