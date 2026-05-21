@@ -70,10 +70,7 @@ const COLLECTIONS = [
   'system-logs'
 ]
 
-const mockS3Config = /** @type {any} */ ({
-  s3Client: {},
-  preSignedUrlExpiry: 60
-})
+const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
 const mockLogger = {
   info: vi.fn(),
   error: vi.fn(),
@@ -84,76 +81,67 @@ const mockLogger = {
   child: vi.fn()
 }
 
-const it = /** @type {any} */ (
-  mongoIt.extend({
-    mongoClient: async ({ db }, use) => {
-      const client = await MongoClient.connect(/** @type {any} */ (db))
-      await use(client)
-      await client.close()
-    },
+const it = mongoIt.extend({
+  mongoClient: async ({ db }, use) => {
+    const client = await MongoClient.connect(db)
+    await use(client)
+    await client.close()
+  },
 
-    // @ts-expect-error -- vitest .extend() fixture typing
-    database: async ({ mongoClient }, use) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      for (const name of COLLECTIONS) {
-        await database.collection(name).deleteMany({})
-      }
-      await use(database)
-    },
-
-    // @ts-expect-error -- vitest .extend() fixture typing
-    repositories: async ({ database }, use) => {
-      const organisationsFactory = await createOrganisationsRepository(database)
-      const prnsFactory = /** @type {any} */ (
-        await createPackagingRecyclingNotesRepository(database, [])
-      )
-      const streamFactory = await createMongoStreamRepository(database)
-      const wasteBalancesFactory = await createWasteBalancesRepository(
-        database,
-        {
-          streamRepository: streamFactory()
-        }
-      )
-      const reportsFactory = await createReportsRepository(database)
-      const wasteRecordsFactory = /** @type {any} */ (
-        await createWasteRecordsRepository(database)
-      )
-      const summaryLogsFactory = await createSummaryLogsRepository(
-        database,
-        mockS3Config
-      )
-      const overseasSitesFactory = await createOverseasSitesRepository(database)
-      const systemLogsFactory = await createSystemLogsRepository(database)
-
-      await use({
-        organisations: organisationsFactory(),
-        prns: prnsFactory(),
-        wasteBalances: wasteBalancesFactory(),
-        reports: reportsFactory(),
-        wasteRecords: wasteRecordsFactory(),
-        summaryLogs: summaryLogsFactory(mockLogger),
-        overseasSites: overseasSitesFactory(),
-        systemLogs: systemLogsFactory(mockLogger),
-        wasteBalancesSave: saveBalance(database)
-      })
-    },
-
-    // @ts-expect-error -- vitest .extend() fixture typing
-    reset: async ({ database }, use) => {
-      await use(createNonProdDataReset(database))
-    },
-
-    // Snapshot config.cdpEnvironment for the duration of a test and expose a
-    // setter. Restores the previous value on teardown so the `config` singleton
-    // doesn't leak state between tests.
-    // eslint-disable-next-line no-empty-pattern
-    setCdpEnvironment: async ({}, use) => {
-      const previous = config.get('cdpEnvironment')
-      await use((value) => config.set('cdpEnvironment', value))
-      config.set('cdpEnvironment', previous)
+  database: async ({ mongoClient }, use) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    for (const name of COLLECTIONS) {
+      await database.collection(name).deleteMany({})
     }
-  })
-)
+    await use(database)
+  },
+
+  repositories: async ({ database }, use) => {
+    const organisationsFactory = await createOrganisationsRepository(database)
+    const prnsFactory = await createPackagingRecyclingNotesRepository(
+      database,
+      []
+    )
+    const streamFactory = await createMongoStreamRepository(database)
+    const wasteBalancesFactory = await createWasteBalancesRepository(database, {
+      streamRepository: streamFactory()
+    })
+    const reportsFactory = await createReportsRepository(database)
+    const wasteRecordsFactory = await createWasteRecordsRepository(database)
+    const summaryLogsFactory = await createSummaryLogsRepository(
+      database,
+      mockS3Config
+    )
+    const overseasSitesFactory = await createOverseasSitesRepository(database)
+    const systemLogsFactory = await createSystemLogsRepository(database)
+
+    await use({
+      organisations: organisationsFactory(),
+      prns: prnsFactory(),
+      wasteBalances: wasteBalancesFactory(),
+      reports: reportsFactory(),
+      wasteRecords: wasteRecordsFactory(),
+      summaryLogs: summaryLogsFactory(mockLogger),
+      overseasSites: overseasSitesFactory(),
+      systemLogs: systemLogsFactory(mockLogger),
+      wasteBalancesSave: saveBalance(database)
+    })
+  },
+
+  reset: async ({ database }, use) => {
+    await use(createNonProdDataReset(database))
+  },
+
+  // Snapshot config.cdpEnvironment for the duration of a test and expose a
+  // setter. Restores the previous value on teardown so the `config` singleton
+  // doesn't leak state between tests.
+  // eslint-disable-next-line no-empty-pattern
+  setCdpEnvironment: async ({}, use) => {
+    const previous = config.get('cdpEnvironment')
+    await use((value) => config.set('cdpEnvironment', value))
+    config.set('cdpEnvironment', previous)
+  }
+})
 
 /**
  * Builds and inserts an organisation with a single exporter registration
@@ -228,11 +216,9 @@ const seedDownstreamForOrganisation = async (
   await repositories.wasteRecords.appendVersions(
     organisationId,
     registrationId,
-    toWasteRecordVersions(
-      /** @type {any} */ ({
-        received: { 'row-1': { version, data } }
-      })
-    )
+    toWasteRecordVersions({
+      received: { 'row-1': { version, data } }
+    })
   )
 
   await repositories.summaryLogs.insert(
@@ -528,11 +514,7 @@ describe('non-prod data reset (mongo)', () => {
       await seedDownstreamForOrganisation(database, repositories, seeded)
       setCdpEnvironment('prod')
 
-      const server = /** @type {any} */ ({
-        app: {},
-        logger: mockLogger,
-        ext: () => {}
-      })
+      const server = { app: {}, logger: mockLogger, ext: () => {} }
       nonProdDataResetPlugin.register(server, { db: database })
 
       await expect(
