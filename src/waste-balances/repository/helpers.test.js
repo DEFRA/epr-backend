@@ -1287,8 +1287,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
       const streamRepository =
-        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
-          appendEvent: vi.fn()
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
@@ -1515,8 +1518,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
       const streamRepository =
-        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
-          appendEvent: vi.fn()
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
@@ -1746,8 +1752,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
       const streamRepository =
-        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
-          appendEvent: vi.fn()
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
@@ -1934,8 +1943,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
       const streamRepository =
-        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
-          appendEvent: vi.fn()
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
