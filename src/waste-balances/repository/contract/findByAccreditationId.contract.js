@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
-import { buildLedgerTransaction } from '../ledger-test-data.js'
+import { buildStreamEvent } from '../stream-test-data.js'
 
 export const testFindByAccreditationIdBehaviour = (it) => {
   describe('findByAccreditationId', () => {
@@ -100,21 +100,23 @@ export const testFindByAccreditationIdBehaviour = (it) => {
 
     it('returns canonicalSource ledger when stored as ledger', async ({
       insertWasteBalance,
-      ledgerRepository
+      streamRepository
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-marker-ledger',
+        registrationId: 'reg-1',
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
 
       await insertWasteBalance(wasteBalance)
-      await ledgerRepository.insertTransactions([
-        buildLedgerTransaction({
+      await streamRepository.appendEvent(
+        buildStreamEvent({
           accreditationId: 'acc-marker-ledger',
+          registrationId: 'reg-1',
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      ])
+      )
 
       const result = await repository.findByAccreditationId('acc-marker-ledger')
 
@@ -123,8 +125,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
 
     describe('marker-aware amount resolution', () => {
       it('returns embedded amount and availableAmount when marker is embedded', async ({
-        insertWasteBalance,
-        ledgerRepository
+        insertWasteBalance
       }) => {
         await insertWasteBalance(
           buildWasteBalance({
@@ -135,14 +136,6 @@ export const testFindByAccreditationIdBehaviour = (it) => {
           })
         )
 
-        await ledgerRepository.insertTransactions([
-          buildLedgerTransaction({
-            accreditationId: 'acc-marker-embedded-amounts',
-            number: 1,
-            closingBalance: { amount: 999, availableAmount: 999 }
-          })
-        ])
-
         const result = await repository.findByAccreditationId(
           'acc-marker-embedded-amounts'
         )
@@ -152,8 +145,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
       })
 
       it('returns embedded amount and availableAmount when marker is migrating', async ({
-        insertWasteBalance,
-        ledgerRepository
+        insertWasteBalance
       }) => {
         await insertWasteBalance(
           buildWasteBalance({
@@ -164,14 +156,6 @@ export const testFindByAccreditationIdBehaviour = (it) => {
           })
         )
 
-        await ledgerRepository.insertTransactions([
-          buildLedgerTransaction({
-            accreditationId: 'acc-marker-migrating-amounts',
-            number: 1,
-            closingBalance: { amount: 999, availableAmount: 999 }
-          })
-        ])
-
         const result = await repository.findByAccreditationId(
           'acc-marker-migrating-amounts'
         )
@@ -180,31 +164,36 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         expect(result.availableAmount).toBe(50)
       })
 
-      it('substitutes amount and availableAmount from the latest ledger transaction when marker is ledger', async ({
+      it('substitutes amount and availableAmount from the latest stream event when marker is ledger', async ({
         insertWasteBalance,
-        ledgerRepository
+        streamRepository
       }) => {
         await insertWasteBalance(
           buildWasteBalance({
             accreditationId: 'acc-marker-ledger-amounts',
+            registrationId: 'reg-1',
             canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
             amount: 999,
             availableAmount: 999
           })
         )
 
-        await ledgerRepository.insertTransactions([
-          buildLedgerTransaction({
+        await streamRepository.appendEvent(
+          buildStreamEvent({
             accreditationId: 'acc-marker-ledger-amounts',
+            registrationId: 'reg-1',
             number: 1,
             closingBalance: { amount: 100, availableAmount: 90 }
-          }),
-          buildLedgerTransaction({
+          })
+        )
+        await streamRepository.appendEvent(
+          buildStreamEvent({
             accreditationId: 'acc-marker-ledger-amounts',
+            registrationId: 'reg-1',
             number: 2,
             closingBalance: { amount: 175, availableAmount: 150 }
           })
-        ])
+        )
 
         const result = await repository.findByAccreditationId(
           'acc-marker-ledger-amounts'
@@ -214,12 +203,13 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         expect(result.availableAmount).toBe(150)
       })
 
-      it('throws when marker is ledger and no ledger transactions exist', async ({
+      it('throws when marker is ledger and no stream events exist', async ({
         insertWasteBalance
       }) => {
         await insertWasteBalance(
           buildWasteBalance({
             accreditationId: 'acc-marker-ledger-empty',
+            registrationId: 'reg-1',
             canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
             amount: 999,
             availableAmount: 999
@@ -229,28 +219,30 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         await expect(
           repository.findByAccreditationId('acc-marker-ledger-empty')
         ).rejects.toThrow(
-          /acc-marker-ledger-empty.*canonicalSource 'ledger' but no ledger transactions/
+          /acc-marker-ledger-empty.*canonicalSource 'ledger' but no stream events/
         )
       })
 
       it('preserves the canonicalSource marker on the returned document', async ({
         insertWasteBalance,
-        ledgerRepository
+        streamRepository
       }) => {
         await insertWasteBalance(
           buildWasteBalance({
             accreditationId: 'acc-marker-ledger-preserved',
+            registrationId: 'reg-1',
             canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
           })
         )
 
-        await ledgerRepository.insertTransactions([
-          buildLedgerTransaction({
+        await streamRepository.appendEvent(
+          buildStreamEvent({
             accreditationId: 'acc-marker-ledger-preserved',
+            registrationId: 'reg-1',
             number: 1,
             closingBalance: { amount: 10, availableAmount: 10 }
           })
-        ])
+        )
 
         const result = await repository.findByAccreditationId(
           'acc-marker-ledger-preserved'

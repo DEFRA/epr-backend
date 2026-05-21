@@ -7,7 +7,7 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
@@ -99,11 +99,11 @@ describe('updatePrnStatus concurrency', () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildIssuableSeed()
     ])
-    const prnRepository = prnFactory(noopLogger())
+    const prnRepository = /** @type {any} */ (prnFactory(noopLogger()))
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [buildBalanceSeed()],
-      { ledgerRepository: createInMemoryLedgerRepository()() }
+      { streamRepository: createInMemoryStreamRepository()() }
     )
     const realWasteBalancesRepository = wasteFactory()
     const deductSpy = vi.fn(
@@ -140,11 +140,11 @@ describe('updatePrnStatus concurrency', () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildIssuableSeed()
     ])
-    const prnRepository = prnFactory(noopLogger())
+    const prnRepository = /** @type {any} */ (prnFactory(noopLogger()))
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [buildBalanceSeed({ availableAmount: RINGFENCED_AVAILABLE })],
-      { ledgerRepository: createInMemoryLedgerRepository()() }
+      { streamRepository: createInMemoryStreamRepository()() }
     )
     const realWasteBalancesRepository = wasteFactory()
     const creditSpy = vi.fn(
@@ -181,7 +181,7 @@ describe('updatePrnStatus concurrency', () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildAwaitingCancellationSeed()
     ])
-    const prnRepository = prnFactory(noopLogger())
+    const prnRepository = /** @type {any} */ (prnFactory(noopLogger()))
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [
@@ -190,7 +190,7 @@ describe('updatePrnStatus concurrency', () => {
           amount: ISSUED_AMOUNT
         })
       ],
-      { ledgerRepository: createInMemoryLedgerRepository()() }
+      { streamRepository: createInMemoryStreamRepository()() }
     )
     const realWasteBalancesRepository = wasteFactory()
     const creditSpy = vi.fn(

@@ -20,7 +20,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
 import {
   createWasteBalancesRepository,
   saveBalance
@@ -45,7 +45,10 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     info: vi.fn(),
     error: (...args) => productionLoggerError(...args),
     warn: vi.fn(),
-    debug: vi.fn()
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn()
   }
 }))
 
@@ -75,7 +78,7 @@ const mockLogger = {
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
+    const client = await MongoClient.connect(/** @type {any} */ (db))
     await use(client)
     await client.close()
   },
@@ -94,9 +97,9 @@ const it = mongoIt.extend({
       database,
       []
     )
-    const ledgerFactory = await createMongoLedgerRepository(database)
+    const streamFactory = await createMongoStreamRepository(database)
     const wasteBalancesFactory = await createWasteBalancesRepository(database, {
-      ledgerRepository: ledgerFactory()
+      streamRepository: streamFactory()
     })
     const reportsFactory = await createReportsRepository(database)
     const wasteRecordsFactory = await createWasteRecordsRepository(database)

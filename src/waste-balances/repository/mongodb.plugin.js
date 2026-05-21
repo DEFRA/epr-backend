@@ -1,5 +1,5 @@
 import { createWasteBalancesRepository } from './mongodb.js'
-import { createMongoLedgerRepository } from './ledger-mongodb.js'
+import { createMongoStreamRepository } from './stream-mongodb.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
 export const mongoWasteBalancesRepositoryPlugin = {
@@ -8,11 +8,11 @@ export const mongoWasteBalancesRepositoryPlugin = {
   dependencies: ['mongodb', 'feature-flags'],
 
   register: async (server) => {
-    const ledgerFactory = await createMongoLedgerRepository(server.db)
-    const ledgerRepository = ledgerFactory()
+    const streamFactory = await createMongoStreamRepository(server.db)
+    const streamRepository = streamFactory()
 
     const factory = await createWasteBalancesRepository(server.db, {
-      ledgerRepository,
+      streamRepository,
       featureFlags: server.featureFlags
     })
     const repository = factory()

@@ -7,7 +7,7 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
@@ -78,12 +78,12 @@ const buildOrganisationsRepository = () => ({
 const setupRepositories = ({ prnSeed, balanceSeed }) => {
   const logger = buildLogger()
   const prnFactory = createInMemoryPackagingRecyclingNotesRepository([prnSeed])
-  const prnRepository = prnFactory(logger)
+  const prnRepository = /** @type {any} */ (prnFactory(logger))
 
   const wasteFactory = createInMemoryWasteBalancesRepository([balanceSeed], {
-    ledgerRepository: createInMemoryLedgerRepository()()
+    streamRepository: createInMemoryStreamRepository()()
   })
-  const wasteBalancesRepository = wasteFactory()
+  const wasteBalancesRepository = /** @type {any} */ (wasteFactory())
 
   const organisationsRepository = buildOrganisationsRepository()
 

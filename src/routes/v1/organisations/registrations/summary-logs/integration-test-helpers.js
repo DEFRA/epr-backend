@@ -13,16 +13,16 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-// eslint-disable-next-line n/no-unpublished-import
+ 
 import { createTestServer } from '#test/create-test-server.js'
-// eslint-disable-next-line n/no-unpublished-import
+ 
 import { asStandardUser } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 
-// eslint-disable-next-line n/no-unpublished-import
+ 
 export { asStandardUser } from '#test/inject-auth.js'
 
 export const REPROCESSOR_RECEIVED_HEADERS = [
@@ -524,7 +524,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const featureFlags = createInMemoryFeatureFlags(featureFlagOverrides)
 
-  const ledgerRepository = createInMemoryLedgerRepository()()
+  const streamRepository = createInMemoryStreamRepository()()
 
   const systemLogsForBalanceAudit = {
     insert: vi.fn().mockResolvedValue(undefined)
@@ -533,7 +533,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
     existingWasteBalances,
     {
-      ledgerRepository,
+      streamRepository,
       featureFlags,
       systemLogsRepository: systemLogsForBalanceAudit
     }
@@ -621,7 +621,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     registrationId,
     accreditationId,
     fileDataMap,
-    ledgerRepository,
+    streamRepository,
     systemLogsForBalanceAudit
   }
 }

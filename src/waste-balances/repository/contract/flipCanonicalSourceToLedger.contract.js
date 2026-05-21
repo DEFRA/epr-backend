@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
-import { buildLedgerTransaction } from '../ledger-test-data.js'
+import { buildStreamEvent } from '../stream-test-data.js'
 
 export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
   describe('flipCanonicalSourceToLedger', () => {
@@ -14,22 +14,24 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
 
     it('flips the marker from migrating to ledger when the captured version matches and clears migratingSince', async ({
       insertWasteBalance,
-      ledgerRepository
+      streamRepository
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-ok',
+        registrationId: 'reg-1',
         version: 7,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
         migratingSince: '2025-01-01T00:00:00.000Z'
       })
       await insertWasteBalance(balance)
-      await ledgerRepository.insertTransactions([
-        buildLedgerTransaction({
+      await streamRepository.appendEvent(
+        buildStreamEvent({
           accreditationId: 'acc-flip-ok',
+          registrationId: 'reg-1',
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      ])
+      )
 
       const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-ok',
@@ -84,21 +86,23 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
 
     it('returns the ledger post-state when the marker is already on ledger — only promotes migrating', async ({
       insertWasteBalance,
-      ledgerRepository
+      streamRepository
     }) => {
       const balance = buildWasteBalance({
         accreditationId: 'acc-flip-already-ledger',
+        registrationId: 'reg-1',
         version: 3,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
       await insertWasteBalance(balance)
-      await ledgerRepository.insertTransactions([
-        buildLedgerTransaction({
+      await streamRepository.appendEvent(
+        buildStreamEvent({
           accreditationId: 'acc-flip-already-ledger',
+          registrationId: 'reg-1',
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      ])
+      )
 
       const result = await repository.flipCanonicalSourceToLedger({
         accreditationId: 'acc-flip-already-ledger',
