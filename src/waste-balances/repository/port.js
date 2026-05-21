@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} DeductAvailableBalanceParams
  * @property {string} accreditationId
+ * @property {string} registrationId
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
@@ -10,6 +11,7 @@
 /**
  * @typedef {Object} DeductTotalBalanceParams
  * @property {string} accreditationId
+ * @property {string} registrationId
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
@@ -19,6 +21,7 @@
 /**
  * @typedef {Object} CreditAvailableBalanceParams
  * @property {string} accreditationId
+ * @property {string} registrationId
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
@@ -28,6 +31,7 @@
 /**
  * @typedef {Object} CreditFullBalanceParams
  * @property {string} accreditationId
+ * @property {string} registrationId
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
@@ -104,7 +108,7 @@
  * @typedef {Object} WasteBalancesRepository
  * @property {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} findByAccreditationId
  * @property {(accreditationIds: string[]) => Promise<import('../domain/model.js').WasteBalance[]>} findByAccreditationIds
- * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], options: { user: import('#domain/summary-logs/worker/port.js').SubmitUser, accreditation: import('#domain/organisations/accreditation.js').Accreditation, overseasSites: import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext }) => Promise<void>} updateWasteBalanceTransactions
+ * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], options: { user: import('#domain/summary-logs/worker/port.js').SubmitUser, accreditation: import('#domain/organisations/accreditation.js').Accreditation, overseasSites: import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext, summaryLogId: string }) => Promise<void>} updateWasteBalanceTransactions
  * @property {(params: DeductAvailableBalanceParams) => Promise<void>} deductAvailableBalanceForPrnCreation
  * @property {(params: DeductTotalBalanceParams) => Promise<void>} deductTotalBalanceForPrnIssue
  * @property {(params: CreditAvailableBalanceParams) => Promise<void>} creditAvailableBalanceForPrnCancellation
