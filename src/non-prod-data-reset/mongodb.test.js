@@ -20,6 +20,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
 import {
   createWasteBalancesRepository,
@@ -193,6 +194,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
 }
 
 const seedDownstreamForOrganisation = async (
+  database,
   repositories,
   { organisationId, registrationId, accreditationId }
 ) => {
@@ -239,6 +241,15 @@ const seedDownstreamForOrganisation = async (
   )
 
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
+
+  await database.collection('waste-balance-events').insertOne(
+    buildStreamEvent({
+      registrationId,
+      accreditationId,
+      organisationId,
+      number: 1
+    })
+  )
 }
 
 // The 'organisation' collection is written by the journey-test apply path and
@@ -292,7 +303,7 @@ describe('non-prod data reset (mongo)', () => {
       reset
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, seeded)
+      await seedDownstreamForOrganisation(database, repositories, seeded)
       await seedOrganisationCollection(database, seeded.organisation.orgId)
       await seedStagingCollections(database, seeded.organisation.orgId)
       // A second PRN so the deleteMany semantics get exercised.
@@ -311,7 +322,7 @@ describe('non-prod data reset (mongo)', () => {
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
         'waste-balances': 1,
-        'waste-balance-events': 0,
+        'waste-balance-events': 1,
         reports: 1,
         'waste-records': 1,
         'summary-logs': 1,
@@ -337,12 +348,12 @@ describe('non-prod data reset (mongo)', () => {
       reset
     }) => {
       const target = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, target)
+      await seedDownstreamForOrganisation(database, repositories, target)
       await seedOrganisationCollection(database, target.organisation.orgId)
       await seedStagingCollections(database, target.organisation.orgId)
 
       const other = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, other)
+      await seedDownstreamForOrganisation(database, repositories, other)
       await seedOrganisationCollection(database, other.organisation.orgId)
       await seedStagingCollections(database, other.organisation.orgId)
 
@@ -440,11 +451,12 @@ describe('non-prod data reset (mongo)', () => {
     })
 
     it('is idempotent: a second call returns all zeros', async ({
+      database,
       repositories,
       reset
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, seeded)
+      await seedDownstreamForOrganisation(database, repositories, seeded)
 
       const first = await reset.deleteByOrgId(seeded.organisation.orgId)
       expect(first['epr-organisations']).toBe(1)
@@ -513,7 +525,7 @@ describe('non-prod data reset (mongo)', () => {
       setCdpEnvironment
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, seeded)
+      await seedDownstreamForOrganisation(database, repositories, seeded)
       setCdpEnvironment('prod')
 
       const server = /** @type {any} */ ({
