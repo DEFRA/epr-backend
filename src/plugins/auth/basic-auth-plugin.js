@@ -85,7 +85,7 @@ export const basicAuthPlugin = {
                   id: username,
                   name: username,
                   isMachine: true, // ensures user is identified appropriately in any audit logs
-                  scope: [SCOPES.adminRead]
+                  scope: [SCOPES.organisationRead]
                 }
               })
             }

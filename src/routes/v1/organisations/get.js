@@ -25,7 +25,7 @@ export const organisationsGetAll = {
   options: {
     auth: {
       strategies: ['access-token', BASIC_AUTH],
-      scope: [SCOPES.adminRead]
+      scope: [SCOPES.adminRead, SCOPES.organisationRead]
     },
     tags: ['api', 'admin'],
     validate: {
