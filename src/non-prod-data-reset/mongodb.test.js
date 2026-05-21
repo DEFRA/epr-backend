@@ -94,7 +94,7 @@ const it = /** @type {any} */ (
 
     // @ts-expect-error -- vitest .extend() fixture typing
     database: async ({ mongoClient }, use) => {
-      const database = /** @type {any} */ (mongoClient).db(DATABASE_NAME)
+      const database = mongoClient.db(DATABASE_NAME)
       for (const name of COLLECTIONS) {
         await database.collection(name).deleteMany({})
       }
@@ -130,7 +130,7 @@ const it = /** @type {any} */ (
         prns: prnsFactory(),
         wasteBalances: wasteBalancesFactory(),
         reports: reportsFactory(),
-        wasteRecords: /** @type {any} */ (wasteRecordsFactory()),
+        wasteRecords: wasteRecordsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),
         overseasSites: overseasSitesFactory(),
         systemLogs: systemLogsFactory(mockLogger),
@@ -140,7 +140,7 @@ const it = /** @type {any} */ (
 
     // @ts-expect-error -- vitest .extend() fixture typing
     reset: async ({ database }, use) => {
-      await use(createNonProdDataReset(/** @type {any} */ (database)))
+      await use(createNonProdDataReset(database))
     },
 
     // Snapshot config.cdpEnvironment for the duration of a test and expose a

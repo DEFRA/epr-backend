@@ -123,6 +123,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     it('should mark record as not excluded when exporter has unknown record type (no matching schema)', () => {
+      // Cast to any: deliberately using an invalid type value ('unknown-type' is
+      // not a WasteRecordType) to test the no-matching-schema branch.
       const unknownTypeRecord = /** @type {any} */ ({
         organisationId: 'org-1',
         registrationId: 'reg-1',
@@ -312,6 +314,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     it('should mark record as not excluded for unknown record type in reprocessor output', () => {
+      // Cast to any: deliberately using an invalid type value ('UNKNOWN' is not
+      // a WasteRecordType) to test the no-matching-schema branch.
       const unknownRecord = /** @type {any} */ ({
         organisationId: 'org-1',
         registrationId: 'reg-1',
@@ -445,7 +449,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
           }
         ]
         const accreditation = { id: 'acc-1' }
-        const streamRepository = /** @type {any} */ ({ appendEvent: vi.fn() })
+        const streamRepository =
+          /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
+            appendEvent: vi.fn()
+          })
         const findBalance = vi.fn().mockResolvedValue({
           id: 'bal-1',
           accreditationId: 'acc-1',
@@ -1279,7 +1286,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
         version: 1,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
-      const streamRepository = /** @type {any} */ ({ appendEvent: vi.fn() })
+      const streamRepository =
+        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
+          appendEvent: vi.fn()
+        })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
       vi.mocked(appendToStream).mockClear()
@@ -1504,7 +1514,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
         version: 1,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
-      const streamRepository = /** @type {any} */ ({ appendEvent: vi.fn() })
+      const streamRepository =
+        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
+          appendEvent: vi.fn()
+        })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
       vi.mocked(appendToStream).mockClear()
@@ -1732,7 +1745,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
         version: 1,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
-      const streamRepository = /** @type {any} */ ({ appendEvent: vi.fn() })
+      const streamRepository =
+        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
+          appendEvent: vi.fn()
+        })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
       vi.mocked(appendToStream).mockClear()
@@ -1917,7 +1933,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
         version: 1,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       }
-      const streamRepository = /** @type {any} */ ({ appendEvent: vi.fn() })
+      const streamRepository =
+        /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
+          appendEvent: vi.fn()
+        })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
       vi.mocked(appendToStream).mockClear()

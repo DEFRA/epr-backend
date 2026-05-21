@@ -83,7 +83,7 @@ const buildBalanceSeed = (overrides = {}) => ({
 })
 
 const buildOrganisationsRepository = () =>
-  /** @type {any} */ ({
+  /** @type {Pick<import('#repositories/organisations/port.js').OrganisationsRepository, 'findAccreditationById'>} */ ({
     findAccreditationById: vi.fn().mockResolvedValue({
       submittedToRegulator: REGULATOR.EA
     })

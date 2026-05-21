@@ -74,7 +74,7 @@ const buildBalanceSeed = (overrides = {}) => ({
 })
 
 const buildOrganisationsRepository = () =>
-  /** @type {any} */ ({
+  /** @type {Pick<import('#repositories/organisations/port.js').OrganisationsRepository, 'findAccreditationById'>} */ ({
     findAccreditationById: vi.fn().mockResolvedValue({
       submittedToRegulator: REGULATOR.EA
     })
@@ -151,9 +151,7 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(debitError)
 
-      const refetched = /** @type {any} */ (
-        await prnRepository.findById(PRN_ID)
-      )
+      const refetched = await prnRepository.findById(PRN_ID)
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
       )
@@ -201,9 +199,7 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(creditError)
 
-      const refetched = /** @type {any} */ (
-        await prnRepository.findById(PRN_ID)
-      )
+      const refetched = await prnRepository.findById(PRN_ID)
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
       )
@@ -256,9 +252,7 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(creditError)
 
-      const refetched = /** @type {any} */ (
-        await prnRepository.findById(PRN_ID)
-      )
+      const refetched = await prnRepository.findById(PRN_ID)
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_CANCELLATION
       )
@@ -303,9 +297,8 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(writeError)
 
-      const balance = /** @type {any} */ (
+      const balance =
         await wasteBalancesRepository.findByAccreditationId(ACC_ID)
-      )
       expect(balance.amount).toBe(STARTING_TOTAL)
       expect(balance.availableAmount).toBe(STARTING_TOTAL)
 
