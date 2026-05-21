@@ -61,6 +61,7 @@ const COLLECTIONS = [
   'accreditation',
   'packaging-recycling-notes',
   'waste-balances',
+  'waste-balance-events',
   'reports',
   'waste-records',
   'summary-logs',
@@ -271,6 +272,7 @@ const seedStagingCollections = async (database, orgId) => {
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
   'waste-balances': 0,
+  'waste-balance-events': 0,
   reports: 0,
   'waste-records': 0,
   'summary-logs': 0,
@@ -309,6 +311,7 @@ describe('non-prod data reset (mongo)', () => {
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
         'waste-balances': 1,
+        'waste-balance-events': 0,
         reports: 1,
         'waste-records': 1,
         'summary-logs': 1,

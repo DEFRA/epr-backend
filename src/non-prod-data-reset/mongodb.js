@@ -21,12 +21,14 @@ const COLLECTIONS = {
   WASTE_RECORDS: 'waste-records',
   SUMMARY_LOGS: 'summary-logs',
   OVERSEAS_SITES: 'overseas-sites',
-  SYSTEM_LOGS: 'system-logs'
+  SYSTEM_LOGS: 'system-logs',
+  WASTE_BALANCE_EVENTS: 'waste-balance-events'
 }
 
 const EMPTY_COUNTS = Object.freeze({
   'packaging-recycling-notes': 0,
   'waste-balances': 0,
+  'waste-balance-events': 0,
   reports: 0,
   'waste-records': 0,
   'summary-logs': 0,
@@ -95,6 +97,11 @@ const buildCascadeSteps = (
       accreditationIds.length === 0
         ? null
         : { accreditationId: { $in: accreditationIds } }
+  },
+  {
+    label: 'waste-balance-events',
+    collection: COLLECTIONS.WASTE_BALANCE_EVENTS,
+    filter: { organisationId: mongoIdHex }
   },
   {
     label: 'reports',
