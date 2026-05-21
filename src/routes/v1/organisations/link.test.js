@@ -263,9 +263,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           const { finalOrgVersion } = await performPostLinkOrganisation()
 
           const systemLogsResponse = await server.inject({
-            method: 'POST',
-            url: '/v1/system-logs/search',
-            payload: { organisationId: finalOrgVersion.id },
+            method: 'GET',
+            url: `/v1/system-logs/search?organisationId=${finalOrgVersion.id}`,
             headers: {
               Authorization: `Bearer ${serviceMaintainerToken}`
             }

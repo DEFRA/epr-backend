@@ -1,1 +1,1 @@
-export { systemLogsPostSearch } from './post-search.js'
+export { systemLogsGetSearch } from './get-search.js'
