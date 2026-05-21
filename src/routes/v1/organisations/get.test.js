@@ -341,7 +341,7 @@ describe('GET /v1/organisations', () => {
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
       })
 
-it('returns 401 with Authorization header that does not provide a basic auth value', async () => {
+      it('returns 401 with Authorization header that does not provide a basic auth value', async () => {
         const response = await server.inject({
           method: 'GET',
           url: '/v1/organisations',
