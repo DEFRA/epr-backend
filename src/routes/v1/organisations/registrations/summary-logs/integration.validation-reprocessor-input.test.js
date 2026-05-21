@@ -445,5 +445,124 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         })
       })
     })
+
+    describe('with whitespace-only value in enum field', () => {
+      const summaryLogId = 'summary-whitespace-enum'
+      const fileId = 'file-whitespace-enum'
+      const filename = 'whitespace-enum.xlsx'
+
+      let server
+      let summaryLogsRepository
+      beforeEach(async () => {
+        const result = await createTestInfrastructure(
+          organisationId,
+          registrationId,
+          {
+            [fileId]: {
+              meta: createStandardMeta('REPROCESSOR_INPUT'),
+              data: {
+                RECEIVED_LOADS_FOR_REPROCESSING: {
+                  location: { sheet: 'Received', row: 7, column: 'B' },
+                  headers: [
+                    'ROW_ID',
+                    'DATE_RECEIVED_FOR_REPROCESSING',
+                    'EWC_CODE',
+                    'DESCRIPTION_WASTE',
+                    'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+                    'GROSS_WEIGHT',
+                    'TARE_WEIGHT',
+                    'PALLET_WEIGHT',
+                    'NET_WEIGHT',
+                    'BAILING_WIRE_PROTOCOL',
+                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                    'WEIGHT_OF_NON_TARGET_MATERIALS',
+                    'RECYCLABLE_PROPORTION_PERCENTAGE',
+                    'TONNAGE_RECEIVED_FOR_RECYCLING',
+                    'SUPPLIER_NAME',
+                    'SUPPLIER_ADDRESS',
+                    'SUPPLIER_POSTCODE',
+                    'SUPPLIER_EMAIL',
+                    'SUPPLIER_PHONE_NUMBER',
+                    'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+                    'YOUR_REFERENCE',
+                    'WEIGHBRIDGE_TICKET',
+                    'CARRIER_NAME',
+                    'CBD_REG_NUMBER',
+                    'CARRIER_VEHICLE_REGISTRATION_NUMBER'
+                  ],
+                  rows: [
+                    {
+                      rowNumber: 8,
+                      values: [
+                        1000,
+                        '2025-05-28T00:00:00.000Z',
+                        '   ', // Whitespace-only EWC code — should be a validation error, not a system crash
+                        'Glass - pre-sorted',
+                        'No',
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'Yes',
+                        'Actual weight (100%)',
+                        50,
+                        0.85,
+                        678.98,
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        ''
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        )
+        server = result.server
+        summaryLogsRepository = result.summaryLogsRepository
+
+        await server.inject({
+          method: 'POST',
+          url: buildPostUrl(organisationId, registrationId, summaryLogId),
+          payload: createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
+        })
+      })
+
+      it('should treat whitespace-only field as empty, not as a system error', async () => {
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
+
+        const { summaryLog } =
+          await summaryLogsRepository.findById(summaryLogId)
+
+        // Whitespace-only is semantically empty — stripped by isFilled,
+        // so the row validates without the field (same as a blank cell)
+        expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+        const systemError = summaryLog.validation.issues.find(
+          (i) => i.code === 'VALIDATION_SYSTEM_ERROR'
+        )
+        expect(systemError).toBeUndefined()
+      })
+    })
   })
 })
