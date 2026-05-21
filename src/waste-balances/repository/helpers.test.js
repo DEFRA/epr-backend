@@ -73,11 +73,17 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark all records as not excluded when processingType is not available', () => {
       const record1 = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {} // no processingType
       }
       const record2 = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-2',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {} // no processingType
       }
@@ -92,6 +98,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED SENT_ON record as not excluded for exporters', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
@@ -99,7 +108,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([sentOnRecord])
 
@@ -110,13 +123,16 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     it('should mark record as not excluded when exporter has unknown record type (no matching schema)', () => {
-      const unknownTypeRecord = {
+      const unknownTypeRecord = /** @type {any} */ ({
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: 'unknown-type',
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
         }
-      }
+      })
 
       const result = markExcludedRecords([unknownTypeRecord])
 
@@ -127,6 +143,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark record as not excluded when processingType is not EXPORTER (no schema lookup)', () => {
       const reprocessorRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -142,6 +161,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED PROCESSED record as not excluded for reprocessor output', () => {
       const processedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.PROCESSED,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
@@ -149,7 +171,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([processedRecord])
 
@@ -162,6 +188,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED SENT_ON record as not excluded for reprocessor output', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
@@ -169,7 +198,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([sentOnRecord])
 
@@ -182,6 +215,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED RECEIVED record as not excluded for reprocessor input', () => {
       const receivedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -189,7 +225,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([receivedRecord])
 
@@ -202,6 +242,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED EXPORTED record as not excluded for exporters', () => {
       const exportedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
@@ -209,7 +252,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([exportedRecord])
 
@@ -222,6 +269,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark record as not excluded when processingType is completely unknown', () => {
       const unknownProcRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: 'completely-unknown'
@@ -237,6 +287,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED SENT_ON record as not excluded for reprocessor input', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -244,7 +297,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([sentOnRecord])
 
@@ -255,13 +312,16 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     it('should mark record as not excluded for unknown record type in reprocessor output', () => {
-      const unknownRecord = {
+      const unknownRecord = /** @type {any} */ ({
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: 'UNKNOWN',
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
         }
-      }
+      })
 
       const result = markExcludedRecords([unknownRecord])
 
@@ -272,6 +332,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark EXCLUDED record as excluded', () => {
       const excludedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
@@ -279,7 +342,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.EXCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.EXCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([excludedRecord])
 
@@ -327,7 +394,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
           schemaVersion: 1
         })
       )
-      expect(result.id).toBeDefined()
+      expect(result).not.toBeNull()
+      expect(
+        /** @type {NonNullable<typeof result>} */ (result).id
+      ).toBeDefined()
     })
 
     it('should return null if not found and shouldCreate is false', async () => {
@@ -687,11 +757,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const newAvailableAmount = 200
 
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
 
       const dependencies = {
         systemLogsRepository: {
-          insert: vi.fn().mockResolvedValue()
+          insert: vi.fn().mockResolvedValue(undefined)
         }
       }
 
@@ -753,7 +823,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const newAvailableAmount = 200
 
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
 
       // Dependencies without systemLogsRepository
       const dependencies = {}
@@ -812,11 +882,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
 
       const dependencies = {
         systemLogsRepository: {
-          insert: vi.fn().mockResolvedValue()
+          insert: vi.fn().mockResolvedValue(undefined)
         }
       }
 
@@ -946,7 +1016,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         })
 
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
 
         await callPerformUpdate({
           wasteRecords,
@@ -989,7 +1059,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         })
 
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
 
         await callPerformUpdate({
           wasteRecords,
@@ -1019,7 +1089,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 400,
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildPrnCreationTransaction({
@@ -1242,7 +1313,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 450, // Already reduced by 50 when PRN was created
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildPrnIssuedTransaction({
@@ -1466,7 +1538,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 350,
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildPrnCancellationTransaction({
@@ -1693,7 +1766,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 350,
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildIssuedPrnCancellationTransaction({

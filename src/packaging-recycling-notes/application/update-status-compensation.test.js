@@ -20,7 +20,9 @@ vi.mock('./metrics.js', () => ({
   }
 }))
 
-const { updatePrnStatus } = await import('./update-status.js')
+const { updatePrnStatus: updatePrnStatusUntyped } =
+  await import('./update-status.js')
+const updatePrnStatus = /** @type {any} */ (updatePrnStatusUntyped)
 
 const buildLogger = () => ({
   info: vi.fn(),
@@ -28,7 +30,8 @@ const buildLogger = () => ({
   warn: vi.fn(),
   debug: vi.fn(),
   trace: vi.fn(),
-  fatal: vi.fn()
+  fatal: vi.fn(),
+  child: vi.fn()
 })
 
 const PRN_ID = '507f1f77bcf86cd799439011'
@@ -38,6 +41,7 @@ const TONNAGE = 50
 const STARTING_TOTAL = 1000
 const POST_DEDUCTION_AVAILABLE = 950
 
+/** @type {any} */
 const PRN_BASE = {
   id: PRN_ID,
   organisation: {
@@ -69,11 +73,12 @@ const buildBalanceSeed = (overrides = {}) => ({
   ...overrides
 })
 
-const buildOrganisationsRepository = () => ({
-  findAccreditationById: vi.fn().mockResolvedValue({
-    submittedToRegulator: REGULATOR.EA
+const buildOrganisationsRepository = () =>
+  /** @type {any} */ ({
+    findAccreditationById: vi.fn().mockResolvedValue({
+      submittedToRegulator: REGULATOR.EA
+    })
   })
-})
 
 const setupRepositories = ({ prnSeed, balanceSeed }) => {
   const logger = buildLogger()
@@ -146,7 +151,9 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(debitError)
 
-      const refetched = await prnRepository.findById(PRN_ID)
+      const refetched = /** @type {any} */ (
+        await prnRepository.findById(PRN_ID)
+      )
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
       )
@@ -194,7 +201,9 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(creditError)
 
-      const refetched = await prnRepository.findById(PRN_ID)
+      const refetched = /** @type {any} */ (
+        await prnRepository.findById(PRN_ID)
+      )
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
       )
@@ -247,7 +256,9 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(creditError)
 
-      const refetched = await prnRepository.findById(PRN_ID)
+      const refetched = /** @type {any} */ (
+        await prnRepository.findById(PRN_ID)
+      )
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_CANCELLATION
       )
@@ -292,8 +303,9 @@ describe('updatePrnStatus compensation', () => {
         })
       ).rejects.toBe(writeError)
 
-      const balance =
+      const balance = /** @type {any} */ (
         await wasteBalancesRepository.findByAccreditationId(ACC_ID)
+      )
       expect(balance.amount).toBe(STARTING_TOTAL)
       expect(balance.availableAmount).toBe(STARTING_TOTAL)
 
