@@ -70,16 +70,17 @@ export function createSystemLogsRepository() {
         const hasNext = isPrev ? page.length > 0 : hasExtra
         const hasPrev = isPrev ? hasExtra : Boolean(cursor)
 
+        const firstRow = page[0]
+        const lastRow = page.at(-1)
+
         return {
           systemLogs: page.map(({ _internalId, ...rest }) => rest),
           hasNext,
           hasPrev,
           nextCursor:
-            hasNext && page.length
-              ? toHexCursor(page.at(-1)._internalId)
-              : null,
+            hasNext && lastRow ? toHexCursor(lastRow._internalId) : null,
           prevCursor:
-            hasPrev && page.length ? toHexCursor(page[0]._internalId) : null
+            hasPrev && firstRow ? toHexCursor(firstRow._internalId) : null
         }
       }
     }

@@ -82,6 +82,9 @@ export const createSystemLogsRepository = async (db) => {
       const hasNext = isPrev ? page.length > 0 : hasExtra
       const hasPrev = isPrev ? hasExtra : Boolean(cursor)
 
+      const firstRow = page[0]
+      const lastRow = page.at(-1)
+
       return {
         systemLogs: page.map((doc) => ({
           event: doc.event,
@@ -91,9 +94,8 @@ export const createSystemLogsRepository = async (db) => {
         })),
         hasNext,
         hasPrev,
-        nextCursor:
-          hasNext && page.length ? page.at(-1)._id.toHexString() : null,
-        prevCursor: hasPrev && page.length ? page[0]._id.toHexString() : null
+        nextCursor: hasNext && lastRow ? lastRow._id.toHexString() : null,
+        prevCursor: hasPrev && firstRow ? firstRow._id.toHexString() : null
       }
     }
   })
