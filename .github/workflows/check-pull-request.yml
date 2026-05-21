@@ -76,7 +76,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@PAE-1339-shared-lint-types-tests-action
+      - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@main
         with:
           include-globs: |
             **/*.test.js
