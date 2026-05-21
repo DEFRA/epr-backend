@@ -26,10 +26,7 @@ const configOverrides = {
 }
 
 vi.mock('#root/config.js', async (importOriginal) => {
-  const configImportOriginal =
-    /** @type {Record<string, unknown> & { getConfig: (overrides?: unknown) => { get: (item: string) => unknown } }} */ (
-      await importOriginal()
-    )
+  const configImportOriginal = await importOriginal()
 
   return {
     ...configImportOriginal,
@@ -68,7 +65,7 @@ vi.mock('hapi-pino', () => ({
 }))
 
 vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
-  const actual = /** @type {Record<string, unknown>} */ (await importOriginal())
+  const actual = await importOriginal()
   return {
     ...actual,
     logger: {
@@ -181,25 +178,23 @@ describe('#startServer', () => {
     test('Should disable auditing if audit.isEnabled config is false', async () => {
       const config = getConfig()
 
-      vi.mocked(getConfig).mockImplementationOnce(() => ({
+      getConfig.mockImplementationOnce(() => ({
         ...config,
-        get: /** @type {any} */ (
-          (item) => {
-            switch (item) {
-              case 'audit':
-                return {
-                  ...configOverrides.audit,
-                  isEnabled: false
-                }
-              case 'host':
-                return configOverrides.host
-              case 'port':
-                return configOverrides.port
-              default:
-                return config.get(item)
-            }
+        get: (item) => {
+          switch (item) {
+            case 'audit':
+              return {
+                ...configOverrides.audit,
+                isEnabled: false
+              }
+            case 'host':
+              return configOverrides.host
+            case 'port':
+              return configOverrides.port
+            default:
+              return config.get(item)
           }
-        )
+        }
       }))
 
       await server.stop()
