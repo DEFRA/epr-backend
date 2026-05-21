@@ -27,7 +27,10 @@ const configOverrides = {
 }
 
 vi.mock('#root/config.js', async (importOriginal) => {
-  const configImportOriginal = /** @type {Record<string, unknown> & { getConfig: (overrides?: unknown) => { get: (item: string) => unknown } }} */ (await importOriginal())
+  const configImportOriginal =
+    /** @type {Record<string, unknown> & { getConfig: (overrides?: unknown) => { get: (item: string) => unknown } }} */ (
+      await importOriginal()
+    )
 
   return {
     ...configImportOriginal,
