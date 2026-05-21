@@ -168,7 +168,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                 {
                   ...org.registrations[0],
                   status: ORGANISATION_STATUS.APPROVED,
-                  cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
+                  cbduNumber:
+                    /** @type {import('#domain/organisations/registration.js').RegistrationOther} */ (
+                      org.registrations[0]
+                    ).cbduNumber || 'CBDU123456',
                   registrationNumber: 'REG1',
                   validFrom: VALID_FROM,
                   validTo: VALID_TO,

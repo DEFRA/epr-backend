@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -17,7 +18,7 @@ describe('GET /v1/system-logs/search', () => {
 
   beforeEach(async () => {
     const systemLogsRepositoryFactory = createSystemLogsRepository()
-    systemLogsRepository = systemLogsRepositoryFactory(undefined)
+    systemLogsRepository = systemLogsRepositoryFactory(logger)
     server = await createTestServer({
       repositories: {
         systemLogsRepository: systemLogsRepositoryFactory
@@ -25,6 +26,16 @@ describe('GET /v1/system-logs/search', () => {
     })
   })
 
+  /**
+   * @param {{
+   *   createdAt?: Date,
+   *   organisationId?: string,
+   *   userId?: string,
+   *   email?: string,
+   *   subCategory?: string,
+   *   id?: number
+   * }} [overrides]
+   */
   const addSystemLog = async ({
     createdAt = new Date(),
     organisationId,
@@ -44,10 +55,14 @@ describe('GET /v1/system-logs/search', () => {
     })
   }
 
+  /**
+   * @param {Record<string, string | number>} [query]
+   */
   const makeRequest = async (query = {}) => {
-    const params = new URLSearchParams(
-      Object.entries(query).map(([key, value]) => [key, String(value)])
-    )
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(query)) {
+      params.set(key, String(value))
+    }
     return server.inject({
       method: 'GET',
       url: `/v1/system-logs/search?${params}`,
