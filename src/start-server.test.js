@@ -16,6 +16,7 @@ const mockLoggerWarn = vi.fn()
 
 const mockHapiLoggerInfo = vi.fn()
 const mockHapiLoggerError = vi.fn()
+const mockHapiLoggerWarn = vi.fn()
 
 const mockEnabledAuditing = vi.fn()
 
@@ -57,7 +58,8 @@ vi.mock('hapi-pino', () => ({
     register: (server) => {
       server.decorate('server', 'logger', {
         info: mockHapiLoggerInfo,
-        error: mockHapiLoggerError
+        error: mockHapiLoggerError,
+        warn: mockHapiLoggerWarn
       })
     },
     name: 'mock-hapi-pino'

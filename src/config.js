@@ -496,6 +496,22 @@ const baseConfig = {
       default: '100',
       env: 'SUMMARY_LOG_BATCH_SIZE'
     }
+  },
+  basicAuth: {
+    username: {
+      doc: 'Username for Basic Auth access to admin endpoints',
+      format: String,
+      nullable: true,
+      default: '',
+      env: 'BASIC_AUTH_USERNAME'
+    },
+    password: {
+      doc: 'Password for Basic Auth access to admin endpoints',
+      format: String,
+      nullable: true,
+      default: '',
+      env: 'BASIC_AUTH_PASSWORD'
+    }
   }
 }
 

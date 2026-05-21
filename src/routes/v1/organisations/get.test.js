@@ -11,6 +11,10 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 
 const { validToken } = entraIdMockAuthTokens
 
+/**
+ * @param {string} name
+ * @returns
+ */
 const buildOrgWithName = (name) => {
   const base = buildOrganisation()
   return {
@@ -23,12 +27,19 @@ const authHeaders = { Authorization: `Bearer ${validToken}` }
 
 describe('GET /v1/organisations', () => {
   setupAuthContext()
+  /**
+   * @type {import('#test/create-test-server.js').TestServer}
+   */
   let server
-  let organisationsRepositoryFactory
+
+  /**
+   * @type {import('#repositories/organisations/port.js').OrganisationsRepository}
+   */
   let organisationsRepository
 
   beforeEach(async () => {
-    organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
     const featureFlags = createInMemoryFeatureFlags()
 
@@ -195,6 +206,9 @@ describe('GET /v1/organisations', () => {
           headers: authHeaders
         })
 
+        /**
+         * @type {{ items: Array<import('#domain/organisations/model.js').Organisation> }} result
+         */
         const result = JSON.parse(response.payload)
         expect(result.items.map((o) => o.companyDetails.name)).toEqual([
           'Alpha Co',
@@ -256,6 +270,133 @@ describe('GET /v1/organisations', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
+  describe('basic-auth strategy', () => {
+    const validCredentials = Buffer.from('basic-auth-user:changeme').toString(
+      'base64'
+    )
+
+    describe('when basic-auth credentials are configured', () => {
+      /**
+       * @type {import('#test/create-test-server.js').TestServer}
+       */
+      let server
+
+      beforeEach(async () => {
+        server = await createTestServer({
+          config: {
+            basicAuth: {
+              username: 'basic-auth-user',
+              password: 'changeme'
+            }
+          },
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([])
+          },
+          featureFlags: createInMemoryFeatureFlags()
+        })
+      })
+
+      it('returns 200 with valid Basic Auth credentials', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: `Basic ${validCredentials}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+
+      it('returns 401 with wrong password', async () => {
+        const encoded = Buffer.from('basic-auth-user:wrong').toString('base64')
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: `Basic ${encoded}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+
+      it('returns 401 with wrong username', async () => {
+        const encoded = Buffer.from('wrong:changeme').toString('base64')
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: `Basic ${encoded}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+
+      it('returns 401 with malformed Basic Auth value', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: 'Basic notbase64credentials' }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+
+      it('returns 401 with overloaded Basic Auth value', async () => {
+        const encoded = Buffer.from(
+          'basic-auth-user:changeme:extraBit'
+        ).toString('base64')
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: `Basic ${encoded}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+
+      it('returns 401 with Authorization header that does not provide a basic auth value', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: 'not a basic auth value' }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+
+      it('returns 401 with no Authorization header', async () => {
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations'
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+    })
+
+    describe('when basic-auth credentials are not configured', () => {
+      it('returns 401 with valid Basic Auth credentials', async () => {
+        const server = await createTestServer({
+          config: {
+            basicAuth: {
+              username: '', // matches default value in config.js
+              password: '' // matches default value in config.js
+            }
+          },
+          repositories: {
+            organisationsRepository: createInMemoryOrganisationsRepository([])
+          },
+          featureFlags: createInMemoryFeatureFlags()
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: '/v1/organisations',
+          headers: { Authorization: `Basic ${validCredentials}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
     })
   })
 
