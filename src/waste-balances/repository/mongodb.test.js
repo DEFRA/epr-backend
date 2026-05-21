@@ -18,7 +18,10 @@ const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(/** @type {any} */ (db))
+    const client = await MongoClient.connect(
+      // db is typed as the fixture tuple by TypeScript; the yielded value is a string (mongo URI)
+      /** @type {string} */ (/** @type {unknown} */ (db))
+    )
     await use(client)
     await client.close()
   },
@@ -44,7 +47,10 @@ const it = mongoIt.extend({
       mongoClient
     ).db(DATABASE_NAME)
     const factory = await createWasteBalancesRepository(database, {
-      streamRepository: /** @type {any} */ (streamRepository)
+      streamRepository:
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
+          /** @type {unknown} */ (streamRepository)
+        )
     })
     await use(factory)
   },
@@ -86,7 +92,10 @@ describe('MongoDB waste balances repository', () => {
         mongoClient
       ).db(DATABASE_NAME)
       const repository = await createWasteBalancesRepository(database, {
-        streamRepository: /** @type {any} */ (streamRepository)
+        streamRepository:
+          /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
+            /** @type {unknown} */ (streamRepository)
+          )
       })
       const instance = repository()
       expect(instance).toBeDefined()
@@ -132,6 +141,7 @@ describe('MongoDB waste balances repository', () => {
       const db = /** @type {import('mongodb').MongoClient} */ (mongoClient).db(
         DATABASE_NAME
       )
+      /** @type {import('../domain/model.js').WasteBalanceTransaction} */
       const transaction = {
         id: 'txn-1',
         type: 'credit',
@@ -144,7 +154,8 @@ describe('MongoDB waste balances repository', () => {
         closingAvailableAmount: 1,
         entities: []
       }
-      const balance = /** @type {any} */ ({
+      /** @type {import('../domain/model.js').WasteBalance} */
+      const balance = {
         id: '00000000-0000-0000-0000-000000000010',
         accreditationId: 'acc-growth-1',
         registrationId: 'reg-growth-1',
@@ -155,7 +166,7 @@ describe('MongoDB waste balances repository', () => {
         version: 1,
         schemaVersion: 1,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      })
+      }
 
       await saveBalance(db)(balance, [transaction])
 

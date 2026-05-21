@@ -117,17 +117,18 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
   const setupStream = () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
-    return setupWasteBalanceIntegrationEnvironment(
-      /** @type {any} */ ({
-        processingType: 'exporter',
-        organisationId,
-        registrationId,
-        featureFlagOverrides: { wasteBalanceLedger: true },
-        existingWasteBalances: [
-          seedStreamBalance(organisationId, registrationId)
-        ]
-      })
-    )
+    /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
+    const existingWasteBalances = [
+      seedStreamBalance(organisationId, registrationId)
+    ]
+    return setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      organisationId,
+      registrationId,
+      featureFlagOverrides: { wasteBalanceLedger: true },
+      // @ts-expect-error -- TypeScript infers existingWasteBalances as never[] from the default [], WasteBalance[] is correct at runtime
+      existingWasteBalances
+    })
   }
 
   it('appends a single stream event with aggregate creditTotal on first upload', async () => {

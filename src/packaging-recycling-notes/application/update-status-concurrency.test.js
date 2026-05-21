@@ -21,7 +21,10 @@ vi.mock('./metrics.js', () => ({
 
 const { updatePrnStatus: updatePrnStatusUntyped } =
   await import('./update-status.js')
-const updatePrnStatus = /** @type {any} */ (updatePrnStatusUntyped)
+const updatePrnStatus =
+  /** @type {typeof import('./update-status.js').updatePrnStatus} */ (
+    updatePrnStatusUntyped
+  )
 
 const noopLogger = () => ({
   info: vi.fn(),
@@ -36,11 +39,12 @@ const noopLogger = () => ({
 const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
+const REG_ID = 'reg-789'
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
 const ISSUED_AMOUNT = 950
 
-/** @type {any} */
+/** @type {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} */
 const PRN_BASE = {
   id: PRN_ID,
   organisation: {
@@ -60,12 +64,17 @@ const PRN_BASE = {
 }
 
 const buildIssuableSeed = () =>
-  /** @type {any} */ (buildAwaitingAuthorisationPrn(PRN_BASE))
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    buildAwaitingAuthorisationPrn(PRN_BASE)
+  )
 const buildAwaitingCancellationSeed = () =>
-  /** @type {any} */ (
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
     buildAwaitingAcceptancePrn({
       ...PRN_BASE,
-      status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
+      status:
+        /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} */ ({
+          currentStatus: PRN_STATUS.AWAITING_CANCELLATION
+        })
     })
   )
 
@@ -83,11 +92,13 @@ const buildBalanceSeed = (overrides = {}) => ({
 })
 
 const buildOrganisationsRepository = () =>
-  /** @type {Pick<import('#repositories/organisations/port.js').OrganisationsRepository, 'findAccreditationById'>} */ ({
-    findAccreditationById: vi.fn().mockResolvedValue({
-      submittedToRegulator: REGULATOR.EA
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
+    /** @type {unknown} */ ({
+      findAccreditationById: vi.fn().mockResolvedValue({
+        submittedToRegulator: REGULATOR.EA
+      })
     })
-  })
+  )
 
 const expectOneWinsOneVersionConflict = (results) => {
   const fulfilled = results.filter((r) => r.status === 'fulfilled')
@@ -107,7 +118,7 @@ describe('updatePrnStatus concurrency', () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildIssuableSeed()
     ])
-    const prnRepository = /** @type {any} */ (prnFactory(noopLogger()))
+    const prnRepository = prnFactory(noopLogger())
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [buildBalanceSeed()],
@@ -133,6 +144,7 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
+        registrationId: REG_ID,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -148,7 +160,7 @@ describe('updatePrnStatus concurrency', () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildIssuableSeed()
     ])
-    const prnRepository = /** @type {any} */ (prnFactory(noopLogger()))
+    const prnRepository = prnFactory(noopLogger())
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [buildBalanceSeed({ availableAmount: RINGFENCED_AVAILABLE })],
@@ -174,6 +186,7 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
+        registrationId: REG_ID,
         newStatus: PRN_STATUS.DELETED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -189,7 +202,7 @@ describe('updatePrnStatus concurrency', () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildAwaitingCancellationSeed()
     ])
-    const prnRepository = /** @type {any} */ (prnFactory(noopLogger()))
+    const prnRepository = prnFactory(noopLogger())
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [
@@ -220,6 +233,7 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
+        registrationId: REG_ID,
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }

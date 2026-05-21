@@ -17,10 +17,24 @@ const buildBalance = (overrides = {}) => ({
   ...overrides
 })
 
-const buildStream = (latest) =>
-  /** @type {any} */ ({
-    findLatestByPartition: vi.fn().mockResolvedValue(latest)
-  })
+/**
+ * Test helper: accepts partial stream events since tests only exercise specific
+ * fields (e.g. closingBalance). Casts to StreamEvent so the returned repository
+ * satisfies the port type.
+ *
+ * @param {Partial<import('./stream-schema.js').StreamEvent> | null} latest
+ * @returns {import('./stream-port.js').WasteBalanceStreamRepository}
+ */
+const buildStream = (latest) => ({
+  findLatestByPartition: vi
+    .fn()
+    .mockResolvedValue(
+      /** @type {import('./stream-schema.js').StreamEvent | null} */ (latest)
+    ),
+  findLatestByPartitionAndKind: vi.fn().mockResolvedValue(null),
+  findEventsByPrnIdAfter: vi.fn().mockResolvedValue([]),
+  appendEvent: vi.fn().mockResolvedValue(undefined)
+})
 
 describe('resolveBalanceAmounts', () => {
   it('leaves an embedded balance unchanged', async () => {

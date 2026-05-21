@@ -59,9 +59,8 @@ describe('waste-balances repository - in-memory implementation', () => {
     const repository = createInMemoryWasteBalancesRepository(initialStorage, {
       streamRepository: createInMemoryStreamRepository()()
     })()
-    expect(/** @type {any} */ (repository)._getStorageForTesting()).toBe(
-      initialStorage
-    )
+    // @ts-expect-error -- _getStorageForTesting is a test-only private method not on the port type
+    expect(repository._getStorageForTesting()).toBe(initialStorage)
   })
 
   testWasteBalancesRepositoryContract(extendedIt)
