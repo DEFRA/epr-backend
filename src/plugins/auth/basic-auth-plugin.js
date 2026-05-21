@@ -60,16 +60,18 @@ export const basicAuthPlugin = {
                 return h.unauthenticated(Boom.unauthorized(null, 'Basic'))
               }
 
-              const [username, password, ...rest] = Buffer.from(
+              const decoded = Buffer.from(
                 authorization.replace('Basic ', ''),
                 'base64'
-              )
-                .toString('utf-8')
-                .split(':')
+              ).toString('utf-8')
+              const colonIndex = decoded.indexOf(':')
 
-              if (rest.length > 0) {
+              if (colonIndex === -1) {
                 return h.unauthenticated(Boom.unauthorized(null, 'Basic'))
               }
+
+              const username = decoded.slice(0, colonIndex)
+              const password = decoded.slice(colonIndex + 1)
 
               if (
                 !safeEqual(username, options.username) ||

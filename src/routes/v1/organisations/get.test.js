@@ -341,20 +341,7 @@ describe('GET /v1/organisations', () => {
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
       })
 
-      it('returns 401 with overloaded Basic Auth value', async () => {
-        const encoded = Buffer.from(
-          'basic-auth-user:changeme:extraBit'
-        ).toString('base64')
-        const response = await server.inject({
-          method: 'GET',
-          url: '/v1/organisations',
-          headers: { Authorization: `Basic ${encoded}` }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-      })
-
-      it('returns 401 with Authorization header that does not provide a basic auth value', async () => {
+it('returns 401 with Authorization header that does not provide a basic auth value', async () => {
         const response = await server.inject({
           method: 'GET',
           url: '/v1/organisations',
