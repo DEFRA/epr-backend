@@ -5,10 +5,10 @@ import {
 
 /**
  * Emit the back-office system-log entry and the CDP audit event for a waste
- * balance update. Both write paths — the embedded-array path in
- * `repository/helpers.js` and the ledger-append path in
- * `application/update-via-ledger.js` — share this helper so they produce
- * identical audit shapes (ADR 0031's transparency requirement).
+ * balance update. Both write paths, the embedded-array path in
+ * `repository/helpers.js` and the stream-append path in
+ * `application/update-via-stream.js`, share this helper so they produce
+ * identical audit shapes.
  *
  * If the full payload exceeds the safe-audit size limit, the system-log
  * entry falls back to a count-only context. The audit event itself goes
