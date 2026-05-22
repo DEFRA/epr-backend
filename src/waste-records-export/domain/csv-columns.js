@@ -1,4 +1,3 @@
-import { isRegistrationAccredited } from '#reports/domain/is-registration-accredited.js'
 import { uppercaseString } from '#common/helpers/formatters.js'
 
 import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
@@ -8,6 +7,7 @@ import * as reprocessorOutput from '#domain/summary-logs/table-schemas/reprocess
 import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
 import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
+/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
@@ -95,6 +95,7 @@ export const buildHeaderRow = (dataFieldColumns) => [
  * @typedef {Object} BuildDataRowInput
  * @property {Organisation} org
  * @property {Registration} registration
+ * @property {Accreditation | null} accreditation
  * @property {WasteRecord} record
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
  * @property {boolean} includedInWasteBalance
@@ -111,12 +112,13 @@ export const buildHeaderRow = (dataFieldColumns) => [
 export const buildDataRow = ({
   org,
   registration,
+  accreditation,
   record,
   summaryLogEntry,
   includedInWasteBalance,
   dataFieldColumns
 }) => {
-  const accredited = isRegistrationAccredited(registration) ? 'Yes' : 'No'
+  const accredited = accreditation !== null ? 'Yes' : 'No'
   const data = record.data
 
   const metadata = [

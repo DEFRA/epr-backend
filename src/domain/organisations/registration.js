@@ -1,6 +1,5 @@
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {GlassRecyclingProcess, Material, User} from '#domain/organisations/model.js' */
-/** @import {ReprocessingType} from '#domain/organisations/model.js' */
+/** @import {GlassRecyclingProcess, Material, RegAccStatus, ReprocessingType, User} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -53,7 +52,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: string;
- *  status: 'approved'|'suspended';
+ *  status: Extract<RegAccStatus, 'approved'|'suspended'>;
  *  validFrom: string;
  *  validTo: string;
  * }} RegistrationApproved
@@ -63,7 +62,7 @@
  * @typedef {RegistrationBase & {
  *  registrationNumber?: string;
  *  cbduNumber?: string;
- *  status: 'created'|'rejected'|'cancelled'|'suspended';
+ *  status: Extract<RegAccStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
  * }} RegistrationOther
