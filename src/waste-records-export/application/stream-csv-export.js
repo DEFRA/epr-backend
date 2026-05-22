@@ -95,6 +95,7 @@ const rowForRecord = ({
   return buildDataRow({
     org,
     registration,
+    accreditation,
     record,
     summaryLogEntry,
     includedInWasteBalance,

@@ -98,9 +98,9 @@ describe('csv-columns', () => {
       org: { companyDetails: { name: 'Acme Ltd' } },
       registration: {
         material: 'plastic',
-        submittedToRegulator: 'ea',
-        accreditation: { status: 'approved' }
+        submittedToRegulator: 'ea'
       },
+      accreditation: { status: 'approved' },
       record: {
         type: WASTE_RECORD_TYPE.RECEIVED,
         rowId: '1001',
@@ -174,7 +174,7 @@ describe('csv-columns', () => {
     it('emits "No" for Accredited when registration is registered-only', () => {
       const row = buildDataRow({
         ...baseInput,
-        registration: { ...baseInput.registration, accreditation: null }
+        accreditation: null
       })
       expect(row[4]).toBe('No')
     })

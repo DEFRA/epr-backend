@@ -329,6 +329,7 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
+    expect(cells[4]).toBe('"Yes"') // Accredited column
     expect(cells[7]).toBe('"true"')
   })
 
@@ -363,6 +364,7 @@ describe('streamCsvExport', () => {
 
     const out = await collect(streamCsvExport(deps))
     const cells = out[1].trim().split(',')
+    expect(cells[4]).toBe('"Yes"') // Accredited column
     expect(cells[7]).toBe('"false"')
   })
 
