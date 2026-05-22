@@ -81,67 +81,83 @@ const mockLogger = {
   child: vi.fn()
 }
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+/**
+ * @typedef {object} ResetTestFixtures
+ * @property {import('mongodb').MongoClient} mongoClient
+ * @property {import('mongodb').Db} database
+ * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, wasteBalancesSave: Function, [k: string]: object | Function }} repositories
+ * @property {import('./mongodb.js').NonProdDataReset} reset
+ * @property {(value: string) => void} setCdpEnvironment
+ */
 
-  database: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    for (const name of COLLECTIONS) {
-      await database.collection(name).deleteMany({})
+const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      // @ts-expect-error -- vitest fixture db is a string URL at runtime
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
+
+    database: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      for (const name of COLLECTIONS) {
+        await database.collection(name).deleteMany({})
+      }
+      await use(database)
+    },
+
+    repositories: async ({ database }, use) => {
+      const organisationsFactory = await createOrganisationsRepository(database)
+      const prnsFactory = await createPackagingRecyclingNotesRepository(
+        database,
+        []
+      )
+      const streamFactory = await createMongoStreamRepository(database)
+      const wasteBalancesFactory = await createWasteBalancesRepository(
+        database,
+        {
+          streamRepository: streamFactory()
+        }
+      )
+      const reportsFactory = await createReportsRepository(database)
+      const wasteRecordsFactory = await createWasteRecordsRepository(database)
+      const summaryLogsFactory = await createSummaryLogsRepository(
+        database,
+        // @ts-expect-error -- partial S3 config sufficient for test
+        mockS3Config
+      )
+      const overseasSitesFactory = await createOverseasSitesRepository(database)
+      const systemLogsFactory = await createSystemLogsRepository(database)
+
+      await use({
+        organisations: organisationsFactory(),
+        prns: prnsFactory(mockLogger),
+        wasteBalances: wasteBalancesFactory(),
+        reports: reportsFactory(),
+        wasteRecords: wasteRecordsFactory(),
+        summaryLogs: summaryLogsFactory(mockLogger),
+        overseasSites: overseasSitesFactory(),
+        systemLogs: systemLogsFactory(mockLogger),
+        wasteBalancesSave: saveBalance(database)
+      })
+    },
+
+    reset: async ({ database }, use) => {
+      await use(createNonProdDataReset(database))
+    },
+
+    // Snapshot config.cdpEnvironment for the duration of a test and expose a
+    // setter. Restores the previous value on teardown so the `config` singleton
+    // doesn't leak state between tests.
+    // eslint-disable-next-line no-empty-pattern
+    setCdpEnvironment: async ({}, use) => {
+      const previous = config.get('cdpEnvironment')
+      await use((value) => config.set('cdpEnvironment', value))
+      config.set('cdpEnvironment', previous)
     }
-    await use(database)
-  },
-
-  repositories: async ({ database }, use) => {
-    const organisationsFactory = await createOrganisationsRepository(database)
-    const prnsFactory = await createPackagingRecyclingNotesRepository(
-      database,
-      []
-    )
-    const streamFactory = await createMongoStreamRepository(database)
-    const wasteBalancesFactory = await createWasteBalancesRepository(database, {
-      streamRepository: streamFactory()
-    })
-    const reportsFactory = await createReportsRepository(database)
-    const wasteRecordsFactory = await createWasteRecordsRepository(database)
-    const summaryLogsFactory = await createSummaryLogsRepository(
-      database,
-      mockS3Config
-    )
-    const overseasSitesFactory = await createOverseasSitesRepository(database)
-    const systemLogsFactory = await createSystemLogsRepository(database)
-
-    await use({
-      organisations: organisationsFactory(),
-      prns: prnsFactory(),
-      wasteBalances: wasteBalancesFactory(),
-      reports: reportsFactory(),
-      wasteRecords: wasteRecordsFactory(),
-      summaryLogs: summaryLogsFactory(mockLogger),
-      overseasSites: overseasSitesFactory(),
-      systemLogs: systemLogsFactory(mockLogger),
-      wasteBalancesSave: saveBalance(database)
-    })
-  },
-
-  reset: async ({ database }, use) => {
-    await use(createNonProdDataReset(database))
-  },
-
-  // Snapshot config.cdpEnvironment for the duration of a test and expose a
-  // setter. Restores the previous value on teardown so the `config` singleton
-  // doesn't leak state between tests.
-  // eslint-disable-next-line no-empty-pattern
-  setCdpEnvironment: async ({}, use) => {
-    const previous = config.get('cdpEnvironment')
-    await use((value) => config.set('cdpEnvironment', value))
-    config.set('cdpEnvironment', previous)
-  }
-})
+  })
+)
 
 /**
  * Builds and inserts an organisation with a single exporter registration
@@ -216,6 +232,7 @@ const seedDownstreamForOrganisation = async (
   await repositories.wasteRecords.appendVersions(
     organisationId,
     registrationId,
+    // @ts-expect-error -- partial waste record map sufficient for seeding
     toWasteRecordVersions({
       received: { 'row-1': { version, data } }
     })
@@ -515,6 +532,7 @@ describe('non-prod data reset (mongo)', () => {
       setCdpEnvironment('prod')
 
       const server = { app: {}, logger: mockLogger, ext: () => {} }
+      // @ts-expect-error -- partial server mock for plugin registration test
       nonProdDataResetPlugin.register(server, { db: database })
 
       await expect(
