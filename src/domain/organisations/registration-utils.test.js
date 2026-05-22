@@ -5,22 +5,61 @@ import {
   resolveAccreditation
 } from './registration-utils.js'
 
-const buildOrg = (overrides = {}) => ({
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Registration } from '#domain/organisations/registration.js' */
+
+const userFixture = {
+  fullName: 'Test User',
+  email: 'test@example.com',
+  phone: '01234567890'
+}
+
+/** @type {Organisation} */
+const orgFixture = {
   id: 'org-1',
   orgId: 500001,
-  companyDetails: { name: 'Acme Ltd' },
   accreditations: [],
   registrations: [],
-  ...overrides
-})
+  companyDetails: { name: 'Acme Ltd' },
+  formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
+  schemaVersion: 1,
+  status: 'active',
+  statusHistory: [{ status: 'approved', updatedAt: new Date('2026-01-01') }],
+  submittedToRegulator: 'ea',
+  submitterContactDetails: userFixture,
+  users: [],
+  version: 1,
+  wasteProcessingTypes: []
+}
 
-const buildReg = (overrides = {}) => ({
+/** @type {Registration} */
+const regFixture = {
   id: 'reg-1',
-  status: 'approved',
-  accreditationId: null,
+  accreditation: null,
+  applicationContactDetails: userFixture,
+  approvedPersons: [],
+  formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
+  material: 'plastic',
+  orgName: 'Acme Ltd',
+  site: {
+    address: {},
+    gridReference: 'TQ123456',
+    siteCapacity: []
+  },
+  submittedToRegulator: 'ea',
+  submitterContactDetails: userFixture,
+  wasteProcessingType: 'reprocessor',
   registrationNumber: 'REG-001',
-  ...overrides
-})
+  status: 'approved',
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31'
+}
+
+/** @returns {Organisation} */
+const buildOrg = (overrides = {}) => ({ ...orgFixture, ...overrides })
+
+/** @returns {Registration} */
+const buildReg = (overrides = {}) => ({ ...regFixture, ...overrides })
 
 // ---------------------------------------------------------------------------
 // getReportableRegistrations

@@ -25,10 +25,10 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteRecordsRepository} wasteRecordsRepository
- * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {OverseasSitesRepository} overseasSitesRepository
+ * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @property {Pick<WasteRecordsRepository, 'findByRegistration' | 'findDistinctDataKeys'>} wasteRecordsRepository
+ * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
+ * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -112,8 +112,8 @@ const rowForRecord = ({
  * @param {Registration} input.registration
  * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
- * @param {WasteRecordsRepository} input.wasteRecordsRepository
- * @param {SummaryLogsRepository} input.summaryLogsRepository
+ * @param {Pick<WasteRecordsRepository, 'findByRegistration'>} input.wasteRecordsRepository
+ * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */
 async function* streamRegistrationRows({
