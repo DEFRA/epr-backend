@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -41,7 +41,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
             version: 1
           }
         ],
-        { ledgerRepository: createInMemoryLedgerRepository()() }
+        { streamRepository: createInMemoryStreamRepository()() }
       )
 
       const featureFlags = createInMemoryFeatureFlags({})
@@ -165,7 +165,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
               version: 1
             }
           ],
-          { ledgerRepository: createInMemoryLedgerRepository()() }
+          { streamRepository: createInMemoryStreamRepository()() }
         )
 
       const featureFlags = createInMemoryFeatureFlags({})
@@ -231,7 +231,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
               version: 1
             }
           ],
-          { ledgerRepository: createInMemoryLedgerRepository()() }
+          { streamRepository: createInMemoryStreamRepository()() }
         )
 
       const featureFlags = createInMemoryFeatureFlags({})
@@ -269,7 +269,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
               version: 1
             }
           ],
-          { ledgerRepository: createInMemoryLedgerRepository()() }
+          { streamRepository: createInMemoryStreamRepository()() }
         )
 
       const featureFlags = createInMemoryFeatureFlags({})
@@ -316,7 +316,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
               version: 1
             }
           ],
-          { ledgerRepository: createInMemoryLedgerRepository()() }
+          { streamRepository: createInMemoryStreamRepository()() }
         )
 
       const featureFlags = createInMemoryFeatureFlags({})
@@ -366,7 +366,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
               version: 1
             }
           ],
-          { ledgerRepository: createInMemoryLedgerRepository()() }
+          { streamRepository: createInMemoryStreamRepository()() }
         )
 
       const featureFlags = createInMemoryFeatureFlags({})

@@ -1,5 +1,5 @@
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
-import { createInMemoryLedgerRepository } from './ledger-inmemory.js'
+import { createInMemoryStreamRepository } from './stream-inmemory.js'
 import { registerRepository } from '#plugins/register-repository.js'
 
 /**
@@ -12,11 +12,11 @@ export function createInMemoryWasteBalancesRepositoryPlugin(
     name: 'wasteBalancesRepository',
     dependencies: ['feature-flags'],
     register: (server) => {
-      const ledgerRepository = createInMemoryLedgerRepository()()
+      const streamRepository = createInMemoryStreamRepository()()
       const factory = createInMemoryWasteBalancesRepository(
         initialWasteBalances ?? [],
         {
-          ledgerRepository,
+          streamRepository,
           featureFlags: server.featureFlags
         }
       )

@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
-import { buildLedgerTransaction } from '../ledger-test-data.js'
+import { buildStreamEvent } from '../stream-test-data.js'
 import {
   WASTE_BALANCE_CANONICAL_SOURCE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -118,25 +118,28 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
 
     it('preserves canonicalSource on update — only the flip method may mutate it', async ({
       insertWasteBalance,
-      ledgerRepository
+      streamRepository
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-issue-marker',
+        registrationId: 'reg-1',
         organisationId: 'org-1',
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       })
 
       await insertWasteBalance(wasteBalance)
-      await ledgerRepository.insertTransactions([
-        buildLedgerTransaction({
+      await streamRepository.appendEvent(
+        buildStreamEvent({
           accreditationId: 'acc-issue-marker',
+          registrationId: 'reg-1',
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
         })
-      ])
+      )
 
       await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-issue-marker',
+        registrationId: 'reg-1',
         organisationId: 'org-1',
         prnId: 'prn-marker',
         tonnage: 1,

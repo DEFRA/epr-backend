@@ -20,7 +20,8 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
 import {
   createWasteBalancesRepository,
   saveBalance
@@ -45,7 +46,10 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     info: vi.fn(),
     error: (...args) => productionLoggerError(...args),
     warn: vi.fn(),
-    debug: vi.fn()
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn()
   }
 }))
 
@@ -58,6 +62,7 @@ const COLLECTIONS = [
   'accreditation',
   'packaging-recycling-notes',
   'waste-balances',
+  'waste-balance-events',
   'reports',
   'waste-records',
   'summary-logs',
@@ -70,70 +75,89 @@ const mockLogger = {
   info: vi.fn(),
   error: vi.fn(),
   warn: vi.fn(),
-  debug: vi.fn()
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: vi.fn()
 }
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(db)
-    await use(client)
-    await client.close()
-  },
+/**
+ * @typedef {object} ResetTestFixtures
+ * @property {import('mongodb').MongoClient} mongoClient
+ * @property {import('mongodb').Db} database
+ * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, wasteBalancesSave: Function, [k: string]: object | Function }} repositories
+ * @property {import('./mongodb.js').NonProdDataReset} reset
+ * @property {(value: string) => void} setCdpEnvironment
+ */
 
-  database: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    for (const name of COLLECTIONS) {
-      await database.collection(name).deleteMany({})
+const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      // @ts-expect-error -- vitest fixture db is a string URL at runtime
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
+
+    database: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      for (const name of COLLECTIONS) {
+        await database.collection(name).deleteMany({})
+      }
+      await use(database)
+    },
+
+    repositories: async ({ database }, use) => {
+      const organisationsFactory = await createOrganisationsRepository(database)
+      const prnsFactory = await createPackagingRecyclingNotesRepository(
+        database,
+        []
+      )
+      const streamFactory = await createMongoStreamRepository(database)
+      const wasteBalancesFactory = await createWasteBalancesRepository(
+        database,
+        {
+          streamRepository: streamFactory()
+        }
+      )
+      const reportsFactory = await createReportsRepository(database)
+      const wasteRecordsFactory = await createWasteRecordsRepository(database)
+      const summaryLogsFactory = await createSummaryLogsRepository(
+        database,
+        // @ts-expect-error -- partial S3 config sufficient for test
+        mockS3Config
+      )
+      const overseasSitesFactory = await createOverseasSitesRepository(database)
+      const systemLogsFactory = await createSystemLogsRepository(database)
+
+      await use({
+        organisations: organisationsFactory(),
+        prns: prnsFactory(mockLogger),
+        wasteBalances: wasteBalancesFactory(),
+        reports: reportsFactory(),
+        wasteRecords: wasteRecordsFactory(),
+        summaryLogs: summaryLogsFactory(mockLogger),
+        overseasSites: overseasSitesFactory(),
+        systemLogs: systemLogsFactory(mockLogger),
+        wasteBalancesSave: saveBalance(database)
+      })
+    },
+
+    reset: async ({ database }, use) => {
+      await use(createNonProdDataReset(database))
+    },
+
+    // Snapshot config.cdpEnvironment for the duration of a test and expose a
+    // setter. Restores the previous value on teardown so the `config` singleton
+    // doesn't leak state between tests.
+    // eslint-disable-next-line no-empty-pattern
+    setCdpEnvironment: async ({}, use) => {
+      const previous = config.get('cdpEnvironment')
+      await use((value) => config.set('cdpEnvironment', value))
+      config.set('cdpEnvironment', previous)
     }
-    await use(database)
-  },
-
-  repositories: async ({ database }, use) => {
-    const organisationsFactory = await createOrganisationsRepository(database)
-    const prnsFactory = await createPackagingRecyclingNotesRepository(
-      database,
-      []
-    )
-    const ledgerFactory = await createMongoLedgerRepository(database)
-    const wasteBalancesFactory = await createWasteBalancesRepository(database, {
-      ledgerRepository: ledgerFactory()
-    })
-    const reportsFactory = await createReportsRepository(database)
-    const wasteRecordsFactory = await createWasteRecordsRepository(database)
-    const summaryLogsFactory = await createSummaryLogsRepository(
-      database,
-      mockS3Config
-    )
-    const overseasSitesFactory = await createOverseasSitesRepository(database)
-    const systemLogsFactory = await createSystemLogsRepository(database)
-
-    await use({
-      organisations: organisationsFactory(),
-      prns: prnsFactory(),
-      wasteBalances: wasteBalancesFactory(),
-      reports: reportsFactory(),
-      wasteRecords: wasteRecordsFactory(),
-      summaryLogs: summaryLogsFactory(mockLogger),
-      overseasSites: overseasSitesFactory(),
-      systemLogs: systemLogsFactory(mockLogger),
-      wasteBalancesSave: saveBalance(database)
-    })
-  },
-
-  reset: async ({ database }, use) => {
-    await use(createNonProdDataReset(database))
-  },
-
-  // Snapshot config.cdpEnvironment for the duration of a test and expose a
-  // setter. Restores the previous value on teardown so the `config` singleton
-  // doesn't leak state between tests.
-  // eslint-disable-next-line no-empty-pattern
-  setCdpEnvironment: async ({}, use) => {
-    const previous = config.get('cdpEnvironment')
-    await use((value) => config.set('cdpEnvironment', value))
-    config.set('cdpEnvironment', previous)
-  }
-})
+  })
+)
 
 /**
  * Builds and inserts an organisation with a single exporter registration
@@ -174,6 +198,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
 }
 
 const seedDownstreamForOrganisation = async (
+  database,
   repositories,
   { organisationId, registrationId, accreditationId }
 ) => {
@@ -207,6 +232,7 @@ const seedDownstreamForOrganisation = async (
   await repositories.wasteRecords.appendVersions(
     organisationId,
     registrationId,
+    // @ts-expect-error -- partial waste record map sufficient for seeding
     toWasteRecordVersions({
       received: { 'row-1': { version, data } }
     })
@@ -218,6 +244,15 @@ const seedDownstreamForOrganisation = async (
   )
 
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
+
+  await database.collection('waste-balance-events').insertOne(
+    buildStreamEvent({
+      registrationId,
+      accreditationId,
+      organisationId,
+      number: 1
+    })
+  )
 }
 
 // The 'organisation' collection is written by the journey-test apply path and
@@ -251,6 +286,7 @@ const seedStagingCollections = async (database, orgId) => {
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
   'waste-balances': 0,
+  'waste-balance-events': 0,
   reports: 0,
   'waste-records': 0,
   'summary-logs': 0,
@@ -270,7 +306,7 @@ describe('non-prod data reset (mongo)', () => {
       reset
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, seeded)
+      await seedDownstreamForOrganisation(database, repositories, seeded)
       await seedOrganisationCollection(database, seeded.organisation.orgId)
       await seedStagingCollections(database, seeded.organisation.orgId)
       // A second PRN so the deleteMany semantics get exercised.
@@ -289,6 +325,7 @@ describe('non-prod data reset (mongo)', () => {
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
         'waste-balances': 1,
+        'waste-balance-events': 1,
         reports: 1,
         'waste-records': 1,
         'summary-logs': 1,
@@ -314,12 +351,12 @@ describe('non-prod data reset (mongo)', () => {
       reset
     }) => {
       const target = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, target)
+      await seedDownstreamForOrganisation(database, repositories, target)
       await seedOrganisationCollection(database, target.organisation.orgId)
       await seedStagingCollections(database, target.organisation.orgId)
 
       const other = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, other)
+      await seedDownstreamForOrganisation(database, repositories, other)
       await seedOrganisationCollection(database, other.organisation.orgId)
       await seedStagingCollections(database, other.organisation.orgId)
 
@@ -417,11 +454,12 @@ describe('non-prod data reset (mongo)', () => {
     })
 
     it('is idempotent: a second call returns all zeros', async ({
+      database,
       repositories,
       reset
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, seeded)
+      await seedDownstreamForOrganisation(database, repositories, seeded)
 
       const first = await reset.deleteByOrgId(seeded.organisation.orgId)
       expect(first['epr-organisations']).toBe(1)
@@ -490,10 +528,11 @@ describe('non-prod data reset (mongo)', () => {
       setCdpEnvironment
     }) => {
       const seeded = await seedOrganisationWithOverseasSites(repositories)
-      await seedDownstreamForOrganisation(repositories, seeded)
+      await seedDownstreamForOrganisation(database, repositories, seeded)
       setCdpEnvironment('prod')
 
       const server = { app: {}, logger: mockLogger, ext: () => {} }
+      // @ts-expect-error -- partial server mock for plugin registration test
       nonProdDataResetPlugin.register(server, { db: database })
 
       await expect(

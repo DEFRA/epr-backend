@@ -7,7 +7,7 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
@@ -20,7 +20,12 @@ vi.mock('./metrics.js', () => ({
   }
 }))
 
-const { updatePrnStatus } = await import('./update-status.js')
+const { updatePrnStatus: updatePrnStatusUntyped } =
+  await import('./update-status.js')
+const updatePrnStatus =
+  /** @type {typeof import('./update-status.js').updatePrnStatus} */ (
+    updatePrnStatusUntyped
+  )
 
 const buildLogger = () => ({
   info: vi.fn(),
@@ -28,16 +33,19 @@ const buildLogger = () => ({
   warn: vi.fn(),
   debug: vi.fn(),
   trace: vi.fn(),
-  fatal: vi.fn()
+  fatal: vi.fn(),
+  child: vi.fn()
 })
 
 const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
+const REG_ID = 'reg-789'
 const TONNAGE = 50
 const STARTING_TOTAL = 1000
 const POST_DEDUCTION_AVAILABLE = 950
 
+/** @type {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} */
 const PRN_BASE = {
   id: PRN_ID,
   organisation: {
@@ -69,11 +77,14 @@ const buildBalanceSeed = (overrides = {}) => ({
   ...overrides
 })
 
-const buildOrganisationsRepository = () => ({
-  findAccreditationById: vi.fn().mockResolvedValue({
-    submittedToRegulator: REGULATOR.EA
-  })
-})
+const buildOrganisationsRepository = () =>
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
+    /** @type {unknown} */ ({
+      findAccreditationById: vi.fn().mockResolvedValue({
+        submittedToRegulator: REGULATOR.EA
+      })
+    })
+  )
 
 const setupRepositories = ({ prnSeed, balanceSeed }) => {
   const logger = buildLogger()
@@ -81,7 +92,7 @@ const setupRepositories = ({ prnSeed, balanceSeed }) => {
   const prnRepository = prnFactory(logger)
 
   const wasteFactory = createInMemoryWasteBalancesRepository([balanceSeed], {
-    ledgerRepository: createInMemoryLedgerRepository()()
+    streamRepository: createInMemoryStreamRepository()()
   })
   const wasteBalancesRepository = wasteFactory()
 
@@ -140,13 +151,17 @@ describe('updatePrnStatus compensation', () => {
           id: PRN_ID,
           organisationId: ORG_ID,
           accreditationId: ACC_ID,
+          registrationId: REG_ID,
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY,
           user: issueUser
         })
       ).rejects.toBe(debitError)
 
-      const refetched = await prnRepository.findById(PRN_ID)
+      const refetched =
+        /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+          await prnRepository.findById(PRN_ID)
+        )
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
       )
@@ -188,13 +203,17 @@ describe('updatePrnStatus compensation', () => {
           id: PRN_ID,
           organisationId: ORG_ID,
           accreditationId: ACC_ID,
+          registrationId: REG_ID,
           newStatus: PRN_STATUS.DELETED,
           actor: PRN_ACTOR.SIGNATORY,
           user: issueUser
         })
       ).rejects.toBe(creditError)
 
-      const refetched = await prnRepository.findById(PRN_ID)
+      const refetched =
+        /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+          await prnRepository.findById(PRN_ID)
+        )
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
       )
@@ -212,7 +231,10 @@ describe('updatePrnStatus compensation', () => {
     it('reverts an issued cancellation to awaiting_cancellation if the full-balance credit throws', async () => {
       const awaitingCancellationSeed = buildAwaitingAcceptancePrn({
         ...PRN_BASE,
-        status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
+        status:
+          /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} */ ({
+            currentStatus: PRN_STATUS.AWAITING_CANCELLATION
+          })
       })
       const {
         logger,
@@ -241,13 +263,17 @@ describe('updatePrnStatus compensation', () => {
           id: PRN_ID,
           organisationId: ORG_ID,
           accreditationId: ACC_ID,
+          registrationId: REG_ID,
           newStatus: PRN_STATUS.CANCELLED,
           actor: PRN_ACTOR.SIGNATORY,
           user: issueUser
         })
       ).rejects.toBe(creditError)
 
-      const refetched = await prnRepository.findById(PRN_ID)
+      const refetched =
+        /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+          await prnRepository.findById(PRN_ID)
+        )
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_CANCELLATION
       )
@@ -286,6 +312,7 @@ describe('updatePrnStatus compensation', () => {
           id: PRN_ID,
           organisationId: ORG_ID,
           accreditationId: ACC_ID,
+          registrationId: REG_ID,
           newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
           actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
           user: issueUser
@@ -293,7 +320,9 @@ describe('updatePrnStatus compensation', () => {
       ).rejects.toBe(writeError)
 
       const balance =
-        await wasteBalancesRepository.findByAccreditationId(ACC_ID)
+        /** @type {import('#waste-balances/domain/model.js').WasteBalance} */ (
+          await wasteBalancesRepository.findByAccreditationId(ACC_ID)
+        )
       expect(balance.amount).toBe(STARTING_TOTAL)
       expect(balance.availableAmount).toBe(STARTING_TOTAL)
 
@@ -339,6 +368,7 @@ describe('updatePrnStatus compensation', () => {
           id: PRN_ID,
           organisationId: ORG_ID,
           accreditationId: ACC_ID,
+          registrationId: REG_ID,
           newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
           actor: PRN_ACTOR.SIGNATORY,
           user: issueUser
@@ -411,6 +441,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
+      registrationId: REG_ID,
       newStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       actor: PRN_ACTOR.REPROCESSOR_EXPORTER,
       user: issueUser
@@ -447,6 +478,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
+      registrationId: REG_ID,
       newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       actor: PRN_ACTOR.SIGNATORY,
       user: issueUser
@@ -483,6 +515,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
+      registrationId: REG_ID,
       newStatus: PRN_STATUS.DELETED,
       actor: PRN_ACTOR.SIGNATORY,
       user: issueUser
@@ -501,7 +534,10 @@ describe('updatePrnStatus system logging on successful balance update', () => {
   it('logs credit_full when an issued PRN cancellation completes', async () => {
     const awaitingCancellationSeed = buildAwaitingAcceptancePrn({
       ...PRN_BASE,
-      status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
+      status:
+        /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} */ ({
+          currentStatus: PRN_STATUS.AWAITING_CANCELLATION
+        })
     })
     const {
       logger,
@@ -524,6 +560,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
+      registrationId: REG_ID,
       newStatus: PRN_STATUS.CANCELLED,
       actor: PRN_ACTOR.SIGNATORY,
       user: issueUser
@@ -562,6 +599,7 @@ describe('updatePrnStatus system logging on successful balance update', () => {
       id: PRN_ID,
       organisationId: ORG_ID,
       accreditationId: ACC_ID,
+      registrationId: REG_ID,
       newStatus: PRN_STATUS.AWAITING_CANCELLATION,
       actor: PRN_ACTOR.PRODUCER,
       user: issueUser

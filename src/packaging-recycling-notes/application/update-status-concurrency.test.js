@@ -7,7 +7,7 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
@@ -19,7 +19,12 @@ vi.mock('./metrics.js', () => ({
   }
 }))
 
-const { updatePrnStatus } = await import('./update-status.js')
+const { updatePrnStatus: updatePrnStatusUntyped } =
+  await import('./update-status.js')
+const updatePrnStatus =
+  /** @type {typeof import('./update-status.js').updatePrnStatus} */ (
+    updatePrnStatusUntyped
+  )
 
 const noopLogger = () => ({
   info: vi.fn(),
@@ -27,16 +32,19 @@ const noopLogger = () => ({
   warn: vi.fn(),
   debug: vi.fn(),
   trace: vi.fn(),
-  fatal: vi.fn()
+  fatal: vi.fn(),
+  child: vi.fn()
 })
 
 const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'
 const ACC_ID = 'acc-456'
+const REG_ID = 'reg-789'
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
 const ISSUED_AMOUNT = 950
 
+/** @type {Partial<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>} */
 const PRN_BASE = {
   id: PRN_ID,
   organisation: {
@@ -55,12 +63,20 @@ const PRN_BASE = {
   tonnage: TONNAGE
 }
 
-const buildIssuableSeed = () => buildAwaitingAuthorisationPrn(PRN_BASE)
+const buildIssuableSeed = () =>
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    buildAwaitingAuthorisationPrn(PRN_BASE)
+  )
 const buildAwaitingCancellationSeed = () =>
-  buildAwaitingAcceptancePrn({
-    ...PRN_BASE,
-    status: { currentStatus: PRN_STATUS.AWAITING_CANCELLATION }
-  })
+  /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ (
+    buildAwaitingAcceptancePrn({
+      ...PRN_BASE,
+      status:
+        /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote['status']} */ ({
+          currentStatus: PRN_STATUS.AWAITING_CANCELLATION
+        })
+    })
+  )
 
 const buildBalanceSeed = (overrides = {}) => ({
   id: 'wb-1',
@@ -75,11 +91,14 @@ const buildBalanceSeed = (overrides = {}) => ({
   ...overrides
 })
 
-const buildOrganisationsRepository = () => ({
-  findAccreditationById: vi.fn().mockResolvedValue({
-    submittedToRegulator: REGULATOR.EA
-  })
-})
+const buildOrganisationsRepository = () =>
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */ (
+    /** @type {unknown} */ ({
+      findAccreditationById: vi.fn().mockResolvedValue({
+        submittedToRegulator: REGULATOR.EA
+      })
+    })
+  )
 
 const expectOneWinsOneVersionConflict = (results) => {
   const fulfilled = results.filter((r) => r.status === 'fulfilled')
@@ -103,7 +122,7 @@ describe('updatePrnStatus concurrency', () => {
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [buildBalanceSeed()],
-      { ledgerRepository: createInMemoryLedgerRepository()() }
+      { streamRepository: createInMemoryStreamRepository()() }
     )
     const realWasteBalancesRepository = wasteFactory()
     const deductSpy = vi.fn(
@@ -125,6 +144,7 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
+        registrationId: REG_ID,
         newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -144,7 +164,7 @@ describe('updatePrnStatus concurrency', () => {
 
     const wasteFactory = createInMemoryWasteBalancesRepository(
       [buildBalanceSeed({ availableAmount: RINGFENCED_AVAILABLE })],
-      { ledgerRepository: createInMemoryLedgerRepository()() }
+      { streamRepository: createInMemoryStreamRepository()() }
     )
     const realWasteBalancesRepository = wasteFactory()
     const creditSpy = vi.fn(
@@ -166,6 +186,7 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
+        registrationId: REG_ID,
         newStatus: PRN_STATUS.DELETED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }
@@ -190,7 +211,7 @@ describe('updatePrnStatus concurrency', () => {
           amount: ISSUED_AMOUNT
         })
       ],
-      { ledgerRepository: createInMemoryLedgerRepository()() }
+      { streamRepository: createInMemoryStreamRepository()() }
     )
     const realWasteBalancesRepository = wasteFactory()
     const creditSpy = vi.fn(
@@ -212,6 +233,7 @@ describe('updatePrnStatus concurrency', () => {
         id: PRN_ID,
         organisationId: ORG_ID,
         accreditationId: ACC_ID,
+        registrationId: REG_ID,
         newStatus: PRN_STATUS.CANCELLED,
         actor: PRN_ACTOR.SIGNATORY,
         user: { id: 'user-789', name: 'Test User' }

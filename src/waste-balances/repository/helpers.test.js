@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   findOrCreateWasteBalance,
   performUpdateWasteBalanceTransactions,
-  markExcludedRecords,
+  markExcludedRecords
+} from './helpers.js'
+import {
   buildPrnCreationTransaction,
   performDeductAvailableBalanceForPrnCreation,
   buildPrnIssuedTransaction,
@@ -12,9 +14,10 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   buildIssuedPrnCancellationTransaction,
   performCreditFullBalanceForIssuedPrnCancellation
-} from './helpers.js'
+} from './helpers-prn.js'
 import { calculateWasteBalanceUpdates } from '../application/calculator.js'
-import { performUpdateViaLedger } from '../application/update-via-ledger.js'
+import { performUpdateViaStream } from '../application/update-via-stream.js'
+import { appendToStream } from '../application/append-to-stream.js'
 import { audit } from '@defra/cdp-auditing'
 import {
   WASTE_BALANCE_CANONICAL_SOURCE,
@@ -52,8 +55,12 @@ vi.mock('../application/calculator.js', () => ({
   calculateWasteBalanceUpdates: vi.fn()
 }))
 
-vi.mock('../application/update-via-ledger.js', () => ({
-  performUpdateViaLedger: vi.fn().mockResolvedValue(undefined)
+vi.mock('../application/update-via-stream.js', () => ({
+  performUpdateViaStream: vi.fn().mockResolvedValue(undefined)
+}))
+
+vi.mock('../application/append-to-stream.js', () => ({
+  appendToStream: vi.fn().mockResolvedValue(undefined)
 }))
 
 describe('src/waste-balances/repository/helpers.js', () => {
@@ -66,11 +73,17 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark all records as not excluded when processingType is not available', () => {
       const record1 = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {} // no processingType
       }
       const record2 = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-2',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {} // no processingType
       }
@@ -85,6 +98,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED SENT_ON record as not excluded for exporters', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
@@ -92,7 +108,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([sentOnRecord])
 
@@ -103,13 +123,18 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     it('should mark record as not excluded when exporter has unknown record type (no matching schema)', () => {
-      const unknownTypeRecord = {
+      // Cast to any: deliberately using an invalid type value ('unknown-type' is
+      // not a WasteRecordType) to test the no-matching-schema branch.
+      const unknownTypeRecord = /** @type {any} */ ({
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: 'unknown-type',
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
         }
-      }
+      })
 
       const result = markExcludedRecords([unknownTypeRecord])
 
@@ -120,6 +145,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark record as not excluded when processingType is not EXPORTER (no schema lookup)', () => {
       const reprocessorRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -135,6 +163,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED PROCESSED record as not excluded for reprocessor output', () => {
       const processedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.PROCESSED,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
@@ -142,7 +173,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([processedRecord])
 
@@ -155,6 +190,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED SENT_ON record as not excluded for reprocessor output', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
@@ -162,7 +200,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([sentOnRecord])
 
@@ -175,6 +217,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED RECEIVED record as not excluded for reprocessor input', () => {
       const receivedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -182,7 +227,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([receivedRecord])
 
@@ -195,6 +244,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED EXPORTED record as not excluded for exporters', () => {
       const exportedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
@@ -202,7 +254,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([exportedRecord])
 
@@ -215,6 +271,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark record as not excluded when processingType is completely unknown', () => {
       const unknownProcRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: 'completely-unknown'
@@ -230,6 +289,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark INCLUDED SENT_ON record as not excluded for reprocessor input', () => {
       const sentOnRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -237,7 +299,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.INCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([sentOnRecord])
 
@@ -248,13 +314,18 @@ describe('src/waste-balances/repository/helpers.js', () => {
     })
 
     it('should mark record as not excluded for unknown record type in reprocessor output', () => {
-      const unknownRecord = {
+      // Cast to any: deliberately using an invalid type value ('UNKNOWN' is not
+      // a WasteRecordType) to test the no-matching-schema branch.
+      const unknownRecord = /** @type {any} */ ({
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: 'UNKNOWN',
         data: {
           processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
         }
-      }
+      })
 
       const result = markExcludedRecords([unknownRecord])
 
@@ -265,6 +336,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
     it('should mark EXCLUDED record as excluded', () => {
       const excludedRecord = {
         organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-1',
+        versions: [],
         type: WASTE_RECORD_TYPE.EXPORTED,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER
@@ -272,7 +346,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.EXCLUDED })
+      classifyRowSpy.mockReturnValue({
+        outcome: ROW_OUTCOME.EXCLUDED,
+        issues: [],
+        data: {}
+      })
 
       const result = markExcludedRecords([excludedRecord])
 
@@ -320,7 +398,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
           schemaVersion: 1
         })
       )
-      expect(result.id).toBeDefined()
+      expect(result).not.toBeNull()
+      expect(
+        /** @type {NonNullable<typeof result>} */ (result).id
+      ).toBeDefined()
     })
 
     it('should return null if not found and shouldCreate is false', async () => {
@@ -338,21 +419,27 @@ describe('src/waste-balances/repository/helpers.js', () => {
   })
 
   describe('performUpdateWasteBalanceTransactions', () => {
+    // Cast to any so partial test objects (accreditation, user, dependencies) are accepted
+    const callPerformUpdate = /** @type {any} */ (
+      performUpdateWasteBalanceTransactions
+    )
+
     it('should return early if wasteRecords is empty', async () => {
-      const result = await performUpdateWasteBalanceTransactions({
-        wasteRecords: [],
+      const result = await callPerformUpdate({
+        wasteRecords: /** @type {any[]} */ ([]),
         accreditation: { id: 'acc-1' },
         dependencies: {},
         findBalance: vi.fn(),
         saveBalance: vi.fn(),
-        overseasSites: ORS_VALIDATION_DISABLED
+        overseasSites: ORS_VALIDATION_DISABLED,
+        summaryLogId: 'log-1'
       })
 
       expect(result).toBeUndefined()
     })
 
     describe('feature flag dispatch', () => {
-      it('routes to the ledger path when flag is ON and canonicalSource is ledger', async () => {
+      it('uses the stream path when flag is ON, canonicalSource is ledger, and streamRepository is provided', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -362,7 +449,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
           }
         ]
         const accreditation = { id: 'acc-1' }
-        const ledgerRepository = { insertTransactions: vi.fn() }
+        const streamRepository =
+          /** @type {Partial<import('./stream-port.js').WasteBalanceStreamRepository>} */ ({
+            appendEvent: vi.fn()
+          })
         const findBalance = vi.fn().mockResolvedValue({
           id: 'bal-1',
           accreditationId: 'acc-1',
@@ -373,27 +463,28 @@ describe('src/waste-balances/repository/helpers.js', () => {
           canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
         })
         const saveBalance = vi.fn()
-        vi.mocked(performUpdateViaLedger).mockClear()
-        vi.mocked(calculateWasteBalanceUpdates).mockClear()
+        vi.mocked(performUpdateViaStream).mockClear()
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {
             featureFlags: { isWasteBalanceLedgerEnabled: () => true },
-            ledgerRepository
+            streamRepository
           },
           findBalance,
           saveBalance,
           user: { id: 'user-1' },
-          overseasSites: ORS_VALIDATION_DISABLED
+          overseasSites: ORS_VALIDATION_DISABLED,
+          summaryLogId: 'log-1'
         })
 
-        expect(performUpdateViaLedger).toHaveBeenCalledTimes(1)
-        const call = vi.mocked(performUpdateViaLedger).mock.calls[0][0]
-        expect(call.ledgerRepository).toBe(ledgerRepository)
+        expect(performUpdateViaStream).toHaveBeenCalledTimes(1)
+        const call = vi.mocked(performUpdateViaStream).mock.calls[0][0]
+        expect(call.streamRepository).toBe(streamRepository)
         expect(call.accreditation.id).toBe('acc-1')
         expect(call.user).toEqual({ id: 'user-1' })
+        expect(call.summaryLogId).toBe('log-1')
         expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
         expect(saveBalance).not.toHaveBeenCalled()
         expect(findBalance).toHaveBeenCalledTimes(1)
@@ -417,15 +508,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
           version: 1
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
           newAvailableAmount: 100
         })
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {
@@ -438,7 +529,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
@@ -462,15 +552,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
           migratingSince: '2025-01-01T00:00:00.000Z'
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
           newAvailableAmount: 100
         })
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {
@@ -483,7 +573,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
@@ -507,15 +596,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
           canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
           newAvailableAmount: 100
         })
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {
@@ -528,7 +617,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
@@ -543,15 +631,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
         ]
         const accreditation = { id: 'acc-1' }
         const findBalance = vi.fn().mockResolvedValue(null)
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
           newAvailableAmount: 100
         })
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {
@@ -564,7 +652,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
         const savedBalance = vi.mocked(saveBalance).mock.calls[0][0]
         expect(savedBalance.canonicalSource).toBe(
@@ -590,15 +677,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
           version: 0
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
           newAvailableAmount: 100
         })
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {
@@ -610,7 +697,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
@@ -633,15 +719,15 @@ describe('src/waste-balances/repository/helpers.js', () => {
           version: 0
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
-        vi.mocked(performUpdateViaLedger).mockClear()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
         vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
           newTransactions: [{ id: 't1' }],
           newAmount: 100,
           newAvailableAmount: 100
         })
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {},
@@ -651,7 +737,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
-        expect(performUpdateViaLedger).not.toHaveBeenCalled()
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
     })
@@ -679,11 +764,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const newAvailableAmount = 200
 
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
 
       const dependencies = {
         systemLogsRepository: {
-          insert: vi.fn().mockResolvedValue()
+          insert: vi.fn().mockResolvedValue(undefined)
         }
       }
 
@@ -693,7 +778,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         newAvailableAmount
       })
 
-      await performUpdateWasteBalanceTransactions({
+      await callPerformUpdate({
         wasteRecords,
         accreditation,
         dependencies,
@@ -745,7 +830,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const newAvailableAmount = 200
 
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
 
       // Dependencies without systemLogsRepository
       const dependencies = {}
@@ -756,7 +841,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         newAvailableAmount
       })
 
-      await performUpdateWasteBalanceTransactions({
+      await callPerformUpdate({
         wasteRecords,
         accreditation,
         dependencies,
@@ -804,11 +889,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
 
       const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-      const saveBalance = vi.fn().mockResolvedValue()
+      const saveBalance = vi.fn().mockResolvedValue(undefined)
 
       const dependencies = {
         systemLogsRepository: {
-          insert: vi.fn().mockResolvedValue()
+          insert: vi.fn().mockResolvedValue(undefined)
         }
       }
 
@@ -818,7 +903,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         newAvailableAmount: 200
       })
 
-      await performUpdateWasteBalanceTransactions({
+      await callPerformUpdate({
         wasteRecords,
         accreditation,
         dependencies,
@@ -869,7 +954,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       const findBalance = vi.fn().mockResolvedValue(null)
       const saveBalance = vi.fn()
 
-      await performUpdateWasteBalanceTransactions({
+      await callPerformUpdate({
         wasteRecords,
         accreditation: { id: 'acc-1' },
         dependencies: {},
@@ -896,7 +981,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         newAvailableAmount: 100
       })
 
-      await performUpdateWasteBalanceTransactions({
+      await callPerformUpdate({
         wasteRecords,
         accreditation,
         dependencies: {},
@@ -938,9 +1023,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
         })
 
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {},
@@ -981,9 +1066,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
         })
 
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue()
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
 
-        await performUpdateWasteBalanceTransactions({
+        await callPerformUpdate({
           wasteRecords,
           accreditation,
           dependencies: {},
@@ -1011,7 +1096,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 400,
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildPrnCreationTransaction({
@@ -1060,6 +1146,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductAvailableBalanceForPrnCreation({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50.5,
@@ -1092,6 +1179,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductAvailableBalanceForPrnCreation({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50.5,
@@ -1128,6 +1216,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductAvailableBalanceForPrnCreation({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
@@ -1165,6 +1254,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductAvailableBalanceForPrnCreation({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
@@ -1184,6 +1274,46 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect.any(Array)
       )
     })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 400,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository =
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
+        })
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performDeductAvailableBalanceForPrnCreation({
+        deductParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
   })
 
   describe('buildPrnIssuedTransaction', () => {
@@ -1196,7 +1326,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 450, // Already reduced by 50 when PRN was created
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildPrnIssuedTransaction({
@@ -1245,6 +1376,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductTotalBalanceForPrnIssue({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
@@ -1277,6 +1409,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductTotalBalanceForPrnIssue({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
@@ -1313,6 +1446,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductTotalBalanceForPrnIssue({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
@@ -1350,6 +1484,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performDeductTotalBalanceForPrnIssue({
         deductParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
@@ -1370,6 +1505,46 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect.any(Array)
       )
     })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 450,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository =
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
+        })
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performDeductTotalBalanceForPrnIssue({
+        deductParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
   })
 
   describe('buildPrnCancellationTransaction', () => {
@@ -1382,7 +1557,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 350,
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildPrnCancellationTransaction({
@@ -1431,6 +1607,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performCreditAvailableBalanceForPrnCancellation({
         creditParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
@@ -1464,6 +1641,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         performCreditAvailableBalanceForPrnCancellation({
           creditParams: {
             accreditationId: 'acc-1',
+            registrationId: 'reg-1',
             organisationId: 'org-1',
             prnId: 'prn-123',
             tonnage: 50,
@@ -1501,6 +1679,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performCreditAvailableBalanceForPrnCancellation({
         creditParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
@@ -1538,6 +1717,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performCreditAvailableBalanceForPrnCancellation({
         creditParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
@@ -1559,6 +1739,46 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect.any(Array)
       )
     })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 500,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository =
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
+        })
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performCreditAvailableBalanceForPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 50,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
+    })
   })
 
   describe('buildIssuedPrnCancellationTransaction', () => {
@@ -1571,7 +1791,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
         availableAmount: 350,
         transactions: [],
         version: 1,
-        schemaVersion: 1
+        schemaVersion: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       }
 
       const transaction = buildIssuedPrnCancellationTransaction({
@@ -1620,6 +1841,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performCreditFullBalanceForIssuedPrnCancellation({
         creditParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
@@ -1653,6 +1875,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         performCreditFullBalanceForIssuedPrnCancellation({
           creditParams: {
             accreditationId: 'acc-1',
+            registrationId: 'reg-1',
             organisationId: 'org-1',
             prnId: 'prn-123',
             tonnage: 60,
@@ -1685,6 +1908,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
       await performCreditFullBalanceForIssuedPrnCancellation({
         creditParams: {
           accreditationId: 'acc-1',
+          registrationId: 'reg-1',
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
@@ -1705,6 +1929,46 @@ describe('src/waste-balances/repository/helpers.js', () => {
         }),
         expect.any(Array)
       )
+    })
+
+    it('dispatches to stream when canonicalSource is ledger', async () => {
+      const existingBalance = {
+        id: 'balance-1',
+        organisationId: 'org-1',
+        accreditationId: 'acc-1',
+        amount: 400,
+        availableAmount: 350,
+        transactions: [],
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      }
+      const streamRepository =
+        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ ({
+          appendEvent: vi.fn(),
+          findLatestByPartition: vi.fn(),
+          findLatestByPartitionAndKind: vi.fn(),
+          findEventsByPrnIdAfter: vi.fn()
+        })
+      const findBalance = vi.fn().mockResolvedValue(existingBalance)
+      const saveBalance = vi.fn()
+      vi.mocked(appendToStream).mockClear()
+
+      await performCreditFullBalanceForIssuedPrnCancellation({
+        creditParams: {
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-123',
+          tonnage: 60,
+          userId: 'user-abc'
+        },
+        findBalance,
+        saveBalance,
+        dependencies: { streamRepository }
+      })
+
+      expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(saveBalance).not.toHaveBeenCalled()
     })
   })
 })
