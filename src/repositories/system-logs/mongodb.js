@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { buildPage } from './pagination.js'
 
 export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 
@@ -13,13 +14,7 @@ async function ensureCollection(db) {
   const collection = db.collection(SYSTEM_LOGS_COLLECTION_NAME)
 
   await collection.createIndex({ 'context.organisationId': 1, _id: -1 })
-  // Case-insensitive collation (strength 2) so email searches ignore case.
-  // The query must specify the same collation for Mongo to use this index;
-  // without it, a case-insensitive regex would bypass the index entirely.
-  await collection.createIndex(
-    { 'createdBy.email': 1, _id: -1 },
-    { collation: { locale: 'en', strength: 2 } }
-  )
+  await collection.createIndex({ 'createdBy.id': 1, _id: -1 })
 
   return collection
 }
@@ -46,46 +41,59 @@ export const createSystemLogsRepository = async (db) => {
       }
     },
 
-    async find({ organisationId, email, subCategory, limit, cursor }) {
-      const filter = {}
+    async find({
+      organisationId,
+      userId,
+      subCategory,
+      limit,
+      cursor,
+      direction
+    }) {
+      const isPrev = direction === 'prev'
 
+      const filter = {}
       if (organisationId) {
         filter['context.organisationId'] = organisationId
       }
-      if (email) {
-        filter['createdBy.email'] = email
+      if (userId) {
+        filter['createdBy.id'] = userId
       }
       if (subCategory) {
         filter['event.subCategory'] = subCategory
       }
       if (cursor) {
-        filter._id = { $lt: ObjectId.createFromHexString(cursor) }
+        const cursorId = ObjectId.createFromHexString(cursor)
+        filter._id = isPrev ? { $gt: cursorId } : { $lt: cursorId }
       }
 
-      // Collation must match the email index for case-insensitive lookup.
-      // Strength 2 is case-insensitive, accent-sensitive. This only affects
-      // string comparisons; the UUID/enum filters are unaffected.
       const docs = await db
         .collection(SYSTEM_LOGS_COLLECTION_NAME)
         .find(filter)
-        .collation({ locale: 'en', strength: 2 })
-        .sort({ _id: -1 })
+        .sort({ _id: isPrev ? 1 : -1 })
         .limit(limit + 1)
         .toArray()
 
-      const hasMore = docs.length > limit
-      const items = hasMore ? docs.slice(0, limit) : docs
+      const { page, hasNext, hasPrev, nextCursor, prevCursor } = buildPage(
+        docs,
+        {
+          limit,
+          isPrev,
+          hasCursor: Boolean(cursor),
+          toCursor: (doc) => doc._id.toHexString()
+        }
+      )
 
       return {
-        systemLogs: items.map((doc) => ({
+        systemLogs: page.map((doc) => ({
           event: doc.event,
           context: doc.context,
           createdAt: doc.createdAt,
           createdBy: doc.createdBy
         })),
-        hasMore,
-        // @ts-expect-error hasMore guarantees items is non-empty
-        nextCursor: hasMore ? items.at(-1)._id.toHexString() : null
+        hasNext,
+        hasPrev,
+        nextCursor,
+        prevCursor
       }
     }
   })
