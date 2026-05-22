@@ -24,6 +24,7 @@ import {
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
+import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
 import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
@@ -181,6 +182,10 @@ async function createServer(options = {}) {
     pulse,
     Jwt,
     authPlugin,
+    {
+      plugin: basicAuthPlugin.plugin,
+      options: { config }
+    },
     {
       plugin: externalApiAuthPlugin.plugin,
       options: { config }

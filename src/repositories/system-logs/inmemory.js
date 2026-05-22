@@ -1,5 +1,7 @@
 /** @import {SystemLog} from './port.js' */
 
+import { buildPage } from './pagination.js'
+
 /** Encode a numeric ID as a 24-char hex string (matching ObjectId format) */
 const toHexCursor = (id) => id.toString(16).padStart(24, '0')
 
@@ -22,7 +24,16 @@ export function createSystemLogsRepository() {
         storage.push({ ...systemLog, _internalId: id })
       },
 
-      async find({ organisationId, email, subCategory, limit, cursor }) {
+      async find({
+        organisationId,
+        userId,
+        subCategory,
+        limit,
+        cursor,
+        direction
+      }) {
+        const isPrev = direction === 'prev'
+
         let results = storage.filter((item) => {
           if (
             organisationId &&
@@ -30,10 +41,7 @@ export function createSystemLogsRepository() {
           ) {
             return false
           }
-          if (
-            email &&
-            item.createdBy?.email?.toLowerCase() !== email.toLowerCase()
-          ) {
+          if (userId && item.createdBy?.id !== userId) {
             return false
           }
           if (subCategory && item.event?.subCategory !== subCategory) {
@@ -42,21 +50,35 @@ export function createSystemLogsRepository() {
           return true
         })
 
-        results.sort((a, b) => b._internalId - a._internalId)
-
         if (cursor) {
           const cursorId = fromHexCursor(cursor)
-          results = results.filter((item) => item._internalId < cursorId)
+          results = results.filter((item) =>
+            isPrev ? item._internalId > cursorId : item._internalId < cursorId
+          )
         }
 
-        const hasMore = results.length > limit
-        const page = hasMore ? results.slice(0, limit) : results
+        // Forward: newest first. Backward: oldest first, so the slice keeps
+        // the rows nearest the cursor; reversed afterwards for display.
+        results.sort((a, b) =>
+          isPrev ? a._internalId - b._internalId : b._internalId - a._internalId
+        )
+
+        const { page, hasNext, hasPrev, nextCursor, prevCursor } = buildPage(
+          results,
+          {
+            limit,
+            isPrev,
+            hasCursor: Boolean(cursor),
+            toCursor: (item) => toHexCursor(item._internalId)
+          }
+        )
 
         return {
           systemLogs: page.map(({ _internalId, ...rest }) => rest),
-          hasMore,
-          // @ts-expect-error hasMore guarantees page is non-empty
-          nextCursor: hasMore ? toHexCursor(page.at(-1)._internalId) : null
+          hasNext,
+          hasPrev,
+          nextCursor,
+          prevCursor
         }
       }
     }

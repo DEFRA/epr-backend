@@ -10,45 +10,21 @@ const DEFAULT_LIMIT = 100
 export const testSystemLogsRepositoryContract = (it) => {
   describe('find', () => {
     describe('filtering', () => {
-      it('returns logs matching the provided email', async ({
+      it('returns logs matching the provided userId', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
-        await repository.insert(buildSystemLog({ email, id: 1 }))
-        await repository.insert(
-          buildSystemLog({ email: `bob-${randomUUID()}@example.com`, id: 2 })
-        )
+        await repository.insert(buildSystemLog({ userId, id: 1 }))
+        await repository.insert(buildSystemLog({ userId: randomUUID(), id: 2 }))
 
-        const result = await repository.find({
-          email,
-          limit: DEFAULT_LIMIT
-        })
+        const result = await repository.find({ userId, limit: DEFAULT_LIMIT })
 
         expect(result.systemLogs).toHaveLength(1)
-        expect(result.systemLogs[0].createdBy.email).toBe(email)
-      })
-
-      it('matches email case-insensitively', async ({
-        systemLogsRepository
-      }) => {
-        /** @type {SystemLogsRepository} */
-        const repository = systemLogsRepository()
-
-        const storedEmail = `Alice.Smith-${randomUUID()}@Example.COM`
-
-        await repository.insert(buildSystemLog({ email: storedEmail, id: 1 }))
-
-        const result = await repository.find({
-          email: storedEmail.toLowerCase(),
-          limit: DEFAULT_LIMIT
-        })
-
-        expect(result.systemLogs).toHaveLength(1)
-        expect(result.systemLogs[0].createdBy.email).toBe(storedEmail)
+        expect(result.systemLogs[0].createdBy.id).toBe(userId)
       })
 
       it('returns logs matching the provided sub-category', async ({
@@ -105,16 +81,16 @@ export const testSystemLogsRepositoryContract = (it) => {
         const repository = systemLogsRepository()
 
         const organisationId = randomUUID()
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
         const subCategory = `Reconciliation-${randomUUID()}`
 
         await repository.insert(
-          buildSystemLog({ organisationId, email, subCategory, id: 1 })
+          buildSystemLog({ organisationId, userId, subCategory, id: 1 })
         )
         await repository.insert(
           buildSystemLog({
             organisationId,
-            email: `bob-${randomUUID()}@example.com`,
+            userId: randomUUID(),
             subCategory,
             id: 2
           })
@@ -122,7 +98,7 @@ export const testSystemLogsRepositoryContract = (it) => {
         await repository.insert(
           buildSystemLog({
             organisationId,
-            email,
+            userId,
             subCategory: `Organisations-${randomUUID()}`,
             id: 3
           })
@@ -130,7 +106,7 @@ export const testSystemLogsRepositoryContract = (it) => {
 
         const result = await repository.find({
           organisationId,
-          email,
+          userId,
           subCategory,
           limit: DEFAULT_LIMIT
         })
@@ -139,20 +115,22 @@ export const testSystemLogsRepositoryContract = (it) => {
         expect(result.systemLogs[0].context.id).toBe(1)
       })
 
-      it('returns empty result when no logs match', async ({
+      it('returns an empty result when no logs match', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
         const result = await repository.find({
-          email: `nobody-${randomUUID()}@example.com`,
+          userId: randomUUID(),
           limit: DEFAULT_LIMIT
         })
 
         expect(result.systemLogs).toEqual([])
-        expect(result.hasMore).toBe(false)
+        expect(result.hasNext).toBe(false)
+        expect(result.hasPrev).toBe(false)
         expect(result.nextCursor).toBeNull()
+        expect(result.prevCursor).toBeNull()
       })
     })
 
@@ -161,179 +139,319 @@ export const testSystemLogsRepositoryContract = (it) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
         await repository.insert(
           buildSystemLog({
-            email,
+            userId,
             createdAt: new Date('2025-01-01'),
             id: 'older'
           })
         )
         await repository.insert(
           buildSystemLog({
-            email,
+            userId,
             createdAt: new Date('2025-01-02'),
             id: 'newer'
           })
         )
 
-        const result = await repository.find({
-          email,
-          limit: DEFAULT_LIMIT
-        })
+        const result = await repository.find({ userId, limit: DEFAULT_LIMIT })
 
         expect(result.systemLogs[0].context.id).toBe('newer')
         expect(result.systemLogs[1].context.id).toBe('older')
       })
     })
 
-    describe('pagination', () => {
-      it('respects limit parameter', async ({ systemLogsRepository }) => {
+    describe('forward pagination', () => {
+      it('respects the limit parameter', async ({ systemLogsRepository }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
         for (let i = 1; i <= 3; i++) {
-          await repository.insert(buildSystemLog({ email, id: i }))
+          await repository.insert(buildSystemLog({ userId, id: i }))
         }
 
-        const result = await repository.find({ email, limit: 2 })
+        const result = await repository.find({ userId, limit: 2 })
 
         expect(result.systemLogs).toHaveLength(2)
       })
 
-      it('returns hasMore true when more items exist beyond limit', async ({
+      it('returns hasNext true with a nextCursor when more items exist', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
         for (let i = 1; i <= 3; i++) {
-          await repository.insert(buildSystemLog({ email, id: i }))
+          await repository.insert(buildSystemLog({ userId, id: i }))
         }
 
-        const result = await repository.find({ email, limit: 2 })
+        const result = await repository.find({ userId, limit: 2 })
 
-        expect(result.hasMore).toBe(true)
+        expect(result.hasNext).toBe(true)
         expect(result.nextCursor).not.toBeNull()
       })
 
-      it('returns hasMore false when all items fit within limit', async ({
+      it('returns hasNext false when all items fit within the limit', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
-        await repository.insert(buildSystemLog({ email, id: 1 }))
-        await repository.insert(buildSystemLog({ email, id: 2 }))
+        await repository.insert(buildSystemLog({ userId, id: 1 }))
+        await repository.insert(buildSystemLog({ userId, id: 2 }))
 
-        const result = await repository.find({ email, limit: 10 })
+        const result = await repository.find({ userId, limit: 10 })
 
         expect(result.systemLogs).toHaveLength(2)
-        expect(result.hasMore).toBe(false)
+        expect(result.hasNext).toBe(false)
         expect(result.nextCursor).toBeNull()
       })
 
-      it('returns items after cursor when cursor is provided', async ({
+      it('reports hasPrev false on the first page', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
         for (let i = 1; i <= 3; i++) {
-          await repository.insert(buildSystemLog({ email, id: i }))
+          await repository.insert(buildSystemLog({ userId, id: i }))
         }
 
-        const page1 = await repository.find({ email, limit: 1 })
+        const result = await repository.find({ userId, limit: 2 })
 
-        expect(page1.systemLogs).toHaveLength(1)
-        expect(page1.hasMore).toBe(true)
+        expect(result.hasPrev).toBe(false)
+        expect(result.prevCursor).toBeNull()
+      })
 
+      it('returns the next page and reports hasPrev true when given a cursor', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 3; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const page1 = await repository.find({ userId, limit: 1 })
         const page2 = await repository.find({
-          email,
+          userId,
           limit: 1,
-          cursor: page1.nextCursor
+          cursor: page1.nextCursor,
+          direction: 'next'
         })
 
         expect(page2.systemLogs).toHaveLength(1)
         expect(page2.systemLogs[0].context.id).not.toBe(
           page1.systemLogs[0].context.id
         )
+        expect(page2.hasPrev).toBe(true)
+        expect(page2.prevCursor).not.toBeNull()
       })
 
-      it('paginates through all results across multiple pages', async ({
+      it('paginates forward through all results without duplicates', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const email = `alice-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
         for (let i = 1; i <= 5; i++) {
-          await repository.insert(buildSystemLog({ email, id: i }))
+          await repository.insert(buildSystemLog({ userId, id: i }))
         }
         await repository.insert(
-          buildSystemLog({ email: `bob-${randomUUID()}@example.com`, id: 99 })
+          buildSystemLog({ userId: randomUUID(), id: 99 })
         )
 
-        const allIds = []
+        const seen = []
         let cursor
+        let hasNext = true
 
-        do {
-          const page = await repository.find({ email, limit: 2, cursor })
-
-          allIds.push(...page.systemLogs.map((log) => log.context.id))
+        while (hasNext) {
+          const page = await repository.find({
+            userId,
+            limit: 2,
+            cursor,
+            direction: 'next'
+          })
+          seen.push(...page.systemLogs.map((log) => log.context.id))
           cursor = page.nextCursor
-        } while (cursor)
+          hasNext = page.hasNext
+        }
 
-        expect(allIds).toHaveLength(5)
-        expect(new Set(allIds).size).toBe(5)
+        expect(seen).toHaveLength(5)
+        expect(new Set(seen).size).toBe(5)
+        expect(seen).not.toContain(99)
       })
+    })
 
-      it('does not include items from other filters in paginated results', async ({
+    describe('backward pagination', () => {
+      it('direction=prev returns the page immediately newer than the cursor', async ({
         systemLogsRepository
       }) => {
         /** @type {SystemLogsRepository} */
         const repository = systemLogsRepository()
 
-        const targetEmail = `alice-${randomUUID()}@example.com`
-        const otherEmail = `bob-${randomUUID()}@example.com`
+        const userId = randomUUID()
 
-        await repository.insert(buildSystemLog({ email: targetEmail, id: 1 }))
-        await repository.insert(buildSystemLog({ email: otherEmail, id: 2 }))
-        await repository.insert(buildSystemLog({ email: targetEmail, id: 3 }))
-        await repository.insert(buildSystemLog({ email: otherEmail, id: 4 }))
-        await repository.insert(buildSystemLog({ email: targetEmail, id: 5 }))
+        for (let i = 1; i <= 5; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
 
-        const result = await repository.find({
-          email: targetEmail,
-          limit: 2
-        })
-
-        expect(result.systemLogs).toHaveLength(2)
-        result.systemLogs.forEach((log) => {
-          expect(log.createdBy.email).toBe(targetEmail)
-        })
-
-        expect(result.hasMore).toBe(true)
-
+        const page1 = await repository.find({ userId, limit: 2 })
         const page2 = await repository.find({
-          email: targetEmail,
+          userId,
           limit: 2,
-          cursor: result.nextCursor
+          cursor: page1.nextCursor,
+          direction: 'next'
+        })
+        const backToPage1 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page2.prevCursor,
+          direction: 'prev'
         })
 
-        expect(page2.systemLogs).toHaveLength(1)
-        expect(page2.systemLogs[0].createdBy.email).toBe(targetEmail)
-        expect(page2.hasMore).toBe(false)
+        expect(backToPage1.systemLogs.map((log) => log.context.id)).toEqual(
+          page1.systemLogs.map((log) => log.context.id)
+        )
+      })
+
+      it('direction=prev always reports hasNext true', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 3; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const page1 = await repository.find({ userId, limit: 1 })
+        const page2 = await repository.find({
+          userId,
+          limit: 1,
+          cursor: page1.nextCursor,
+          direction: 'next'
+        })
+        const back = await repository.find({
+          userId,
+          limit: 1,
+          cursor: page2.prevCursor,
+          direction: 'prev'
+        })
+
+        expect(back.hasNext).toBe(true)
+      })
+
+      it('direction=prev reports hasPrev false when no older page exists', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 4; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const page1 = await repository.find({ userId, limit: 2 })
+        const page2 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page1.nextCursor,
+          direction: 'next'
+        })
+        const backToPage1 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page2.prevCursor,
+          direction: 'prev'
+        })
+
+        expect(backToPage1.hasPrev).toBe(false)
+      })
+
+      it('direction=prev returns the page nearest the cursor when more newer rows exist', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 6; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const page1 = await repository.find({ userId, limit: 2 })
+        const page2 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page1.nextCursor,
+          direction: 'next'
+        })
+        const page3 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page2.nextCursor,
+          direction: 'next'
+        })
+        const backToPage2 = await repository.find({
+          userId,
+          limit: 2,
+          cursor: page3.prevCursor,
+          direction: 'prev'
+        })
+
+        expect(backToPage2.systemLogs.map((log) => log.context.id)).toEqual(
+          page2.systemLogs.map((log) => log.context.id)
+        )
+        expect(backToPage2.hasPrev).toBe(true)
+        expect(backToPage2.hasNext).toBe(true)
+      })
+
+      it('direction=prev returns an empty result with hasNext false when nothing is newer', async ({
+        systemLogsRepository
+      }) => {
+        /** @type {SystemLogsRepository} */
+        const repository = systemLogsRepository()
+
+        const userId = randomUUID()
+
+        for (let i = 1; i <= 3; i++) {
+          await repository.insert(buildSystemLog({ userId, id: i }))
+        }
+
+        const newestPage = await repository.find({ userId, limit: 1 })
+        const result = await repository.find({
+          userId,
+          limit: 10,
+          cursor: newestPage.nextCursor,
+          direction: 'prev'
+        })
+
+        expect(result.systemLogs).toEqual([])
+        expect(result.hasNext).toBe(false)
+        expect(result.hasPrev).toBe(false)
+        expect(result.nextCursor).toBeNull()
+        expect(result.prevCursor).toBeNull()
       })
     })
   })

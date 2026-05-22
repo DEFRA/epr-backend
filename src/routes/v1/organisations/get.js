@@ -1,8 +1,7 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 export const organisationsGetAllPath = '/v1/organisations'
 
@@ -25,7 +24,8 @@ export const organisationsGetAll = {
   path: organisationsGetAllPath,
   options: {
     auth: {
-      scope: [SCOPES.adminRead]
+      strategies: ['access-token', BASIC_AUTH],
+      scope: [SCOPES.adminRead, SCOPES.organisationRead]
     },
     tags: ['api', 'admin'],
     validate: {
@@ -34,10 +34,9 @@ export const organisationsGetAll = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationsRepository: OrganisationsRepository,
    *   query: { search?: string, page?: number, pageSize?: number }
    * }} request
-   * @param {Object} h - Hapi response toolkit
+   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
   handler: async ({ organisationsRepository, query }, h) => {
     if (!isPaginatedRequest(query)) {

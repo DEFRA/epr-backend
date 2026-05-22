@@ -4,7 +4,7 @@ import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens
 
 /**
  * @param {Object} params
- * @param {() => import('@hapi/hapi').Server} params.server
+ * @param {() => import('#test/create-test-server.js').TestServer} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
  * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
  * @param {number=} params.successStatus - Optional success status code (defaults to 200 OK)
@@ -71,7 +71,7 @@ export function testOnlyServiceMaintainerCanAccess({
 
 /**
  * @param {Object} params
- * @param {() => import('@hapi/hapi').Server} params.server
+ * @param {() => import('#test/create-test-server.js').TestServer} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
  * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
  */
@@ -136,7 +136,7 @@ export function testOnlyStandardUserCanAccess({
 
 /**
  * @param {Object} params
- * @param {() => import('@hapi/hapi').Server} params.server
+ * @param {() => import('#test/create-test-server.js').TestServer} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
  * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
  */
