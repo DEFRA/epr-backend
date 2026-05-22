@@ -15,7 +15,8 @@ export const ROLES = {
 export const SCOPES = {
   adminRead: 'admin.read',
   adminWrite: 'admin.write',
-  adminDlqPurge: 'admin.dlq.purge'
+  adminDlqPurge: 'admin.dlq.purge',
+  organisationRead: 'organisation.read'
 }
 
 /**
