@@ -2,6 +2,7 @@ import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_IDS } from '#common/helpers/parse-test-organisations.js'
+import { resolveAccreditation } from '#domain/organisations/registration-utils.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -24,10 +25,10 @@ const TEST_ORGANISATIONS = new Set(TEST_ORGANISATION_IDS)
 
 /**
  * @typedef {Object} StreamCsvExportDeps
- * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteRecordsRepository} wasteRecordsRepository
- * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {OverseasSitesRepository} overseasSitesRepository
+ * @property {Pick<OrganisationsRepository, 'findAll'>} organisationsRepository
+ * @property {Pick<WasteRecordsRepository, 'findByRegistration' | 'findDistinctDataKeys'>} wasteRecordsRepository
+ * @property {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
+ * @property {Pick<OverseasSitesRepository, 'findAll'>} overseasSitesRepository
  */
 
 const sortById = (a, b) => a.id.localeCompare(b.id)
@@ -94,6 +95,7 @@ const rowForRecord = ({
   return buildDataRow({
     org,
     registration,
+    accreditation,
     record,
     summaryLogEntry,
     includedInWasteBalance,
@@ -111,8 +113,8 @@ const rowForRecord = ({
  * @param {Registration} input.registration
  * @param {Map<string, OverseasSite>} input.sitesById
  * @param {string[]} input.dataFieldColumns
- * @param {WasteRecordsRepository} input.wasteRecordsRepository
- * @param {SummaryLogsRepository} input.summaryLogsRepository
+ * @param {Pick<WasteRecordsRepository, 'findByRegistration'>} input.wasteRecordsRepository
+ * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
  */
 async function* streamRegistrationRows({
@@ -123,7 +125,7 @@ async function* streamRegistrationRows({
   wasteRecordsRepository,
   summaryLogsRepository
 }) {
-  const accreditation = registration.accreditation ?? null
+  const accreditation = resolveAccreditation(registration, org)
   const overseasSites = buildOverseasSitesContext(registration, sitesById)
   const summaryLogMap = await loadSummaryLogMap(
     summaryLogsRepository,

@@ -8,7 +8,7 @@
  * Memory cost is small (count is bounded by submissions per registration —
  * typically dozens at most).
  *
- * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {Pick<SummaryLogsRepository, 'findAllByOrgReg'>} summaryLogsRepository
  * @param {string} organisationId
  * @param {string} registrationId
  * @returns {Promise<Map<string, { submittedAt: string }>>}
