@@ -15,11 +15,12 @@ import {
  *
  * @typedef {{
  *   organisationId?: string,
- *   email?: string,
+ *   userId?: string,
  *   subCategory?: string,
  *   limit?: number,
- *   cursor?: string
- * }} SystemLogsSearchPayload
+ *   cursor?: string,
+ *   direction?: 'next' | 'prev'
+ * }} SystemLogsSearchQuery
  */
 
 const DEFAULT_LIMIT = 50
@@ -27,48 +28,55 @@ const MAX_LIMIT = 200
 
 const systemLogsSearchPath = '/v1/system-logs/search'
 
-export const systemLogsPostSearch = {
-  method: 'POST',
+export const systemLogsGetSearch = {
+  method: 'GET',
   path: systemLogsSearchPath,
   options: {
     auth: getAuthConfig([SCOPES.adminRead]),
     tags: ['api', 'admin'],
     validate: {
-      payload: Joi.object({
+      query: Joi.object({
         organisationId: Joi.string().optional(),
-        email: Joi.string().trim().optional(),
+        userId: Joi.string().trim().optional(),
         subCategory: Joi.string().optional(),
         limit: Joi.number().integer().min(1).optional(),
-        cursor: Joi.string().hex().length(24).optional()
-      }).or('organisationId', 'email', 'subCategory')
+        cursor: Joi.string().hex().length(24).optional(),
+        direction: Joi.string().valid('next', 'prev').optional()
+      })
+        .or('organisationId', 'userId', 'subCategory')
+        .with('direction', 'cursor')
     }
   },
   /**
-   * @param {HapiRequest<SystemLogsSearchPayload> & {
+   * @param {HapiRequest<unknown> & {
+   *   query: SystemLogsSearchQuery,
    *   systemLogsRepository: SystemLogsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { systemLogsRepository, logger } = request
-    const { organisationId, email, subCategory, limit, cursor } =
-      request.payload
+    const { organisationId, userId, subCategory, limit, cursor, direction } =
+      request.query
 
     try {
       const effectiveLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT)
 
       const result = await systemLogsRepository.find({
         organisationId,
-        email,
+        userId,
         subCategory,
         limit: effectiveLimit,
-        cursor
+        cursor,
+        direction
       })
 
       const response = {
         systemLogs: result.systemLogs,
-        hasMore: result.hasMore,
-        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {})
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev,
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+        ...(result.prevCursor ? { prevCursor: result.prevCursor } : {})
       }
 
       logger.info({

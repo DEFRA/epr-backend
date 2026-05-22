@@ -18,18 +18,21 @@
 /**
  * @typedef {{
  *   organisationId?: string
- *   email?: string
+ *   userId?: string
  *   subCategory?: string
  *   limit: number
  *   cursor?: string
+ *   direction?: 'next' | 'prev'
  * }} FindParams
  */
 
 /**
  * @typedef {{
  *   systemLogs: SystemLog[]
- *   hasMore: boolean
+ *   hasNext: boolean
+ *   hasPrev: boolean
  *   nextCursor: string | null
+ *   prevCursor: string | null
  * }} PaginatedSystemLogs
  */
 
