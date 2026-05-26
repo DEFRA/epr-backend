@@ -6,14 +6,20 @@ import { LOCATION_KEYS } from '#common/validation/validation-issues.js'
 
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-/** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+/** @import {StoredFile, SummaryLog} from '#domain/summary-logs/model.js' */
 
 /**
- * SummaryLog after the validator has confirmed it's past PREPROCESSING (org/reg
- * guaranteed by upstream business logic but the SummaryLog typedef leaves them
- * optional to cover the PREPROCESSING state too).
+ * SummaryLog after the validator has confirmed it's past PREPROCESSING. The
+ * base typedef leaves org/reg/accreditation optional and admits the pending
+ * file shape to cover PREPROCESSING; this narrows them to the guarantees
+ * upstream business logic provides by the VALIDATING state.
  *
- * @typedef {SummaryLog & { organisationId: string, registrationId: string }} SubmittedSummaryLog
+ * @typedef {SummaryLog & {
+ *   organisationId: string,
+ *   registrationId: string,
+ *   accreditationId?: string,
+ *   file: StoredFile
+ * }} SubmittedSummaryLog
  */
 
 /**

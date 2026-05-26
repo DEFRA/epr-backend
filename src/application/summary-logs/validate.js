@@ -39,8 +39,10 @@ export const MAX_VALIDATION_ISSUES = 100
 export const MAX_ACTUAL_LENGTH = 200
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -50,6 +52,15 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
 
+/**
+ * @param {{
+ *   summaryLogExtractor: SummaryLogExtractor,
+ *   summaryLog: SummaryLog,
+ *   loggingContext: string,
+ *   logger: TypedLogger
+ * }} params
+ * @returns {Promise<ParsedSummaryLog>}
+ */
 const extractSummaryLog = async ({
   summaryLogExtractor,
   summaryLog,
@@ -69,6 +80,18 @@ const extractSummaryLog = async ({
   return parsed
 }
 
+/**
+ * @param {{
+ *   summaryLogId: string,
+ *   summaryLog: SubmittedSummaryLog,
+ *   validatedData: object,
+ *   wasteRecordsRepository: WasteRecordsRepository
+ * }} params
+ * @returns {Promise<{
+ *   wasteRecords: ValidatedWasteRecord[],
+ *   issues: ValidationIssuesCollector
+ * }>}
+ */
 const transformAndValidateData = async ({
   summaryLogId,
   summaryLog,
@@ -112,6 +135,16 @@ const transformAndValidateData = async ({
   return { wasteRecords, issues }
 }
 
+/**
+ * @param {{
+ *   organisationsRepository: OrganisationsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   loggingContext: string,
+ *   logger: TypedLogger
+ * }} params
+ * @returns {Promise<Registration>}
+ */
 const fetchRegistration = async ({
   organisationsRepository,
   organisationId,
@@ -202,6 +235,12 @@ const extractMetaValues = (parsedMeta) => {
   )
 }
 
+/**
+ * @param {Error & { code?: string }} error
+ * @param {ValidationIssuesCollector} issues
+ * @param {string} loggingContext
+ * @param {TypedLogger} logger
+ */
 const handleValidationFailure = (error, issues, loggingContext, logger) => {
   if (error instanceof SpreadsheetValidationError) {
     logger.warn({
@@ -417,13 +456,8 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
 }
 
 /**
- * Creates a summary logs validator function
- *
- * @param {Object} params
- * @param {SummaryLogsRepository} params.summaryLogsRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {WasteRecordsRepository} params.wasteRecordsRepository
- * @param {SummaryLogExtractor} params.summaryLogExtractor
+ * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
+ * @param {string} summaryLogId
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
@@ -560,6 +594,18 @@ const classifyLoads = ({
   return { loads, loadsByWasteRecordType }
 }
 
+/**
+ * Creates a summary logs validator function.
+ *
+ * @param {{
+ *   logger: TypedLogger,
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   wasteRecordsRepository: WasteRecordsRepository,
+ *   summaryLogExtractor: SummaryLogExtractor
+ * }} params
+ * @returns {(summaryLogId: string) => Promise<void>}
+ */
 export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,

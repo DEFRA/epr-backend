@@ -15,6 +15,8 @@ import {
   createEmptyLoadValidity
 } from './load-counts.js'
 
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+
 // ============================================================================
 // Test Builders
 // ============================================================================
@@ -148,10 +150,15 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
 const mockLoggerError = vi.fn()
 
+/** @type {TypedLogger} */
 const logger = {
   info: (...args) => mockLoggerInfo(...args),
   warn: (...args) => mockLoggerWarn(...args),
-  error: (...args) => mockLoggerError(...args)
+  error: (...args) => mockLoggerError(...args),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: () => logger
 }
 
 const mockRecordStatusTransition = vi.fn()
