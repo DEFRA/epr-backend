@@ -58,18 +58,20 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
 }
 
 /**
- * @param {ReturnType<ReturnType<typeof createValidationIssues>['getCounts']>} counts
- * @param {string} summaryLogId
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {{
+ *   counts: ReturnType<ReturnType<typeof createValidationIssues>['getCounts']>,
+ *   summaryLogId: string,
+ *   organisationId: string,
+ *   registrationId: string
+ * }} params
  * @returns {IndexedLogProperties}
  */
-const buildSummaryLogPayload = (
+const buildSummaryLogPayload = ({
   counts,
   summaryLogId,
   organisationId,
   registrationId
-) => ({
+}) => ({
   message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} org=${organisationId} reg=${registrationId}`,
   event: {
     kind: 'event',
@@ -106,11 +108,11 @@ export const logValidationIssues = ({
     logger.warn(buildIssueLogPayload(issue, summaryLogId))
   })
   logger.warn(
-    buildSummaryLogPayload(
-      issues.getCounts(),
+    buildSummaryLogPayload({
+      counts: issues.getCounts(),
       summaryLogId,
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId
+    })
   )
 }
