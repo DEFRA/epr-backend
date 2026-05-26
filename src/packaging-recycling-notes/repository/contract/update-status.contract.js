@@ -2,13 +2,19 @@ import { describe, beforeEach, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildDraftPrn, buildAwaitingAuthorisationPrn } from './test-data.js'
 
+/** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
+
 export const testUpdateStatusBehaviour = (it) => {
   describe('updateStatus', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: PrnRepository }} */ { prnRepository }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     describe('basic behaviour', () => {
       it('updates the current status', async () => {
