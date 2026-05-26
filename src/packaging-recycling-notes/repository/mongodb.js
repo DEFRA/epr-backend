@@ -351,6 +351,11 @@ const performUpdateStatus = async (
   }
 
   const versionMatches = { $eq: [{ $ifNull: ['$version', 1] }, version] }
+  // A supplied watermark must not go backwards: it has to be >= the stored one,
+  // with a missing stored watermark defaulting to the incoming value so the
+  // first write always passes. An omitted watermark is allowed only while the
+  // PRN carries none (the embedded path); omitting it over a stored watermark
+  // is itself a regression and fails the guard.
   const watermarkAdvances =
     lastAppliedEventNumber === undefined
       ? { $eq: [{ $ifNull: ['$lastAppliedEventNumber', null] }, null] }
