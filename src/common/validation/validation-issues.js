@@ -11,6 +11,7 @@ export const LOCATION_KEYS = /** @type {const} */ ([
   'sheet',
   'table',
   'row',
+  'rowId',
   'column',
   'header',
   'field'
@@ -26,15 +27,16 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  */
 
 /**
- * Additional context attached to a validation issue.
- *
- * Note: All other context fields are preserved and copied to HTTP response
- * meta. See ADR 0020 for HTTP response format mapping.
+ * Additional context attached to a validation issue. Open by design — all
+ * known fields are listed but the index signature permits arbitrary extras,
+ * which `issueToErrorObject` copies through to the HTTP response meta. See
+ * ADR 0020 for the HTTP response format mapping.
  *
  * @typedef {{
  *   location?: ValidationIssueLocation,
  *   expected?: unknown,
- *   actual?: unknown
+ *   actual?: unknown,
+ *   [key: string]: unknown
  * }} ValidationIssueContext
  */
 
@@ -56,12 +58,78 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  */
 
 /**
+ * Issue counts grouped by severity, plus the total.
+ *
+ * @typedef {{
+ *   fatal: number,
+ *   error: number,
+ *   warning: number,
+ *   total: number
+ * }} ValidationIssueCounts
+ */
+
+/**
+ * HTTP error object produced by issueToErrorObject (ADR 0020 format).
+ *
+ * @typedef {{
+ *   type: string,
+ *   meta?: Record<string, unknown>
+ * }} HttpValidationError
+ */
+
+/**
+ * Collector returned by createValidationIssues. Accumulates issues and exposes
+ * helpers for adding, querying, and transforming them. The add* methods return
+ * the collector to support chaining.
+ *
+ * @typedef {{
+ *   addIssue: (
+ *     severity: ValidationSeverity,
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   addFatal: (
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   addError: (
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   addWarning: (
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   isFatal: () => boolean,
+ *   isValid: () => boolean,
+ *   hasIssues: () => boolean,
+ *   getIssuesBySeverity: (severity: ValidationSeverity) => ValidationIssue[],
+ *   getIssuesByCategory: (category: string) => ValidationIssue[],
+ *   getIssuesByRow: () => Map<number, ValidationIssue[]>,
+ *   groupBySeverity: () => Record<ValidationSeverity, ValidationIssue[]>,
+ *   getAllIssues: () => ValidationIssue[],
+ *   merge: (other: ValidationIssuesCollector) => ValidationIssuesCollector,
+ *   getCounts: () => ValidationIssueCounts,
+ *   getSummary: () => string,
+ *   toErrorResponse: () => { issues: HttpValidationError[] }
+ * }} ValidationIssuesCollector
+ */
+
+/**
  * Converts a validation issue to an error object suitable for HTTP responses
  *
  * Follows the format defined in ADR 0020: Summary Log Validation Output Formats
  *
  * @param {ValidationIssue} issue - The validation issue
- * @returns {Object} Error object with type and meta
+ * @returns {HttpValidationError} Error object with type and meta
  *
  * @example
  * const httpIssues = summaryLog.validation.issues.map(issueToErrorObject)
@@ -273,7 +341,7 @@ const createIssueTransformers = (
  * Collects and manages validation issues with support for different
  * severity levels and categorization
  *
- * @returns {Object} A validation issues object with methods for managing issues
+ * @returns {ValidationIssuesCollector}
  *
  * @example
  * const issues = createValidationIssues()
@@ -283,8 +351,9 @@ const createIssueTransformers = (
  * }
  */
 export const createValidationIssues = () => {
+  /** @type {ValidationIssue[]} */
   const issues = []
-  const result = {}
+  const result = /** @type {ValidationIssuesCollector} */ ({})
 
   const adders = createIssueAdders(issues, result)
   const queries = createIssueQueries(issues)

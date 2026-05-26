@@ -39,7 +39,7 @@ export const MAX_VALIDATION_ISSUES = 100
 export const MAX_ACTUAL_LENGTH = 200
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
@@ -142,7 +142,7 @@ const fetchRegistration = async ({
 
 /**
  * @typedef {Object} ValidationResult
- * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues object with methods like getAllIssues(), isFatal()
+ * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  */
@@ -334,7 +334,7 @@ const performValidationChecks = async ({
 /**
  * Records validation issue metrics grouped by severity × category
  *
- * @param {ReturnType<typeof createValidationIssues>} issues - Validation issues object
+ * @param {ValidationIssuesCollector} issues - Validation issues object
  * @param {string} processingType - The processing type for the metric dimension
  */
 const recordValidationIssueMetrics = async (issues, processingType) => {
@@ -443,7 +443,7 @@ const assertValidatingStatus = (result, summaryLogId) => {
  * Records all validation-related metrics.
  *
  * @param {Object} params
- * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {ValidationIssuesCollector} params.issues
  * @param {import('#common/helpers/metrics/summary-logs.js').ProcessingType} params.processingType
  * @param {SummaryLogStatus} params.status
  * @param {number} params.validationDurationMs
@@ -469,7 +469,7 @@ const recordValidationMetrics = async ({
  * Persists the validation result to the summary log document.
  *
  * @param {Object} params
- * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta

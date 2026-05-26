@@ -5,7 +5,7 @@ import {
 import { LOCATION_KEYS } from '#common/validation/validation-issues.js'
 
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssueContext, createValidationIssues} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 
 /**
@@ -59,7 +59,7 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
 
 /**
  * @param {{
- *   counts: ReturnType<ReturnType<typeof createValidationIssues>['getCounts']>,
+ *   counts: ValidationIssueCounts,
  *   summaryLogId: string,
  *   organisationId: string,
  *   registrationId: string
@@ -91,7 +91,7 @@ const buildSummaryLogPayload = ({
  * @param {{
  *   summaryLogId: string,
  *   summaryLog: SubmittedSummaryLog,
- *   issues: ReturnType<typeof createValidationIssues>,
+ *   issues: ValidationIssuesCollector,
  *   logger: TypedLogger
  * }} params
  */
