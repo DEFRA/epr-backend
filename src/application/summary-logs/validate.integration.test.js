@@ -127,6 +127,7 @@ describe('SummaryLogsValidator integration', () => {
     const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
     return {
+      summaryLogId,
       updated,
       summaryLog,
       testOrg,
@@ -680,6 +681,250 @@ describe('SummaryLogsValidator integration', () => {
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
       expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+  })
+
+  describe('validation issue logging', () => {
+    let warnSpy
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      warnSpy.mockRestore()
+    })
+
+    const filterByAction = (action) =>
+      warnSpy.mock.calls
+        .map(([payload]) => payload)
+        .filter((payload) => payload?.event?.action === action)
+
+    it('should emit a warn log per issue plus a summary log when validation produces issues', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const issueLogs = filterByAction('summary_log_validation_issue')
+      const summaryLogs = filterByAction('summary_log_validation_completed')
+
+      expect(issueLogs).toHaveLength(1)
+      expect(summaryLogs).toHaveLength(1)
+    })
+
+    it('should not emit validation-issue warn logs when validation passes cleanly', async () => {
+      const accreditationNumber = 'ACC-001'
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT',
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        },
+        ACCREDITATION_NUMBER: {
+          value: accreditationNumber,
+          location: { sheet: 'Cover', row: 5, column: 'B' }
+        }
+      }
+
+      await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        accreditationNumber,
+        metadata
+      })
+
+      const issueLogs = filterByAction('summary_log_validation_issue')
+      const summaryLogs = filterByAction('summary_log_validation_completed')
+
+      expect(issueLogs).toEqual([])
+      expect(summaryLogs).toEqual([])
+    })
+
+    it('should structure the per-issue log with CDP-indexed fields and no PII', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      const { summaryLogId } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const [issueLog] = filterByAction('summary_log_validation_issue')
+
+      expect(issueLog).toEqual({
+        message: expect.stringContaining(
+          'Summary log validation issue: PROCESSING_TYPE_REQUIRED'
+        ),
+        event: {
+          kind: 'event',
+          category: 'server',
+          action: 'summary_log_validation_issue',
+          outcome: 'failure',
+          type: 'error',
+          reference: summaryLogId,
+          reason: 'PROCESSING_TYPE_REQUIRED'
+        },
+        error: {
+          code: 'PROCESSING_TYPE_REQUIRED',
+          type: 'fatal',
+          message: expect.stringContaining(
+            "Invalid meta field 'PROCESSING_TYPE'"
+          ),
+          id: 'field=PROCESSING_TYPE'
+        }
+      })
+    })
+
+    it('should encode location as a semicolon-delimited composite in error.id', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT',
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        },
+        ACCREDITATION_NUMBER: {
+          value: '99999999',
+          location: { sheet: 'Cover', row: 5, column: 'B' }
+        }
+      }
+
+      await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        accreditationNumber: '87654321',
+        metadata
+      })
+
+      const [issueLog] = filterByAction('summary_log_validation_issue')
+
+      expect(issueLog.error.id).toBe(
+        'sheet=Cover;row=5;column=B;field=ACCREDITATION_NUMBER'
+      )
+    })
+
+    it('should structure the summary log with counts and org/reg in message', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      const { summaryLogId, testOrg } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const [summaryLogPayload] = filterByAction(
+        'summary_log_validation_completed'
+      )
+
+      expect(summaryLogPayload).toEqual({
+        message: `Summary log validation completed: fatal=1 error=0 warning=0 org=${testOrg.id} reg=${testOrg.registrations[0].id}`,
+        event: {
+          kind: 'event',
+          category: 'server',
+          action: 'summary_log_validation_completed',
+          outcome: 'failure',
+          reference: summaryLogId
+        }
+      })
+    })
+
+    it('should never include the actual value, organisationId or registrationId in per-issue logs', async () => {
+      const piiValue = 'sensitive-operator-data-value'
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: piiValue,
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      const { testOrg } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const issueLogs = filterByAction('summary_log_validation_issue')
+      const serialised = JSON.stringify(issueLogs)
+
+      expect(serialised).not.toContain(piiValue)
+      expect(serialised).not.toContain(testOrg.id)
+      expect(serialised).not.toContain(testOrg.registrations[0].id)
     })
   })
 })

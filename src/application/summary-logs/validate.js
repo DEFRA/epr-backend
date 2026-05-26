@@ -37,18 +37,25 @@ import {
 export const MAX_VALIDATION_ISSUES = 100
 export const MAX_ACTUAL_LENGTH = 200
 
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {ValidationIssue, ValidationIssueContext, ValidationIssueLocation} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
-/** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
-/** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
-/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
-/** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
-/** @typedef {import('./load-counts.js').Loads} Loads */
+/** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+/** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
+/** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
+/** @import {SummaryLogExtractor} from './extractor.js' */
+/** @import {Loads} from './load-counts.js' */
 
-/** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
+/**
+ * SummaryLog after assertValidatingStatus has confirmed it's past PREPROCESSING
+ * (org/reg guaranteed by upstream business logic but the SummaryLog typedef
+ * leaves them optional to cover the PREPROCESSING state too).
+ *
+ * @typedef {SummaryLog & { organisationId: string, registrationId: string }} SubmittedSummaryLog
+ */
 
 const extractSummaryLog = async ({
   summaryLogExtractor,
@@ -416,6 +423,114 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
   }
 }
 
+/** @type {readonly (keyof ValidationIssueLocation)[]} */
+const LOCATION_KEY_ORDER = [
+  'sheet',
+  'table',
+  'row',
+  'column',
+  'header',
+  'field'
+]
+
+/**
+ * @param {ValidationIssueContext} [context]
+ * @returns {string} Semicolon-delimited composite, empty parts omitted
+ */
+const buildLocationId = (context) => {
+  const location = context?.location
+  if (!location) {
+    return ''
+  }
+  return LOCATION_KEY_ORDER.filter((key) => location[key] !== undefined)
+    .map((key) => `${key}=${location[key]}`)
+    .join(';')
+}
+
+/**
+ * @param {ValidationIssue} issue
+ * @param {string} summaryLogId
+ * @returns {IndexedLogProperties}
+ */
+const buildIssueLogPayload = (issue, summaryLogId) => ({
+  message: `Summary log validation issue: ${issue.code}`,
+  event: {
+    kind: 'event',
+    category: LOGGING_EVENT_CATEGORIES.SERVER,
+    action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_ISSUE,
+    outcome: 'failure',
+    type: 'error',
+    reference: summaryLogId,
+    reason: issue.code
+  },
+  error: {
+    code: issue.code,
+    type: issue.severity,
+    message: issue.message,
+    id: buildLocationId(issue.context)
+  }
+})
+
+/**
+ * @param {ValidationIssue[]} allIssues
+ * @param {string} summaryLogId
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @returns {IndexedLogProperties}
+ */
+const buildSummaryLogPayload = (
+  allIssues,
+  summaryLogId,
+  organisationId,
+  registrationId
+) => {
+  const counts = { fatal: 0, error: 0, warning: 0 }
+  allIssues.forEach((issue) => {
+    counts[issue.severity]++
+  })
+  return {
+    message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} org=${organisationId} reg=${registrationId}`,
+    event: {
+      kind: 'event',
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_COMPLETED,
+      outcome: 'failure',
+      reference: summaryLogId
+    }
+  }
+}
+
+/**
+ * Emits a warn-level log per validation issue plus a single summary log so
+ * support can investigate failures via OpenSearch DQL. No-op when there are
+ * no issues. PII (issue.context.actual) and org/reg are never included in
+ * per-issue logs; org/reg appear only in the run-level summary log.
+ *
+ * @param {{
+ *   summaryLogId: string,
+ *   summaryLog: SubmittedSummaryLog,
+ *   issues: ReturnType<typeof createValidationIssues>,
+ *   logger: TypedLogger
+ * }} params
+ */
+const logValidationIssues = ({ summaryLogId, summaryLog, issues, logger }) => {
+  const allIssues = issues.getAllIssues()
+  if (allIssues.length === 0) {
+    return
+  }
+  allIssues.forEach((issue) => {
+    logger.warn(buildIssueLogPayload(issue, summaryLogId))
+  })
+  logger.warn(
+    buildSummaryLogPayload(
+      allIssues,
+      summaryLogId,
+      summaryLog.organisationId,
+      summaryLog.registrationId
+    )
+  )
+}
+
 /**
  * Creates a summary logs validator function
  *
@@ -572,8 +687,10 @@ export const createSummaryLogsValidator = ({
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
     assertValidatingStatus(result, summaryLogId)
-
-    const { version, summaryLog } = result
+    const { version, summaryLog } =
+      /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
+        result
+      )
     const {
       file: { id: fileId, name: filename }
     } = summaryLog
@@ -600,6 +717,8 @@ export const createSummaryLogsValidator = ({
       validateDataSyntax
     })
     const validationDurationMs = Date.now() - validationStart
+
+    logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 
