@@ -80,7 +80,7 @@ const prnTransitionToStreamKind = (prevStatus, newStatus) => {
  * @param {Array} params.wasteRecords
  * @param {Array} params.prns
  * @param {Object} params.overseasSites
- * @param {Array<{ id: string, status: string, submittedAt: string }>} params.summaryLogs
+ * @param {Array<{ id: string, status: string, submittedAt?: string }>} params.summaryLogs
  */
 export const buildChronologicalEvents = ({
   accreditation,
@@ -92,8 +92,14 @@ export const buildChronologicalEvents = ({
   const events = []
 
   const submitted = summaryLogs
-    .filter((sl) => sl.status === SUMMARY_LOG_STATUS.SUBMITTED)
-    .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
+    .filter(
+      /** @returns {sl is { id: string, status: string, submittedAt: string }} */
+      (sl) => sl.status === SUMMARY_LOG_STATUS.SUBMITTED
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
+    )
 
   const seenSummaryLogIds = new Set()
 
@@ -110,7 +116,10 @@ export const buildChronologicalEvents = ({
         continue
       }
       const amount = getTargetAmount(
-        { data, excludedFromWasteBalance: record.excludedFromWasteBalance },
+        /** @type {any} */ ({
+          data,
+          excludedFromWasteBalance: record.excludedFromWasteBalance
+        }),
         accreditation,
         overseasSites
       )
@@ -213,7 +222,7 @@ export const replayStream = (events) => {
  * @param {Array} params.wasteRecords
  * @param {Array} params.prns
  * @param {Object} params.overseasSites
- * @param {Array<{ id: string, status: string, submittedAt: string }>} params.summaryLogs
+ * @param {Array<{ id: string, status: string, submittedAt?: string }>} params.summaryLogs
  */
 export const computeRebuiltStream = ({
   accreditation,
@@ -253,7 +262,10 @@ export const computeRebuiltStream = ({
 
   for (const event of events) {
     if (event.kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED) {
-      wasteRecordContribution = event.payload.creditTotal
+      wasteRecordContribution =
+        /** @type {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
+          event.payload
+        ).creditTotal
     } else {
       const delta = {
         amount: event.closingBalance.amount - event.openingBalance.amount,

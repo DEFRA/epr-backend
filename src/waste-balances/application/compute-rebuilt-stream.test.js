@@ -212,12 +212,14 @@ describe('buildChronologicalEvents', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    findSchemaForProcessingType.mockReturnValue({
-      classifyForWasteBalance: (data) =>
-        data.tonnage === undefined
-          ? { outcome: ROW_OUTCOME.EXCLUDED, transactionAmount: 0 }
-          : includedAt(data.tonnage)
-    })
+    vi.mocked(findSchemaForProcessingType).mockReturnValue(
+      /** @type {any} */ ({
+        classifyForWasteBalance: (data) =>
+          data.tonnage === undefined
+            ? { outcome: ROW_OUTCOME.EXCLUDED, transactionAmount: 0 }
+            : includedAt(data.tonnage)
+      })
+    )
   })
 
   it('returns empty array when no summary logs and no PRNs', () => {
@@ -337,8 +339,7 @@ describe('buildChronologicalEvents', () => {
       },
       {
         id: 'sl-draft',
-        status: SUMMARY_LOG_STATUS.VALIDATED,
-        submittedAt: undefined
+        status: SUMMARY_LOG_STATUS.VALIDATED
       }
     ]
     const wasteRecords = [
@@ -457,12 +458,14 @@ describe('computeRebuiltStream', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    findSchemaForProcessingType.mockReturnValue({
-      classifyForWasteBalance: (data) =>
-        data.tonnage === undefined
-          ? { outcome: ROW_OUTCOME.EXCLUDED, transactionAmount: 0 }
-          : includedAt(data.tonnage)
-    })
+    vi.mocked(findSchemaForProcessingType).mockReturnValue(
+      /** @type {any} */ ({
+        classifyForWasteBalance: (data) =>
+          data.tonnage === undefined
+            ? { outcome: ROW_OUTCOME.EXCLUDED, transactionAmount: 0 }
+            : includedAt(data.tonnage)
+      })
+    )
   })
 
   it('returns zero totals and empty events when given no inputs', () => {
@@ -609,10 +612,18 @@ describe('computeRebuiltStream', () => {
     expect(result.events).toHaveLength(3)
     // Chronological: sl-1 (Jan 10), prn-created (Jan 15), sl-2 (Jan 20)
     expect(result.events[0].kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
-    expect(result.events[0].payload.creditTotal).toBe(40)
+    expect(
+      /** @type {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
+        result.events[0].payload
+      ).creditTotal
+    ).toBe(40)
     expect(result.events[1].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
     expect(result.events[2].kind).toBe(STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
-    expect(result.events[2].payload.creditTotal).toBe(60)
+    expect(
+      /** @type {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
+        result.events[2].payload
+      ).creditTotal
+    ).toBe(60)
 
     // Final balance: 60 (waste) - 10 (PRN created, availableAmount only)
     expect(result.amount).toBe(60)
