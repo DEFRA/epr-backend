@@ -92,6 +92,12 @@ const buildReceivedLoadRow = (overrides = {}) => ({
 const rowToArray = (rowObject) =>
   RECEIVED_LOADS_HEADERS.map((header) => rowObject[header])
 
+/**
+ * @param {{
+ *   rows?: Array<unknown[] | Record<string, unknown>>,
+ *   headers?: string[]
+ * }} [options]
+ */
 const buildReceivedLoadsTable = ({
   rows = [],
   headers = RECEIVED_LOADS_HEADERS
