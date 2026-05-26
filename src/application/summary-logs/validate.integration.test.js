@@ -921,7 +921,7 @@ describe('SummaryLogsValidator integration', () => {
       )
 
       expect(summaryLogPayload).toStrictEqual({
-        message: `Summary log validation completed: fatal=1 error=0 warning=0 org=${testOrg.id} reg=${testOrg.registrations[0].id}`,
+        message: `Summary log validation completed: fatal=1 error=0 warning=0 total=1 logged=1 org=${testOrg.id} reg=${testOrg.registrations[0].id}`,
         event: {
           kind: 'event',
           category: 'server',

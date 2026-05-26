@@ -4,6 +4,8 @@ import {
 } from '#common/enums/index.js'
 import { LOCATION_KEYS } from '#common/validation/validation-issues.js'
 
+const MAX_LOGGED_ISSUES = 50
+
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {StoredFile, SummaryLog} from '#domain/summary-logs/model.js' */
@@ -66,6 +68,7 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
 /**
  * @param {{
  *   counts: ValidationIssueCounts,
+ *   logged: number,
  *   summaryLogId: string,
  *   organisationId: string,
  *   registrationId: string
@@ -74,11 +77,12 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
  */
 const buildSummaryLogPayload = ({
   counts,
+  logged,
   summaryLogId,
   organisationId,
   registrationId
 }) => ({
-  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} org=${organisationId} reg=${registrationId}`,
+  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} total=${counts.total} logged=${logged} org=${organisationId} reg=${registrationId}`,
   event: {
     kind: 'event',
     category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -110,12 +114,14 @@ export const logValidationIssues = ({
   if (!issues.hasIssues()) {
     return
   }
-  issues.getAllIssues().forEach((issue) => {
+  const issuesToLog = issues.getAllIssues().slice(0, MAX_LOGGED_ISSUES)
+  issuesToLog.forEach((issue) => {
     logger.warn(buildIssueLogPayload(issue, summaryLogId))
   })
   logger.warn(
     buildSummaryLogPayload({
       counts: issues.getCounts(),
+      logged: issuesToLog.length,
       summaryLogId,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId
