@@ -58,33 +58,27 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
 }
 
 /**
- * @param {ValidationIssue[]} allIssues
+ * @param {ReturnType<ReturnType<typeof createValidationIssues>['getCounts']>} counts
  * @param {string} summaryLogId
  * @param {string} organisationId
  * @param {string} registrationId
  * @returns {IndexedLogProperties}
  */
 const buildSummaryLogPayload = (
-  allIssues,
+  counts,
   summaryLogId,
   organisationId,
   registrationId
-) => {
-  const counts = { fatal: 0, error: 0, warning: 0 }
-  allIssues.forEach((issue) => {
-    counts[issue.severity]++
-  })
-  return {
-    message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} org=${organisationId} reg=${registrationId}`,
-    event: {
-      kind: 'event',
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_COMPLETED,
-      outcome: 'failure',
-      reference: summaryLogId
-    }
+) => ({
+  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} org=${organisationId} reg=${registrationId}`,
+  event: {
+    kind: 'event',
+    category: LOGGING_EVENT_CATEGORIES.SERVER,
+    action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_COMPLETED,
+    outcome: 'failure',
+    reference: summaryLogId
   }
-}
+})
 
 /**
  * Emits a warn-level log per validation issue plus a single summary log so
@@ -105,16 +99,15 @@ export const logValidationIssues = ({
   issues,
   logger
 }) => {
-  const allIssues = issues.getAllIssues()
-  if (allIssues.length === 0) {
+  if (!issues.hasIssues()) {
     return
   }
-  allIssues.forEach((issue) => {
+  issues.getAllIssues().forEach((issue) => {
     logger.warn(buildIssueLogPayload(issue, summaryLogId))
   })
   logger.warn(
     buildSummaryLogPayload(
-      allIssues,
+      issues.getCounts(),
       summaryLogId,
       summaryLog.organisationId,
       summaryLog.registrationId
