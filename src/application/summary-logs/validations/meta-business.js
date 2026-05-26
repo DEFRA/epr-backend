@@ -4,6 +4,8 @@ import { validateProcessingType } from './processing-type.js'
 import { validateAccreditationNumber } from './accreditation-number.js'
 import { validateMaterialType } from './material-type.js'
 
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+
 /**
  * Validates meta fields against registration business rules
  *
@@ -17,7 +19,7 @@ import { validateMaterialType } from './material-type.js'
  * @param {Object} params.parsed - The parsed summary log data
  * @param {Object} params.registration - The registration from the database
  * @param {string} params.loggingContext - Context string for logging
- * @returns {Object} Validation issues object
+ * @returns {ValidationIssuesCollector} Validation issues object
  */
 export const validateMetaBusiness = ({
   parsed,

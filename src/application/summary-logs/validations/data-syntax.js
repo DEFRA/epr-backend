@@ -20,8 +20,12 @@ import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/ta
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ * @typedef {import('#common/validation/validation-issues.js').ValidationIssuesCollector} ValidationIssuesCollector
  * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
  */
+
+/** @import {ValidatedSummaryLog} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -432,8 +436,8 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
 
 /**
  * @typedef {Object} DataSyntaxValidationResult
- * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues
- * @property {Object} validatedData - Parsed data with rows converted to ValidatedRow[]
+ * @property {ValidationIssuesCollector} issues - Validation issues
+ * @property {ValidatedSummaryLog} validatedData - Parsed data with rows converted to ValidatedRow[]
  */
 
 /**
@@ -452,7 +456,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
  * @param {Object} schemaRegistry - Schema registry mapping processing types to table schemas
- * @returns {function(Object): DataSyntaxValidationResult} Validator function that takes parsed summary log
+ * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
 export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
   const issues = createValidationIssues()

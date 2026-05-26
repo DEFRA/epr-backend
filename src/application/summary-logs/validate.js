@@ -42,11 +42,12 @@ export { MAX_VALIDATION_ISSUES }
 
 export const MAX_ACTUAL_LENGTH = 200
 
-/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
+/** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -88,7 +89,7 @@ const extractSummaryLog = async ({
  * @param {{
  *   summaryLogId: string,
  *   summaryLog: SubmittedSummaryLog,
- *   validatedData: object,
+ *   validatedData: ValidatedSummaryLog,
  *   wasteRecordsRepository: WasteRecordsRepository
  * }} params
  * @returns {Promise<{
@@ -185,48 +186,6 @@ const fetchRegistration = async ({
  */
 
 /**
- * Performs all validation checks on a summary log
- *
- * Implements a four-level short-circuit validation strategy:
- *
- * Level 1: Meta Syntax (FATAL)
- *   - Validates structural correctness of meta fields
- *   - Stops on fatal errors
- *
- * Level 2: Meta Business (FATAL/ERROR)
- *   - Validates meta fields against registration business rules
- *   - Stops on fatal errors
- *
- * Level 3: Data Syntax (ERROR/WARNING)
- *   - Validates structural correctness of data table rows
- *   - Attaches issues directly to rows for downstream processing
- *   - Continues even with errors (non-fatal)
- *
- * Level 4: Transform & Data Business (FATAL/ERROR/WARNING)
- *   - Transforms validated rows into waste records with issues attached
- *   - Sequential row validation: ensures no rows removed from previous uploads
- *   - Stops on fatal errors
- *
- * This approach provides:
- * - Better performance (stops early on fatal errors)
- * - Clearer user feedback (fixes meta issues before seeing data errors)
- * - Reduced noise in validation output
- * - Logical separation between meta and data validation phases
- * - Issues flow with data through transformation (no re-correlation needed)
- *
- * Converts any exceptions to fatal technical issues.
- *
- * @param {Object} params
- * @param {string} params.summaryLogId - The summary log ID
- * @param {SummaryLog} params.summaryLog - The summary log to validate
- * @param {string} params.loggingContext - Context string for logging (e.g., "summaryLogId=123, fileId=456")
- * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
- * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
- * @param {WasteRecordsRepository} params.wasteRecordsRepository - Waste records repository for fetching existing records
- * @param {Function} params.validateDataSyntax - Data syntax validator function
- * @returns {Promise<ValidationResult>} Validation result with issues and transformed records
- */
-/**
  * Extracts just the values from parsed metadata entries
  * @param {Object<string, {value: *}>} parsedMeta - Parsed metadata with value/location objects
  * @returns {ExtractedMeta} Object with field names mapped to their values
@@ -296,6 +255,43 @@ const markIgnoredByDateRange = (
   }
 }
 
+/**
+ * Performs all validation checks on a summary log
+ *
+ * Implements a four-level short-circuit validation strategy:
+ *
+ * Level 1: Meta Syntax (FATAL)
+ *   - Validates structural correctness of meta fields
+ *   - Stops on fatal errors
+ *
+ * Level 2: Meta Business (FATAL/ERROR)
+ *   - Validates meta fields against registration business rules
+ *   - Stops on fatal errors
+ *
+ * Level 3: Data Syntax (ERROR/WARNING)
+ *   - Validates structural correctness of data table rows
+ *   - Attaches issues directly to rows for downstream processing
+ *   - Continues even with errors (non-fatal)
+ *
+ * Level 4: Transform & Data Business (FATAL/ERROR/WARNING)
+ *   - Transforms validated rows into waste records with issues attached
+ *   - Sequential row validation: ensures no rows removed from previous uploads
+ *   - Stops on fatal errors
+ *
+ * Converts any exceptions to fatal technical issues.
+ *
+ * @param {{
+ *   summaryLogId: string,
+ *   summaryLog: SubmittedSummaryLog,
+ *   loggingContext: string,
+ *   logger: TypedLogger,
+ *   summaryLogExtractor: SummaryLogExtractor,
+ *   organisationsRepository: OrganisationsRepository,
+ *   wasteRecordsRepository: WasteRecordsRepository,
+ *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
+ * }} params
+ * @returns {Promise<ValidationResult>}
+ */
 const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
@@ -564,7 +560,7 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {string} params.summaryLogId
- * @param {string} params.processingType
+ * @param {ProcessingType} params.processingType
  * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
  */
 const classifyLoads = ({
