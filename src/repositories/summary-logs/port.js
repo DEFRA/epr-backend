@@ -1,7 +1,9 @@
+/** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+
 /**
  * @typedef {Object} SummaryLogVersion
  * @property {number} version
- * @property {Object} summaryLog
+ * @property {SummaryLog} summaryLog
  */
 
 /**

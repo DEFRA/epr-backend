@@ -29,6 +29,7 @@
 /**
  * @typedef {Object} Validation
  * @property {ValidationIssue[]} [issues] - Validation issues found during processing
+ * @property {number} [totalIssuesCount] - Total number of validation issues found (may exceed issues.length when capped for storage)
  */
 
 /**
@@ -44,6 +45,8 @@
  * @property {string} [organisationId]
  * @property {string} [registrationId]
  * @property {SummaryLogMeta} [meta]
+ * @property {import('#application/summary-logs/load-counts.js').Loads} [loads]
+ * @property {import('#application/summary-logs/load-counts.js').LoadsByWasteRecordType} [loadsByWasteRecordType]
  */
 
 /**
@@ -54,6 +57,8 @@
  * @property {string} [organisationId]
  * @property {string} [registrationId]
  * @property {SummaryLogMeta} [meta]
+ * @property {import('#application/summary-logs/load-counts.js').Loads} [loads]
+ * @property {import('#application/summary-logs/load-counts.js').LoadsByWasteRecordType} [loadsByWasteRecordType]
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
