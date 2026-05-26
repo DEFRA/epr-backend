@@ -8,10 +8,8 @@ import {
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 
-/**
- * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('../validate.js').ValidatedWasteRecord} ValidatedWasteRecord
- */
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * Validates that no rows from previous uploads have been removed

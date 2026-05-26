@@ -1,10 +1,8 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { validateRowContinuity } from './row-continuity.js'
 
-/**
- * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('../validate.js').ValidatedWasteRecord} ValidatedWasteRecord
- */
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * Validates data business rules

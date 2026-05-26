@@ -1,12 +1,12 @@
-/** @import {SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
-/** @import {MetadataEntry} from '#domain/summary-logs/extractor/port.js' */
-/** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
-
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import {
+  ORGANISATION_STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -14,6 +14,9 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+
+/** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
+/** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
 
 describe('SummaryLogsValidator integration', () => {
   let summaryLogsRepository
@@ -54,10 +57,13 @@ describe('SummaryLogsValidator integration', () => {
       ...(accreditation && { accreditationId: accreditation.id })
     }
 
-    return buildOrganisation({
-      registrations: [registration],
-      accreditations: accreditation ? [accreditation] : []
-    })
+    return {
+      ...buildOrganisation({
+        registrations: [registration],
+        accreditations: accreditation ? [accreditation] : []
+      }),
+      status: ORGANISATION_STATUS.ACTIVE
+    }
   }
 
   const createExtractor = (fileId, metadata, data = {}) => {
@@ -77,12 +83,13 @@ describe('SummaryLogsValidator integration', () => {
 
   /**
    * @typedef {{
-   *  registrationType: WasteProcessingTypeValue;
-   *  registrationWRN: string;
-   *  accreditationNumber?: string;
-   *  reprocessingType?: 'input' | 'output';
-   *  metadata?: Record<string, MetadataEntry>;
-   *  summaryLogExtractor?: SummaryLogExtractor;
+   *   registrationType: WasteProcessingTypeValue;
+   *   registrationWRN: string;
+   *   accreditationNumber?: string;
+   *   reprocessingType?: 'input' | 'output';
+   *   metadata?: Record<string, MetadataEntry>;
+   *   data?: Record<string, DataSection>;
+   *   summaryLogExtractor?: SummaryLogExtractor;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -93,7 +100,7 @@ describe('SummaryLogsValidator integration', () => {
     reprocessingType = 'input',
     metadata,
     data,
-    summaryLogExtractor = null
+    summaryLogExtractor
   }) => {
     const testOrg = createTestOrg(
       registrationType,
@@ -194,13 +201,13 @@ describe('SummaryLogsValidator integration', () => {
   describe('successful type matching', () => {
     describe.each([
       {
-        registrationType: 'reprocessor',
+        registrationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         registrationWRN: 'REG-123',
         accreditationNumber: 'ACC-001',
         spreadsheetType: 'REPROCESSOR_INPUT'
       },
       {
-        registrationType: 'exporter',
+        registrationType: WASTE_PROCESSING_TYPE.EXPORTER,
         registrationWRN: 'REG-456',
         accreditationNumber: 'ACC-002',
         spreadsheetType: 'EXPORTER'
@@ -254,12 +261,12 @@ describe('SummaryLogsValidator integration', () => {
   describe('type mismatches', () => {
     describe.each([
       {
-        registrationType: 'reprocessor',
+        registrationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         registrationWRN: 'REG-123',
         spreadsheetType: 'EXPORTER'
       },
       {
-        registrationType: 'exporter',
+        registrationType: WASTE_PROCESSING_TYPE.EXPORTER,
         registrationWRN: 'REG-456',
         spreadsheetType: 'REPROCESSOR_INPUT'
       }
