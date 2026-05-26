@@ -56,6 +56,39 @@ const buildVersionConflictError = (id, expected, actual) =>
   )
 
 /**
+ * @param {string} id
+ * @param {number | undefined} storedEventNumber
+ * @param {number | undefined} incomingEventNumber
+ * @param {TypedLogger} logger
+ */
+const enforceMonotonicWatermark = (
+  id,
+  storedEventNumber,
+  incomingEventNumber,
+  logger
+) => {
+  if (
+    storedEventNumber !== undefined &&
+    (incomingEventNumber === undefined ||
+      incomingEventNumber < storedEventNumber)
+  ) {
+    const conflictError = new Error(
+      `Stale watermark: PRN ${id} has already applied event ${storedEventNumber} but the update did not advance it`
+    )
+    logger.error({
+      err: conflictError,
+      message: `Stale watermark detected for PRN ${id}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.WATERMARK_REGRESSION_DETECTED,
+        reference: id
+      }
+    })
+    throw Boom.conflict(conflictError.message)
+  }
+}
+
+/**
  * @param {Storage} storage
  * @returns {(accreditationId: string) => Promise<PackagingRecyclingNote[]>}
  */
@@ -185,25 +218,12 @@ const performUpdateStatus =
       throw Boom.conflict(conflictError.message)
     }
 
-    if (
-      prn.lastAppliedEventNumber !== undefined &&
-      (lastAppliedEventNumber === undefined ||
-        lastAppliedEventNumber < prn.lastAppliedEventNumber)
-    ) {
-      const conflictError = new Error(
-        `Stale watermark: PRN ${id} has already applied event ${prn.lastAppliedEventNumber} but the update did not advance it`
-      )
-      logger.error({
-        err: conflictError,
-        message: `Stale watermark detected for PRN ${id}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.WATERMARK_REGRESSION_DETECTED,
-          reference: id
-        }
-      })
-      throw Boom.conflict(conflictError.message)
-    }
+    enforceMonotonicWatermark(
+      id,
+      prn.lastAppliedEventNumber,
+      lastAppliedEventNumber,
+      logger
+    )
 
     if (prnNumber) {
       for (const existing of storage.values()) {
