@@ -1,5 +1,7 @@
 import { VALIDATION_SEVERITY } from '#common/enums/index.js'
 
+/** @import {ValidationSeverity} from '#common/enums/validation.js' */
+
 /**
  * Ordered list of spreadsheet-location keys. Single source of truth — the
  * ValidationIssueLocation type below is derived from this array, so adding or
@@ -40,7 +42,7 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  * Represents a single validation issue.
  *
  * @typedef {{
- *   severity: string,
+ *   severity: ValidationSeverity,
  *   category: string,
  *   message: string,
  *   code: string,
