@@ -771,8 +771,8 @@ describe('SummaryLogsValidator integration', () => {
       const issueLogs = filterByAction('summary_log_validation_issue')
       const summaryLogs = filterByAction('summary_log_validation_completed')
 
-      expect(issueLogs).toEqual([])
-      expect(summaryLogs).toEqual([])
+      expect(issueLogs).toStrictEqual([])
+      expect(summaryLogs).toStrictEqual([])
     })
 
     it('should structure the per-issue log with CDP-indexed fields and no PII', async () => {
@@ -799,7 +799,7 @@ describe('SummaryLogsValidator integration', () => {
 
       const [issueLog] = filterByAction('summary_log_validation_issue')
 
-      expect(issueLog).toEqual({
+      expect(issueLog).toStrictEqual({
         message: expect.stringContaining(
           'Summary log validation issue: PROCESSING_TYPE_REQUIRED'
         ),
@@ -861,6 +861,39 @@ describe('SummaryLogsValidator integration', () => {
       )
     })
 
+    it('should omit error.id when the issue has no location context', async () => {
+      const errorMessage = 'Test extraction error'
+      const { summaryLogId } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        summaryLogExtractor: {
+          extract: async () => {
+            throw new Error(errorMessage)
+          }
+        }
+      })
+
+      const [issueLog] = filterByAction('summary_log_validation_issue')
+
+      expect(issueLog).toStrictEqual({
+        message: 'Summary log validation issue: VALIDATION_SYSTEM_ERROR',
+        event: {
+          kind: 'event',
+          category: 'server',
+          action: 'summary_log_validation_issue',
+          outcome: 'failure',
+          type: 'error',
+          reference: summaryLogId,
+          reason: 'VALIDATION_SYSTEM_ERROR'
+        },
+        error: {
+          code: 'VALIDATION_SYSTEM_ERROR',
+          type: 'fatal',
+          message: errorMessage
+        }
+      })
+    })
+
     it('should structure the summary log with counts and org/reg in message', async () => {
       const metadata = {
         REGISTRATION_NUMBER: {
@@ -887,7 +920,7 @@ describe('SummaryLogsValidator integration', () => {
         'summary_log_validation_completed'
       )
 
-      expect(summaryLogPayload).toEqual({
+      expect(summaryLogPayload).toStrictEqual({
         message: `Summary log validation completed: fatal=1 error=0 warning=0 org=${testOrg.id} reg=${testOrg.registrations[0].id}`,
         event: {
           kind: 'event',

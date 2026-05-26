@@ -35,24 +35,27 @@ const buildLocationId = (context) => {
  * @param {string} summaryLogId
  * @returns {IndexedLogProperties}
  */
-const buildIssueLogPayload = (issue, summaryLogId) => ({
-  message: `Summary log validation issue: ${issue.code}`,
-  event: {
-    kind: 'event',
-    category: LOGGING_EVENT_CATEGORIES.SERVER,
-    action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_ISSUE,
-    outcome: 'failure',
-    type: 'error',
-    reference: summaryLogId,
-    reason: issue.code
-  },
-  error: {
-    code: issue.code,
-    type: issue.severity,
-    message: issue.message,
-    id: buildLocationId(issue.context)
+const buildIssueLogPayload = (issue, summaryLogId) => {
+  const id = buildLocationId(issue.context)
+  return {
+    message: `Summary log validation issue: ${issue.code}`,
+    event: {
+      kind: 'event',
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_ISSUE,
+      outcome: 'failure',
+      type: 'error',
+      reference: summaryLogId,
+      reason: issue.code
+    },
+    error: {
+      code: issue.code,
+      type: issue.severity,
+      message: issue.message,
+      ...(id && { id })
+    }
   }
-})
+}
 
 /**
  * @param {ValidationIssue[]} allIssues
