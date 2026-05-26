@@ -19,6 +19,7 @@ export class PrnNumberConflictError extends Error {
  * @property {Date} updatedAt - Timestamp of the change
  * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
  * @property {{ slot: import('#packaging-recycling-notes/domain/model.js').BusinessOperationSlot; at: Date; by: import('#packaging-recycling-notes/domain/model.js').Actor }} [operation] - Business operation to record on the status object
+ * @property {number} [lastAppliedEventNumber] - Stream watermark to stamp on the projection; the sequence number of the latest waste-balance event folded into this PRN
  */
 
 /**

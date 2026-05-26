@@ -490,6 +490,41 @@ describe('PRN insert schema', () => {
       expect(value.bogus).toBeUndefined()
     })
   })
+
+  describe('lastAppliedEventNumber watermark', () => {
+    it('accepts an optional integer lastAppliedEventNumber', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 3 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('accepts a document without lastAppliedEventNumber', () => {
+      const data = buildValidPrnInsert()
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('rejects lastAppliedEventNumber below 1', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 0 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('rejects a non-integer lastAppliedEventNumber', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 1.5 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('does not strip lastAppliedEventNumber when stripUnknown is enabled', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 7 })
+      const { error, value } = prnInsertSchema.validate(data, {
+        stripUnknown: true
+      })
+      expect(error).toBeUndefined()
+      expect(value.lastAppliedEventNumber).toBe(7)
+    })
+  })
 })
 
 describe('PRN read schema', () => {
@@ -534,6 +569,15 @@ describe('PRN read schema', () => {
     const { error, value } = prnReadSchema.validate(data)
     expect(error).toBeUndefined()
     expect(value).not.toHaveProperty('notes')
+  })
+
+  it('round-trips a lastAppliedEventNumber watermark under stripUnknown', () => {
+    const data = buildReadDocument({ lastAppliedEventNumber: 12 })
+    const { error, value } = prnReadSchema.validate(data, {
+      stripUnknown: true
+    })
+    expect(error).toBeUndefined()
+    expect(value.lastAppliedEventNumber).toBe(12)
   })
 
   it('rejects when required fields from insert schema are missing', () => {

@@ -294,7 +294,16 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
 const performUpdateStatus = async (
   db,
   logger,
-  { id, version, status, updatedBy, updatedAt, prnNumber, operation }
+  {
+    id,
+    version,
+    status,
+    updatedBy,
+    updatedAt,
+    prnNumber,
+    operation,
+    lastAppliedEventNumber
+  }
 ) => {
   const setFields = {
     'status.currentStatus': status,
@@ -305,6 +314,10 @@ const performUpdateStatus = async (
 
   if (prnNumber) {
     setFields.prnNumber = prnNumber
+  }
+
+  if (lastAppliedEventNumber !== undefined) {
+    setFields.lastAppliedEventNumber = lastAppliedEventNumber
   }
 
   if (operation) {

@@ -170,6 +170,78 @@ export const testUpdateStatusBehaviour = (it) => {
       })
     })
 
+    describe('lastAppliedEventNumber watermark', () => {
+      it('sets lastAppliedEventNumber when provided', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          version: created.version,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
+          updatedAt: new Date(),
+          lastAppliedEventNumber: 5
+        })
+
+        expect(updated.lastAppliedEventNumber).toBe(5)
+      })
+
+      it('persists lastAppliedEventNumber so it can be retrieved', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        await repository.updateStatus({
+          id: created.id,
+          version: created.version,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
+          updatedAt: new Date(),
+          lastAppliedEventNumber: 7
+        })
+
+        const found = await repository.findById(created.id)
+        expect(found.lastAppliedEventNumber).toBe(7)
+      })
+
+      it('does not set lastAppliedEventNumber when not provided', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        const updated = await repository.updateStatus({
+          id: created.id,
+          version: created.version,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
+          updatedAt: new Date()
+        })
+
+        expect(updated.lastAppliedEventNumber).toBeUndefined()
+      })
+
+      it('preserves an existing watermark when a later update omits it', async () => {
+        const created = await repository.create(buildDraftPrn())
+
+        const watermarked = await repository.updateStatus({
+          id: created.id,
+          version: created.version,
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
+          updatedAt: new Date(),
+          lastAppliedEventNumber: 5
+        })
+
+        await repository.updateStatus({
+          id: created.id,
+          version: watermarked.version,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: new Date(),
+          prnNumber: `ER26${Date.now().toString().slice(-5)}W`
+        })
+
+        const found = await repository.findById(created.id)
+        expect(found.lastAppliedEventNumber).toBe(5)
+      })
+    })
+
     describe('business operation slots', () => {
       it('sets the named operation slot when provided', async () => {
         const created = await repository.create(buildAwaitingAuthorisationPrn())

@@ -163,7 +163,8 @@ const performUpdateStatus =
     updatedBy,
     updatedAt,
     prnNumber,
-    operation
+    operation,
+    lastAppliedEventNumber
   }) => {
     const prn = storage.get(id)
     if (!prn) {
@@ -213,6 +214,10 @@ const performUpdateStatus =
 
     if (prnNumber) {
       updated.prnNumber = prnNumber
+    }
+
+    if (lastAppliedEventNumber !== undefined) {
+      updated.lastAppliedEventNumber = lastAppliedEventNumber
     }
 
     storage.set(id, structuredClone(updated))
