@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { buildDraftPrn, buildAwaitingAuthorisationPrn } from './test-data.js'
 
@@ -171,38 +171,42 @@ export const testUpdateStatusBehaviour = (it) => {
     })
 
     describe('lastAppliedEventNumber watermark', () => {
-      it('sets lastAppliedEventNumber when provided', async () => {
+      const seedWatermarkedPrn = async (lastAppliedEventNumber) => {
         const created = await repository.create(buildDraftPrn())
-
-        const updated = await repository.updateStatus({
+        return repository.updateStatus({
           id: created.id,
           version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
           updatedBy: { id: 'user-raiser', name: 'Raiser User' },
           updatedAt: new Date(),
-          lastAppliedEventNumber: 5
+          lastAppliedEventNumber
+        })
+      }
+
+      const reapplyWatermark = (prn, lastAppliedEventNumber) =>
+        repository.updateStatus({
+          id: prn.id,
+          version: prn.version,
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+          updatedAt: new Date(),
+          lastAppliedEventNumber
         })
 
-        expect(updated.lastAppliedEventNumber).toBe(5)
+      it('sets lastAppliedEventNumber when provided', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
+
+        expect(watermarked.lastAppliedEventNumber).toBe(5)
       })
 
       it('persists lastAppliedEventNumber so it can be retrieved', async () => {
-        const created = await repository.create(buildDraftPrn())
+        const watermarked = await seedWatermarkedPrn(7)
 
-        await repository.updateStatus({
-          id: created.id,
-          version: created.version,
-          status: PRN_STATUS.AWAITING_AUTHORISATION,
-          updatedBy: { id: 'user-raiser', name: 'Raiser User' },
-          updatedAt: new Date(),
-          lastAppliedEventNumber: 7
-        })
-
-        const found = await repository.findById(created.id)
+        const found = await repository.findById(watermarked.id)
         expect(found.lastAppliedEventNumber).toBe(7)
       })
 
-      it('does not set lastAppliedEventNumber when not provided', async () => {
+      it('does not set lastAppliedEventNumber when none is stored or provided', async () => {
         const created = await repository.create(buildDraftPrn())
 
         const updated = await repository.updateStatus({
@@ -216,10 +220,83 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(updated.lastAppliedEventNumber).toBeUndefined()
       })
 
-      it('preserves an existing watermark when a later update omits it', async () => {
-        const created = await repository.create(buildDraftPrn())
+      it('re-applies an equal watermark', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
 
-        const watermarked = await repository.updateStatus({
+        const updated = await reapplyWatermark(watermarked, 5)
+
+        expect(updated.lastAppliedEventNumber).toBe(5)
+      })
+
+      it('advances to a higher watermark', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
+
+        const updated = await reapplyWatermark(watermarked, 9)
+
+        expect(updated.lastAppliedEventNumber).toBe(9)
+      })
+
+      it('rejects a lower watermark with a 409 conflict', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
+
+        await expect(reapplyWatermark(watermarked, 3)).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
+        })
+      })
+
+      it('rejects an update that omits the watermark once one is set', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
+
+        await expect(
+          reapplyWatermark(watermarked, undefined)
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
+        })
+      })
+
+      it('leaves the PRN untouched when a stale watermark is rejected', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
+
+        await reapplyWatermark(watermarked, 3).catch(() => {})
+
+        const found = await repository.findById(watermarked.id)
+        expect(found.lastAppliedEventNumber).toBe(5)
+        expect(found.version).toBe(watermarked.version)
+        expect(found.status.currentStatus).toBe(
+          PRN_STATUS.AWAITING_AUTHORISATION
+        )
+      })
+
+      it('describes the stored watermark in the conflict message', async () => {
+        const watermarked = await seedWatermarkedPrn(5)
+
+        await expect(reapplyWatermark(watermarked, 3)).rejects.toMatchObject({
+          isBoom: true,
+          output: {
+            statusCode: 409,
+            payload: {
+              message: `Stale watermark: PRN ${watermarked.id} has already applied event 5 but the update did not advance it`
+            }
+          }
+        })
+      })
+    })
+
+    describe('watermark conflict logging', () => {
+      it('logs watermark regression with database/watermark_regression_detected event metadata', async ({
+        prnRepositoryFactory
+      }) => {
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
+        const repo = prnRepositoryFactory(logger)
+        const created = await repo.create(buildDraftPrn())
+        const watermarked = await repo.updateStatus({
           id: created.id,
           version: created.version,
           status: PRN_STATUS.AWAITING_AUTHORISATION,
@@ -228,17 +305,31 @@ export const testUpdateStatusBehaviour = (it) => {
           lastAppliedEventNumber: 5
         })
 
-        await repository.updateStatus({
-          id: created.id,
-          version: watermarked.version,
-          status: PRN_STATUS.AWAITING_ACCEPTANCE,
-          updatedBy: { id: 'user-issuer', name: 'Issuer User' },
-          updatedAt: new Date(),
-          prnNumber: `ER26${Date.now().toString().slice(-5)}W`
+        await expect(
+          repo.updateStatus({
+            id: created.id,
+            version: watermarked.version,
+            status: PRN_STATUS.AWAITING_ACCEPTANCE,
+            updatedBy: { id: 'user-issuer', name: 'Issuer User' },
+            updatedAt: new Date(),
+            lastAppliedEventNumber: 3
+          })
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
         })
 
-        const found = await repository.findById(created.id)
-        expect(found.lastAppliedEventNumber).toBe(5)
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            err: expect.any(Error),
+            message: `Stale watermark detected for PRN ${created.id}`,
+            event: {
+              category: 'database',
+              action: 'watermark_regression_detected',
+              reference: created.id
+            }
+          })
+        )
       })
     })
 

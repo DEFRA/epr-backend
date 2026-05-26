@@ -185,6 +185,26 @@ const performUpdateStatus =
       throw Boom.conflict(conflictError.message)
     }
 
+    if (
+      prn.lastAppliedEventNumber !== undefined &&
+      (lastAppliedEventNumber === undefined ||
+        lastAppliedEventNumber < prn.lastAppliedEventNumber)
+    ) {
+      const conflictError = new Error(
+        `Stale watermark: PRN ${id} has already applied event ${prn.lastAppliedEventNumber} but the update did not advance it`
+      )
+      logger.error({
+        err: conflictError,
+        message: `Stale watermark detected for PRN ${id}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.WATERMARK_REGRESSION_DETECTED,
+          reference: id
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
     if (prnNumber) {
       for (const existing of storage.values()) {
         if (existing.id !== id && existing.prnNumber === prnNumber) {

@@ -250,8 +250,12 @@ const performFindByStatus = (db, excludeOrganisationIds) => {
 }
 
 /**
- * Resolves a missed CAS update into a 404 (PRN missing) or 409 (version conflict).
- * Logs the version conflict for observability before throwing.
+ * Resolves a missed CAS update into a 404 (PRN missing), a 409 version
+ * conflict, or a 409 stale-watermark conflict. When the expected version is
+ * still current the monotonic watermark guard is what rejected the write — the
+ * update either supplied a lower lastAppliedEventNumber or omitted it over a
+ * PRN that already carries one. Logs the conflict for observability before
+ * throwing.
  *
  * @param {Db} db
  * @param {string} id
@@ -263,22 +267,41 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
   const objectId = ObjectId.createFromHexString(id)
   const existing = await db
     .collection(COLLECTION_NAME)
-    .findOne({ _id: objectId }, { projection: { version: 1 } })
+    .findOne(
+      { _id: objectId },
+      { projection: { version: 1, lastAppliedEventNumber: 1 } }
+    )
 
   if (!existing) {
     return null
   }
 
   const actualVersion = existing.version ?? 1
+  if (actualVersion !== expectedVersion) {
+    const conflictError = new Error(
+      `Version conflict: attempted to update PRN ${id} with version ${expectedVersion} but current version is ${actualVersion}`
+    )
+    logger.error({
+      err: conflictError,
+      message: `Version conflict detected for PRN ${id}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+        reference: id
+      }
+    })
+    throw Boom.conflict(conflictError.message)
+  }
+
   const conflictError = new Error(
-    `Version conflict: attempted to update PRN ${id} with version ${expectedVersion} but current version is ${actualVersion}`
+    `Stale watermark: PRN ${id} has already applied event ${existing.lastAppliedEventNumber} but the update did not advance it`
   )
   logger.error({
     err: conflictError,
-    message: `Version conflict detected for PRN ${id}`,
+    message: `Stale watermark detected for PRN ${id}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.DB,
-      action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+      action: LOGGING_EVENT_ACTIONS.WATERMARK_REGRESSION_DETECTED,
       reference: id
     }
   })
@@ -327,11 +350,22 @@ const performUpdateStatus = async (
     }
   }
 
+  const versionMatches = { $eq: [{ $ifNull: ['$version', 1] }, version] }
+  const watermarkAdvances =
+    lastAppliedEventNumber === undefined
+      ? { $eq: [{ $ifNull: ['$lastAppliedEventNumber', null] }, null] }
+      : {
+          $gte: [
+            lastAppliedEventNumber,
+            { $ifNull: ['$lastAppliedEventNumber', lastAppliedEventNumber] }
+          ]
+        }
+
   try {
     const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
       {
         _id: ObjectId.createFromHexString(id),
-        $expr: { $eq: [{ $ifNull: ['$version', 1] }, version] }
+        $expr: { $and: [versionMatches, watermarkAdvances] }
       },
       {
         $set: { ...setFields, version: version + 1 },
