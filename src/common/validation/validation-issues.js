@@ -1,16 +1,25 @@
 import { VALIDATION_SEVERITY } from '#common/enums/index.js'
 
 /**
+ * Ordered list of spreadsheet-location keys. Single source of truth — the
+ * ValidationIssueLocation type below is derived from this array, so adding or
+ * removing a key updates both the type and the iteration order.
+ */
+export const LOCATION_KEYS = /** @type {const} */ ([
+  'sheet',
+  'table',
+  'row',
+  'column',
+  'header',
+  'field'
+])
+
+/**
  * Spreadsheet location for a validation issue. All fields optional because
  * meta-level issues have no row/column and table-level issues have no field.
  *
  * @typedef {{
- *   sheet?: string,
- *   table?: string,
- *   row?: number,
- *   column?: string,
- *   field?: string,
- *   header?: string
+ *   [K in typeof LOCATION_KEYS[number]]?: K extends 'row' ? number : string
  * }} ValidationIssueLocation
  */
 

@@ -1,4 +1,4 @@
-import { isNil } from '#common/helpers/is-nil.js'
+import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -6,56 +6,49 @@ import {
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/index.js'
+import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
-import { validateMetaSyntax } from './validations/meta-syntax.js'
-import { validateMetaBusiness } from './validations/meta-business.js'
-import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   PROCESSING_TYPE_TABLES,
   findSchemaForProcessingType
 } from '#domain/summary-logs/table-schemas/index.js'
-import { validateDataBusiness } from './validations/data-business.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
-  countByWasteBalanceInclusion,
   countByValidity,
+  countByWasteBalanceInclusion,
   countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
+import { logValidationIssues } from './validate-issue-logging.js'
+import { validateDataBusiness } from './validations/data-business.js'
+import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { validateMetaBusiness } from './validations/meta-business.js'
+import { validateMetaSyntax } from './validations/meta-syntax.js'
 
 export const MAX_VALIDATION_ISSUES = 100
 export const MAX_ACTUAL_LENGTH = 200
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssueContext, ValidationIssueLocation} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
+/** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
-
-/**
- * SummaryLog after assertValidatingStatus has confirmed it's past PREPROCESSING
- * (org/reg guaranteed by upstream business logic but the SummaryLog typedef
- * leaves them optional to cover the PREPROCESSING state too).
- *
- * @typedef {SummaryLog & { organisationId: string, registrationId: string }} SubmittedSummaryLog
- */
 
 const extractSummaryLog = async ({
   summaryLogExtractor,
@@ -421,114 +414,6 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
       )
     }
   }
-}
-
-/** @type {readonly (keyof ValidationIssueLocation)[]} */
-const LOCATION_KEY_ORDER = [
-  'sheet',
-  'table',
-  'row',
-  'column',
-  'header',
-  'field'
-]
-
-/**
- * @param {ValidationIssueContext} [context]
- * @returns {string} Semicolon-delimited composite, empty parts omitted
- */
-const buildLocationId = (context) => {
-  const location = context?.location
-  if (!location) {
-    return ''
-  }
-  return LOCATION_KEY_ORDER.filter((key) => location[key] !== undefined)
-    .map((key) => `${key}=${location[key]}`)
-    .join(';')
-}
-
-/**
- * @param {ValidationIssue} issue
- * @param {string} summaryLogId
- * @returns {IndexedLogProperties}
- */
-const buildIssueLogPayload = (issue, summaryLogId) => ({
-  message: `Summary log validation issue: ${issue.code}`,
-  event: {
-    kind: 'event',
-    category: LOGGING_EVENT_CATEGORIES.SERVER,
-    action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_ISSUE,
-    outcome: 'failure',
-    type: 'error',
-    reference: summaryLogId,
-    reason: issue.code
-  },
-  error: {
-    code: issue.code,
-    type: issue.severity,
-    message: issue.message,
-    id: buildLocationId(issue.context)
-  }
-})
-
-/**
- * @param {ValidationIssue[]} allIssues
- * @param {string} summaryLogId
- * @param {string} organisationId
- * @param {string} registrationId
- * @returns {IndexedLogProperties}
- */
-const buildSummaryLogPayload = (
-  allIssues,
-  summaryLogId,
-  organisationId,
-  registrationId
-) => {
-  const counts = { fatal: 0, error: 0, warning: 0 }
-  allIssues.forEach((issue) => {
-    counts[issue.severity]++
-  })
-  return {
-    message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} org=${organisationId} reg=${registrationId}`,
-    event: {
-      kind: 'event',
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_VALIDATION_COMPLETED,
-      outcome: 'failure',
-      reference: summaryLogId
-    }
-  }
-}
-
-/**
- * Emits a warn-level log per validation issue plus a single summary log so
- * support can investigate failures via OpenSearch DQL. No-op when there are
- * no issues. PII (issue.context.actual) and org/reg are never included in
- * per-issue logs; org/reg appear only in the run-level summary log.
- *
- * @param {{
- *   summaryLogId: string,
- *   summaryLog: SubmittedSummaryLog,
- *   issues: ReturnType<typeof createValidationIssues>,
- *   logger: TypedLogger
- * }} params
- */
-const logValidationIssues = ({ summaryLogId, summaryLog, issues, logger }) => {
-  const allIssues = issues.getAllIssues()
-  if (allIssues.length === 0) {
-    return
-  }
-  allIssues.forEach((issue) => {
-    logger.warn(buildIssueLogPayload(issue, summaryLogId))
-  })
-  logger.warn(
-    buildSummaryLogPayload(
-      allIssues,
-      summaryLogId,
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
-  )
 }
 
 /**
