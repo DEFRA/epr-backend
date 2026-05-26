@@ -4,7 +4,7 @@ import {
 } from '#common/enums/index.js'
 import { LOCATION_KEYS } from '#common/validation/validation-issues.js'
 
-const MAX_LOGGED_ISSUES = 50
+export const MAX_VALIDATION_ISSUES = 100
 
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
@@ -114,7 +114,7 @@ export const logValidationIssues = ({
   if (!issues.hasIssues()) {
     return
   }
-  const issuesToLog = issues.getAllIssues().slice(0, MAX_LOGGED_ISSUES)
+  const issuesToLog = issues.getAllIssues().slice(0, MAX_VALIDATION_ISSUES)
   issuesToLog.forEach((issue) => {
     logger.warn(buildIssueLogPayload(issue, summaryLogId))
   })

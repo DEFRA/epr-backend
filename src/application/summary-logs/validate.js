@@ -29,13 +29,17 @@ import {
   countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
-import { logValidationIssues } from './validate-issue-logging.js'
+import {
+  logValidationIssues,
+  MAX_VALIDATION_ISSUES
+} from './validate-issue-logging.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 
-export const MAX_VALIDATION_ISSUES = 100
+export { MAX_VALIDATION_ISSUES }
+
 export const MAX_ACTUAL_LENGTH = 200
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */

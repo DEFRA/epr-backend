@@ -35,9 +35,9 @@ describe('logValidationIssues', () => {
   })
 
   describe('issue-log cap', () => {
-    it('should cap per-issue logs at 50 and report total + logged in the summary', () => {
+    it('should cap per-issue logs at MAX_VALIDATION_ISSUES and report total + logged in the summary', () => {
       const issues = createValidationIssues()
-      for (let i = 0; i < 75; i++) {
+      for (let i = 0; i < 150; i++) {
         issues.addError(
           VALIDATION_CATEGORY.TECHNICAL,
           `issue ${i}`,
@@ -66,9 +66,9 @@ describe('logValidationIssues', () => {
         )
         .map(([payload]) => payload)
 
-      expect(issueLogs).toHaveLength(50)
-      expect(summaryPayload.message).toContain('total=75')
-      expect(summaryPayload.message).toContain('logged=50')
+      expect(issueLogs).toHaveLength(100)
+      expect(summaryPayload.message).toContain('total=150')
+      expect(summaryPayload.message).toContain('logged=100')
     })
 
     it('should report total === logged when issues fit under the cap', () => {
