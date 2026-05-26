@@ -415,6 +415,134 @@ describe('buildChronologicalEvents', () => {
     })
   })
 
+  it('emits PRN_CREATION_CANCELLED for a deleted PRN', () => {
+    const prns = [
+      {
+        id: 'prn-1',
+        tonnage: 25,
+        status: {
+          history: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: new Date('2025-01-10T00:00:00.000Z')
+            },
+            {
+              status: PRN_STATUS.AWAITING_AUTHORISATION,
+              at: new Date('2025-01-11T00:00:00.000Z')
+            },
+            {
+              status: PRN_STATUS.CANCELLED,
+              at: new Date('2025-01-12T00:00:00.000Z')
+            }
+          ]
+        }
+      }
+    ]
+
+    const result = buildChronologicalEvents({
+      accreditation,
+      wasteRecords: [],
+      prns,
+      overseasSites,
+      summaryLogs: []
+    })
+
+    expect(result).toHaveLength(2)
+    expect(result[0].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    expect(result[1].kind).toBe(STREAM_EVENT_KIND.PRN_CREATION_CANCELLED)
+  })
+
+  it('emits PRN_CANCELLED_AFTER_ISSUE for a post-issue cancellation', () => {
+    const prns = [
+      {
+        id: 'prn-1',
+        tonnage: 25,
+        status: {
+          history: [
+            {
+              status: PRN_STATUS.DRAFT,
+              at: new Date('2025-01-10T00:00:00.000Z')
+            },
+            {
+              status: PRN_STATUS.AWAITING_AUTHORISATION,
+              at: new Date('2025-01-11T00:00:00.000Z')
+            },
+            {
+              status: PRN_STATUS.AWAITING_ACCEPTANCE,
+              at: new Date('2025-01-12T00:00:00.000Z')
+            },
+            {
+              status: PRN_STATUS.AWAITING_CANCELLATION,
+              at: new Date('2025-01-13T00:00:00.000Z')
+            },
+            {
+              status: PRN_STATUS.CANCELLED,
+              at: new Date('2025-01-14T00:00:00.000Z')
+            }
+          ]
+        }
+      }
+    ]
+
+    const result = buildChronologicalEvents({
+      accreditation,
+      wasteRecords: [],
+      prns,
+      overseasSites,
+      summaryLogs: []
+    })
+
+    expect(result).toHaveLength(3)
+    expect(result[0].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    expect(result[1].kind).toBe(STREAM_EVENT_KIND.PRN_ISSUED)
+    expect(result[2].kind).toBe(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
+  })
+
+  it('skips waste records not yet created at a submission point', () => {
+    const summaryLogs = [
+      {
+        id: 'sl-1',
+        status: SUMMARY_LOG_STATUS.SUBMITTED,
+        submittedAt: '2025-01-10T00:00:00.000Z'
+      },
+      {
+        id: 'sl-2',
+        status: SUMMARY_LOG_STATUS.SUBMITTED,
+        submittedAt: '2025-01-20T00:00:00.000Z'
+      }
+    ]
+    const wasteRecords = [
+      {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        type: 'received',
+        data: { processingType: 'INPUT', tonnage: 50 },
+        versions: [
+          {
+            summaryLog: { id: 'sl-2' },
+            data: { processingType: 'INPUT', tonnage: 50 }
+          }
+        ],
+        excludedFromWasteBalance: false
+      }
+    ]
+
+    const result = buildChronologicalEvents({
+      accreditation,
+      wasteRecords,
+      prns: [],
+      overseasSites,
+      summaryLogs
+    })
+
+    expect(result).toHaveLength(2)
+    expect(result[0].payload).toEqual({ summaryLogId: 'sl-1', creditTotal: 0 })
+    expect(result[1].payload).toEqual({
+      summaryLogId: 'sl-2',
+      creditTotal: 50
+    })
+  })
+
   it('skips PRN transitions that do not produce stream events', () => {
     const prns = [
       {
