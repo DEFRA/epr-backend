@@ -278,11 +278,11 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
 
   const actualVersion = existing.version ?? 1
   if (actualVersion !== expectedVersion) {
-    const conflictError = new Error(
+    const versionConflictError = new Error(
       `Version conflict: attempted to update PRN ${id} with version ${expectedVersion} but current version is ${actualVersion}`
     )
     logger.error({
-      err: conflictError,
+      err: versionConflictError,
       message: `Version conflict detected for PRN ${id}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.DB,
@@ -290,14 +290,14 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
         reference: id
       }
     })
-    throw Boom.conflict(conflictError.message)
+    throw Boom.conflict(versionConflictError.message)
   }
 
-  const conflictError = new Error(
+  const watermarkConflictError = new Error(
     `Stale watermark: PRN ${id} has already applied event ${existing.lastAppliedEventNumber} but the update did not advance it`
   )
   logger.error({
-    err: conflictError,
+    err: watermarkConflictError,
     message: `Stale watermark detected for PRN ${id}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.DB,
@@ -305,7 +305,7 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
       reference: id
     }
   })
-  throw Boom.conflict(conflictError.message)
+  throw Boom.conflict(watermarkConflictError.message)
 }
 
 /**
