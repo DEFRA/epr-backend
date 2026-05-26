@@ -37,13 +37,13 @@ describe('logValidationIssues', () => {
   describe('issue-log cap', () => {
     it('should cap per-issue logs at MAX_VALIDATION_ISSUES and report total + logged in the summary', () => {
       const issues = createValidationIssues()
-      for (let i = 0; i < 150; i++) {
+      Array.from({ length: 150 }).forEach(() =>
         issues.addError(
           VALIDATION_CATEGORY.TECHNICAL,
-          `issue ${i}`,
+          'issue',
           VALIDATION_CODE.FIELD_REQUIRED
         )
-      }
+      )
 
       logValidationIssues({
         summaryLogId: 'summary-1',
