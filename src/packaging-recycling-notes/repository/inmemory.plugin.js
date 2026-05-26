@@ -8,6 +8,10 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert } from './validation.js'
+import {
+  isWatermarkRegression,
+  throwWatermarkRegression
+} from './watermark-guard.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -56,12 +60,6 @@ const buildVersionConflictError = (id, expected, actual) =>
   )
 
 /**
- * The watermark only ever moves alongside the version, so a stale watermark
- * here means the caller held the current version yet supplied a lower (or
- * absent) watermark — it fed an out-of-order event into the projection rather
- * than losing a race. That is a coding error, not a retryable conflict, so it
- * surfaces as an internal error.
- *
  * @param {string} id
  * @param {number | undefined} storedEventNumber
  * @param {number | undefined} incomingEventNumber
@@ -73,24 +71,8 @@ const enforceMonotonicWatermark = (
   incomingEventNumber,
   logger
 ) => {
-  if (
-    storedEventNumber !== undefined &&
-    (incomingEventNumber === undefined ||
-      incomingEventNumber < storedEventNumber)
-  ) {
-    const regressionError = new Error(
-      `Stale watermark: PRN ${id} has already applied event ${storedEventNumber} but the update did not advance it`
-    )
-    logger.error({
-      err: regressionError,
-      message: `Stale watermark detected for PRN ${id}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.DB,
-        action: LOGGING_EVENT_ACTIONS.WATERMARK_REGRESSION_DETECTED,
-        reference: id
-      }
-    })
-    throw Boom.badImplementation(regressionError.message)
+  if (isWatermarkRegression(storedEventNumber, incomingEventNumber)) {
+    throwWatermarkRegression(id, storedEventNumber, incomingEventNumber, logger)
   }
 }
 
@@ -278,7 +260,13 @@ const performUpdateStatus =
  */
 const performRollback =
   (storage, logger, { revertedStatus, slotsToUnset, unsetPrnNumber }) =>
-  async ({ id, expectedVersion, updatedBy, updatedAt }) => {
+  async ({
+    id,
+    expectedVersion,
+    updatedBy,
+    updatedAt,
+    lastAppliedEventNumber
+  }) => {
     const prn = storage.get(id)
     if (!prn) {
       return null
@@ -301,6 +289,13 @@ const performRollback =
       })
       throw Boom.conflict(conflictError.message)
     }
+
+    enforceMonotonicWatermark(
+      id,
+      prn.lastAppliedEventNumber,
+      lastAppliedEventNumber,
+      logger
+    )
 
     const statusUpdate = {
       ...prn.status,
@@ -326,6 +321,10 @@ const performRollback =
 
     if (unsetPrnNumber) {
       delete updated.prnNumber
+    }
+
+    if (lastAppliedEventNumber !== undefined) {
+      updated.lastAppliedEventNumber = lastAppliedEventNumber
     }
 
     storage.set(id, structuredClone(updated))

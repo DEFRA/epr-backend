@@ -251,18 +251,19 @@ export const testUpdateStatusBehaviour = (it) => {
         })
       })
 
-      it('rejects an update that omits the watermark once one is set', async () => {
+      it('rejects an update that drops the watermark once one is set', async () => {
         const watermarked = await seedWatermarkedPrn(5)
 
         await expect(
           reapplyWatermark(watermarked, undefined)
         ).rejects.toMatchObject({
           isBoom: true,
-          output: { statusCode: 500 }
+          output: { statusCode: 500 },
+          message: `Watermark regression: PRN ${watermarked.id} has applied event 5 but the update did not carry a watermark`
         })
       })
 
-      it('leaves the PRN untouched when a stale watermark is rejected', async () => {
+      it('leaves the PRN untouched when a watermark regression is rejected', async () => {
         const watermarked = await seedWatermarkedPrn(5)
 
         await reapplyWatermark(watermarked, 3).catch(() => {})
@@ -275,18 +276,18 @@ export const testUpdateStatusBehaviour = (it) => {
         )
       })
 
-      it('describes the stored watermark in the error message', async () => {
+      it('describes the backwards move in the error message', async () => {
         const watermarked = await seedWatermarkedPrn(5)
 
         await expect(reapplyWatermark(watermarked, 3)).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 500 },
-          message: `Stale watermark: PRN ${watermarked.id} has already applied event 5 but the update did not advance it`
+          message: `Watermark regression: PRN ${watermarked.id} has applied event 5 but the update would move it back to 3`
         })
       })
     })
 
-    describe('watermark conflict logging', () => {
+    describe('watermark regression logging', () => {
       it('logs watermark regression with database/watermark_regression_detected event metadata', async ({
         prnRepositoryFactory
       }) => {
@@ -324,7 +325,7 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             err: expect.any(Error),
-            message: `Stale watermark detected for PRN ${created.id}`,
+            message: `Watermark regression detected for PRN ${created.id}`,
             event: {
               category: 'database',
               action: 'watermark_regression_detected',

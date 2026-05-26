@@ -363,7 +363,8 @@ async function performTransition({
           id,
           expectedVersion: updatedPrn.version,
           updatedBy: user,
-          updatedAt: now
+          updatedAt: now,
+          lastAppliedEventNumber: updatedPrn.lastAppliedEventNumber
         }),
       {
         forwardError,

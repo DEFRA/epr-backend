@@ -8,6 +8,7 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { PrnNumberConflictError } from './port.js'
 import { validatePrnInsert, validatePrnRead } from './validation.js'
+import { throwWatermarkRegression } from './watermark-guard.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -250,23 +251,46 @@ const performFindByStatus = (db, excludeOrganisationIds) => {
 }
 
 /**
+ * CAS guard that lets a write through only when it does not move the watermark
+ * backwards. An omitted watermark passes only while the PRN carries none (the
+ * pre-migration path); once a PRN has a watermark every write must supply one,
+ * and it must be greater than or equal to the stored value. A missing stored
+ * value defaults to the incoming one so the migrating write always passes.
+ *
+ * @param {number | undefined} lastAppliedEventNumber
+ */
+const watermarkNotRegressing = (lastAppliedEventNumber) =>
+  lastAppliedEventNumber === undefined
+    ? { $eq: [{ $ifNull: ['$lastAppliedEventNumber', null] }, null] }
+    : {
+        $gte: [
+          lastAppliedEventNumber,
+          { $ifNull: ['$lastAppliedEventNumber', lastAppliedEventNumber] }
+        ]
+      }
+
+/**
  * Resolves a missed CAS update into a 404 (PRN missing), a 409 version
- * conflict, or a 500 internal error. When the expected version is still
- * current the monotonic watermark guard is the only thing that could have
- * rejected the write, and since the watermark only ever moves alongside the
- * version, that means the caller held the current version yet supplied a lower
- * lastAppliedEventNumber (or omitted it over a watermarked PRN) — an
- * out-of-order event fed into the projection rather than a lost race. That is
- * a coding error, so it surfaces as an internal error rather than a retryable
- * conflict. Logs the cause for observability before throwing.
+ * conflict, or a 500 internal error. If the stored version still matches the
+ * expected one then the version guard passed and it was the watermark guard
+ * that rejected the write: the caller held the current version yet failed to
+ * carry a migrated PRN's watermark forward. That is a coding error, not a lost
+ * race, so it surfaces as an internal error. Logs the cause before throwing.
  *
  * @param {Db} db
  * @param {string} id
  * @param {number} expectedVersion
+ * @param {number | undefined} incomingEventNumber
  * @param {TypedLogger} logger
  * @returns {Promise<null>}
  */
-const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
+const resolveMissedUpdate = async (
+  db,
+  id,
+  expectedVersion,
+  incomingEventNumber,
+  logger
+) => {
   const objectId = ObjectId.createFromHexString(id)
   const existing = await db
     .collection(COLLECTION_NAME)
@@ -296,19 +320,12 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
     throw Boom.conflict(versionConflictError.message)
   }
 
-  const watermarkRegressionError = new Error(
-    `Stale watermark: PRN ${id} has already applied event ${existing.lastAppliedEventNumber} but the update did not advance it`
+  return throwWatermarkRegression(
+    id,
+    existing.lastAppliedEventNumber,
+    incomingEventNumber,
+    logger
   )
-  logger.error({
-    err: watermarkRegressionError,
-    message: `Stale watermark detected for PRN ${id}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.DB,
-      action: LOGGING_EVENT_ACTIONS.WATERMARK_REGRESSION_DETECTED,
-      reference: id
-    }
-  })
-  throw Boom.badImplementation(watermarkRegressionError.message)
 }
 
 /**
@@ -354,26 +371,14 @@ const performUpdateStatus = async (
   }
 
   const versionMatches = { $eq: [{ $ifNull: ['$version', 1] }, version] }
-  // A supplied watermark must not go backwards: it has to be >= the stored one,
-  // with a missing stored watermark defaulting to the incoming value so the
-  // first write always passes. An omitted watermark is allowed only while the
-  // PRN carries none (the embedded path); omitting it over a stored watermark
-  // is itself a regression and fails the guard.
-  const watermarkAdvances =
-    lastAppliedEventNumber === undefined
-      ? { $eq: [{ $ifNull: ['$lastAppliedEventNumber', null] }, null] }
-      : {
-          $gte: [
-            lastAppliedEventNumber,
-            { $ifNull: ['$lastAppliedEventNumber', lastAppliedEventNumber] }
-          ]
-        }
 
   try {
     const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
       {
         _id: ObjectId.createFromHexString(id),
-        $expr: { $and: [versionMatches, watermarkAdvances] }
+        $expr: {
+          $and: [versionMatches, watermarkNotRegressing(lastAppliedEventNumber)]
+        }
       },
       {
         $set: { ...setFields, version: version + 1 },
@@ -385,7 +390,13 @@ const performUpdateStatus = async (
     )
 
     if (!result) {
-      return resolveMissedUpdate(db, id, version, logger)
+      return resolveMissedUpdate(
+        db,
+        id,
+        version,
+        lastAppliedEventNumber,
+        logger
+      )
     }
 
     return validatePrnRead({ ...result, id: result._id.toHexString() })
@@ -410,7 +421,7 @@ const performUpdateStatus = async (
 const performRollback = async (
   db,
   logger,
-  { id, expectedVersion, updatedBy, updatedAt },
+  { id, expectedVersion, updatedBy, updatedAt, lastAppliedEventNumber },
   { revertedStatus, slotsToUnset, unsetPrnNumber }
 ) => {
   const setFields = {
@@ -418,6 +429,10 @@ const performRollback = async (
     'status.currentStatusAt': updatedAt,
     updatedAt,
     updatedBy
+  }
+
+  if (lastAppliedEventNumber !== undefined) {
+    setFields.lastAppliedEventNumber = lastAppliedEventNumber
   }
 
   /** @type {Record<string, ''>} */
@@ -429,10 +444,16 @@ const performRollback = async (
     unsetFields.prnNumber = ''
   }
 
+  const versionMatches = {
+    $eq: [{ $ifNull: ['$version', 1] }, expectedVersion]
+  }
+
   const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
     {
       _id: ObjectId.createFromHexString(id),
-      $expr: { $eq: [{ $ifNull: ['$version', 1] }, expectedVersion] }
+      $expr: {
+        $and: [versionMatches, watermarkNotRegressing(lastAppliedEventNumber)]
+      }
     },
     {
       $set: { ...setFields, version: expectedVersion + 1 },
@@ -449,7 +470,13 @@ const performRollback = async (
   )
 
   if (!result) {
-    return resolveMissedUpdate(db, id, expectedVersion, logger)
+    return resolveMissedUpdate(
+      db,
+      id,
+      expectedVersion,
+      lastAppliedEventNumber,
+      logger
+    )
   }
 
   return validatePrnRead({ ...result, id: result._id.toHexString() })
