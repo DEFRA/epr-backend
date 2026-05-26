@@ -242,12 +242,12 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(updated.lastAppliedEventNumber).toBe(9)
       })
 
-      it('rejects a lower watermark with a 409 conflict', async () => {
+      it('rejects a lower watermark as an internal error', async () => {
         const watermarked = await seedWatermarkedPrn(5)
 
         await expect(reapplyWatermark(watermarked, 3)).rejects.toMatchObject({
           isBoom: true,
-          output: { statusCode: 409 }
+          output: { statusCode: 500 }
         })
       })
 
@@ -258,7 +258,7 @@ export const testUpdateStatusBehaviour = (it) => {
           reapplyWatermark(watermarked, undefined)
         ).rejects.toMatchObject({
           isBoom: true,
-          output: { statusCode: 409 }
+          output: { statusCode: 500 }
         })
       })
 
@@ -275,17 +275,13 @@ export const testUpdateStatusBehaviour = (it) => {
         )
       })
 
-      it('describes the stored watermark in the conflict message', async () => {
+      it('describes the stored watermark in the error message', async () => {
         const watermarked = await seedWatermarkedPrn(5)
 
         await expect(reapplyWatermark(watermarked, 3)).rejects.toMatchObject({
           isBoom: true,
-          output: {
-            statusCode: 409,
-            payload: {
-              message: `Stale watermark: PRN ${watermarked.id} has already applied event 5 but the update did not advance it`
-            }
-          }
+          output: { statusCode: 500 },
+          message: `Stale watermark: PRN ${watermarked.id} has already applied event 5 but the update did not advance it`
         })
       })
     })
@@ -322,7 +318,7 @@ export const testUpdateStatusBehaviour = (it) => {
           })
         ).rejects.toMatchObject({
           isBoom: true,
-          output: { statusCode: 409 }
+          output: { statusCode: 500 }
         })
 
         expect(logger.error).toHaveBeenCalledWith(

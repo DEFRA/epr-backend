@@ -56,6 +56,12 @@ const buildVersionConflictError = (id, expected, actual) =>
   )
 
 /**
+ * The watermark only ever moves alongside the version, so a stale watermark
+ * here means the caller held the current version yet supplied a lower (or
+ * absent) watermark — it fed an out-of-order event into the projection rather
+ * than losing a race. That is a coding error, not a retryable conflict, so it
+ * surfaces as an internal error.
+ *
  * @param {string} id
  * @param {number | undefined} storedEventNumber
  * @param {number | undefined} incomingEventNumber
@@ -72,11 +78,11 @@ const enforceMonotonicWatermark = (
     (incomingEventNumber === undefined ||
       incomingEventNumber < storedEventNumber)
   ) {
-    const conflictError = new Error(
+    const regressionError = new Error(
       `Stale watermark: PRN ${id} has already applied event ${storedEventNumber} but the update did not advance it`
     )
     logger.error({
-      err: conflictError,
+      err: regressionError,
       message: `Stale watermark detected for PRN ${id}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.DB,
@@ -84,7 +90,7 @@ const enforceMonotonicWatermark = (
         reference: id
       }
     })
-    throw Boom.conflict(conflictError.message)
+    throw Boom.badImplementation(regressionError.message)
   }
 }
 

@@ -251,11 +251,14 @@ const performFindByStatus = (db, excludeOrganisationIds) => {
 
 /**
  * Resolves a missed CAS update into a 404 (PRN missing), a 409 version
- * conflict, or a 409 stale-watermark conflict. When the expected version is
- * still current the monotonic watermark guard is what rejected the write — the
- * update either supplied a lower lastAppliedEventNumber or omitted it over a
- * PRN that already carries one. Logs the conflict for observability before
- * throwing.
+ * conflict, or a 500 internal error. When the expected version is still
+ * current the monotonic watermark guard is the only thing that could have
+ * rejected the write, and since the watermark only ever moves alongside the
+ * version, that means the caller held the current version yet supplied a lower
+ * lastAppliedEventNumber (or omitted it over a watermarked PRN) — an
+ * out-of-order event fed into the projection rather than a lost race. That is
+ * a coding error, so it surfaces as an internal error rather than a retryable
+ * conflict. Logs the cause for observability before throwing.
  *
  * @param {Db} db
  * @param {string} id
@@ -293,11 +296,11 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
     throw Boom.conflict(versionConflictError.message)
   }
 
-  const watermarkConflictError = new Error(
+  const watermarkRegressionError = new Error(
     `Stale watermark: PRN ${id} has already applied event ${existing.lastAppliedEventNumber} but the update did not advance it`
   )
   logger.error({
-    err: watermarkConflictError,
+    err: watermarkRegressionError,
     message: `Stale watermark detected for PRN ${id}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.DB,
@@ -305,7 +308,7 @@ const resolveMissedUpdate = async (db, id, expectedVersion, logger) => {
       reference: id
     }
   })
-  throw Boom.conflict(watermarkConflictError.message)
+  throw Boom.badImplementation(watermarkRegressionError.message)
 }
 
 /**
