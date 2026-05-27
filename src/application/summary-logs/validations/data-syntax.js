@@ -304,11 +304,8 @@ const toApplicationIssue = ({
       colIndex,
       location
     }),
-    actual: rowObject[fieldName]
-  }
-
-  if (errorCode) {
-    context.errorCode = errorCode
+    actual: rowObject[fieldName],
+    ...(errorCode && { errorCode })
   }
 
   return {
