@@ -61,6 +61,7 @@ export const buildPrnCreationTransaction = ({
  * @param {number} params.tonnage
  * @param {string} params.userId
  * @param {import('./stream-schema.js').StreamEventKind} params.streamKind
+ * @returns {Promise<number>} The event number of the appended event (the watermark).
  */
 const appendPrnStreamEvent = async ({
   streamRepository,
@@ -72,7 +73,7 @@ const appendPrnStreamEvent = async ({
   userId,
   streamKind
 }) => {
-  await appendToStream(
+  const event = await appendToStream(
     {
       repository: streamRepository,
       registrationId,
@@ -85,6 +86,7 @@ const appendPrnStreamEvent = async ({
       createdBy: { id: userId, name: userId }
     }
   )
+  return event.number
 }
 
 /**
@@ -96,6 +98,8 @@ const appendPrnStreamEvent = async ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @returns {Promise<number|null>} The appended event number on the ledger path,
+ *   or `null` on the embedded path and when no balance exists.
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
   deductParams,
@@ -116,14 +120,14 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
   const wasteBalance = await findBalance(validatedAccreditationId)
 
   if (!wasteBalance) {
-    return
+    return null
   }
 
   if (
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
     dependencies?.streamRepository
   ) {
-    await appendPrnStreamEvent({
+    return appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
       registrationId,
       accreditationId: validatedAccreditationId,
@@ -133,7 +137,6 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
       userId,
       streamKind: STREAM_EVENT_KIND.PRN_CREATED
     })
-    return
   }
 
   const transaction = buildPrnCreationTransaction({
@@ -151,6 +154,8 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
   }
 
   await saveBalance(updatedBalance, [transaction])
+
+  return null
 }
 
 /**
@@ -198,6 +203,8 @@ export const buildPrnIssuedTransaction = ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @returns {Promise<number|null>} The appended event number on the ledger path,
+ *   or `null` on the embedded path and when no balance exists.
  */
 export const performDeductTotalBalanceForPrnIssue = async ({
   deductParams,
@@ -218,14 +225,14 @@ export const performDeductTotalBalanceForPrnIssue = async ({
   const wasteBalance = await findBalance(validatedAccreditationId)
 
   if (!wasteBalance) {
-    return
+    return null
   }
 
   if (
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
     dependencies?.streamRepository
   ) {
-    await appendPrnStreamEvent({
+    return appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
       registrationId,
       accreditationId: validatedAccreditationId,
@@ -235,7 +242,6 @@ export const performDeductTotalBalanceForPrnIssue = async ({
       userId,
       streamKind: STREAM_EVENT_KIND.PRN_ISSUED
     })
-    return
   }
 
   const transaction = buildPrnIssuedTransaction({
@@ -253,6 +259,8 @@ export const performDeductTotalBalanceForPrnIssue = async ({
   }
 
   await saveBalance(updatedBalance, [transaction])
+
+  return null
 }
 
 /**
@@ -342,6 +350,8 @@ export const buildIssuedPrnCancellationTransaction = ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @returns {Promise<number|null>} The appended event number on the ledger path,
+ *   or `null` on the embedded path. Throws when no balance exists.
  */
 export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   creditParams,
@@ -371,7 +381,7 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
     dependencies?.streamRepository
   ) {
-    await appendPrnStreamEvent({
+    return appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
       registrationId,
       accreditationId: validatedAccreditationId,
@@ -381,7 +391,6 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
       userId,
       streamKind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
     })
-    return
   }
 
   const transaction = buildIssuedPrnCancellationTransaction({
@@ -400,6 +409,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   }
 
   await saveBalance(updatedBalance, [transaction])
+
+  return null
 }
 
 /**
@@ -411,6 +422,8 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @returns {Promise<number|null>} The appended event number on the ledger path,
+ *   or `null` on the embedded path. Throws when no balance exists.
  */
 export const performCreditAvailableBalanceForPrnCancellation = async ({
   creditParams,
@@ -440,7 +453,7 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
     wasteBalance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER &&
     dependencies?.streamRepository
   ) {
-    await appendPrnStreamEvent({
+    return appendPrnStreamEvent({
       streamRepository: dependencies.streamRepository,
       registrationId,
       accreditationId: validatedAccreditationId,
@@ -450,7 +463,6 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
       userId,
       streamKind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
     })
-    return
   }
 
   const transaction = buildPrnCancellationTransaction({
@@ -468,4 +480,6 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
   }
 
   await saveBalance(updatedBalance, [transaction])
+
+  return null
 }
