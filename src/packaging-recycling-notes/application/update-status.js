@@ -434,12 +434,12 @@ async function performStreamWrite({
   user,
   now
 }) {
-  // On the embedded path the suspension check lives inside applyStatusUpdate,
-  // which runs after the doc CAS. Event-first ordering would otherwise append
-  // the debit before that check, so the check is hoisted ahead of the append
-  // here to guarantee a suspended accreditation is never debited. The fetched
-  // accreditation is handed to applyStatusUpdate so the issuance write reuses
-  // it rather than reading it twice.
+  // The suspension check lives inside applyStatusUpdate, gating the document
+  // write. On the stream path the balance event is appended before that write,
+  // so the check is hoisted ahead of the append here to guarantee a suspended
+  // accreditation is never debited. The fetched accreditation is handed to
+  // applyStatusUpdate so the issuance write reuses it rather than reading it
+  // twice.
   let accreditation
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     accreditation = await organisationsRepository.findAccreditationById(

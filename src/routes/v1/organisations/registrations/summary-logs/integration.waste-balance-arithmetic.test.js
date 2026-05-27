@@ -1272,7 +1272,12 @@ describe('Waste balance arithmetic integration tests', () => {
 
     it('ringfences available balance and stamps the PRN watermark when raising', async () => {
       const env = await setupLedgerEnv()
-      const { wasteBalancesRepository, packagingRecyclingNotesRepository } = env
+      const {
+        wasteBalancesRepository,
+        packagingRecyclingNotesRepository,
+        streamRepository,
+        registrationId
+      } = env
 
       await performSummaryLogSubmission(
         env,
@@ -1294,8 +1299,13 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.amount).toBe(300) // total unchanged
       expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
 
+      // The document watermark is the event the raise appended, not just any number.
+      const latest = await streamRepository.findLatestByPartition(
+        registrationId,
+        'ACC-123'
+      )
       const stored = await packagingRecyclingNotesRepository.findById(prn.id)
-      expect(stored.lastAppliedEventNumber).toEqual(expect.any(Number))
+      expect(stored.lastAppliedEventNumber).toBe(latest?.number)
     })
 
     it('deducts from total balance when issuing', async () => {
@@ -1346,7 +1356,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(balance.availableAmount).toBe(100) // ringfence released
     })
 
-    it('debits available balance once per PRN when two raises race on the same accreditation', async () => {
+    it('debits available balance once per PRN when two raises are submitted together on the same accreditation', async () => {
       const env = await setupLedgerEnv()
       const { wasteBalancesRepository } = env
 

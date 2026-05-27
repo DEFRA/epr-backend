@@ -235,4 +235,34 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
 
     expect(creditAvailableBalanceForPrnCancellation).not.toHaveBeenCalled()
   })
+
+  it('does not roll back the balance when the PRN document write fails on issuance', async () => {
+    const updateStatus = vi
+      .fn()
+      .mockRejectedValue(new Error('doc write failed'))
+    const prnRepository = { findById: vi.fn(), updateStatus }
+    const creditFullBalanceForIssuedPrnCancellation = vi.fn()
+    const wasteBalancesRepository = {
+      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      deductTotalBalanceForPrnIssue: vi
+        .fn()
+        .mockResolvedValue(APPENDED_WATERMARK),
+      creditFullBalanceForIssuedPrnCancellation
+    }
+
+    await expect(
+      callUpdate({
+        prnRepository,
+        wasteBalancesRepository,
+        organisationsRepository: buildOrganisationsRepository(),
+        providedPrn: buildPrn({
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }),
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+    ).rejects.toThrow('doc write failed')
+
+    expect(creditFullBalanceForIssuedPrnCancellation).not.toHaveBeenCalled()
+  })
 })
