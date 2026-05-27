@@ -32,9 +32,20 @@
  * @property {number} [totalIssuesCount] - Total number of validation issues found (may exceed issues.length when capped for storage)
  */
 
+/** @import {ProcessingType} from './meta-fields.js' */
+
 /**
- * @typedef {Object.<string, string>} SummaryLogMeta
- * Metadata extracted from the summary log spreadsheet (e.g. PROCESSING_TYPE, MATERIAL)
+ * Metadata extracted from the summary log spreadsheet's Cover sheet.
+ * All fields are optional because extraction emits only the keys that were
+ * present in the parsed file — a missing cell yields a missing field.
+ *
+ * @typedef {{
+ *   PROCESSING_TYPE?: ProcessingType,
+ *   TEMPLATE_VERSION?: number,
+ *   MATERIAL?: string,
+ *   ACCREDITATION_NUMBER?: string,
+ *   REGISTRATION_NUMBER?: string
+ * }} SummaryLogMeta
  */
 
 /**

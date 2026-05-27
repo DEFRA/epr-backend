@@ -174,9 +174,9 @@ export const determineStatusFromUpload = (uploadStatus) => {
 /**
  * Validates a status transition and returns an update object with the new
  * status and calculated expiresAt value.
- * @param {{status?: string}} summaryLog - The current summary log (only status is read)
- * @param {string} newStatus - The status to transition to
- * @returns {{status: string, expiresAt: Date|null}} Update object for repository
+ * @param {{status?: SummaryLogStatus}} summaryLog - The current summary log (only status is read)
+ * @param {SummaryLogStatus} newStatus - The status to transition to
+ * @returns {{status: SummaryLogStatus, expiresAt: Date|null}} Update object for repository
  * @throws {InvalidTransitionError} If the transition is not allowed
  */
 export const transitionStatus = (summaryLog, newStatus) => {

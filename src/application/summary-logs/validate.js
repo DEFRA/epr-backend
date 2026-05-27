@@ -507,7 +507,7 @@ const recordValidationMetrics = async ({
  * @param {Loads | null} params.loads
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
- * @param {string} params.status
+ * @param {SummaryLogStatus} params.status
  * @param {SummaryLog} params.summaryLog
  * @param {string} params.summaryLogId
  * @param {SummaryLogsRepository} params.summaryLogsRepository
