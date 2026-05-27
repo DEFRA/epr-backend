@@ -136,8 +136,8 @@ const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs: summaryLogDocs.map(({ id, summaryLog }) => ({
-      id,
+    summaryLogs: summaryLogDocs.map(({ summaryLog }) => ({
+      id: summaryLog.file.id,
       status: summaryLog.status,
       submittedAt: summaryLog.submittedAt
     }))

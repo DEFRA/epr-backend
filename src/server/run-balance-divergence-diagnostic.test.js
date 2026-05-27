@@ -579,7 +579,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
-  it('fetches summary logs and passes them to computeRebuiltStream', async () => {
+  it('passes file.id (not the document _id) as the summary log identifier to computeRebuiltStream', async () => {
     const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
     setEmbeddedBalances([
       {
@@ -600,9 +600,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [accreditation]
     summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
       {
-        id: 'sl-1',
+        id: 'doc-id-1',
         version: 1,
-        summaryLog: { status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+        summaryLog: {
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z',
+          file: { id: 'file-id-1', name: 'test.xlsx', uri: 's3://bucket/key' }
+        }
       }
     ])
     const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
@@ -622,7 +626,11 @@ describe('runBalanceDivergenceDiagnostic', () => {
       prns,
       overseasSites: {},
       summaryLogs: [
-        { id: 'sl-1', status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+        {
+          id: 'file-id-1',
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z'
+        }
       ]
     })
   })
