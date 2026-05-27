@@ -116,10 +116,7 @@ export const buildChronologicalEvents = ({
         continue
       }
       const amount = getTargetAmount(
-        /** @type {any} */ ({
-          data,
-          excludedFromWasteBalance: record.excludedFromWasteBalance
-        }),
+        { ...record, data },
         accreditation,
         overseasSites
       )
