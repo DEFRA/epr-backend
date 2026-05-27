@@ -191,6 +191,69 @@ export const testRollbackBehaviour = (it) => {
         })
       )
     })
+
+    describe('lastAppliedEventNumber watermark', () => {
+      const seedWatermarked = (lastAppliedEventNumber) =>
+        repository.create(
+          buildAwaitingAcceptancePrn({ lastAppliedEventNumber })
+        )
+
+      const rollback = (prn, lastAppliedEventNumber) =>
+        repository.rollbackIssuance({
+          id: prn.id,
+          expectedVersion: prn.version,
+          updatedBy: compensator,
+          updatedAt: new Date(),
+          lastAppliedEventNumber
+        })
+
+      it('carries an equal watermark forward', async () => {
+        const created = await seedWatermarked(5)
+
+        const rolledBack = await rollback(created, 5)
+
+        expect(rolledBack.lastAppliedEventNumber).toBe(5)
+      })
+
+      it('advances to a higher watermark', async () => {
+        const created = await seedWatermarked(5)
+
+        const rolledBack = await rollback(created, 9)
+
+        expect(rolledBack.lastAppliedEventNumber).toBe(9)
+      })
+
+      it('rejects a lower watermark as an internal error', async () => {
+        const created = await seedWatermarked(5)
+
+        await expect(rollback(created, 3)).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 500 },
+          message: `Watermark regression: PRN ${created.id} has applied event 5 but the update would move it back to 3`
+        })
+      })
+
+      it('rejects a rollback that drops the watermark once one is set', async () => {
+        const created = await seedWatermarked(5)
+
+        await expect(rollback(created, undefined)).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 500 },
+          message: `Watermark regression: PRN ${created.id} has applied event 5 but the update did not carry a watermark`
+        })
+      })
+
+      it('leaves the watermark untouched when a rollback is rejected', async () => {
+        const created = await seedWatermarked(5)
+
+        await rollback(created, 3).catch(() => {})
+
+        const found = await repository.findById(created.id)
+        expect(found.lastAppliedEventNumber).toBe(5)
+        expect(found.version).toBe(created.version)
+        expect(found.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      })
+    })
   })
 
   describe('rollbackPendingCancellation', () => {

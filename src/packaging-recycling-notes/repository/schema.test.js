@@ -7,6 +7,9 @@ import {
   buildAwaitingAcceptancePrn
 } from './contract/test-data.js'
 
+/** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
+/** @typedef {import('#domain/organisations/model.js').Material} Material */
+
 const buildReadDocument = (overrides = {}) => ({
   id: '507f1f77bcf86cd799439011',
   ...buildValidPrnInsert(),
@@ -75,7 +78,7 @@ describe('PRN insert schema', () => {
     })
 
     it('rejects null notes on insert', () => {
-      const data = buildValidPrnInsert({ notes: null })
+      const data = { ...buildValidPrnInsert(), notes: null }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
@@ -164,131 +167,131 @@ describe('PRN insert schema', () => {
 
   describe('required fields', () => {
     it('rejects when schemaVersion is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.schemaVersion
+      const { schemaVersion: _schemaVersion, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when organisation is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.organisation
+      const { organisation: _organisation, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when organisation.id is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         organisation: { name: 'Org' }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when organisation.name is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         organisation: { id: 'org-1' }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when registrationId is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.registrationId
+      const { registrationId: _registrationId, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when accreditation is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.accreditation
+      const { accreditation: _accreditation, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when accreditation.id is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           accreditationNumber: 'ACC-001',
           accreditationYear: 2026,
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when accreditation.accreditationNumber is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
           accreditationYear: 2026,
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when accreditation.accreditationYear is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
           material: 'plastic',
           submittedToRegulator: 'ea'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when accreditation.material is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
           accreditationYear: 2026,
           submittedToRegulator: 'ea'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when accreditation.submittedToRegulator is missing', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
           accreditationYear: 2026,
           material: 'plastic'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when tonnage is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.tonnage
+      const { tonnage: _tonnage, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when isExport is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.isExport
+      const { isExport: _isExport, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('rejects when status is missing', () => {
-      const data = buildValidPrnInsert()
-      delete data.status
+      const { status: _status, ...data } = buildValidPrnInsert()
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
@@ -299,14 +302,14 @@ describe('PRN insert schema', () => {
       const data = buildValidPrnInsert({ tonnage: 0 })
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
-      expect(error.message).toContain('positive')
+      expect(error?.message).toContain('positive')
     })
 
     it('rejects negative tonnage', () => {
       const data = buildValidPrnInsert({ tonnage: -5 })
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
-      expect(error.message).toContain('positive')
+      expect(error?.message).toContain('positive')
     })
 
     it('accepts positive tonnage', () => {
@@ -318,7 +321,8 @@ describe('PRN insert schema', () => {
 
   describe('material enum validation', () => {
     it('rejects invalid material value', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
@@ -326,12 +330,13 @@ describe('PRN insert schema', () => {
           material: 'unobtainium',
           submittedToRegulator: 'ea'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
 
     it('accepts all valid material values', () => {
+      /** @type {Material[]} */
       const materials = [
         'aluminium',
         'fibre',
@@ -342,6 +347,7 @@ describe('PRN insert schema', () => {
         'wood'
       ]
       for (const material of materials) {
+        /** @type {AccreditationSnapshot} */
         const accreditation =
           material === 'glass'
             ? {
@@ -371,7 +377,8 @@ describe('PRN insert schema', () => {
 
   describe('glassRecyclingProcess enum validation', () => {
     it('rejects invalid glassRecyclingProcess value', () => {
-      const data = buildValidPrnInsert({
+      const data = {
+        ...buildValidPrnInsert(),
         accreditation: {
           id: 'acc-1',
           accreditationNumber: 'ACC-001',
@@ -380,7 +387,7 @@ describe('PRN insert schema', () => {
           submittedToRegulator: 'ea',
           glassRecyclingProcess: 'glass_magic'
         }
-      })
+      }
       const { error } = prnInsertSchema.validate(data)
       expect(error).toBeDefined()
     })
@@ -482,12 +489,47 @@ describe('PRN insert schema', () => {
 
   describe('strips unknown fields', () => {
     it('strips unknown top-level fields', () => {
-      const data = buildValidPrnInsert({ bogus: 'field' })
+      const data = { ...buildValidPrnInsert(), bogus: 'field' }
       const { error, value } = prnInsertSchema.validate(data, {
         stripUnknown: true
       })
       expect(error).toBeUndefined()
       expect(value.bogus).toBeUndefined()
+    })
+  })
+
+  describe('lastAppliedEventNumber watermark', () => {
+    it('accepts an optional integer lastAppliedEventNumber', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 3 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('accepts a document without lastAppliedEventNumber', () => {
+      const data = buildValidPrnInsert()
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeUndefined()
+    })
+
+    it('rejects lastAppliedEventNumber below 1', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 0 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('rejects a non-integer lastAppliedEventNumber', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 1.5 })
+      const { error } = prnInsertSchema.validate(data)
+      expect(error).toBeDefined()
+    })
+
+    it('does not strip lastAppliedEventNumber when stripUnknown is enabled', () => {
+      const data = buildValidPrnInsert({ lastAppliedEventNumber: 7 })
+      const { error, value } = prnInsertSchema.validate(data, {
+        stripUnknown: true
+      })
+      expect(error).toBeUndefined()
+      expect(value.lastAppliedEventNumber).toBe(7)
     })
   })
 })
@@ -500,8 +542,7 @@ describe('PRN read schema', () => {
   })
 
   it('rejects when id is missing', () => {
-    const data = buildReadDocument()
-    delete data.id
+    const { id: _id, ...data } = buildReadDocument()
     const { error } = prnReadSchema.validate(data)
     expect(error).toBeDefined()
   })
@@ -536,9 +577,17 @@ describe('PRN read schema', () => {
     expect(value).not.toHaveProperty('notes')
   })
 
+  it('round-trips a lastAppliedEventNumber watermark under stripUnknown', () => {
+    const data = buildReadDocument({ lastAppliedEventNumber: 12 })
+    const { error, value } = prnReadSchema.validate(data, {
+      stripUnknown: true
+    })
+    expect(error).toBeUndefined()
+    expect(value.lastAppliedEventNumber).toBe(12)
+  })
+
   it('rejects when required fields from insert schema are missing', () => {
-    const data = buildReadDocument()
-    delete data.organisation
+    const { organisation: _organisation, ...data } = buildReadDocument()
     const { error } = prnReadSchema.validate(data)
     expect(error).toBeDefined()
   })

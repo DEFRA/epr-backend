@@ -19,6 +19,7 @@ export class PrnNumberConflictError extends Error {
  * @property {Date} updatedAt - Timestamp of the change
  * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
  * @property {{ slot: import('#packaging-recycling-notes/domain/model.js').BusinessOperationSlot; at: Date; by: import('#packaging-recycling-notes/domain/model.js').Actor }} [operation] - Business operation to record on the status object
+ * @property {number} [lastAppliedEventNumber] - Stream watermark to stamp on the projection; the sequence number of the latest waste-balance event folded into this PRN. Enforced monotonic: once a PRN carries a watermark it has migrated to ledger-event status tracking, so every write must carry one forward (equal or higher). A lower or dropped watermark cannot be a lost race, only a coding error, so it is rejected as a 500 internal error. A PRN that has never carried a watermark may omit it (the pre-migration path).
  */
 
 /**
@@ -47,6 +48,7 @@ export class PrnNumberConflictError extends Error {
  * @property {number} expectedVersion - Document version after the forward write (CAS gate)
  * @property {{ id: string; name: string }} updatedBy - Actor recorded against the rollback history entry
  * @property {Date} updatedAt - Timestamp of the rollback
+ * @property {number} [lastAppliedEventNumber] - Stream watermark to carry forward; subject to the same monotonic guard as updateStatus. A migrated PRN (one that already carries a watermark) must carry one on its rollback too; a PRN that has never carried one may omit it.
  */
 
 /**
