@@ -6,7 +6,9 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
+import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
 import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnostic.js'
 
@@ -31,8 +33,14 @@ vi.mock('#overseas-sites/repository/mongodb.js', () => ({
 vi.mock('#waste-balances/application/compute-rebuilt-totals.js', () => ({
   computeRebuiltTotals: vi.fn()
 }))
+vi.mock('#waste-balances/application/compute-rebuilt-stream.js', () => ({
+  computeRebuiltStream: vi.fn()
+}))
 vi.mock('#application/waste-records/resolve-overseas-sites.js', () => ({
   resolveOverseasSites: vi.fn()
+}))
+vi.mock('#repositories/summary-logs/mongodb.js', () => ({
+  createSummaryLogsRepository: vi.fn()
 }))
 
 describe('runBalanceDivergenceDiagnostic', () => {
@@ -42,6 +50,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
   let wasteRecordsRepository
   let prnRepository
   let overseasSitesRepository
+  let summaryLogsRepository
   let mockToArray
   let mockFind
   let collectionByName
@@ -86,31 +95,47 @@ describe('runBalanceDivergenceDiagnostic', () => {
         accreditations: accreditations[orgId] ?? []
       }))
     }
-    createOrganisationsRepository.mockResolvedValue(
+    vi.mocked(createOrganisationsRepository).mockResolvedValue(
       () => organisationsRepository
     )
 
     wasteRecordsRepository = {
       findByRegistration: vi.fn().mockResolvedValue([])
     }
-    createWasteRecordsRepository.mockResolvedValue(() => wasteRecordsRepository)
+    vi.mocked(createWasteRecordsRepository).mockResolvedValue(
+      () => wasteRecordsRepository
+    )
 
     prnRepository = {
       findByAccreditation: vi.fn().mockResolvedValue([])
     }
-    createPackagingRecyclingNotesRepository.mockResolvedValue(
+    vi.mocked(createPackagingRecyclingNotesRepository).mockResolvedValue(
       () => prnRepository
     )
 
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
     }
-    createOverseasSitesRepository.mockResolvedValue(
+    vi.mocked(createOverseasSitesRepository).mockResolvedValue(
       () => overseasSitesRepository
     )
 
-    computeRebuiltTotals.mockReturnValue({ amount: 0, availableAmount: 0 })
-    resolveOverseasSites.mockResolvedValue({})
+    summaryLogsRepository = {
+      findAllByOrgReg: vi.fn().mockResolvedValue([])
+    }
+    vi.mocked(createSummaryLogsRepository).mockResolvedValue(
+      () => summaryLogsRepository
+    )
+
+    vi.mocked(computeRebuiltTotals).mockReturnValue(
+      /** @type {any} */ ({ amount: 0, availableAmount: 0 })
+    )
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [],
+      amount: 0,
+      availableAmount: 0
+    })
+    vi.mocked(resolveOverseasSites).mockResolvedValue({})
   })
 
   it('acquires a lock scoped to the diagnostic and releases it afterwards', async () => {
@@ -182,13 +207,24 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
     ]
-    computeRebuiltTotals.mockReturnValue({ amount: 7, availableAmount: 5 })
+    vi.mocked(computeRebuiltTotals).mockReturnValue(
+      /** @type {any} */ ({ amount: 7, availableAmount: 5 })
+    )
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [],
+      amount: 7,
+      availableAmount: 5
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    const perAccreditationLines = logger.info.mock.calls.filter(([arg]) =>
-      arg.message.startsWith('Waste-balance divergence affected accreditation:')
-    )
+    const perAccreditationLines = vi
+      .mocked(logger.info)
+      .mock.calls.filter(([arg]) =>
+        /** @type {any} */ (arg).message?.startsWith(
+          'Waste-balance divergence affected accreditation:'
+        )
+      )
     expect(perAccreditationLines).toHaveLength(0)
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -216,19 +252,24 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1', status: 'approved' }
     ]
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 95,
       availableAmount: 80,
       wasteRecordContribution: 95,
       prnAmountContribution: 0,
       prnAvailableAmountContribution: -15
     })
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [],
+      amount: 95,
+      availableAmount: 80
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-acc-1 currentAmount=100 rebuiltAmount=95 deltaAmount=-5 currentAvailableAmount=80 rebuiltAvailableAmount=80 deltaAvailableAmount=0 registrationStatus=approved accreditationStatus=approved wasteRecordCount=0 wasteRecordContribution=95 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=-15'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-acc-1 currentAmount=100 rebuiltAmount=95 deltaAmount=-5 currentAvailableAmount=80 rebuiltAvailableAmount=80 deltaAvailableAmount=0 registrationStatus=approved accreditationStatus=approved wasteRecordCount=0 wasteRecordContribution=95 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=-15 streamAmount=95 streamAvailableAmount=80 streamDeltaAmount=0 streamDeltaAvailableAmount=0 streamEventCount=0'
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -298,7 +339,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
     ]
-    resolveOverseasSites.mockResolvedValue({ '099': { validFrom: null } })
+    vi.mocked(resolveOverseasSites).mockResolvedValue({
+      '099': { validFrom: null }
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
@@ -333,19 +376,24 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ]
     accreditations['org-1'] = [{ id: 'acc-pending', status: 'created' }]
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 7,
       availableAmount: 7,
       wasteRecordContribution: 7,
       prnAmountContribution: 0,
       prnAvailableAmountContribution: 0
     })
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [],
+      amount: 7,
+      availableAmount: 7
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=created wasteRecordCount=0 wasteRecordContribution=7 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=0'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=created wasteRecordCount=0 wasteRecordContribution=7 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=0 streamAmount=7 streamAvailableAmount=7 streamDeltaAmount=0 streamDeltaAvailableAmount=0 streamEventCount=0'
     })
   })
 
@@ -371,7 +419,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     ]
     wasteRecordsRepository.findByRegistration.mockResolvedValue([{}, {}, {}])
     prnRepository.findByAccreditation.mockResolvedValue([{}, {}])
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 0,
       availableAmount: 0,
       wasteRecordContribution: 0,
@@ -383,7 +431,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=null accreditationNumber=ACC-1 currentAmount=2084.27 rebuiltAmount=0 deltaAmount=-2084.27 currentAvailableAmount=2084.27 rebuiltAvailableAmount=0 deltaAvailableAmount=-2084.27 registrationStatus=cancelled accreditationStatus=cancelled wasteRecordCount=3 wasteRecordContribution=0 prnCount=2 prnAmountContribution=0 prnAvailableAmountContribution=0'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=null accreditationNumber=ACC-1 currentAmount=2084.27 rebuiltAmount=0 deltaAmount=-2084.27 currentAvailableAmount=2084.27 rebuiltAvailableAmount=0 deltaAvailableAmount=-2084.27 registrationStatus=cancelled accreditationStatus=cancelled wasteRecordCount=3 wasteRecordContribution=0 prnCount=2 prnAmountContribution=0 prnAvailableAmountContribution=0 streamAmount=0 streamAvailableAmount=0 streamDeltaAmount=0 streamDeltaAvailableAmount=0 streamEventCount=0'
     })
   })
 
@@ -480,7 +528,14 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-2'] = [
       { id: 'acc-good', accreditationNumber: 'ACC-good' }
     ]
-    computeRebuiltTotals.mockReturnValue({ amount: 5, availableAmount: 5 })
+    vi.mocked(computeRebuiltTotals).mockReturnValue(
+      /** @type {any} */ ({ amount: 5, availableAmount: 5 })
+    )
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [],
+      amount: 5,
+      availableAmount: 5
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
@@ -522,5 +577,101 @@ describe('runBalanceDivergenceDiagnostic', () => {
       err: error,
       message: 'Failed to run waste-balance divergence diagnostic'
     })
+  })
+
+  it('fetches summary logs and passes them to computeRebuiltStream', async () => {
+    const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [accreditation]
+    summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
+      {
+        id: 'sl-1',
+        version: 1,
+        summaryLog: { status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+      }
+    ])
+    const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
+    wasteRecordsRepository.findByRegistration.mockResolvedValue(wasteRecords)
+    const prns = [{ id: 'prn-1' }]
+    prnRepository.findByAccreditation.mockResolvedValue(prns)
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(summaryLogsRepository.findAllByOrgReg).toHaveBeenCalledWith(
+      'org-1',
+      'reg-1'
+    )
+    expect(computeRebuiltStream).toHaveBeenCalledWith({
+      accreditation,
+      wasteRecords,
+      prns,
+      overseasSites: {},
+      summaryLogs: [
+        { id: 'sl-1', status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+      ]
+    })
+  })
+
+  it('includes stream replay figures in the divergence log when stream disagrees', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 100,
+        availableAmount: 80
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
+    ]
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
+      amount: 100,
+      availableAmount: 80,
+      wasteRecordContribution: 100,
+      prnAmountContribution: 0,
+      prnAvailableAmountContribution: -20
+    })
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [],
+      amount: 95,
+      availableAmount: 75
+    })
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    const divergenceLines = vi
+      .mocked(logger.info)
+      .mock.calls.filter(([arg]) =>
+        /** @type {any} */ (arg).message?.startsWith(
+          'Waste-balance divergence affected accreditation:'
+        )
+      )
+    expect(divergenceLines).toHaveLength(1)
+    expect(divergenceLines[0][0].message).toContain('streamAmount=95')
+    expect(divergenceLines[0][0].message).toContain('streamAvailableAmount=75')
+    expect(divergenceLines[0][0].message).toContain('streamEventCount=0')
   })
 })

@@ -1,6 +1,8 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { getTargetAmount } from './target-amount.js'
+import { prnTransitionToStreamKind } from './compute-rebuilt-stream.js'
+
+import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -9,56 +11,24 @@ import { getTargetAmount } from './target-amount.js'
  * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} OverseasSitesContext
  */
 
-const REBUILT_TRANSACTION_KIND = Object.freeze({
-  PRN_CREATED: 'prn-created',
-  PRN_ISSUED: 'prn-issued',
-  PRN_CANCELLED_PRE_ISSUE: 'prn-cancelled-pre-issue',
-  PRN_CANCELLED_POST_ISSUE: 'prn-cancelled-post-issue'
-})
-
 const PRN_DELTAS = Object.freeze({
-  [REBUILT_TRANSACTION_KIND.PRN_CREATED]: (tonnage) => ({
+  [STREAM_EVENT_KIND.PRN_CREATED]: (tonnage) => ({
     amount: 0,
     availableAmount: -tonnage
   }),
-  [REBUILT_TRANSACTION_KIND.PRN_ISSUED]: (tonnage) => ({
+  [STREAM_EVENT_KIND.PRN_ISSUED]: (tonnage) => ({
     amount: -tonnage,
     availableAmount: 0
   }),
-  [REBUILT_TRANSACTION_KIND.PRN_CANCELLED_PRE_ISSUE]: (tonnage) => ({
+  [STREAM_EVENT_KIND.PRN_CREATION_CANCELLED]: (tonnage) => ({
     amount: 0,
     availableAmount: tonnage
   }),
-  [REBUILT_TRANSACTION_KIND.PRN_CANCELLED_POST_ISSUE]: (tonnage) => ({
+  [STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: (tonnage) => ({
     amount: tonnage,
     availableAmount: tonnage
   })
 })
-
-const prnKindFromTransition = (prevStatus, newStatus) => {
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    return REBUILT_TRANSACTION_KIND.PRN_CREATED
-  }
-  if (
-    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE &&
-    prevStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    return REBUILT_TRANSACTION_KIND.PRN_ISSUED
-  }
-  if (
-    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
-    prevStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    return REBUILT_TRANSACTION_KIND.PRN_CANCELLED_PRE_ISSUE
-  }
-  if (
-    newStatus === PRN_STATUS.CANCELLED &&
-    prevStatus === PRN_STATUS.AWAITING_CANCELLATION
-  ) {
-    return REBUILT_TRANSACTION_KIND.PRN_CANCELLED_POST_ISSUE
-  }
-  return null
-}
 
 /**
  * Iterate balance-affecting deltas from a PRN's status history without
@@ -70,7 +40,7 @@ function* prnDeltasOf(prn) {
   const history = prn.status.history
   for (let i = 0; i < history.length; i++) {
     const prevStatus = i === 0 ? null : history[i - 1].status
-    const kind = prnKindFromTransition(prevStatus, history[i].status)
+    const kind = prnTransitionToStreamKind(prevStatus, history[i].status)
     if (!kind) {
       continue
     }
