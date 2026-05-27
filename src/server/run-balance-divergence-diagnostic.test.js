@@ -95,36 +95,42 @@ describe('runBalanceDivergenceDiagnostic', () => {
         accreditations: accreditations[orgId] ?? []
       }))
     }
-    createOrganisationsRepository.mockResolvedValue(
+    vi.mocked(createOrganisationsRepository).mockResolvedValue(
       () => organisationsRepository
     )
 
     wasteRecordsRepository = {
       findByRegistration: vi.fn().mockResolvedValue([])
     }
-    createWasteRecordsRepository.mockResolvedValue(() => wasteRecordsRepository)
+    vi.mocked(createWasteRecordsRepository).mockResolvedValue(
+      () => wasteRecordsRepository
+    )
 
     prnRepository = {
       findByAccreditation: vi.fn().mockResolvedValue([])
     }
-    createPackagingRecyclingNotesRepository.mockResolvedValue(
+    vi.mocked(createPackagingRecyclingNotesRepository).mockResolvedValue(
       () => prnRepository
     )
 
     overseasSitesRepository = {
       findByIds: vi.fn().mockResolvedValue([])
     }
-    createOverseasSitesRepository.mockResolvedValue(
+    vi.mocked(createOverseasSitesRepository).mockResolvedValue(
       () => overseasSitesRepository
     )
 
     summaryLogsRepository = {
       findAllByOrgReg: vi.fn().mockResolvedValue([])
     }
-    createSummaryLogsRepository.mockResolvedValue(() => summaryLogsRepository)
+    vi.mocked(createSummaryLogsRepository).mockResolvedValue(
+      () => summaryLogsRepository
+    )
 
-    computeRebuiltTotals.mockReturnValue({ amount: 0, availableAmount: 0 })
-    computeRebuiltStream.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue(
+      /** @type {any} */ ({ amount: 0, availableAmount: 0 })
+    )
+    vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 0,
       availableAmount: 0,
@@ -132,7 +138,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       prnAmountContribution: 0,
       prnAvailableAmountContribution: 0
     })
-    resolveOverseasSites.mockResolvedValue({})
+    vi.mocked(resolveOverseasSites).mockResolvedValue({})
   })
 
   it('acquires a lock scoped to the diagnostic and releases it afterwards', async () => {
@@ -204,8 +210,10 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
     ]
-    computeRebuiltTotals.mockReturnValue({ amount: 7, availableAmount: 5 })
-    computeRebuiltStream.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue(
+      /** @type {any} */ ({ amount: 7, availableAmount: 5 })
+    )
+    vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 7,
       availableAmount: 5,
@@ -216,9 +224,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    const perAccreditationLines = logger.info.mock.calls.filter(([arg]) =>
-      arg.message.startsWith('Waste-balance divergence affected accreditation:')
-    )
+    const perAccreditationLines = vi
+      .mocked(logger.info)
+      .mock.calls.filter(([arg]) =>
+        /** @type {any} */ (arg).message?.startsWith(
+          'Waste-balance divergence affected accreditation:'
+        )
+      )
     expect(perAccreditationLines).toHaveLength(0)
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -246,14 +258,14 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1', status: 'approved' }
     ]
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 95,
       availableAmount: 80,
       wasteRecordContribution: 95,
       prnAmountContribution: 0,
       prnAvailableAmountContribution: -15
     })
-    computeRebuiltStream.mockReturnValue({
+    vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 95,
       availableAmount: 80,
@@ -336,7 +348,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-acc-1' }
     ]
-    resolveOverseasSites.mockResolvedValue({ '099': { validFrom: null } })
+    vi.mocked(resolveOverseasSites).mockResolvedValue({
+      '099': { validFrom: null }
+    })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
@@ -371,14 +385,14 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ]
     accreditations['org-1'] = [{ id: 'acc-pending', status: 'created' }]
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 7,
       availableAmount: 7,
       wasteRecordContribution: 7,
       prnAmountContribution: 0,
       prnAvailableAmountContribution: 0
     })
-    computeRebuiltStream.mockReturnValue({
+    vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 7,
       availableAmount: 7,
@@ -417,7 +431,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     ]
     wasteRecordsRepository.findByRegistration.mockResolvedValue([{}, {}, {}])
     prnRepository.findByAccreditation.mockResolvedValue([{}, {}])
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 0,
       availableAmount: 0,
       wasteRecordContribution: 0,
@@ -526,8 +540,10 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-2'] = [
       { id: 'acc-good', accreditationNumber: 'ACC-good' }
     ]
-    computeRebuiltTotals.mockReturnValue({ amount: 5, availableAmount: 5 })
-    computeRebuiltStream.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue(
+      /** @type {any} */ ({ amount: 5, availableAmount: 5 })
+    )
+    vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 5,
       availableAmount: 5,
@@ -641,14 +657,14 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [
       { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
     ]
-    computeRebuiltTotals.mockReturnValue({
+    vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 100,
       availableAmount: 80,
       wasteRecordContribution: 100,
       prnAmountContribution: 0,
       prnAvailableAmountContribution: -20
     })
-    computeRebuiltStream.mockReturnValue({
+    vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 95,
       availableAmount: 75,
@@ -659,9 +675,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    const divergenceLines = logger.info.mock.calls.filter(([arg]) =>
-      arg.message.startsWith('Waste-balance divergence affected accreditation:')
-    )
+    const divergenceLines = vi
+      .mocked(logger.info)
+      .mock.calls.filter(([arg]) =>
+        /** @type {any} */ (arg).message?.startsWith(
+          'Waste-balance divergence affected accreditation:'
+        )
+      )
     expect(divergenceLines).toHaveLength(1)
     expect(divergenceLines[0][0].message).toContain('streamAmount=95')
     expect(divergenceLines[0][0].message).toContain('streamAvailableAmount=75')
