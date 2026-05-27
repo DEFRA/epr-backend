@@ -150,13 +150,12 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
 
 /**
  * Maps a Joi failure message to a specific application error code, or
- * undefined if the message isn't recognised or is absent.
+ * undefined if the message isn't recognised.
  *
- * @param {string | undefined} message
+ * @param {string} message
  * @returns {ValidationCode | undefined}
  */
-const mapMessageToErrorCode = (message) =>
-  message ? JOI_MESSAGE_TO_ERROR_CODE[message] : undefined
+const mapMessageToErrorCode = (message) => JOI_MESSAGE_TO_ERROR_CODE[message]
 
 /**
  * Builds a map from header names to their column indices
