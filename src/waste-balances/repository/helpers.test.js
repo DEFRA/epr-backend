@@ -60,7 +60,7 @@ vi.mock('../application/update-via-stream.js', () => ({
 }))
 
 vi.mock('../application/append-to-stream.js', () => ({
-  appendToStream: vi.fn().mockResolvedValue(undefined)
+  appendToStream: vi.fn().mockResolvedValue({ number: 1 })
 }))
 
 describe('src/waste-balances/repository/helpers.js', () => {

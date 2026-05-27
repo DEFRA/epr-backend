@@ -1,6 +1,9 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '../../domain/model.js'
+import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+} from '../../domain/model.js'
 
 export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
   describe('deductAvailableBalanceForPrnCreation', () => {
@@ -67,8 +70,8 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
       )
     })
 
-    it('does nothing when no balance exists', async () => {
-      await repository.deductAvailableBalanceForPrnCreation({
+    it('does nothing and returns null when no balance exists', async () => {
+      const watermark = await repository.deductAvailableBalanceForPrnCreation({
         accreditationId: 'acc-nonexistent',
         organisationId: 'org-1',
         prnId: 'prn-789',
@@ -78,6 +81,58 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
 
       const result = await repository.findByAccreditationId('acc-nonexistent')
       expect(result).toBeNull()
+      expect(watermark).toBeNull()
+    })
+
+    it('returns the appended stream event number on the ledger path', async ({
+      insertWasteBalance,
+      streamRepository
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-prn-ledger',
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const watermark = await repository.deductAvailableBalanceForPrnCreation({
+        accreditationId: 'acc-prn-ledger',
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        prnId: 'prn-ledger',
+        tonnage: 10,
+        userId: 'user-abc'
+      })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        'acc-prn-ledger'
+      )
+      expect(watermark).toBe(latest.number)
+      expect(watermark).toBe(1)
+    })
+
+    it('returns null on the embedded path', async ({ insertWasteBalance }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-prn-embedded',
+        organisationId: 'org-1',
+        amount: 500,
+        availableAmount: 400
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const watermark = await repository.deductAvailableBalanceForPrnCreation({
+        accreditationId: 'acc-prn-embedded',
+        organisationId: 'org-1',
+        prnId: 'prn-embedded',
+        tonnage: 10,
+        userId: 'user-abc'
+      })
+
+      expect(watermark).toBeNull()
     })
 
     it('increments version number', async ({ insertWasteBalance }) => {
