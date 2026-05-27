@@ -403,10 +403,7 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
           /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationCategory} */ (
             category
           ),
-        processingType:
-          /** @type {ProcessingType} */ (
-            processingType
-          )
+        processingType: /** @type {ProcessingType} */ (processingType)
       },
       count
     )
@@ -445,10 +442,7 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
             /** @type {import('#common/helpers/metrics/summary-logs.js').RowOutcome} */ (
               outcome
             ),
-          processingType:
-            /** @type {ProcessingType} */ (
-              processingType
-            )
+          processingType: /** @type {ProcessingType} */ (processingType)
         },
         count
       )
