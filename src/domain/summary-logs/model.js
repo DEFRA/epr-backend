@@ -32,7 +32,9 @@
  * @property {number} [totalIssuesCount] - Total number of validation issues found (may exceed issues.length when capped for storage)
  */
 
+/** @import {Loads, LoadsByWasteRecordType} from '#application/summary-logs/load-counts.js' */
 /** @import {ProcessingType} from './meta-fields.js' */
+/** @import {SummaryLogStatus} from './status.js' */
 
 /**
  * Metadata extracted from the summary log spreadsheet's Cover sheet.
@@ -49,27 +51,21 @@
  */
 
 /**
- * @typedef {Object} SummaryLog
- * @property {import('./status.js').SummaryLogStatus} status
- * @property {SummaryLogFile} file
- * @property {Validation} [validation]
- * @property {string} [organisationId]
- * @property {string} [registrationId]
- * @property {SummaryLogMeta} [meta]
- * @property {import('#application/summary-logs/load-counts.js').Loads} [loads]
- * @property {import('#application/summary-logs/load-counts.js').LoadsByWasteRecordType} [loadsByWasteRecordType]
+ * @typedef {{
+ *   createdAt?: string,
+ *   expiresAt?: Date | null,
+ *   file: SummaryLogFile,
+ *   loads?: Loads,
+ *   loadsByWasteRecordType?: LoadsByWasteRecordType,
+ *   meta?: SummaryLogMeta,
+ *   organisationId?: string,
+ *   registrationId?: string,
+ *   status: SummaryLogStatus,
+ *   submittedAt?: string,
+ *   validation?: Validation
+ * }} SummaryLog
  */
 
-/**
- * @typedef {Object} StoredSummaryLog
- * @property {import('./status.js').SummaryLogStatus} status
- * @property {StoredFile} file
- * @property {Validation} [validation]
- * @property {string} [organisationId]
- * @property {string} [registrationId]
- * @property {SummaryLogMeta} [meta]
- * @property {import('#application/summary-logs/load-counts.js').Loads} [loads]
- * @property {import('#application/summary-logs/load-counts.js').LoadsByWasteRecordType} [loadsByWasteRecordType]
- */
+/** @typedef {Omit<SummaryLog, 'file'> & { file: StoredFile }} StoredSummaryLog */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
