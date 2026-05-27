@@ -5,12 +5,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
-import {
-  reconstructDataAtSubmission,
-  replayStream,
-  buildChronologicalEvents,
-  computeRebuiltStream
-} from './compute-rebuilt-stream.js'
+import { computeRebuiltStream } from './compute-rebuilt-stream.js'
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn()
@@ -22,562 +17,6 @@ const { findSchemaForProcessingType } =
 const includedAt = (amount) => ({
   outcome: ROW_OUTCOME.INCLUDED,
   transactionAmount: amount
-})
-
-describe('reconstructDataAtSubmission', () => {
-  it('returns null when no versions match the seen summary logs', () => {
-    const versions = [{ summaryLog: { id: 'sl-2' }, data: { tonnage: 10 } }]
-
-    const result = reconstructDataAtSubmission(versions, new Set(['sl-1']))
-
-    expect(result).toBeNull()
-  })
-
-  it('returns the created version data when its summary log has been seen', () => {
-    const versions = [
-      {
-        status: 'created',
-        summaryLog: { id: 'sl-1' },
-        data: { tonnage: 10, material: 'plastic', processingType: 'INPUT' }
-      }
-    ]
-
-    const result = reconstructDataAtSubmission(versions, new Set(['sl-1']))
-
-    expect(result).toEqual({
-      tonnage: 10,
-      material: 'plastic',
-      processingType: 'INPUT'
-    })
-  })
-
-  it('layers updated version data onto the created version', () => {
-    const versions = [
-      {
-        status: 'created',
-        summaryLog: { id: 'sl-1' },
-        data: { tonnage: 10, material: 'plastic', processingType: 'INPUT' }
-      },
-      {
-        status: 'updated',
-        summaryLog: { id: 'sl-2' },
-        data: { tonnage: 15 }
-      }
-    ]
-
-    const result = reconstructDataAtSubmission(
-      versions,
-      new Set(['sl-1', 'sl-2'])
-    )
-
-    expect(result).toEqual({
-      tonnage: 15,
-      material: 'plastic',
-      processingType: 'INPUT'
-    })
-  })
-
-  it('stops at the latest version whose summary log has been seen', () => {
-    const versions = [
-      {
-        status: 'created',
-        summaryLog: { id: 'sl-1' },
-        data: { tonnage: 10, material: 'plastic', processingType: 'INPUT' }
-      },
-      {
-        status: 'updated',
-        summaryLog: { id: 'sl-2' },
-        data: { tonnage: 15 }
-      },
-      {
-        status: 'updated',
-        summaryLog: { id: 'sl-3' },
-        data: { tonnage: 20 }
-      }
-    ]
-
-    const result = reconstructDataAtSubmission(
-      versions,
-      new Set(['sl-1', 'sl-2'])
-    )
-
-    expect(result).toEqual({
-      tonnage: 15,
-      material: 'plastic',
-      processingType: 'INPUT'
-    })
-  })
-})
-
-describe('replayStream', () => {
-  it('returns empty array when given no events', () => {
-    const result = replayStream([])
-
-    expect(result).toEqual([])
-  })
-
-  it('replays a single summary-log-submitted event from zero balance', () => {
-    const events = [
-      {
-        timestamp: new Date('2025-01-01T00:00:00.000Z'),
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'sl-1', creditTotal: 100 },
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        organisationId: 'org-1'
-      }
-    ]
-
-    const result = replayStream(events)
-
-    expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({
-      number: 1,
-      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      openingBalance: { amount: 0, availableAmount: 0 },
-      closingBalance: { amount: 100, availableAmount: 100 }
-    })
-  })
-
-  it('threads balances across multiple events', () => {
-    const events = [
-      {
-        timestamp: new Date('2025-01-01T00:00:00.000Z'),
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'sl-1', creditTotal: 100 },
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        organisationId: 'org-1'
-      },
-      {
-        timestamp: new Date('2025-01-02T00:00:00.000Z'),
-        kind: STREAM_EVENT_KIND.PRN_CREATED,
-        payload: { prnId: 'prn-1', amount: 30 },
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        organisationId: 'org-1'
-      }
-    ]
-
-    const result = replayStream(events)
-
-    expect(result).toHaveLength(2)
-    expect(result[0].closingBalance).toEqual({
-      amount: 100,
-      availableAmount: 100
-    })
-    expect(result[1]).toMatchObject({
-      number: 2,
-      openingBalance: { amount: 100, availableAmount: 100 },
-      closingBalance: { amount: 100, availableAmount: 70 }
-    })
-  })
-
-  it('tracks previousCreditTotal across summary-log events', () => {
-    const events = [
-      {
-        timestamp: new Date('2025-01-01T00:00:00.000Z'),
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'sl-1', creditTotal: 100 },
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        organisationId: 'org-1'
-      },
-      {
-        timestamp: new Date('2025-01-02T00:00:00.000Z'),
-        kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-        payload: { summaryLogId: 'sl-2', creditTotal: 150 },
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        organisationId: 'org-1'
-      }
-    ]
-
-    const result = replayStream(events)
-
-    expect(result[0].closingBalance).toEqual({
-      amount: 100,
-      availableAmount: 100
-    })
-    expect(result[1]).toMatchObject({
-      openingBalance: { amount: 100, availableAmount: 100 },
-      closingBalance: { amount: 150, availableAmount: 150 }
-    })
-  })
-})
-
-describe('buildChronologicalEvents', () => {
-  const accreditation = { id: 'acc-1' }
-  const overseasSites = {}
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(findSchemaForProcessingType).mockReturnValue(
-      /** @type {any} */ ({
-        classifyForWasteBalance: (data) =>
-          data.tonnage === undefined
-            ? { outcome: ROW_OUTCOME.EXCLUDED, transactionAmount: 0 }
-            : includedAt(data.tonnage)
-      })
-    )
-  })
-
-  it('returns empty array when no summary logs and no PRNs', () => {
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords: [],
-      prns: [],
-      overseasSites,
-      summaryLogs: []
-    })
-
-    expect(result).toEqual([])
-  })
-
-  it('emits a summary-log-submitted event with creditTotal from waste records', () => {
-    const summaryLogs = [
-      {
-        id: 'sl-1',
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        submittedAt: '2025-01-15T10:00:00.000Z'
-      }
-    ]
-    const wasteRecords = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        type: 'received',
-        data: { processingType: 'INPUT', tonnage: 40 },
-        versions: [
-          {
-            summaryLog: { id: 'sl-1' },
-            data: { processingType: 'INPUT', tonnage: 40 }
-          }
-        ],
-        excludedFromWasteBalance: false
-      },
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        type: 'received',
-        data: { processingType: 'INPUT', tonnage: 60 },
-        versions: [
-          {
-            summaryLog: { id: 'sl-1' },
-            data: { processingType: 'INPUT', tonnage: 60 }
-          }
-        ],
-        excludedFromWasteBalance: false
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords,
-      prns: [],
-      overseasSites,
-      summaryLogs
-    })
-
-    expect(result).toHaveLength(1)
-    expect(result[0]).toMatchObject({
-      kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-      payload: { summaryLogId: 'sl-1', creditTotal: 100 },
-      timestamp: new Date('2025-01-15T10:00:00.000Z')
-    })
-  })
-
-  it('accumulates creditTotal across summary log submissions using version history', () => {
-    const summaryLogs = [
-      {
-        id: 'sl-1',
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        submittedAt: '2025-01-15T10:00:00.000Z'
-      },
-      {
-        id: 'sl-2',
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        submittedAt: '2025-02-15T10:00:00.000Z'
-      }
-    ]
-    const wasteRecords = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        type: 'received',
-        data: { processingType: 'INPUT', tonnage: 50 },
-        versions: [
-          {
-            summaryLog: { id: 'sl-1' },
-            data: { processingType: 'INPUT', tonnage: 40 }
-          },
-          { summaryLog: { id: 'sl-2' }, data: { tonnage: 50 } }
-        ],
-        excludedFromWasteBalance: false
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords,
-      prns: [],
-      overseasSites,
-      summaryLogs
-    })
-
-    expect(result).toHaveLength(2)
-    expect(result[0].payload).toEqual({ summaryLogId: 'sl-1', creditTotal: 40 })
-    expect(result[1].payload).toEqual({ summaryLogId: 'sl-2', creditTotal: 50 })
-  })
-
-  it('filters out non-submitted summary logs', () => {
-    const summaryLogs = [
-      {
-        id: 'sl-1',
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        submittedAt: '2025-01-15T10:00:00.000Z'
-      },
-      {
-        id: 'sl-draft',
-        status: SUMMARY_LOG_STATUS.VALIDATED
-      }
-    ]
-    const wasteRecords = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        type: 'received',
-        data: { processingType: 'INPUT', tonnage: 10 },
-        versions: [
-          {
-            summaryLog: { id: 'sl-1' },
-            data: { processingType: 'INPUT', tonnage: 10 }
-          }
-        ],
-        excludedFromWasteBalance: false
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords,
-      prns: [],
-      overseasSites,
-      summaryLogs
-    })
-
-    expect(result).toHaveLength(1)
-    expect(result[0].payload.summaryLogId).toBe('sl-1')
-  })
-
-  it('emits PRN events from status history transitions', () => {
-    const prns = [
-      {
-        id: 'prn-1',
-        tonnage: 25,
-        status: {
-          history: [
-            {
-              status: PRN_STATUS.DRAFT,
-              at: new Date('2025-01-10T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_AUTHORISATION,
-              at: new Date('2025-01-11T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_ACCEPTANCE,
-              at: new Date('2025-01-12T00:00:00.000Z')
-            }
-          ]
-        }
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords: [],
-      prns,
-      overseasSites,
-      summaryLogs: []
-    })
-
-    expect(result).toHaveLength(2)
-    expect(result[0]).toMatchObject({
-      kind: STREAM_EVENT_KIND.PRN_CREATED,
-      payload: { prnId: 'prn-1', amount: 25 },
-      timestamp: new Date('2025-01-11T00:00:00.000Z')
-    })
-    expect(result[1]).toMatchObject({
-      kind: STREAM_EVENT_KIND.PRN_ISSUED,
-      payload: { prnId: 'prn-1', amount: 25 },
-      timestamp: new Date('2025-01-12T00:00:00.000Z')
-    })
-  })
-
-  it('emits PRN_CREATION_CANCELLED for a deleted PRN', () => {
-    const prns = [
-      {
-        id: 'prn-1',
-        tonnage: 25,
-        status: {
-          history: [
-            {
-              status: PRN_STATUS.DRAFT,
-              at: new Date('2025-01-10T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_AUTHORISATION,
-              at: new Date('2025-01-11T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.CANCELLED,
-              at: new Date('2025-01-12T00:00:00.000Z')
-            }
-          ]
-        }
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords: [],
-      prns,
-      overseasSites,
-      summaryLogs: []
-    })
-
-    expect(result).toHaveLength(2)
-    expect(result[0].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
-    expect(result[1].kind).toBe(STREAM_EVENT_KIND.PRN_CREATION_CANCELLED)
-  })
-
-  it('emits PRN_CANCELLED_AFTER_ISSUE for a post-issue cancellation', () => {
-    const prns = [
-      {
-        id: 'prn-1',
-        tonnage: 25,
-        status: {
-          history: [
-            {
-              status: PRN_STATUS.DRAFT,
-              at: new Date('2025-01-10T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_AUTHORISATION,
-              at: new Date('2025-01-11T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_ACCEPTANCE,
-              at: new Date('2025-01-12T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_CANCELLATION,
-              at: new Date('2025-01-13T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.CANCELLED,
-              at: new Date('2025-01-14T00:00:00.000Z')
-            }
-          ]
-        }
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords: [],
-      prns,
-      overseasSites,
-      summaryLogs: []
-    })
-
-    expect(result).toHaveLength(3)
-    expect(result[0].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
-    expect(result[1].kind).toBe(STREAM_EVENT_KIND.PRN_ISSUED)
-    expect(result[2].kind).toBe(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
-  })
-
-  it('skips waste records not yet created at a submission point', () => {
-    const summaryLogs = [
-      {
-        id: 'sl-1',
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        submittedAt: '2025-01-10T00:00:00.000Z'
-      },
-      {
-        id: 'sl-2',
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        submittedAt: '2025-01-20T00:00:00.000Z'
-      }
-    ]
-    const wasteRecords = [
-      {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        type: 'received',
-        data: { processingType: 'INPUT', tonnage: 50 },
-        versions: [
-          {
-            summaryLog: { id: 'sl-2' },
-            data: { processingType: 'INPUT', tonnage: 50 }
-          }
-        ],
-        excludedFromWasteBalance: false
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords,
-      prns: [],
-      overseasSites,
-      summaryLogs
-    })
-
-    expect(result).toHaveLength(2)
-    expect(result[0].payload).toEqual({ summaryLogId: 'sl-1', creditTotal: 0 })
-    expect(result[1].payload).toEqual({
-      summaryLogId: 'sl-2',
-      creditTotal: 50
-    })
-  })
-
-  it('skips PRN transitions that do not produce stream events', () => {
-    const prns = [
-      {
-        id: 'prn-1',
-        tonnage: 25,
-        status: {
-          history: [
-            {
-              status: PRN_STATUS.DRAFT,
-              at: new Date('2025-01-10T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.AWAITING_AUTHORISATION,
-              at: new Date('2025-01-11T00:00:00.000Z')
-            },
-            {
-              status: PRN_STATUS.ACCEPTED,
-              at: new Date('2025-01-13T00:00:00.000Z')
-            }
-          ]
-        }
-      }
-    ]
-
-    const result = buildChronologicalEvents({
-      accreditation,
-      wasteRecords: [],
-      prns,
-      overseasSites,
-      summaryLogs: []
-    })
-
-    expect(result).toHaveLength(1)
-    expect(result[0].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
-  })
 })
 
 describe('computeRebuiltStream', () => {
@@ -759,5 +198,205 @@ describe('computeRebuiltStream', () => {
     expect(result.wasteRecordContribution).toBe(60)
     expect(result.prnAmountContribution).toBe(0)
     expect(result.prnAvailableAmountContribution).toBe(-10)
+  })
+
+  it('ignores non-submitted summary logs', () => {
+    const result = computeRebuiltStream({
+      accreditation,
+      wasteRecords: [
+        {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          type: 'received',
+          data: { processingType: 'INPUT', tonnage: 10 },
+          versions: [
+            {
+              summaryLog: { id: 'sl-1' },
+              data: { processingType: 'INPUT', tonnage: 10 }
+            }
+          ],
+          excludedFromWasteBalance: false
+        }
+      ],
+      prns: [],
+      overseasSites,
+      summaryLogs: [
+        {
+          id: 'sl-1',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-15T10:00:00.000Z'
+        },
+        { id: 'sl-draft', status: SUMMARY_LOG_STATUS.VALIDATED }
+      ]
+    })
+
+    expect(result.events).toHaveLength(1)
+    expect(result.wasteRecordContribution).toBe(10)
+  })
+
+  it('excludes waste records not yet created at a submission point', () => {
+    const result = computeRebuiltStream({
+      accreditation,
+      wasteRecords: [
+        {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          type: 'received',
+          data: { processingType: 'INPUT', tonnage: 50 },
+          versions: [
+            {
+              summaryLog: { id: 'sl-2' },
+              data: { processingType: 'INPUT', tonnage: 50 }
+            }
+          ],
+          excludedFromWasteBalance: false
+        }
+      ],
+      prns: [],
+      overseasSites,
+      summaryLogs: [
+        {
+          id: 'sl-1',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-10T00:00:00.000Z'
+        },
+        {
+          id: 'sl-2',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-20T00:00:00.000Z'
+        }
+      ]
+    })
+
+    expect(result.events).toHaveLength(2)
+    // First submission: record does not exist yet, creditTotal = 0
+    expect(result.events[0].closingBalance).toEqual({
+      amount: 0,
+      availableAmount: 0
+    })
+    // Second submission: record appears, creditTotal = 50
+    expect(result.wasteRecordContribution).toBe(50)
+    expect(result.amount).toBe(50)
+  })
+
+  it('reverses availableAmount for a pre-issue PRN cancellation', () => {
+    const result = computeRebuiltStream({
+      accreditation,
+      wasteRecords: [
+        {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          type: 'received',
+          data: { processingType: 'INPUT', tonnage: 100 },
+          versions: [
+            {
+              summaryLog: { id: 'sl-1' },
+              data: { processingType: 'INPUT', tonnage: 100 }
+            }
+          ],
+          excludedFromWasteBalance: false
+        }
+      ],
+      prns: [
+        {
+          id: 'prn-1',
+          tonnage: 25,
+          status: {
+            history: [
+              {
+                status: PRN_STATUS.DRAFT,
+                at: new Date('2025-01-20T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at: new Date('2025-01-21T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.CANCELLED,
+                at: new Date('2025-01-22T00:00:00.000Z')
+              }
+            ]
+          }
+        }
+      ],
+      overseasSites,
+      summaryLogs: [
+        {
+          id: 'sl-1',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-15T10:00:00.000Z'
+        }
+      ]
+    })
+
+    // PRN created then cancelled pre-issue: net zero effect on availableAmount
+    expect(result.amount).toBe(100)
+    expect(result.availableAmount).toBe(100)
+    expect(result.prnAvailableAmountContribution).toBe(0)
+  })
+
+  it('reverses both amount and availableAmount for a post-issue cancellation', () => {
+    const result = computeRebuiltStream({
+      accreditation,
+      wasteRecords: [
+        {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          type: 'received',
+          data: { processingType: 'INPUT', tonnage: 100 },
+          versions: [
+            {
+              summaryLog: { id: 'sl-1' },
+              data: { processingType: 'INPUT', tonnage: 100 }
+            }
+          ],
+          excludedFromWasteBalance: false
+        }
+      ],
+      prns: [
+        {
+          id: 'prn-1',
+          tonnage: 25,
+          status: {
+            history: [
+              {
+                status: PRN_STATUS.DRAFT,
+                at: new Date('2025-01-20T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at: new Date('2025-01-21T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                at: new Date('2025-01-22T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_CANCELLATION,
+                at: new Date('2025-01-23T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.CANCELLED,
+                at: new Date('2025-01-24T00:00:00.000Z')
+              }
+            ]
+          }
+        }
+      ],
+      overseasSites,
+      summaryLogs: [
+        {
+          id: 'sl-1',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-15T10:00:00.000Z'
+        }
+      ]
+    })
+
+    // PRN created, issued, then cancelled: net zero effect
+    expect(result.amount).toBe(100)
+    expect(result.availableAmount).toBe(100)
+    expect(result.prnAmountContribution).toBe(0)
+    expect(result.prnAvailableAmountContribution).toBe(0)
   })
 })

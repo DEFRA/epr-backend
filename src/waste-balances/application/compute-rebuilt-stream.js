@@ -18,7 +18,7 @@ import { getTargetAmount } from './target-amount.js'
  * @param {Set<string>} seenSummaryLogIds
  * @returns {Object | null}
  */
-export const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
+const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
   let lastMatchIndex = -1
 
   for (let i = 0; i < versions.length; i++) {
@@ -82,7 +82,7 @@ export const prnTransitionToStreamKind = (prevStatus, newStatus) => {
  * @param {Object} params.overseasSites
  * @param {Array<{ id: string, status: string, submittedAt?: string }>} params.summaryLogs
  */
-export const buildChronologicalEvents = ({
+const buildChronologicalEvents = ({
   accreditation,
   wasteRecords,
   prns,
@@ -169,7 +169,7 @@ export const buildChronologicalEvents = ({
  * }>} events
  * @returns {import('../repository/stream-schema.js').StreamEventInsert[]}
  */
-export const replayStream = (events) => {
+const replayStream = (events) => {
   const result = []
   let previousBalance = { amount: 0, availableAmount: 0 }
   let previousCreditTotal = 0
