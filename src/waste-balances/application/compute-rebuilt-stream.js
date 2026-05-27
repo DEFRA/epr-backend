@@ -254,7 +254,7 @@ export const computeRebuiltStream = ({
     }
   }
 
-  const finalBalance = events[events.length - 1].closingBalance
+  const finalBalance = events.at(-1).closingBalance
 
   let wasteRecordContribution = 0
   let prnAmountContribution = 0
