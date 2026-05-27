@@ -21,6 +21,40 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 /** @type {CellLocation} */
 const DEFAULT_TEST_LOCATION = { sheet: 'TestSheet', row: 1, column: 'A' }
 
+/**
+ * Asserts the array has exactly one element and returns it (narrowed to T).
+ * Lets callers access `.foo` on the result without TS complaining about
+ * possibly-undefined array indices.
+ *
+ * @template T
+ * @param {T[]} arr
+ * @returns {T}
+ */
+const expectOne = (arr) => {
+  expect(arr).toHaveLength(1)
+  const [first] = arr
+  if (first === undefined) {
+    throw new Error('expectOne: array is empty after length assertion')
+  }
+  return first
+}
+
+/**
+ * Asserts the array contains a matching element and returns it (narrowed to T).
+ *
+ * @template T
+ * @param {T[]} arr
+ * @param {(value: T) => boolean} predicate
+ * @returns {T}
+ */
+const expectFind = (arr, predicate) => {
+  const found = arr.find(predicate)
+  if (found === undefined) {
+    throw new Error('expectFind: no matching element')
+  }
+  return found
+}
+
 const buildClassifyForWasteBalance = (requiredFields, unfilledValues) => {
   return (data, _context) => {
     const missingResult = checkRequiredFields(
@@ -381,13 +415,12 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-      expect(fatals[0].message).toContain('Missing required header')
-      expect(fatals[0].message).toContain('NUMBER_FIELD')
+      expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatal.message).toContain('Missing required header')
+      expect(fatal.message).toContain('NUMBER_FIELD')
     })
 
     it('returns multiple fatal errors when multiple headers are missing', () => {
@@ -423,12 +456,11 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('ROW_ID')
-      expect(fatals[0].context.actual).toBe('not-a-number')
+      expect(fatal.message).toContain('ROW_ID')
+      expect(fatal.context?.actual).toBe('not-a-number')
     })
 
     it('returns FATAL error when ROW_ID is below minimum (1000)', () => {
@@ -438,12 +470,11 @@ describe('createDataSyntaxValidator', () => {
 
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('ROW_ID')
-      expect(fatals[0].context.actual).toBe(999)
+      expect(fatal.message).toContain('ROW_ID')
+      expect(fatal.context?.actual).toBe(999)
     })
 
     it('returns FATAL error for each row with invalid ROW_ID', () => {
@@ -473,12 +504,11 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('TEXT_FIELD')
-      expect(fatals[0].message).toContain('must be a string')
+      expect(fatal.message).toContain('TEXT_FIELD')
+      expect(fatal.message).toContain('must be a string')
     })
 
     it('returns FATAL error when number field is not a number', () => {
@@ -493,12 +523,11 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('NUMBER_FIELD')
-      expect(fatals[0].message).toContain('must be a number')
+      expect(fatal.message).toContain('NUMBER_FIELD')
+      expect(fatal.message).toContain('must be a number')
     })
 
     it('returns FATAL error when number field is zero or negative', () => {
@@ -509,12 +538,11 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('NUMBER_FIELD')
-      expect(fatals[0].message).toContain('must be greater than 0')
+      expect(fatal.message).toContain('NUMBER_FIELD')
+      expect(fatal.message).toContain('must be greater than 0')
     })
 
     it('returns FATAL error when date field is invalid', () => {
@@ -525,12 +553,11 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('DATE_FIELD')
-      expect(fatals[0].message).toContain('must be a valid date')
+      expect(fatal.message).toContain('DATE_FIELD')
+      expect(fatal.message).toContain('must be a valid date')
     })
 
     it('returns FATAL error when pattern field does not match pattern', () => {
@@ -541,12 +568,11 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('CODE_FIELD')
-      expect(fatals[0].message).toContain('must be in format "XX XX XX"')
+      expect(fatal.message).toContain('CODE_FIELD')
+      expect(fatal.message).toContain('must be in format "XX XX XX"')
     })
 
     it('reports FATAL errors for multiple rows', () => {
@@ -577,10 +603,10 @@ describe('createDataSyntaxValidator', () => {
         { location: { sheet: 'Sheet1', row: 10, column: 'B' } }
       )
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
         row: 11, // 10 + 1 (first data row)
@@ -602,15 +628,17 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(fatals).toHaveLength(2)
 
-      const textError = fatals.find(
-        (e) => e.context.location?.header === 'TEXT_FIELD'
+      const textError = expectFind(
+        fatals,
+        (e) => e.context?.location?.header === 'TEXT_FIELD'
       )
-      const numberError = fatals.find(
-        (e) => e.context.location?.header === 'NUMBER_FIELD'
+      const numberError = expectFind(
+        fatals,
+        (e) => e.context?.location?.header === 'NUMBER_FIELD'
       )
 
-      expect(textError.context.location.column).toBe('C')
-      expect(numberError.context.location.column).toBe('D')
+      expect(textError.context?.location?.column).toBe('C')
+      expect(numberError.context?.location?.column).toBe('D')
     })
 
     it('handles multi-letter column offsets correctly', () => {
@@ -621,10 +649,10 @@ describe('createDataSyntaxValidator', () => {
         { location: { sheet: 'Sheet1', row: 5, column: 'Z' } }
       )
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location.column).toBe('AA') // Z + 1
+      expect(fatal.context?.location?.column).toBe('AA') // Z + 1
     })
 
     it('handles missing location gracefully', () => {
@@ -632,12 +660,12 @@ describe('createDataSyntaxValidator', () => {
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location.header).toBe('TEXT_FIELD')
-      expect(fatals[0].context.location.row).toBeUndefined()
-      expect(fatals[0].context.location.column).toBeUndefined()
+      expect(fatal.context?.location?.header).toBe('TEXT_FIELD')
+      expect(fatal.context?.location?.row).toBeUndefined()
+      expect(fatal.context?.location?.column).toBeUndefined()
     })
 
     it('includes location in FATAL ROW_ID errors', () => {
@@ -648,10 +676,10 @@ describe('createDataSyntaxValidator', () => {
         { location: { sheet: 'Sheet1', row: 7, column: 'B' } }
       )
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
         row: 8,
@@ -665,11 +693,11 @@ describe('createDataSyntaxValidator', () => {
         TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location.header).toBe('ROW_ID')
-      expect(fatals[0].context.location.row).toBeUndefined()
+      expect(fatal.context?.location?.header).toBe('ROW_ID')
+      expect(fatal.context?.location?.row).toBeUndefined()
     })
   })
 
@@ -701,14 +729,13 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-      expect(fatals[0].code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
-      expect(fatals[0].message).toContain('UNKNOWN_TABLE')
-      expect(fatals[0].context.location.table).toBe('UNKNOWN_TABLE')
+      expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatal.code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
+      expect(fatal.message).toContain('UNKNOWN_TABLE')
+      expect(fatal.context?.location?.table).toBe('UNKNOWN_TABLE')
     })
 
     it('reports all unrecognised tables when multiple are present', () => {
@@ -732,10 +759,10 @@ describe('createDataSyntaxValidator', () => {
         VALIDATION_SEVERITY.FATAL
       )
       expect(fatals).toHaveLength(2)
-      expect(fatals.map((e) => e.context.location.table)).toContain(
+      expect(fatals.map((e) => e.context?.location?.table)).toContain(
         'UNKNOWN_TABLE_1'
       )
-      expect(fatals.map((e) => e.context.location.table)).toContain(
+      expect(fatals.map((e) => e.context?.location?.table)).toContain(
         'UNKNOWN_TABLE_2'
       )
     })
@@ -774,10 +801,10 @@ describe('createDataSyntaxValidator', () => {
         }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         sheet: 'DataSheet',
         table: 'UNKNOWN_TABLE'
       })
@@ -792,10 +819,10 @@ describe('createDataSyntaxValidator', () => {
         }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         table: 'UNKNOWN_TABLE'
       })
     })
@@ -836,11 +863,10 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('VALUE_FIELD')
+      expect(fatal.message).toContain('VALUE_FIELD')
     })
   })
 
@@ -869,13 +895,12 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('YES_NO_FIELD')
-      expect(fatals[0].message).toContain('must be Yes or No')
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.message).toContain('YES_NO_FIELD')
+      expect(fatal.message).toContain('must be Yes or No')
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
     })
 
     it('returns FATAL error for case-sensitive mismatch', () => {
@@ -935,15 +960,14 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('CALCULATED_RESULT')
-      expect(fatals[0].message).toContain(
+      expect(fatal.message).toContain('CALCULATED_RESULT')
+      expect(fatal.message).toContain(
         'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
+      expect(fatal.code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
     })
   })
 
@@ -973,11 +997,10 @@ describe('createDataSyntaxValidator', () => {
       expect(rows).toHaveLength(0)
 
       // Issues are still available at the top level
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].context.location.header).toBe('TEXT_FIELD')
+      expect(fatal.context?.location?.header).toBe('TEXT_FIELD')
     })
 
     it('returns empty rows when headers are missing', () => {
@@ -1071,11 +1094,11 @@ describe('createDataSyntaxValidator', () => {
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
-      expect(fatals[0].context.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_STRING)
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.context?.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_STRING)
     })
 
     it('sets errorCode for number.base errors', () => {
@@ -1087,11 +1110,11 @@ describe('createDataSyntaxValidator', () => {
         }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
-      expect(fatals[0].context.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_NUMBER)
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.context?.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_NUMBER)
     })
 
     it('sets errorCode for number.greater errors', () => {
@@ -1099,11 +1122,11 @@ describe('createDataSyntaxValidator', () => {
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
-      expect(fatals[0].context.errorCode).toBe(
+      expect(fatal.code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
+      expect(fatal.context?.errorCode).toBe(
         VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO
       )
     })
@@ -1113,11 +1136,11 @@ describe('createDataSyntaxValidator', () => {
         DATE_TABLE: { ROW_ID: 1000, DATE_FIELD: 'not-a-date' }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_DATE)
-      expect(fatals[0].context.errorCode).toBe(
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_DATE)
+      expect(fatal.context?.errorCode).toBe(
         VALIDATION_CODE.MUST_BE_A_VALID_DATE
       )
     })
@@ -1127,13 +1150,11 @@ describe('createDataSyntaxValidator', () => {
         VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Maybe' }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
-      expect(fatals[0].context.errorCode).toBe(
-        VALIDATION_CODE.MUST_BE_YES_OR_NO
-      )
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.context?.errorCode).toBe(VALIDATION_CODE.MUST_BE_YES_OR_NO)
     })
 
     it('sets errorCode for calculation mismatch errors', () => {
@@ -1146,11 +1167,11 @@ describe('createDataSyntaxValidator', () => {
         }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
-      expect(fatals[0].context.errorCode).toBe(
+      expect(fatal.code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
+      expect(fatal.context?.errorCode).toBe(
         VALIDATION_CODE.NET_WEIGHT_CALCULATION_MISMATCH
       )
     })
@@ -1160,11 +1181,11 @@ describe('createDataSyntaxValidator', () => {
         TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
-      expect(fatals[0].context.errorCode).toBeUndefined()
+      expect(fatal.code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
+      expect(fatal.context?.errorCode).toBeUndefined()
     })
 
     it('does not set errorCode for MISSING_REQUIRED_FIELD issues', () => {
@@ -1176,7 +1197,7 @@ describe('createDataSyntaxValidator', () => {
         VALIDATION_SEVERITY.ERROR
       )
       expect(errors[0].code).toBe(VALIDATION_CODE.FIELD_REQUIRED)
-      expect(errors[0].context.errorCode).toBeUndefined()
+      expect(errors[0].context?.errorCode).toBeUndefined()
     })
   })
 })
