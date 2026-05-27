@@ -33,7 +33,7 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
       throw Boom.conflict('Insufficient available waste balance')
     }
 
-    await wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
+    return wasteBalancesRepository.deductAvailableBalanceForPrnCreation({
       accreditationId,
       registrationId,
       organisationId,
@@ -71,7 +71,7 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
       throw Boom.conflict('Insufficient total waste balance')
     }
 
-    await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
+    return wasteBalancesRepository.deductTotalBalanceForPrnIssue({
       accreditationId,
       registrationId,
       organisationId,
@@ -106,7 +106,7 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
-    await wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
+    return wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
       accreditationId,
       registrationId,
       organisationId,
@@ -141,7 +141,7 @@ async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
   if (balance) {
-    await wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
+    return wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
       accreditationId,
       registrationId,
       organisationId,
@@ -191,6 +191,9 @@ function logWasteBalanceUpdate(
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {Object} params
+ * @returns {Promise<number|null>} The stream event number applied by the firing
+ *   transition (the watermark) on the ledger path, or `null` on the embedded
+ *   path and when no balance effect fires.
  */
 export async function applyWasteBalanceEffects(
   wasteBalancesRepository,
@@ -200,8 +203,13 @@ export async function applyWasteBalanceEffects(
   const { currentStatus, newStatus, ...balanceParams } = params
   const { prnId, tonnage } = balanceParams
 
+  let lastAppliedEventNumber = null
+
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    await deductWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    lastAppliedEventNumber = await deductWasteBalanceIfNeeded(
+      wasteBalancesRepository,
+      balanceParams
+    )
     logWasteBalanceUpdate(
       logger,
       'deduct_available',
@@ -219,7 +227,10 @@ export async function applyWasteBalanceEffects(
     (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
   ) {
-    await creditWasteBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    lastAppliedEventNumber = await creditWasteBalanceIfNeeded(
+      wasteBalancesRepository,
+      balanceParams
+    )
     logWasteBalanceUpdate(
       logger,
       'credit_available',
@@ -234,7 +245,10 @@ export async function applyWasteBalanceEffects(
     newStatus === PRN_STATUS.CANCELLED &&
     currentStatus === PRN_STATUS.AWAITING_CANCELLATION
   ) {
-    await creditFullBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    lastAppliedEventNumber = await creditFullBalanceIfNeeded(
+      wasteBalancesRepository,
+      balanceParams
+    )
     logWasteBalanceUpdate(
       logger,
       'credit_full',
@@ -246,7 +260,10 @@ export async function applyWasteBalanceEffects(
   }
 
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    await deductTotalBalanceIfNeeded(wasteBalancesRepository, balanceParams)
+    lastAppliedEventNumber = await deductTotalBalanceIfNeeded(
+      wasteBalancesRepository,
+      balanceParams
+    )
     logWasteBalanceUpdate(
       logger,
       'deduct_total',
@@ -256,4 +273,6 @@ export async function applyWasteBalanceEffects(
       newStatus
     )
   }
+
+  return lastAppliedEventNumber
 }

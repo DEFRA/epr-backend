@@ -103,8 +103,8 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
       expect(transaction.closingAvailableAmount).toBe(270)
     })
 
-    it('does nothing when no balance exists', async () => {
-      await repository.deductTotalBalanceForPrnIssue({
+    it('does nothing and returns null when no balance exists', async () => {
+      const watermark = await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-nonexistent',
         organisationId: 'org-1',
         prnId: 'prn-999',
@@ -114,6 +114,58 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
 
       const result = await repository.findByAccreditationId('acc-nonexistent')
       expect(result).toBeNull()
+      expect(watermark).toBeNull()
+    })
+
+    it('returns the appended stream event number on the ledger path', async ({
+      insertWasteBalance,
+      streamRepository
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-issue-ledger',
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const watermark = await repository.deductTotalBalanceForPrnIssue({
+        accreditationId: 'acc-issue-ledger',
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        prnId: 'prn-ledger',
+        tonnage: 10,
+        userId: 'user-abc'
+      })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        'acc-issue-ledger'
+      )
+      expect(watermark).toBe(latest.number)
+      expect(watermark).toBe(1)
+    })
+
+    it('returns null on the embedded path', async ({ insertWasteBalance }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-issue-embedded',
+        organisationId: 'org-1',
+        amount: 500,
+        availableAmount: 450
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const watermark = await repository.deductTotalBalanceForPrnIssue({
+        accreditationId: 'acc-issue-embedded',
+        organisationId: 'org-1',
+        prnId: 'prn-embedded',
+        tonnage: 10,
+        userId: 'user-abc'
+      })
+
+      expect(watermark).toBeNull()
     })
 
     it('preserves canonicalSource on update — only the flip method may mutate it', async ({
