@@ -27,16 +27,6 @@ import {
 /** @import {RowClassificationIssue, RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
- * Output of adaptDomainSchema — the shape validateTable expects.
- *
- * @typedef {{
- *   requiredHeaders: string[],
- *   rowIdField: string,
- *   domainSchema: TableSchema
- * }} AdaptedSchema
- */
-
-/**
  * A validated row from the data syntax validation pipeline
  *
  * All fields are required - this is the output of validation, not the input.
@@ -48,21 +38,6 @@ import {
  * @property {RowOutcome} outcome - Classification outcome from validation pipeline
  * @property {ValidationIssue[]} issues - Validation issues for this row (empty array if none)
  */
-
-/**
- * Adapts domain table schema to the structure expected by validateTable.
- *
- * Domain schemas use: unfilledValues, validationSchema.
- * This adapter extracts what validateTable needs during the migration.
- *
- * @param {TableSchema} domainSchema
- * @returns {AdaptedSchema}
- */
-const adaptDomainSchema = (domainSchema) => ({
-  requiredHeaders: domainSchema.requiredHeaders,
-  rowIdField: domainSchema.rowIdField,
-  domainSchema
-})
 
 /**
  * Joi error type to application error code mapping.
@@ -443,19 +418,18 @@ const validateRows = ({
  * @param {{
  *   tableName: string,
  *   tableData: DataSection,
- *   schema: AdaptedSchema,
+ *   domainSchema: TableSchema,
  *   issues: ValidationIssuesCollector
  * }} params
  * @returns {ValidatedTableSection} Validated table data with rows converted to ValidatedRow[]
  */
-const validateTable = ({ tableName, tableData, schema, issues }) => {
+const validateTable = ({ tableName, tableData, domainSchema, issues }) => {
   const { headers, rows, location } = tableData
-  const { requiredHeaders, domainSchema } = schema
 
   validateHeaders({
     tableName,
     headers,
-    requiredHeaders,
+    requiredHeaders: domainSchema.requiredHeaders,
     location,
     issues
   })
@@ -540,13 +514,10 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
       continue
     }
 
-    // Adapt domain schema for validateTable
-    const schema = adaptDomainSchema(domainSchema)
-
     validatedTables[tableName] = validateTable({
       tableName,
       tableData,
-      schema,
+      domainSchema,
       issues
     })
   }
