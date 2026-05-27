@@ -46,7 +46,7 @@ export const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
  * @param {string} newStatus
  * @returns {import('../repository/stream-schema.js').StreamEventKind | null}
  */
-const prnTransitionToStreamKind = (prevStatus, newStatus) => {
+export const prnTransitionToStreamKind = (prevStatus, newStatus) => {
   if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
     return STREAM_EVENT_KIND.PRN_CREATED
   }
