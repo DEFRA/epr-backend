@@ -10,8 +10,8 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 
@@ -178,25 +178,30 @@ describe('SummaryLogsValidator integration', () => {
     expect(updated.summaryLog.validation.issues).toEqual([])
   })
 
-  it('should fail validation when extraction throws error', async () => {
-    const errorMessage = 'Test extraction error'
-    const { updated } = await runValidation({
-      registrationType: 'reprocessor',
-      registrationWRN: 'REG-123',
-      summaryLogExtractor: {
-        extract: async () => {
-          throw new Error(errorMessage)
+  it.each([
+    { description: 'an Error instance', thrown: new Error('extraction error') },
+    { description: 'a non-Error value', thrown: { message: 'plain object' } }
+  ])(
+    'should fail validation when extraction throws $description',
+    async ({ thrown }) => {
+      const { updated } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        summaryLogExtractor: {
+          extract: async () => {
+            throw thrown
+          }
         }
-      }
-    })
+      })
 
-    expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-    expect(updated.summaryLog.validation.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'VALIDATION_SYSTEM_ERROR' })
-      ])
-    )
-  })
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'VALIDATION_SYSTEM_ERROR' })
+        ])
+      )
+    }
+  )
 
   describe('successful type matching', () => {
     describe.each([
