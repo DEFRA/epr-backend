@@ -579,7 +579,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
-  it('fetches summary logs and passes them to computeRebuiltStream', async () => {
+  it('passes file.id (not the document _id) as the summary log identifier to computeRebuiltStream', async () => {
     const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
     setEmbeddedBalances([
       {
@@ -600,9 +600,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
     accreditations['org-1'] = [accreditation]
     summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
       {
-        id: 'sl-1',
+        id: 'doc-id-1',
         version: 1,
-        summaryLog: { status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+        summaryLog: {
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z',
+          file: { id: 'file-id-1', name: 'test.xlsx', uri: 's3://bucket/key' }
+        }
       }
     ])
     const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
@@ -622,9 +626,66 @@ describe('runBalanceDivergenceDiagnostic', () => {
       prns,
       overseasSites: {},
       summaryLogs: [
-        { id: 'sl-1', status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+        {
+          id: 'file-id-1',
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z'
+        }
       ]
     })
+  })
+
+  it('filters out failure-status summary logs that may lack a file field before mapping', async () => {
+    const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [accreditation]
+    summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
+      {
+        id: 'doc-submitted',
+        version: 1,
+        summaryLog: {
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z',
+          file: { id: 'file-id-1', name: 'test.xlsx', uri: 's3://bucket/key' }
+        }
+      },
+      {
+        id: 'doc-rejected',
+        version: 1,
+        summaryLog: {
+          status: 'rejected'
+        }
+      }
+    ])
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(computeRebuiltStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summaryLogs: [
+          {
+            id: 'file-id-1',
+            status: 'submitted',
+            submittedAt: '2025-01-01T00:00:00Z'
+          }
+        ]
+      })
+    )
   })
 
   it('includes stream replay figures in the divergence log when stream disagrees', async () => {

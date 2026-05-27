@@ -9,6 +9,7 @@ import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuil
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
 const ACTIVE_REGISTRATION_STATUSES = new Set([
@@ -61,6 +62,20 @@ const findEmbeddedWasteBalances = async (db) => {
     .toArray()
   return /** @type {EmbeddedBalanceRow[]} */ (/** @type {unknown} */ (docs))
 }
+
+/**
+ * Map a summary log document from findAllByOrgReg into the shape that
+ * computeRebuiltStream expects. Uses summaryLog.file.id (the file
+ * identifier stored on waste record versions) rather than the document
+ * _id, which is a different namespace.
+ *
+ * @param {{ summaryLog: { file: { id: string }, status: string, submittedAt?: string } }} doc
+ */
+export const toStreamSummaryLog = ({ summaryLog }) => ({
+  id: summaryLog.file.id,
+  status: summaryLog.status,
+  submittedAt: summaryLog.submittedAt
+})
 
 const formatDelta = (current, rebuilt) =>
   Number((rebuilt - current).toFixed(10))
@@ -136,11 +151,11 @@ const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs: summaryLogDocs.map(({ id, summaryLog }) => ({
-      id,
-      status: summaryLog.status,
-      submittedAt: summaryLog.submittedAt
-    }))
+    summaryLogs: summaryLogDocs
+      .filter(
+        ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
+      )
+      .map(toStreamSummaryLog)
   })
 
   return buildComparison(
