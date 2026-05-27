@@ -613,10 +613,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
       }
     ]
     accreditations['org-1'] = [accreditation]
-    const summaryLogs = [
-      { id: 'sl-1', status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
-    ]
-    summaryLogsRepository.findAllByOrgReg.mockResolvedValue(summaryLogs)
+    summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
+      {
+        id: 'sl-1',
+        version: 1,
+        summaryLog: { status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+      }
+    ])
     const wasteRecords = [{ rowId: 'r-1', type: 'received' }]
     wasteRecordsRepository.findByRegistration.mockResolvedValue(wasteRecords)
     const prns = [{ id: 'prn-1' }]
@@ -633,7 +636,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
       wasteRecords,
       prns,
       overseasSites: {},
-      summaryLogs
+      summaryLogs: [
+        { id: 'sl-1', status: 'submitted', submittedAt: '2025-01-01T00:00:00Z' }
+      ]
     })
   })
 

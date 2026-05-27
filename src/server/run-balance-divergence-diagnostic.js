@@ -126,7 +126,7 @@ const compareForEmbedded = async (embedded, deps) => {
     overseasSites
   })
 
-  const summaryLogs = await summaryLogsRepository.findAllByOrgReg(
+  const summaryLogDocs = await summaryLogsRepository.findAllByOrgReg(
     embedded.organisationId,
     registration.id
   )
@@ -136,7 +136,11 @@ const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs: /** @type {any} */ (summaryLogs)
+    summaryLogs: summaryLogDocs.map(({ id, summaryLog }) => ({
+      id,
+      status: summaryLog.status,
+      submittedAt: summaryLog.submittedAt
+    }))
   })
 
   return buildComparison(
