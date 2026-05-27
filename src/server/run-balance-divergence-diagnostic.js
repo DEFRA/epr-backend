@@ -136,39 +136,57 @@ const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs
+    summaryLogs: /** @type {any} */ (summaryLogs)
   })
 
-  return {
-    organisationId: embedded.organisationId,
-    registrationNumber: registration.registrationNumber,
-    accreditationNumber: accreditation.accreditationNumber ?? '<none>',
-    currentAmount: embedded.amount,
-    rebuiltAmount: rebuilt.amount,
-    deltaAmount: formatDelta(embedded.amount, rebuilt.amount),
-    currentAvailableAmount: embedded.availableAmount,
-    rebuiltAvailableAmount: rebuilt.availableAmount,
-    deltaAvailableAmount: formatDelta(
-      embedded.availableAmount,
-      rebuilt.availableAmount
-    ),
-    registrationStatus: registration.status,
-    accreditationStatus: accreditation.status,
-    wasteRecordCount: wasteRecords.length,
-    wasteRecordContribution: rebuilt.wasteRecordContribution,
-    prnCount: prns.length,
-    prnAmountContribution: rebuilt.prnAmountContribution,
-    prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution,
-    streamAmount: stream.amount,
-    streamAvailableAmount: stream.availableAmount,
-    streamDeltaAmount: formatDelta(rebuilt.amount, stream.amount),
-    streamDeltaAvailableAmount: formatDelta(
-      rebuilt.availableAmount,
-      stream.availableAmount
-    ),
-    streamEventCount: stream.events.length
-  }
+  return buildComparison(
+    embedded,
+    registration,
+    accreditation,
+    rebuilt,
+    stream,
+    wasteRecords,
+    prns
+  )
 }
+
+const buildComparison = (
+  embedded,
+  registration,
+  accreditation,
+  rebuilt,
+  stream,
+  wasteRecords,
+  prns
+) => ({
+  organisationId: embedded.organisationId,
+  registrationNumber: registration.registrationNumber,
+  accreditationNumber: accreditation.accreditationNumber ?? '<none>',
+  currentAmount: embedded.amount,
+  rebuiltAmount: rebuilt.amount,
+  deltaAmount: formatDelta(embedded.amount, rebuilt.amount),
+  currentAvailableAmount: embedded.availableAmount,
+  rebuiltAvailableAmount: rebuilt.availableAmount,
+  deltaAvailableAmount: formatDelta(
+    embedded.availableAmount,
+    rebuilt.availableAmount
+  ),
+  registrationStatus: registration.status,
+  accreditationStatus: accreditation.status,
+  wasteRecordCount: wasteRecords.length,
+  wasteRecordContribution: rebuilt.wasteRecordContribution,
+  prnCount: prns.length,
+  prnAmountContribution: rebuilt.prnAmountContribution,
+  prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution,
+  streamAmount: stream.amount,
+  streamAvailableAmount: stream.availableAmount,
+  streamDeltaAmount: formatDelta(rebuilt.amount, stream.amount),
+  streamDeltaAvailableAmount: formatDelta(
+    rebuilt.availableAmount,
+    stream.availableAmount
+  ),
+  streamEventCount: stream.events.length
+})
 
 const isDivergent = (comparison) =>
   comparison.deltaAmount !== 0 ||
@@ -264,7 +282,7 @@ const buildDependencies = async (server) => {
     await createOverseasSitesRepository(server.db)
   )()
   const summaryLogsRepository = (
-    await createSummaryLogsRepository(server.db, {})
+    await createSummaryLogsRepository(server.db, /** @type {any} */ ({}))
   )(logger)
 
   return /** @type {DiagnosticDependencies} */ ({
