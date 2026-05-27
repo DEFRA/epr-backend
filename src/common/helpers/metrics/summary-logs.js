@@ -4,8 +4,9 @@ import {
   timed
 } from '#common/helpers/metrics.js'
 
+/** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
+
 /**
- * @typedef {'REPROCESSOR_INPUT'|'REPROCESSOR_OUTPUT'|'EXPORTER'} ProcessingType
  * @typedef {string} SummaryLogStatus
  * @typedef {'fatal'|'error'|'warning'} ValidationSeverity
  * @typedef {'technical'|'business'} ValidationCategory

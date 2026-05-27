@@ -1,21 +1,24 @@
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+
 /**
  * @typedef {Object} SummaryLogVersion
  * @property {number} version
- * @property {Object} summaryLog
+ * @property {SummaryLog} summaryLog
  */
 
 /**
  * @typedef {Object} SummaryLogWithId
  * @property {string} id
  * @property {number} version
- * @property {Object} summaryLog
+ * @property {SummaryLog} summaryLog
  */
 
 /**
- * @typedef {Object} TransitionResult
- * @property {boolean} success
- * @property {Object} [summaryLog]
- * @property {number} [version]
+ * @typedef {
+ *   | { success: false }
+ *   | { success: true, summaryLog: SummaryLog, version: number }
+ * } TransitionResult
  */
 
 /**
@@ -36,8 +39,8 @@
 
 /**
  * @typedef {Object} SummaryLogsRepository
- * @property {(id: string, summaryLog: Object) => Promise<void>} insert
- * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
+ * @property {(id: string, summaryLog: SummaryLog) => Promise<void>} insert
+ * @property {(id: string, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId|null>} findLatestSubmittedForOrgReg
  * @property {(organisationId: string, registrationId: string) => Promise<SummaryLogWithId[]>} findAllByOrgReg
@@ -47,7 +50,7 @@
  */
 
 /**
- * @typedef {(logger: import('#common/helpers/logging/logger.js').TypedLogger) => SummaryLogsRepository} SummaryLogsRepositoryFactory
+ * @typedef {(logger: TypedLogger) => SummaryLogsRepository} SummaryLogsRepositoryFactory
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

@@ -6,6 +6,8 @@ import {
 import { MIN_TEMPLATE_VERSIONS } from '#domain/summary-logs/table-schemas/index.js'
 import { createMetaSchema } from './meta-syntax.schema.js'
 
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+
 /**
  * Maps Joi error types to validation codes based on field name
  * @param {string} fieldName - The meta field name
@@ -46,7 +48,7 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
  * @param {Object} params.parsed - The parsed summary log structure from the parser
  * @param {Object} [params.registration] - Unused, for signature compatibility
  * @param {string} [params.loggingContext] - Unused, for signature compatibility
- * @returns {Object} validation issues with any issues found
+ * @returns {ValidationIssuesCollector} validation issues with any issues found
  */
 export const validateMetaSyntax = ({ parsed }) => {
   const issues = createValidationIssues()

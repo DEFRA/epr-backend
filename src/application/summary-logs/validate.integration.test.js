@@ -1,19 +1,22 @@
-/** @import {SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
-/** @import {MetadataEntry} from '#domain/summary-logs/extractor/port.js' */
-/** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
-
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import {
+  ORGANISATION_STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+
+/** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
+/** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
 
 describe('SummaryLogsValidator integration', () => {
   let summaryLogsRepository
@@ -54,10 +57,13 @@ describe('SummaryLogsValidator integration', () => {
       ...(accreditation && { accreditationId: accreditation.id })
     }
 
-    return buildOrganisation({
-      registrations: [registration],
-      accreditations: accreditation ? [accreditation] : []
-    })
+    return {
+      ...buildOrganisation({
+        registrations: [registration],
+        accreditations: accreditation ? [accreditation] : []
+      }),
+      status: ORGANISATION_STATUS.ACTIVE
+    }
   }
 
   const createExtractor = (fileId, metadata, data = {}) => {
@@ -77,12 +83,13 @@ describe('SummaryLogsValidator integration', () => {
 
   /**
    * @typedef {{
-   *  registrationType: WasteProcessingTypeValue;
-   *  registrationWRN: string;
-   *  accreditationNumber?: string;
-   *  reprocessingType?: 'input' | 'output';
-   *  metadata?: Record<string, MetadataEntry>;
-   *  summaryLogExtractor?: SummaryLogExtractor;
+   *   registrationType: WasteProcessingTypeValue;
+   *   registrationWRN: string;
+   *   accreditationNumber?: string;
+   *   reprocessingType?: 'input' | 'output';
+   *   metadata?: Record<string, MetadataEntry>;
+   *   data?: Record<string, DataSection>;
+   *   summaryLogExtractor?: SummaryLogExtractor;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
@@ -93,7 +100,7 @@ describe('SummaryLogsValidator integration', () => {
     reprocessingType = 'input',
     metadata,
     data,
-    summaryLogExtractor = null
+    summaryLogExtractor
   }) => {
     const testOrg = createTestOrg(
       registrationType,
@@ -127,6 +134,7 @@ describe('SummaryLogsValidator integration', () => {
     const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
     return {
+      summaryLogId,
       updated,
       summaryLog,
       testOrg,
@@ -170,14 +178,13 @@ describe('SummaryLogsValidator integration', () => {
     expect(updated.summaryLog.validation.issues).toEqual([])
   })
 
-  it('should fail validation when extraction throws error', async () => {
-    const errorMessage = 'Test extraction error'
+  it('should fail validation when extraction throws an error', async () => {
     const { updated } = await runValidation({
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
       summaryLogExtractor: {
         extract: async () => {
-          throw new Error(errorMessage)
+          throw new Error('extraction error')
         }
       }
     })
@@ -193,13 +200,13 @@ describe('SummaryLogsValidator integration', () => {
   describe('successful type matching', () => {
     describe.each([
       {
-        registrationType: 'reprocessor',
+        registrationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         registrationWRN: 'REG-123',
         accreditationNumber: 'ACC-001',
         spreadsheetType: 'REPROCESSOR_INPUT'
       },
       {
-        registrationType: 'exporter',
+        registrationType: WASTE_PROCESSING_TYPE.EXPORTER,
         registrationWRN: 'REG-456',
         accreditationNumber: 'ACC-002',
         spreadsheetType: 'EXPORTER'
@@ -253,12 +260,12 @@ describe('SummaryLogsValidator integration', () => {
   describe('type mismatches', () => {
     describe.each([
       {
-        registrationType: 'reprocessor',
+        registrationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         registrationWRN: 'REG-123',
         spreadsheetType: 'EXPORTER'
       },
       {
-        registrationType: 'exporter',
+        registrationType: WASTE_PROCESSING_TYPE.EXPORTER,
         registrationWRN: 'REG-456',
         spreadsheetType: 'REPROCESSOR_INPUT'
       }
@@ -680,6 +687,283 @@ describe('SummaryLogsValidator integration', () => {
 
       expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
       expect(updated.summaryLog.validation.issues).toEqual([])
+    })
+  })
+
+  describe('validation issue logging', () => {
+    let warnSpy
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      warnSpy.mockRestore()
+    })
+
+    const filterByAction = (action) =>
+      warnSpy.mock.calls
+        .map(([payload]) => payload)
+        .filter((payload) => payload?.event?.action === action)
+
+    it('should emit a warn log per issue plus a summary log when validation produces issues', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const issueLogs = filterByAction('summary_log_validation_issue')
+      const summaryLogs = filterByAction('summary_log_validation_completed')
+
+      expect(issueLogs).toHaveLength(1)
+      expect(summaryLogs).toHaveLength(1)
+    })
+
+    it('should not emit validation-issue warn logs when validation passes cleanly', async () => {
+      const accreditationNumber = 'ACC-001'
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT',
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        },
+        ACCREDITATION_NUMBER: {
+          value: accreditationNumber,
+          location: { sheet: 'Cover', row: 5, column: 'B' }
+        }
+      }
+
+      await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        accreditationNumber,
+        metadata
+      })
+
+      const issueLogs = filterByAction('summary_log_validation_issue')
+      const summaryLogs = filterByAction('summary_log_validation_completed')
+
+      expect(issueLogs).toStrictEqual([])
+      expect(summaryLogs).toStrictEqual([])
+    })
+
+    it('should structure the per-issue log with CDP-indexed fields and no PII', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      const { summaryLogId } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const [issueLog] = filterByAction('summary_log_validation_issue')
+
+      expect(issueLog).toStrictEqual({
+        message: expect.stringContaining(
+          'Summary log validation issue: PROCESSING_TYPE_REQUIRED'
+        ),
+        event: {
+          kind: 'event',
+          category: 'server',
+          action: 'summary_log_validation_issue',
+          outcome: 'failure',
+          type: 'error',
+          reference: summaryLogId,
+          reason: 'PROCESSING_TYPE_REQUIRED'
+        },
+        error: {
+          code: 'PROCESSING_TYPE_REQUIRED',
+          type: 'fatal',
+          message: expect.stringContaining(
+            "Invalid meta field 'PROCESSING_TYPE'"
+          ),
+          id: 'field=PROCESSING_TYPE'
+        }
+      })
+    })
+
+    it('should encode location as a semicolon-delimited composite in error.id', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT',
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        },
+        ACCREDITATION_NUMBER: {
+          value: '99999999',
+          location: { sheet: 'Cover', row: 5, column: 'B' }
+        }
+      }
+
+      await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        accreditationNumber: '87654321',
+        metadata
+      })
+
+      const [issueLog] = filterByAction('summary_log_validation_issue')
+
+      expect(issueLog.error.id).toBe(
+        'sheet=Cover;row=5;column=B;field=ACCREDITATION_NUMBER'
+      )
+    })
+
+    it('should omit error.id when the issue has no location context', async () => {
+      const errorMessage = 'Test extraction error'
+      const { summaryLogId } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        summaryLogExtractor: {
+          extract: async () => {
+            throw new Error(errorMessage)
+          }
+        }
+      })
+
+      const [issueLog] = filterByAction('summary_log_validation_issue')
+
+      expect(issueLog).toStrictEqual({
+        message: 'Summary log validation issue: VALIDATION_SYSTEM_ERROR',
+        event: {
+          kind: 'event',
+          category: 'server',
+          action: 'summary_log_validation_issue',
+          outcome: 'failure',
+          type: 'error',
+          reference: summaryLogId,
+          reason: 'VALIDATION_SYSTEM_ERROR'
+        },
+        error: {
+          code: 'VALIDATION_SYSTEM_ERROR',
+          type: 'fatal',
+          message: errorMessage
+        }
+      })
+    })
+
+    it('should structure the summary log with counts and org/reg in message', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      const { summaryLogId, testOrg } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const [summaryLogPayload] = filterByAction(
+        'summary_log_validation_completed'
+      )
+
+      expect(summaryLogPayload).toStrictEqual({
+        message: `Summary log validation completed: fatal=1 error=0 warning=0 total=1 logged=1 org=${testOrg.id} reg=${testOrg.registrations[0].id}`,
+        event: {
+          kind: 'event',
+          category: 'server',
+          action: 'summary_log_validation_completed',
+          outcome: 'failure',
+          reference: summaryLogId
+        }
+      })
+    })
+
+    it('should never include the actual value, organisationId or registrationId in per-issue logs', async () => {
+      const piiValue = 'sensitive-operator-data-value'
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: piiValue,
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 5,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
+      const { testOrg } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'REG-123',
+        metadata
+      })
+
+      const issueLogs = filterByAction('summary_log_validation_issue')
+      const serialised = JSON.stringify(issueLogs)
+
+      expect(serialised).not.toContain(piiValue)
+      expect(serialised).not.toContain(testOrg.id)
+      expect(serialised).not.toContain(testOrg.registrations[0].id)
     })
   })
 })

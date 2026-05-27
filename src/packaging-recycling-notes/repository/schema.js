@@ -88,6 +88,7 @@ const statusSchema = Joi.object({
 export const prnInsertSchema = Joi.object({
   schemaVersion: Joi.number().integer().valid(2).required(),
   version: Joi.number().integer().min(1).default(1),
+  lastAppliedEventNumber: Joi.number().integer().min(1).optional(),
   prnNumber: Joi.string().allow(null).optional(),
   organisation: organisationNameAndIdSchema.required(),
   registrationId: Joi.string().required(),

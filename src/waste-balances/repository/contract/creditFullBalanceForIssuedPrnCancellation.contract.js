@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '../../domain/model.js'
+import {
+  WASTE_BALANCE_CANONICAL_SOURCE,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+} from '../../domain/model.js'
 
 export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
   describe('creditFullBalanceForIssuedPrnCancellation', () => {
@@ -78,6 +81,59 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
           userId: 'user-123'
         })
       ).rejects.toThrow(Boom.Boom)
+    })
+
+    it('returns the appended stream event number on the ledger path', async ({
+      insertWasteBalance,
+      streamRepository
+    }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-full-cancel-ledger',
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const watermark =
+        await repository.creditFullBalanceForIssuedPrnCancellation({
+          accreditationId: 'acc-full-cancel-ledger',
+          registrationId: 'reg-1',
+          organisationId: 'org-1',
+          prnId: 'prn-ledger',
+          tonnage: 10,
+          userId: 'user-abc'
+        })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        'acc-full-cancel-ledger'
+      )
+      expect(watermark).toBe(latest.number)
+      expect(watermark).toBe(1)
+    })
+
+    it('returns null on the embedded path', async ({ insertWasteBalance }) => {
+      const wasteBalance = buildWasteBalance({
+        accreditationId: 'acc-full-cancel-embedded',
+        organisationId: 'org-1',
+        amount: 400,
+        availableAmount: 350
+      })
+
+      await insertWasteBalance(wasteBalance)
+
+      const watermark =
+        await repository.creditFullBalanceForIssuedPrnCancellation({
+          accreditationId: 'acc-full-cancel-embedded',
+          organisationId: 'org-1',
+          prnId: 'prn-embedded',
+          tonnage: 10,
+          userId: 'user-abc'
+        })
+
+      expect(watermark).toBeNull()
     })
 
     it('increments version number', async ({ insertWasteBalance }) => {

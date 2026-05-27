@@ -1,10 +1,9 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { validateRowContinuity } from './row-continuity.js'
 
-/**
- * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('../validate.js').ValidatedWasteRecord} ValidatedWasteRecord
- */
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * Validates data business rules
@@ -24,7 +23,7 @@ import { validateRowContinuity } from './row-continuity.js'
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
  * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
- * @returns {Object} Validation issues object
+ * @returns {ValidationIssuesCollector} Validation issues object
  */
 export const validateDataBusiness = ({
   wasteRecords,

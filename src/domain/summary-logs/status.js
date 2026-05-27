@@ -89,6 +89,8 @@ export const SUMMARY_LOG_COMMAND = Object.freeze({
  * Statuses that indicate a summary log is still being validated.
  * Used by the timeout tracker to determine if a failed/timed-out task
  * should be marked as validation_failed.
+ *
+ * @type {readonly SummaryLogStatus[]}
  */
 export const PROCESSING_STATUSES = Object.freeze([
   SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -99,6 +101,8 @@ export const PROCESSING_STATUSES = Object.freeze([
  * Statuses that indicate a summary log is still being submitted.
  * Used by the timeout tracker to determine if a failed/timed-out task
  * should be marked as submission_failed.
+ *
+ * @type {readonly SummaryLogStatus[]}
  */
 export const SUBMISSION_PROCESSING_STATUSES = Object.freeze([
   SUMMARY_LOG_STATUS.SUBMITTING
@@ -124,6 +128,7 @@ const UploadStatusToSummaryLogStatusMap = {
   [UPLOAD_STATUS.COMPLETE]: SUMMARY_LOG_STATUS.VALIDATING
 }
 
+/** @type {Record<SummaryLogStatus, SummaryLogStatus[]>} */
 const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.PREPROCESSING]: [
     SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -161,7 +166,7 @@ class InvalidTransitionError extends Error {
 
 /**
  * @param {string} uploadStatus
- * @returns {string}
+ * @returns {SummaryLogStatus}
  */
 export const determineStatusFromUpload = (uploadStatus) => {
   const status = UploadStatusToSummaryLogStatusMap[uploadStatus]
@@ -174,9 +179,9 @@ export const determineStatusFromUpload = (uploadStatus) => {
 /**
  * Validates a status transition and returns an update object with the new
  * status and calculated expiresAt value.
- * @param {{status?: string}} summaryLog - The current summary log (only status is read)
- * @param {string} newStatus - The status to transition to
- * @returns {{status: string, expiresAt: Date|null}} Update object for repository
+ * @param {{status?: SummaryLogStatus}} summaryLog - The current summary log (only status is read)
+ * @param {SummaryLogStatus} newStatus - The status to transition to
+ * @returns {{status: SummaryLogStatus, expiresAt: Date|null}} Update object for repository
  * @throws {InvalidTransitionError} If the transition is not allowed
  */
 export const transitionStatus = (summaryLog, newStatus) => {

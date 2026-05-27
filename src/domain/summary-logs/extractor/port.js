@@ -18,10 +18,19 @@
  */
 
 /**
- * @typedef {Object} DataSection
- * @property {CellLocation} location - Starting location of the data section
- * @property {Array<string|null>} headers - Column headers (null for skipped columns)
- * @property {Array<Array<*>>} rows - Data rows
+ * @typedef {{ rowNumber: number, values: Array<unknown> }} DataRow
+ */
+
+/**
+ * @typedef {{
+ *   location: CellLocation,
+ *   headers: Array<string | null>,
+ *   rows: DataRow[]
+ * }} DataSection
+ *
+ * - location: Starting location of the data section
+ * - headers: Column headers (null for skipped columns)
+ * - rows: Parsed data rows in the section
  */
 
 /**
@@ -43,7 +52,7 @@
  * @example
  * const result = await parse(excelBuffer)
  * // result.meta.PROCESSING_TYPE = { value: 'REPROCESSOR_INPUT', location: { sheet: 'Sheet1', row: 1, column: 'B' } }
- * // result.data.RECEIVED_LOADS_FOR_REPROCESSING = { location: {...}, headers: ['REF', 'DATE'], rows: [[123, '2025-01-01']] }
+ * // result.data.RECEIVED_LOADS_FOR_REPROCESSING = { location: {...}, headers: ['REF', 'DATE'], rows: [{ rowNumber: 3, values: [123, '2025-01-01'] }] }
  *
  * @typedef {(buffer: any) => Promise<ParsedSummaryLog>} SummaryLogParser
  */

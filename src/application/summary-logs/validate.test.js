@@ -15,6 +15,8 @@ import {
   createEmptyLoadValidity
 } from './load-counts.js'
 
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+
 // ============================================================================
 // Test Builders
 // ============================================================================
@@ -92,6 +94,12 @@ const buildReceivedLoadRow = (overrides = {}) => ({
 const rowToArray = (rowObject) =>
   RECEIVED_LOADS_HEADERS.map((header) => rowObject[header])
 
+/**
+ * @param {{
+ *   rows?: Array<unknown[] | Record<string, unknown>>,
+ *   headers?: string[]
+ * }} [options]
+ */
 const buildReceivedLoadsTable = ({
   rows = [],
   headers = RECEIVED_LOADS_HEADERS
@@ -142,10 +150,15 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
 const mockLoggerError = vi.fn()
 
+/** @type {TypedLogger} */
 const logger = {
   info: (...args) => mockLoggerInfo(...args),
   warn: (...args) => mockLoggerWarn(...args),
-  error: (...args) => mockLoggerError(...args)
+  error: (...args) => mockLoggerError(...args),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: () => logger
 }
 
 const mockRecordStatusTransition = vi.fn()

@@ -30,8 +30,11 @@ export const LOGGING_EVENT_ACTIONS = {
   PROCESS_FAILURE: 'process_failure',
   PROCESS_SUCCESS: 'process_success',
   VERSION_CONFLICT_DETECTED: 'version_conflict_detected',
+  WATERMARK_REGRESSION_DETECTED: 'watermark_regression_detected',
   DATA_MIGRATION_FAILURE: 'data_migration_failure',
   SUMMARY_LOG_SUPERSEDED: 'summary_log_superseded',
+  SUMMARY_LOG_VALIDATION_ISSUE: 'summary_log_validation_issue',
+  SUMMARY_LOG_VALIDATION_COMPLETED: 'summary_log_validation_completed',
   COMPENSATION_FAILURE: 'compensation_failure',
   COMPENSATION_SUCCESS: 'compensation_success',
   WASTE_BALANCE_UPDATED: 'waste_balance_updated'

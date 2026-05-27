@@ -21,6 +21,8 @@ export const PROCESSING_TYPES = Object.freeze({
   EXPORTER_REGISTERED_ONLY: 'EXPORTER_REGISTERED_ONLY'
 })
 
+/** @typedef {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} ProcessingType */
+
 /**
  * Mapping from spreadsheet PROCESSING_TYPE values to registration wasteProcessingType values
  */

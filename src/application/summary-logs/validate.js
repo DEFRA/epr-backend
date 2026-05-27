@@ -1,4 +1,4 @@
-import { isNil } from '#common/helpers/is-nil.js'
+import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -6,50 +6,66 @@ import {
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/index.js'
+import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
-import { validateMetaSyntax } from './validations/meta-syntax.js'
-import { validateMetaBusiness } from './validations/meta-business.js'
-import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   PROCESSING_TYPE_TABLES,
   findSchemaForProcessingType
 } from '#domain/summary-logs/table-schemas/index.js'
-import { validateDataBusiness } from './validations/data-business.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
-  countByWasteBalanceInclusion,
   countByValidity,
+  countByWasteBalanceInclusion,
   countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
+import {
+  logValidationIssues,
+  MAX_VALIDATION_ISSUES
+} from './validate-issue-logging.js'
+import { validateDataBusiness } from './validations/data-business.js'
+import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { validateMetaBusiness } from './validations/meta-business.js'
+import { validateMetaSyntax } from './validations/meta-syntax.js'
 
-export const MAX_VALIDATION_ISSUES = 100
+export { MAX_VALIDATION_ISSUES }
+
 export const MAX_ACTUAL_LENGTH = 200
 
+/** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
-/** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
-/** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
-/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
-/** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
-/** @typedef {import('./load-counts.js').Loads} Loads */
+/** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
+/** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
+/** @import {SummaryLog} from '#domain/summary-logs/model.js' */
+/** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
+/** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
+/** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
+/** @import {SummaryLogExtractor} from './extractor.js' */
+/** @import {Loads} from './load-counts.js' */
 
-/** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
-
+/**
+ * @param {{
+ *   summaryLogExtractor: SummaryLogExtractor,
+ *   summaryLog: SummaryLog,
+ *   loggingContext: string,
+ *   logger: TypedLogger
+ * }} params
+ * @returns {Promise<ParsedSummaryLog>}
+ */
 const extractSummaryLog = async ({
   summaryLogExtractor,
   summaryLog,
@@ -69,6 +85,18 @@ const extractSummaryLog = async ({
   return parsed
 }
 
+/**
+ * @param {{
+ *   summaryLogId: string,
+ *   summaryLog: SubmittedSummaryLog,
+ *   validatedData: ValidatedSummaryLog,
+ *   wasteRecordsRepository: WasteRecordsRepository
+ * }} params
+ * @returns {Promise<{
+ *   wasteRecords: ValidatedWasteRecord[],
+ *   issues: ValidationIssuesCollector
+ * }>}
+ */
 const transformAndValidateData = async ({
   summaryLogId,
   summaryLog,
@@ -112,6 +140,16 @@ const transformAndValidateData = async ({
   return { wasteRecords, issues }
 }
 
+/**
+ * @param {{
+ *   organisationsRepository: OrganisationsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   loggingContext: string,
+ *   logger: TypedLogger
+ * }} params
+ * @returns {Promise<Registration>}
+ */
 const fetchRegistration = async ({
   organisationsRepository,
   organisationId,
@@ -142,53 +180,11 @@ const fetchRegistration = async ({
 
 /**
  * @typedef {Object} ValidationResult
- * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues object with methods like getAllIssues(), isFatal()
+ * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  */
 
-/**
- * Performs all validation checks on a summary log
- *
- * Implements a four-level short-circuit validation strategy:
- *
- * Level 1: Meta Syntax (FATAL)
- *   - Validates structural correctness of meta fields
- *   - Stops on fatal errors
- *
- * Level 2: Meta Business (FATAL/ERROR)
- *   - Validates meta fields against registration business rules
- *   - Stops on fatal errors
- *
- * Level 3: Data Syntax (ERROR/WARNING)
- *   - Validates structural correctness of data table rows
- *   - Attaches issues directly to rows for downstream processing
- *   - Continues even with errors (non-fatal)
- *
- * Level 4: Transform & Data Business (FATAL/ERROR/WARNING)
- *   - Transforms validated rows into waste records with issues attached
- *   - Sequential row validation: ensures no rows removed from previous uploads
- *   - Stops on fatal errors
- *
- * This approach provides:
- * - Better performance (stops early on fatal errors)
- * - Clearer user feedback (fixes meta issues before seeing data errors)
- * - Reduced noise in validation output
- * - Logical separation between meta and data validation phases
- * - Issues flow with data through transformation (no re-correlation needed)
- *
- * Converts any exceptions to fatal technical issues.
- *
- * @param {Object} params
- * @param {string} params.summaryLogId - The summary log ID
- * @param {SummaryLog} params.summaryLog - The summary log to validate
- * @param {string} params.loggingContext - Context string for logging (e.g., "summaryLogId=123, fileId=456")
- * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
- * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
- * @param {WasteRecordsRepository} params.wasteRecordsRepository - Waste records repository for fetching existing records
- * @param {Function} params.validateDataSyntax - Data syntax validator function
- * @returns {Promise<ValidationResult>} Validation result with issues and transformed records
- */
 /**
  * Extracts just the values from parsed metadata entries
  * @param {Object<string, {value: *}>} parsedMeta - Parsed metadata with value/location objects
@@ -202,6 +198,12 @@ const extractMetaValues = (parsedMeta) => {
   )
 }
 
+/**
+ * @param {Error & { code?: string }} error
+ * @param {ValidationIssuesCollector} issues
+ * @param {string} loggingContext
+ * @param {TypedLogger} logger
+ */
 const handleValidationFailure = (error, issues, loggingContext, logger) => {
   if (error instanceof SpreadsheetValidationError) {
     logger.warn({
@@ -253,6 +255,43 @@ const markIgnoredByDateRange = (
   }
 }
 
+/**
+ * Performs all validation checks on a summary log
+ *
+ * Implements a four-level short-circuit validation strategy:
+ *
+ * Level 1: Meta Syntax (FATAL)
+ *   - Validates structural correctness of meta fields
+ *   - Stops on fatal errors
+ *
+ * Level 2: Meta Business (FATAL/ERROR)
+ *   - Validates meta fields against registration business rules
+ *   - Stops on fatal errors
+ *
+ * Level 3: Data Syntax (ERROR/WARNING)
+ *   - Validates structural correctness of data table rows
+ *   - Attaches issues directly to rows for downstream processing
+ *   - Continues even with errors (non-fatal)
+ *
+ * Level 4: Transform & Data Business (FATAL/ERROR/WARNING)
+ *   - Transforms validated rows into waste records with issues attached
+ *   - Sequential row validation: ensures no rows removed from previous uploads
+ *   - Stops on fatal errors
+ *
+ * Converts any exceptions to fatal technical issues.
+ *
+ * @param {{
+ *   summaryLogId: string,
+ *   summaryLog: SubmittedSummaryLog,
+ *   loggingContext: string,
+ *   logger: TypedLogger,
+ *   summaryLogExtractor: SummaryLogExtractor,
+ *   organisationsRepository: OrganisationsRepository,
+ *   wasteRecordsRepository: WasteRecordsRepository,
+ *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
+ * }} params
+ * @returns {Promise<ValidationResult>}
+ */
 const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
@@ -325,7 +364,12 @@ const performValidationChecks = async ({
 
     issues.merge(dataResult.issues)
   } catch (error) {
-    handleValidationFailure(error, issues, loggingContext, logger)
+    handleValidationFailure(
+      /** @type {Error & { code?: string }} */ (error),
+      issues,
+      loggingContext,
+      logger
+    )
   }
 
   return { issues, wasteRecords, meta }
@@ -334,7 +378,7 @@ const performValidationChecks = async ({
 /**
  * Records validation issue metrics grouped by severity × category
  *
- * @param {ReturnType<typeof createValidationIssues>} issues - Validation issues object
+ * @param {ValidationIssuesCollector} issues - Validation issues object
  * @param {string} processingType - The processing type for the metric dimension
  */
 const recordValidationIssueMetrics = async (issues, processingType) => {
@@ -363,10 +407,7 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
           /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationCategory} */ (
             category
           ),
-        processingType:
-          /** @type {import('#common/helpers/metrics/summary-logs.js').ProcessingType} */ (
-            processingType
-          )
+        processingType: /** @type {ProcessingType} */ (processingType)
       },
       count
     )
@@ -405,10 +446,7 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
             /** @type {import('#common/helpers/metrics/summary-logs.js').RowOutcome} */ (
               outcome
             ),
-          processingType:
-            /** @type {import('#common/helpers/metrics/summary-logs.js').ProcessingType} */ (
-              processingType
-            )
+          processingType: /** @type {ProcessingType} */ (processingType)
         },
         count
       )
@@ -417,13 +455,8 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
 }
 
 /**
- * Creates a summary logs validator function
- *
- * @param {Object} params
- * @param {SummaryLogsRepository} params.summaryLogsRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {WasteRecordsRepository} params.wasteRecordsRepository
- * @param {SummaryLogExtractor} params.summaryLogExtractor
+ * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
+ * @param {string} summaryLogId
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
@@ -443,8 +476,8 @@ const assertValidatingStatus = (result, summaryLogId) => {
  * Records all validation-related metrics.
  *
  * @param {Object} params
- * @param {ReturnType<typeof createValidationIssues>} params.issues
- * @param {import('#common/helpers/metrics/summary-logs.js').ProcessingType} params.processingType
+ * @param {ValidationIssuesCollector} params.issues
+ * @param {ProcessingType} params.processingType
  * @param {SummaryLogStatus} params.status
  * @param {number} params.validationDurationMs
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
@@ -469,11 +502,11 @@ const recordValidationMetrics = async ({
  * Persists the validation result to the summary log document.
  *
  * @param {Object} params
- * @param {ReturnType<typeof createValidationIssues>} params.issues
+ * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
- * @param {string} params.status
+ * @param {SummaryLogStatus} params.status
  * @param {SummaryLog} params.summaryLog
  * @param {string} params.summaryLogId
  * @param {SummaryLogsRepository} params.summaryLogsRepository
@@ -526,7 +559,7 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {string} params.summaryLogId
- * @param {string} params.processingType
+ * @param {ProcessingType} params.processingType
  * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
  */
 const classifyLoads = ({
@@ -560,6 +593,18 @@ const classifyLoads = ({
   return { loads, loadsByWasteRecordType }
 }
 
+/**
+ * Creates a summary logs validator function.
+ *
+ * @param {{
+ *   logger: TypedLogger,
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   organisationsRepository: OrganisationsRepository,
+ *   wasteRecordsRepository: WasteRecordsRepository,
+ *   summaryLogExtractor: SummaryLogExtractor
+ * }} params
+ * @returns {(summaryLogId: string) => Promise<void>}
+ */
 export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
@@ -572,8 +617,10 @@ export const createSummaryLogsValidator = ({
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
     assertValidatingStatus(result, summaryLogId)
-
-    const { version, summaryLog } = result
+    const { version, summaryLog } =
+      /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
+        result
+      )
     const {
       file: { id: fileId, name: filename }
     } = summaryLog
@@ -600,6 +647,8 @@ export const createSummaryLogsValidator = ({
       validateDataSyntax
     })
     const validationDurationMs = Date.now() - validationStart
+
+    logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 

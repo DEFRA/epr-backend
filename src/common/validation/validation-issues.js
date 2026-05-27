@@ -1,26 +1,126 @@
 import { VALIDATION_SEVERITY } from '#common/enums/index.js'
 
+/** @import {ValidationSeverity} from '#common/enums/validation.js' */
+
 /**
- * Represents a single validation issue
+ * Ordered list of spreadsheet-location keys. Single source of truth — the
+ * ValidationIssueLocation type below is derived from this array, so adding or
+ * removing a key updates both the type and the iteration order.
+ */
+export const LOCATION_KEYS = /** @type {const} */ ([
+  'sheet',
+  'table',
+  'row',
+  'rowId',
+  'column',
+  'header',
+  'field'
+])
+
+/**
+ * Spreadsheet location for a validation issue. All fields optional because
+ * meta-level issues have no row/column and table-level issues have no field.
  *
- * @typedef {Object} ValidationIssue
- * @property {string} severity - One of VALIDATION_SEVERITY (fatal, error, warning)
- * @property {string} category - One of VALIDATION_CATEGORY (technical, business, parsing)
- * @property {string} message - Human-readable description for developers/logging (not sent to clients)
- * @property {string} code - Specific error code for i18n/translation (e.g., 'HEADER_REQUIRED')
- * @property {Object} [context] - Additional context about the issue
- * @property {Object} [context.location] - Spreadsheet location information
- * @property {string} [context.location.sheet] - Sheet name (e.g., 'Cover', 'Received')
- * @property {string} [context.location.table] - Data table name (e.g., 'RECEIVED_LOADS_FOR_REPROCESSING')
- * @property {number} [context.location.row] - Spreadsheet row number (1-based)
- * @property {string} [context.location.column] - Excel column letter (e.g., 'B', 'AA')
- * @property {string} [context.location.field] - Meta field name (e.g., 'REGISTRATION_NUMBER', 'MATERIAL')
- * @property {string} [context.location.header] - Data table column header (e.g., 'DATE_RECEIVED', 'TONNAGE')
- * @property {*} [context.expected] - The expected value (for mismatch errors)
- * @property {*} [context.actual] - The actual value that was provided (for validation errors)
+ * @typedef {{
+ *   [K in typeof LOCATION_KEYS[number]]?: K extends 'row' ? number : string
+ * }} ValidationIssueLocation
+ */
+
+/**
+ * Additional context attached to a validation issue. Open by design — all
+ * known fields are listed but the index signature permits arbitrary extras,
+ * which `issueToErrorObject` copies through to the HTTP response meta. See
+ * ADR 0020 for the HTTP response format mapping.
  *
- * Note: All other context fields are preserved and copied to HTTP response meta.
- * See ADR 0020 for HTTP response format mapping.
+ * @typedef {{
+ *   location?: ValidationIssueLocation,
+ *   expected?: unknown,
+ *   actual?: unknown,
+ *   [key: string]: unknown
+ * }} ValidationIssueContext
+ */
+
+/**
+ * Represents a single validation issue.
+ *
+ * @typedef {{
+ *   severity: ValidationSeverity,
+ *   category: string,
+ *   message: string,
+ *   code: string,
+ *   context?: ValidationIssueContext
+ * }} ValidationIssue
+ *
+ * - severity: One of VALIDATION_SEVERITY (fatal, error, warning)
+ * - category: One of VALIDATION_CATEGORY (technical, business, parsing)
+ * - message: Human-readable description for developers/logging (not sent to clients)
+ * - code: Specific error code for i18n/translation (e.g., 'HEADER_REQUIRED')
+ */
+
+/**
+ * Issue counts grouped by severity, plus the total.
+ *
+ * @typedef {{
+ *   fatal: number,
+ *   error: number,
+ *   warning: number,
+ *   total: number
+ * }} ValidationIssueCounts
+ */
+
+/**
+ * HTTP error object produced by issueToErrorObject (ADR 0020 format).
+ *
+ * @typedef {{
+ *   type: string,
+ *   meta?: Record<string, unknown>
+ * }} HttpValidationError
+ */
+
+/**
+ * Collector returned by createValidationIssues. Accumulates issues and exposes
+ * helpers for adding, querying, and transforming them. The add* methods return
+ * the collector to support chaining.
+ *
+ * @typedef {{
+ *   addIssue: (
+ *     severity: ValidationSeverity,
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   addFatal: (
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   addError: (
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   addWarning: (
+ *     category: string,
+ *     message: string,
+ *     code: string,
+ *     context?: ValidationIssueContext
+ *   ) => ValidationIssuesCollector,
+ *   isFatal: () => boolean,
+ *   isValid: () => boolean,
+ *   hasIssues: () => boolean,
+ *   getIssuesBySeverity: (severity: ValidationSeverity) => ValidationIssue[],
+ *   getIssuesByCategory: (category: string) => ValidationIssue[],
+ *   getIssuesByRow: () => Map<number, ValidationIssue[]>,
+ *   groupBySeverity: () => Record<ValidationSeverity, ValidationIssue[]>,
+ *   getAllIssues: () => ValidationIssue[],
+ *   merge: (other: ValidationIssuesCollector) => ValidationIssuesCollector,
+ *   getCounts: () => ValidationIssueCounts,
+ *   getSummary: () => string,
+ *   toErrorResponse: () => { issues: HttpValidationError[] }
+ * }} ValidationIssuesCollector
  */
 
 /**
@@ -29,7 +129,7 @@ import { VALIDATION_SEVERITY } from '#common/enums/index.js'
  * Follows the format defined in ADR 0020: Summary Log Validation Output Formats
  *
  * @param {ValidationIssue} issue - The validation issue
- * @returns {Object} Error object with type and meta
+ * @returns {HttpValidationError} Error object with type and meta
  *
  * @example
  * const httpIssues = summaryLog.validation.issues.map(issueToErrorObject)
@@ -241,7 +341,7 @@ const createIssueTransformers = (
  * Collects and manages validation issues with support for different
  * severity levels and categorization
  *
- * @returns {Object} A validation issues object with methods for managing issues
+ * @returns {ValidationIssuesCollector}
  *
  * @example
  * const issues = createValidationIssues()
@@ -251,8 +351,9 @@ const createIssueTransformers = (
  * }
  */
 export const createValidationIssues = () => {
+  /** @type {ValidationIssue[]} */
   const issues = []
-  const result = {}
+  const result = /** @type {ValidationIssuesCollector} */ ({})
 
   const adders = createIssueAdders(issues, result)
   const queries = createIssueQueries(issues)

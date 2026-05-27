@@ -1,10 +1,8 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
-/**
- * @typedef {import('./validate.js').ValidatedWasteRecord} ValidatedWasteRecord
- * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
- */
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 
 /**
  * @typedef {Object} LoadCategory

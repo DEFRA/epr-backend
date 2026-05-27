@@ -1,11 +1,15 @@
 /**
  * Severity levels for validation issues
  */
-export const VALIDATION_SEVERITY = Object.freeze({
-  FATAL: 'fatal',
-  ERROR: 'error',
-  WARNING: 'warning'
-})
+export const VALIDATION_SEVERITY = Object.freeze(
+  /** @type {const} */ ({
+    FATAL: 'fatal',
+    ERROR: 'error',
+    WARNING: 'warning'
+  })
+)
+
+/** @typedef {(typeof VALIDATION_SEVERITY)[keyof typeof VALIDATION_SEVERITY]} ValidationSeverity */
 
 /**
  * Categories of validation issues

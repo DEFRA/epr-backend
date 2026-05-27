@@ -3,8 +3,10 @@ import { resolveOverseasSites } from '#application/waste-records/resolve-oversea
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
+import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
@@ -32,6 +34,7 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
+ * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepository
  */
 
 /**
@@ -77,7 +80,8 @@ const compareForEmbedded = async (embedded, deps) => {
     organisationsRepository,
     prnRepository,
     wasteRecordsRepository,
-    overseasSitesRepository
+    overseasSitesRepository,
+    summaryLogsRepository
   } = deps
 
   const organisation = await organisationsRepository.findById(
@@ -122,31 +126,77 @@ const compareForEmbedded = async (embedded, deps) => {
     overseasSites
   })
 
-  return {
-    organisationId: embedded.organisationId,
-    registrationNumber: registration.registrationNumber,
-    accreditationNumber: accreditation.accreditationNumber ?? '<none>',
-    currentAmount: embedded.amount,
-    rebuiltAmount: rebuilt.amount,
-    deltaAmount: formatDelta(embedded.amount, rebuilt.amount),
-    currentAvailableAmount: embedded.availableAmount,
-    rebuiltAvailableAmount: rebuilt.availableAmount,
-    deltaAvailableAmount: formatDelta(
-      embedded.availableAmount,
-      rebuilt.availableAmount
-    ),
-    registrationStatus: registration.status,
-    accreditationStatus: accreditation.status,
-    wasteRecordCount: wasteRecords.length,
-    wasteRecordContribution: rebuilt.wasteRecordContribution,
-    prnCount: prns.length,
-    prnAmountContribution: rebuilt.prnAmountContribution,
-    prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution
-  }
+  const summaryLogDocs = await summaryLogsRepository.findAllByOrgReg(
+    embedded.organisationId,
+    registration.id
+  )
+
+  const stream = computeRebuiltStream({
+    accreditation,
+    wasteRecords,
+    prns,
+    overseasSites,
+    summaryLogs: summaryLogDocs.map(({ id, summaryLog }) => ({
+      id,
+      status: summaryLog.status,
+      submittedAt: summaryLog.submittedAt
+    }))
+  })
+
+  return buildComparison(
+    embedded,
+    registration,
+    accreditation,
+    rebuilt,
+    stream,
+    wasteRecords,
+    prns
+  )
 }
 
+const buildComparison = (
+  embedded,
+  registration,
+  accreditation,
+  rebuilt,
+  stream,
+  wasteRecords,
+  prns
+) => ({
+  organisationId: embedded.organisationId,
+  registrationNumber: registration.registrationNumber,
+  accreditationNumber: accreditation.accreditationNumber ?? '<none>',
+  currentAmount: embedded.amount,
+  rebuiltAmount: rebuilt.amount,
+  deltaAmount: formatDelta(embedded.amount, rebuilt.amount),
+  currentAvailableAmount: embedded.availableAmount,
+  rebuiltAvailableAmount: rebuilt.availableAmount,
+  deltaAvailableAmount: formatDelta(
+    embedded.availableAmount,
+    rebuilt.availableAmount
+  ),
+  registrationStatus: registration.status,
+  accreditationStatus: accreditation.status,
+  wasteRecordCount: wasteRecords.length,
+  wasteRecordContribution: rebuilt.wasteRecordContribution,
+  prnCount: prns.length,
+  prnAmountContribution: rebuilt.prnAmountContribution,
+  prnAvailableAmountContribution: rebuilt.prnAvailableAmountContribution,
+  streamAmount: stream.amount,
+  streamAvailableAmount: stream.availableAmount,
+  streamDeltaAmount: formatDelta(rebuilt.amount, stream.amount),
+  streamDeltaAvailableAmount: formatDelta(
+    rebuilt.availableAmount,
+    stream.availableAmount
+  ),
+  streamEventCount: stream.events.length
+})
+
 const isDivergent = (comparison) =>
-  comparison.deltaAmount !== 0 || comparison.deltaAvailableAmount !== 0
+  comparison.deltaAmount !== 0 ||
+  comparison.deltaAvailableAmount !== 0 ||
+  comparison.streamDeltaAmount !== 0 ||
+  comparison.streamDeltaAvailableAmount !== 0
 
 const formatDivergenceLine = (comparison) =>
   [
@@ -166,7 +216,12 @@ const formatDivergenceLine = (comparison) =>
     `wasteRecordContribution=${comparison.wasteRecordContribution}`,
     `prnCount=${comparison.prnCount}`,
     `prnAmountContribution=${comparison.prnAmountContribution}`,
-    `prnAvailableAmountContribution=${comparison.prnAvailableAmountContribution}`
+    `prnAvailableAmountContribution=${comparison.prnAvailableAmountContribution}`,
+    `streamAmount=${comparison.streamAmount}`,
+    `streamAvailableAmount=${comparison.streamAvailableAmount}`,
+    `streamDeltaAmount=${comparison.streamDeltaAmount}`,
+    `streamDeltaAvailableAmount=${comparison.streamDeltaAvailableAmount}`,
+    `streamEventCount=${comparison.streamEventCount}`
   ].join(' ')
 
 const formatErrorLine = (embedded, error) =>
@@ -230,12 +285,16 @@ const buildDependencies = async (server) => {
   const overseasSitesRepository = (
     await createOverseasSitesRepository(server.db)
   )()
+  const summaryLogsRepository = (
+    await createSummaryLogsRepository(server.db, /** @type {any} */ ({}))
+  )(logger)
 
   return /** @type {DiagnosticDependencies} */ ({
     organisationsRepository,
     wasteRecordsRepository,
     prnRepository,
-    overseasSitesRepository
+    overseasSitesRepository,
+    summaryLogsRepository
   })
 }
 

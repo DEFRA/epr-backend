@@ -20,12 +20,6 @@ import {
  */
 
 /**
- * Row classification outcome type
- *
- * @typedef {'REJECTED'|'EXCLUDED'|'INCLUDED'|'IGNORED'} RowOutcome
- */
-
-/**
  * Result of classifying a row for waste balance calculation.
  *
  * - INCLUDED: row contributes to waste balance with a transaction amount
@@ -59,8 +53,6 @@ import {
 
 /**
  * Row classification outcomes
- *
- * @type {Readonly<{REJECTED: 'REJECTED', EXCLUDED: 'EXCLUDED', INCLUDED: 'INCLUDED', IGNORED: 'IGNORED'}>}
  */
 export const ROW_OUTCOME = Object.freeze({
   REJECTED: 'REJECTED',
@@ -68,6 +60,8 @@ export const ROW_OUTCOME = Object.freeze({
   INCLUDED: 'INCLUDED',
   IGNORED: 'IGNORED'
 })
+
+/** @typedef {typeof ROW_OUTCOME[keyof typeof ROW_OUTCOME]} RowOutcome */
 
 /**
  * Checks if a value is considered "filled"

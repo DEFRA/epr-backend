@@ -11,13 +11,15 @@ import {
 import { processOrsImport } from '#overseas-sites/application/process-import.js'
 import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
 
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+/** @import {CommandHandler} from './summary-log-commands.js' */
+
 const userSchema = Joi.object({
   id: Joi.string().required(),
   email: Joi.string().required(),
   scope: Joi.array().items(Joi.string()).required()
 })
-
-/** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
 
 /**
  * @typedef {object} OrsImportHandlerDeps
@@ -26,10 +28,10 @@ const userSchema = Joi.object({
  * @property {object} uploadsRepository
  * @property {object} overseasSitesRepository
  * @property {object} organisationsRepository
- * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
+ * @property {SystemLogsRepository} systemLogsRepository
  */
 
-/** @type {import('./summary-log-commands.js').CommandHandler[]} */
+/** @type {CommandHandler[]} */
 export const orsImportCommandHandlers = [
   {
     command: ORS_IMPORT_COMMAND.IMPORT_OVERSEAS_SITES,
