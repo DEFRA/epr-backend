@@ -3,6 +3,10 @@ import { describe, it, expect } from 'vitest'
 import { mapToExternalPrn } from './external-prn-mapper.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
+/**
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ */
+
 const draftDate = new Date('2026-01-10T10:00:00Z')
 const authorisedDate = new Date('2026-01-12T10:00:00Z')
 const issuedDate = new Date('2026-01-15T10:00:00Z')
@@ -14,9 +18,14 @@ const creator = { id: 'user-123', name: 'Test User' }
 const issuer = { id: 'user-issuer', name: 'Issuer User', position: 'Manager' }
 const producer = { id: 'user-producer', name: 'Producer User' }
 
+/**
+ * @param {Partial<PackagingRecyclingNote>} overrides
+ * @returns {PackagingRecyclingNote}
+ */
 const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   id: '507f1f77bcf86cd799439011',
   schemaVersion: 2,
+  version: 1,
   prnNumber: 'ER2600001',
   organisation: {
     id: 'org-123',
@@ -42,6 +51,7 @@ const buildAwaitingAcceptancePrn = (overrides = {}) => ({
   notes: 'T2E Reference 9201234',
   status: {
     currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+    currentStatusAt: issuedDate,
     created: { at: authorisedDate, by: creator },
     issued: { at: issuedDate, by: issuer },
     history: [
@@ -103,6 +113,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       status: {
         currentStatus: PRN_STATUS.ACCEPTED,
+        currentStatusAt: acceptedDate,
         created: { at: authorisedDate, by: creator },
         issued: { at: issuedDate, by: issuer },
         accepted: { at: acceptedDate, by: producer },
@@ -119,6 +130,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       status: {
         currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
+        currentStatusAt: rejectedDate,
         created: { at: authorisedDate, by: creator },
         issued: { at: issuedDate, by: issuer },
         rejected: { at: rejectedDate, by: producer },
@@ -135,6 +147,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       status: {
         currentStatus: PRN_STATUS.CANCELLED,
+        currentStatusAt: cancelledDate,
         created: { at: authorisedDate, by: creator },
         issued: { at: issuedDate, by: issuer },
         rejected: { at: rejectedDate, by: producer },
@@ -152,6 +165,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       status: {
         currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        currentStatusAt: authorisedDate,
         created: { at: authorisedDate, by: creator },
         history: []
       }
@@ -169,6 +183,7 @@ describe('mapToExternalPrn', () => {
     const prn = buildAwaitingAcceptancePrn({
       status: {
         currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        currentStatusAt: issuedDate,
         created: { at: authorisedDate, by: creator },
         issued: { at: issuedDate, by: issuerWithoutPosition },
         history: []
@@ -229,6 +244,7 @@ describe('mapToExternalPrn', () => {
       prnNumber: undefined,
       status: {
         currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        currentStatusAt: authorisedDate,
         created: { at: authorisedDate, by: creator },
         history: []
       }
@@ -295,5 +311,13 @@ describe('mapToExternalPrn', () => {
     const result = mapToExternalPrn(prn)
 
     expect(result.isExport).toBe(true)
+  })
+
+  it('omits the internal lastAppliedEventNumber watermark', () => {
+    const prn = buildAwaitingAcceptancePrn({ lastAppliedEventNumber: 7 })
+
+    const result = mapToExternalPrn(prn)
+
+    expect(result).not.toHaveProperty('lastAppliedEventNumber')
   })
 })

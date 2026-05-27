@@ -197,6 +197,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
  *   id: string;
  *   schemaVersion: number;
  *   version: number;
+ *   lastAppliedEventNumber?: number;
  *   prnNumber?: string | null;
  *   organisation: OrganisationNameAndId;
  *   registrationId: string;
