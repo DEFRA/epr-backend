@@ -52,16 +52,20 @@ const it = mongoIt.extend({
 })
 
 describe('balance divergence diagnostic (integration)', () => {
-  // @ts-expect-error vitest cannot resolve chained fixture types
   it('stream replay produces correct creditTotal when summary log file.id is used to correlate waste record versions', async ({
     summaryLogsRepository
   }) => {
+    const repo =
+      /** @type {import('#repositories/summary-logs/port.js').SummaryLogsRepository} */ (
+        summaryLogsRepository
+      )
+
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const fileId = generateFileId()
     const docId = new ObjectId().toString()
 
-    await summaryLogsRepository.insert(
+    await repo.insert(
       docId,
       summaryLogFactory.submitted({
         organisationId,
@@ -71,7 +75,7 @@ describe('balance divergence diagnostic (integration)', () => {
       })
     )
 
-    const summaryLogDocs = await summaryLogsRepository.findAllByOrgReg(
+    const summaryLogDocs = await repo.findAllByOrgReg(
       organisationId,
       registrationId
     )
