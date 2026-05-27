@@ -20,6 +20,7 @@ import {
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @import {ValidatedSummaryLog, ValidatedTableSection} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ValidationCode} from '#common/enums/validation.js' */
 /** @import {ValidationIssue, ValidationIssueLocation, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
@@ -64,10 +65,12 @@ const adaptDomainSchema = (domainSchema) => ({
 })
 
 /**
- * Joi error type to application error code mapping
+ * Joi error type to application error code mapping.
  *
  * When adding new Joi validators to table schemas, ensure the error types
  * they produce are mapped here. Unmapped types will throw an error.
+ *
+ * @type {Readonly<Record<string, ValidationCode>>}
  */
 const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'any.required': VALIDATION_CODE.FIELD_REQUIRED,
@@ -95,10 +98,10 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
 })
 
 /**
- * Maps Joi validation error types to application error codes
+ * Maps Joi validation error types to application error codes.
  *
  * @param {string} joiType - The Joi error type (e.g., 'number.min', 'string.pattern.base')
- * @returns {string} The application error code
+ * @returns {ValidationCode} The application error code
  * @throws {Error} If the Joi error type is not mapped
  */
 const mapJoiTypeToErrorCode = (joiType) => {
@@ -111,6 +114,7 @@ const mapJoiTypeToErrorCode = (joiType) => {
   return code
 }
 
+/** @type {Readonly<Record<string, ValidationCode>>} */
 export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [MESSAGES.MUST_BE_A_NUMBER]: VALIDATION_CODE.MUST_BE_A_NUMBER,
   [MESSAGES.MUST_BE_A_STRING]: VALIDATION_CODE.MUST_BE_A_STRING,
@@ -144,6 +148,13 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   ]]: VALIDATION_CODE.UK_PACKAGING_PROPORTION_CALCULATION_MISMATCH
 })
 
+/**
+ * Maps a Joi failure message to a specific application error code, or
+ * undefined if the message isn't recognised.
+ *
+ * @param {string} message
+ * @returns {ValidationCode | undefined}
+ */
 const mapMessageToErrorCode = (message) => JOI_MESSAGE_TO_ERROR_CODE[message]
 
 /**
