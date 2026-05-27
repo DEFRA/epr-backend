@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient, ObjectId  } from 'mongodb'
+import { MongoClient, ObjectId } from 'mongodb'
 
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import {
@@ -18,7 +18,7 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn().mockReturnValue({
-    classifyForWasteBalance: (data) => ({
+    classifyForWasteBalance: (/** @type {{ tonnage: number }} */ data) => ({
       outcome: ROW_OUTCOME.INCLUDED,
       transactionAmount: data.tonnage
     })
@@ -27,18 +27,32 @@ vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
 
 const DATABASE_NAME = 'epr-backend'
 
+const mockS3Config = /** @type {any} */ ({})
+const mockLogger = /** @type {any} */ ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+})
+
 const it = mongoIt.extend({
-  summaryLogsRepository: async ({ db: uri }, use) => {
-    const client = await MongoClient.connect(uri)
-    const database = client.db(DATABASE_NAME)
-    const factory = await createSummaryLogsRepository(database, {})
-    const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-    await use(factory(mockLogger))
+  mongoClient: async ({ db }, use) => {
+    // @ts-expect-error vitest fixture types db as union, not string
+    const client = await MongoClient.connect(db)
+    await use(client)
     await client.close()
+  },
+
+  // @ts-expect-error vitest cannot resolve chained fixture types
+  summaryLogsRepository: async ({ mongoClient }, use) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const factory = await createSummaryLogsRepository(database, mockS3Config)
+    await use(factory(mockLogger))
   }
 })
 
 describe('balance divergence diagnostic (integration)', () => {
+  // @ts-expect-error vitest cannot resolve chained fixture types
   it('stream replay produces correct creditTotal when summary log file.id is used to correlate waste record versions', async ({
     summaryLogsRepository
   }) => {
