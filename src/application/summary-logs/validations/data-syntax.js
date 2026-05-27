@@ -213,6 +213,7 @@ const validateHeaders = ({
  * @param {{
  *   tableName: string,
  *   rowNumber: number,
+ *   rowId: string,
  *   fieldName: string,
  *   colIndex: number | undefined,
  *   location: CellLocation
@@ -222,6 +223,7 @@ const validateHeaders = ({
 const buildCellLocation = ({
   tableName,
   rowNumber,
+  rowId,
   fieldName,
   colIndex,
   location
@@ -231,16 +233,18 @@ const buildCellLocation = ({
         sheet: location.sheet,
         table: tableName,
         row: rowNumber,
+        rowId,
         column: offsetColumn(location.column, colIndex),
         header: fieldName
       }
-    : { table: tableName, header: fieldName }
+    : { table: tableName, rowId, header: fieldName }
 
 const toApplicationIssue = ({
   issue,
   classification,
   headerToIndexMap,
   rowObject,
+  rowId,
   tableName,
   rowNumber,
   location
@@ -267,6 +271,7 @@ const toApplicationIssue = ({
     location: buildCellLocation({
       tableName,
       rowNumber,
+      rowId,
       fieldName,
       colIndex,
       location
@@ -373,6 +378,7 @@ const validateRows = ({
     }
 
     const classification = classifyRow(rowObject, domainSchema)
+    const rowId = String(rowObject[domainSchema.rowIdField])
 
     const rowIssues = classification.issues.map((issue) =>
       toApplicationIssue({
@@ -380,6 +386,7 @@ const validateRows = ({
         classification,
         headerToIndexMap,
         rowObject,
+        rowId,
         tableName,
         rowNumber,
         location
@@ -391,7 +398,7 @@ const validateRows = ({
     return [
       {
         data: rowObject,
-        rowId: String(rowObject[domainSchema.rowIdField]),
+        rowId,
         outcome: classification.outcome,
         issues: rowIssues
       }

@@ -610,6 +610,7 @@ describe('createDataSyntaxValidator', () => {
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
         row: 11, // 10 + 1 (first data row)
+        rowId: '1000',
         column: 'C', // B + 1 (TEXT_FIELD is second column)
         header: 'TEXT_FIELD'
       })
@@ -683,6 +684,7 @@ describe('createDataSyntaxValidator', () => {
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
         row: 8,
+        rowId: '999',
         column: 'B',
         header: 'ROW_ID'
       })
