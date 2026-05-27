@@ -15,10 +15,10 @@
  */
 
 /**
- * @typedef {Object} TransitionResult
- * @property {boolean} success
- * @property {SummaryLog} [summaryLog]
- * @property {number} [version]
+ * @typedef {
+ *   | { success: false }
+ *   | { success: true, summaryLog: SummaryLog, version: number }
+ * } TransitionResult
  */
 
 /**
