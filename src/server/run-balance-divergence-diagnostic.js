@@ -9,6 +9,7 @@ import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuil
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
 const ACTIVE_REGISTRATION_STATUSES = new Set([
@@ -150,7 +151,11 @@ const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs: summaryLogDocs.map(toStreamSummaryLog)
+    summaryLogs: summaryLogDocs
+      .filter(
+        ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
+      )
+      .map(toStreamSummaryLog)
   })
 
   return buildComparison(
