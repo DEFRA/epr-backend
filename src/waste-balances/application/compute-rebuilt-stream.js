@@ -254,7 +254,10 @@ export const computeRebuiltStream = ({
     }
   }
 
-  const finalBalance = events.at(-1).closingBalance
+  const finalBalance =
+    /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+      events.at(-1)
+    ).closingBalance
 
   let wasteRecordContribution = 0
   let prnAmountContribution = 0
