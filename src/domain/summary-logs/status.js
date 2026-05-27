@@ -166,7 +166,7 @@ class InvalidTransitionError extends Error {
 
 /**
  * @param {string} uploadStatus
- * @returns {string}
+ * @returns {SummaryLogStatus}
  */
 export const determineStatusFromUpload = (uploadStatus) => {
   const status = UploadStatusToSummaryLogStatusMap[uploadStatus]
