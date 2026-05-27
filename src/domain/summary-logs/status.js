@@ -124,6 +124,7 @@ const UploadStatusToSummaryLogStatusMap = {
   [UPLOAD_STATUS.COMPLETE]: SUMMARY_LOG_STATUS.VALIDATING
 }
 
+/** @type {Record<SummaryLogStatus, SummaryLogStatus[]>} */
 const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.PREPROCESSING]: [
     SUMMARY_LOG_STATUS.PREPROCESSING,
