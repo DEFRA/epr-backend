@@ -43,6 +43,7 @@ export { MAX_VALIDATION_ISSUES }
 export const MAX_ACTUAL_LENGTH = 200
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
@@ -56,6 +57,12 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
+
+/**
+ * A waste record from the validation pipeline (outcome guaranteed).
+ *
+ * @typedef {ValidatedWasteRecord & { outcome: RowOutcome }} ClassifiedWasteRecord
+ */
 
 /**
  * @param {{
@@ -413,7 +420,7 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
 /**
  * Records row outcome metrics grouped by outcome
  *
- * @param {ValidatedWasteRecord[] | null} wasteRecords - Waste records with outcomes
+ * @param {ClassifiedWasteRecord[] | null} wasteRecords - Waste records with outcomes
  * @param {string} processingType - The processing type for the metric dimension
  */
 const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
@@ -476,7 +483,7 @@ const assertValidatingStatus = (result, summaryLogId) => {
  * @param {ProcessingType} params.processingType
  * @param {SummaryLogStatus} params.status
  * @param {number} params.validationDurationMs
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {ClassifiedWasteRecord[]} params.wasteBalanceRecords
  */
 const recordValidationMetrics = async ({
   issues,
@@ -537,9 +544,9 @@ const persistValidationResult = async ({
 /**
  * Filters waste records to only those from tables that participate in waste balance.
  *
- * @param {ValidatedWasteRecord[] | null} wasteRecords
+ * @param {ClassifiedWasteRecord[] | null} wasteRecords
  * @param {string} processingType
- * @returns {ValidatedWasteRecord[]}
+ * @returns {ClassifiedWasteRecord[]}
  */
 const filterWasteBalanceRecords = (wasteRecords, processingType) =>
   wasteRecords?.filter((wr) => {
@@ -652,8 +659,9 @@ export const createSummaryLogsValidator = ({
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
+    // wasteRecords come from the validate pipeline, where outcome is guaranteed.
     const wasteBalanceRecords = filterWasteBalanceRecords(
-      wasteRecords,
+      /** @type {ClassifiedWasteRecord[] | null} */ (wasteRecords),
       processingType
     )
 
