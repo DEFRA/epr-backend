@@ -19,7 +19,7 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @typedef {Object} TransformableRow
  * @property {Record<string, any>} data - Row data as object keyed by header name
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
- * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline, absent on sync path)
+ * @property {RowOutcome} outcome - Classification outcome from validation pipeline
  */
 
 /**
@@ -50,7 +50,7 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @typedef {Object} ValidatedWasteRecord
  * @property {WasteRecord} record - The waste record
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
- * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline, absent on sync path)
+ * @property {RowOutcome} outcome - Classification outcome from validation pipeline
  * @property {WasteRecordChange} change - What happened to this record: created, updated, or unchanged
  * @property {string} tableName - The table schema key (e.g. RECEIVED_LOADS_FOR_EXPORT)
  * @property {string} wasteRecordType - The waste record type (e.g. received, exported, sentOn)

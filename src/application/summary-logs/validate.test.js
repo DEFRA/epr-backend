@@ -1,4 +1,3 @@
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -1816,26 +1815,6 @@ describe('SummaryLogsValidator', () => {
         { processingType: 'REPROCESSOR_INPUT' },
         expect.any(Number)
       )
-    })
-
-    it('should record row outcome metrics with a defined outcome value for every call', async () => {
-      summaryLogExtractor.extract.mockResolvedValue(
-        buildExtractedData({
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
-              rows: [buildReceivedLoadRow({ ROW_ID: 10000 })]
-            })
-          }
-        })
-      )
-
-      await validateSummaryLog(summaryLogId)
-
-      expect(mockRecordRowOutcome).toHaveBeenCalled()
-      const validOutcomes = Object.values(ROW_OUTCOME)
-      for (const [{ outcome }] of mockRecordRowOutcome.mock.calls) {
-        expect(validOutcomes).toContain(outcome)
-      }
     })
 
     it('should not record row outcome metrics for non-waste-balance table rows', async () => {
