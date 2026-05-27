@@ -410,7 +410,9 @@ const validateRows = ({
     }
 
     const classification = classifyRow(rowObject, domainSchema)
-    const rowId = String(rowObject[domainSchema.rowIdField])
+    const rowId = String(
+      /** @type {string | number} */ (rowObject[domainSchema.rowIdField])
+    )
 
     const rowIssues = classification.issues.map((issue) =>
       toApplicationIssue({
