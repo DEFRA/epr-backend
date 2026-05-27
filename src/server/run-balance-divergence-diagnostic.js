@@ -62,6 +62,20 @@ const findEmbeddedWasteBalances = async (db) => {
   return /** @type {EmbeddedBalanceRow[]} */ (/** @type {unknown} */ (docs))
 }
 
+/**
+ * Map a summary log document from findAllByOrgReg into the shape that
+ * computeRebuiltStream expects. Uses summaryLog.file.id (the file
+ * identifier stored on waste record versions) rather than the document
+ * _id, which is a different namespace.
+ *
+ * @param {{ summaryLog: { file: { id: string }, status: string, submittedAt?: string } }} doc
+ */
+export const toStreamSummaryLog = ({ summaryLog }) => ({
+  id: summaryLog.file.id,
+  status: summaryLog.status,
+  submittedAt: summaryLog.submittedAt
+})
+
 const formatDelta = (current, rebuilt) =>
   Number((rebuilt - current).toFixed(10))
 
@@ -136,11 +150,7 @@ const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs: summaryLogDocs.map(({ summaryLog }) => ({
-      id: summaryLog.file.id,
-      status: summaryLog.status,
-      submittedAt: summaryLog.submittedAt
-    }))
+    summaryLogs: summaryLogDocs.map(toStreamSummaryLog)
   })
 
   return buildComparison(
