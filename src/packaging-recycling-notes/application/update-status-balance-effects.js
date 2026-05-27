@@ -196,13 +196,21 @@ function logWasteBalanceUpdate(
  * @returns {boolean}
  */
 export function affectsWasteBalance(currentStatus, newStatus) {
+  const deductsAvailableOnCreation =
+    newStatus === PRN_STATUS.AWAITING_AUTHORISATION
+  const deductsTotalOnIssue = newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+  const creditsAvailableOnPreIssueCancellation =
+    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
+    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
+  const creditsFullOnIssuedCancellation =
+    newStatus === PRN_STATUS.CANCELLED &&
+    currentStatus === PRN_STATUS.AWAITING_CANCELLATION
+
   return (
-    newStatus === PRN_STATUS.AWAITING_AUTHORISATION ||
-    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
-    ((newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
-      currentStatus === PRN_STATUS.AWAITING_AUTHORISATION) ||
-    (newStatus === PRN_STATUS.CANCELLED &&
-      currentStatus === PRN_STATUS.AWAITING_CANCELLATION)
+    deductsAvailableOnCreation ||
+    deductsTotalOnIssue ||
+    creditsAvailableOnPreIssueCancellation ||
+    creditsFullOnIssuedCancellation
   )
 }
 
