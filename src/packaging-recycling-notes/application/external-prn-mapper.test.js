@@ -296,4 +296,12 @@ describe('mapToExternalPrn', () => {
 
     expect(result.isExport).toBe(true)
   })
+
+  it('omits the internal lastAppliedEventNumber watermark', () => {
+    const prn = buildAwaitingAcceptancePrn({ lastAppliedEventNumber: 7 })
+
+    const result = mapToExternalPrn(prn)
+
+    expect(result).not.toHaveProperty('lastAppliedEventNumber')
+  })
 })
