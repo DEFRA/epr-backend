@@ -117,7 +117,7 @@ const groupAndTransformRowIssues = (issues) => {
  * - `failures`: Array of fatal meta-level errors (XOR with concerns)
  * - `concerns`: Object with table-keyed row-level errors and warnings
  *
- * @param {Object} validation - The validation object from database
+ * @param {Object} [validation] - The validation object from database
  * @param {Array} [validation.issues] - Array of validation issues (from validation pipeline)
  * @param {Array} [validation.failures] - Array of failure codes (from upload rejection)
  * @param {number} [validation.totalIssuesCount] - Total issue count when issues were truncated
@@ -125,7 +125,7 @@ const groupAndTransformRowIssues = (issues) => {
  */
 export const transformValidationResponse = (validation) => {
   // Handle direct failures (e.g., from upload rejection)
-  if ((validation?.failures?.length ?? 0) > 0) {
+  if (validation?.failures && validation.failures.length > 0) {
     const failures =
       /** @type {Array<{errorCode?: string, code?: string, [key: string]: unknown}>} */ (
         validation.failures
