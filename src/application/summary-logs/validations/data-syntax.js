@@ -1,6 +1,7 @@
 import {
   VALIDATION_CATEGORY,
-  VALIDATION_CODE
+  VALIDATION_CODE,
+  VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
@@ -18,14 +19,21 @@ import {
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
-/**
- * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
- * @typedef {import('#common/validation/validation-issues.js').ValidationIssuesCollector} ValidationIssuesCollector
- * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
- */
-
 /** @import {ValidatedSummaryLog, ValidatedTableSection} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
+/** @import {ValidationIssue, ValidationIssueLocation, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+
+/**
+ * Output of adaptDomainSchema — the shape validateTable expects.
+ *
+ * @typedef {{
+ *   requiredHeaders: string[],
+ *   rowIdField: string,
+ *   domainSchema: TableSchema
+ * }} AdaptedSchema
+ */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -41,13 +49,13 @@ import {
  */
 
 /**
- * Adapts domain table schema to the structure expected by validateTable
+ * Adapts domain table schema to the structure expected by validateTable.
  *
- * Domain schemas use: unfilledValues, validationSchema
+ * Domain schemas use: unfilledValues, validationSchema.
  * This adapter extracts what validateTable needs during the migration.
  *
- * @param {Object} domainSchema - Schema from domain layer
- * @returns {Object} Schema structure for validateTable
+ * @param {TableSchema} domainSchema
+ * @returns {AdaptedSchema}
  */
 const adaptDomainSchema = (domainSchema) => ({
   requiredHeaders: domainSchema.requiredHeaders,
@@ -159,17 +167,18 @@ const buildHeaderToIndexMap = (headers) => {
 }
 
 /**
- * Validates that required headers are present in the table
+ * Validates that required headers are present in the table.
  *
  * Missing headers are FATAL because without them we cannot map cell values
  * to their intended columns, making the entire table unprocessable.
  *
- * @param {Object} params
- * @param {string} params.tableName - Name of the table being validated
- * @param {Array<string|null>} params.headers - Array of header names from the table
- * @param {Array<string>} params.requiredHeaders - Array of required header names
- * @param {Object} params.location - Table location in spreadsheet
- * @param {Object} params.issues - Validation issues collector
+ * @param {{
+ *   tableName: string,
+ *   headers: Array<string | null>,
+ *   requiredHeaders: string[],
+ *   location: CellLocation,
+ *   issues: ValidationIssuesCollector
+ * }} params
  */
 const validateHeaders = ({
   tableName,
@@ -199,15 +208,16 @@ const validateHeaders = ({
 }
 
 /**
- * Builds cell location for error reporting
+ * Builds cell location for error reporting.
  *
- * @param {Object} params
- * @param {string} params.tableName - Name of the table
- * @param {number} params.rowNumber - Actual spreadsheet row number
- * @param {string} params.fieldName - Name of the field with the error
- * @param {number|undefined} params.colIndex - Column index for the field
- * @param {Object} params.location - Table location in spreadsheet
- * @returns {Object} Cell location object
+ * @param {{
+ *   tableName: string,
+ *   rowNumber: number,
+ *   fieldName: string,
+ *   colIndex: number | undefined,
+ *   location: CellLocation
+ * }} params
+ * @returns {ValidationIssueLocation}
  */
 const buildCellLocation = ({
   tableName,
@@ -270,7 +280,7 @@ const toApplicationIssue = ({
 
   return {
     category: VALIDATION_CATEGORY.TECHNICAL,
-    severity: isFatal ? 'fatal' : 'error',
+    severity: isFatal ? VALIDATION_SEVERITY.FATAL : VALIDATION_SEVERITY.ERROR,
     message,
     code,
     context
@@ -298,30 +308,13 @@ const recordIssues = (rowIssues, issues) => {
 }
 
 /**
- * Validates all rows using the classifyRow pipeline
- *
- * Each row is classified as:
- * - REJECTED: Fails VAL010 (in-sheet validation) - produces FATAL errors
- * - EXCLUDED: Fails VAL011 (missing required fields) - produces ERROR severity
- * - INCLUDED: Passes all validation
- *
- * @param {Object} params
- * @param {string} params.tableName - Name of the table being validated
- * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
- * @param {Array<{rowNumber: number, values: Array<*>}>} params.rows - Array of raw data rows
- * @param {Object} params.domainSchema - Domain table schema with unfilledValues, validationSchema
- * @param {Object} params.location - Table location in spreadsheet
- * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
- * @returns {ValidatedRow[]} Array of validated rows with outcome and issues attached
- */
-/**
  * Checks whether a row should be filtered out before validation.
  *
  * Rows are filtered when the row ID field contains template artefacts
  * rather than real data: user-facing header description rows or
  * pre-populated empty template rows.
  *
- * @param {Record<string, *>} rowObject - Row data keyed by header name
+ * @param {Record<string, unknown>} rowObject - Row data keyed by header name
  * @param {string} rowIdField - Name of the row ID field
  * @returns {boolean} True if the row should be excluded from validation
  */
@@ -342,6 +335,24 @@ const isTemplateRow = (rowObject, rowIdField) => {
   return false
 }
 
+/**
+ * Validates all rows using the classifyRow pipeline.
+ *
+ * Each row is classified as:
+ * - REJECTED: Fails VAL010 (in-sheet validation) - produces FATAL errors
+ * - EXCLUDED: Fails VAL011 (missing required fields) - produces ERROR severity
+ * - INCLUDED: Passes all validation
+ *
+ * @param {{
+ *   tableName: string,
+ *   headerToIndexMap: Map<string, number>,
+ *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
+ *   domainSchema: TableSchema,
+ *   location: CellLocation,
+ *   issues: ValidationIssuesCollector
+ * }} params
+ * @returns {ValidatedRow[]}
+ */
 const validateRows = ({
   tableName,
   headerToIndexMap,
@@ -351,6 +362,7 @@ const validateRows = ({
   issues
 }) => {
   return rows.flatMap(({ rowNumber, values }) => {
+    /** @type {Record<string, unknown>} */
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
       rowObject[headerName] = values[colIndex]
@@ -388,13 +400,14 @@ const validateRows = ({
 }
 
 /**
- * Validates a single table's data syntax and returns validated table data
+ * Validates a single table's data syntax and returns validated table data.
  *
- * @param {Object} params
- * @param {string} params.tableName - Name of the table
- * @param {Object} params.tableData - The table data with headers, rows, and location
- * @param {Object} params.schema - The adapted validation schema for this table
- * @param {Object} params.issues - Validation issues collector
+ * @param {{
+ *   tableName: string,
+ *   tableData: DataSection,
+ *   schema: AdaptedSchema,
+ *   issues: ValidationIssuesCollector
+ * }} params
  * @returns {ValidatedTableSection} Validated table data with rows converted to ValidatedRow[]
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
