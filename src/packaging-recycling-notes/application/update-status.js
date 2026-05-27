@@ -1,7 +1,11 @@
 import Boom from '@hapi/boom'
 
 import { prnMetrics } from './metrics.js'
-import { applyWasteBalanceEffects } from './update-status-balance-effects.js'
+import {
+  applyWasteBalanceEffects,
+  affectsWasteBalance
+} from './update-status-balance-effects.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -66,6 +70,31 @@ const ROLLBACK_METHOD_BY_TRANSITION = {
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ */
+
+/**
+ * The shared context every write strategy receives. The three strategies
+ * (create, transition, stream) consume overlapping subsets of it, so the
+ * dispatcher hands all of it to whichever one it selects.
+ *
+ * @typedef {Object} PrnWriteContext
+ * @property {PackagingRecyclingNotesRepository} prnRepository
+ * @property {OrganisationsRepository} organisationsRepository
+ * @property {WasteBalancesRepository} wasteBalancesRepository
+ * @property {import('#common/hapi-types.js').TypedLogger} logger
+ * @property {PackagingRecyclingNote} prn
+ * @property {import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams} updateParams
+ * @property {Object} balanceEffectsParams
+ * @property {PrnStatus} newStatus
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} accreditationId
+ * @property {{ id: string; name: string }} user
+ * @property {PrnStatus} currentStatus
+ * @property {Date} now
+ * @property {string} id
  */
 
 /**
@@ -121,7 +150,8 @@ async function applyStatusUpdate({
   organisationId,
   accreditationId,
   user,
-  now
+  now,
+  accreditation: providedAccreditation
 }) {
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     updateParams.operation = {
@@ -130,10 +160,12 @@ async function applyStatusUpdate({
       by: { id: user.id, name: user.name }
     }
 
-    const accreditation = await organisationsRepository.findAccreditationById(
-      organisationId,
-      accreditationId
-    )
+    const accreditation =
+      providedAccreditation ??
+      (await organisationsRepository.findAccreditationById(
+        organisationId,
+        accreditationId
+      ))
 
     assertAccreditationNotSuspended(accreditation)
 
@@ -381,6 +413,96 @@ async function performTransition({
 }
 
 /**
+ * Event-first write for a migrated accreditation (canonicalSource 'ledger').
+ * The balance-affecting event is appended before the PRN document is
+ * projected, and the returned event number is stamped onto the document as its
+ * watermark. There is no compensation: a partial failure (event appended, doc
+ * not written) is recovered by the read-side catch-up, which folds events
+ * after the watermark on the next read.
+ */
+async function performStreamWrite({
+  prnRepository,
+  organisationsRepository,
+  wasteBalancesRepository,
+  logger,
+  prn,
+  updateParams,
+  balanceEffectsParams,
+  newStatus,
+  organisationId,
+  accreditationId,
+  user,
+  now
+}) {
+  // On the embedded path the suspension check lives inside applyStatusUpdate,
+  // which runs after the doc CAS. Event-first ordering would otherwise append
+  // the debit before that check, so the check is hoisted ahead of the append
+  // here to guarantee a suspended accreditation is never debited. The fetched
+  // accreditation is handed to applyStatusUpdate so the issuance write reuses
+  // it rather than reading it twice.
+  let accreditation
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    accreditation = await organisationsRepository.findAccreditationById(
+      organisationId,
+      accreditationId
+    )
+    assertAccreditationNotSuspended(accreditation)
+  }
+
+  updateParams.lastAppliedEventNumber = await applyWasteBalanceEffects(
+    wasteBalancesRepository,
+    logger,
+    balanceEffectsParams
+  )
+
+  return applyStatusUpdate({
+    prnRepository,
+    organisationsRepository,
+    prn,
+    updateParams,
+    newStatus,
+    organisationId,
+    accreditationId,
+    user,
+    now,
+    accreditation
+  })
+}
+
+/**
+ * Whether the accreditation's balance has migrated to the event-sourced stream
+ * (canonicalSource 'ledger'). Read up front so the write ordering is chosen
+ * before any side effect runs.
+ *
+ * @param {WasteBalancesRepository} wasteBalancesRepository
+ * @param {string} accreditationId
+ * @returns {Promise<boolean>}
+ */
+async function isOnLedger(wasteBalancesRepository, accreditationId) {
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  return balance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+}
+
+/**
+ * Selects the write strategy. A migrated accreditation uses the event-first
+ * stream write; everything else keeps the embedded create/transition paths
+ * with their compensation, byte-for-byte as before.
+ *
+ * @param {boolean} onLedger
+ * @param {PrnStatus} newStatus
+ * @returns {(context: PrnWriteContext) => Promise<PackagingRecyclingNote>}
+ */
+function selectWriteStrategy(onLedger, newStatus) {
+  if (onLedger) {
+    return performStreamWrite
+  }
+  return newStatus === PRN_STATUS.AWAITING_AUTHORISATION
+    ? performCreation
+    : performTransition
+}
+
+/**
  * Updates PRN status with all business logic
  *
  * @param {Object} params
@@ -444,13 +566,15 @@ export async function updatePrnStatus({
     version: prn.version,
     status: newStatus,
     updatedBy: user,
-    updatedAt: now
+    updatedAt: now,
+    lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
 
-  const perform =
-    newStatus === PRN_STATUS.AWAITING_AUTHORISATION
-      ? performCreation
-      : performTransition
+  const onLedger =
+    affectsWasteBalance(currentStatus, newStatus) &&
+    (await isOnLedger(wasteBalancesRepository, accreditationId))
+
+  const perform = selectWriteStrategy(onLedger, newStatus)
 
   const updatedPrn = await perform({
     prnRepository,

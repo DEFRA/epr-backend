@@ -185,6 +185,28 @@ function logWasteBalanceUpdate(
 }
 
 /**
+ * Whether a status transition fires a waste balance effect. The four cases
+ * mirror the firing branches in {@link applyWasteBalanceEffects} exactly: a
+ * caller that needs to know whether a balance write will happen (to choose the
+ * write ordering before any side effect runs) must agree with what the effects
+ * actually do.
+ *
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
+ * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} newStatus
+ * @returns {boolean}
+ */
+export function affectsWasteBalance(currentStatus, newStatus) {
+  return (
+    newStatus === PRN_STATUS.AWAITING_AUTHORISATION ||
+    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE ||
+    ((newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
+      currentStatus === PRN_STATUS.AWAITING_AUTHORISATION) ||
+    (newStatus === PRN_STATUS.CANCELLED &&
+      currentStatus === PRN_STATUS.AWAITING_CANCELLATION)
+  )
+}
+
+/**
  * Applies waste balance side effects for a status transition.
  * Each transition type is mutually exclusive based on newStatus.
  *

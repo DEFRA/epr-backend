@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 
-import { applyWasteBalanceEffects } from './update-status-balance-effects.js'
+import {
+  applyWasteBalanceEffects,
+  affectsWasteBalance
+} from './update-status-balance-effects.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
@@ -168,5 +171,58 @@ describe('applyWasteBalanceEffects watermark return', () => {
     )
 
     expect(watermark).toBeNull()
+  })
+})
+
+describe('affectsWasteBalance', () => {
+  it('is true for PRN creation', () => {
+    expect(
+      affectsWasteBalance(PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION)
+    ).toBe(true)
+  })
+
+  it('is true for PRN issuance', () => {
+    expect(
+      affectsWasteBalance(
+        PRN_STATUS.AWAITING_AUTHORISATION,
+        PRN_STATUS.AWAITING_ACCEPTANCE
+      )
+    ).toBe(true)
+  })
+
+  it('is true for deleting a PRN awaiting authorisation', () => {
+    expect(
+      affectsWasteBalance(PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DELETED)
+    ).toBe(true)
+  })
+
+  it('is true for cancelling an issued PRN', () => {
+    expect(
+      affectsWasteBalance(
+        PRN_STATUS.AWAITING_CANCELLATION,
+        PRN_STATUS.CANCELLED
+      )
+    ).toBe(true)
+  })
+
+  it('is false for accepting an issued PRN', () => {
+    expect(
+      affectsWasteBalance(PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED)
+    ).toBe(false)
+  })
+
+  it('is false for requesting cancellation of an issued PRN', () => {
+    expect(
+      affectsWasteBalance(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.AWAITING_CANCELLATION
+      )
+    ).toBe(false)
+  })
+
+  it('is false for discarding a draft PRN', () => {
+    expect(affectsWasteBalance(PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED)).toBe(
+      false
+    )
   })
 })

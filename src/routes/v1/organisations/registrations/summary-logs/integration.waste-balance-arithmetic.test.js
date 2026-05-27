@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
 import { describe, it, expect, beforeEach } from 'vitest'
 
@@ -7,7 +8,10 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#waste-balances/domain/model.js'
+import {
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE,
+  WASTE_BALANCE_CANONICAL_SOURCE
+} from '#waste-balances/domain/model.js'
 
 import {
   asStandardUser,
@@ -1234,6 +1238,138 @@ describe('Waste balance arithmetic integration tests', () => {
       const balanceAfterB =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balanceAfterB.amount).toBe(100)
+    })
+  })
+
+  describe('on the event-sourced ledger path', () => {
+    const setupLedgerEnv = () => {
+      const organisationId = new ObjectId().toString()
+      const registrationId = new ObjectId().toString()
+      /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
+      const existingWasteBalances = [
+        {
+          id: 'seeded-ledger-balance',
+          accreditationId: 'ACC-123',
+          registrationId,
+          organisationId,
+          schemaVersion: 1,
+          version: 0,
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        }
+      ]
+      return setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter',
+        organisationId,
+        registrationId,
+        featureFlagOverrides: { wasteBalanceLedger: true },
+        // @ts-expect-error -- existingWasteBalances defaults to never[]; WasteBalance[] is correct at runtime
+        existingWasteBalances
+      })
+    }
+
+    it('ringfences available balance and stamps the PRN watermark when raising', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository, packagingRecyclingNotesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-raise',
+        'file-ledger-raise',
+        'waste-ledger-raise.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 300 }])
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId('ACC-123')
+      expect(balance.amount).toBe(300)
+      expect(balance.availableAmount).toBe(300)
+
+      const prn = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance = await wasteBalancesRepository.findByAccreditationId('ACC-123')
+      expect(balance.amount).toBe(300) // total unchanged
+      expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
+
+      const stored = await packagingRecyclingNotesRepository.findById(prn.id)
+      expect(stored.lastAppliedEventNumber).toEqual(expect.any(Number))
+    })
+
+    it('deducts from total balance when issuing', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-issue',
+        'file-ledger-issue',
+        'waste-ledger-issue.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      const prn = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId('ACC-123')
+      expect(balance.amount).toBe(150) // 200 - 50 finalised
+      expect(balance.availableAmount).toBe(150)
+    })
+
+    it('restores available balance when deleting a raised PRN', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-delete',
+        'file-ledger-delete',
+        'waste-ledger-delete.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      const prn = await createPrn(env, 40)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId('ACC-123')
+      expect(balance.availableAmount).toBe(60)
+
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.DELETED)
+
+      balance = await wasteBalancesRepository.findByAccreditationId('ACC-123')
+      expect(balance.amount).toBe(100)
+      expect(balance.availableAmount).toBe(100) // ringfence released
+    })
+
+    it('debits available balance once per PRN when two raises race on the same accreditation', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-race',
+        'file-ledger-race',
+        'waste-ledger-race.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      const prnA = await createPrn(env, 30)
+      const prnB = await createPrn(env, 30)
+
+      await Promise.allSettled([
+        transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_AUTHORISATION),
+        transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      ])
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId('ACC-123')
+      expect(balance.amount).toBe(200)
+      expect(balance.availableAmount).toBe(140) // 200 - 30 - 30
     })
   })
 })

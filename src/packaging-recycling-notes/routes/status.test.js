@@ -984,7 +984,11 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     it('returns 400 when no waste balance exists', async () => {
-      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(null)
+      // An accreditation with no balance returns null on every lookup: both
+      // the up-front canonical-source check and the balance-effect read.
+      wasteBalancesRepository.findByAccreditationId
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null)
       packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         createMockPrn()
       )
