@@ -14,6 +14,8 @@ import {
   logValidationSuccess
 } from './helpers.js'
 
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+
 /**
  * Validates that the accreditation number in the spreadsheet matches the registration's accreditation number
  *
@@ -21,7 +23,7 @@ import {
  * @param {Object} params.parsed - The parsed summary log structure from the parser
  * @param {Object} params.registration - The registration object from the organisations repository
  * @param {string} params.loggingContext - Logging context message
- * @returns {Object} validation issues with any issues found
+ * @returns {ValidationIssuesCollector} validation issues with any issues found
  */
 export const validateAccreditationNumber = ({
   parsed,

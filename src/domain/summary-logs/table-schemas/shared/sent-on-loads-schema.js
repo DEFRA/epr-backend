@@ -41,7 +41,6 @@ const SUPPLEMENTARY_FIELDS = [
  *
  * @param {number} rowIdMinimum - Minimum ROW_ID value for this variant
  * @param {Function} rowTransformer - Function to transform a row into waste record metadata
- * @returns {object} Table schema for SENT_ON_LOADS
  */
 export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
   rowIdField: FIELDS.ROW_ID,

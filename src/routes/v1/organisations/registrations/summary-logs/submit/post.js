@@ -96,7 +96,7 @@ export const summaryLogsSubmit = {
           summaryLogId
         )
 
-      if (!result.success || result.version === undefined) {
+      if (!result.success) {
         throw Boom.conflict(
           'Another submission is in progress. Please try again.'
         )

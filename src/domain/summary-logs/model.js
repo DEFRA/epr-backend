@@ -29,31 +29,44 @@
 /**
  * @typedef {Object} Validation
  * @property {ValidationIssue[]} [issues] - Validation issues found during processing
+ * @property {Array<{code: string, [k: string]: unknown}>} [failures] - Failure codes from upload rejection
+ * @property {number} [totalIssuesCount] - Total number of validation issues found (may exceed issues.length when capped for storage)
+ */
+
+/** @import {Loads, LoadsByWasteRecordType} from '#application/summary-logs/load-counts.js' */
+/** @import {ProcessingType} from './meta-fields.js' */
+/** @import {SummaryLogStatus} from './status.js' */
+
+/**
+ * Metadata extracted from the summary log spreadsheet's Cover sheet.
+ * All fields are optional because extraction emits only the keys that were
+ * present in the parsed file — a missing cell yields a missing field.
+ *
+ * @typedef {{
+ *   PROCESSING_TYPE?: ProcessingType,
+ *   TEMPLATE_VERSION?: number,
+ *   MATERIAL?: string,
+ *   ACCREDITATION_NUMBER?: string,
+ *   REGISTRATION_NUMBER?: string
+ * }} SummaryLogMeta
  */
 
 /**
- * @typedef {Object.<string, string>} SummaryLogMeta
- * Metadata extracted from the summary log spreadsheet (e.g. PROCESSING_TYPE, MATERIAL)
+ * @typedef {{
+ *   createdAt?: string,
+ *   expiresAt?: Date | null,
+ *   file: SummaryLogFile,
+ *   loads?: Loads,
+ *   loadsByWasteRecordType?: LoadsByWasteRecordType,
+ *   meta?: SummaryLogMeta,
+ *   organisationId?: string,
+ *   registrationId?: string,
+ *   status: SummaryLogStatus,
+ *   submittedAt?: string,
+ *   validation?: Validation
+ * }} SummaryLog
  */
 
-/**
- * @typedef {Object} SummaryLog
- * @property {import('./status.js').SummaryLogStatus} status
- * @property {SummaryLogFile} file
- * @property {Validation} [validation]
- * @property {string} [organisationId]
- * @property {string} [registrationId]
- * @property {SummaryLogMeta} [meta]
- */
-
-/**
- * @typedef {Object} StoredSummaryLog
- * @property {import('./status.js').SummaryLogStatus} status
- * @property {StoredFile} file
- * @property {Validation} [validation]
- * @property {string} [organisationId]
- * @property {string} [registrationId]
- * @property {SummaryLogMeta} [meta]
- */
+/** @typedef {Omit<SummaryLog, 'file'> & { file: StoredFile }} StoredSummaryLog */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

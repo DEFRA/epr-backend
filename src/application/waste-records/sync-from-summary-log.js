@@ -11,6 +11,7 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_CHANGE } from '#domain/waste-records/model.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
@@ -75,7 +76,8 @@ const prepareRows = (headers, rows, rowIdField) => {
       data[headerName] = values[colIndex]
     }
 
-    return [{ data }]
+    // Sync re-syncs already-validated records; outcome required by type, unread here.
+    return [{ data, outcome: ROW_OUTCOME.INCLUDED }]
   })
 }
 

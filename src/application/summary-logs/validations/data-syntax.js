@@ -1,27 +1,31 @@
-import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   isEprMarker,
   SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
+import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
+import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/index.js'
+import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
+import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
+import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
 import {
   classifyRow,
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/index.js'
-import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
-import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
-import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
-import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ * @typedef {import('#common/validation/validation-issues.js').ValidationIssuesCollector} ValidationIssuesCollector
  * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
  */
+
+/** @import {ValidatedSummaryLog, ValidatedTableSection} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -391,7 +395,7 @@ const validateRows = ({
  * @param {Object} params.tableData - The table data with headers, rows, and location
  * @param {Object} params.schema - The adapted validation schema for this table
  * @param {Object} params.issues - Validation issues collector
- * @returns {Object} Validated table data with rows converted to ValidatedRow[]
+ * @returns {ValidatedTableSection} Validated table data with rows converted to ValidatedRow[]
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
   const { headers, rows, location } = tableData
@@ -432,8 +436,8 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
 
 /**
  * @typedef {Object} DataSyntaxValidationResult
- * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues
- * @property {Object} validatedData - Parsed data with rows converted to ValidatedRow[]
+ * @property {ValidationIssuesCollector} issues - Validation issues
+ * @property {ValidatedSummaryLog} validatedData - Parsed data with rows converted to ValidatedRow[]
  */
 
 /**
@@ -452,7 +456,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
  * @param {Object} schemaRegistry - Schema registry mapping processing types to table schemas
- * @returns {function(Object): DataSyntaxValidationResult} Validator function that takes parsed summary log
+ * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
 export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
   const issues = createValidationIssues()
@@ -460,6 +464,7 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
   const data = parsed?.data || {}
   const processingType = parsed?.meta?.PROCESSING_TYPE?.value
   const getTableSchema = createTableSchemaGetter(processingType, schemaRegistry)
+  /** @type {ValidatedSummaryLog['data']} */
   const validatedTables = {}
 
   for (const [tableName, tableData] of Object.entries(data)) {
@@ -477,8 +482,10 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
         { location }
       )
 
-      // Keep unvalidated tables as-is for downstream processing
-      validatedTables[tableName] = tableData
+      // Keep unvalidated tables as-is for downstream processing.
+      validatedTables[tableName] = /** @type {ValidatedTableSection} */ (
+        /** @type {unknown} */ (tableData)
+      )
       continue
     }
 
