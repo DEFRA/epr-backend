@@ -1,5 +1,7 @@
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
+/** @import {Validation} from '#domain/summary-logs/model.js' */
+
 /**
  * Transforms a fatal validation issue to HTTP response format
  *
@@ -117,10 +119,7 @@ const groupAndTransformRowIssues = (issues) => {
  * - `failures`: Array of fatal meta-level errors (XOR with concerns)
  * - `concerns`: Object with table-keyed row-level errors and warnings
  *
- * @param {Object} [validation] - The validation object from database
- * @param {Array} [validation.issues] - Array of validation issues (from validation pipeline)
- * @param {Array} [validation.failures] - Array of failure codes (from upload rejection)
- * @param {number} [validation.totalIssuesCount] - Total issue count when issues were truncated
+ * @param {Validation} [validation] - The validation object from database
  * @returns {Object} Transformed validation for HTTP response
  */
 export const transformValidationResponse = (validation) => {

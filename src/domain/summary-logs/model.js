@@ -29,6 +29,7 @@
 /**
  * @typedef {Object} Validation
  * @property {ValidationIssue[]} [issues] - Validation issues found during processing
+ * @property {Array<{code: string, [k: string]: unknown}>} [failures] - Failure codes from upload rejection
  * @property {number} [totalIssuesCount] - Total number of validation issues found (may exceed issues.length when capped for storage)
  */
 
