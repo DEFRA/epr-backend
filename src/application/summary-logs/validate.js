@@ -199,7 +199,7 @@ const extractMetaValues = (parsedMeta) => {
 }
 
 /**
- * @param {unknown} error
+ * @param {Error & { code?: string }} error
  * @param {ValidationIssuesCollector} issues
  * @param {string} loggingContext
  * @param {TypedLogger} logger
@@ -216,9 +216,8 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
     })
     issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
   } else {
-    const err = error instanceof Error ? error : new Error(String(error))
     logger.error({
-      err,
+      err: error,
       message: `Failed to validate summary log file: ${loggingContext}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -227,7 +226,7 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
     })
     issues.addFatal(
       VALIDATION_CATEGORY.TECHNICAL,
-      err.message,
+      error.message,
       VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
     )
   }
@@ -365,7 +364,12 @@ const performValidationChecks = async ({
 
     issues.merge(dataResult.issues)
   } catch (error) {
-    handleValidationFailure(error, issues, loggingContext, logger)
+    handleValidationFailure(
+      /** @type {Error & { code?: string }} */ (error),
+      issues,
+      loggingContext,
+      logger
+    )
   }
 
   return { issues, wasteRecords, meta }

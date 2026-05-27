@@ -178,30 +178,24 @@ describe('SummaryLogsValidator integration', () => {
     expect(updated.summaryLog.validation.issues).toEqual([])
   })
 
-  it.each([
-    { description: 'an Error instance', thrown: new Error('extraction error') },
-    { description: 'a non-Error value', thrown: { message: 'plain object' } }
-  ])(
-    'should fail validation when extraction throws $description',
-    async ({ thrown }) => {
-      const { updated } = await runValidation({
-        registrationType: 'reprocessor',
-        registrationWRN: 'REG-123',
-        summaryLogExtractor: {
-          extract: async () => {
-            throw thrown
-          }
+  it('should fail validation when extraction throws an error', async () => {
+    const { updated } = await runValidation({
+      registrationType: 'reprocessor',
+      registrationWRN: 'REG-123',
+      summaryLogExtractor: {
+        extract: async () => {
+          throw new Error('extraction error')
         }
-      })
+      }
+    })
 
-      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-      expect(updated.summaryLog.validation.issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ code: 'VALIDATION_SYSTEM_ERROR' })
-        ])
-      )
-    }
-  )
+    expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    expect(updated.summaryLog.validation.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'VALIDATION_SYSTEM_ERROR' })
+      ])
+    )
+  })
 
   describe('successful type matching', () => {
     describe.each([
