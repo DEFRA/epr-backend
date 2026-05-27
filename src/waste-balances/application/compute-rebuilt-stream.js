@@ -210,9 +210,10 @@ const replayStream = (events) => {
 
 /**
  * Reconstruct the full historical event stream for an accreditation and
- * derive balance totals from it. The event list is suitable for seeding
- * a stream store; the totals match the shape of `computeRebuiltTotals`
- * for 3-way diagnostic comparison.
+ * derive balance totals from it. The event list validates the stream
+ * replay logic against authoritative sources; seeding these events into
+ * a store requires further work (deterministic tiebreaks, partition
+ * shape, createdBy attribution) tracked separately under PAE-1382.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
@@ -241,14 +242,7 @@ export const computeRebuiltStream = ({
   const events = replayStream(unsorted)
 
   if (events.length === 0) {
-    return {
-      events,
-      amount: 0,
-      availableAmount: 0,
-      wasteRecordContribution: 0,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
-    }
+    return { events, amount: 0, availableAmount: 0 }
   }
 
   const finalBalance =
@@ -256,36 +250,9 @@ export const computeRebuiltStream = ({
       events.at(-1)
     ).closingBalance
 
-  let wasteRecordContribution = 0
-  let prnAmountContribution = 0
-  let prnAvailableAmountContribution = 0
-
-  for (const event of events) {
-    if (event.kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED) {
-      wasteRecordContribution =
-        /** @type {import('../repository/stream-schema.js').SummaryLogSubmittedPayload} */ (
-          event.payload
-        ).creditTotal
-    } else {
-      const delta = {
-        amount: event.closingBalance.amount - event.openingBalance.amount,
-        availableAmount:
-          event.closingBalance.availableAmount -
-          event.openingBalance.availableAmount
-      }
-      prnAmountContribution = toNumber(add(prnAmountContribution, delta.amount))
-      prnAvailableAmountContribution = toNumber(
-        add(prnAvailableAmountContribution, delta.availableAmount)
-      )
-    }
-  }
-
   return {
     events,
     amount: finalBalance.amount,
-    availableAmount: finalBalance.availableAmount,
-    wasteRecordContribution,
-    prnAmountContribution,
-    prnAvailableAmountContribution
+    availableAmount: finalBalance.availableAmount
   }
 }

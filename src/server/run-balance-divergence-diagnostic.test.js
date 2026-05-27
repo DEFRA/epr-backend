@@ -133,10 +133,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 0,
-      availableAmount: 0,
-      wasteRecordContribution: 0,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
+      availableAmount: 0
     })
     vi.mocked(resolveOverseasSites).mockResolvedValue({})
   })
@@ -216,10 +213,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 7,
-      availableAmount: 5,
-      wasteRecordContribution: 7,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
+      availableAmount: 5
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -268,10 +262,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 95,
-      availableAmount: 80,
-      wasteRecordContribution: 95,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: -15
+      availableAmount: 80
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -395,10 +386,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 7,
-      availableAmount: 7,
-      wasteRecordContribution: 7,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
+      availableAmount: 7
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -546,10 +534,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 5,
-      availableAmount: 5,
-      wasteRecordContribution: 5,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
+      availableAmount: 5
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -672,10 +657,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 95,
-      availableAmount: 75,
-      wasteRecordContribution: 95,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: -20
+      availableAmount: 75
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)

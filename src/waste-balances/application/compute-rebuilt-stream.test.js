@@ -47,10 +47,7 @@ describe('computeRebuiltStream', () => {
     expect(result).toEqual({
       events: [],
       amount: 0,
-      availableAmount: 0,
-      wasteRecordContribution: 0,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
+      availableAmount: 0
     })
   })
 
@@ -115,9 +112,6 @@ describe('computeRebuiltStream', () => {
 
     expect(result.amount).toBe(70)
     expect(result.availableAmount).toBe(70)
-    expect(result.wasteRecordContribution).toBe(100)
-    expect(result.prnAmountContribution).toBe(-30)
-    expect(result.prnAvailableAmountContribution).toBe(-30)
   })
 
   it('handles multiple summary logs with version history and interleaved PRNs', () => {
@@ -195,9 +189,6 @@ describe('computeRebuiltStream', () => {
     // Final balance: 60 (waste) - 10 (PRN created, availableAmount only)
     expect(result.amount).toBe(60)
     expect(result.availableAmount).toBe(50)
-    expect(result.wasteRecordContribution).toBe(60)
-    expect(result.prnAmountContribution).toBe(0)
-    expect(result.prnAvailableAmountContribution).toBe(-10)
   })
 
   it('ignores non-submitted summary logs', () => {
@@ -231,7 +222,7 @@ describe('computeRebuiltStream', () => {
     })
 
     expect(result.events).toHaveLength(1)
-    expect(result.wasteRecordContribution).toBe(10)
+    expect(result.amount).toBe(10)
   })
 
   it('excludes waste records not yet created at a submission point', () => {
@@ -274,8 +265,7 @@ describe('computeRebuiltStream', () => {
       amount: 0,
       availableAmount: 0
     })
-    // Second submission: record appears, creditTotal = 50
-    expect(result.wasteRecordContribution).toBe(50)
+    // Second submission: record appears, balance reflects it
     expect(result.amount).toBe(50)
   })
 
@@ -329,10 +319,9 @@ describe('computeRebuiltStream', () => {
       ]
     })
 
-    // PRN created then cancelled pre-issue: net zero effect on availableAmount
+    // PRN created then cancelled pre-issue: net zero effect on balance
     expect(result.amount).toBe(100)
     expect(result.availableAmount).toBe(100)
-    expect(result.prnAvailableAmountContribution).toBe(0)
   })
 
   it('reverses both amount and availableAmount for a post-issue cancellation', () => {
@@ -396,7 +385,5 @@ describe('computeRebuiltStream', () => {
     // PRN created, issued, then cancelled: net zero effect
     expect(result.amount).toBe(100)
     expect(result.availableAmount).toBe(100)
-    expect(result.prnAmountContribution).toBe(0)
-    expect(result.prnAvailableAmountContribution).toBe(0)
   })
 })
