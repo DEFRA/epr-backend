@@ -409,9 +409,7 @@ const validateRows = ({
     }
 
     const classification = classifyRow(rowObject, domainSchema)
-    const rowId = String(
-      /** @type {string | number} */ (rowObject[domainSchema.rowIdField])
-    )
+    const rowId = String(rowObject[domainSchema.rowIdField]) // NOSONAR: javascript:S6551 - ROW_ID is never an object
 
     const rowIssues = classification.issues.map((issue) =>
       toApplicationIssue({
