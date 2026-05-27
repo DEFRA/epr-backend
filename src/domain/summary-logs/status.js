@@ -89,6 +89,8 @@ export const SUMMARY_LOG_COMMAND = Object.freeze({
  * Statuses that indicate a summary log is still being validated.
  * Used by the timeout tracker to determine if a failed/timed-out task
  * should be marked as validation_failed.
+ *
+ * @type {readonly SummaryLogStatus[]}
  */
 export const PROCESSING_STATUSES = Object.freeze([
   SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -99,6 +101,8 @@ export const PROCESSING_STATUSES = Object.freeze([
  * Statuses that indicate a summary log is still being submitted.
  * Used by the timeout tracker to determine if a failed/timed-out task
  * should be marked as submission_failed.
+ *
+ * @type {readonly SummaryLogStatus[]}
  */
 export const SUBMISSION_PROCESSING_STATUSES = Object.freeze([
   SUMMARY_LOG_STATUS.SUBMITTING
