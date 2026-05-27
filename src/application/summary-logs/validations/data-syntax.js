@@ -24,7 +24,7 @@ import {
 /** @import {ValidationIssue, ValidationIssueLocation, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @import {RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {RowClassificationIssue, RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
  * Output of adaptDomainSchema — the shape validateTable expects.
@@ -150,12 +150,13 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
 
 /**
  * Maps a Joi failure message to a specific application error code, or
- * undefined if the message isn't recognised.
+ * undefined if the message isn't recognised or is absent.
  *
- * @param {string} message
+ * @param {string | undefined} message
  * @returns {ValidationCode | undefined}
  */
-const mapMessageToErrorCode = (message) => JOI_MESSAGE_TO_ERROR_CODE[message]
+const mapMessageToErrorCode = (message) =>
+  message ? JOI_MESSAGE_TO_ERROR_CODE[message] : undefined
 
 /**
  * Builds a map from header names to their column indices
@@ -250,6 +251,22 @@ const buildCellLocation = ({
       }
     : { table: tableName, rowId, header: fieldName }
 
+/**
+ * Maps a row-classification issue from the validation pipeline into a
+ * domain-level ValidationIssue (with our category/severity/code/context shape).
+ *
+ * @param {{
+ *   issue: RowClassificationIssue,
+ *   classification: { outcome: RowOutcome },
+ *   headerToIndexMap: Map<string, number>,
+ *   rowObject: Record<string, unknown>,
+ *   rowId: string,
+ *   tableName: string,
+ *   rowNumber: number,
+ *   location: CellLocation
+ * }} params
+ * @returns {ValidationIssue}
+ */
 const toApplicationIssue = ({
   issue,
   classification,
@@ -303,6 +320,13 @@ const toApplicationIssue = ({
   }
 }
 
+/**
+ * Records each row-level issue onto the run-level issues collector, preserving
+ * its severity (fatal vs error).
+ *
+ * @param {ValidationIssue[]} rowIssues
+ * @param {ValidationIssuesCollector} issues
+ */
 const recordIssues = (rowIssues, issues) => {
   for (const rowIssue of rowIssues) {
     if (rowIssue.severity === 'fatal') {
