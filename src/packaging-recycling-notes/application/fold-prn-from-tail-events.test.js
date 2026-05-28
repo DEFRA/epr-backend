@@ -4,17 +4,26 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
+const baseUpdatedAt = new Date('2026-01-15T10:00:00.000Z')
+const baseCreator = { id: 'creator', name: 'Original Creator' }
+
 const basePrn = () => ({
   id: 'prn-1',
   registrationId: 'reg-1',
   accreditation: { id: 'acc-1' },
+  version: 1,
+  updatedAt: baseUpdatedAt,
+  updatedBy: baseCreator,
   status: {
     currentStatus: PRN_STATUS.DRAFT,
-    currentStatusAt: new Date('2026-01-15T10:00:00.000Z')
+    currentStatusAt: baseUpdatedAt,
+    history: [{ status: PRN_STATUS.DRAFT, at: baseUpdatedAt, by: baseCreator }]
   }
 })
 
-const buildEvent = (kind, number, createdAt) => ({
+const eventCreator = { id: 'user-1', name: 'Test User' }
+
+const buildEvent = (kind, number, createdAt, createdBy = eventCreator) => ({
   id: `event-${number}`,
   registrationId: 'reg-1',
   accreditationId: 'acc-1',
@@ -25,7 +34,7 @@ const buildEvent = (kind, number, createdAt) => ({
   openingBalance: { amount: 100, availableAmount: 100 },
   closingBalance: { amount: 100, availableAmount: 50 },
   createdAt: new Date(createdAt),
-  createdBy: { id: 'user-1', name: 'Test User' }
+  createdBy
 })
 
 describe('foldPrnFromTailEvents', () => {
@@ -39,8 +48,8 @@ describe('foldPrnFromTailEvents', () => {
     })
   })
 
-  describe('fold map', () => {
-    it('prn-created folds to awaiting_authorisation', () => {
+  describe('per-event projection', () => {
+    it('prn-created sets status, slot, history, version, updatedAt/By and watermark', () => {
       const prn = basePrn()
       const event = buildEvent(
         STREAM_EVENT_KIND.PRN_CREATED,
@@ -54,11 +63,26 @@ describe('foldPrnFromTailEvents', () => {
         PRN_STATUS.AWAITING_AUTHORISATION
       )
       expect(result.status.currentStatusAt).toEqual(event.createdAt)
+      expect(result.status.created).toEqual({
+        at: event.createdAt,
+        by: event.createdBy
+      })
+      expect(result.status.history).toEqual([
+        ...prn.status.history,
+        {
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          at: event.createdAt,
+          by: event.createdBy
+        }
+      ])
+      expect(result.version).toBe(2)
+      expect(result.updatedAt).toEqual(event.createdAt)
+      expect(result.updatedBy).toEqual(event.createdBy)
       expect(result.lastAppliedEventNumber).toBe(1)
     })
 
-    it('prn-issued folds to awaiting_acceptance', () => {
-      const prn = { ...basePrn(), lastAppliedEventNumber: 1 }
+    it('prn-issued sets currentStatus awaiting_acceptance and issued slot', () => {
+      const prn = basePrn()
       const event = buildEvent(
         STREAM_EVENT_KIND.PRN_ISSUED,
         2,
@@ -68,40 +92,153 @@ describe('foldPrnFromTailEvents', () => {
       const result = foldPrnFromTailEvents(prn, [event])
 
       expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-      expect(result.status.currentStatusAt).toEqual(event.createdAt)
-      expect(result.lastAppliedEventNumber).toBe(2)
+      expect(result.status.issued).toEqual({
+        at: event.createdAt,
+        by: event.createdBy
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.AWAITING_ACCEPTANCE,
+        at: event.createdAt,
+        by: event.createdBy
+      })
     })
 
-    it('prn-creation-cancelled folds to deleted', () => {
+    it('prn-accepted sets currentStatus accepted and accepted slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+        STREAM_EVENT_KIND.PRN_ACCEPTED,
         3,
         '2026-02-03T12:00:00.000Z'
       )
 
       const result = foldPrnFromTailEvents(prn, [event])
 
-      expect(result.status.currentStatus).toBe(PRN_STATUS.DELETED)
-      expect(result.status.currentStatusAt).toEqual(event.createdAt)
-      expect(result.lastAppliedEventNumber).toBe(3)
+      expect(result.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+      expect(result.status.accepted).toEqual({
+        at: event.createdAt,
+        by: event.createdBy
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.ACCEPTED,
+        at: event.createdAt,
+        by: event.createdBy
+      })
     })
 
-    it('prn-cancelled-after-issue folds to cancelled', () => {
+    it('prn-rejected sets currentStatus awaiting_cancellation and rejected slot', () => {
       const prn = basePrn()
       const event = buildEvent(
-        STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        STREAM_EVENT_KIND.PRN_REJECTED,
         4,
         '2026-02-04T12:00:00.000Z'
       )
 
       const result = foldPrnFromTailEvents(prn, [event])
 
-      expect(result.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
-      expect(result.status.currentStatusAt).toEqual(event.createdAt)
-      expect(result.lastAppliedEventNumber).toBe(4)
+      expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_CANCELLATION)
+      expect(result.status.rejected).toEqual({
+        at: event.createdAt,
+        by: event.createdBy
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.AWAITING_CANCELLATION,
+        at: event.createdAt,
+        by: event.createdBy
+      })
     })
 
+    it('prn-creation-cancelled sets currentStatus deleted and deleted slot', () => {
+      const prn = basePrn()
+      const event = buildEvent(
+        STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+        5,
+        '2026-02-05T12:00:00.000Z'
+      )
+
+      const result = foldPrnFromTailEvents(prn, [event])
+
+      expect(result.status.currentStatus).toBe(PRN_STATUS.DELETED)
+      expect(result.status.deleted).toEqual({
+        at: event.createdAt,
+        by: event.createdBy
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.DELETED,
+        at: event.createdAt,
+        by: event.createdBy
+      })
+    })
+
+    it('prn-cancelled-after-issue sets currentStatus cancelled and cancelled slot', () => {
+      const prn = basePrn()
+      const event = buildEvent(
+        STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        6,
+        '2026-02-06T12:00:00.000Z'
+      )
+
+      const result = foldPrnFromTailEvents(prn, [event])
+
+      expect(result.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+      expect(result.status.cancelled).toEqual({
+        at: event.createdAt,
+        by: event.createdBy
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.CANCELLED,
+        at: event.createdAt,
+        by: event.createdBy
+      })
+    })
+  })
+
+  describe('multi-event left fold', () => {
+    it('applies every event in order, populating each slot and appending each history entry', () => {
+      const prn = basePrn()
+      const created = buildEvent(
+        STREAM_EVENT_KIND.PRN_CREATED,
+        1,
+        '2026-02-01T12:00:00.000Z'
+      )
+      const issued = buildEvent(
+        STREAM_EVENT_KIND.PRN_ISSUED,
+        2,
+        '2026-02-02T12:00:00.000Z',
+        { id: 'signatory', name: 'Sig Natory' }
+      )
+
+      const result = foldPrnFromTailEvents(prn, [created, issued])
+
+      expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(result.status.currentStatusAt).toEqual(issued.createdAt)
+      expect(result.status.created).toEqual({
+        at: created.createdAt,
+        by: created.createdBy
+      })
+      expect(result.status.issued).toEqual({
+        at: issued.createdAt,
+        by: issued.createdBy
+      })
+      expect(result.status.history.slice(-2)).toEqual([
+        {
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          at: created.createdAt,
+          by: created.createdBy
+        },
+        {
+          status: PRN_STATUS.AWAITING_ACCEPTANCE,
+          at: issued.createdAt,
+          by: issued.createdBy
+        }
+      ])
+      expect(result.version).toBe(3)
+      expect(result.updatedAt).toEqual(issued.createdAt)
+      expect(result.updatedBy).toEqual(issued.createdBy)
+      expect(result.lastAppliedEventNumber).toBe(2)
+    })
+  })
+
+  describe('error handling', () => {
     it('throws on an unmappable kind (e.g. summary-log-submitted)', () => {
       const prn = basePrn()
       const event = buildEvent(
@@ -116,30 +253,8 @@ describe('foldPrnFromTailEvents', () => {
     })
   })
 
-  describe('with multiple tail events', () => {
-    it('folds from the latest (highest-numbered) event', () => {
-      const prn = basePrn()
-      const earlier = buildEvent(
-        STREAM_EVENT_KIND.PRN_CREATED,
-        1,
-        '2026-02-01T12:00:00.000Z'
-      )
-      const latest = buildEvent(
-        STREAM_EVENT_KIND.PRN_ISSUED,
-        2,
-        '2026-02-02T12:00:00.000Z'
-      )
-
-      const result = foldPrnFromTailEvents(prn, [earlier, latest])
-
-      expect(result.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-      expect(result.status.currentStatusAt).toEqual(latest.createdAt)
-      expect(result.lastAppliedEventNumber).toBe(2)
-    })
-  })
-
-  describe('preserves the rest of the PRN', () => {
-    it('does not mutate the input', () => {
+  describe('purity', () => {
+    it('does not mutate the input PRN', () => {
       const prn = basePrn()
       const snapshot = structuredClone(prn)
       const event = buildEvent(
@@ -153,16 +268,12 @@ describe('foldPrnFromTailEvents', () => {
       expect(prn).toEqual(snapshot)
     })
 
-    it('keeps other top-level fields and nested status fields', () => {
+    it('keeps other top-level fields untouched', () => {
       const prn = {
         ...basePrn(),
         tonnage: 50,
         prnNumber: 'ER1234567890A',
-        status: {
-          ...basePrn().status,
-          history: [{ status: PRN_STATUS.DRAFT, at: new Date(), by: {} }],
-          issued: { at: new Date('2026-01-16T14:30:00.000Z'), by: { id: 'u' } }
-        }
+        notes: 'leave me alone'
       }
       const event = buildEvent(
         STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
@@ -174,9 +285,7 @@ describe('foldPrnFromTailEvents', () => {
 
       expect(result.tonnage).toBe(50)
       expect(result.prnNumber).toBe('ER1234567890A')
-      expect(result.status.history).toEqual(prn.status.history)
-      expect(result.status.issued).toEqual(prn.status.issued)
-      expect(result.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+      expect(result.notes).toBe('leave me alone')
     })
   })
 })

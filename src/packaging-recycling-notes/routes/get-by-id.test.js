@@ -451,7 +451,10 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const stalePrn = {
           ...mockPrn,
           lastAppliedEventNumber: 1,
-          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
         }
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           stalePrn
@@ -474,7 +477,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('recovers a first-event failure: draft doc + null watermark + prn-created at 1', async () => {
         const draftPrn = {
           ...mockPrn,
-          status: { currentStatus: PRN_STATUS.DRAFT }
+          status: { currentStatus: PRN_STATUS.DRAFT, history: [] }
         }
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           draftPrn
@@ -505,7 +508,10 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const issuedPrn = {
           ...mockPrn,
           lastAppliedEventNumber: 2,
-          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+            history: []
+          }
         }
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           issuedPrn
@@ -533,7 +539,10 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const awaitingAuthPrn = {
           ...mockPrn,
           lastAppliedEventNumber: 1,
-          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
         }
         packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           awaitingAuthPrn
