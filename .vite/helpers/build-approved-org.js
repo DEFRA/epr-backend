@@ -10,6 +10,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
+/**
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository
+ * @param {object} [overrides]
+ * @returns {Promise<import('#repositories/organisations/port.js').Organisation>}
+ */
 export async function buildApprovedOrg(organisationsRepository, overrides) {
   const org = buildOrganisation(overrides)
 

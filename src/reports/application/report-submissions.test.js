@@ -35,7 +35,13 @@ describe('generateReportSubmissions (integration)', () => {
       registrationId: org1Reg.id,
       year: 2026,
       cadence: 'monthly',
-      period: 1
+      period: 1,
+      prn: {
+        issuedTonnage: 80,
+        freeTonnage: 5,
+        totalRevenue: 40000,
+        averagePricePerTonne: 500
+      }
     })
 
     // Org 2: approved registration with no report submissions
@@ -76,8 +82,8 @@ describe('generateReportSubmissions (integration)', () => {
       noteToRegulator: ''
     }
 
-    // Default buildCreateReportParams has recyclingActivity (zeros/nulls),
-    // wasteSent (zeros), prn: null, no exportActivity, no supportingInformation
+    // buildCreateReportParams has recyclingActivity (zeros/nulls), wasteSent (zeros),
+    // prn overridden with non-zero values to exercise freeTonnagePrnsPerns
     const submittedTonnage = {
       tonnageReceivedForRecycling: '0',
       tonnageRecycled: '',
@@ -86,10 +92,10 @@ describe('generateReportSubmissions (integration)', () => {
       tonnageSentOnToReprocessor: '0',
       tonnageSentOnToExporter: '0',
       tonnageSentOnToOtherFacilities: '0',
-      tonnagePrnsPernsIssued: '',
-      freeTonnagePrnsPerns: '',
-      totalRevenuePrnsPerns: '',
-      averagePrnPernPricePerTonne: '',
+      tonnagePrnsPernsIssued: '80',
+      freeTonnagePrnsPerns: '5',
+      totalRevenuePrnsPerns: '40000',
+      averagePrnPernPricePerTonne: '500',
       tonnageReceivedButNotRecycled: '',
       tonnageReceivedButNotExported: '',
       tonnageExportedThatWasStopped: '',
@@ -231,13 +237,15 @@ const buildRegistrationMock = (overrides = {}) => ({
   ...overrides
 })
 
-const makeOrgsRepo = (orgs) => ({
-  findAll: vi.fn().mockResolvedValue(orgs)
-})
+const makeOrgsRepo = (orgs) =>
+  /** @type {any} */ ({
+    findAll: vi.fn().mockResolvedValue(orgs)
+  })
 
-const makeReportsRepo = (allPeriodicReports = []) => ({
-  findAllPeriodicReports: vi.fn().mockResolvedValue(allPeriodicReports)
-})
+const makeReportsRepo = (allPeriodicReports = []) =>
+  /** @type {any} */ ({
+    findAllPeriodicReports: vi.fn().mockResolvedValue(allPeriodicReports)
+  })
 
 describe('generateReportSubmissions (edge cases)', () => {
   it('skips registrations with created status', async () => {
