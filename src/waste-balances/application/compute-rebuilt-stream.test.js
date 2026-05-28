@@ -324,6 +324,138 @@ describe('computeRebuiltStream', () => {
     expect(result.availableAmount).toBe(100)
   })
 
+  it('records a zero-delta PRN_ACCEPTED event when a producer accepts', () => {
+    const result = computeRebuiltStream({
+      accreditation,
+      wasteRecords: [
+        {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          type: 'received',
+          data: { processingType: 'INPUT', tonnage: 100 },
+          versions: [
+            {
+              summaryLog: { id: 'sl-1' },
+              data: { processingType: 'INPUT', tonnage: 100 }
+            }
+          ],
+          excludedFromWasteBalance: false
+        }
+      ],
+      prns: [
+        {
+          id: 'prn-1',
+          tonnage: 30,
+          status: {
+            history: [
+              {
+                status: PRN_STATUS.DRAFT,
+                at: new Date('2025-01-20T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at: new Date('2025-01-21T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                at: new Date('2025-01-22T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.ACCEPTED,
+                at: new Date('2025-01-23T00:00:00.000Z')
+              }
+            ]
+          }
+        }
+      ],
+      overseasSites,
+      summaryLogs: [
+        {
+          id: 'sl-1',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-15T10:00:00.000Z'
+        }
+      ]
+    })
+
+    const accepted =
+      /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+        result.events.find((e) => e.kind === STREAM_EVENT_KIND.PRN_ACCEPTED)
+      )
+    expect(accepted).toBeDefined()
+    expect(accepted.openingBalance).toEqual(accepted.closingBalance)
+
+    // Final balance unchanged by acceptance: created (-30 avail), issued (-30 amount)
+    expect(result.amount).toBe(70)
+    expect(result.availableAmount).toBe(70)
+  })
+
+  it('records a zero-delta PRN_REJECTED event when a producer rejects', () => {
+    const result = computeRebuiltStream({
+      accreditation,
+      wasteRecords: [
+        {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          type: 'received',
+          data: { processingType: 'INPUT', tonnage: 100 },
+          versions: [
+            {
+              summaryLog: { id: 'sl-1' },
+              data: { processingType: 'INPUT', tonnage: 100 }
+            }
+          ],
+          excludedFromWasteBalance: false
+        }
+      ],
+      prns: [
+        {
+          id: 'prn-1',
+          tonnage: 30,
+          status: {
+            history: [
+              {
+                status: PRN_STATUS.DRAFT,
+                at: new Date('2025-01-20T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                at: new Date('2025-01-21T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                at: new Date('2025-01-22T00:00:00.000Z')
+              },
+              {
+                status: PRN_STATUS.AWAITING_CANCELLATION,
+                at: new Date('2025-01-23T00:00:00.000Z')
+              }
+            ]
+          }
+        }
+      ],
+      overseasSites,
+      summaryLogs: [
+        {
+          id: 'sl-1',
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          submittedAt: '2025-01-15T10:00:00.000Z'
+        }
+      ]
+    })
+
+    const rejected =
+      /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+        result.events.find((e) => e.kind === STREAM_EVENT_KIND.PRN_REJECTED)
+      )
+    expect(rejected).toBeDefined()
+    expect(rejected.openingBalance).toEqual(rejected.closingBalance)
+
+    // Balance after created (-30 avail) + issued (-30 amount) + rejected (no-op)
+    expect(result.amount).toBe(70)
+    expect(result.availableAmount).toBe(70)
+  })
+
   it('reverses both amount and availableAmount for a post-issue cancellation', () => {
     const result = computeRebuiltStream({
       accreditation,

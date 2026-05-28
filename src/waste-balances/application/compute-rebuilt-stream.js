@@ -39,6 +39,35 @@ const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
   return data
 }
 
+/** @type {Map<string, import('../repository/stream-schema.js').StreamEventKind>} */
+const PRN_TRANSITION_MAP = new Map([
+  [`*→${PRN_STATUS.AWAITING_AUTHORISATION}`, STREAM_EVENT_KIND.PRN_CREATED],
+  [
+    `${PRN_STATUS.AWAITING_AUTHORISATION}→${PRN_STATUS.AWAITING_ACCEPTANCE}`,
+    STREAM_EVENT_KIND.PRN_ISSUED
+  ],
+  [
+    `${PRN_STATUS.AWAITING_AUTHORISATION}→${PRN_STATUS.CANCELLED}`,
+    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
+  ],
+  [
+    `${PRN_STATUS.AWAITING_AUTHORISATION}→${PRN_STATUS.DELETED}`,
+    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
+  ],
+  [
+    `${PRN_STATUS.AWAITING_CANCELLATION}→${PRN_STATUS.CANCELLED}`,
+    STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+  ],
+  [
+    `${PRN_STATUS.AWAITING_ACCEPTANCE}→${PRN_STATUS.ACCEPTED}`,
+    STREAM_EVENT_KIND.PRN_ACCEPTED
+  ],
+  [
+    `${PRN_STATUS.AWAITING_ACCEPTANCE}→${PRN_STATUS.AWAITING_CANCELLATION}`,
+    STREAM_EVENT_KIND.PRN_REJECTED
+  ]
+])
+
 /**
  * Map a PRN status transition to a stream event kind.
  *
@@ -46,30 +75,10 @@ const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
  * @param {string} newStatus
  * @returns {import('../repository/stream-schema.js').StreamEventKind | null}
  */
-export const prnTransitionToStreamKind = (prevStatus, newStatus) => {
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    return STREAM_EVENT_KIND.PRN_CREATED
-  }
-  if (
-    newStatus === PRN_STATUS.AWAITING_ACCEPTANCE &&
-    prevStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    return STREAM_EVENT_KIND.PRN_ISSUED
-  }
-  if (
-    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
-    prevStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    return STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
-  }
-  if (
-    newStatus === PRN_STATUS.CANCELLED &&
-    prevStatus === PRN_STATUS.AWAITING_CANCELLATION
-  ) {
-    return STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
-  }
-  return null
-}
+export const prnTransitionToStreamKind = (prevStatus, newStatus) =>
+  PRN_TRANSITION_MAP.get(`${prevStatus}→${newStatus}`) ??
+  PRN_TRANSITION_MAP.get(`*→${newStatus}`) ??
+  null
 
 /**
  * Build an unsorted list of chronologically timestamped event tuples

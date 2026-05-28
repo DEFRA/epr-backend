@@ -56,6 +56,9 @@ export const closingForPrn = (opening, kind, prnAmount) => {
         amount: toNumber(add(opening.amount, prnAmount)),
         availableAmount: toNumber(add(opening.availableAmount, prnAmount))
       }
+    case STREAM_EVENT_KIND.PRN_ACCEPTED:
+    case STREAM_EVENT_KIND.PRN_REJECTED:
+      return { ...opening }
     default:
       throw new Error(`Unknown PRN event kind: ${kind}`)
   }
