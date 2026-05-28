@@ -129,7 +129,7 @@ export const coerceRowData = (row, { unfilledValues, validationSchema }) => {
 
 /**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
- * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message?: string, type: string }} ValidationErrorIssue
+ * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string }} ValidationErrorIssue
  */
 
 /**

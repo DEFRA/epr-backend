@@ -14,10 +14,11 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  */
 
 /**
- * A row that can be transformed into a waste record
+ * A row that can be transformed into a waste record.
  *
  * @typedef {Object} TransformableRow
  * @property {Record<string, any>} data - Row data as object keyed by header name
+ * @property {string} [rowId] - Extracted row ID (set by data-syntax validator; not required for transformation)
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} outcome - Classification outcome from validation pipeline
  */

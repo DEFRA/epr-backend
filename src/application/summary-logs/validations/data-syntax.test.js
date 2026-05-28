@@ -16,6 +16,45 @@ import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/ta
 import { checkRequiredFields } from '#domain/summary-logs/table-schemas/shared/classify-helpers.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
+/** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
+
+/** @type {CellLocation} */
+const DEFAULT_TEST_LOCATION = { sheet: 'TestSheet', row: 1, column: 'A' }
+
+/**
+ * Asserts the array has exactly one element and returns it (narrowed to T).
+ * Lets callers access `.foo` on the result without TS complaining about
+ * possibly-undefined array indices.
+ *
+ * @template T
+ * @param {T[]} arr
+ * @returns {T}
+ */
+const expectOne = (arr) => {
+  expect(arr).toHaveLength(1)
+  const [first] = arr
+  if (first === undefined) {
+    throw new Error('expectOne: array is empty after length assertion')
+  }
+  return first
+}
+
+/**
+ * Asserts the array contains a matching element and returns it (narrowed to T).
+ *
+ * @template T
+ * @param {T[]} arr
+ * @param {(value: T) => boolean} predicate
+ * @returns {T}
+ */
+const expectFind = (arr, predicate) => {
+  const found = arr.find(predicate)
+  if (found === undefined) {
+    throw new Error('expectFind: no matching element')
+  }
+  return found
+}
+
 const buildClassifyForWasteBalance = (requiredFields, unfilledValues) => {
   return (data, _context) => {
     const missingResult = checkRequiredFields(
@@ -201,14 +240,17 @@ describe('createDataSyntaxValidator', () => {
   }
 
   /**
-   * Creates parsed data structure from row objects
+   * Builds a ParsedSummaryLog from row-object fixtures — headers are computed
+   * from the keys of the first row in each table.
    *
-   * @param {Object} tables - Object keyed by table name, values are row objects or arrays of row objects
-   * @param {Object} [options] - Additional options
-   * @param {Object} [options.location] - Spreadsheet location
-   * @returns {Object} Parsed data structure
+   * @param {Record<string,
+   *   Record<string, unknown> | Array<Record<string, unknown>>
+   * >} tables - keyed by table name; value is one row object or an array of row objects
+   * @param {{ location?: CellLocation }} [options]
+   * @returns {ParsedSummaryLog}
    */
-  const createParsedData = (tables, options = {}) => {
+  const parsedFromRows = (tables, options = {}) => {
+    /** @type {Record<string, object>} */
     const data = {}
 
     for (const [tableName, rowData] of Object.entries(tables)) {
@@ -231,20 +273,59 @@ describe('createDataSyntaxValidator', () => {
       }
     }
 
-    return {
-      meta: { PROCESSING_TYPE: { value: 'TEST' } },
+    return /** @type {ParsedSummaryLog} */ ({
+      meta: {
+        PROCESSING_TYPE: { value: 'TEST', location: DEFAULT_TEST_LOCATION }
+      },
       data
-    }
+    })
   }
+
+  /**
+   * Builds a ParsedSummaryLog from explicit data-section fixtures. Sections
+   * pass through verbatim — including any that omit `location`, so tests can
+   * exercise data-syntax's defensive guard for parser quirks (the real parser
+   * always sets location). The internal cast is the price for that flexibility.
+   *
+   * @param {Record<string, {
+   *   headers: Array<string | null>,
+   *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
+   *   location?: CellLocation
+   * }>} dataSections
+   * @returns {ParsedSummaryLog}
+   */
+  const parsedFromSections = (dataSections) =>
+    /** @type {ParsedSummaryLog} */ ({
+      meta: {
+        PROCESSING_TYPE: { value: 'TEST', location: DEFAULT_TEST_LOCATION }
+      },
+      data: dataSections
+    })
 
   const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS)
 
-  const validate = (tables, options = {}) =>
-    validateDataSyntax(createParsedData(tables, options))
+  /**
+   * Validates from row-object fixtures (headers auto-computed from keys).
+   * Use when the test only cares about row values.
+   *
+   * @param {Parameters<typeof parsedFromRows>[0]} tables
+   * @param {Parameters<typeof parsedFromRows>[1]} [options]
+   */
+  const validateRows = (tables, options = {}) =>
+    validateDataSyntax(parsedFromRows(tables, options))
+
+  /**
+   * Validates from explicit data-section fixtures. Use when the test needs to
+   * control headers/rows precisely (header order, null headers, markers, etc).
+   *
+   * @param {Parameters<typeof parsedFromSections>[0]} dataSections
+   */
+  const validateSections = (dataSections) =>
+    validateDataSyntax(parsedFromSections(dataSections))
 
   describe('valid data', () => {
     it('returns valid result when all data is correct', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
@@ -254,7 +335,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('validates multiple rows', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 1000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
           { ROW_ID: 10001, TEXT_FIELD: 'second', NUMBER_FIELD: 2 },
@@ -264,77 +345,59 @@ describe('createDataSyntaxValidator', () => {
 
       expect(result.issues.isValid()).toBe(true)
     })
+  })
 
+  describe('header handling', () => {
     it('allows headers in different order', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['NUMBER_FIELD', 'ROW_ID', 'TEXT_FIELD'],
-            rows: [{ rowNumber: 2, values: [42, 1000, 'hello'] }]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['NUMBER_FIELD', 'ROW_ID', 'TEXT_FIELD'],
+          rows: [{ rowNumber: 2, values: [42, 1000, 'hello'] }]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(true)
     })
 
     it('allows additional headers beyond required ones', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD', 'EXTRA_FIELD'],
-            rows: [{ rowNumber: 2, values: [1000, 'hello', 42, 'extra'] }]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD', 'EXTRA_FIELD'],
+          rows: [{ rowNumber: 2, values: [1000, 'hello', 42, 'extra'] }]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(true)
     })
 
     it('ignores null headers', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID', null, 'TEXT_FIELD', 'NUMBER_FIELD', null],
-            rows: [
-              {
-                rowNumber: 2,
-                values: [1000, 'ignored', 'hello', 42, 'also ignored']
-              }
-            ]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID', null, 'TEXT_FIELD', 'NUMBER_FIELD', null],
+          rows: [
+            {
+              rowNumber: 2,
+              values: [1000, 'ignored', 'hello', 42, 'also ignored']
+            }
+          ]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(true)
     })
 
     it('ignores special marker headers starting with __', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: [
-              'ROW_ID',
-              'TEXT_FIELD',
-              'NUMBER_FIELD',
-              '__EPR_DATA_MARKER'
-            ],
-            rows: [{ rowNumber: 2, values: [1000, 'hello', 42, 'marker'] }]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: [
+            'ROW_ID',
+            'TEXT_FIELD',
+            'NUMBER_FIELD',
+            '__EPR_DATA_MARKER'
+          ],
+          rows: [{ rowNumber: 2, values: [1000, 'hello', 42, 'marker'] }]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -342,42 +405,31 @@ describe('createDataSyntaxValidator', () => {
 
   describe('header validation (FATAL)', () => {
     it('returns fatal error when required header is missing', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID', 'TEXT_FIELD'],
-            rows: [{ rowNumber: 2, values: [1000, 'hello'] }]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID', 'TEXT_FIELD'],
+          rows: [{ rowNumber: 2, values: [1000, 'hello'] }]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-      expect(fatals[0].message).toContain('Missing required header')
-      expect(fatals[0].message).toContain('NUMBER_FIELD')
+      expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatal.message).toContain('Missing required header')
+      expect(fatal.message).toContain('NUMBER_FIELD')
     })
 
     it('returns multiple fatal errors when multiple headers are missing', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID'],
-            rows: [{ rowNumber: 2, values: [1000] }]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID'],
+          rows: [{ rowNumber: 2, values: [1000] }]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isFatal()).toBe(true)
 
@@ -393,7 +445,7 @@ describe('createDataSyntaxValidator', () => {
 
   describe('ROW_ID validation (FATAL)', () => {
     it('returns FATAL error when ROW_ID is not a number', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: {
           ROW_ID: 'not-a-number',
           TEXT_FIELD: 'hello',
@@ -404,31 +456,29 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('ROW_ID')
-      expect(fatals[0].context.actual).toBe('not-a-number')
+      expect(fatal.message).toContain('ROW_ID')
+      expect(fatal.context?.actual).toBe('not-a-number')
     })
 
     it('returns FATAL error when ROW_ID is below minimum (1000)', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('ROW_ID')
-      expect(fatals[0].context.actual).toBe(999)
+      expect(fatal.message).toContain('ROW_ID')
+      expect(fatal.context?.actual).toBe(999)
     })
 
     it('returns FATAL error for each row with invalid ROW_ID', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 1000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
           { ROW_ID: 'invalid', TEXT_FIELD: 'bad', NUMBER_FIELD: 2 },
@@ -447,23 +497,22 @@ describe('createDataSyntaxValidator', () => {
 
   describe('cell validation errors', () => {
     it('returns FATAL error when string field is not a string', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('TEXT_FIELD')
-      expect(fatals[0].message).toContain('must be a string')
+      expect(fatal.message).toContain('TEXT_FIELD')
+      expect(fatal.message).toContain('must be a string')
     })
 
     it('returns FATAL error when number field is not a number', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: {
           ROW_ID: 1000,
           TEXT_FIELD: 'hello',
@@ -474,64 +523,60 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('NUMBER_FIELD')
-      expect(fatals[0].message).toContain('must be a number')
+      expect(fatal.message).toContain('NUMBER_FIELD')
+      expect(fatal.message).toContain('must be a number')
     })
 
     it('returns FATAL error when number field is zero or negative', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
       })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('NUMBER_FIELD')
-      expect(fatals[0].message).toContain('must be greater than 0')
+      expect(fatal.message).toContain('NUMBER_FIELD')
+      expect(fatal.message).toContain('must be greater than 0')
     })
 
     it('returns FATAL error when date field is invalid', () => {
-      const result = validate({
+      const result = validateRows({
         DATE_TABLE: { ROW_ID: 1000, DATE_FIELD: 'not-a-date' }
       })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('DATE_FIELD')
-      expect(fatals[0].message).toContain('must be a valid date')
+      expect(fatal.message).toContain('DATE_FIELD')
+      expect(fatal.message).toContain('must be a valid date')
     })
 
     it('returns FATAL error when pattern field does not match pattern', () => {
-      const result = validate({
+      const result = validateRows({
         PATTERN_TABLE: { ROW_ID: 1000, CODE_FIELD: 'invalid' }
       })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('CODE_FIELD')
-      expect(fatals[0].message).toContain('must be in format "XX XX XX"')
+      expect(fatal.message).toContain('CODE_FIELD')
+      expect(fatal.message).toContain('must be in format "XX XX XX"')
     })
 
     it('reports FATAL errors for multiple rows', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 1000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
           { ROW_ID: 10001, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' },
@@ -551,27 +596,28 @@ describe('createDataSyntaxValidator', () => {
 
   describe('location context', () => {
     it('includes spreadsheet location in error context', () => {
-      const result = validate(
+      const result = validateRows(
         {
           TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
         },
         { location: { sheet: 'Sheet1', row: 10, column: 'B' } }
       )
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
         row: 11, // 10 + 1 (first data row)
+        rowId: '1000',
         column: 'C', // B + 1 (TEXT_FIELD is second column)
         header: 'TEXT_FIELD'
       })
     })
 
     it('calculates correct column letters for multiple errors', () => {
-      const result = validate(
+      const result = validateRows(
         {
           TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' }
         },
@@ -583,80 +629,83 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(fatals).toHaveLength(2)
 
-      const textError = fatals.find(
-        (e) => e.context.location?.header === 'TEXT_FIELD'
+      const textError = expectFind(
+        fatals,
+        (e) => e.context?.location?.header === 'TEXT_FIELD'
       )
-      const numberError = fatals.find(
-        (e) => e.context.location?.header === 'NUMBER_FIELD'
+      const numberError = expectFind(
+        fatals,
+        (e) => e.context?.location?.header === 'NUMBER_FIELD'
       )
 
-      expect(textError.context.location.column).toBe('C')
-      expect(numberError.context.location.column).toBe('D')
+      expect(textError.context?.location?.column).toBe('C')
+      expect(numberError.context?.location?.column).toBe('D')
     })
 
     it('handles multi-letter column offsets correctly', () => {
-      const result = validate(
+      const result = validateRows(
         {
           TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
         },
         { location: { sheet: 'Sheet1', row: 5, column: 'Z' } }
       )
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location.column).toBe('AA') // Z + 1
+      expect(fatal.context?.location?.column).toBe('AA') // Z + 1
     })
 
     it('handles missing location gracefully', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location.header).toBe('TEXT_FIELD')
-      expect(fatals[0].context.location.row).toBeUndefined()
-      expect(fatals[0].context.location.column).toBeUndefined()
+      expect(fatal.context?.location?.header).toBe('TEXT_FIELD')
+      expect(fatal.context?.location?.row).toBeUndefined()
+      expect(fatal.context?.location?.column).toBeUndefined()
     })
 
     it('includes location in FATAL ROW_ID errors', () => {
-      const result = validate(
+      const result = validateRows(
         {
           TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
         },
         { location: { sheet: 'Sheet1', row: 7, column: 'B' } }
       )
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
         row: 8,
+        rowId: '999',
         column: 'B',
         header: 'ROW_ID'
       })
     })
 
     it('handles missing location gracefully for FATAL errors', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location.header).toBe('ROW_ID')
-      expect(fatals[0].context.location.row).toBeUndefined()
+      expect(fatal.context?.location?.header).toBe('ROW_ID')
+      expect(fatal.context?.location?.row).toBeUndefined()
     })
   })
 
   describe('multiple tables', () => {
     it('validates multiple tables independently', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 },
         DATE_TABLE: { ROW_ID: 10001, DATE_FIELD: '2025-01-01' }
       })
@@ -667,54 +716,43 @@ describe('createDataSyntaxValidator', () => {
 
   describe('unrecognised tables', () => {
     it('returns FATAL when table has no schema for processing type', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
-            rows: [{ rowNumber: 2, values: [1000, 'hello', 42] }]
-          },
-          UNKNOWN_TABLE: {
-            headers: ['ANYTHING'],
-            rows: [{ rowNumber: 6, values: ['goes'] }],
-            location: { sheet: 'Sheet1', row: 5, column: 'A' }
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+          rows: [{ rowNumber: 2, values: [1000, 'hello', 42] }]
+        },
+        UNKNOWN_TABLE: {
+          headers: ['ANYTHING'],
+          rows: [{ rowNumber: 6, values: ['goes'] }],
+          location: { sheet: 'Sheet1', row: 5, column: 'A' }
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-      expect(fatals[0].code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
-      expect(fatals[0].message).toContain('UNKNOWN_TABLE')
-      expect(fatals[0].context.location.table).toBe('UNKNOWN_TABLE')
+      expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatal.code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
+      expect(fatal.message).toContain('UNKNOWN_TABLE')
+      expect(fatal.context?.location?.table).toBe('UNKNOWN_TABLE')
     })
 
     it('reports all unrecognised tables when multiple are present', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          UNKNOWN_TABLE_1: {
-            headers: ['FOO'],
-            rows: [{ rowNumber: 6, values: ['bar'] }],
-            location: { sheet: 'Sheet1', row: 5, column: 'A' }
-          },
-          UNKNOWN_TABLE_2: {
-            headers: ['BAZ'],
-            rows: [{ rowNumber: 11, values: ['qux'] }],
-            location: { sheet: 'Sheet2', row: 10, column: 'B' }
-          }
+      const result = validateSections({
+        UNKNOWN_TABLE_1: {
+          headers: ['FOO'],
+          rows: [{ rowNumber: 6, values: ['bar'] }],
+          location: { sheet: 'Sheet1', row: 5, column: 'A' }
+        },
+        UNKNOWN_TABLE_2: {
+          headers: ['BAZ'],
+          rows: [{ rowNumber: 11, values: ['qux'] }],
+          location: { sheet: 'Sheet2', row: 10, column: 'B' }
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
@@ -723,32 +761,27 @@ describe('createDataSyntaxValidator', () => {
         VALIDATION_SEVERITY.FATAL
       )
       expect(fatals).toHaveLength(2)
-      expect(fatals.map((e) => e.context.location.table)).toContain(
+      expect(fatals.map((e) => e.context?.location?.table)).toContain(
         'UNKNOWN_TABLE_1'
       )
-      expect(fatals.map((e) => e.context.location.table)).toContain(
+      expect(fatals.map((e) => e.context?.location?.table)).toContain(
         'UNKNOWN_TABLE_2'
       )
     })
 
     it('still validates recognised tables when unrecognised tables are present', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
-            rows: [{ rowNumber: 3, values: [1000, 123, 42] }], // TEXT_FIELD should be string, not number
-            location: { sheet: 'Sheet1', row: 2, column: 'A' }
-          },
-          UNKNOWN_TABLE: {
-            headers: ['ANYTHING'],
-            rows: [{ rowNumber: 6, values: ['goes'] }],
-            location: { sheet: 'Sheet2', row: 5, column: 'A' }
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+          rows: [{ rowNumber: 3, values: [1000, 123, 42] }], // TEXT_FIELD should be string, not number
+          location: { sheet: 'Sheet1', row: 2, column: 'A' }
+        },
+        UNKNOWN_TABLE: {
+          headers: ['ANYTHING'],
+          rows: [{ rowNumber: 6, values: ['goes'] }],
+          location: { sheet: 'Sheet2', row: 5, column: 'A' }
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       // Should have FATAL for unrecognised table and for invalid TEXT_FIELD
       const fatals = result.issues.getIssuesBySeverity(
@@ -762,46 +795,36 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('includes sheet location in error context when available', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          UNKNOWN_TABLE: {
-            headers: ['ANYTHING'],
-            rows: [{ rowNumber: 16, values: ['goes'] }],
-            location: { sheet: 'DataSheet', row: 15, column: 'C' }
-          }
+      const result = validateSections({
+        UNKNOWN_TABLE: {
+          headers: ['ANYTHING'],
+          rows: [{ rowNumber: 16, values: ['goes'] }],
+          location: { sheet: 'DataSheet', row: 15, column: 'C' }
         }
-      }
+      })
 
-      const result = validateDataSyntax(parsed)
-
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         sheet: 'DataSheet',
         table: 'UNKNOWN_TABLE'
       })
     })
 
     it('handles missing location gracefully', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          UNKNOWN_TABLE: {
-            headers: ['ANYTHING'],
-            rows: [{ rowNumber: 2, values: ['goes'] }]
-            // No location
-          }
+      const result = validateSections({
+        UNKNOWN_TABLE: {
+          headers: ['ANYTHING'],
+          rows: [{ rowNumber: 2, values: ['goes'] }]
+          // No location
         }
-      }
+      })
 
-      const result = validateDataSyntax(parsed)
-
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].context.location).toEqual({
+      expect(fatal.context?.location).toEqual({
         table: 'UNKNOWN_TABLE'
       })
     })
@@ -809,27 +832,29 @@ describe('createDataSyntaxValidator', () => {
 
   describe('edge cases', () => {
     it('handles missing data section gracefully', () => {
-      const result = validateDataSyntax({})
+      const result = validateDataSyntax(/** @type {ParsedSummaryLog} */ ({}))
 
       expect(result.issues.isValid()).toBe(true)
     })
 
     it('handles empty data section gracefully', () => {
-      const result = validateDataSyntax({ data: {} })
+      const result = validateDataSyntax(
+        /** @type {ParsedSummaryLog} */ ({ data: {} })
+      )
 
       expect(result.issues.isValid()).toBe(true)
     })
 
     it('throws error for unmapped Joi error types', () => {
       expect(() =>
-        validate({
+        validateRows({
           UNMAPPED_TABLE: { ROW_ID: 1000, EMAIL_FIELD: 'not-an-email' }
         })
       ).toThrow("Unmapped Joi error type 'string.email'")
     })
 
     it('produces FATAL errors for REJECTED rows', () => {
-      const result = validate({
+      const result = validateRows({
         SIMPLE_TABLE: {
           ROW_ID: 1000,
           VALUE_FIELD: 'not-a-number'
@@ -840,17 +865,16 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('VALUE_FIELD')
+      expect(fatal.message).toContain('VALUE_FIELD')
     })
   })
 
   describe('string.valid() / any.only validation', () => {
     it('accepts valid value from allowed set', () => {
-      const result = validate({
+      const result = validateRows({
         VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Yes' }
       })
 
@@ -858,7 +882,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('accepts another valid value from allowed set', () => {
-      const result = validate({
+      const result = validateRows({
         VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'No' }
       })
 
@@ -866,24 +890,23 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('returns FATAL error for value not in allowed set', () => {
-      const result = validate({
+      const result = validateRows({
         VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Maybe' }
       })
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('YES_NO_FIELD')
-      expect(fatals[0].message).toContain('must be Yes or No')
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.message).toContain('YES_NO_FIELD')
+      expect(fatal.message).toContain('must be Yes or No')
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
     })
 
     it('returns FATAL error for case-sensitive mismatch', () => {
-      const result = validate({
+      const result = validateRows({
         VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'yes' }
       })
 
@@ -894,7 +917,7 @@ describe('createDataSyntaxValidator', () => {
 
   describe('calculation mismatch validation', () => {
     it('accepts correct calculation', () => {
-      const result = validate({
+      const result = validateRows({
         CALCULATED_TABLE: {
           ROW_ID: 1000,
           VALUE_A: 10,
@@ -909,7 +932,7 @@ describe('createDataSyntaxValidator', () => {
     it('skips calculation check when source fields are missing', () => {
       // If VALUE_B is missing, CALCULATED_RESULT should also be missing
       // (user hasn't filled in the calculation yet)
-      const result = validate({
+      const result = validateRows({
         CALCULATED_TABLE: {
           ROW_ID: 1000,
           VALUE_A: 10,
@@ -927,7 +950,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('returns FATAL error for incorrect calculation', () => {
-      const result = validate({
+      const result = validateRows({
         CALCULATED_TABLE: {
           ROW_ID: 1000,
           VALUE_A: 10,
@@ -939,21 +962,20 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].message).toContain('CALCULATED_RESULT')
-      expect(fatals[0].message).toContain(
+      expect(fatal.message).toContain('CALCULATED_RESULT')
+      expect(fatal.message).toContain(
         'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
+      expect(fatal.code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
     })
   })
 
   describe('validated data output', () => {
     it('returns validated rows with row IDs extracted', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 1000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
           { ROW_ID: 10001, TEXT_FIELD: 'second', NUMBER_FIELD: 2 }
@@ -968,7 +990,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('clears validated rows when fatal issues are present', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
@@ -977,25 +999,19 @@ describe('createDataSyntaxValidator', () => {
       expect(rows).toHaveLength(0)
 
       // Issues are still available at the top level
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].context.location.header).toBe('TEXT_FIELD')
+      expect(fatal.context?.location?.header).toBe('TEXT_FIELD')
     })
 
     it('returns empty rows when headers are missing', () => {
-      const parsed = {
-        meta: { PROCESSING_TYPE: { value: 'TEST' } },
-        data: {
-          TEST_TABLE: {
-            headers: ['ROW_ID'],
-            rows: [{ rowNumber: 2, values: [1000] }]
-          }
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID'],
+          rows: [{ rowNumber: 2, values: [1000] }]
         }
-      }
-
-      const result = validateDataSyntax(parsed)
+      })
 
       expect(result.validatedData.data.TEST_TABLE.rows).toEqual([])
     })
@@ -1003,7 +1019,7 @@ describe('createDataSyntaxValidator', () => {
 
   describe('domain-layer row filtering', () => {
     it('filters out rows where rowIdField starts with header description text', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 'Row ID', TEXT_FIELD: 'Date received', NUMBER_FIELD: 42 },
           { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 }
@@ -1017,7 +1033,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('filters out rows where rowIdField starts with header text including description', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           {
             ROW_ID: 'Row ID\n(Automatically generated)',
@@ -1034,7 +1050,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('filters out rows where rowIdField is null', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 },
           { ROW_ID: null, TEXT_FIELD: 'placeholder', NUMBER_FIELD: 99 }
@@ -1048,7 +1064,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('filters out rows where rowIdField is undefined', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 1000, TEXT_FIELD: 'actual data', NUMBER_FIELD: 1 },
           { ROW_ID: undefined, TEXT_FIELD: 'placeholder', NUMBER_FIELD: 99 }
@@ -1061,7 +1077,7 @@ describe('createDataSyntaxValidator', () => {
     })
 
     it('does not produce validation errors for filtered rows', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: [
           { ROW_ID: 'Row ID', TEXT_FIELD: 'not valid', NUMBER_FIELD: 42 },
           { ROW_ID: null, TEXT_FIELD: 'also not valid', NUMBER_FIELD: 42 },
@@ -1076,19 +1092,19 @@ describe('createDataSyntaxValidator', () => {
 
   describe('errorCode (specific validation codes)', () => {
     it('sets errorCode for string.base errors', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
-      expect(fatals[0].context.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_STRING)
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.context?.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_STRING)
     })
 
     it('sets errorCode for number.base errors', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: {
           ROW_ID: 1000,
           TEXT_FIELD: 'hello',
@@ -1096,57 +1112,55 @@ describe('createDataSyntaxValidator', () => {
         }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
-      expect(fatals[0].context.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_NUMBER)
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.context?.errorCode).toBe(VALIDATION_CODE.MUST_BE_A_NUMBER)
     })
 
     it('sets errorCode for number.greater errors', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
-      expect(fatals[0].context.errorCode).toBe(
+      expect(fatal.code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
+      expect(fatal.context?.errorCode).toBe(
         VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO
       )
     })
 
     it('sets errorCode for date.base errors', () => {
-      const result = validate({
+      const result = validateRows({
         DATE_TABLE: { ROW_ID: 1000, DATE_FIELD: 'not-a-date' }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_DATE)
-      expect(fatals[0].context.errorCode).toBe(
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_DATE)
+      expect(fatal.context?.errorCode).toBe(
         VALIDATION_CODE.MUST_BE_A_VALID_DATE
       )
     })
 
     it('sets errorCode for any.only errors', () => {
-      const result = validate({
+      const result = validateRows({
         VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Maybe' }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
-      expect(fatals[0].context.errorCode).toBe(
-        VALIDATION_CODE.MUST_BE_YES_OR_NO
-      )
+      expect(fatal.code).toBe(VALIDATION_CODE.INVALID_TYPE)
+      expect(fatal.context?.errorCode).toBe(VALIDATION_CODE.MUST_BE_YES_OR_NO)
     })
 
     it('sets errorCode for calculation mismatch errors', () => {
-      const result = validate({
+      const result = validateRows({
         CALCULATED_TABLE: {
           ROW_ID: 1000,
           VALUE_A: 10,
@@ -1155,29 +1169,29 @@ describe('createDataSyntaxValidator', () => {
         }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
-      expect(fatals[0].context.errorCode).toBe(
+      expect(fatal.code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
+      expect(fatal.context?.errorCode).toBe(
         VALIDATION_CODE.NET_WEIGHT_CALCULATION_MISMATCH
       )
     })
 
     it('does not set errorCode for unmapped messages', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
-      const fatals = result.issues.getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
+      const fatal = expectOne(
+        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatals[0].code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
-      expect(fatals[0].context.errorCode).toBeUndefined()
+      expect(fatal.code).toBe(VALIDATION_CODE.VALUE_OUT_OF_RANGE)
+      expect(fatal.context?.errorCode).toBeUndefined()
     })
 
     it('does not set errorCode for MISSING_REQUIRED_FIELD issues', () => {
-      const result = validate({
+      const result = validateRows({
         TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: null, NUMBER_FIELD: null }
       })
 
@@ -1185,7 +1199,7 @@ describe('createDataSyntaxValidator', () => {
         VALIDATION_SEVERITY.ERROR
       )
       expect(errors[0].code).toBe(VALIDATION_CODE.FIELD_REQUIRED)
-      expect(errors[0].context.errorCode).toBeUndefined()
+      expect(errors[0].context?.errorCode).toBeUndefined()
     })
   })
 })
