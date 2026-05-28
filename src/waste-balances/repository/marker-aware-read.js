@@ -1,4 +1,5 @@
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
+import { ZERO_BALANCE } from './stream-schema.js'
 
 /**
  * Marker-aware substitution of `amount` / `availableAmount` on a waste-balance
@@ -29,8 +30,7 @@ export const resolveBalanceAmounts = async (balance, streamRepository) => {
   if (!latest) {
     return {
       ...balance,
-      amount: 0,
-      availableAmount: 0
+      ...ZERO_BALANCE
     }
   }
 
