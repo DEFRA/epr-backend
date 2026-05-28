@@ -149,8 +149,10 @@ describe('runStreamPromotion', () => {
       () => summaryLogsRepository
     )
 
-    vi.mocked(createOverseasSitesRepository).mockResolvedValue(() => ({}))
-    vi.mocked(resolveOverseasSites).mockResolvedValue([])
+    vi.mocked(createOverseasSitesRepository).mockResolvedValue(
+      () => /** @type {*} */ ({})
+    )
+    vi.mocked(resolveOverseasSites).mockResolvedValue(/** @type {*} */ ([]))
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 0,
@@ -275,9 +277,9 @@ describe('runStreamPromotion', () => {
       }
     ])
 
-    const builtEvents = [
+    const builtEvents = /** @type {*} */ ([
       { registrationId: 'reg-1', accreditationId: 'acc-1', number: 1 }
-    ]
+    ])
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: builtEvents,
       amount: 100,

@@ -33,7 +33,9 @@ const buildStream = (latest) => ({
     ),
   findLatestByPartitionAndKind: vi.fn().mockResolvedValue(null),
   findEventsByPrnIdAfter: vi.fn().mockResolvedValue([]),
-  appendEvent: vi.fn().mockResolvedValue(undefined)
+  appendEvent: vi.fn().mockResolvedValue(undefined),
+  deleteByPartition: vi.fn().mockResolvedValue(0),
+  bulkAppendEvents: vi.fn().mockResolvedValue([])
 })
 
 describe('resolveBalanceAmounts', () => {
