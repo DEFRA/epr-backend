@@ -103,6 +103,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
                 },
                 prn: {
                   issuedTonnage: 80,
+                  freeTonnage: 0,
                   totalRevenue: 40000,
                   averagePricePerTonne: 500
                 },
@@ -176,6 +177,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
         },
         prn: {
           issuedTonnage: 80,
+          freeTonnage: 0,
           totalRevenue: 40000,
           averagePricePerTonne: 500
         },
@@ -207,6 +209,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
           },
           prn: {
             issuedTonnage: 80,
+            freeTonnage: 0,
             totalRevenue: 40000,
             averagePricePerTonne: 500
           },

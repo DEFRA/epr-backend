@@ -49,6 +49,7 @@ export const getReportSubmissions = {
               tonnageSentOnToExporter: Joi.string().allow('').required(),
               tonnageSentOnToOtherFacilities: Joi.string().allow('').required(),
               tonnagePrnsPernsIssued: Joi.string().allow('').required(),
+              freeTonnagePrnsPerns: Joi.string().allow('').required(),
               totalRevenuePrnsPerns: Joi.string().allow('').required(),
               averagePrnPernPricePerTonne: Joi.string().allow('').required(),
               tonnageReceivedButNotRecycled: Joi.string().allow('').required(),
