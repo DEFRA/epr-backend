@@ -89,7 +89,7 @@ describe('resolveBalanceAmounts', () => {
     expect(result.availableAmount).toBe(175)
   })
 
-  it('throws when marker is ledger but no stream events exist', async () => {
+  it('returns zero balances when marker is ledger but stream is empty', async () => {
     const balance = buildBalance({
       accreditationId: 'acc-empty',
       registrationId: 'reg-empty',
@@ -99,9 +99,10 @@ describe('resolveBalanceAmounts', () => {
     })
     const stream = buildStream(null)
 
-    await expect(resolveBalanceAmounts(balance, stream)).rejects.toThrow(
-      /acc-empty.*canonicalSource 'ledger' but no stream events/
-    )
+    const result = await resolveBalanceAmounts(balance, stream)
+
+    expect(result.amount).toBe(0)
+    expect(result.availableAmount).toBe(0)
   })
 
   it('preserves all non-amount fields', async () => {

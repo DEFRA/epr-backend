@@ -203,7 +203,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         expect(result.availableAmount).toBe(150)
       })
 
-      it('throws when marker is ledger and no stream events exist', async ({
+      it('returns zero balances when marker is ledger and no stream events exist', async ({
         insertWasteBalance
       }) => {
         await insertWasteBalance(
@@ -216,11 +216,12 @@ export const testFindByAccreditationIdBehaviour = (it) => {
           })
         )
 
-        await expect(
-          repository.findByAccreditationId('acc-marker-ledger-empty')
-        ).rejects.toThrow(
-          /acc-marker-ledger-empty.*canonicalSource 'ledger' but no stream events/
+        const result = await repository.findByAccreditationId(
+          'acc-marker-ledger-empty'
         )
+
+        expect(result.amount).toBe(0)
+        expect(result.availableAmount).toBe(0)
       })
 
       it('preserves the canonicalSource marker on the returned document', async ({
