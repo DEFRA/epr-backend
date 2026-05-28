@@ -378,9 +378,10 @@ describe('computeRebuiltStream', () => {
       ]
     })
 
-    const accepted = result.events.find(
-      (e) => e.kind === STREAM_EVENT_KIND.PRN_ACCEPTED
-    )
+    const accepted =
+      /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+        result.events.find((e) => e.kind === STREAM_EVENT_KIND.PRN_ACCEPTED)
+      )
     expect(accepted).toBeDefined()
     expect(accepted.openingBalance).toEqual(accepted.closingBalance)
 
@@ -443,9 +444,10 @@ describe('computeRebuiltStream', () => {
       ]
     })
 
-    const rejected = result.events.find(
-      (e) => e.kind === STREAM_EVENT_KIND.PRN_REJECTED
-    )
+    const rejected =
+      /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+        result.events.find((e) => e.kind === STREAM_EVENT_KIND.PRN_REJECTED)
+      )
     expect(rejected).toBeDefined()
     expect(rejected.openingBalance).toEqual(rejected.closingBalance)
 
