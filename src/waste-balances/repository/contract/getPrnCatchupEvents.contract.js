@@ -169,7 +169,7 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
       expect(result[0].number).toBe(2)
     })
 
-    it('throws when accreditationId is missing', async () => {
+    it('throws Boom badData when accreditationId is missing', async () => {
       await expect(
         repository.getPrnCatchupEvents({
           registrationId: 'reg-missing-acc',
@@ -177,7 +177,10 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
           prnId: PRN_ID,
           afterEventNumber: 0
         })
-      ).rejects.toThrow()
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 422 }
+      })
     })
   })
 }

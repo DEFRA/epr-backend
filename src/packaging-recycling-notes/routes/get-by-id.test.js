@@ -568,6 +568,27 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           wasteBalancesRepository.getPrnCatchupEvents
         ).not.toHaveBeenCalled()
       })
+
+      it('does not query catch-up events when the PRN is already doc-soft-deleted', async () => {
+        const deletedPrn = {
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.DELETED }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          deletedPrn
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+        expect(
+          wasteBalancesRepository.getPrnCatchupEvents
+        ).not.toHaveBeenCalled()
+      })
     })
   })
 })
