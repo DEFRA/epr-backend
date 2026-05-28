@@ -68,6 +68,18 @@ export const prnTransitionToStreamKind = (prevStatus, newStatus) => {
   ) {
     return STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
   }
+  if (
+    newStatus === PRN_STATUS.ACCEPTED &&
+    prevStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+  ) {
+    return STREAM_EVENT_KIND.PRN_ACCEPTED
+  }
+  if (
+    newStatus === PRN_STATUS.AWAITING_CANCELLATION &&
+    prevStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+  ) {
+    return STREAM_EVENT_KIND.PRN_REJECTED
+  }
   return null
 }
 

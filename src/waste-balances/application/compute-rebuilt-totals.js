@@ -27,7 +27,9 @@ const PRN_DELTAS = Object.freeze({
   [STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: (tonnage) => ({
     amount: tonnage,
     availableAmount: tonnage
-  })
+  }),
+  [STREAM_EVENT_KIND.PRN_ACCEPTED]: () => ({ amount: 0, availableAmount: 0 }),
+  [STREAM_EVENT_KIND.PRN_REJECTED]: () => ({ amount: 0, availableAmount: 0 })
 })
 
 /**
