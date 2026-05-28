@@ -42,7 +42,10 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {Object} params
  */
-async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
+export async function deductWasteBalanceIfNeeded(
+  wasteBalancesRepository,
+  params
+) {
   const {
     accreditationId,
     registrationId,
@@ -80,7 +83,10 @@ async function deductWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {Object} params
  */
-async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
+export async function deductTotalBalanceIfNeeded(
+  wasteBalancesRepository,
+  params
+) {
   const {
     accreditationId,
     registrationId,
@@ -119,7 +125,10 @@ async function deductTotalBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {Object} params
  */
-async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
+export async function creditWasteBalanceIfNeeded(
+  wasteBalancesRepository,
+  params
+) {
   const {
     accreditationId,
     registrationId,
@@ -154,7 +163,10 @@ async function creditWasteBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {Object} params
  */
-async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
+export async function creditFullBalanceIfNeeded(
+  wasteBalancesRepository,
+  params
+) {
   const {
     accreditationId,
     registrationId,
@@ -192,7 +204,7 @@ async function creditFullBalanceIfNeeded(wasteBalancesRepository, params) {
  * @param {string} fromStatus
  * @param {string} toStatus
  */
-function logWasteBalanceUpdate(
+export function logWasteBalanceUpdate(
   logger,
   operation,
   prnId,
@@ -229,6 +241,18 @@ export function balanceEventsFor(currentStatus, newStatus, params) {
     return [{ kind: STREAM_EVENT_KIND.PRN_ISSUED, params }]
   }
   if (
+    newStatus === PRN_STATUS.ACCEPTED &&
+    currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+  ) {
+    return [{ kind: STREAM_EVENT_KIND.PRN_ACCEPTED, params }]
+  }
+  if (
+    newStatus === PRN_STATUS.AWAITING_CANCELLATION &&
+    currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+  ) {
+    return [{ kind: STREAM_EVENT_KIND.PRN_REJECTED, params }]
+  }
+  if (
     (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
   ) {
@@ -244,9 +268,25 @@ export function balanceEventsFor(currentStatus, newStatus, params) {
 }
 
 /**
+ * Append a status-only stream event (PRN_ACCEPTED, PRN_REJECTED). No balance
+ * change; the ledger-only repository method appends to the stream and throws
+ * loudly if called on an embedded balance.
+ *
+ * @param {import('#waste-balances/repository/stream-schema.js').StreamEventKind} streamKind
+ */
+const appendStatusOnlyStreamEvent =
+  (streamKind) => async (wasteBalancesRepository, params) =>
+    wasteBalancesRepository.appendStreamEvent({
+      ...params,
+      streamKind
+    })
+
+/**
  * Per-kind dispatch: each kind pairs an effect handler with its log-operation
- * label. The handlers are the same primitives the embedded path has always
- * used; on the ledger path they append a stream event and return its number.
+ * label. Balance-affecting kinds mutate the balance (embedded) or append to
+ * the stream (ledger); status-only kinds (PRN_ACCEPTED, PRN_REJECTED) only
+ * append on the ledger — they should never be dispatched on the embedded path,
+ * and `appendStreamEvent` throws if they are.
  */
 const EFFECT_HANDLERS = Object.freeze({
   [STREAM_EVENT_KIND.PRN_CREATED]: {
@@ -256,6 +296,14 @@ const EFFECT_HANDLERS = Object.freeze({
   [STREAM_EVENT_KIND.PRN_ISSUED]: {
     apply: deductTotalBalanceIfNeeded,
     logOperation: 'deduct_total'
+  },
+  [STREAM_EVENT_KIND.PRN_ACCEPTED]: {
+    apply: appendStatusOnlyStreamEvent(STREAM_EVENT_KIND.PRN_ACCEPTED),
+    logOperation: 'append_accepted'
+  },
+  [STREAM_EVENT_KIND.PRN_REJECTED]: {
+    apply: appendStatusOnlyStreamEvent(STREAM_EVENT_KIND.PRN_REJECTED),
+    logOperation: 'append_rejected'
   },
   [STREAM_EVENT_KIND.PRN_CREATION_CANCELLED]: {
     apply: creditWasteBalanceIfNeeded,

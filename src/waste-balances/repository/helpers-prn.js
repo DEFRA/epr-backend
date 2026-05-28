@@ -88,6 +88,67 @@ const appendPrnStreamEvent = async ({
   )
 
 /**
+ * Append a PRN stream event with no balance side-effect (PRN_ACCEPTED,
+ * PRN_REJECTED). Ledger-only — throws on embedded balances and when no balance
+ * exists. The dispatcher in update-status routes status-only kinds here on the
+ * ledger path; if the marker is anything else, that's a contract violation we
+ * surface rather than silently no-op.
+ *
+ * @param {Object} params
+ * @param {Object} params.appendParams
+ * @param {string} params.appendParams.accreditationId
+ * @param {string} params.appendParams.registrationId
+ * @param {string} params.appendParams.organisationId
+ * @param {string} params.appendParams.prnId
+ * @param {number} params.appendParams.tonnage
+ * @param {string} params.appendParams.userId
+ * @param {import('./stream-schema.js').StreamEventKind} params.appendParams.streamKind
+ * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
+ * @param {Object} [params.dependencies]
+ * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @returns {Promise<import('./stream-port.js').StreamEvent>}
+ */
+export const performAppendPrnStreamEvent = async ({
+  appendParams,
+  findBalance,
+  dependencies
+}) => {
+  const {
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId,
+    streamKind
+  } = appendParams
+  const validatedAccreditationId = validateAccreditationId(accreditationId)
+
+  const wasteBalance = await findBalance(validatedAccreditationId)
+
+  if (
+    !wasteBalance ||
+    wasteBalance.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER ||
+    !dependencies?.streamRepository
+  ) {
+    throw Boom.badImplementation(
+      `appendStreamEvent is ledger-only and requires a stream-backed balance (accreditation ${validatedAccreditationId})`
+    )
+  }
+
+  return appendPrnStreamEvent({
+    streamRepository: dependencies.streamRepository,
+    registrationId,
+    accreditationId: validatedAccreditationId,
+    organisationId,
+    prnId,
+    tonnage,
+    userId,
+    streamKind
+  })
+}
+
+/**
  * Deduct available balance for PRN creation (ringfencing tonnage).
  *
  * @param {Object} params

@@ -3,7 +3,12 @@ import Boom from '@hapi/boom'
 import { prnMetrics } from './metrics.js'
 import {
   applyWasteBalanceEffects,
-  balanceEventsFor
+  balanceEventsFor,
+  creditFullBalanceIfNeeded,
+  creditWasteBalanceIfNeeded,
+  deductTotalBalanceIfNeeded,
+  deductWasteBalanceIfNeeded,
+  logWasteBalanceUpdate
 } from './update-status-balance-effects.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import {
@@ -68,6 +73,70 @@ const ROLLBACK_METHOD_BY_TRANSITION = {
 }
 
 /**
+ * Embedded-path balance effects keyed by `${currentStatus}|${newStatus}`. The
+ * embedded path predates event sourcing — it doesn't emit stream events, it
+ * just mutates the balance document directly. Missing entry means the
+ * transition is lifecycle-only (no balance change) and just stamps the PRN.
+ */
+const EMBEDDED_BALANCE_EFFECTS = Object.freeze({
+  [`${PRN_STATUS.DRAFT}|${PRN_STATUS.AWAITING_AUTHORISATION}`]: {
+    apply: deductWasteBalanceIfNeeded,
+    log: 'deduct_available'
+  },
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]: {
+    apply: deductTotalBalanceIfNeeded,
+    log: 'deduct_total'
+  },
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]: {
+    apply: creditWasteBalanceIfNeeded,
+    log: 'credit_available'
+  },
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.CANCELLED}`]: {
+    apply: creditWasteBalanceIfNeeded,
+    log: 'credit_available'
+  },
+  [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]: {
+    apply: creditFullBalanceIfNeeded,
+    log: 'credit_full'
+  }
+})
+
+/**
+ * @typedef {Object} EmbeddedBalanceEffectParams
+ * @property {WasteBalancesRepository} wasteBalancesRepository
+ * @property {import('#common/hapi-types.js').TypedLogger} logger
+ * @property {PrnStatus} currentStatus
+ * @property {PrnStatus} newStatus
+ * @property {{accreditationId: string, registrationId: string, organisationId: string, prnId: string, tonnage: number, userId: string}} params
+ */
+
+/**
+ * Apply the embedded-path balance effect for a transition. No events are
+ * generated; the balance document is mutated directly.
+ *
+ * @param {EmbeddedBalanceEffectParams} args
+ */
+async function applyEmbeddedBalanceEffect({
+  wasteBalancesRepository,
+  logger,
+  currentStatus,
+  newStatus,
+  params
+}) {
+  const effect = EMBEDDED_BALANCE_EFFECTS[`${currentStatus}|${newStatus}`]
+  if (!effect) return
+  await effect.apply(wasteBalancesRepository, params)
+  logWasteBalanceUpdate(
+    logger,
+    effect.log,
+    params.prnId,
+    params.tonnage,
+    currentStatus,
+    newStatus
+  )
+}
+
+/**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
  * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
@@ -76,9 +145,9 @@ const ROLLBACK_METHOD_BY_TRANSITION = {
  */
 
 /**
- * The shared context every write strategy receives. The three strategies
- * (create, transition, stream) consume overlapping subsets of it, so the
- * dispatcher hands all of it to whichever one it selects.
+ * The shared context handed to each top-level write strategy (ledger or
+ * embedded). Inner helpers (performStreamWrite, applyStatusUpdate,
+ * applyEmbeddedBalanceEffect) consume different subsets.
  *
  * @typedef {Object} PrnWriteContext
  * @property {PackagingRecyclingNotesRepository} prnRepository
@@ -87,7 +156,6 @@ const ROLLBACK_METHOD_BY_TRANSITION = {
  * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {PackagingRecyclingNote} prn
  * @property {import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams} updateParams
- * @property {import('./update-status-balance-effects.js').BalanceEvent[]} events
  * @property {PrnStatus} newStatus
  * @property {string} organisationId
  * @property {string} registrationId
@@ -294,7 +362,6 @@ async function performCreation({
   logger,
   prn,
   updateParams,
-  events,
   newStatus,
   organisationId,
   registrationId,
@@ -304,7 +371,20 @@ async function performCreation({
   now,
   id
 }) {
-  await applyWasteBalanceEffects(wasteBalancesRepository, logger, events)
+  await applyEmbeddedBalanceEffect({
+    wasteBalancesRepository,
+    logger,
+    currentStatus,
+    newStatus,
+    params: {
+      accreditationId,
+      registrationId,
+      organisationId,
+      prnId: id,
+      tonnage: prn.tonnage,
+      userId: user.id
+    }
+  })
 
   try {
     return await applyStatusUpdate({
@@ -354,9 +434,9 @@ async function performTransition({
   logger,
   prn,
   updateParams,
-  events,
   newStatus,
   organisationId,
+  registrationId,
   accreditationId,
   user,
   currentStatus,
@@ -376,7 +456,20 @@ async function performTransition({
   })
 
   try {
-    await applyWasteBalanceEffects(wasteBalancesRepository, logger, events)
+    await applyEmbeddedBalanceEffect({
+      wasteBalancesRepository,
+      logger,
+      currentStatus,
+      newStatus,
+      params: {
+        accreditationId,
+        registrationId,
+        organisationId,
+        prnId: id,
+        tonnage: prn.tonnage,
+        userId: user.id
+      }
+    })
   } catch (forwardError) {
     const transitionKey = /** @type {PostCasRollbackTransition} */ (
       `${currentStatus}|${newStatus}`
@@ -515,6 +608,59 @@ async function performStreamWrite({
 }
 
 /**
+ * Ledger-path write. Computes the stream events the transition emits and hands
+ * them to the event-first write. On the ledger path every status transition
+ * MUST produce at least one event — the fold is the projection of those events
+ * onto the PRN doc, so no events means no projection, which would mean an
+ * unrecoverable doc/stream divergence. Pre-creation transitions
+ * (DRAFT→DISCARDED) are filtered out before this branch is reached.
+ */
+async function performLedgerWrite({
+  prnRepository,
+  organisationsRepository,
+  wasteBalancesRepository,
+  logger,
+  prn,
+  newStatus,
+  organisationId,
+  registrationId,
+  accreditationId,
+  user,
+  currentStatus,
+  id
+}) {
+  const events = balanceEventsFor(currentStatus, newStatus, {
+    currentStatus,
+    newStatus,
+    accreditationId,
+    registrationId,
+    organisationId,
+    prnId: id,
+    tonnage: prn.tonnage,
+    userId: user.id
+  })
+
+  /* c8 ignore next 5 - defensive: the only legal transition with no balance events (DRAFT→DISCARDED) is handled before this branch */
+  if (events.length === 0) {
+    throw Boom.badImplementation(
+      `No stream events for transition ${currentStatus} -> ${newStatus} on ledger accreditation ${accreditationId}`
+    )
+  }
+
+  return performStreamWrite({
+    prnRepository,
+    organisationsRepository,
+    wasteBalancesRepository,
+    logger,
+    prn,
+    events,
+    newStatus,
+    organisationId,
+    accreditationId
+  })
+}
+
+/**
  * Whether the accreditation's balance has migrated to the event-sourced stream
  * (canonicalSource 'ledger'). Read up front so the write ordering is chosen
  * before any side effect runs.
@@ -530,18 +676,14 @@ async function isOnLedger(wasteBalancesRepository, accreditationId) {
 }
 
 /**
- * Selects the write strategy. A migrated accreditation uses the event-first
- * stream write; everything else keeps the embedded create/transition paths
- * with their compensation, byte-for-byte as before.
+ * Selects the embedded-path write strategy. Creation is its own strategy
+ * because the balance debit happens before the PRN write; everything else
+ * writes the PRN first and applies the balance effect after.
  *
- * @param {boolean} useStreamWrite
  * @param {PrnStatus} newStatus
  * @returns {(context: PrnWriteContext) => Promise<PackagingRecyclingNote>}
  */
-function selectWriteStrategy(useStreamWrite, newStatus) {
-  if (useStreamWrite) {
-    return performStreamWrite
-  }
+function selectEmbeddedWriteStrategy(newStatus) {
   return newStatus === PRN_STATUS.AWAITING_AUTHORISATION
     ? performCreation
     : performTransition
@@ -594,17 +736,6 @@ export async function updatePrnStatus({
   const currentStatus = prn.status.currentStatus
   validateTransition(currentStatus, newStatus, actor)
 
-  const events = balanceEventsFor(currentStatus, newStatus, {
-    currentStatus,
-    newStatus,
-    accreditationId,
-    registrationId,
-    organisationId,
-    prnId: id,
-    tonnage: prn.tonnage,
-    userId: user.id
-  })
-
   const now = updatedAt ?? new Date()
   const updateParams = {
     id,
@@ -615,29 +746,68 @@ export async function updatePrnStatus({
     lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
 
-  const useStreamWrite =
-    events.length > 0 &&
-    (await isOnLedger(wasteBalancesRepository, accreditationId))
+  // Pre-creation transition: the PRN never reached the stream, so the
+  // accreditation's marker is irrelevant. Doc-only update.
+  if (
+    currentStatus === PRN_STATUS.DRAFT &&
+    newStatus === PRN_STATUS.DISCARDED
+  ) {
+    const updatedPrn = await applyStatusUpdate({
+      prnRepository,
+      organisationsRepository,
+      prn,
+      updateParams,
+      newStatus,
+      organisationId,
+      accreditationId,
+      user,
+      now
+    })
 
-  const perform = selectWriteStrategy(useStreamWrite, newStatus)
+    await prnMetrics.recordStatusTransition({
+      fromStatus: currentStatus,
+      toStatus: newStatus,
+      material: prn.accreditation.material,
+      isExport: prn.isExport
+    })
 
-  const updatedPrn = await perform({
-    prnRepository,
-    organisationsRepository,
+    return updatedPrn
+  }
+
+  const updatedPrn = (await isOnLedger(
     wasteBalancesRepository,
-    logger,
-    prn,
-    updateParams,
-    events,
-    newStatus,
-    organisationId,
-    registrationId,
-    accreditationId,
-    user,
-    currentStatus,
-    now,
-    id
-  })
+    accreditationId
+  ))
+    ? await performLedgerWrite({
+        prnRepository,
+        organisationsRepository,
+        wasteBalancesRepository,
+        logger,
+        prn,
+        newStatus,
+        organisationId,
+        registrationId,
+        accreditationId,
+        user,
+        currentStatus,
+        id
+      })
+    : await selectEmbeddedWriteStrategy(newStatus)({
+        prnRepository,
+        organisationsRepository,
+        wasteBalancesRepository,
+        logger,
+        prn,
+        updateParams,
+        newStatus,
+        organisationId,
+        registrationId,
+        accreditationId,
+        user,
+        currentStatus,
+        now,
+        id
+      })
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,

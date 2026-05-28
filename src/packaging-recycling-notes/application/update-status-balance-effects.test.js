@@ -140,6 +140,47 @@ describe('applyWasteBalanceEffects appended events return', () => {
     expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
   })
 
+  it('returns the appended event from the prn-accepted branch', async () => {
+    const { wasteBalancesRepository, streamRepository } =
+      await setupLedgerRepository()
+
+    const applied = await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      buildLogger(),
+      eventsForTransition(PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED)
+    )
+
+    const latest = await streamRepository.findLatestByPartition(
+      REGISTRATION_ID,
+      ACCREDITATION_ID
+    )
+    expect(applied[0]?.kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
+    expect(applied[0]?.number).toBe(latest?.number)
+    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
+  })
+
+  it('returns the appended event from the prn-rejected branch', async () => {
+    const { wasteBalancesRepository, streamRepository } =
+      await setupLedgerRepository()
+
+    const applied = await applyWasteBalanceEffects(
+      wasteBalancesRepository,
+      buildLogger(),
+      eventsForTransition(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.AWAITING_CANCELLATION
+      )
+    )
+
+    const latest = await streamRepository.findLatestByPartition(
+      REGISTRATION_ID,
+      ACCREDITATION_ID
+    )
+    expect(applied[0]?.kind).toBe(STREAM_EVENT_KIND.PRN_REJECTED)
+    expect(applied[0]?.number).toBe(latest?.number)
+    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
+  })
+
   it('returns the appended event from the credit-full branch', async () => {
     const { wasteBalancesRepository, streamRepository } =
       await setupLedgerRepository()
@@ -220,24 +261,24 @@ describe('balanceEventsFor', () => {
     ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, params }])
   })
 
-  it('emits no events when accepting an issued PRN', () => {
+  it('emits a prn-accepted event for accepting an issued PRN', () => {
     expect(
       balanceEventsFor(
         PRN_STATUS.AWAITING_ACCEPTANCE,
         PRN_STATUS.ACCEPTED,
         params
       )
-    ).toEqual([])
+    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_ACCEPTED, params }])
   })
 
-  it('emits no events when requesting cancellation of an issued PRN', () => {
+  it('emits a prn-rejected event for requesting cancellation of an issued PRN', () => {
     expect(
       balanceEventsFor(
         PRN_STATUS.AWAITING_ACCEPTANCE,
         PRN_STATUS.AWAITING_CANCELLATION,
         params
       )
-    ).toEqual([])
+    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_REJECTED, params }])
   })
 
   it('emits no events when discarding a draft PRN', () => {

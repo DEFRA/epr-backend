@@ -39,6 +39,17 @@
  */
 
 /**
+ * @typedef {Object} AppendStreamEventParams
+ * @property {string} accreditationId
+ * @property {string} registrationId
+ * @property {string} organisationId
+ * @property {string} prnId
+ * @property {number} tonnage
+ * @property {string} userId
+ * @property {import('./stream-schema.js').StreamEventKind} streamKind
+ */
+
+/**
  * @typedef {Object} FlipCanonicalSourceToMigratingParams
  * @property {string} accreditationId
  * @property {number} capturedVersion - The `version` observed on the embedded
@@ -132,6 +143,9 @@
  * @property {(params: CreditFullBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} creditFullBalanceForIssuedPrnCancellation
  *   Resolves to the appended stream event on the ledger path, or `null` on the
  *   embedded path.
+ * @property {(params: AppendStreamEventParams) => Promise<import('./stream-port.js').StreamEvent>} appendStreamEvent
+ *   Append a status-only PRN event (PRN_ACCEPTED, PRN_REJECTED) to the stream.
+ *   Ledger-only: throws on embedded balances and when no balance exists.
  * @property {(params: FlipCanonicalSourceToMigratingParams) => Promise<FlipCanonicalSourceToMigratingResult>} flipCanonicalSourceToMigrating
  *   Promote an `'embedded'` accreditation to `'migrating'` and stamp
  *   `migratingSince`, gated on `version` matching the captured value. The

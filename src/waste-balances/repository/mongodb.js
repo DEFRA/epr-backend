@@ -2,6 +2,7 @@ import { validateAccreditationId } from './validation.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import { performUpdateWasteBalanceTransactions } from './helpers.js'
 import {
+  performAppendPrnStreamEvent,
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
   performCreditAvailableBalanceForPrnCancellation,
@@ -298,6 +299,13 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
         creditParams,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db),
+        dependencies
+      })
+    },
+    appendStreamEvent: async (appendParams) => {
+      return performAppendPrnStreamEvent({
+        appendParams,
+        findBalance: findBalance(db),
         dependencies
       })
     },

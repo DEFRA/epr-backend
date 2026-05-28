@@ -244,7 +244,9 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
 
     await callUpdate({
       prnRepository,
-      wasteBalancesRepository: {},
+      wasteBalancesRepository: {
+        findByAccreditationId: vi.fn().mockResolvedValue(null)
+      },
       organisationsRepository: buildOrganisationsRepository(),
       providedPrn: buildPrn({
         status: {
