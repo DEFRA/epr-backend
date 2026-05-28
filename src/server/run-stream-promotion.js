@@ -177,8 +177,8 @@ const promoteAccreditation = async (row, deps) => {
     })
 
   if (
-    !migratingResult ||
-    migratingResult.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+    migratingResult?.canonicalSource !==
+    WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
   ) {
     return 'skipped'
   }
@@ -201,10 +201,7 @@ const promoteAccreditation = async (row, deps) => {
       capturedVersion: afterStream.version
     })
 
-  if (
-    !ledgerResult ||
-    ledgerResult.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-  ) {
+  if (ledgerResult?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
     logger.info({
       message: `Stream promotion: flip to ledger did not land for accreditation ${row.accreditationId}, will retry next boot`
     })
