@@ -1,10 +1,8 @@
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
 import {
   closingForSummaryLogSubmitted,
   closingForPrn
 } from './stream-closing-balance.js'
-
-const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
 
 /**
  * @param {import('../repository/stream-port.js').StreamEvent | null} latest

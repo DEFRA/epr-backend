@@ -31,6 +31,9 @@ const PRN_KINDS = new Set([
  * @property {number} availableAmount
  */
 
+/** @type {Readonly<StreamBalanceSnapshot>} */
+export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
+
 /**
  * @typedef {Object} StreamUserSummary
  * @property {string} id

@@ -2,7 +2,7 @@ import { add, toNumber } from '#common/helpers/decimal-utils.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
 import {
   closingForSummaryLogSubmitted,
   closingForPrn
@@ -171,7 +171,7 @@ const buildChronologicalEvents = ({
  */
 const replayStream = (events) => {
   const result = []
-  let previousBalance = { amount: 0, availableAmount: 0 }
+  let previousBalance = { ...ZERO_BALANCE }
   let previousCreditTotal = 0
 
   for (let i = 0; i < events.length; i++) {
@@ -242,7 +242,7 @@ export const computeRebuiltStream = ({
   const events = replayStream(unsorted)
 
   if (events.length === 0) {
-    return { events, amount: 0, availableAmount: 0 }
+    return { events, ...ZERO_BALANCE }
   }
 
   const finalBalance =
