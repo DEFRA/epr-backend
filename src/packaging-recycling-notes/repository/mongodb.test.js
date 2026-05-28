@@ -7,29 +7,45 @@ import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
 
+/**
+ * @typedef {import('mongodb').Db} Db
+ * @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ * @typedef {import('./port.js').PackagingRecyclingNotesRepository} PrnRepository
+ */
+
 const DATABASE_NAME = 'epr-backend'
 
+/** Asserts a structural test stub satisfies the Mongo Db surface the code under test exercises. */
+const asDb = (/** @type {unknown} */ stub) => /** @type {Db} */ (stub)
+
+/** A complete TypedLogger stub for tests that only execute paths preceding any log call. */
+const stubLogger = () =>
+  /** @type {TypedLogger} */ ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn()
+  })
+
 const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
+  mongoClient: async (/** @type {*} */ { db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
     await client.close()
   },
 
-  prnRepositoryFactory: async ({ mongoClient }, use) => {
+  prnRepositoryFactory: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
     const factory = await createPackagingRecyclingNotesRepository(database, [])
     await use(factory)
   },
 
-  prnRepository: async ({ prnRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
-    const repository = prnRepositoryFactory(mockLogger)
+  prnRepository: async (/** @type {*} */ { prnRepositoryFactory }, use) => {
+    const repository = prnRepositoryFactory(stubLogger())
     await use(repository)
   }
 })
@@ -42,8 +58,9 @@ describe('MongoDB packaging recycling notes repository', () => {
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const hexId = '123456789012345678901234'
-      const otherError = new Error('Connection timeout')
-      otherError.code = 'ETIMEOUT'
+      const otherError = Object.assign(new Error('Connection timeout'), {
+        code: 'ETIMEOUT'
+      })
 
       const mockDb = {
         collection: function () {
@@ -61,8 +78,11 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
-      const repository = factory()
+      const factory = await createPackagingRecyclingNotesRepository(
+        asDb(mockDb),
+        []
+      )
+      const repository = factory(stubLogger())
 
       await expect(
         repository.updateStatus({
@@ -78,8 +98,9 @@ describe('MongoDB packaging recycling notes repository', () => {
 
     it('re-throws non-duplicate key errors from persistProjection', async () => {
       const hexId = '123456789012345678901234'
-      const otherError = new Error('Connection timeout')
-      otherError.code = 'ETIMEOUT'
+      const otherError = Object.assign(new Error('Connection timeout'), {
+        code: 'ETIMEOUT'
+      })
 
       const mockDb = {
         collection: function () {
@@ -97,22 +118,27 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
-      const repository = factory()
+      const factory = await createPackagingRecyclingNotesRepository(
+        asDb(mockDb),
+        []
+      )
+      const repository = factory(stubLogger())
 
       await expect(
         repository.persistProjection({
-          projection: {
-            id: hexId,
-            version: 2,
-            updatedAt: new Date(),
-            updatedBy: { id: 'user-123', name: 'Test User' },
-            status: {
-              currentStatus: 'awaiting_acceptance',
-              currentStatusAt: new Date(),
-              history: []
-            }
-          },
+          projection: /** @type {PackagingRecyclingNote} */ (
+            /** @type {unknown} */ ({
+              id: hexId,
+              version: 2,
+              updatedAt: new Date(),
+              updatedBy: { id: 'user-123', name: 'Test User' },
+              status: {
+                currentStatus: 'awaiting_acceptance',
+                currentStatusAt: new Date(),
+                history: []
+              }
+            })
+          ),
           expectedVersion: 1
         })
       ).rejects.toThrow('Connection timeout')
@@ -121,9 +147,10 @@ describe('MongoDB packaging recycling notes repository', () => {
     it('throws PrnNumberConflictError on duplicate key error for prnNumber', async () => {
       const hexId = '123456789012345678901234'
       const prnNumber = 'ER2612345'
-      const duplicateKeyError = new Error('duplicate key error')
-      duplicateKeyError.code = 11000
-      duplicateKeyError.keyPattern = { prnNumber: 1 }
+      const duplicateKeyError = Object.assign(
+        new Error('duplicate key error'),
+        { code: 11000, keyPattern: { prnNumber: 1 } }
+      )
 
       const mockDb = {
         collection: function () {
@@ -141,8 +168,11 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
-      const repository = factory()
+      const factory = await createPackagingRecyclingNotesRepository(
+        asDb(mockDb),
+        []
+      )
+      const repository = factory(stubLogger())
 
       await expect(
         repository.updateStatus({
@@ -178,7 +208,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const orgStatusIndex = createdIndexes.find(
         (idx) => idx.options.name === 'organisationId_status'
@@ -219,7 +249,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       expect(droppedIndexes).toContain('organisationId_status')
 
@@ -258,14 +288,15 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       expect(droppedIndex).toBeNull()
     })
 
     it('handles NamespaceNotFound error when collection is new', async () => {
-      const nsError = new Error('ns not found')
-      nsError.codeName = 'NamespaceNotFound'
+      const nsError = Object.assign(new Error('ns not found'), {
+        codeName: 'NamespaceNotFound'
+      })
 
       let indexesCalls = 0
       const createdIndexes = []
@@ -293,7 +324,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const orgStatusIndex = createdIndexes.find(
         (idx) => idx.options.name === 'organisationId_status'
@@ -302,8 +333,9 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
 
     it('re-throws non-NamespaceNotFound errors', async () => {
-      const connectionError = new Error('Connection refused')
-      connectionError.codeName = 'NetworkError'
+      const connectionError = Object.assign(new Error('Connection refused'), {
+        codeName: 'NetworkError'
+      })
 
       let indexesCalls = 0
 
@@ -329,15 +361,16 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(mockDb, [])
+        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection refused')
     })
   })
 
   describe('ensurePrnNumberIndex error handling', () => {
     it('re-throws non-NamespaceNotFound errors from prnNumber indexes()', async () => {
-      const connectionError = new Error('Connection lost')
-      connectionError.codeName = 'NetworkError'
+      const connectionError = Object.assign(new Error('Connection lost'), {
+        codeName: 'NetworkError'
+      })
 
       let indexesCalls = 0
 
@@ -364,7 +397,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(mockDb, [])
+        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection lost')
     })
   })
@@ -390,7 +423,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const statusDateIndex = createdIndexes.find(
         (idx) => idx.options.name === 'status_currentStatusAt'
@@ -404,8 +437,9 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
 
     it('handles NamespaceNotFound error when collection does not exist', async () => {
-      const nsError = new Error('ns not found')
-      nsError.codeName = 'NamespaceNotFound'
+      const nsError = Object.assign(new Error('ns not found'), {
+        codeName: 'NamespaceNotFound'
+      })
 
       let createIndexCalls = 0
 
@@ -430,13 +464,17 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
+      const factory = await createPackagingRecyclingNotesRepository(
+        asDb(mockDb),
+        []
+      )
       expect(factory).toBeTypeOf('function')
     })
 
     it('re-throws non-NamespaceNotFound errors from createIndex', async () => {
-      const connectionError = new Error('Connection lost')
-      connectionError.codeName = 'NetworkError'
+      const connectionError = Object.assign(new Error('Connection lost'), {
+        codeName: 'NetworkError'
+      })
 
       let createIndexCalls = 0
 
@@ -462,7 +500,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(mockDb, [])
+        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection lost')
     })
   })
@@ -488,7 +526,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const prnNumberIndex = createdIndexes.find(
         (idx) => idx.options.name === 'prnNumber'
@@ -524,7 +562,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       expect(droppedIndex).toBe('prnNumber')
 
@@ -563,16 +601,16 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       expect(droppedIndex).toBeNull()
     })
 
     it('handles ns does not exist error when collection is new', async () => {
-      const nsDoesNotExistError = new Error(
-        'ns does not exist: epr-backend.packaging-recycling-notes'
+      const nsDoesNotExistError = Object.assign(
+        new Error('ns does not exist: epr-backend.packaging-recycling-notes'),
+        { codeName: 'NamespaceNotFound' }
       )
-      nsDoesNotExistError.codeName = 'NamespaceNotFound'
 
       const createdIndexes = []
 
@@ -595,7 +633,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(mockDb, [])
+      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const prnNumberIndex = createdIndexes.find(
         (idx) => idx.options.name === 'prnNumber'
@@ -606,8 +644,9 @@ describe('MongoDB packaging recycling notes repository', () => {
     })
 
     it('re-throws non-NamespaceNotFound errors from indexes()', async () => {
-      const connectionError = new Error('Connection refused')
-      connectionError.codeName = 'NetworkError'
+      const connectionError = Object.assign(new Error('Connection refused'), {
+        codeName: 'NetworkError'
+      })
 
       const mockDb = {
         collection: function () {
@@ -627,7 +666,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(mockDb, [])
+        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection refused')
     })
   })
@@ -644,20 +683,25 @@ describe('MongoDB packaging recycling notes repository', () => {
     }
 
     it('reads back as version 1', async ({ mongoClient, prnRepository }) => {
-      const id = await seedVersionlessPrn(mongoClient)
+      const client = /** @type {MongoClient} */ (mongoClient)
+      const repo = /** @type {PrnRepository} */ (prnRepository)
 
-      const found = await prnRepository.findById(id)
+      const id = await seedVersionlessPrn(client)
+      const found = await repo.findById(id)
 
-      expect(found.version).toBe(1)
+      expect(found?.version).toBe(1)
     })
 
     it('accepts a CAS update with version 1 and bumps to version 2', async ({
       mongoClient,
       prnRepository
     }) => {
-      const id = await seedVersionlessPrn(mongoClient)
+      const client = /** @type {MongoClient} */ (mongoClient)
+      const repo = /** @type {PrnRepository} */ (prnRepository)
 
-      const updated = await prnRepository.updateStatus({
+      const id = await seedVersionlessPrn(client)
+
+      const updated = await repo.updateStatus({
         id,
         version: 1,
         status: PRN_STATUS.AWAITING_ACCEPTANCE,
@@ -666,22 +710,24 @@ describe('MongoDB packaging recycling notes repository', () => {
         prnNumber: `TT2699999`
       })
 
-      expect(updated.version).toBe(2)
-      expect(updated.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      expect(updated?.version).toBe(2)
+      expect(updated?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      const reread = await prnRepository.findById(id)
-      expect(reread.version).toBe(2)
+      const reread = await repo.findById(id)
+      expect(reread?.version).toBe(2)
     })
 
     it('reports actual version as 1 when conflict is detected', async ({
       mongoClient,
       prnRepository
     }) => {
-      const id = await seedVersionlessPrn(mongoClient)
+      const client = /** @type {MongoClient} */ (mongoClient)
+      const repo = /** @type {PrnRepository} */ (prnRepository)
+      const id = await seedVersionlessPrn(client)
 
       const staleVersion = 5
       await expect(
-        prnRepository.updateStatus({
+        repo.updateStatus({
           id,
           version: staleVersion,
           status: PRN_STATUS.AWAITING_ACCEPTANCE,

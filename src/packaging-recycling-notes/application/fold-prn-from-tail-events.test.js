@@ -4,22 +4,32 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
+/**
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ */
+
 const baseUpdatedAt = new Date('2026-01-15T10:00:00.000Z')
 const baseCreator = { id: 'creator', name: 'Original Creator' }
 
-const basePrn = () => ({
-  id: 'prn-1',
-  registrationId: 'reg-1',
-  accreditation: { id: 'acc-1' },
-  version: 1,
-  updatedAt: baseUpdatedAt,
-  updatedBy: baseCreator,
-  status: {
-    currentStatus: PRN_STATUS.DRAFT,
-    currentStatusAt: baseUpdatedAt,
-    history: [{ status: PRN_STATUS.DRAFT, at: baseUpdatedAt, by: baseCreator }]
-  }
-})
+/** @returns {PackagingRecyclingNote} */
+const basePrn = () =>
+  /** @type {PackagingRecyclingNote} */ (
+    /** @type {unknown} */ ({
+      id: 'prn-1',
+      registrationId: 'reg-1',
+      accreditation: { id: 'acc-1' },
+      version: 1,
+      updatedAt: baseUpdatedAt,
+      updatedBy: baseCreator,
+      status: {
+        currentStatus: PRN_STATUS.DRAFT,
+        currentStatusAt: baseUpdatedAt,
+        history: [
+          { status: PRN_STATUS.DRAFT, at: baseUpdatedAt, by: baseCreator }
+        ]
+      }
+    })
+  )
 
 const eventCreator = { id: 'user-1', name: 'Test User' }
 
