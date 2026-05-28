@@ -23,6 +23,15 @@ const registrationId = 'reg-001'
 const accreditationId = 'acc-789'
 const prnId = 'prn-001'
 
+/**
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ */
+
+/**
+ * Intentionally lacks `version` so the fold's `prn.version ?? 0` defensive
+ * branch (legacy-doc compatibility) is exercised when this fixture flows
+ * through `foldPrnFromTailEvents`. Cast at the consumer boundary.
+ */
 const mockPrn = {
   id: prnId,
   schemaVersion: 2,
@@ -58,6 +67,10 @@ const mockPrn = {
   notes: 'Test notes'
 }
 
+const asPrn = (/** @type {unknown} */ p) =>
+  /** @type {PackagingRecyclingNote} */ (p)
+
+/** @param {PackagingRecyclingNote | null} prn */
 const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
   return () => ({
     create: vi.fn(),
@@ -77,7 +90,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository(mockPrn)()
+        createInMemoryPackagingRecyclingNotesRepository(asPrn(mockPrn))()
 
       organisationsRepository = {
         findAccreditationById: vi.fn(async () => ({
