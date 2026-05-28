@@ -6,7 +6,9 @@ import {
   buildPrnCreatedEvent,
   buildPrnIssuedEvent,
   buildPrnCreationCancelledEvent,
-  buildPrnCancelledAfterIssueEvent
+  buildPrnCancelledAfterIssueEvent,
+  buildPrnAcceptedEvent,
+  buildPrnRejectedEvent
 } from './stream-test-data.js'
 import {
   validateStreamEventInsert,
@@ -54,6 +56,26 @@ describe('stream event insert schema', () => {
     const { error } = validate(
       buildStreamEvent({
         kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+        payload: { prnId: 'prn-1', amount: 50 }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts a valid prn-accepted event', () => {
+    const { error } = validate(
+      buildStreamEvent({
+        kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+        payload: { prnId: 'prn-1', amount: 50 }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts a valid prn-rejected event', () => {
+    const { error } = validate(
+      buildStreamEvent({
+        kind: STREAM_EVENT_KIND.PRN_REJECTED,
         payload: { prnId: 'prn-1', amount: 50 }
       })
     )
@@ -114,6 +136,28 @@ describe('stream event insert schema', () => {
     expect(error).toBeDefined()
   })
 
+  it('rejects prn-accepted when accreditationId is null', () => {
+    const { error } = validate(
+      buildStreamEvent({
+        accreditationId: null,
+        kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+        payload: { prnId: 'prn-1', amount: 50 }
+      })
+    )
+    expect(error).toBeDefined()
+  })
+
+  it('rejects prn-rejected when accreditationId is null', () => {
+    const { error } = validate(
+      buildStreamEvent({
+        accreditationId: null,
+        kind: STREAM_EVENT_KIND.PRN_REJECTED,
+        payload: { prnId: 'prn-1', amount: 50 }
+      })
+    )
+    expect(error).toBeDefined()
+  })
+
   it('rejects number less than 1', () => {
     const { error } = validate(buildStreamEvent({ number: 0 }))
     expect(error).toBeDefined()
@@ -140,6 +184,16 @@ describe('stream event insert schema', () => {
 
   it('accepts convenience builder output for prn-cancelled-after-issue', () => {
     const { error } = validate(buildPrnCancelledAfterIssueEvent())
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts convenience builder output for prn-accepted', () => {
+    const { error } = validate(buildPrnAcceptedEvent())
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts convenience builder output for prn-rejected', () => {
+    const { error } = validate(buildPrnRejectedEvent())
     expect(error).toBeUndefined()
   })
 })
