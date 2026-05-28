@@ -1,3 +1,6 @@
+import assert from 'node:assert/strict'
+
+import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
 import { describe, it, expect, beforeEach } from 'vitest'
 
@@ -7,7 +10,10 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { WASTE_BALANCE_TRANSACTION_ENTITY_TYPE } from '#waste-balances/domain/model.js'
+import {
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE,
+  WASTE_BALANCE_CANONICAL_SOURCE
+} from '#waste-balances/domain/model.js'
 
 import {
   asStandardUser,
@@ -21,6 +27,20 @@ import {
   createExporterRowValues,
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
+
+/**
+ * Reads an accreditation's waste balance and asserts it is present, so callers
+ * can read its fields without a null guard at every assertion site.
+ *
+ * @param {{ findByAccreditationId: (accreditationId: string) => Promise<import('#waste-balances/domain/model.js').WasteBalance | null> }} wasteBalancesRepository
+ * @param {string} accreditationId
+ */
+const getWasteBalance = async (wasteBalancesRepository, accreditationId) => {
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  assert(balance)
+  return balance
+}
 
 /**
  * Integration tests for waste balance arithmetic across multiple operations.
@@ -183,8 +203,10 @@ describe('Waste balance arithmetic integration tests', () => {
         ])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(300) // 100 + 200 = 300
       expect(balance.availableAmount).toBe(300)
 
@@ -192,8 +214,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(300) // Total unchanged
       expect(balance.availableAmount).toBe(250) // 300 - 50 = 250
 
@@ -211,8 +232,7 @@ describe('Waste balance arithmetic integration tests', () => {
         ])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(450) // 100 + 200 + 150 = 450
       expect(balance.availableAmount).toBe(400) // 450 - 50 = 400
 
@@ -220,8 +240,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn2 = await createPrn(env, 75)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(450) // Total unchanged
       expect(balance.availableAmount).toBe(325) // 400 - 75 = 325
 
@@ -229,8 +248,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn3 = await createPrn(env, 100)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(450) // Total unchanged
       expect(balance.availableAmount).toBe(225) // 325 - 100 = 225
     })
@@ -251,8 +269,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 100 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(100)
 
@@ -260,8 +280,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 30)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(70) // 100 - 30 = 70
 
@@ -277,8 +296,7 @@ describe('Waste balance arithmetic integration tests', () => {
         ])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(150) // 100 + 50 = 150
       expect(balance.availableAmount).toBe(120) // 70 + 50 = 120
 
@@ -286,8 +304,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn2 = await createPrn(env, 45)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(150) // Total unchanged
       expect(balance.availableAmount).toBe(75) // 120 - 45 = 75
 
@@ -304,8 +321,7 @@ describe('Waste balance arithmetic integration tests', () => {
         ])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(350) // 100 + 50 + 200 = 350
       expect(balance.availableAmount).toBe(275) // 75 + 200 = 275
 
@@ -313,8 +329,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn3 = await createPrn(env, 125)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(350) // Total unchanged
       expect(balance.availableAmount).toBe(150) // 275 - 125 = 150
 
@@ -337,8 +352,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 200 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
 
@@ -346,8 +363,7 @@ describe('Waste balance arithmetic integration tests', () => {
       await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
       await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(150)
       expect(balance.availableAmount).toBe(150)
 
@@ -359,8 +375,7 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 200 }])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(150)
       expect(balance.availableAmount).toBe(150)
     })
@@ -381,8 +396,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: firstCredit }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(firstCredit)
       expect(balance.availableAmount).toBe(firstCredit)
 
@@ -392,8 +409,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, debit1)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(firstCredit) // Total unchanged
       expect(balance.availableAmount).toBe(expectedAvailable1) // 100.5 - 33 = 67.5
 
@@ -412,8 +428,7 @@ describe('Waste balance arithmetic integration tests', () => {
         ])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(expectedTotal2) // 100.5 + 50.25 = 150.75
       expect(balance.availableAmount).toBe(expectedAvailable2) // 150.75 - 33 = 117.75
 
@@ -423,8 +438,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn2 = await createPrn(env, debit2)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(expectedTotal2) // Total unchanged
       expect(balance.availableAmount).toBe(expectedAvailable3) // 117.75 - 17 = 100.75
     })
@@ -445,8 +459,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: creditAmount }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(creditAmount)
       expect(balance.availableAmount).toBe(creditAmount)
 
@@ -462,8 +478,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(result.message).toBe('Insufficient available waste balance')
 
       // Balance should be unchanged
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(100)
     })
@@ -483,8 +498,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 100 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(100)
 
@@ -492,22 +509,21 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(50)
 
       // Manually reduce total balance to simulate concurrent deduction
       await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
         accreditationId,
+        registrationId: env.registrationId,
         organisationId: env.organisationId,
         prnId: 'other-prn',
         tonnage: 80,
         userId: 'test-user'
       })
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(20) // 100 - 80
 
       // Attempt to issue PRN for 50 (more than remaining total of 20) - should be rejected
@@ -520,8 +536,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(result.message).toBe('Insufficient total waste balance')
 
       // Balance should be unchanged
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(20)
     })
 
@@ -540,8 +555,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 200 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
 
@@ -551,16 +568,14 @@ describe('Waste balance arithmetic integration tests', () => {
       // Raise PRN (deduct from available only)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(200) // Total unchanged
       expect(balance.availableAmount).toBe(150) // 200 - 50 = 150
 
       // Issue PRN (deduct from total only)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(150) // 200 - 50 = 150 (now deducted)
       expect(balance.availableAmount).toBe(150) // Unchanged from issue
     })
@@ -580,8 +595,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 500 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(500)
       expect(balance.availableAmount).toBe(500)
 
@@ -589,8 +606,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 100)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(500)
       expect(balance.availableAmount).toBe(400) // 500 - 100
 
@@ -598,16 +614,14 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn2 = await createPrn(env, 75)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(500)
       expect(balance.availableAmount).toBe(325) // 400 - 75
 
       // Issue PRN 1 (total deducted, available unchanged)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(400) // 500 - 100
       expect(balance.availableAmount).toBe(325) // Unchanged
 
@@ -615,24 +629,21 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn3 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(400) // Unchanged
       expect(balance.availableAmount).toBe(275) // 325 - 50
 
       // Issue PRN 2 (total deducted, available unchanged)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(325) // 400 - 75
       expect(balance.availableAmount).toBe(275) // Unchanged
 
       // Issue PRN 3 (total deducted, available unchanged)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(275) // 325 - 50
       expect(balance.availableAmount).toBe(275) // Now matches total
 
@@ -654,8 +665,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 100 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(100)
 
@@ -663,8 +676,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 30)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(70)
 
@@ -677,8 +689,7 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 80 }])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(80) // Revised down
       expect(balance.availableAmount).toBe(50) // 80 - 30 = 50
 
@@ -686,8 +697,7 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn2 = await createPrn(env, 25)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(80)
       expect(balance.availableAmount).toBe(25) // 50 - 25 = 25
 
@@ -700,8 +710,7 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 120 }])
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(120) // Revised up
       expect(balance.availableAmount).toBe(65) // 120 - 30 - 25 = 65
     })
@@ -723,8 +732,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 200 }])
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
 
@@ -732,16 +743,14 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(150)
 
       // Delete the PRN (restores available)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(200) // Total unchanged
       expect(balance.availableAmount).toBe(200) // Restored: 150 + 50
     })
@@ -764,16 +773,17 @@ describe('Waste balance arithmetic integration tests', () => {
       // Create PRN (stays in draft, no balance deduction)
       const prn1 = await createPrn(env, 50)
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
 
       // Discard from draft (no balance change)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.DISCARDED)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(200) // Unchanged
       expect(balance.availableAmount).toBe(200) // Unchanged
     })
@@ -803,16 +813,17 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn3 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(500)
       expect(balance.availableAmount).toBe(275) // 500 - 100 - 75 - 50
 
       // Delete only the 75-tonne PRN
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.DELETED)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(500) // Total unchanged
       expect(balance.availableAmount).toBe(350) // 275 + 75
     })
@@ -836,23 +847,23 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn1 = await createPrn(env, 80)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.availableAmount).toBe(20)
 
       // Delete it (available restored to 100)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.availableAmount).toBe(100)
 
       // Raise a new PRN for 90 using the restored balance
       const prn2 = await createPrn(env, 90)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(100) // Total unchanged throughout
       expect(balance.availableAmount).toBe(10) // 100 - 90
     })
@@ -882,32 +893,31 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn3 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(500)
       expect(balance.availableAmount).toBe(275) // 500 - 100 - 75 - 50
 
       // Issue PRN 1 (total deducted, available unchanged)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(400) // 500 - 100
       expect(balance.availableAmount).toBe(275) // Unchanged
 
       // Delete PRN 2 (available credited, total unchanged)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.DELETED)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(400) // Unchanged
       expect(balance.availableAmount).toBe(350) // 275 + 75
 
       // Issue PRN 3 (total deducted, available unchanged)
       await transitionPrnStatus(env, prn3.id, PRN_STATUS.AWAITING_ACCEPTANCE)
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(350) // 400 - 50
       expect(balance.availableAmount).toBe(350) // Now matches total
     })
@@ -949,8 +959,10 @@ describe('Waste balance arithmetic integration tests', () => {
       const prn2 = await createPrn(env, 25)
       await transitionPrnStatus(env, prn2.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // Verify final amounts
       expect(balance.amount).toBe(160) // 100 + 60
@@ -999,8 +1011,10 @@ describe('Waste balance arithmetic integration tests', () => {
       // Delete it
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // Find the cancellation credit transaction
       const cancellationTransactions = balance.transactions.filter((t) =>
@@ -1041,6 +1055,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
       await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
         accreditationId,
+        registrationId: env.registrationId,
         organisationId,
         prnId: 'other-prn',
         tonnage: 80,
@@ -1055,6 +1070,7 @@ describe('Waste balance arithmetic integration tests', () => {
       expect(result.statusCode).toBe(409)
 
       const refetched = await packagingRecyclingNotesRepository.findById(prn.id)
+      assert(refetched)
 
       expect(refetched.status.currentStatus).toBe(
         PRN_STATUS.AWAITING_AUTHORISATION
@@ -1090,6 +1106,7 @@ describe('Waste balance arithmetic integration tests', () => {
 
       await wasteBalancesRepository.deductTotalBalanceForPrnIssue({
         accreditationId,
+        registrationId: env.registrationId,
         organisationId,
         prnId: 'other-prn',
         tonnage: 20,
@@ -1104,17 +1121,21 @@ describe('Waste balance arithmetic integration tests', () => {
       const refetchedA = await packagingRecyclingNotesRepository.findById(
         prnA.id
       )
+      assert(refetchedA)
       const refetchedB = await packagingRecyclingNotesRepository.findById(
         prnB.id
       )
+      assert(refetchedB)
 
       const issuedCount = [refetchedA, refetchedB].filter(
         (p) => p.status.currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
       ).length
       expect(issuedCount).toBe(1)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(30)
     })
   })
@@ -1144,8 +1165,10 @@ describe('Waste balance arithmetic integration tests', () => {
         transitionPrnStatus(env, prnB.id, PRN_STATUS.DELETED)
       ])
 
-      const balanceAfter =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balanceAfter = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balanceAfter.amount).toBe(200)
       expect(balanceAfter.availableAmount).toBe(200)
     })
@@ -1171,8 +1194,10 @@ describe('Waste balance arithmetic integration tests', () => {
         transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
       ])
 
-      const balanceAfter =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balanceAfter = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balanceAfter.amount).toBe(100)
       expect(balanceAfter.availableAmount).toBe(50)
     })
@@ -1199,8 +1224,10 @@ describe('Waste balance arithmetic integration tests', () => {
         transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
       ])
 
-      const balanceAfter =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balanceAfter = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balanceAfter.amount).toBe(200)
       expect(balanceAfter.availableAmount).toBe(140)
     })
@@ -1219,8 +1246,10 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 100 }])
       )
 
-      const balanceAfterA =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balanceAfterA = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balanceAfterA.amount).toBe(100)
 
       await performSummaryLogSubmission(
@@ -1231,9 +1260,150 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 100 }])
       )
 
-      const balanceAfterB =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balanceAfterB = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balanceAfterB.amount).toBe(100)
+    })
+  })
+
+  describe('on the event-sourced ledger path', () => {
+    const setupLedgerEnv = () => {
+      const organisationId = new ObjectId().toString()
+      const registrationId = new ObjectId().toString()
+      /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
+      const existingWasteBalances = [
+        {
+          id: 'seeded-ledger-balance',
+          accreditationId: 'ACC-123',
+          registrationId,
+          organisationId,
+          schemaVersion: 1,
+          version: 0,
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        }
+      ]
+      return setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter',
+        organisationId,
+        registrationId,
+        featureFlagOverrides: { wasteBalanceLedger: true },
+        // @ts-expect-error -- existingWasteBalances defaults to never[]; WasteBalance[] is correct at runtime
+        existingWasteBalances
+      })
+    }
+
+    it('ringfences available balance and stamps the PRN watermark when raising', async () => {
+      const env = await setupLedgerEnv()
+      const {
+        wasteBalancesRepository,
+        packagingRecyclingNotesRepository,
+        streamRepository,
+        registrationId
+      } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-raise',
+        'file-ledger-raise',
+        'waste-ledger-raise.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 300 }])
+      )
+
+      let balance = await getWasteBalance(wasteBalancesRepository, 'ACC-123')
+      expect(balance.amount).toBe(300)
+      expect(balance.availableAmount).toBe(300)
+
+      const prn = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      balance = await getWasteBalance(wasteBalancesRepository, 'ACC-123')
+      expect(balance.amount).toBe(300) // total unchanged
+      expect(balance.availableAmount).toBe(250) // 300 - 50 ringfenced
+
+      // The document watermark is the event the raise appended, not just any number.
+      const latest = await streamRepository.findLatestByPartition(
+        registrationId,
+        'ACC-123'
+      )
+      const stored = await packagingRecyclingNotesRepository.findById(prn.id)
+      assert(stored)
+      expect(stored.lastAppliedEventNumber).toBe(latest?.number)
+    })
+
+    it('deducts from total balance when issuing', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-issue',
+        'file-ledger-issue',
+        'waste-ledger-issue.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      const prn = await createPrn(env, 50)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_ACCEPTANCE)
+
+      const balance = await getWasteBalance(wasteBalancesRepository, 'ACC-123')
+      expect(balance.amount).toBe(150) // 200 - 50 finalised
+      expect(balance.availableAmount).toBe(150)
+    })
+
+    it('restores available balance when deleting a raised PRN', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-delete',
+        'file-ledger-delete',
+        'waste-ledger-delete.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 100 }])
+      )
+
+      const prn = await createPrn(env, 40)
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.AWAITING_AUTHORISATION)
+
+      let balance = await getWasteBalance(wasteBalancesRepository, 'ACC-123')
+      expect(balance.availableAmount).toBe(60)
+
+      await transitionPrnStatus(env, prn.id, PRN_STATUS.DELETED)
+
+      balance = await getWasteBalance(wasteBalancesRepository, 'ACC-123')
+      expect(balance.amount).toBe(100)
+      expect(balance.availableAmount).toBe(100) // ringfence released
+    })
+
+    it('debits available balance once per PRN when two raises are submitted together on the same accreditation', async () => {
+      const env = await setupLedgerEnv()
+      const { wasteBalancesRepository } = env
+
+      await performSummaryLogSubmission(
+        env,
+        'log-ledger-race',
+        'file-ledger-race',
+        'waste-ledger-race.xlsx',
+        createUploadData([{ rowId: 1001, exportTonnage: 200 }])
+      )
+
+      const prnA = await createPrn(env, 30)
+      const prnB = await createPrn(env, 30)
+
+      await Promise.allSettled([
+        transitionPrnStatus(env, prnA.id, PRN_STATUS.AWAITING_AUTHORISATION),
+        transitionPrnStatus(env, prnB.id, PRN_STATUS.AWAITING_AUTHORISATION)
+      ])
+
+      const balance = await getWasteBalance(wasteBalancesRepository, 'ACC-123')
+      expect(balance.amount).toBe(200)
+      expect(balance.availableAmount).toBe(140) // 200 - 30 - 30
     })
   })
 })
