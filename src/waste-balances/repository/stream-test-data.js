@@ -75,3 +75,31 @@ export const buildPrnCancelledAfterIssueEvent = (overrides = {}) =>
     closingBalance: { amount: 100, availableAmount: 100 },
     ...overrides
   })
+
+/**
+ * Build a PRN-accepted event. The kind alone signals no balance delta;
+ * payload carries the PRN's tonnage for downstream consumers.
+ * @param {object} [overrides]
+ */
+export const buildPrnAcceptedEvent = (overrides = {}) =>
+  buildStreamEvent({
+    kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+    payload: { prnId: 'prn-1', amount: 50 },
+    openingBalance: { amount: 100, availableAmount: 50 },
+    closingBalance: { amount: 100, availableAmount: 50 },
+    ...overrides
+  })
+
+/**
+ * Build a PRN-rejected event. The kind alone signals no balance delta;
+ * payload carries the PRN's tonnage for downstream consumers.
+ * @param {object} [overrides]
+ */
+export const buildPrnRejectedEvent = (overrides = {}) =>
+  buildStreamEvent({
+    kind: STREAM_EVENT_KIND.PRN_REJECTED,
+    payload: { prnId: 'prn-1', amount: 50 },
+    openingBalance: { amount: 100, availableAmount: 50 },
+    closingBalance: { amount: 100, availableAmount: 50 },
+    ...overrides
+  })
