@@ -183,6 +183,12 @@ const promoteAccreditation = async (row, deps) => {
     return 'skipped'
   }
 
+  // Idempotency: if a previous boot crashed between bulkAppendEvents and
+  // flipCanonicalSourceToLedger, stale events may exist. Deleting first
+  // means a restart always replays from the authoritative sources rather
+  // than appending on top of a partial write. An alternative would be to
+  // skip the delete and let bulkAppendEvents fail on a sequence conflict,
+  // but that turns a recoverable restart into a stuck accreditation.
   await streamRepository.deleteByPartition(registration.id, row.accreditationId)
   await streamRepository.bulkAppendEvents(events)
 
