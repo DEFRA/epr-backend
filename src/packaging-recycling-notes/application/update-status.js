@@ -3,7 +3,7 @@ import Boom from '@hapi/boom'
 import { prnMetrics } from './metrics.js'
 import {
   applyWasteBalanceEffects,
-  affectsWasteBalance
+  balanceEventsFor
 } from './update-status-balance-effects.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import {
@@ -86,7 +86,7 @@ const ROLLBACK_METHOD_BY_TRANSITION = {
  * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {PackagingRecyclingNote} prn
  * @property {import('#packaging-recycling-notes/repository/port.js').UpdateStatusParams} updateParams
- * @property {Object} balanceEffectsParams
+ * @property {import('./update-status-balance-effects.js').BalanceEvent[]} events
  * @property {PrnStatus} newStatus
  * @property {string} organisationId
  * @property {string} registrationId
@@ -293,7 +293,7 @@ async function performCreation({
   logger,
   prn,
   updateParams,
-  balanceEffectsParams,
+  events,
   newStatus,
   organisationId,
   registrationId,
@@ -303,11 +303,7 @@ async function performCreation({
   now,
   id
 }) {
-  await applyWasteBalanceEffects(
-    wasteBalancesRepository,
-    logger,
-    balanceEffectsParams
-  )
+  await applyWasteBalanceEffects(wasteBalancesRepository, logger, events)
 
   try {
     return await applyStatusUpdate({
@@ -357,7 +353,7 @@ async function performTransition({
   logger,
   prn,
   updateParams,
-  balanceEffectsParams,
+  events,
   newStatus,
   organisationId,
   accreditationId,
@@ -379,11 +375,7 @@ async function performTransition({
   })
 
   try {
-    await applyWasteBalanceEffects(
-      wasteBalancesRepository,
-      logger,
-      balanceEffectsParams
-    )
+    await applyWasteBalanceEffects(wasteBalancesRepository, logger, events)
   } catch (forwardError) {
     const transitionKey = /** @type {PostCasRollbackTransition} */ (
       `${currentStatus}|${newStatus}`
@@ -427,7 +419,7 @@ async function performStreamWrite({
   logger,
   prn,
   updateParams,
-  balanceEffectsParams,
+  events,
   newStatus,
   organisationId,
   accreditationId,
@@ -452,7 +444,7 @@ async function performStreamWrite({
   updateParams.lastAppliedEventNumber = await applyWasteBalanceEffects(
     wasteBalancesRepository,
     logger,
-    balanceEffectsParams
+    events
   )
 
   return applyStatusUpdate({
@@ -489,12 +481,12 @@ async function isOnLedger(wasteBalancesRepository, accreditationId) {
  * stream write; everything else keeps the embedded create/transition paths
  * with their compensation, byte-for-byte as before.
  *
- * @param {boolean} onLedger
+ * @param {boolean} useStreamWrite
  * @param {PrnStatus} newStatus
  * @returns {(context: PrnWriteContext) => Promise<PackagingRecyclingNote>}
  */
-function selectWriteStrategy(onLedger, newStatus) {
-  if (onLedger) {
+function selectWriteStrategy(useStreamWrite, newStatus) {
+  if (useStreamWrite) {
     return performStreamWrite
   }
   return newStatus === PRN_STATUS.AWAITING_AUTHORISATION
@@ -549,7 +541,7 @@ export async function updatePrnStatus({
   const currentStatus = prn.status.currentStatus
   validateTransition(currentStatus, newStatus, actor)
 
-  const balanceEffectsParams = {
+  const events = balanceEventsFor(currentStatus, newStatus, {
     currentStatus,
     newStatus,
     accreditationId,
@@ -558,7 +550,7 @@ export async function updatePrnStatus({
     prnId: id,
     tonnage: prn.tonnage,
     userId: user.id
-  }
+  })
 
   const now = updatedAt ?? new Date()
   const updateParams = {
@@ -570,11 +562,11 @@ export async function updatePrnStatus({
     lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
 
-  const onLedger =
-    affectsWasteBalance(currentStatus, newStatus) &&
+  const useStreamWrite =
+    events.length > 0 &&
     (await isOnLedger(wasteBalancesRepository, accreditationId))
 
-  const perform = selectWriteStrategy(onLedger, newStatus)
+  const perform = selectWriteStrategy(useStreamWrite, newStatus)
 
   const updatedPrn = await perform({
     prnRepository,
@@ -583,7 +575,7 @@ export async function updatePrnStatus({
     logger,
     prn,
     updateParams,
-    balanceEffectsParams,
+    events,
     newStatus,
     organisationId,
     registrationId,

@@ -5,9 +5,35 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 /**
  * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ * @typedef {import('#waste-balances/repository/stream-schema.js').StreamEventKind} StreamEventKind
+ */
+
+/**
+ * Payload carried by a balance event — what the embedded path needs to mutate
+ * the balance, what the stream path needs to append, and what the logger needs
+ * for ops correlation. `currentStatus`/`newStatus` are transition metadata
+ * preserved for logging only.
+ *
+ * @typedef {Object} BalanceEventParams
+ * @property {PrnStatus} currentStatus
+ * @property {PrnStatus} newStatus
+ * @property {string} accreditationId
+ * @property {string} registrationId
+ * @property {string} organisationId
+ * @property {string} prnId
+ * @property {number} tonnage
+ * @property {string} userId
+ */
+
+/**
+ * @typedef {Object} BalanceEvent
+ * @property {StreamEventKind} kind
+ * @property {BalanceEventParams} params
  */
 
 /**
@@ -185,124 +211,93 @@ function logWasteBalanceUpdate(
 }
 
 /**
- * Whether a status transition fires a waste balance effect. The four cases
- * mirror the firing branches in {@link applyWasteBalanceEffects} exactly: a
- * caller that needs to know whether a balance write will happen (to choose the
- * write ordering before any side effect runs) must agree with what the effects
- * actually do.
+ * Derives the balance events a status transition would write. An empty array
+ * means the transition has no balance effect — callers use that to skip the
+ * stream-write decision read entirely. The kinds align with `STREAM_EVENT_KIND`
+ * so the live-write path, backfill, and the stream itself share one vocabulary.
  *
- * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
- * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} newStatus
- * @returns {boolean}
+ * @param {PrnStatus} currentStatus
+ * @param {PrnStatus} newStatus
+ * @param {BalanceEventParams} params
+ * @returns {BalanceEvent[]}
  */
-export function affectsWasteBalance(currentStatus, newStatus) {
-  const deductsAvailableOnCreation =
-    newStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  const deductsTotalOnIssue = newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-  const creditsAvailableOnPreIssueCancellation =
+export function balanceEventsFor(currentStatus, newStatus, params) {
+  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
+    return [{ kind: STREAM_EVENT_KIND.PRN_CREATED, params }]
+  }
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    return [{ kind: STREAM_EVENT_KIND.PRN_ISSUED, params }]
+  }
+  if (
     (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
     currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  const creditsFullOnIssuedCancellation =
+  ) {
+    return [{ kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED, params }]
+  }
+  if (
     newStatus === PRN_STATUS.CANCELLED &&
     currentStatus === PRN_STATUS.AWAITING_CANCELLATION
-
-  return (
-    deductsAvailableOnCreation ||
-    deductsTotalOnIssue ||
-    creditsAvailableOnPreIssueCancellation ||
-    creditsFullOnIssuedCancellation
-  )
+  ) {
+    return [{ kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, params }]
+  }
+  return []
 }
 
 /**
- * Applies waste balance side effects for a status transition.
- * Each transition type is mutually exclusive based on newStatus.
+ * Per-kind dispatch: each kind pairs an effect handler with its log-operation
+ * label. The handlers are the same primitives the embedded path has always
+ * used; on the ledger path they append a stream event and return its number.
+ */
+const EFFECT_HANDLERS = Object.freeze({
+  [STREAM_EVENT_KIND.PRN_CREATED]: {
+    apply: deductWasteBalanceIfNeeded,
+    logOperation: 'deduct_available'
+  },
+  [STREAM_EVENT_KIND.PRN_ISSUED]: {
+    apply: deductTotalBalanceIfNeeded,
+    logOperation: 'deduct_total'
+  },
+  [STREAM_EVENT_KIND.PRN_CREATION_CANCELLED]: {
+    apply: creditWasteBalanceIfNeeded,
+    logOperation: 'credit_available'
+  },
+  [STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE]: {
+    apply: creditFullBalanceIfNeeded,
+    logOperation: 'credit_full'
+  }
+})
+
+/**
+ * Applies the balance events for a status transition. Returns the last applied
+ * event's number (the watermark) on the ledger path, or `null` on the embedded
+ * path and when the events array is empty.
  *
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {Object} params
- * @returns {Promise<number|null>} The stream event number applied by the firing
- *   transition (the watermark) on the ledger path, or `null` on the embedded
- *   path and when no balance effect fires.
+ * @param {BalanceEvent[]} events
+ * @returns {Promise<number|null>}
  */
 export async function applyWasteBalanceEffects(
   wasteBalancesRepository,
   logger,
-  params
+  events
 ) {
-  const { currentStatus, newStatus, ...balanceParams } = params
-  const { prnId, tonnage } = balanceParams
-
   let lastAppliedEventNumber = null
-
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    lastAppliedEventNumber = await deductWasteBalanceIfNeeded(
+  for (const event of events) {
+    const handler = EFFECT_HANDLERS[event.kind]
+    const { currentStatus, newStatus, ...balanceParams } = event.params
+    lastAppliedEventNumber = await handler.apply(
       wasteBalancesRepository,
       balanceParams
     )
     logWasteBalanceUpdate(
       logger,
-      'deduct_available',
-      prnId,
-      tonnage,
+      handler.logOperation,
+      balanceParams.prnId,
+      balanceParams.tonnage,
       currentStatus,
       newStatus
     )
   }
-
-  // AWAITING_AUTHORISATION -> CANCELLED is rejected by validateTransition; only the
-  // DELETED leg is reachable here, but the OR is kept defensively as the credit
-  // semantics are identical for both targets.
-  if (
-    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
-    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    lastAppliedEventNumber = await creditWasteBalanceIfNeeded(
-      wasteBalancesRepository,
-      balanceParams
-    )
-    logWasteBalanceUpdate(
-      logger,
-      'credit_available',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
-
-  if (
-    newStatus === PRN_STATUS.CANCELLED &&
-    currentStatus === PRN_STATUS.AWAITING_CANCELLATION
-  ) {
-    lastAppliedEventNumber = await creditFullBalanceIfNeeded(
-      wasteBalancesRepository,
-      balanceParams
-    )
-    logWasteBalanceUpdate(
-      logger,
-      'credit_full',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
-
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    lastAppliedEventNumber = await deductTotalBalanceIfNeeded(
-      wasteBalancesRepository,
-      balanceParams
-    )
-    logWasteBalanceUpdate(
-      logger,
-      'deduct_total',
-      prnId,
-      tonnage,
-      currentStatus,
-      newStatus
-    )
-  }
-
   return lastAppliedEventNumber
 }

@@ -2,12 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 
 import {
   applyWasteBalanceEffects,
-  affectsWasteBalance
+  balanceEventsFor
 } from './update-status-balance-effects.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 
 const REGISTRATION_ID = 'reg-1'
@@ -73,6 +74,13 @@ const balanceParamsFor = (overrides) => ({
   ...overrides
 })
 
+const eventsForTransition = (currentStatus, newStatus) =>
+  balanceEventsFor(
+    currentStatus,
+    newStatus,
+    balanceParamsFor({ currentStatus, newStatus })
+  )
+
 describe('applyWasteBalanceEffects watermark return', () => {
   it('returns the appended event number from the deduct-available branch', async () => {
     const { wasteBalancesRepository, streamRepository } =
@@ -81,10 +89,7 @@ describe('applyWasteBalanceEffects watermark return', () => {
     const watermark = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
-      balanceParamsFor({
-        currentStatus: PRN_STATUS.DRAFT,
-        newStatus: PRN_STATUS.AWAITING_AUTHORISATION
-      })
+      eventsForTransition(PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION)
     )
 
     const latest = await streamRepository.findLatestByPartition(
@@ -102,10 +107,10 @@ describe('applyWasteBalanceEffects watermark return', () => {
     const watermark = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
-      balanceParamsFor({
-        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE
-      })
+      eventsForTransition(
+        PRN_STATUS.AWAITING_AUTHORISATION,
+        PRN_STATUS.AWAITING_ACCEPTANCE
+      )
     )
 
     const latest = await streamRepository.findLatestByPartition(
@@ -123,10 +128,7 @@ describe('applyWasteBalanceEffects watermark return', () => {
     const watermark = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
-      balanceParamsFor({
-        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        newStatus: PRN_STATUS.DELETED
-      })
+      eventsForTransition(PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DELETED)
     )
 
     const latest = await streamRepository.findLatestByPartition(
@@ -144,10 +146,10 @@ describe('applyWasteBalanceEffects watermark return', () => {
     const watermark = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
-      balanceParamsFor({
-        currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-        newStatus: PRN_STATUS.CANCELLED
-      })
+      eventsForTransition(
+        PRN_STATUS.AWAITING_CANCELLATION,
+        PRN_STATUS.CANCELLED
+      )
     )
 
     const latest = await streamRepository.findLatestByPartition(
@@ -158,71 +160,88 @@ describe('applyWasteBalanceEffects watermark return', () => {
     expect(watermark).toBe(APPENDED_EVENT_NUMBER)
   })
 
-  it('returns null when the transition has no balance effect', async () => {
+  it('returns null when the events array is empty', async () => {
     const { wasteBalancesRepository } = await setupLedgerRepository()
 
     const watermark = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
-      balanceParamsFor({
-        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        newStatus: PRN_STATUS.AWAITING_CANCELLATION
-      })
+      []
     )
 
     expect(watermark).toBeNull()
   })
 })
 
-describe('affectsWasteBalance', () => {
-  it('is true for PRN creation', () => {
-    expect(
-      affectsWasteBalance(PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION)
-    ).toBe(true)
+describe('balanceEventsFor', () => {
+  const params = balanceParamsFor({
+    currentStatus: PRN_STATUS.DRAFT,
+    newStatus: PRN_STATUS.AWAITING_AUTHORISATION
   })
 
-  it('is true for PRN issuance', () => {
+  it('emits a prn-created event for PRN creation', () => {
     expect(
-      affectsWasteBalance(
+      balanceEventsFor(
+        PRN_STATUS.DRAFT,
         PRN_STATUS.AWAITING_AUTHORISATION,
-        PRN_STATUS.AWAITING_ACCEPTANCE
+        params
       )
-    ).toBe(true)
+    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CREATED, params }])
   })
 
-  it('is true for deleting a PRN awaiting authorisation', () => {
+  it('emits a prn-issued event for PRN issuance', () => {
     expect(
-      affectsWasteBalance(PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DELETED)
-    ).toBe(true)
-  })
-
-  it('is true for cancelling an issued PRN', () => {
-    expect(
-      affectsWasteBalance(
-        PRN_STATUS.AWAITING_CANCELLATION,
-        PRN_STATUS.CANCELLED
-      )
-    ).toBe(true)
-  })
-
-  it('is false for accepting an issued PRN', () => {
-    expect(
-      affectsWasteBalance(PRN_STATUS.AWAITING_ACCEPTANCE, PRN_STATUS.ACCEPTED)
-    ).toBe(false)
-  })
-
-  it('is false for requesting cancellation of an issued PRN', () => {
-    expect(
-      affectsWasteBalance(
+      balanceEventsFor(
+        PRN_STATUS.AWAITING_AUTHORISATION,
         PRN_STATUS.AWAITING_ACCEPTANCE,
-        PRN_STATUS.AWAITING_CANCELLATION
+        params
       )
-    ).toBe(false)
+    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_ISSUED, params }])
   })
 
-  it('is false for discarding a draft PRN', () => {
-    expect(affectsWasteBalance(PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED)).toBe(
-      false
-    )
+  it('emits a prn-creation-cancelled event for deleting a PRN awaiting authorisation', () => {
+    expect(
+      balanceEventsFor(
+        PRN_STATUS.AWAITING_AUTHORISATION,
+        PRN_STATUS.DELETED,
+        params
+      )
+    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED, params }])
+  })
+
+  it('emits a prn-cancelled-after-issue event for cancelling an issued PRN', () => {
+    expect(
+      balanceEventsFor(
+        PRN_STATUS.AWAITING_CANCELLATION,
+        PRN_STATUS.CANCELLED,
+        params
+      )
+    ).toEqual([{ kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, params }])
+  })
+
+  it('emits no events when accepting an issued PRN', () => {
+    expect(
+      balanceEventsFor(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.ACCEPTED,
+        params
+      )
+    ).toEqual([])
+  })
+
+  it('emits no events when requesting cancellation of an issued PRN', () => {
+    expect(
+      balanceEventsFor(
+        PRN_STATUS.AWAITING_ACCEPTANCE,
+        PRN_STATUS.AWAITING_CANCELLATION,
+        params
+      )
+    ).toEqual([])
+  })
+
+  it('emits no events when discarding a draft PRN', () => {
+    expect(
+      balanceEventsFor(PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED, params)
+    ).toEqual([])
   })
 })
