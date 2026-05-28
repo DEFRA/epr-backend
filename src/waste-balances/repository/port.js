@@ -93,6 +93,17 @@
  */
 
 /**
+ * @typedef {Object} GetPrnCatchupEventsParams
+ * @property {string} registrationId
+ * @property {string} accreditationId
+ * @property {string} prnId
+ * @property {number} afterEventNumber - The watermark to fold past. Pass
+ *   `lastAppliedEventNumber ?? 0` so the first event of a first-event-failure
+ *   case (where no watermark was ever stamped onto the PRN doc) is still
+ *   returned.
+ */
+
+/**
  * @typedef {{ canonicalSource: import('../domain/model.js').WasteBalanceCanonicalSource } | null} ResetCanonicalSourceToEmbeddedResult
  *   Post-state of the accreditation's balance document.
  *
@@ -146,6 +157,11 @@
  *   the rebuild process died between the two flips and submissions for the
  *   registration are blocked until the marker is reset. Strictly demotes:
  *   `'embedded'` is left as-is and `'ledger'` is never demoted.
+ * @property {(params: GetPrnCatchupEventsParams) => Promise<import('./stream-schema.js').StreamEvent[]>} getPrnCatchupEvents
+ *   Return the stream tail events to project onto a PRN read. Empty array
+ *   when the accreditation's marker is not `'ledger'` (no stream query is
+ *   issued), when no balance document exists, or when the ledger-canonical
+ *   accreditation has no tail events for this PRN past the watermark.
  */
 
 /**

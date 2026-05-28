@@ -133,6 +133,27 @@ const performFlipCanonicalSourceToLedger =
     return { canonicalSource: current.canonicalSource }
   }
 
+const performGetPrnCatchupEvents =
+  (wasteBalanceStorage, streamRepository) =>
+  async ({ registrationId, accreditationId, prnId, afterEventNumber }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (
+      !current ||
+      current.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+    ) {
+      return []
+    }
+    return streamRepository.findEventsByPrnIdAfter(
+      registrationId,
+      validatedAccreditationId,
+      prnId,
+      afterEventNumber
+    )
+  }
+
 const performResetCanonicalSourceToEmbedded =
   (wasteBalanceStorage) =>
   async ({ accreditationId }) => {
@@ -231,6 +252,10 @@ export const createInMemoryWasteBalancesRepository = (
       performFlipCanonicalSourceToLedger(wasteBalanceStorage),
     resetCanonicalSourceToEmbedded:
       performResetCanonicalSourceToEmbedded(wasteBalanceStorage),
+    getPrnCatchupEvents: performGetPrnCatchupEvents(
+      wasteBalanceStorage,
+      streamRepository
+    ),
     // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage
   })

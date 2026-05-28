@@ -128,6 +128,27 @@ const performFlipCanonicalSourceToLedger =
     return { canonicalSource: current.canonicalSource }
   }
 
+const performGetPrnCatchupEvents =
+  (db, streamRepository) =>
+  async ({ registrationId, accreditationId, prnId, afterEventNumber }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const doc = await db
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .findOne(
+        { accreditationId: validatedAccreditationId },
+        { projection: { canonicalSource: 1 } }
+      )
+    if (!doc || doc.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+      return []
+    }
+    return streamRepository.findEventsByPrnIdAfter(
+      registrationId,
+      validatedAccreditationId,
+      prnId,
+      afterEventNumber
+    )
+  }
+
 const performResetCanonicalSourceToEmbedded =
   (db) =>
   async ({ accreditationId }) => {
@@ -282,6 +303,7 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
     },
     flipCanonicalSourceToMigrating: performFlipCanonicalSourceToMigrating(db),
     flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db),
-    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db)
+    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db),
+    getPrnCatchupEvents: performGetPrnCatchupEvents(db, streamRepository)
   })
 }

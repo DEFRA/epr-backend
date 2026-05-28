@@ -15,6 +15,7 @@ import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { packagingRecyclingNoteByIdPath } from './get-by-id.js'
 
 const organisationId = 'org-123'
@@ -72,6 +73,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     let server
     let packagingRecyclingNotesRepository
     let organisationsRepository
+    let wasteBalancesRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
@@ -84,11 +86,16 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         }))
       }
 
+      wasteBalancesRepository = {
+        getPrnCatchupEvents: vi.fn(async () => [])
+      }
+
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          wasteBalancesRepository: () => wasteBalancesRepository
         },
         featureFlags: createInMemoryFeatureFlags()
       })
@@ -98,6 +105,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
     afterEach(() => {
       vi.clearAllMocks()
+      wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValue([])
     })
 
     afterAll(async () => {
@@ -359,6 +367,206 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      })
+    })
+
+    describe('read-side catch-up from event stream', () => {
+      const url = `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}`
+
+      const tailEvent = (kind, number, createdAt) => ({
+        id: `event-${number}`,
+        registrationId,
+        accreditationId,
+        organisationId,
+        number,
+        kind,
+        payload: { prnId, amount: 50 },
+        openingBalance: { amount: 100, availableAmount: 100 },
+        closingBalance: { amount: 100, availableAmount: 50 },
+        createdAt: new Date(createdAt),
+        createdBy: { id: 'user-1', name: 'Test User' }
+      })
+
+      it('queries catch-up events using the PRN watermark', async () => {
+        const issuedPrn = {
+          ...mockPrn,
+          lastAppliedEventNumber: 3,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          issuedPrn
+        )
+
+        await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(
+          wasteBalancesRepository.getPrnCatchupEvents
+        ).toHaveBeenCalledWith({
+          registrationId,
+          accreditationId,
+          prnId,
+          afterEventNumber: 3
+        })
+      })
+
+      it('defaults afterEventNumber to 0 when the PRN has no watermark', async () => {
+        const draftPrn = {
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          draftPrn
+        )
+
+        await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(
+          wasteBalancesRepository.getPrnCatchupEvents
+        ).toHaveBeenCalledWith(expect.objectContaining({ afterEventNumber: 0 }))
+      })
+
+      it('returns the PRN unchanged when no tail events exist', async () => {
+        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([])
+
+        const response = await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
+      })
+
+      it('recovers a partial failure: stale doc, fresh tail event projects to awaiting_acceptance', async () => {
+        const stalePrn = {
+          ...mockPrn,
+          lastAppliedEventNumber: 1,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          stalePrn
+        )
+        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([
+          tailEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
+        ])
+
+        const response = await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+      })
+
+      it('recovers a first-event failure: draft doc + null watermark + prn-created at 1', async () => {
+        const draftPrn = {
+          ...mockPrn,
+          status: { currentStatus: PRN_STATUS.DRAFT }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          draftPrn
+        )
+        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([
+          tailEvent(
+            STREAM_EVENT_KIND.PRN_CREATED,
+            1,
+            '2026-02-01T12:00:00.000Z'
+          )
+        ])
+
+        const response = await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(
+          wasteBalancesRepository.getPrnCatchupEvents
+        ).toHaveBeenCalledWith(expect.objectContaining({ afterEventNumber: 0 }))
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
+      })
+
+      it('folds prn-cancelled-after-issue to cancelled', async () => {
+        const issuedPrn = {
+          ...mockPrn,
+          lastAppliedEventNumber: 2,
+          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          issuedPrn
+        )
+        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([
+          tailEvent(
+            STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+            3,
+            '2026-02-03T12:00:00.000Z'
+          )
+        ])
+
+        const response = await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(PRN_STATUS.CANCELLED)
+      })
+
+      it('returns 404 when a prn-creation-cancelled event folds the PRN to deleted', async () => {
+        const awaitingAuthPrn = {
+          ...mockPrn,
+          lastAppliedEventNumber: 1,
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+        wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValueOnce([
+          tailEvent(
+            STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+            2,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ])
+
+        const response = await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
+      it('does not query catch-up events when the PRN does not exist (404 short-circuits the fold)', async () => {
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(null)
+
+        await server.inject({
+          method: 'GET',
+          url,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(
+          wasteBalancesRepository.getPrnCatchupEvents
+        ).not.toHaveBeenCalled()
       })
     })
   })
