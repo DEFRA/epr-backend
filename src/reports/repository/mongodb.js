@@ -332,6 +332,7 @@ const performFindAllPeriodicReports = async (db) => {
           'wasteSent.tonnageSentToExporter': 1,
           'wasteSent.tonnageSentToAnotherSite': 1,
           'prn.issuedTonnage': 1,
+          'prn.freeTonnage': 1,
           'prn.totalRevenue': 1,
           'prn.averagePricePerTonne': 1,
           supportingInformation: 1
