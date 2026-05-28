@@ -117,7 +117,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
       expect(watermark).toBeNull()
     })
 
-    it('returns the appended stream event number on the ledger path', async ({
+    it('returns the appended stream event on the ledger path', async ({
       insertWasteBalance,
       streamRepository
     }) => {
@@ -130,7 +130,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
 
       await insertWasteBalance(wasteBalance)
 
-      const watermark = await repository.deductTotalBalanceForPrnIssue({
+      const appended = await repository.deductTotalBalanceForPrnIssue({
         accreditationId: 'acc-issue-ledger',
         registrationId: 'reg-1',
         organisationId: 'org-1',
@@ -143,8 +143,8 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         'reg-1',
         'acc-issue-ledger'
       )
-      expect(watermark).toBe(latest.number)
-      expect(watermark).toBe(1)
+      expect(appended.number).toBe(latest.number)
+      expect(appended.number).toBe(1)
     })
 
     it('returns null on the embedded path', async ({ insertWasteBalance }) => {

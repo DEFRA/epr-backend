@@ -83,7 +83,7 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
       ).rejects.toThrow(Boom.Boom)
     })
 
-    it('returns the appended stream event number on the ledger path', async ({
+    it('returns the appended stream event on the ledger path', async ({
       insertWasteBalance,
       streamRepository
     }) => {
@@ -96,7 +96,7 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
 
       await insertWasteBalance(wasteBalance)
 
-      const watermark =
+      const appended =
         await repository.creditFullBalanceForIssuedPrnCancellation({
           accreditationId: 'acc-full-cancel-ledger',
           registrationId: 'reg-1',
@@ -110,8 +110,8 @@ export const testCreditFullBalanceForIssuedPrnCancellationBehaviour = (it) => {
         'reg-1',
         'acc-full-cancel-ledger'
       )
-      expect(watermark).toBe(latest.number)
-      expect(watermark).toBe(1)
+      expect(appended.number).toBe(latest.number)
+      expect(appended.number).toBe(1)
     })
 
     it('returns null on the embedded path', async ({ insertWasteBalance }) => {

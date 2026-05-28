@@ -61,7 +61,7 @@ export const buildPrnCreationTransaction = ({
  * @param {number} params.tonnage
  * @param {string} params.userId
  * @param {import('./stream-schema.js').StreamEventKind} params.streamKind
- * @returns {Promise<number>} The event number of the appended event (the watermark).
+ * @returns {Promise<import('./stream-port.js').StreamEvent>} The appended event.
  */
 const appendPrnStreamEvent = async ({
   streamRepository,
@@ -72,8 +72,8 @@ const appendPrnStreamEvent = async ({
   tonnage,
   userId,
   streamKind
-}) => {
-  const event = await appendToStream(
+}) =>
+  appendToStream(
     {
       repository: streamRepository,
       registrationId,
@@ -86,8 +86,6 @@ const appendPrnStreamEvent = async ({
       createdBy: { id: userId, name: userId }
     }
   )
-  return event.number
-}
 
 /**
  * Deduct available balance for PRN creation (ringfencing tonnage).
@@ -98,8 +96,9 @@ const appendPrnStreamEvent = async ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
- * @returns {Promise<number|null>} The appended event number on the ledger path,
- *   or `null` on the embedded path and when no balance exists.
+ * @returns {Promise<import('./stream-port.js').StreamEvent|null>} The appended
+ *   stream event on the ledger path, or `null` on the embedded path and when
+ *   no balance exists.
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
   deductParams,
@@ -203,8 +202,9 @@ export const buildPrnIssuedTransaction = ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
- * @returns {Promise<number|null>} The appended event number on the ledger path,
- *   or `null` on the embedded path and when no balance exists.
+ * @returns {Promise<import('./stream-port.js').StreamEvent|null>} The appended
+ *   stream event on the ledger path, or `null` on the embedded path and when
+ *   no balance exists.
  */
 export const performDeductTotalBalanceForPrnIssue = async ({
   deductParams,
@@ -350,8 +350,9 @@ export const buildIssuedPrnCancellationTransaction = ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
- * @returns {Promise<number|null>} The appended event number on the ledger path,
- *   or `null` on the embedded path. Throws when no balance exists.
+ * @returns {Promise<import('./stream-port.js').StreamEvent|null>} The appended
+ *   stream event on the ledger path, or `null` on the embedded path. Throws
+ *   when no balance exists.
  */
 export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   creditParams,
@@ -422,8 +423,9 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  * @param {Object} [params.dependencies]
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
- * @returns {Promise<number|null>} The appended event number on the ledger path,
- *   or `null` on the embedded path. Throws when no balance exists.
+ * @returns {Promise<import('./stream-port.js').StreamEvent|null>} The appended
+ *   stream event on the ledger path, or `null` on the embedded path. Throws
+ *   when no balance exists.
  */
 export const performCreditAvailableBalanceForPrnCancellation = async ({
   creditParams,

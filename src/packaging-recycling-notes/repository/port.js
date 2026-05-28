@@ -52,6 +52,17 @@ export class PrnNumberConflictError extends Error {
  */
 
 /**
+ * Save a fully projected PRN document with optimistic concurrency. The
+ * projection is constructed at the application layer (typically by folding
+ * stream events onto the prior PRN); the repository performs no projection
+ * logic itself.
+ *
+ * @typedef {Object} PersistProjectionParams
+ * @property {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} projection - Fully projected PRN document to persist.
+ * @property {number} expectedVersion - The version of the PRN before this projection step; the CAS gate.
+ */
+
+/**
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findById
  * @property {(prnNumber: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} findByPrnNumber
@@ -59,6 +70,7 @@ export class PrnNumberConflictError extends Error {
  * @property {(accreditationId: string) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>} findByAccreditation
  * @property {(params: FindByStatusParams) => Promise<PaginatedResult>} findByStatus
  * @property {(params: UpdateStatusParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} updateStatus
+ * @property {(params: PersistProjectionParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} persistProjection
  * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuance
  * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackPendingCancellation
  * @property {(params: RollbackParams) => Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>} rollbackIssuedCancellation

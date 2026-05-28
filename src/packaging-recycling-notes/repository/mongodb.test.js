@@ -76,6 +76,48 @@ describe('MongoDB packaging recycling notes repository', () => {
       ).rejects.toThrow('Connection timeout')
     })
 
+    it('re-throws non-duplicate key errors from persistProjection', async () => {
+      const hexId = '123456789012345678901234'
+      const otherError = new Error('Connection timeout')
+      otherError.code = 'ETIMEOUT'
+
+      const mockDb = {
+        collection: function () {
+          return this
+        },
+        indexes: async () => [],
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndReplace: async () => {
+          throw otherError
+        }
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(mockDb, [])
+      const repository = factory()
+
+      await expect(
+        repository.persistProjection({
+          projection: {
+            id: hexId,
+            version: 2,
+            updatedAt: new Date(),
+            updatedBy: { id: 'user-123', name: 'Test User' },
+            status: {
+              currentStatus: 'awaiting_acceptance',
+              currentStatusAt: new Date(),
+              history: []
+            }
+          },
+          expectedVersion: 1
+        })
+      ).rejects.toThrow('Connection timeout')
+    })
+
     it('throws PrnNumberConflictError on duplicate key error for prnNumber', async () => {
       const hexId = '123456789012345678901234'
       const prnNumber = 'ER2612345'

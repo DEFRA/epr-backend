@@ -13,7 +13,7 @@ import { throwWatermarkRegression } from './watermark-guard.js'
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, RollbackParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, PaginatedResult, PersistProjectionParams, RollbackParams, UpdateStatusParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
@@ -414,6 +414,57 @@ const performUpdateStatus = async (
 /**
  * @param {Db} db
  * @param {TypedLogger} logger
+ * @param {PersistProjectionParams} params
+ * @returns {Promise<PackagingRecyclingNote | null>}
+ */
+const performPersistProjection = async (
+  db,
+  logger,
+  { projection, expectedVersion }
+) => {
+  const objectId = ObjectId.createFromHexString(projection.id)
+  const { id: _id, ...replacement } = projection
+
+  try {
+    const result = await db.collection(COLLECTION_NAME).findOneAndReplace(
+      {
+        _id: objectId,
+        $expr: {
+          $and: [
+            { $eq: [{ $ifNull: ['$version', 1] }, expectedVersion] },
+            watermarkNotRegressing(projection.lastAppliedEventNumber)
+          ]
+        }
+      },
+      replacement,
+      { returnDocument: 'after' }
+    )
+
+    if (!result) {
+      return resolveMissedUpdate(
+        db,
+        projection.id,
+        expectedVersion,
+        projection.lastAppliedEventNumber,
+        logger
+      )
+    }
+
+    return validatePrnRead({ ...result, id: result._id.toHexString() })
+  } catch (error) {
+    if (
+      error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE &&
+      error.keyPattern?.prnNumber
+    ) {
+      throw new PrnNumberConflictError(projection.prnNumber)
+    }
+    throw error
+  }
+}
+
+/**
+ * @param {Db} db
+ * @param {TypedLogger} logger
  * @param {RollbackParams} params
  * @param {{ revertedStatus: import('#packaging-recycling-notes/domain/model.js').PrnStatus, slotsToUnset: Array<'issued' | 'cancelled' | 'deleted'>, unsetPrnNumber?: boolean }} options
  * @returns {Promise<PackagingRecyclingNote | null>}
@@ -501,6 +552,7 @@ export const createPackagingRecyclingNotesRepository = async (
     findByPrnNumber: (prnNumber) => performFindByPrnNumber(db, prnNumber),
     findByStatus: performFindByStatus(db, excludeOrganisationIds),
     updateStatus: (params) => performUpdateStatus(db, logger, params),
+    persistProjection: (params) => performPersistProjection(db, logger, params),
     rollbackIssuance: (params) =>
       performRollback(db, logger, params, {
         revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,

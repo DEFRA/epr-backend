@@ -268,28 +268,30 @@ const EFFECT_HANDLERS = Object.freeze({
 })
 
 /**
- * Applies the balance events for a status transition. Returns the last applied
- * event's number (the watermark) on the ledger path, or `null` on the embedded
- * path and when the events array is empty.
+ * Applies the balance events for a status transition. Returns the appended
+ * stream events on the ledger path. On the embedded path the array entries
+ * are `null` (no stream event was appended); the array still has one entry
+ * per input event so callers can map positionally.
  *
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {BalanceEvent[]} events
- * @returns {Promise<number|null>}
+ * @returns {Promise<Array<import('#waste-balances/repository/stream-port.js').StreamEvent|null>>}
  */
 export async function applyWasteBalanceEffects(
   wasteBalancesRepository,
   logger,
   events
 ) {
-  let lastAppliedEventNumber = null
+  const applied = []
   for (const event of events) {
     const handler = EFFECT_HANDLERS[event.kind]
     const { currentStatus, newStatus, ...balanceParams } = event.params
-    lastAppliedEventNumber = await handler.apply(
+    const streamEvent = await handler.apply(
       wasteBalancesRepository,
       balanceParams
     )
+    applied.push(streamEvent)
     logWasteBalanceUpdate(
       logger,
       handler.logOperation,
@@ -299,5 +301,5 @@ export async function applyWasteBalanceEffects(
       newStatus
     )
   }
-  return lastAppliedEventNumber
+  return applied
 }

@@ -81,12 +81,12 @@ const eventsForTransition = (currentStatus, newStatus) =>
     balanceParamsFor({ currentStatus, newStatus })
   )
 
-describe('applyWasteBalanceEffects watermark return', () => {
-  it('returns the appended event number from the deduct-available branch', async () => {
+describe('applyWasteBalanceEffects appended events return', () => {
+  it('returns the appended event from the deduct-available branch', async () => {
     const { wasteBalancesRepository, streamRepository } =
       await setupLedgerRepository()
 
-    const watermark = await applyWasteBalanceEffects(
+    const applied = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
       eventsForTransition(PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION)
@@ -96,15 +96,16 @@ describe('applyWasteBalanceEffects watermark return', () => {
       REGISTRATION_ID,
       ACCREDITATION_ID
     )
-    expect(watermark).toBe(latest?.number)
-    expect(watermark).toBe(APPENDED_EVENT_NUMBER)
+    expect(applied).toHaveLength(1)
+    expect(applied[0]?.number).toBe(latest?.number)
+    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
   })
 
-  it('returns the appended event number from the deduct-total branch', async () => {
+  it('returns the appended event from the deduct-total branch', async () => {
     const { wasteBalancesRepository, streamRepository } =
       await setupLedgerRepository()
 
-    const watermark = await applyWasteBalanceEffects(
+    const applied = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
       eventsForTransition(
@@ -117,15 +118,15 @@ describe('applyWasteBalanceEffects watermark return', () => {
       REGISTRATION_ID,
       ACCREDITATION_ID
     )
-    expect(watermark).toBe(latest?.number)
-    expect(watermark).toBe(APPENDED_EVENT_NUMBER)
+    expect(applied[0]?.number).toBe(latest?.number)
+    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
   })
 
-  it('returns the appended event number from the credit-available branch', async () => {
+  it('returns the appended event from the credit-available branch', async () => {
     const { wasteBalancesRepository, streamRepository } =
       await setupLedgerRepository()
 
-    const watermark = await applyWasteBalanceEffects(
+    const applied = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
       eventsForTransition(PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.DELETED)
@@ -135,15 +136,15 @@ describe('applyWasteBalanceEffects watermark return', () => {
       REGISTRATION_ID,
       ACCREDITATION_ID
     )
-    expect(watermark).toBe(latest?.number)
-    expect(watermark).toBe(APPENDED_EVENT_NUMBER)
+    expect(applied[0]?.number).toBe(latest?.number)
+    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
   })
 
-  it('returns the appended event number from the credit-full branch', async () => {
+  it('returns the appended event from the credit-full branch', async () => {
     const { wasteBalancesRepository, streamRepository } =
       await setupLedgerRepository()
 
-    const watermark = await applyWasteBalanceEffects(
+    const applied = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
       eventsForTransition(
@@ -156,20 +157,20 @@ describe('applyWasteBalanceEffects watermark return', () => {
       REGISTRATION_ID,
       ACCREDITATION_ID
     )
-    expect(watermark).toBe(latest?.number)
-    expect(watermark).toBe(APPENDED_EVENT_NUMBER)
+    expect(applied[0]?.number).toBe(latest?.number)
+    expect(applied[0]?.number).toBe(APPENDED_EVENT_NUMBER)
   })
 
-  it('returns null when the events array is empty', async () => {
+  it('returns an empty array when the events array is empty', async () => {
     const { wasteBalancesRepository } = await setupLedgerRepository()
 
-    const watermark = await applyWasteBalanceEffects(
+    const applied = await applyWasteBalanceEffects(
       wasteBalancesRepository,
       buildLogger(),
       []
     )
 
-    expect(watermark).toBeNull()
+    expect(applied).toEqual([])
   })
 })
 

@@ -120,18 +120,18 @@
  * @property {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} findByAccreditationId
  * @property {(accreditationIds: string[]) => Promise<import('../domain/model.js').WasteBalance[]>} findByAccreditationIds
  * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], options: { user: import('#domain/summary-logs/worker/port.js').SubmitUser, accreditation: import('#domain/organisations/accreditation.js').Accreditation, overseasSites: import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext, summaryLogId: string }) => Promise<void>} updateWasteBalanceTransactions
- * @property {(params: DeductAvailableBalanceParams) => Promise<number|null>} deductAvailableBalanceForPrnCreation
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path (and when no balance exists).
- * @property {(params: DeductTotalBalanceParams) => Promise<number|null>} deductTotalBalanceForPrnIssue
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path (and when no balance exists).
- * @property {(params: CreditAvailableBalanceParams) => Promise<number|null>} creditAvailableBalanceForPrnCancellation
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path.
- * @property {(params: CreditFullBalanceParams) => Promise<number|null>} creditFullBalanceForIssuedPrnCancellation
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path.
+ * @property {(params: DeductAvailableBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} deductAvailableBalanceForPrnCreation
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path (and when no balance exists).
+ * @property {(params: DeductTotalBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} deductTotalBalanceForPrnIssue
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path (and when no balance exists).
+ * @property {(params: CreditAvailableBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} creditAvailableBalanceForPrnCancellation
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path.
+ * @property {(params: CreditFullBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} creditFullBalanceForIssuedPrnCancellation
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path.
  * @property {(params: FlipCanonicalSourceToMigratingParams) => Promise<FlipCanonicalSourceToMigratingResult>} flipCanonicalSourceToMigrating
  *   Promote an `'embedded'` accreditation to `'migrating'` and stamp
  *   `migratingSince`, gated on `version` matching the captured value. The

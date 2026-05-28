@@ -17,6 +17,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
 
 /** Suffixes A-Z for collision avoidance */
 const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -405,12 +406,55 @@ async function performTransition({
 }
 
 /**
+ * Persist a projected PRN, retrying issuance with new PRN number suffixes when
+ * the existing one collides. The projection's `prnNumber` is the only field that
+ * changes between attempts.
+ *
+ * @param {Object} params
+ * @param {PackagingRecyclingNotesRepository} params.prnRepository
+ * @param {PackagingRecyclingNote} params.projection
+ * @param {number} params.expectedVersion
+ * @param {{ regulator: string, isExport: boolean, accreditationYear: number }} params.prnNumberParams
+ * @returns {Promise<PackagingRecyclingNote>}
+ */
+async function persistProjectionWithIssuanceRetry({
+  prnRepository,
+  projection,
+  expectedVersion,
+  prnNumberParams
+}) {
+  const suffixAttempts = [undefined, ...COLLISION_SUFFIXES]
+
+  for (const suffix of suffixAttempts) {
+    const prnNumber = generatePrnNumber({ ...prnNumberParams, suffix })
+
+    try {
+      const result = await prnRepository.persistProjection({
+        projection: { ...projection, prnNumber },
+        expectedVersion
+      })
+      if (!result) {
+        throw Boom.badImplementation('Failed to persist PRN projection')
+      }
+      return result
+    } catch (error) {
+      if (error instanceof PrnNumberConflictError) {
+        continue
+      }
+      throw error
+    }
+  }
+
+  throw new Error('Unable to generate unique PRN number after all retries')
+}
+
+/**
  * Event-first write for a migrated accreditation (canonicalSource 'ledger').
- * The balance-affecting event is appended before the PRN document is
- * projected, and the returned event number is stamped onto the document as its
- * watermark. There is no compensation: a partial failure (event appended, doc
- * not written) is recovered by the read-side catch-up, which folds events
- * after the watermark on the next read.
+ * The balance-affecting events are appended to the stream, then folded onto
+ * the in-memory PRN, then the resulting projection is persisted. There is no
+ * compensation: a partial failure (event appended, doc not persisted) is
+ * recovered by the read-side catch-up, which folds events after the watermark
+ * on the next read.
  */
 async function performStreamWrite({
   prnRepository,
@@ -418,20 +462,14 @@ async function performStreamWrite({
   wasteBalancesRepository,
   logger,
   prn,
-  updateParams,
   events,
   newStatus,
   organisationId,
-  accreditationId,
-  user,
-  now
+  accreditationId
 }) {
-  // The suspension check lives inside applyStatusUpdate, gating the document
-  // write. On the stream path the balance event is appended before that write,
-  // so the check is hoisted ahead of the append here to guarantee a suspended
-  // accreditation is never debited. The fetched accreditation is handed to
-  // applyStatusUpdate so the issuance write reuses it rather than reading it
-  // twice.
+  // The suspension check is hoisted ahead of the stream append so a suspended
+  // accreditation is never debited. The fetched accreditation is reused to
+  // stamp the PRN number on the issuance path.
   let accreditation
   if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
     accreditation = await organisationsRepository.findAccreditationById(
@@ -441,24 +479,39 @@ async function performStreamWrite({
     assertAccreditationNotSuspended(accreditation)
   }
 
-  updateParams.lastAppliedEventNumber = await applyWasteBalanceEffects(
+  const applied = await applyWasteBalanceEffects(
     wasteBalancesRepository,
     logger,
     events
   )
+  const streamEvents =
+    /** @type {import('#waste-balances/repository/stream-port.js').StreamEvent[]} */ (
+      applied.filter((e) => e !== null)
+    )
 
-  return applyStatusUpdate({
-    prnRepository,
-    organisationsRepository,
-    prn,
-    updateParams,
-    newStatus,
-    organisationId,
-    accreditationId,
-    user,
-    now,
-    accreditation
+  const projection = foldPrnFromTailEvents(prn, streamEvents)
+
+  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
+    return persistProjectionWithIssuanceRetry({
+      prnRepository,
+      projection,
+      expectedVersion: prn.version,
+      prnNumberParams: {
+        regulator: accreditation.submittedToRegulator,
+        isExport: prn.isExport,
+        accreditationYear: prn.accreditation.accreditationYear
+      }
+    })
+  }
+
+  const persisted = await prnRepository.persistProjection({
+    projection,
+    expectedVersion: prn.version
   })
+  if (!persisted) {
+    throw Boom.badImplementation('Failed to persist PRN projection')
+  }
+  return persisted
 }
 
 /**
