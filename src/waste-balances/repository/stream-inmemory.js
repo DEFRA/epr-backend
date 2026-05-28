@@ -144,6 +144,74 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         .sort((a, b) => a.number - b.number)
 
       return structuredClone(matches)
+    },
+
+    /**
+     * @migration PAE-1382 — delete all events for a partition.
+     * @param {string} registrationId
+     * @param {string | null} accreditationId
+     * @returns {Promise<number>}
+     */
+    deleteByPartition: async (registrationId, accreditationId) => {
+      const before = storage.length
+      const remaining = storage.filter(
+        (event) => !matchesPartition(event, registrationId, accreditationId)
+      )
+      storage.length = 0
+      storage.push(...remaining)
+      return before - remaining.length
+    },
+
+    /**
+     * @migration PAE-1382 — insert multiple events in one call.
+     * @param {StreamEventInsert[]} events
+     * @returns {Promise<StreamEvent[]>}
+     */
+    bulkAppendEvents: async (events) => {
+      if (events.length === 0) {
+        return []
+      }
+
+      const first = events[0]
+      const partitionEvents = storage.filter((existing) =>
+        matchesPartition(existing, first.registrationId, first.accreditationId)
+      )
+      const currentMax =
+        partitionEvents.length > 0
+          ? /** @type {StreamEvent} */ (partitionEvents.at(-1)).number
+          : 0
+
+      const expectedStart = currentMax + 1
+
+      if (first.number !== expectedStart) {
+        throw new StreamSequenceError(
+          first.registrationId,
+          first.accreditationId,
+          first.number,
+          expectedStart
+        )
+      }
+
+      for (let i = 1; i < events.length; i++) {
+        const expected = first.number + i
+        if (events[i].number !== expected) {
+          throw new StreamSequenceError(
+            events[i].registrationId,
+            events[i].accreditationId,
+            events[i].number,
+            expected
+          )
+        }
+      }
+
+      const stored = events.map((event) => {
+        const validated = validateStreamEventInsert(event)
+        const persisted = { id: randomUUID(), ...validated }
+        storage.push(persisted)
+        return structuredClone(persisted)
+      })
+
+      return stored
     }
   })
 }
