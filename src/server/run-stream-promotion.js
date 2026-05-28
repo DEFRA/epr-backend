@@ -192,19 +192,14 @@ const promoteAccreditation = async (row, deps) => {
   await streamRepository.deleteByPartition(registration.id, row.accreditationId)
   await streamRepository.bulkAppendEvents(events)
 
-  const afterStream = await wasteBalancesRepository.findByAccreditationId(
-    row.accreditationId
-  )
-  if (!afterStream) {
-    throw new Error(
-      `Waste balance disappeared for accreditation ${row.accreditationId}`
-    )
-  }
-
+  // Use the ORIGINAL captured version, not a re-read. If a concurrent
+  // mutation (PRN op or summary log upload) bumped version while we were
+  // migrating, the filter misses and the flip no-ops. The accreditation
+  // retries next boot with fresh data that includes the mutation.
   const ledgerResult =
     await wasteBalancesRepository.flipCanonicalSourceToLedger({
       accreditationId: row.accreditationId,
-      capturedVersion: afterStream.version
+      capturedVersion: captured.version
     })
 
   if (ledgerResult?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {

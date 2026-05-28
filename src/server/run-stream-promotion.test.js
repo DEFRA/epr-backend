@@ -321,6 +321,72 @@ describe('runStreamPromotion', () => {
     )
   })
 
+  it('counts as failed when a concurrent mutation bumps version during migration', async () => {
+    const migratingToArray = vi.fn().mockResolvedValue([])
+    const embeddedToArray = vi.fn().mockResolvedValue([
+      {
+        accreditationId: 'acc-race',
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+    ])
+
+    mockFindBalances
+      .mockReturnValueOnce({ toArray: migratingToArray })
+      .mockReturnValueOnce({ toArray: embeddedToArray })
+
+    organisationsRepository.findById.mockResolvedValue({
+      id: 'org-1',
+      registrations: [
+        {
+          id: 'reg-1',
+          accreditationId: 'acc-race',
+          registrationNumber: 'CBDU1',
+          status: 'approved'
+        }
+      ],
+      accreditations: [
+        { id: 'acc-race', accreditationNumber: 'CBDA1', status: 'approved' }
+      ]
+    })
+
+    // First read: version 1 (used for flipToMigrating)
+    // Second read: version 2 (a PRN op bumped it during migration)
+    wasteBalancesRepository.findByAccreditationId
+      .mockResolvedValueOnce({
+        accreditationId: 'acc-race',
+        version: 1,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
+      .mockResolvedValueOnce({
+        accreditationId: 'acc-race',
+        version: 2,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      })
+
+    // flipToLedger should use the ORIGINAL version (1), which won't match
+    // the live document (version 2), so it no-ops
+    wasteBalancesRepository.flipCanonicalSourceToLedger.mockResolvedValue({
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+    })
+
+    await runStreamPromotion(mockServer)
+
+    // flipToLedger must use the pre-migration version, not the re-read
+    expect(
+      wasteBalancesRepository.flipCanonicalSourceToLedger
+    ).toHaveBeenCalledWith({
+      accreditationId: 'acc-race',
+      capturedVersion: 1
+    })
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringMatching(/failed=1/)
+      })
+    )
+  })
+
   it('skips an accreditation that is already on the ledger after flip-to-migrating', async () => {
     const migratingToArray = vi.fn().mockResolvedValue([])
     const embeddedToArray = vi.fn().mockResolvedValue([
@@ -510,52 +576,6 @@ describe('runStreamPromotion', () => {
     })
 
     // findByAccreditationId returns null (default mock)
-
-    await runStreamPromotion(mockServer)
-
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('failed=1')
-      })
-    )
-  })
-
-  it('counts as failed when waste balance disappears after stream write', async () => {
-    const migratingToArray = vi.fn().mockResolvedValue([])
-    const embeddedToArray = vi.fn().mockResolvedValue([
-      {
-        accreditationId: 'acc-vanish',
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-    ])
-
-    mockFindBalances
-      .mockReturnValueOnce({ toArray: migratingToArray })
-      .mockReturnValueOnce({ toArray: embeddedToArray })
-
-    organisationsRepository.findById.mockResolvedValue({
-      id: 'org-1',
-      registrations: [
-        {
-          id: 'reg-1',
-          accreditationId: 'acc-vanish',
-          registrationNumber: 'CBDU1',
-          status: 'approved'
-        }
-      ],
-      accreditations: [
-        { id: 'acc-vanish', accreditationNumber: 'CBDA1', status: 'approved' }
-      ]
-    })
-
-    wasteBalancesRepository.findByAccreditationId
-      .mockResolvedValueOnce({
-        accreditationId: 'acc-vanish',
-        version: 1,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      })
-      .mockResolvedValueOnce(null) // disappeared after stream write
 
     await runStreamPromotion(mockServer)
 
