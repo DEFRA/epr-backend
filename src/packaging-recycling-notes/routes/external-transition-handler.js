@@ -12,6 +12,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { updatePrnStatus } from '#packaging-recycling-notes/application/update-status.js'
 import { auditPrnStatusTransition } from '#packaging-recycling-notes/application/audit.js'
+import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/get-projected-prn.js'
 
 /**
  * @import { Request, Lifecycle } from '@hapi/hapi'
@@ -65,8 +66,11 @@ export function createExternalTransitionHandler({
       const { prnNumber } = params
 
       try {
-        const prn =
-          await packagingRecyclingNotesRepository.findByPrnNumber(prnNumber)
+        const prn = await getProjectedPrnByNumber({
+          packagingRecyclingNotesRepository,
+          wasteBalancesRepository,
+          prnNumber
+        })
 
         if (!prn) {
           throw Boom.notFound(
