@@ -72,9 +72,19 @@ const findEmbeddedBalances = async (db) => {
 /**
  * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
+ * @returns {Promise<{ events: Array, registration: { id: string } } | null>}
+ *   null when the accreditation has no active registration (nothing to rebuild)
  */
 const rebuildEvents = async (row, deps) => {
-  const sources = await loadAccreditationSources(row, deps)
+  let sources
+  try {
+    sources = await loadAccreditationSources(row, deps)
+  } catch (error) {
+    if (error.message?.startsWith('No registration links to accreditation')) {
+      return null
+    }
+    throw error
+  }
   const { events } = computeRebuiltStream(sources)
   return { events, registration: sources.registration }
 }
@@ -98,7 +108,7 @@ const promoteAccreditation = async (row, deps) => {
     )
   }
 
-  const { events, registration } = await rebuildEvents(row, deps)
+  const rebuildResult = await rebuildEvents(row, deps)
 
   const migratingResult =
     await wasteBalancesRepository.flipCanonicalSourceToMigrating({
@@ -113,14 +123,24 @@ const promoteAccreditation = async (row, deps) => {
     return 'skipped'
   }
 
-  // Idempotency: if a previous boot crashed between bulkAppendEvents and
-  // flipCanonicalSourceToLedger, stale events may exist. Deleting first
-  // means a restart always replays from the authoritative sources rather
-  // than appending on top of a partial write. An alternative would be to
-  // skip the delete and let bulkAppendEvents fail on a sequence conflict,
-  // but that turns a recoverable restart into a stuck accreditation.
-  await streamRepository.deleteByPartition(registration.id, row.accreditationId)
-  await streamRepository.bulkAppendEvents(events)
+  if (rebuildResult) {
+    const { events, registration } = rebuildResult
+    // Idempotency: if a previous boot crashed between bulkAppendEvents and
+    // flipCanonicalSourceToLedger, stale events may exist. Deleting first
+    // means a restart always replays from the authoritative sources rather
+    // than appending on top of a partial write. An alternative would be to
+    // skip the delete and let bulkAppendEvents fail on a sequence conflict,
+    // but that turns a recoverable restart into a stuck accreditation.
+    await streamRepository.deleteByPartition(
+      registration.id,
+      row.accreditationId
+    )
+    await streamRepository.bulkAppendEvents(events)
+  } else {
+    logger.info({
+      message: `Stream promotion: no active registration for accreditation ${row.accreditationId}, promoting with empty stream`
+    })
+  }
 
   // Use the ORIGINAL captured version, not a re-read. If a concurrent
   // mutation (PRN op or summary log upload) bumped version while we were

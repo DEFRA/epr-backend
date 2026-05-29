@@ -522,7 +522,7 @@ describe('runStreamPromotion', () => {
     )
   })
 
-  it('counts as failed when no registration links to accreditation', async () => {
+  it('promotes with empty stream when no active registration exists', async () => {
     const migratingToArray = vi.fn().mockResolvedValue([])
     const embeddedToArray = vi.fn().mockResolvedValue([
       {
@@ -552,9 +552,26 @@ describe('runStreamPromotion', () => {
 
     await runStreamPromotion(mockServer)
 
-    expect(logger.warn).toHaveBeenCalledWith(
+    // No stream writes for accreditations without active registrations
+    expect(streamRepository.deleteByPartition).not.toHaveBeenCalled()
+    expect(streamRepository.bulkAppendEvents).not.toHaveBeenCalled()
+
+    // Still flips to ledger
+    expect(
+      wasteBalancesRepository.flipCanonicalSourceToLedger
+    ).toHaveBeenCalledWith({
+      accreditationId: 'acc-noreg',
+      capturedVersion: 1
+    })
+
+    expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('failed=1')
+        message: expect.stringContaining('no active registration')
+      })
+    )
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('promoted=1')
       })
     )
   })
