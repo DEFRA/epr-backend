@@ -7,6 +7,7 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
@@ -15,6 +16,7 @@ import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnos
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
+    warn: vi.fn(),
     error: vi.fn()
   }
 }))
@@ -133,7 +135,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 0,
-      availableAmount: 0
+      availableAmount: 0,
+      backfilledActorCount: 0
     })
     vi.mocked(resolveOverseasSites).mockResolvedValue({})
   })
@@ -213,7 +216,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 7,
-      availableAmount: 5
+      availableAmount: 5,
+      backfilledActorCount: 0
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -262,7 +266,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 95,
-      availableAmount: 80
+      availableAmount: 80,
+      backfilledActorCount: 0
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -386,7 +391,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 7,
-      availableAmount: 7
+      availableAmount: 7,
+      backfilledActorCount: 0
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -534,7 +540,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 5,
-      availableAmount: 5
+      availableAmount: 5,
+      backfilledActorCount: 0
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -720,7 +727,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 95,
-      availableAmount: 75
+      availableAmount: 75,
+      backfilledActorCount: 0
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -736,5 +744,72 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(divergenceLines[0][0].message).toContain('streamAmount=95')
     expect(divergenceLines[0][0].message).toContain('streamAvailableAmount=75')
     expect(divergenceLines[0][0].message).toContain('streamEventCount=0')
+  })
+
+  it('warns with a tagged key=value line when the rebuild used the backfill actor', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
+    ]
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [buildStreamEvent(), buildStreamEvent(), buildStreamEvent()],
+      amount: 0,
+      availableAmount: 0,
+      backfilledActorCount: 2
+    })
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.warn).toHaveBeenCalledWith({
+      message:
+        'Waste-balance rebuild used backfill actor: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 backfilledActorCount=2 streamEventCount=3'
+    })
+  })
+
+  it('does not warn when every rebuilt event carried a real actor', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
+    ]
+    vi.mocked(computeRebuiltStream).mockReturnValue({
+      events: [buildStreamEvent()],
+      amount: 0,
+      availableAmount: 0,
+      backfilledActorCount: 0
+    })
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 })

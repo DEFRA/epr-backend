@@ -148,6 +148,7 @@ const buildSummaryLogEvents = ({
 
   const seenSummaryLogIds = new Set()
   const events = []
+  let backfilledActorCount = 0
 
   for (const summaryLog of submitted) {
     seenSummaryLogIds.add(summaryLog.id)
@@ -169,6 +170,10 @@ const buildSummaryLogEvents = ({
       creditTotal = toNumber(add(creditTotal, amount))
     }
 
+    if (!summaryLog.submittedBy) {
+      backfilledActorCount += 1
+    }
+
     events.push({
       timestamp: new Date(summaryLog.submittedAt),
       kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
@@ -180,7 +185,7 @@ const buildSummaryLogEvents = ({
     })
   }
 
-  return events
+  return { events, backfilledActorCount }
 }
 
 /**
@@ -247,9 +252,11 @@ const buildPrnEvents = ({
   prns
 }) => {
   const events = []
+  let backfilledActorCount = 0
 
   for (const prn of prns) {
-    for (let i = 0; i < prn.status.history.length; i++) {
+    const history = prn.status.history
+    for (let i = 0; i < history.length; i++) {
       const event = prnTransitionEvent({
         prn,
         index: i,
@@ -259,11 +266,14 @@ const buildPrnEvents = ({
       })
       if (event !== null) {
         events.push(event)
+        if (!history[i].by) {
+          backfilledActorCount += 1
+        }
       }
     }
   }
 
-  return events
+  return { events, backfilledActorCount }
 }
 
 /**
@@ -279,10 +289,16 @@ const buildPrnEvents = ({
  * @param {Object} params.overseasSites
  * @param {Array<{ id: string, status: string, submittedAt?: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }>} params.summaryLogs
  */
-const buildChronologicalEvents = (params) => [
-  ...buildSummaryLogEvents(params),
-  ...buildPrnEvents(params)
-]
+const buildChronologicalEvents = (params) => {
+  const summaryLog = buildSummaryLogEvents(params)
+  const prn = buildPrnEvents(params)
+
+  return {
+    events: [...summaryLog.events, ...prn.events],
+    backfilledActorCount:
+      summaryLog.backfilledActorCount + prn.backfilledActorCount
+  }
+}
 
 /**
  * Replay a chronologically sorted list of events, threading opening and
@@ -370,7 +386,10 @@ const byStreamOrder = (a, b) =>
  * derive balance totals from it. Events are totally ordered, carry real
  * registration / organisation context and actor attribution, and throw on
  * source history that violates the PRN state machine — so the sequence is
- * seedable into the stream store, not only a totals cross-check.
+ * seedable into the stream store, not only a totals cross-check. Also reports
+ * `backfilledActorCount`: how many events fell back to the backfill actor
+ * because no real actor was recoverable, so callers can surface attribution
+ * gaps.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
@@ -390,7 +409,7 @@ export const computeRebuiltStream = ({
   overseasSites,
   summaryLogs
 }) => {
-  const unsorted = buildChronologicalEvents({
+  const { events: unsorted, backfilledActorCount } = buildChronologicalEvents({
     accreditation,
     registrationId,
     organisationId,
@@ -405,7 +424,7 @@ export const computeRebuiltStream = ({
   const events = replayStream(unsorted)
 
   if (events.length === 0) {
-    return { events, ...ZERO_BALANCE }
+    return { events, ...ZERO_BALANCE, backfilledActorCount }
   }
 
   const finalBalance =
@@ -416,6 +435,7 @@ export const computeRebuiltStream = ({
   return {
     events,
     amount: finalBalance.amount,
-    availableAmount: finalBalance.availableAmount
+    availableAmount: finalBalance.availableAmount,
+    backfilledActorCount
   }
 }

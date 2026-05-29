@@ -55,7 +55,8 @@ describe('computeRebuiltStream', () => {
     expect(result).toEqual({
       events: [],
       amount: 0,
-      availableAmount: 0
+      availableAmount: 0,
+      backfilledActorCount: 0
     })
   })
 
@@ -611,7 +612,7 @@ describe('computeRebuiltStream', () => {
       const issued = result.events.find(
         (e) => e.kind === STREAM_EVENT_KIND.PRN_ISSUED
       )
-      expect(issued.createdBy).toEqual({ id: 'sig-7', name: 'Sam Signatory' })
+      expect(issued?.createdBy).toEqual({ id: 'sig-7', name: 'Sam Signatory' })
     })
 
     it('attributes summary-log events to the supplied submitter', () => {
@@ -740,10 +741,11 @@ describe('computeRebuiltStream', () => {
         summaryLogs: []
       })
 
-      expect(result.events.map((e) => e.payload.prnId)).toEqual([
-        'prn-alpha',
-        'prn-zulu'
-      ])
+      expect(
+        result.events.map((e) =>
+          'prnId' in e.payload ? e.payload.prnId : undefined
+        )
+      ).toEqual(['prn-alpha', 'prn-zulu'])
     })
 
     it('throws on an impossible PRN status transition in history', () => {
@@ -873,10 +875,11 @@ describe('computeRebuiltStream', () => {
         ]
       })
 
-      expect(result.events.map((e) => e.payload.summaryLogId)).toEqual([
-        'sl-alpha',
-        'sl-zulu'
-      ])
+      expect(
+        result.events.map((e) =>
+          'summaryLogId' in e.payload ? e.payload.summaryLogId : undefined
+        )
+      ).toEqual(['sl-alpha', 'sl-zulu'])
     })
 
     it('emits events that satisfy the stream insert schema', () => {
@@ -908,6 +911,104 @@ describe('computeRebuiltStream', () => {
       for (const event of result.events) {
         expect(streamEventInsertSchema.validate(event).error).toBeUndefined()
       }
+    })
+  })
+
+  describe('backfilled actor count', () => {
+    const registrationId = 'reg-1'
+    const organisationId = 'org-1'
+
+    const submittedLog = (id, submittedBy) => ({
+      id,
+      status: SUMMARY_LOG_STATUS.SUBMITTED,
+      submittedAt: '2025-01-15T10:00:00.000Z',
+      ...(submittedBy ? { submittedBy } : {})
+    })
+
+    const createdPrn = (id, by) => ({
+      id,
+      tonnage: 10,
+      status: {
+        history: [
+          {
+            status: PRN_STATUS.AWAITING_AUTHORISATION,
+            at: new Date('2025-01-21T00:00:00.000Z'),
+            ...(by ? { by } : {})
+          }
+        ]
+      }
+    })
+
+    it('reports zero when every event carries a real actor', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [createdPrn('prn-1', { id: 'rep-1', name: 'Rita Reprocessor' })],
+        overseasSites,
+        summaryLogs: [
+          submittedLog('sl-1', { id: 'usr-9', name: 'submitter@example.com' })
+        ]
+      })
+
+      expect(result.backfilledActorCount).toBe(0)
+    })
+
+    it('counts a summary-log event with no submitter', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [],
+        overseasSites,
+        summaryLogs: [submittedLog('sl-1')]
+      })
+
+      expect(result.backfilledActorCount).toBe(1)
+    })
+
+    it('counts a PRN event whose history entry has no actor', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [createdPrn('prn-1')],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.backfilledActorCount).toBe(1)
+    })
+
+    it('sums backfilled summary-log and PRN events', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [createdPrn('prn-1')],
+        overseasSites,
+        summaryLogs: [submittedLog('sl-1')]
+      })
+
+      expect(result.backfilledActorCount).toBe(2)
+    })
+
+    it('reports zero for an empty stream', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.backfilledActorCount).toBe(0)
     })
   })
 })

@@ -206,7 +206,8 @@ const buildComparison = (
     rebuilt.availableAmount,
     stream.availableAmount
   ),
-  streamEventCount: stream.events.length
+  streamEventCount: stream.events.length,
+  backfilledActorCount: stream.backfilledActorCount
 })
 
 const isDivergent = (comparison) =>
@@ -249,6 +250,16 @@ const formatErrorLine = (embedded, error) =>
     `error="${error.message}"`
   ].join(' ')
 
+const formatBackfillLine = (comparison) =>
+  [
+    'Waste-balance rebuild used backfill actor:',
+    `organisationId=${comparison.organisationId}`,
+    `registrationNumber=${comparison.registrationNumber}`,
+    `accreditationNumber=${comparison.accreditationNumber}`,
+    `backfilledActorCount=${comparison.backfilledActorCount}`,
+    `streamEventCount=${comparison.streamEventCount}`
+  ].join(' ')
+
 /**
  * @param {import('mongodb').Db} db
  * @param {DiagnosticDependencies} deps
@@ -268,6 +279,9 @@ const runDiagnostic = async (db, deps) => {
     scanned += 1
     try {
       const comparison = await compareForEmbedded(row, deps)
+      if (comparison.backfilledActorCount > 0) {
+        logger.warn({ message: formatBackfillLine(comparison) })
+      }
       if (isDivergent(comparison)) {
         changed += 1
         logger.info({ message: formatDivergenceLine(comparison) })
