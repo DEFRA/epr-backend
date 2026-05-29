@@ -296,13 +296,14 @@ const runPromotion = async (db, deps) => {
       }
     } catch (error) {
       failed += 1
-      logger.info({
+      logger.error({
         message: `Stream promotion failed: accreditationId=${row.accreditationId} error="${error.message}"`
       })
     }
   }
 
-  logger.info({
+  const summaryLevel = failed > 0 ? 'warn' : 'info'
+  logger[summaryLevel]({
     message: `Stream promotion complete: promoted=${promoted} skipped=${skipped} failed=${failed}`
   })
 }

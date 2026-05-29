@@ -18,6 +18,7 @@ import { runStreamPromotion } from './run-stream-promotion.js'
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
+    warn: vi.fn(),
     error: vi.fn()
   }
 }))
@@ -380,7 +381,7 @@ describe('runStreamPromotion', () => {
       capturedVersion: 1
     })
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringMatching(/failed=1/)
       })
@@ -514,7 +515,7 @@ describe('runStreamPromotion', () => {
 
     await runStreamPromotion(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining('failed=1')
       })
@@ -551,7 +552,7 @@ describe('runStreamPromotion', () => {
 
     await runStreamPromotion(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining('failed=1')
       })
@@ -591,7 +592,7 @@ describe('runStreamPromotion', () => {
 
     await runStreamPromotion(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining('failed=1')
       })
@@ -644,7 +645,7 @@ describe('runStreamPromotion', () => {
         message: expect.stringContaining('will retry next boot')
       })
     )
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringMatching(/failed=1/)
       })
