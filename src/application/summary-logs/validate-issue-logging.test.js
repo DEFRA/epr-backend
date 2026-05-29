@@ -52,14 +52,14 @@ describe('logValidationIssues', () => {
         logger
       })
 
-      const warnCalls = /** @type {{ mock: { calls: any[][] } }} */ (
-        /** @type {unknown} */ (logger.warn)
+      const infoCalls = /** @type {{ mock: { calls: any[][] } }} */ (
+        /** @type {unknown} */ (logger.info)
       ).mock.calls
 
-      const issueLogs = warnCalls.filter(
+      const issueLogs = infoCalls.filter(
         ([payload]) => payload?.event?.action === 'summary_log_validation_issue'
       )
-      const [summaryPayload] = warnCalls
+      const [summaryPayload] = infoCalls
         .filter(
           ([payload]) =>
             payload?.event?.action === 'summary_log_validation_completed'
@@ -86,10 +86,10 @@ describe('logValidationIssues', () => {
         logger
       })
 
-      const warnCalls = /** @type {{ mock: { calls: any[][] } }} */ (
-        /** @type {unknown} */ (logger.warn)
+      const infoCalls = /** @type {{ mock: { calls: any[][] } }} */ (
+        /** @type {unknown} */ (logger.info)
       ).mock.calls
-      const [summaryPayload] = warnCalls
+      const [summaryPayload] = infoCalls
         .filter(
           ([payload]) =>
             payload?.event?.action === 'summary_log_validation_completed'
