@@ -93,7 +93,7 @@ const buildSummaryLogPayload = ({
 })
 
 /**
- * Emits a warn-level log per validation issue plus a single summary log so
+ * Emits an info-level log per validation issue plus a single summary log so
  * support can investigate failures via OpenSearch DQL. No-op when there are
  * no issues. PII (issue.context.actual) and org/reg are never included in
  * per-issue logs; org/reg appear only in the run-level summary log.
@@ -116,9 +116,9 @@ export const logValidationIssues = ({
   }
   const issuesToLog = issues.getAllIssues().slice(0, MAX_VALIDATION_ISSUES)
   issuesToLog.forEach((issue) => {
-    logger.warn(buildIssueLogPayload(issue, summaryLogId))
+    logger.info(buildIssueLogPayload(issue, summaryLogId))
   })
-  logger.warn(
+  logger.info(
     buildSummaryLogPayload({
       counts: issues.getCounts(),
       logged: issuesToLog.length,

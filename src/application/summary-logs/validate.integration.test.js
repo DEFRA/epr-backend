@@ -691,22 +691,22 @@ describe('SummaryLogsValidator integration', () => {
   })
 
   describe('validation issue logging', () => {
-    let warnSpy
+    let infoSpy
 
     beforeEach(() => {
-      warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+      infoSpy = vi.spyOn(logger, 'info').mockImplementation(() => {})
     })
 
     afterEach(() => {
-      warnSpy.mockRestore()
+      infoSpy.mockRestore()
     })
 
     const filterByAction = (action) =>
-      warnSpy.mock.calls
+      infoSpy.mock.calls
         .map(([payload]) => payload)
         .filter((payload) => payload?.event?.action === action)
 
-    it('should emit a warn log per issue plus a summary log when validation produces issues', async () => {
+    it('should emit an info log per issue plus a summary log when validation produces issues', async () => {
       const metadata = {
         REGISTRATION_NUMBER: {
           value: 'REG-123',
@@ -735,7 +735,7 @@ describe('SummaryLogsValidator integration', () => {
       expect(summaryLogs).toHaveLength(1)
     })
 
-    it('should not emit validation-issue warn logs when validation passes cleanly', async () => {
+    it('should not emit validation-issue info logs when validation passes cleanly', async () => {
       const accreditationNumber = 'ACC-001'
       const metadata = {
         REGISTRATION_NUMBER: {
