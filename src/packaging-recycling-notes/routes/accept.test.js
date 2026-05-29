@@ -4,6 +4,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -58,6 +59,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
       wasteBalancesRepository = {
         findByAccreditationId: vi.fn(),
         findByAccreditationIds: vi.fn(),
+        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
         deductAvailableBalanceForPrnCreation: vi.fn(),
         deductTotalBalanceForPrnIssue: vi.fn(),
         creditAvailableBalanceForPrnCancellation: vi.fn()
@@ -82,6 +84,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
 
     afterEach(() => {
       vi.resetAllMocks()
+    })
+
+    beforeEach(() => {
+      // resetAllMocks wipes implementations between tests; the read-side fold
+      // needs a stream-tail response on every transition.
+      wasteBalancesRepository.getPrnCatchupEvents.mockResolvedValue([])
     })
 
     afterAll(async () => {

@@ -64,7 +64,8 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
           wasteBalancesRepository: () => ({
-            findByAccreditationId: vi.fn().mockResolvedValue(null)
+            findByAccreditationId: vi.fn().mockResolvedValue(null),
+            getPrnCatchupEvents: vi.fn().mockResolvedValue([])
           }),
           organisationsRepository: () => ({})
         },
