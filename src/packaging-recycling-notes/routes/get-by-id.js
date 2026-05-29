@@ -9,7 +9,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { foldPrnFromTailEvents } from '#packaging-recycling-notes/application/fold-prn-from-tail-events.js'
+import { getProjectedPrnById } from '#packaging-recycling-notes/application/get-projected-prn.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').GetPrnResponse} GetPrnResponse */
 /** @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
@@ -66,7 +66,11 @@ export const packagingRecyclingNoteById = {
 
     try {
       const [prn, accreditation] = await Promise.all([
-        packagingRecyclingNotesRepository.findById(prnId),
+        getProjectedPrnById({
+          packagingRecyclingNotesRepository,
+          wasteBalancesRepository,
+          prnId
+        }),
         organisationsRepository.findAccreditationById(
           organisationId,
           accreditationId
@@ -81,18 +85,6 @@ export const packagingRecyclingNoteById = {
         throw Boom.notFound('PRN not found')
       }
 
-      const tailEvents = await wasteBalancesRepository.getPrnCatchupEvents({
-        registrationId: prn.registrationId,
-        accreditationId: prn.accreditation.id,
-        prnId: prn.id,
-        afterEventNumber: prn.lastAppliedEventNumber ?? 0
-      })
-      const foldedPrn = foldPrnFromTailEvents(prn, tailEvents)
-
-      if (foldedPrn.status.currentStatus === PRN_STATUS.DELETED) {
-        throw Boom.notFound('PRN not found')
-      }
-
       logger.info({
         message: `PRN retrieved: id=${prnId}`,
         event: {
@@ -102,9 +94,7 @@ export const packagingRecyclingNoteById = {
         }
       })
 
-      return h
-        .response(buildResponse(foldedPrn, accreditation))
-        .code(StatusCodes.OK)
+      return h.response(buildResponse(prn, accreditation)).code(StatusCodes.OK)
     } catch (error) {
       if (error.isBoom) {
         throw error
