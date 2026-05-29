@@ -156,6 +156,8 @@ describe('balance divergence diagnostic (integration)', () => {
 
     const result = computeRebuiltStream({
       accreditation: { id: 'acc-1' },
+      registrationId,
+      organisationId,
       wasteRecords,
       prns: [],
       overseasSites: {},

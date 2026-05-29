@@ -240,6 +240,46 @@ const prnTransitionEvent = ({
 }
 
 /**
+ * Build the events from a single PRN's status history, counting those that
+ * fall back to the system backfill actor because the history entry names none.
+ *
+ * @param {Object} params
+ * @param {Object} params.prn
+ * @param {{ id: string }} params.accreditation
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
+ */
+const buildPrnHistoryEvents = ({
+  prn,
+  accreditation,
+  registrationId,
+  organisationId
+}) => {
+  const history = prn.status.history
+  const events = []
+  let backfilledActorCount = 0
+
+  for (let i = 0; i < history.length; i++) {
+    const event = prnTransitionEvent({
+      prn,
+      index: i,
+      accreditation,
+      registrationId,
+      organisationId
+    })
+    if (event === null) {
+      continue
+    }
+    events.push(event)
+    if (!history[i].by) {
+      backfilledActorCount += 1
+    }
+  }
+
+  return { events, backfilledActorCount }
+}
+
+/**
  * Build PRN events from every status transition in each PRN's history.
  *
  * @param {Object} params
@@ -254,29 +294,22 @@ const buildPrnEvents = ({
   organisationId,
   prns
 }) => {
-  const events = []
-  let backfilledActorCount = 0
+  const perPrn = prns.map((prn) =>
+    buildPrnHistoryEvents({
+      prn,
+      accreditation,
+      registrationId,
+      organisationId
+    })
+  )
 
-  for (const prn of prns) {
-    const history = prn.status.history
-    for (let i = 0; i < history.length; i++) {
-      const event = prnTransitionEvent({
-        prn,
-        index: i,
-        accreditation,
-        registrationId,
-        organisationId
-      })
-      if (event !== null) {
-        events.push(event)
-        if (!history[i].by) {
-          backfilledActorCount += 1
-        }
-      }
-    }
+  return {
+    events: perPrn.flatMap(({ events }) => events),
+    backfilledActorCount: perPrn.reduce(
+      (sum, { backfilledActorCount }) => sum + backfilledActorCount,
+      0
+    )
   }
-
-  return { events, backfilledActorCount }
 }
 
 /**
