@@ -504,6 +504,12 @@ describe('runStreamPromotion', () => {
       .mockReturnValueOnce({ toArray: migratingToArray })
       .mockReturnValueOnce({ toArray: embeddedToArray })
 
+    wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
+      accreditationId: 'acc-missing',
+      version: 1,
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    })
+
     // Default org mock has empty accreditations array
 
     await runStreamPromotion(mockServer)
@@ -528,6 +534,12 @@ describe('runStreamPromotion', () => {
     mockFindBalances
       .mockReturnValueOnce({ toArray: migratingToArray })
       .mockReturnValueOnce({ toArray: embeddedToArray })
+
+    wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
+      accreditationId: 'acc-noreg',
+      version: 1,
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    })
 
     organisationsRepository.findById.mockResolvedValue({
       id: 'org-1',

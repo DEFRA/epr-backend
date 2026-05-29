@@ -159,8 +159,9 @@ const rebuildEvents = async (row, deps) => {
 const promoteAccreditation = async (row, deps) => {
   const { wasteBalancesRepository, streamRepository } = deps
 
-  const { events, registration } = await rebuildEvents(row, deps)
-
+  // Capture version BEFORE rebuilding events. A submission that writes waste
+  // records and bumps version during rebuildEvents must push version past
+  // the capture so the flip safely no-ops (retried next boot with fresh data).
   const captured = await wasteBalancesRepository.findByAccreditationId(
     row.accreditationId
   )
@@ -169,6 +170,8 @@ const promoteAccreditation = async (row, deps) => {
       `No waste balance found for accreditation ${row.accreditationId}`
     )
   }
+
+  const { events, registration } = await rebuildEvents(row, deps)
 
   const migratingResult =
     await wasteBalancesRepository.flipCanonicalSourceToMigrating({
