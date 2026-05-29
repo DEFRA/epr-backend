@@ -7,7 +7,68 @@ import {
   VALIDATION_CATEGORY
 } from '#common/enums/validation.js'
 
+/** @import {ValidationIssue} from './validation-issues.js' */
+
 describe('Validation Issues', () => {
+  describe('createValidationIssues seeding', () => {
+    /** @type {ValidationIssue[]} */
+    const seed = [
+      {
+        severity: VALIDATION_SEVERITY.FATAL,
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: 'Seeded fatal',
+        code: 'ERR_SEED_FATAL',
+        context: { location: { row: 1 } }
+      },
+      {
+        severity: VALIDATION_SEVERITY.WARNING,
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message: 'Seeded warning',
+        code: 'ERR_SEED_WARNING'
+      }
+    ]
+
+    it('should seed the collector with the provided issues', () => {
+      const result = createValidationIssues(seed)
+
+      expect(result.getAllIssues()).toEqual(seed)
+      expect(result.getCounts()).toMatchObject({
+        fatal: 1,
+        warning: 1,
+        total: 2
+      })
+      expect(result.isFatal()).toBe(true)
+    })
+
+    it('should copy the seed so later mutations do not leak in', () => {
+      const initial = [...seed]
+      const result = createValidationIssues(initial)
+
+      initial.push({
+        severity: VALIDATION_SEVERITY.ERROR,
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: 'Added after construction',
+        code: 'ERR_LATE'
+      })
+
+      expect(result.getAllIssues()).toHaveLength(2)
+    })
+
+    it('should keep adding issues on top of the seed', () => {
+      const result = createValidationIssues(seed)
+
+      result.addError(VALIDATION_CATEGORY.BUSINESS, 'Added later', 'ERR_ADDED')
+
+      expect(result.getAllIssues()).toHaveLength(3)
+    })
+
+    it('should default to an empty collector when no seed is given', () => {
+      const result = createValidationIssues()
+
+      expect(result.getAllIssues()).toEqual([])
+    })
+  })
+
   describe('addIssue', () => {
     it('adds an issue with all properties', () => {
       const result = createValidationIssues()

@@ -341,6 +341,7 @@ const createIssueTransformers = (
  * Collects and manages validation issues with support for different
  * severity levels and categorization
  *
+ * @param {ValidationIssue[]} [initialIssues] - Issues to seed the collector with
  * @returns {ValidationIssuesCollector}
  *
  * @example
@@ -350,9 +351,9 @@ const createIssueTransformers = (
  *   console.log(issues.getSummary())
  * }
  */
-export const createValidationIssues = () => {
+export const createValidationIssues = (initialIssues = []) => {
   /** @type {ValidationIssue[]} */
-  const issues = []
+  const issues = [...initialIssues]
   const result = /** @type {ValidationIssuesCollector} */ ({})
 
   const adders = createIssueAdders(issues, result)

@@ -712,6 +712,35 @@ describe('createDataSyntaxValidator', () => {
 
       expect(result.issues.isValid()).toBe(true)
     })
+
+    it.for([
+      {
+        order: 'earlier-table-fatal-first',
+        tables: {
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 },
+          DATE_TABLE: { ROW_ID: 1001, DATE_FIELD: 'not-a-date' }
+        }
+      },
+      {
+        order: 'later-table-fatal-first',
+        tables: {
+          DATE_TABLE: { ROW_ID: 1001, DATE_FIELD: 'not-a-date' },
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        }
+      }
+    ])(
+      'should report fatal cell errors in every table regardless of order ($order)',
+      ({ tables }) => {
+        const result = validateRows(tables)
+
+        const fatalTables = result.issues
+          .getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+          .map((issue) => issue.context?.location?.table)
+
+        expect(fatalTables).toContain('TEST_TABLE')
+        expect(fatalTables).toContain('DATE_TABLE')
+      }
+    )
   })
 
   describe('unrecognised tables', () => {
