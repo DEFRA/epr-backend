@@ -140,6 +140,29 @@ export const testFindLatestByPartitionBehaviour = (it) => {
       })
     })
 
+    it('finds events by accreditationId alone when registrationId is undefined', async () => {
+      await repository.appendEvent(
+        buildStreamEvent({
+          registrationId: 'reg-orphan',
+          accreditationId: 'acc-orphan',
+          number: 1,
+          closingBalance: { amount: 298.25, availableAmount: 298.25 }
+        })
+      )
+
+      const result = await repository.findLatestByPartition(
+        undefined,
+        'acc-orphan'
+      )
+
+      expect(result).not.toBeNull()
+      expect(result.accreditationId).toBe('acc-orphan')
+      expect(result.closingBalance).toEqual({
+        amount: 298.25,
+        availableAmount: 298.25
+      })
+    })
+
     it('round-trips high-precision amounts exactly', async () => {
       await repository.appendEvent(
         buildStreamEvent({

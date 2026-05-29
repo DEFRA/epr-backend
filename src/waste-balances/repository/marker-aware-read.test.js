@@ -107,6 +107,28 @@ describe('resolveBalanceAmounts', () => {
     expect(result.availableAmount).toBe(0)
   })
 
+  it('passes undefined registrationId through to the stream lookup', async () => {
+    const balance = buildBalance({
+      accreditationId: 'acc-no-reg',
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+      amount: 999,
+      availableAmount: 999
+    })
+    delete balance.registrationId
+    const stream = buildStream({
+      closingBalance: { amount: 298.25, availableAmount: 298.25 }
+    })
+
+    const result = await resolveBalanceAmounts(balance, stream)
+
+    expect(stream.findLatestByPartition).toHaveBeenCalledWith(
+      undefined,
+      'acc-no-reg'
+    )
+    expect(result.amount).toBe(298.25)
+    expect(result.availableAmount).toBe(298.25)
+  })
+
   it('preserves all non-amount fields', async () => {
     const balance = buildBalance({
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,

@@ -167,14 +167,14 @@ const performAppendEvent = (collection) => async (event) => {
 
 /**
  * @param {Collection} collection
- * @returns {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>}
+ * @returns {(registrationId: string | undefined, accreditationId: string | null) => Promise<StreamEvent | null>}
  */
 const performFindLatestByPartition =
   (collection) => async (registrationId, accreditationId) => {
-    const doc = await collection.findOne(
-      { registrationId, accreditationId },
-      { sort: { number: -1 } }
-    )
+    const filter = registrationId
+      ? { registrationId, accreditationId }
+      : { accreditationId }
+    const doc = await collection.findOne(filter, { sort: { number: -1 } })
     return doc ? toStreamEvent(doc) : null
   }
 

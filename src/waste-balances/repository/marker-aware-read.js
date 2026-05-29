@@ -23,7 +23,7 @@ export const resolveBalanceAmounts = async (balance, streamRepository) => {
   }
 
   const latest = await streamRepository.findLatestByPartition(
-    /** @type {string} */ (balance.registrationId),
+    balance.registrationId,
     balance.accreditationId
   )
 

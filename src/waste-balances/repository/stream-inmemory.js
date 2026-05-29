@@ -24,7 +24,8 @@ import { validateStreamEventInsert } from './stream-validation.js'
  * @param {string | null} accreditationId
  */
 const matchesPartition = (event, registrationId, accreditationId) =>
-  event.registrationId === registrationId &&
+  (registrationId === undefined ||
+    event.registrationId === registrationId) &&
   event.accreditationId === accreditationId
 
 /**

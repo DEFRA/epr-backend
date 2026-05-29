@@ -90,9 +90,12 @@ export class StreamSequenceError extends Error {
  *
  *   Throws `StreamSlotConflictError` if the
  *   `(registrationId, accreditationId, number)` slot is already occupied.
- * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent | null>} findLatestByPartition
+ * @property {(registrationId: string | undefined, accreditationId: string | null) => Promise<StreamEvent | null>} findLatestByPartition
  *   Return the highest-numbered event for the stream partition, or `null`
- *   if none exist.
+ *   if none exist. When `registrationId` is `undefined` the lookup falls
+ *   back to `accreditationId` alone (safe because accreditation IDs are
+ *   unique). This accommodates legacy `waste-balances` documents that were
+ *   persisted without a `registrationId` field.
  * @property {(registrationId: string, accreditationId: string | null, kind: import('./stream-schema.js').StreamEventKind) => Promise<StreamEvent | null>} findLatestByPartitionAndKind
  *   Return the highest-numbered event of the given kind for the stream
  *   partition, or `null` if none of that kind exist.
