@@ -11,6 +11,11 @@ import {
   getProjectedPrnByNumber
 } from './get-projected-prn.js'
 
+/**
+ * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { StreamEvent, StreamEventKind } from '#waste-balances/repository/stream-schema.js'
+ */
+
 const REG_ID = 'reg-789'
 const ACC_ID = 'acc-456'
 const ORG_ID = 'org-123'
@@ -31,7 +36,10 @@ const noopLogger = () =>
     child: () => {}
   })
 
-/** @param {object} [overrides] */
+/**
+ * @param {Partial<PackagingRecyclingNote>} [overrides]
+ * @returns {PackagingRecyclingNote}
+ */
 const buildPrn = (overrides = {}) => ({
   id: PRN_ID,
   schemaVersion: 2,
@@ -62,7 +70,12 @@ const buildPrn = (overrides = {}) => ({
   ...overrides
 })
 
-/** @param {string} kind @param {number} number @param {string} createdAt */
+/**
+ * @param {StreamEventKind} kind
+ * @param {number} number
+ * @param {string} createdAt
+ * @returns {StreamEvent}
+ */
 const buildEvent = (kind, number, createdAt) => ({
   id: `event-${number}`,
   registrationId: REG_ID,
@@ -95,8 +108,8 @@ const buildBalance = (canonicalSource) => ({
  * balance is what gates whether catch-up events are returned.
  *
  * @param {object} params
- * @param {object | null} [params.prn]
- * @param {object[]} [params.events]
+ * @param {PackagingRecyclingNote | null} [params.prn]
+ * @param {StreamEvent[]} [params.events]
  * @param {string} [params.canonicalSource]
  */
 const buildRepositories = ({
@@ -108,9 +121,7 @@ const buildRepositories = ({
     createInMemoryPackagingRecyclingNotesRepository(prn ? [prn] : [])(
       noopLogger()
     )
-  const streamRepository = createInMemoryStreamRepository(
-    /** @type {*} */ (events)
-  )()
+  const streamRepository = createInMemoryStreamRepository(events)()
   const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
     [buildBalance(canonicalSource)],
     { streamRepository }

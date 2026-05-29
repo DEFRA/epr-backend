@@ -121,7 +121,7 @@ export function createExternalTransitionHandler({
   }
 }
 
-function mapTransitionError(error, path, logger) {
+export function mapTransitionError(error, path, logger) {
   if (error instanceof StatusConflictError) {
     return Boom.conflict(error.message)
   }
