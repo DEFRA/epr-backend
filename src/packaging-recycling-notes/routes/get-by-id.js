@@ -77,8 +77,12 @@ export const packagingRecyclingNoteById = {
         )
       ])
 
+      if (!prn) {
+        throw Boom.notFound('PRN not found')
+      }
+
       if (
-        prn?.organisation.id !== organisationId ||
+        prn.organisation.id !== organisationId ||
         prn.accreditation.id !== accreditationId ||
         prn.status.currentStatus === PRN_STATUS.DELETED
       ) {
