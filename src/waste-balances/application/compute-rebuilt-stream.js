@@ -178,7 +178,7 @@ const buildChronologicalEvents = ({
       registrationId,
       accreditationId: accreditation.id,
       organisationId,
-      createdBy: summaryLog.submittedBy ?? { ...BACKFILL_ACTOR }
+      createdBy: actorOf(summaryLog.submittedBy)
     })
   }
 

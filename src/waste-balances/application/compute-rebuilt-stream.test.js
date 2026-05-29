@@ -4,7 +4,10 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
-import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import {
+  STREAM_EVENT_KIND,
+  streamEventInsertSchema
+} from '../repository/stream-schema.js'
 import {
   BACKFILL_ACTOR,
   computeRebuiltStream
@@ -565,8 +568,12 @@ describe('computeRebuiltStream', () => {
       ...(submittedBy ? { submittedBy } : {})
     })
 
-    it('attributes PRN events to the actor on the status history entry', () => {
-      const signatory = { id: 'sig-7', name: 'Sam Signatory' }
+    it('attributes PRN events to the actor on the status history entry, reduced to id and name', () => {
+      const signatory = {
+        id: 'sig-7',
+        name: 'Sam Signatory',
+        position: 'Signatory'
+      }
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -604,7 +611,7 @@ describe('computeRebuiltStream', () => {
       const issued = result.events.find(
         (e) => e.kind === STREAM_EVENT_KIND.PRN_ISSUED
       )
-      expect(issued.createdBy).toEqual(signatory)
+      expect(issued.createdBy).toEqual({ id: 'sig-7', name: 'Sam Signatory' })
     })
 
     it('attributes summary-log events to the supplied submitter', () => {
@@ -870,6 +877,37 @@ describe('computeRebuiltStream', () => {
         'sl-alpha',
         'sl-zulu'
       ])
+    })
+
+    it('emits events that satisfy the stream insert schema', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      expect(result.events).toHaveLength(2)
+      for (const event of result.events) {
+        expect(streamEventInsertSchema.validate(event).error).toBeUndefined()
+      }
     })
   })
 })
