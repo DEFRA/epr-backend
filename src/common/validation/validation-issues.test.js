@@ -123,6 +123,7 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
 
       expect(() => {
+        // @ts-expect-error -- code intentionally omitted to test the runtime guard
         result.addIssue(
           VALIDATION_SEVERITY.ERROR,
           VALIDATION_CATEGORY.TECHNICAL,
@@ -579,9 +580,9 @@ describe('Validation Issues', () => {
       expect(byRow.size).toBe(2)
       expect(byRow.get(5)).toHaveLength(2)
       expect(byRow.get(10)).toHaveLength(1)
-      expect(byRow.get(5)[0].message).toBe('Error on row 5')
-      expect(byRow.get(5)[1].message).toBe('Warning on row 5')
-      expect(byRow.get(10)[0].message).toBe('Error on row 10')
+      expect(byRow.get(5)?.[0]?.message).toBe('Error on row 5')
+      expect(byRow.get(5)?.[1]?.message).toBe('Warning on row 5')
+      expect(byRow.get(10)?.[0]?.message).toBe('Error on row 10')
     })
 
     it('ignores issues without row context', () => {
@@ -677,7 +678,8 @@ describe('Validation Issues', () => {
       all.push({
         severity: VALIDATION_SEVERITY.WARNING,
         category: VALIDATION_CATEGORY.BUSINESS,
-        message: 'Added'
+        message: 'Added',
+        code: 'TEST_CODE'
       })
 
       expect(result.getAllIssues()).toHaveLength(1)
@@ -819,11 +821,13 @@ describe('Validation Issues', () => {
       )
 
       const issue = result.getAllIssues()[0]
-      expect(issue.context.row).toBe(42)
-      expect(issue.context.field).toBe('TONNAGE')
-      expect(issue.context.section).toBe('Section 1')
-      expect(issue.context.value).toBe('invalid')
-      expect(issue.context.reason).toBe('Must be a number')
+      expect(issue.context).toEqual({
+        row: 42,
+        field: 'TONNAGE',
+        section: 'Section 1',
+        value: 'invalid',
+        reason: 'Must be a number'
+      })
     })
   })
 
@@ -999,6 +1003,7 @@ describe('Validation Issues', () => {
         VALIDATION_CATEGORY.TECHNICAL,
         'System error',
         'TEST_CODE',
+        // @ts-expect-error -- null context intentionally passed to verify it is treated as no context
         null
       )
 
@@ -1015,9 +1020,10 @@ describe('Validation Issues', () => {
   describe('issueToErrorObject', () => {
     it('transforms a domain issue to HTTP format', () => {
       const domainIssue = {
-        severity: 'ERROR',
-        category: 'TECHNICAL',
+        severity: VALIDATION_SEVERITY.ERROR,
+        category: VALIDATION_CATEGORY.TECHNICAL,
         message: 'Invalid value',
+        code: 'TEST_CODE',
         context: {
           location: {
             sheet: 'Received',
@@ -1048,9 +1054,10 @@ describe('Validation Issues', () => {
     it('creates correct type from severity and category', () => {
       expect(
         issueToErrorObject({
-          severity: 'FATAL',
-          category: 'TECHNICAL',
-          message: 'Cannot parse'
+          severity: VALIDATION_SEVERITY.FATAL,
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          message: 'Cannot parse',
+          code: 'TEST_CODE'
         })
       ).toEqual({
         type: 'TECHNICAL_FATAL'
@@ -1058,9 +1065,10 @@ describe('Validation Issues', () => {
 
       expect(
         issueToErrorObject({
-          severity: 'WARNING',
-          category: 'BUSINESS',
+          severity: VALIDATION_SEVERITY.WARNING,
+          category: VALIDATION_CATEGORY.BUSINESS,
           message: 'Low value',
+          code: 'TEST_CODE',
           context: { field: 'TONNAGE' }
         })
       ).toEqual({
@@ -1071,9 +1079,10 @@ describe('Validation Issues', () => {
 
     it('includes all context fields in meta', () => {
       const httpIssue = issueToErrorObject({
-        severity: 'ERROR',
-        category: 'TECHNICAL',
+        severity: VALIDATION_SEVERITY.ERROR,
+        category: VALIDATION_CATEGORY.TECHNICAL,
         message: 'Invalid',
+        code: 'TEST_CODE',
         context: {
           location: { header: 'FIELD' },
           actual: 'bad',
@@ -1093,9 +1102,10 @@ describe('Validation Issues', () => {
 
     it('omits meta when context only contains undefined values', () => {
       const httpIssue = issueToErrorObject({
-        severity: 'ERROR',
-        category: 'TECHNICAL',
+        severity: VALIDATION_SEVERITY.ERROR,
+        category: VALIDATION_CATEGORY.TECHNICAL,
         message: 'Invalid',
+        code: 'TEST_CODE',
         context: { field: undefined, value: undefined }
       })
 
@@ -1155,8 +1165,10 @@ describe('Validation Issues', () => {
       expect(issue.severity).toBe('error')
       expect(issue.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
       expect(issue.message).toBe('Missing field')
-      expect(issue.context.location.row).toBe(5)
-      expect(issue.context.location.field).toBe('PROCESSING_TYPE')
+      expect(issue.context?.location).toEqual({
+        row: 5,
+        field: 'PROCESSING_TYPE'
+      })
     })
 
     it('merges empty result without errors', () => {
@@ -1201,9 +1213,13 @@ describe('Validation Issues', () => {
     it('throws TypeError when merging non-ValidationResult', () => {
       const result = createValidationIssues()
 
+      // @ts-expect-error -- {} is not a collector; testing the runtime guard
       expect(() => result.merge({})).toThrow(TypeError)
+      // @ts-expect-error -- null is not a collector; testing the runtime guard
       expect(() => result.merge(null)).toThrow(TypeError)
+      // @ts-expect-error -- [] is not a collector; testing the runtime guard
       expect(() => result.merge([])).toThrow(TypeError)
+      // @ts-expect-error -- string is not a collector; testing the runtime guard
       expect(() => result.merge('string')).toThrow(TypeError)
     })
 
