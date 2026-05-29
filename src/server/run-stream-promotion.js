@@ -1,6 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { getConfig } from '#root/config.js'
-import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
@@ -9,17 +8,8 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
 import { createWasteBalancesRepository } from '#waste-balances/repository/mongodb.js'
 import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
-import { toStreamSummaryLog } from '#server/run-balance-divergence-diagnostic.js'
+import { loadAccreditationSources } from '#server/load-accreditation-sources.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-
-/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
-const ACTIVE_REGISTRATION_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.CANCELLED,
-  REG_ACC_STATUS.SUSPENDED
-])
 
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const LOCK_NAME = 'stream-promotion'
@@ -80,76 +70,13 @@ const findEmbeddedBalances = async (db) => {
  */
 
 /**
- * @param {{ accreditationId: string, organisationId: string, registrationId: string }} row
- * @param {PromotionDependencies} deps
- */
-/**
- * Load the organisation, registration, and accreditation for a balance row,
- * then rebuild the event stream from authoritative sources.
- *
  * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
  */
 const rebuildEvents = async (row, deps) => {
-  const {
-    organisationsRepository,
-    prnRepository,
-    wasteRecordsRepository,
-    overseasSitesRepository,
-    summaryLogsRepository
-  } = deps
-
-  const organisation = await organisationsRepository.findById(
-    row.organisationId
-  )
-  const accreditation = organisation.accreditations.find(
-    (a) => a.id === row.accreditationId
-  )
-  if (!accreditation) {
-    throw new Error(
-      `Accreditation ${row.accreditationId} not found on organisation ${row.organisationId}`
-    )
-  }
-  const registration = organisation.registrations.find(
-    (r) =>
-      r.accreditationId === row.accreditationId &&
-      ACTIVE_REGISTRATION_STATUSES.has(r.status)
-  )
-  if (!registration) {
-    throw new Error(
-      `No registration links to accreditation ${row.accreditationId} on organisation ${row.organisationId}`
-    )
-  }
-
-  const wasteRecords = await wasteRecordsRepository.findByRegistration(
-    row.organisationId,
-    registration.id
-  )
-  const prns = await prnRepository.findByAccreditation(row.accreditationId)
-  const overseasSites = await resolveOverseasSites(
-    organisationsRepository,
-    overseasSitesRepository,
-    row.organisationId,
-    registration.id
-  )
-  const summaryLogDocs = await summaryLogsRepository.findAllByOrgReg(
-    row.organisationId,
-    registration.id
-  )
-
-  const { events } = computeRebuiltStream({
-    accreditation,
-    wasteRecords,
-    prns,
-    overseasSites,
-    summaryLogs: summaryLogDocs
-      .filter(
-        ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
-      )
-      .map(toStreamSummaryLog)
-  })
-
-  return { events, registration }
+  const sources = await loadAccreditationSources(row, deps)
+  const { events } = computeRebuiltStream(sources)
+  return { events, registration: sources.registration }
 }
 
 /**
