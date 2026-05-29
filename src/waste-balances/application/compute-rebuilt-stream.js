@@ -116,29 +116,26 @@ const actorOf = (actor) =>
   actor ? { id: actor.id, name: actor.name } : { ...BACKFILL_ACTOR }
 
 /**
- * Build an unsorted list of chronologically timestamped event tuples
- * from summary log submissions and PRN status transitions.
+ * Build summary-log-submitted events, threading the running set of seen
+ * summary-log ids so each submission credits the waste-record data as it
+ * stood at that point.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
  * @param {string} params.registrationId
  * @param {string} params.organisationId
  * @param {Array} params.wasteRecords
- * @param {Array} params.prns
  * @param {Object} params.overseasSites
  * @param {Array<{ id: string, status: string, submittedAt?: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }>} params.summaryLogs
  */
-const buildChronologicalEvents = ({
+const buildSummaryLogEvents = ({
   accreditation,
   registrationId,
   organisationId,
   wasteRecords,
-  prns,
   overseasSites,
   summaryLogs
 }) => {
-  const events = []
-
   const submitted = summaryLogs
     .filter(
       /** @returns {sl is { id: string, status: string, submittedAt: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }} */
@@ -150,6 +147,7 @@ const buildChronologicalEvents = ({
     )
 
   const seenSummaryLogIds = new Set()
+  const events = []
 
   for (const summaryLog of submitted) {
     seenSummaryLogIds.add(summaryLog.id)
@@ -182,38 +180,109 @@ const buildChronologicalEvents = ({
     })
   }
 
-  for (const prn of prns) {
-    const history = prn.status.history
-    for (let i = 0; i < history.length; i++) {
-      const prevStatus = i === 0 ? null : history[i - 1].status
-      const newStatus = history[i].status
-      const kind = prnTransitionToStreamKind(prevStatus, newStatus)
+  return events
+}
 
-      if (kind === null) {
-        if (
-          prevStatus !== null &&
-          !isStructurallyValidPrnTransition(prevStatus, newStatus)
-        ) {
-          throw new Error(
-            `Impossible PRN status transition in history for prnId=${prn.id}: ${prevStatus} -> ${newStatus}`
-          )
-        }
-        continue
-      }
-      events.push({
-        timestamp: history[i].at,
-        kind,
-        payload: { prnId: prn.id, amount: prn.tonnage },
+/**
+ * Build the stream event for a single PRN status-history entry, or null when
+ * the transition is a valid state-machine move that produces no balance event.
+ * Throws when the transition cannot occur in the PRN state machine at all,
+ * surfacing corrupt source history.
+ *
+ * @param {Object} params
+ * @param {{ id: string, tonnage: number, status: { history: Array<{ status: string, at: Date, by?: { id: string, name: string } }> } }} params.prn
+ * @param {number} params.index
+ * @param {{ id: string }} params.accreditation
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
+ */
+const prnTransitionEvent = ({
+  prn,
+  index,
+  accreditation,
+  registrationId,
+  organisationId
+}) => {
+  const history = prn.status.history
+  const prevStatus = index === 0 ? null : history[index - 1].status
+  const newStatus = history[index].status
+  const kind = prnTransitionToStreamKind(prevStatus, newStatus)
+
+  if (kind === null) {
+    if (
+      prevStatus !== null &&
+      !isStructurallyValidPrnTransition(prevStatus, newStatus)
+    ) {
+      throw new Error(
+        `Impossible PRN status transition in history for prnId=${prn.id}: ${prevStatus} -> ${newStatus}`
+      )
+    }
+    return null
+  }
+
+  return {
+    timestamp: history[index].at,
+    kind,
+    payload: { prnId: prn.id, amount: prn.tonnage },
+    registrationId,
+    accreditationId: accreditation.id,
+    organisationId,
+    createdBy: actorOf(history[index].by)
+  }
+}
+
+/**
+ * Build PRN events from every status transition in each PRN's history.
+ *
+ * @param {Object} params
+ * @param {{ id: string }} params.accreditation
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
+ * @param {Array} params.prns
+ */
+const buildPrnEvents = ({
+  accreditation,
+  registrationId,
+  organisationId,
+  prns
+}) => {
+  const events = []
+
+  for (const prn of prns) {
+    for (let i = 0; i < prn.status.history.length; i++) {
+      const event = prnTransitionEvent({
+        prn,
+        index: i,
+        accreditation,
         registrationId,
-        accreditationId: accreditation.id,
-        organisationId,
-        createdBy: actorOf(history[i].by)
+        organisationId
       })
+      if (event !== null) {
+        events.push(event)
+      }
     }
   }
 
   return events
 }
+
+/**
+ * Build an unsorted list of chronologically timestamped event tuples
+ * from summary log submissions and PRN status transitions.
+ *
+ * @param {Object} params
+ * @param {{ id: string }} params.accreditation
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
+ * @param {Array} params.wasteRecords
+ * @param {Array} params.prns
+ * @param {Object} params.overseasSites
+ * @param {Array<{ id: string, status: string, submittedAt?: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }>} params.summaryLogs
+ */
+const buildChronologicalEvents = (params) => [
+  ...buildSummaryLogEvents(params),
+  ...buildPrnEvents(params)
+]
 
 /**
  * Replay a chronologically sorted list of events, threading opening and
