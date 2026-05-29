@@ -1,5 +1,8 @@
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  PRN_STATUS_TRANSITIONS
+} from '#packaging-recycling-notes/domain/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
@@ -8,6 +11,17 @@ import {
   closingForPrn
 } from './stream-closing-balance.js'
 import { getTargetAmount } from './target-amount.js'
+
+/**
+ * Attribution for backfilled events with no recoverable real actor. The
+ * submitting session for historical summary-log submissions is not persisted
+ * on the summary-log document or the waste-record version, so a backfill
+ * supplies it out of band where it can; absent that, events are attributed to
+ * the system.
+ *
+ * @type {Readonly<import('../repository/stream-schema.js').StreamUserSummary>}
+ */
+export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Reconstruct a waste record's data as it existed at a given submission
@@ -81,18 +95,43 @@ export const prnTransitionToStreamKind = (prevStatus, newStatus) =>
   null
 
 /**
+ * Whether a status move exists in the PRN state machine, irrespective of
+ * which actor performed it. Used to detect corrupt source history rather
+ * than to authorise a live transition.
+ *
+ * @param {string} fromStatus
+ * @param {string} toStatus
+ * @returns {boolean}
+ */
+const isStructurallyValidPrnTransition = (fromStatus, toStatus) =>
+  (PRN_STATUS_TRANSITIONS[fromStatus] ?? []).some((t) => t.status === toStatus)
+
+/**
+ * Reduce a PRN status-history actor to the stream's user-summary shape.
+ *
+ * @param {{ id: string, name: string } | undefined} actor
+ * @returns {import('../repository/stream-schema.js').StreamUserSummary}
+ */
+const actorOf = (actor) =>
+  actor ? { id: actor.id, name: actor.name } : { ...BACKFILL_ACTOR }
+
+/**
  * Build an unsorted list of chronologically timestamped event tuples
  * from summary log submissions and PRN status transitions.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
  * @param {Array} params.wasteRecords
  * @param {Array} params.prns
  * @param {Object} params.overseasSites
- * @param {Array<{ id: string, status: string, submittedAt?: string }>} params.summaryLogs
+ * @param {Array<{ id: string, status: string, submittedAt?: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }>} params.summaryLogs
  */
 const buildChronologicalEvents = ({
   accreditation,
+  registrationId,
+  organisationId,
   wasteRecords,
   prns,
   overseasSites,
@@ -102,7 +141,7 @@ const buildChronologicalEvents = ({
 
   const submitted = summaryLogs
     .filter(
-      /** @returns {sl is { id: string, status: string, submittedAt: string }} */
+      /** @returns {sl is { id: string, status: string, submittedAt: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }} */
       (sl) => sl.status === SUMMARY_LOG_STATUS.SUBMITTED
     )
     .sort(
@@ -136,9 +175,10 @@ const buildChronologicalEvents = ({
       timestamp: new Date(summaryLog.submittedAt),
       kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId: summaryLog.id, creditTotal },
-      registrationId: wasteRecords[0]?.registrationId,
+      registrationId,
       accreditationId: accreditation.id,
-      organisationId: wasteRecords[0]?.organisationId
+      organisationId,
+      createdBy: summaryLog.submittedBy ?? { ...BACKFILL_ACTOR }
     })
   }
 
@@ -146,17 +186,28 @@ const buildChronologicalEvents = ({
     const history = prn.status.history
     for (let i = 0; i < history.length; i++) {
       const prevStatus = i === 0 ? null : history[i - 1].status
-      const kind = prnTransitionToStreamKind(prevStatus, history[i].status)
+      const newStatus = history[i].status
+      const kind = prnTransitionToStreamKind(prevStatus, newStatus)
+
       if (kind === null) {
+        if (
+          prevStatus !== null &&
+          !isStructurallyValidPrnTransition(prevStatus, newStatus)
+        ) {
+          throw new Error(
+            `Impossible PRN status transition in history for prnId=${prn.id}: ${prevStatus} -> ${newStatus}`
+          )
+        }
         continue
       }
       events.push({
         timestamp: history[i].at,
         kind,
         payload: { prnId: prn.id, amount: prn.tonnage },
-        registrationId: wasteRecords[0]?.registrationId,
+        registrationId,
         accreditationId: accreditation.id,
-        organisationId: wasteRecords[0]?.organisationId
+        organisationId,
+        createdBy: actorOf(history[i].by)
       })
     }
   }
@@ -174,7 +225,8 @@ const buildChronologicalEvents = ({
  *   payload: Object,
  *   registrationId: string,
  *   accreditationId: string | null,
- *   organisationId: string
+ *   organisationId: string,
+ *   createdBy: import('../repository/stream-schema.js').StreamUserSummary
  * }>} events
  * @returns {import('../repository/stream-schema.js').StreamEventInsert[]}
  */
@@ -184,7 +236,7 @@ const replayStream = (events) => {
   let previousCreditTotal = 0
 
   for (let i = 0; i < events.length; i++) {
-    const { timestamp, kind, payload, ...context } = events[i]
+    const { timestamp, kind, payload, createdBy, ...context } = events[i]
     const openingBalance = { ...previousBalance }
 
     let closingBalance
@@ -208,7 +260,7 @@ const replayStream = (events) => {
       openingBalance,
       closingBalance,
       createdAt: timestamp,
-      createdBy: { id: 'system', name: 'replay' }
+      createdBy
     })
 
     previousBalance = closingBalance
@@ -217,22 +269,53 @@ const replayStream = (events) => {
   return result
 }
 
+const SUMMARY_LOG_KIND_PRIORITY = 0
+const PRN_KIND_PRIORITY = 1
+
+const kindOrdering = (kind) =>
+  kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    ? SUMMARY_LOG_KIND_PRIORITY
+    : PRN_KIND_PRIORITY
+
+const naturalKey = (event) =>
+  event.kind === STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+    ? event.payload.summaryLogId
+    : event.payload.prnId
+
+/**
+ * Total order over events for deterministic seeding. Primary by timestamp;
+ * a summary-log submission precedes a PRN op sharing its instant so the PRN
+ * sees the post-submission balance; remaining ties break on natural key.
+ *
+ * @param {{ timestamp: Date, kind: string, payload: Object }} a
+ * @param {{ timestamp: Date, kind: string, payload: Object }} b
+ * @returns {number}
+ */
+const byStreamOrder = (a, b) =>
+  a.timestamp.getTime() - b.timestamp.getTime() ||
+  kindOrdering(a.kind) - kindOrdering(b.kind) ||
+  naturalKey(a).localeCompare(naturalKey(b))
+
 /**
  * Reconstruct the full historical event stream for an accreditation and
- * derive balance totals from it. The event list validates the stream
- * replay logic against authoritative sources; seeding these events into
- * a store requires further work (deterministic tiebreaks, partition
- * shape, createdBy attribution) tracked separately under PAE-1382.
+ * derive balance totals from it. Events are totally ordered, carry real
+ * registration / organisation context and actor attribution, and throw on
+ * source history that violates the PRN state machine — so the sequence is
+ * seedable into the stream store, not only a totals cross-check.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
+ * @param {string} params.registrationId
+ * @param {string} params.organisationId
  * @param {Array} params.wasteRecords
  * @param {Array} params.prns
  * @param {Object} params.overseasSites
- * @param {Array<{ id: string, status: string, submittedAt?: string }>} params.summaryLogs
+ * @param {Array<{ id: string, status: string, submittedAt?: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }>} params.summaryLogs
  */
 export const computeRebuiltStream = ({
   accreditation,
+  registrationId,
+  organisationId,
   wasteRecords,
   prns,
   overseasSites,
@@ -240,13 +323,15 @@ export const computeRebuiltStream = ({
 }) => {
   const unsorted = buildChronologicalEvents({
     accreditation,
+    registrationId,
+    organisationId,
     wasteRecords,
     prns,
     overseasSites,
     summaryLogs
   })
 
-  unsorted.sort((a, b) => a.timestamp - b.timestamp)
+  unsorted.sort(byStreamOrder)
 
   const events = replayStream(unsorted)
 

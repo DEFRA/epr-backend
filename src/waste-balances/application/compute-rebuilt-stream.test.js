@@ -5,7 +5,10 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
-import { computeRebuiltStream } from './compute-rebuilt-stream.js'
+import {
+  BACKFILL_ACTOR,
+  computeRebuiltStream
+} from './compute-rebuilt-stream.js'
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn()
@@ -38,6 +41,8 @@ describe('computeRebuiltStream', () => {
   it('returns zero totals and empty events when given no inputs', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [],
       prns: [],
       overseasSites,
@@ -99,6 +104,8 @@ describe('computeRebuiltStream', () => {
 
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords,
       prns,
       overseasSites,
@@ -164,6 +171,8 @@ describe('computeRebuiltStream', () => {
 
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords,
       prns,
       overseasSites,
@@ -194,6 +203,8 @@ describe('computeRebuiltStream', () => {
   it('ignores non-submitted summary logs', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [
         {
           organisationId: 'org-1',
@@ -228,6 +239,8 @@ describe('computeRebuiltStream', () => {
   it('excludes waste records not yet created at a submission point', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [
         {
           organisationId: 'org-1',
@@ -272,6 +285,8 @@ describe('computeRebuiltStream', () => {
   it('reverses availableAmount for a pre-issue PRN cancellation', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [
         {
           organisationId: 'org-1',
@@ -327,6 +342,8 @@ describe('computeRebuiltStream', () => {
   it('records a zero-delta PRN_ACCEPTED event when a producer accepts', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [
         {
           organisationId: 'org-1',
@@ -393,6 +410,8 @@ describe('computeRebuiltStream', () => {
   it('records a zero-delta PRN_REJECTED event when a producer rejects', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [
         {
           organisationId: 'org-1',
@@ -459,6 +478,8 @@ describe('computeRebuiltStream', () => {
   it('reverses both amount and availableAmount for a post-issue cancellation', () => {
     const result = computeRebuiltStream({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords: [
         {
           organisationId: 'org-1',
@@ -517,5 +538,338 @@ describe('computeRebuiltStream', () => {
     // PRN created, issued, then cancelled: net zero effect
     expect(result.amount).toBe(100)
     expect(result.availableAmount).toBe(100)
+  })
+
+  describe('event linkage for stream seeding', () => {
+    const registrationId = 'reg-1'
+    const organisationId = 'org-1'
+
+    const submittedRecord = (tonnage) => ({
+      organisationId,
+      registrationId,
+      type: 'received',
+      data: { processingType: 'INPUT', tonnage },
+      versions: [
+        {
+          summaryLog: { id: 'sl-1' },
+          data: { processingType: 'INPUT', tonnage }
+        }
+      ],
+      excludedFromWasteBalance: false
+    })
+
+    const submittedLog = (submittedBy) => ({
+      id: 'sl-1',
+      status: SUMMARY_LOG_STATUS.SUBMITTED,
+      submittedAt: '2025-01-15T10:00:00.000Z',
+      ...(submittedBy ? { submittedBy } : {})
+    })
+
+    it('attributes PRN events to the actor on the status history entry', () => {
+      const signatory = { id: 'sig-7', name: 'Sam Signatory' }
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-22T00:00:00.000Z'),
+                  by: signatory
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      const issued = result.events.find(
+        (e) => e.kind === STREAM_EVENT_KIND.PRN_ISSUED
+      )
+      expect(issued.createdBy).toEqual(signatory)
+    })
+
+    it('attributes summary-log events to the supplied submitter', () => {
+      const submitter = { id: 'usr-9', name: 'submitter@example.com' }
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [],
+        overseasSites,
+        summaryLogs: [submittedLog(submitter)]
+      })
+
+      expect(result.events[0].kind).toBe(
+        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      )
+      expect(result.events[0].createdBy).toEqual(submitter)
+    })
+
+    it('falls back to a system backfill actor when no submitter is supplied', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      expect(result.events[0].createdBy).toEqual(BACKFILL_ACTOR)
+    })
+
+    it('sources registrationId and organisationId from parameters for a PRN-only accreditation', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId: 'reg-prn-only',
+        organisationId: 'org-prn-only',
+        wasteRecords: [],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.events).toHaveLength(1)
+      expect(result.events[0].registrationId).toBe('reg-prn-only')
+      expect(result.events[0].organisationId).toBe('org-prn-only')
+      expect(result.events[0].accreditationId).toBe(accreditation.id)
+    })
+
+    it('orders a summary-log submission before a PRN event sharing its timestamp', () => {
+      const sharedInstant = '2025-01-15T10:00:00.000Z'
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-10T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date(sharedInstant),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      expect(result.events[0].kind).toBe(
+        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      )
+      expect(result.events[1].kind).toBe(STREAM_EVENT_KIND.PRN_CREATED)
+    })
+
+    it('breaks PRN-vs-PRN timestamp ties by natural key', () => {
+      const sharedInstant = new Date('2025-01-21T00:00:00.000Z')
+      const createdAt = (id) => ({
+        id,
+        tonnage: 10,
+        status: {
+          history: [
+            {
+              status: PRN_STATUS.AWAITING_AUTHORISATION,
+              at: sharedInstant,
+              by: { id: 'rep-1', name: 'Rita Reprocessor' }
+            }
+          ]
+        }
+      })
+
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [createdAt('prn-zulu'), createdAt('prn-alpha')],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.events.map((e) => e.payload.prnId)).toEqual([
+        'prn-alpha',
+        'prn-zulu'
+      ])
+    })
+
+    it('throws on an impossible PRN status transition in history', () => {
+      expect(() =>
+        computeRebuiltStream({
+          accreditation,
+          registrationId,
+          organisationId,
+          wasteRecords: [],
+          prns: [
+            {
+              id: 'prn-1',
+              tonnage: 10,
+              status: {
+                history: [
+                  {
+                    status: PRN_STATUS.DRAFT,
+                    at: new Date('2025-01-20T00:00:00.000Z'),
+                    by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                  },
+                  {
+                    status: PRN_STATUS.AWAITING_AUTHORISATION,
+                    at: new Date('2025-01-21T00:00:00.000Z'),
+                    by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                  },
+                  {
+                    status: PRN_STATUS.AWAITING_CANCELLATION,
+                    at: new Date('2025-01-22T00:00:00.000Z'),
+                    by: { id: 'sig-1', name: 'Sam Signatory' }
+                  }
+                ]
+              }
+            }
+          ],
+          overseasSites,
+          summaryLogs: []
+        })
+      ).toThrow(/prn-1/)
+    })
+
+    it('skips a valid transition that maps to no balance event without throwing', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 10,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.DISCARDED,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.events).toHaveLength(0)
+    })
+
+    it('throws when a history entry transitions from an unrecognised status', () => {
+      expect(() =>
+        computeRebuiltStream({
+          accreditation,
+          registrationId,
+          organisationId,
+          wasteRecords: [],
+          prns: [
+            {
+              id: 'prn-1',
+              tonnage: 10,
+              status: {
+                history: [
+                  {
+                    status: 'not-a-real-status',
+                    at: new Date('2025-01-20T00:00:00.000Z'),
+                    by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                  },
+                  {
+                    status: PRN_STATUS.DRAFT,
+                    at: new Date('2025-01-21T00:00:00.000Z'),
+                    by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                  }
+                ]
+              }
+            }
+          ],
+          overseasSites,
+          summaryLogs: []
+        })
+      ).toThrow(/prn-1/)
+    })
+
+    it('breaks summary-log timestamp ties by natural key', () => {
+      const sharedInstant = '2025-01-15T10:00:00.000Z'
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [],
+        overseasSites,
+        summaryLogs: [
+          {
+            id: 'sl-zulu',
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            submittedAt: sharedInstant
+          },
+          {
+            id: 'sl-alpha',
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            submittedAt: sharedInstant
+          }
+        ]
+      })
+
+      expect(result.events.map((e) => e.payload.summaryLogId)).toEqual([
+        'sl-alpha',
+        'sl-zulu'
+      ])
+    })
   })
 })

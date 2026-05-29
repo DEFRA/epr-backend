@@ -622,6 +622,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(computeRebuiltStream).toHaveBeenCalledWith({
       accreditation,
+      registrationId: 'reg-1',
+      organisationId: 'org-1',
       wasteRecords,
       prns,
       overseasSites: {},

@@ -148,6 +148,8 @@ const compareForEmbedded = async (embedded, deps) => {
 
   const stream = computeRebuiltStream({
     accreditation,
+    registrationId: registration.id,
+    organisationId: embedded.organisationId,
     wasteRecords,
     prns,
     overseasSites,
