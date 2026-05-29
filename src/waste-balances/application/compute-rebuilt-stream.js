@@ -170,6 +170,9 @@ const buildSummaryLogEvents = ({
       creditTotal = toNumber(add(creditTotal, amount))
     }
 
+    // One event is emitted per submitted log, so a missing submitter is
+    // exactly one backfilled event — no need to gate on emission as the PRN
+    // builder does.
     if (!summaryLog.submittedBy) {
       backfilledActorCount += 1
     }
