@@ -223,6 +223,30 @@ export function logWasteBalanceUpdate(
 }
 
 /**
+ * Transition table keyed by `${currentStatus}|${newStatus}`. Each entry names
+ * the stream event kind the transition writes. Transitions without an entry
+ * have no balance effect.
+ *
+ * @type {Record<string, StreamEventKind>}
+ */
+const TRANSITION_TO_EVENT_KIND = Object.freeze({
+  [`${PRN_STATUS.DRAFT}|${PRN_STATUS.AWAITING_AUTHORISATION}`]:
+    STREAM_EVENT_KIND.PRN_CREATED,
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.AWAITING_ACCEPTANCE}`]:
+    STREAM_EVENT_KIND.PRN_ISSUED,
+  [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.ACCEPTED}`]:
+    STREAM_EVENT_KIND.PRN_ACCEPTED,
+  [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.AWAITING_CANCELLATION}`]:
+    STREAM_EVENT_KIND.PRN_REJECTED,
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.CANCELLED}`]:
+    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]:
+    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
+  [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]:
+    STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
+})
+
+/**
  * Derives the balance events a status transition would write. An empty array
  * means the transition has no balance effect — callers use that to skip the
  * stream-write decision read entirely. The kinds align with `STREAM_EVENT_KIND`
@@ -234,37 +258,8 @@ export function logWasteBalanceUpdate(
  * @returns {BalanceEvent[]}
  */
 export function balanceEventsFor(currentStatus, newStatus, params) {
-  if (newStatus === PRN_STATUS.AWAITING_AUTHORISATION) {
-    return [{ kind: STREAM_EVENT_KIND.PRN_CREATED, params }]
-  }
-  if (newStatus === PRN_STATUS.AWAITING_ACCEPTANCE) {
-    return [{ kind: STREAM_EVENT_KIND.PRN_ISSUED, params }]
-  }
-  if (
-    newStatus === PRN_STATUS.ACCEPTED &&
-    currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-  ) {
-    return [{ kind: STREAM_EVENT_KIND.PRN_ACCEPTED, params }]
-  }
-  if (
-    newStatus === PRN_STATUS.AWAITING_CANCELLATION &&
-    currentStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-  ) {
-    return [{ kind: STREAM_EVENT_KIND.PRN_REJECTED, params }]
-  }
-  if (
-    (newStatus === PRN_STATUS.CANCELLED || newStatus === PRN_STATUS.DELETED) &&
-    currentStatus === PRN_STATUS.AWAITING_AUTHORISATION
-  ) {
-    return [{ kind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED, params }]
-  }
-  if (
-    newStatus === PRN_STATUS.CANCELLED &&
-    currentStatus === PRN_STATUS.AWAITING_CANCELLATION
-  ) {
-    return [{ kind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, params }]
-  }
-  return []
+  const kind = TRANSITION_TO_EVENT_KIND[`${currentStatus}|${newStatus}`]
+  return kind ? [{ kind, params }] : []
 }
 
 /**

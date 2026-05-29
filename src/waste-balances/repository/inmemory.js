@@ -141,10 +141,7 @@ const performGetPrnCatchupEvents =
     const current = wasteBalanceStorage.find(
       (b) => b.accreditationId === validatedAccreditationId
     )
-    if (
-      !current ||
-      current.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-    ) {
+    if (current?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
       return []
     }
     return streamRepository.findEventsByPrnIdAfter(
@@ -183,12 +180,66 @@ const performResetCanonicalSourceToEmbedded =
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
+const balanceMutators = (wasteBalanceStorage, dependencies) => {
+  const find = findBalance(wasteBalanceStorage)
+  const save = saveBalance(wasteBalanceStorage)
+  return {
+    updateWasteBalanceTransactions: async (
+      wasteRecords,
+      { user, accreditation, overseasSites, summaryLogId }
+    ) =>
+      performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditation,
+        dependencies,
+        findBalance: find,
+        saveBalance: save,
+        user,
+        overseasSites,
+        summaryLogId
+      }),
+    deductAvailableBalanceForPrnCreation: async (deductParams) =>
+      performDeductAvailableBalanceForPrnCreation({
+        deductParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    deductTotalBalanceForPrnIssue: async (deductParams) =>
+      performDeductTotalBalanceForPrnIssue({
+        deductParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    creditAvailableBalanceForPrnCancellation: async (creditParams) =>
+      performCreditAvailableBalanceForPrnCancellation({
+        creditParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    creditFullBalanceForIssuedPrnCancellation: async (creditParams) =>
+      performCreditFullBalanceForIssuedPrnCancellation({
+        creditParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    appendStreamEvent: async (appendParams) =>
+      performAppendPrnStreamEvent({
+        appendParams,
+        findBalance: find,
+        dependencies
+      })
+  }
+}
+
 export const createInMemoryWasteBalancesRepository = (
   initialWasteBalances,
   dependencies
 ) => {
   const wasteBalanceStorage = initialWasteBalances
-
   const { streamRepository } = dependencies
 
   return () => ({
@@ -200,60 +251,7 @@ export const createInMemoryWasteBalancesRepository = (
       wasteBalanceStorage,
       streamRepository
     ),
-    updateWasteBalanceTransactions: async (
-      wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId }
-    ) => {
-      return performUpdateWasteBalanceTransactions({
-        wasteRecords,
-        accreditation,
-        dependencies,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        user,
-        overseasSites,
-        summaryLogId
-      })
-    },
-    deductAvailableBalanceForPrnCreation: async (deductParams) => {
-      return performDeductAvailableBalanceForPrnCreation({
-        deductParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    deductTotalBalanceForPrnIssue: async (deductParams) => {
-      return performDeductTotalBalanceForPrnIssue({
-        deductParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    creditAvailableBalanceForPrnCancellation: async (creditParams) => {
-      return performCreditAvailableBalanceForPrnCancellation({
-        creditParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
-      return performCreditFullBalanceForIssuedPrnCancellation({
-        creditParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    appendStreamEvent: async (appendParams) => {
-      return performAppendPrnStreamEvent({
-        appendParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
+    ...balanceMutators(wasteBalanceStorage, dependencies),
     flipCanonicalSourceToMigrating:
       performFlipCanonicalSourceToMigrating(wasteBalanceStorage),
     flipCanonicalSourceToLedger:
@@ -264,7 +262,6 @@ export const createInMemoryWasteBalancesRepository = (
       wasteBalanceStorage,
       streamRepository
     ),
-    // Test-only method to access internal storage
     _getStorageForTesting: () => wasteBalanceStorage
   })
 }

@@ -127,8 +127,7 @@ export const performAppendPrnStreamEvent = async ({
   const wasteBalance = await findBalance(validatedAccreditationId)
 
   if (
-    !wasteBalance ||
-    wasteBalance.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER ||
+    wasteBalance?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER ||
     !dependencies?.streamRepository
   ) {
     throw Boom.badImplementation(

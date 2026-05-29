@@ -82,5 +82,5 @@ export const foldPrnFromTailEvents = (prn, tailEvents) => {
   if (tailEvents.length === 0) {
     return prn
   }
-  return tailEvents.reduce(applyEvent, prn)
+  return tailEvents.reduce((acc, event) => applyEvent(acc, event), prn)
 }

@@ -139,7 +139,7 @@ const performGetPrnCatchupEvents =
         { accreditationId: validatedAccreditationId },
         { projection: { canonicalSource: 1 } }
       )
-    if (!doc || doc.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+    if (doc?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
       return []
     }
     return streamRepository.findEventsByPrnIdAfter(

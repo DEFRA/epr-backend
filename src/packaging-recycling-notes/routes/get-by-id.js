@@ -74,8 +74,7 @@ export const packagingRecyclingNoteById = {
       ])
 
       if (
-        !prn ||
-        prn.organisation.id !== organisationId ||
+        prn?.organisation.id !== organisationId ||
         prn.accreditation.id !== accreditationId ||
         prn.status.currentStatus === PRN_STATUS.DELETED
       ) {

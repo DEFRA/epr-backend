@@ -124,7 +124,9 @@ async function applyEmbeddedBalanceEffect({
   params
 }) {
   const effect = EMBEDDED_BALANCE_EFFECTS[`${currentStatus}|${newStatus}`]
-  if (!effect) return
+  if (!effect) {
+    return
+  }
   await effect.apply(wasteBalancesRepository, params)
   logWasteBalanceUpdate(
     logger,
@@ -708,6 +710,11 @@ function selectEmbeddedWriteStrategy(newStatus) {
  * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
+const dispatchStatusWrite = async (ctx) =>
+  (await isOnLedger(ctx.wasteBalancesRepository, ctx.accreditationId))
+    ? performLedgerWrite(ctx)
+    : selectEmbeddedWriteStrategy(ctx.newStatus)(ctx)
+
 export async function updatePrnStatus({
   prnRepository,
   wasteBalancesRepository,
@@ -746,68 +753,27 @@ export async function updatePrnStatus({
     lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
 
-  // Pre-creation transition: the PRN never reached the stream, so the
-  // accreditation's marker is irrelevant. Doc-only update.
-  if (
-    currentStatus === PRN_STATUS.DRAFT &&
-    newStatus === PRN_STATUS.DISCARDED
-  ) {
-    const updatedPrn = await applyStatusUpdate({
-      prnRepository,
-      organisationsRepository,
-      prn,
-      updateParams,
-      newStatus,
-      organisationId,
-      accreditationId,
-      user,
-      now
-    })
-
-    await prnMetrics.recordStatusTransition({
-      fromStatus: currentStatus,
-      toStatus: newStatus,
-      material: prn.accreditation.material,
-      isExport: prn.isExport
-    })
-
-    return updatedPrn
+  const ctx = {
+    prnRepository,
+    organisationsRepository,
+    wasteBalancesRepository,
+    logger,
+    prn,
+    updateParams,
+    newStatus,
+    organisationId,
+    registrationId,
+    accreditationId,
+    user,
+    currentStatus,
+    now,
+    id
   }
 
-  const updatedPrn = (await isOnLedger(
-    wasteBalancesRepository,
-    accreditationId
-  ))
-    ? await performLedgerWrite({
-        prnRepository,
-        organisationsRepository,
-        wasteBalancesRepository,
-        logger,
-        prn,
-        newStatus,
-        organisationId,
-        registrationId,
-        accreditationId,
-        user,
-        currentStatus,
-        id
-      })
-    : await selectEmbeddedWriteStrategy(newStatus)({
-        prnRepository,
-        organisationsRepository,
-        wasteBalancesRepository,
-        logger,
-        prn,
-        updateParams,
-        newStatus,
-        organisationId,
-        registrationId,
-        accreditationId,
-        user,
-        currentStatus,
-        now,
-        id
-      })
+  const updatedPrn =
+    currentStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
+      ? await applyStatusUpdate(ctx)
+      : await dispatchStatusWrite(ctx)
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,
