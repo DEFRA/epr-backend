@@ -16,7 +16,7 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { FindByStatusParams, PaginatedResult, RollbackParams, UpdateStatusParams } from './port.js' */
+/** @import { FindByStatusParams, PaginatedResult, PersistProjectionParams, RollbackParams, UpdateStatusParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -255,6 +255,58 @@ const performUpdateStatus =
 /**
  * @param {Storage} storage
  * @param {TypedLogger} logger
+ * @returns {(params: PersistProjectionParams) => Promise<PackagingRecyclingNote | null>}
+ */
+const performPersistProjection =
+  (storage, logger) =>
+  async ({ projection, expectedVersion }) => {
+    const id = projection.id
+    const existing = storage.get(id)
+    if (!existing) {
+      return null
+    }
+
+    if (existing.version !== expectedVersion) {
+      const conflictError = buildVersionConflictError(
+        id,
+        expectedVersion,
+        existing.version
+      )
+      logger.error({
+        err: conflictError,
+        message: `Version conflict detected for PRN ${id}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: id
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    enforceMonotonicWatermark(
+      id,
+      existing.lastAppliedEventNumber,
+      projection.lastAppliedEventNumber,
+      logger
+    )
+
+    if (projection.prnNumber) {
+      for (const other of storage.values()) {
+        if (other.id !== id && other.prnNumber === projection.prnNumber) {
+          throw new PrnNumberConflictError(projection.prnNumber)
+        }
+      }
+    }
+
+    const persisted = { ...projection, id }
+    storage.set(id, structuredClone(persisted))
+    return structuredClone(persisted)
+  }
+
+/**
+ * @param {Storage} storage
+ * @param {TypedLogger} logger
  * @param {{ revertedStatus: import('#packaging-recycling-notes/domain/model.js').PrnStatus, slotsToUnset: Array<'issued' | 'cancelled' | 'deleted'>, unsetPrnNumber?: boolean }} options
  * @returns {(params: RollbackParams) => Promise<PackagingRecyclingNote | null>}
  */
@@ -354,6 +406,7 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     findByPrnNumber: performFindByPrnNumber(storage),
     findByStatus: performFindByStatus(storage, excludeOrganisationIds),
     updateStatus: performUpdateStatus(storage, logger),
+    persistProjection: performPersistProjection(storage, logger),
     rollbackIssuance: performRollback(storage, logger, {
       revertedStatus: PRN_STATUS.AWAITING_AUTHORISATION,
       slotsToUnset: ['issued'],

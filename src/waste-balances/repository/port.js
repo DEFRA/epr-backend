@@ -39,6 +39,17 @@
  */
 
 /**
+ * @typedef {Object} AppendStreamEventParams
+ * @property {string} accreditationId
+ * @property {string} registrationId
+ * @property {string} organisationId
+ * @property {string} prnId
+ * @property {number} tonnage
+ * @property {string} userId
+ * @property {import('./stream-schema.js').StreamEventKind} streamKind
+ */
+
+/**
  * @typedef {Object} FlipCanonicalSourceToMigratingParams
  * @property {string} accreditationId
  * @property {number} capturedVersion - The `version` observed on the embedded
@@ -93,6 +104,17 @@
  */
 
 /**
+ * @typedef {Object} GetPrnCatchupEventsParams
+ * @property {string} registrationId
+ * @property {string} accreditationId
+ * @property {string} prnId
+ * @property {number} afterEventNumber - The watermark to fold past. Pass
+ *   `lastAppliedEventNumber ?? 0` so the first event of a first-event-failure
+ *   case (where no watermark was ever stamped onto the PRN doc) is still
+ *   returned.
+ */
+
+/**
  * @typedef {{ canonicalSource: import('../domain/model.js').WasteBalanceCanonicalSource } | null} ResetCanonicalSourceToEmbeddedResult
  *   Post-state of the accreditation's balance document.
  *
@@ -109,18 +131,21 @@
  * @property {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} findByAccreditationId
  * @property {(accreditationIds: string[]) => Promise<import('../domain/model.js').WasteBalance[]>} findByAccreditationIds
  * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], options: { user: import('#domain/summary-logs/worker/port.js').SubmitUser, accreditation: import('#domain/organisations/accreditation.js').Accreditation, overseasSites: import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext, summaryLogId: string }) => Promise<void>} updateWasteBalanceTransactions
- * @property {(params: DeductAvailableBalanceParams) => Promise<number|null>} deductAvailableBalanceForPrnCreation
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path (and when no balance exists).
- * @property {(params: DeductTotalBalanceParams) => Promise<number|null>} deductTotalBalanceForPrnIssue
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path (and when no balance exists).
- * @property {(params: CreditAvailableBalanceParams) => Promise<number|null>} creditAvailableBalanceForPrnCancellation
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path.
- * @property {(params: CreditFullBalanceParams) => Promise<number|null>} creditFullBalanceForIssuedPrnCancellation
- *   Resolves to the appended stream event number on the ledger path, or `null`
- *   on the embedded path.
+ * @property {(params: DeductAvailableBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} deductAvailableBalanceForPrnCreation
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path (and when no balance exists).
+ * @property {(params: DeductTotalBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} deductTotalBalanceForPrnIssue
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path (and when no balance exists).
+ * @property {(params: CreditAvailableBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} creditAvailableBalanceForPrnCancellation
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path.
+ * @property {(params: CreditFullBalanceParams) => Promise<import('./stream-port.js').StreamEvent|null>} creditFullBalanceForIssuedPrnCancellation
+ *   Resolves to the appended stream event on the ledger path, or `null` on the
+ *   embedded path.
+ * @property {(params: AppendStreamEventParams) => Promise<import('./stream-port.js').StreamEvent>} appendStreamEvent
+ *   Append a status-only PRN event (PRN_ACCEPTED, PRN_REJECTED) to the stream.
+ *   Ledger-only: throws on embedded balances and when no balance exists.
  * @property {(params: FlipCanonicalSourceToMigratingParams) => Promise<FlipCanonicalSourceToMigratingResult>} flipCanonicalSourceToMigrating
  *   Promote an `'embedded'` accreditation to `'migrating'` and stamp
  *   `migratingSince`, gated on `version` matching the captured value. The
@@ -146,6 +171,11 @@
  *   the rebuild process died between the two flips and submissions for the
  *   registration are blocked until the marker is reset. Strictly demotes:
  *   `'embedded'` is left as-is and `'ledger'` is never demoted.
+ * @property {(params: GetPrnCatchupEventsParams) => Promise<import('./stream-schema.js').StreamEvent[]>} getPrnCatchupEvents
+ *   Return the stream tail events to project onto a PRN read. Empty array
+ *   when the accreditation's marker is not `'ledger'` (no stream query is
+ *   issued), when no balance document exists, or when the ledger-canonical
+ *   accreditation has no tail events for this PRN past the watermark.
  */
 
 /**

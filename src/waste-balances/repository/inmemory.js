@@ -2,6 +2,7 @@ import { validateAccreditationId } from './validation.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import { performUpdateWasteBalanceTransactions } from './helpers.js'
 import {
+  performAppendPrnStreamEvent,
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
   performCreditAvailableBalanceForPrnCancellation,
@@ -133,6 +134,24 @@ const performFlipCanonicalSourceToLedger =
     return { canonicalSource: current.canonicalSource }
   }
 
+const performGetPrnCatchupEvents =
+  (wasteBalanceStorage, streamRepository) =>
+  async ({ registrationId, accreditationId, prnId, afterEventNumber }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const current = wasteBalanceStorage.find(
+      (b) => b.accreditationId === validatedAccreditationId
+    )
+    if (current?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+      return []
+    }
+    return streamRepository.findEventsByPrnIdAfter(
+      registrationId,
+      validatedAccreditationId,
+      prnId,
+      afterEventNumber
+    )
+  }
+
 const performResetCanonicalSourceToEmbedded =
   (wasteBalanceStorage) =>
   async ({ accreditationId }) => {
@@ -151,6 +170,71 @@ const performResetCanonicalSourceToEmbedded =
   }
 
 /**
+ * The balance-mutating repository methods, sharing one find/save pair over the
+ * in-memory storage. Spread into the repository factory's result.
+ *
+ * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
+ * @param {Object} dependencies
+ * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
+ */
+const balanceMutators = (wasteBalanceStorage, dependencies) => {
+  const find = findBalance(wasteBalanceStorage)
+  const save = saveBalance(wasteBalanceStorage)
+  return {
+    updateWasteBalanceTransactions: async (
+      wasteRecords,
+      { user, accreditation, overseasSites, summaryLogId }
+    ) =>
+      performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditation,
+        dependencies,
+        findBalance: find,
+        saveBalance: save,
+        user,
+        overseasSites,
+        summaryLogId
+      }),
+    deductAvailableBalanceForPrnCreation: async (deductParams) =>
+      performDeductAvailableBalanceForPrnCreation({
+        deductParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    deductTotalBalanceForPrnIssue: async (deductParams) =>
+      performDeductTotalBalanceForPrnIssue({
+        deductParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    creditAvailableBalanceForPrnCancellation: async (creditParams) =>
+      performCreditAvailableBalanceForPrnCancellation({
+        creditParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    creditFullBalanceForIssuedPrnCancellation: async (creditParams) =>
+      performCreditFullBalanceForIssuedPrnCancellation({
+        creditParams,
+        findBalance: find,
+        saveBalance: save,
+        dependencies
+      }),
+    appendStreamEvent: async (appendParams) =>
+      performAppendPrnStreamEvent({
+        appendParams,
+        findBalance: find,
+        dependencies
+      })
+  }
+}
+
+/**
  * Create an in-memory waste balances repository.
  * Ensures data isolation by deep-cloning on read.
  *
@@ -166,7 +250,6 @@ export const createInMemoryWasteBalancesRepository = (
   dependencies
 ) => {
   const wasteBalanceStorage = initialWasteBalances
-
   const { streamRepository } = dependencies
 
   return () => ({
@@ -178,60 +261,17 @@ export const createInMemoryWasteBalancesRepository = (
       wasteBalanceStorage,
       streamRepository
     ),
-    updateWasteBalanceTransactions: async (
-      wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId }
-    ) => {
-      return performUpdateWasteBalanceTransactions({
-        wasteRecords,
-        accreditation,
-        dependencies,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        user,
-        overseasSites,
-        summaryLogId
-      })
-    },
-    deductAvailableBalanceForPrnCreation: async (deductParams) => {
-      return performDeductAvailableBalanceForPrnCreation({
-        deductParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    deductTotalBalanceForPrnIssue: async (deductParams) => {
-      return performDeductTotalBalanceForPrnIssue({
-        deductParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    creditAvailableBalanceForPrnCancellation: async (creditParams) => {
-      return performCreditAvailableBalanceForPrnCancellation({
-        creditParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
-    creditFullBalanceForIssuedPrnCancellation: async (creditParams) => {
-      return performCreditFullBalanceForIssuedPrnCancellation({
-        creditParams,
-        findBalance: findBalance(wasteBalanceStorage),
-        saveBalance: saveBalance(wasteBalanceStorage),
-        dependencies
-      })
-    },
+    ...balanceMutators(wasteBalanceStorage, dependencies),
     flipCanonicalSourceToMigrating:
       performFlipCanonicalSourceToMigrating(wasteBalanceStorage),
     flipCanonicalSourceToLedger:
       performFlipCanonicalSourceToLedger(wasteBalanceStorage),
     resetCanonicalSourceToEmbedded:
       performResetCanonicalSourceToEmbedded(wasteBalanceStorage),
-    // Test-only method to access internal storage
+    getPrnCatchupEvents: performGetPrnCatchupEvents(
+      wasteBalanceStorage,
+      streamRepository
+    ),
     _getStorageForTesting: () => wasteBalanceStorage
   })
 }

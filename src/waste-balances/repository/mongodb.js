@@ -2,6 +2,7 @@ import { validateAccreditationId } from './validation.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import { performUpdateWasteBalanceTransactions } from './helpers.js'
 import {
+  performAppendPrnStreamEvent,
   performDeductAvailableBalanceForPrnCreation,
   performDeductTotalBalanceForPrnIssue,
   performCreditAvailableBalanceForPrnCancellation,
@@ -126,6 +127,27 @@ const performFlipCanonicalSourceToLedger =
       return null
     }
     return { canonicalSource: current.canonicalSource }
+  }
+
+const performGetPrnCatchupEvents =
+  (db, streamRepository) =>
+  async ({ registrationId, accreditationId, prnId, afterEventNumber }) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+    const doc = await db
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .findOne(
+        { accreditationId: validatedAccreditationId },
+        { projection: { canonicalSource: 1 } }
+      )
+    if (doc?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+      return []
+    }
+    return streamRepository.findEventsByPrnIdAfter(
+      registrationId,
+      validatedAccreditationId,
+      prnId,
+      afterEventNumber
+    )
   }
 
 const performResetCanonicalSourceToEmbedded =
@@ -280,8 +302,16 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
         dependencies
       })
     },
+    appendStreamEvent: async (appendParams) => {
+      return performAppendPrnStreamEvent({
+        appendParams,
+        findBalance: findBalance(db),
+        dependencies
+      })
+    },
     flipCanonicalSourceToMigrating: performFlipCanonicalSourceToMigrating(db),
     flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db),
-    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db)
+    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db),
+    getPrnCatchupEvents: performGetPrnCatchupEvents(db, streamRepository)
   })
 }
