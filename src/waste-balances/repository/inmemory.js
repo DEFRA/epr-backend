@@ -170,15 +170,14 @@ const performResetCanonicalSourceToEmbedded =
   }
 
 /**
- * Create an in-memory waste balances repository.
- * Ensures data isolation by deep-cloning on read.
+ * The balance-mutating repository methods, sharing one find/save pair over the
+ * in-memory storage. Spread into the repository factory's result.
  *
- * @param {Array} initialWasteBalances
+ * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
  * @param {Object} dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
- * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
 const balanceMutators = (wasteBalanceStorage, dependencies) => {
   const find = findBalance(wasteBalanceStorage)
@@ -235,6 +234,17 @@ const balanceMutators = (wasteBalanceStorage, dependencies) => {
   }
 }
 
+/**
+ * Create an in-memory waste balances repository.
+ * Ensures data isolation by deep-cloning on read.
+ *
+ * @param {Array} initialWasteBalances
+ * @param {Object} dependencies
+ * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
+ * @returns {import('./port.js').WasteBalancesRepositoryFactory}
+ */
 export const createInMemoryWasteBalancesRepository = (
   initialWasteBalances,
   dependencies
