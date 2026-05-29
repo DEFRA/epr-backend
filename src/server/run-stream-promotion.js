@@ -110,6 +110,19 @@ const promoteAccreditation = async (row, deps) => {
 
   const rebuildResult = await rebuildEvents(row, deps)
 
+  // Guard: if there's no active registration but the embedded balance is
+  // non-zero, something unexpected happened (e.g. a summary log submitted
+  // against a non-approved registration). Abort rather than silently
+  // promoting to an empty stream that would read back zero.
+  if (
+    !rebuildResult &&
+    (captured.amount !== 0 || captured.availableAmount !== 0)
+  ) {
+    throw new Error(
+      `Accreditation ${row.accreditationId} has no active registration but a non-zero balance (amount=${captured.amount}, availableAmount=${captured.availableAmount})`
+    )
+  }
+
   const migratingResult =
     await wasteBalancesRepository.flipCanonicalSourceToMigrating({
       accreditationId: row.accreditationId,
