@@ -1,189 +1,309 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { getProjectedPrnById } from './get-projected-prn.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
+import {
+  getProjectedPrnById,
+  getProjectedPrnByNumber
+} from './get-projected-prn.js'
 
 /**
- * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
- * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
- * @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository
+ * @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js'
+ * @import { StreamEvent, StreamEventKind } from '#waste-balances/repository/stream-schema.js'
  */
 
-const baseUpdatedAt = new Date('2026-01-15T10:00:00.000Z')
-const baseCreator = { id: 'creator', name: 'Original Creator' }
+const REG_ID = 'reg-789'
+const ACC_ID = 'acc-456'
+const ORG_ID = 'org-123'
+const PRN_ID = '507f1f77bcf86cd799439011'
+const PRN_NUMBER = 'ER2600001'
+const baseAt = new Date('2026-01-15T10:00:00.000Z')
+const creator = { id: 'creator', name: 'Original Creator' }
+const eventActor = { id: 'user-1', name: 'Test User' }
+
+const noopLogger = () =>
+  /** @type {*} */ ({
+    info: () => {},
+    error: () => {},
+    warn: () => {},
+    debug: () => {},
+    trace: () => {},
+    fatal: () => {},
+    child: () => {}
+  })
 
 /**
  * @param {Partial<PackagingRecyclingNote>} [overrides]
  * @returns {PackagingRecyclingNote}
  */
-const buildPrn = (overrides = {}) =>
-  /** @type {PackagingRecyclingNote} */ (
-    /** @type {unknown} */ ({
-      id: 'prn-1',
-      registrationId: 'reg-1',
-      accreditation: { id: 'acc-1' },
-      organisation: { id: 'org-1' },
-      version: 1,
-      updatedAt: baseUpdatedAt,
-      updatedBy: baseCreator,
-      status: {
-        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
-        currentStatusAt: baseUpdatedAt,
-        history: []
-      },
-      ...overrides
-    })
-  )
+const buildPrn = (overrides = {}) => ({
+  id: PRN_ID,
+  schemaVersion: 2,
+  prnNumber: PRN_NUMBER,
+  registrationId: REG_ID,
+  organisation: { id: ORG_ID, name: 'Test Reprocessor' },
+  accreditation: {
+    id: ACC_ID,
+    accreditationNumber: 'ACC-1',
+    accreditationYear: 2026,
+    material: 'plastic',
+    submittedToRegulator: 'ea'
+  },
+  issuedToOrganisation: { id: 'producer-1', name: 'Producer Org' },
+  tonnage: 50,
+  isExport: false,
+  isDecemberWaste: false,
+  version: 1,
+  createdAt: baseAt,
+  createdBy: creator,
+  updatedAt: baseAt,
+  updatedBy: creator,
+  status: {
+    currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+    currentStatusAt: baseAt,
+    history: []
+  },
+  ...overrides
+})
 
-const eventCreator = { id: 'user-1', name: 'Test User' }
-
+/**
+ * @param {StreamEventKind} kind
+ * @param {number} number
+ * @param {string} createdAt
+ * @returns {StreamEvent}
+ */
 const buildEvent = (kind, number, createdAt) => ({
   id: `event-${number}`,
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1',
-  organisationId: 'org-1',
+  registrationId: REG_ID,
+  accreditationId: ACC_ID,
+  organisationId: ORG_ID,
   number,
   kind,
-  payload: { prnId: 'prn-1', amount: 50 },
+  payload: { prnId: PRN_ID, amount: 50 },
   openingBalance: { amount: 100, availableAmount: 100 },
   closingBalance: { amount: 100, availableAmount: 50 },
   createdAt: new Date(createdAt),
-  createdBy: eventCreator
+  createdBy: eventActor
+})
+
+const buildBalance = (canonicalSource) => ({
+  id: 'wb-1',
+  accreditationId: ACC_ID,
+  organisationId: ORG_ID,
+  amount: 100,
+  availableAmount: 100,
+  transactions: [],
+  version: 0,
+  schemaVersion: 1,
+  canonicalSource
 })
 
 /**
- * @param {{ findById: import('vitest').Mock }} repo
- * @returns {PackagingRecyclingNotesRepository}
+ * Assembles the real in-memory adapters: the PRN store, the event stream, and
+ * the waste-balance store that shares that stream. The marker on the seeded
+ * balance is what gates whether catch-up events are returned.
+ *
+ * @param {object} params
+ * @param {PackagingRecyclingNote | null} [params.prn]
+ * @param {StreamEvent[]} [params.events]
+ * @param {string} [params.canonicalSource]
  */
-const asPrnRepo = (repo) =>
-  /** @type {PackagingRecyclingNotesRepository} */ (
-    /** @type {unknown} */ (repo)
-  )
-
-/**
- * @param {{ getPrnCatchupEvents: import('vitest').Mock }} repo
- * @returns {WasteBalancesRepository}
- */
-const asWasteRepo = (repo) =>
-  /** @type {WasteBalancesRepository} */ (/** @type {unknown} */ (repo))
-
-/**
- * @param {{ prn?: PackagingRecyclingNote | null, tailEvents?: object[] }} setup
- */
-const setupRepositories = ({ prn = null, tailEvents = [] }) => ({
-  prnRepository: { findById: vi.fn(async () => prn) },
-  wasteBalancesRepository: {
-    getPrnCatchupEvents: vi.fn(async () => tailEvents)
-  }
-})
+const buildRepositories = ({
+  prn = null,
+  events = [],
+  canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+}) => {
+  const packagingRecyclingNotesRepository =
+    createInMemoryPackagingRecyclingNotesRepository(prn ? [prn] : [])(
+      noopLogger()
+    )
+  const streamRepository = createInMemoryStreamRepository(events)()
+  const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
+    [buildBalance(canonicalSource)],
+    { streamRepository }
+  )()
+  return { packagingRecyclingNotesRepository, wasteBalancesRepository }
+}
 
 describe('getProjectedPrnById', () => {
-  it('folds tail events onto the PRN and returns the projected note', async () => {
-    const prn = buildPrn({ lastAppliedEventNumber: 1 })
-    const { prnRepository, wasteBalancesRepository } = setupRepositories({
-      prn,
-      tailEvents: [
-        buildEvent(STREAM_EVENT_KIND.PRN_ISSUED, 2, '2026-02-02T12:00:00.000Z')
-      ]
-    })
+  it('folds tail events past the watermark onto the PRN', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            currentStatusAt: baseAt,
+            history: []
+          }
+        }),
+        events: [
+          buildEvent(
+            STREAM_EVENT_KIND.PRN_ISSUED,
+            1,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ]
+      })
 
     const result = await getProjectedPrnById({
-      packagingRecyclingNotesRepository: asPrnRepo(prnRepository),
-      wasteBalancesRepository: asWasteRepo(wasteBalancesRepository),
-      prnId: 'prn-1'
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnId: PRN_ID
     })
 
     expect(result?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(result?.lastAppliedEventNumber).toBe(1)
   })
 
-  it('queries catch-up events using the PRN watermark', async () => {
+  it('ignores events at or before the watermark', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({
+        prn: buildPrn({ version: 1, lastAppliedEventNumber: 1 }),
+        events: [
+          buildEvent(
+            STREAM_EVENT_KIND.PRN_ISSUED,
+            1,
+            '2026-02-01T12:00:00.000Z'
+          ),
+          buildEvent(
+            STREAM_EVENT_KIND.PRN_ACCEPTED,
+            2,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ]
+      })
+
+    const result = await getProjectedPrnById({
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnId: PRN_ID
+    })
+
+    // Only event 2 is folded (event 1 is at the watermark): one version bump.
+    expect(result?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
+    expect(result?.lastAppliedEventNumber).toBe(2)
+    expect(result?.version).toBe(2)
+  })
+
+  it('does not fold for an embedded-marker accreditation', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({
+        prn: buildPrn(),
+        events: [
+          buildEvent(
+            STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+            1,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ],
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      })
+
+    const result = await getProjectedPrnById({
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnId: PRN_ID
+    })
+
+    expect(result?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(result?.version).toBe(1)
+  })
+
+  it('returns the PRN unchanged when the ledger stream has no later events', async () => {
     const prn = buildPrn({ lastAppliedEventNumber: 3 })
-    const { prnRepository, wasteBalancesRepository } = setupRepositories({
-      prn
-    })
-
-    await getProjectedPrnById({
-      packagingRecyclingNotesRepository: asPrnRepo(prnRepository),
-      wasteBalancesRepository: asWasteRepo(wasteBalancesRepository),
-      prnId: 'prn-1'
-    })
-
-    expect(wasteBalancesRepository.getPrnCatchupEvents).toHaveBeenCalledWith({
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1',
-      prnId: 'prn-1',
-      afterEventNumber: 3
-    })
-  })
-
-  it('defaults afterEventNumber to 0 when the PRN has no watermark', async () => {
-    const prn = buildPrn()
-    const { prnRepository, wasteBalancesRepository } = setupRepositories({
-      prn
-    })
-
-    await getProjectedPrnById({
-      packagingRecyclingNotesRepository: asPrnRepo(prnRepository),
-      wasteBalancesRepository: asWasteRepo(wasteBalancesRepository),
-      prnId: 'prn-1'
-    })
-
-    expect(wasteBalancesRepository.getPrnCatchupEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ afterEventNumber: 0 })
-    )
-  })
-
-  it('returns the PRN unchanged when no tail events exist', async () => {
-    const prn = buildPrn({ lastAppliedEventNumber: 2 })
-    const { prnRepository, wasteBalancesRepository } = setupRepositories({
-      prn,
-      tailEvents: []
-    })
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({ prn })
 
     const result = await getProjectedPrnById({
-      packagingRecyclingNotesRepository: asPrnRepo(prnRepository),
-      wasteBalancesRepository: asWasteRepo(wasteBalancesRepository),
-      prnId: 'prn-1'
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnId: PRN_ID
     })
 
-    expect(result).toBe(prn)
+    expect(result?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(result?.version).toBe(1)
   })
 
-  it('returns null without querying the stream when the PRN does not exist', async () => {
-    const { prnRepository, wasteBalancesRepository } = setupRepositories({
-      prn: null
-    })
+  it('returns null when the PRN does not exist', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({ prn: null })
 
     const result = await getProjectedPrnById({
-      packagingRecyclingNotesRepository: asPrnRepo(prnRepository),
-      wasteBalancesRepository: asWasteRepo(wasteBalancesRepository),
-      prnId: 'prn-1'
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnId: PRN_ID
     })
 
     expect(result).toBeNull()
-    expect(wasteBalancesRepository.getPrnCatchupEvents).not.toHaveBeenCalled()
   })
 
-  it('returns a soft-deleted PRN as-is without querying the stream', async () => {
-    const deletedPrn = buildPrn({
-      status: {
-        currentStatus: PRN_STATUS.DELETED,
-        currentStatusAt: baseUpdatedAt,
-        history: []
-      }
-    })
-    const { prnRepository, wasteBalancesRepository } = setupRepositories({
-      prn: deletedPrn
-    })
+  it('returns a soft-deleted PRN as-is without folding', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({
+        prn: buildPrn({
+          status: {
+            currentStatus: PRN_STATUS.DELETED,
+            currentStatusAt: baseAt,
+            history: []
+          }
+        }),
+        events: [
+          buildEvent(
+            STREAM_EVENT_KIND.PRN_ISSUED,
+            1,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ]
+      })
 
     const result = await getProjectedPrnById({
-      packagingRecyclingNotesRepository: asPrnRepo(prnRepository),
-      wasteBalancesRepository: asWasteRepo(wasteBalancesRepository),
-      prnId: 'prn-1'
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnId: PRN_ID
     })
 
-    expect(result).toBe(deletedPrn)
-    expect(wasteBalancesRepository.getPrnCatchupEvents).not.toHaveBeenCalled()
+    expect(result?.status.currentStatus).toBe(PRN_STATUS.DELETED)
+    expect(result?.version).toBe(1)
+  })
+})
+
+describe('getProjectedPrnByNumber', () => {
+  it('folds the stream tail onto the PRN found by number', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({
+        prn: buildPrn(),
+        events: [
+          buildEvent(
+            STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
+            1,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ]
+      })
+
+    const result = await getProjectedPrnByNumber({
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnNumber: PRN_NUMBER
+    })
+
+    expect(result?.status.currentStatus).toBe(PRN_STATUS.CANCELLED)
+  })
+
+  it('returns null when no PRN matches the number', async () => {
+    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
+      buildRepositories({ prn: null })
+
+    const result = await getProjectedPrnByNumber({
+      packagingRecyclingNotesRepository,
+      wasteBalancesRepository,
+      prnNumber: 'NONEXISTENT'
+    })
+
+    expect(result).toBeNull()
   })
 })
