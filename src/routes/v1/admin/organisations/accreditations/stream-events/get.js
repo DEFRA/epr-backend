@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
 export const streamEventsGetPath =
-  '/v1/admin/organisations/{organisationId}/accreditations/{accreditationId}/stream-events'
+  '/v1/admin/organisations/{organisationId}/accreditations/{accreditationId}/waste-balance-events'
 
 export const streamEventsGet = {
   method: 'GET',
