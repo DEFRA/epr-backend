@@ -85,7 +85,15 @@ const rebuildEvents = async (row, deps) => {
     }
     throw error
   }
-  const { events } = computeRebuiltStream(sources)
+  const { events } = computeRebuiltStream({
+    accreditation: sources.accreditation,
+    registrationId: sources.registration.id,
+    organisationId: row.organisationId,
+    wasteRecords: sources.wasteRecords,
+    prns: sources.prns,
+    overseasSites: sources.overseasSites,
+    summaryLogs: sources.summaryLogs
+  })
   return { events, registration: sources.registration }
 }
 
