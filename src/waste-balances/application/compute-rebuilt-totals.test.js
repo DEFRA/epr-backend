@@ -1,9 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import Joi from 'joi'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 
 import { computeRebuiltTotals } from './compute-rebuilt-totals.js'
+
+/**
+ * @typedef {import('#domain/summary-logs/table-schemas/index.js').TableSchema} TableSchema
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatusHistoryItem} PrnStatusHistoryItem
+ * @typedef {import('#packaging-recycling-notes/domain/model.js').Actor} Actor
+ * @typedef {import('#domain/waste-records/model.js').WasteRecordType} WasteRecordType
+ */
 
 vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
   findSchemaForProcessingType: vi.fn()
@@ -14,32 +27,70 @@ const { findSchemaForProcessingType } =
 
 const includedAt = (amount) => ({
   outcome: ROW_OUTCOME.INCLUDED,
+  reasons: [],
   transactionAmount: amount
 })
 
+/**
+ * @param {TableSchema['classifyForWasteBalance']} classifyForWasteBalance
+ * @returns {TableSchema}
+ */
+const tableSchemaWith = (classifyForWasteBalance) => ({
+  rowIdField: 'rowId',
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  sheetName: 'Received',
+  rowTransformer: (rowData) => ({
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    rowId: '',
+    data: rowData
+  }),
+  requiredHeaders: [],
+  unfilledValues: {},
+  validationSchema: Joi.object(),
+  classifyForWasteBalance
+})
+
+/**
+ * @param {{
+ *   rowId: string,
+ *   type?: WasteRecordType,
+ *   processingType?: string,
+ *   excludedFromWasteBalance?: boolean,
+ *   data?: Record<string, unknown>
+ * }} options
+ */
 const wasteRecord = ({
   rowId,
-  type = 'received',
+  type = WASTE_RECORD_TYPE.RECEIVED,
   processingType = 'REPROCESSOR_INPUT',
   excludedFromWasteBalance = false,
   data = {}
-}) => ({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  rowId,
-  type,
-  data: { processingType, ...data },
-  versions: [{ id: 'v1', createdAt: '2025-01-01T00:00:00.000Z' }],
-  excludedFromWasteBalance
-})
+}) =>
+  buildWasteRecord({
+    rowId,
+    type,
+    data: { processingType, ...data },
+    excludedFromWasteBalance
+  })
 
-const prnHistory = (...entries) =>
-  entries.map(([status, at, by = { id: 'user-1', name: 'Alice' }]) => ({
+/** @type {Actor} */
+const DEFAULT_ACTOR = { id: 'user-1', name: 'Alice' }
+
+/**
+ * @param {Array<[PrnStatus, string]>} entries
+ * @returns {PrnStatusHistoryItem[]}
+ */
+const prnHistory = (entries) =>
+  entries.map(([status, at]) => ({
     status,
     at: new Date(at),
-    by
+    by: DEFAULT_ACTOR
   }))
 
+/**
+ * @param {{ id: string, tonnage: number, history?: Array<[PrnStatus, string]> }} options
+ * @returns {PackagingRecyclingNote}
+ */
 const prn = ({
   id,
   tonnage,
@@ -47,24 +98,73 @@ const prn = ({
     [PRN_STATUS.DRAFT, '2025-01-01T00:00:00.000Z'],
     [PRN_STATUS.AWAITING_AUTHORISATION, '2025-01-02T00:00:00.000Z']
   ]
-}) => ({
-  id,
-  tonnage,
-  status: { history: prnHistory(...history) }
-})
+}) => {
+  const statusHistory = prnHistory(history)
+  const latest = statusHistory[statusHistory.length - 1]
+  return {
+    id,
+    schemaVersion: 2,
+    version: 1,
+    prnNumber: null,
+    organisation: { id: 'org-1', name: 'ACME ltd' },
+    registrationId: 'reg-1',
+    accreditation: {
+      id: 'acc-1',
+      accreditationNumber: 'ACC-001',
+      accreditationYear: 2025,
+      material: 'glass',
+      submittedToRegulator: 'ea'
+    },
+    issuedToOrganisation: { id: 'producer-1', name: 'Producer Ltd' },
+    tonnage,
+    isExport: false,
+    isDecemberWaste: false,
+    status: {
+      currentStatus: latest.status,
+      currentStatusAt: latest.at,
+      history: statusHistory
+    },
+    createdAt: statusHistory[0].at,
+    createdBy: DEFAULT_ACTOR,
+    updatedAt: latest.at,
+    updatedBy: DEFAULT_ACTOR
+  }
+}
 
-const accreditation = { id: 'acc-1' }
-const overseasSites = {}
+/** @type {import('#domain/organisations/accreditation.js').Accreditation} */
+const accreditation = {
+  id: 'acc-1',
+  status: 'created',
+  statusHistory: [{ status: 'created', updatedAt: '2025-01-01T00:00:00.000Z' }],
+  formSubmission: { id: 'form-1', time: new Date('2025-01-01T00:00:00.000Z') },
+  material: 'glass',
+  prnIssuance: {
+    incomeBusinessPlan: [],
+    signatories: [],
+    tonnageBand: 'up_to_500'
+  },
+  submittedToRegulator: 'ea',
+  submitterContactDetails: {
+    fullName: 'Anakin Skywalker',
+    email: 'anakin@example.com',
+    phone: '0123456789'
+  },
+  wasteProcessingType: 'reprocessor'
+}
+
+/** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
+const overseasSites = ORS_VALIDATION_DISABLED
 
 describe('computeRebuiltTotals', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    findSchemaForProcessingType.mockReturnValue({
-      classifyForWasteBalance: (data) =>
+    vi.mocked(findSchemaForProcessingType).mockReturnValue(
+      tableSchemaWith((data) =>
         data.tonnage === undefined
-          ? { outcome: ROW_OUTCOME.EXCLUDED, transactionAmount: 0 }
+          ? { outcome: ROW_OUTCOME.EXCLUDED, reasons: [] }
           : includedAt(data.tonnage)
-    })
+      )
+    )
   })
 
   it('returns zero totals when no records or PRNs', () => {
@@ -148,9 +248,9 @@ describe('computeRebuiltTotals', () => {
   })
 
   it('skips records whose schema has no classifyForWasteBalance', () => {
-    findSchemaForProcessingType.mockReturnValueOnce({
-      classifyForWasteBalance: null
-    })
+    vi.mocked(findSchemaForProcessingType).mockReturnValueOnce(
+      tableSchemaWith(null)
+    )
 
     const result = computeRebuiltTotals({
       accreditation,
