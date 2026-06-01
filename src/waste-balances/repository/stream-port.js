@@ -100,6 +100,14 @@ export class StreamSequenceError extends Error {
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified partition, with `number > afterNumber`, ordered by
  *   `number` ascending.
+ * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteByPartition
+ *   Migration PAE-1382: delete all events for the given partition.
+ *   Returns the number of deleted events. No-op on empty partition.
+ * @property {(events: StreamEventInsert[]) => Promise<StreamEvent[]>} bulkAppendEvents
+ *   Migration PAE-1382: insert multiple events in one call. Validates
+ *   sequence: events must be numbered sequentially, and the first event's
+ *   number must be `currentMax + 1` (or `1` if the partition is empty).
+ *   Throws `StreamSequenceError` on failure. Empty array is a no-op.
  */
 
 /**

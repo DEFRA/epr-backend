@@ -1,6 +1,5 @@
-import Boom from '@hapi/boom'
-
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
+import { ZERO_BALANCE } from './stream-schema.js'
 
 /**
  * Marker-aware substitution of `amount` / `availableAmount` on a waste-balance
@@ -9,9 +8,10 @@ import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
  * `'embedded'` and `'migrating'` markers leave the document unchanged because
  * the embedded write path is still authoritative for them.
  *
- * Marker `'ledger'` with no stream events is an invariant violation: the
- * promotion sweep must populate the stream before flipping the marker. Throws
- * so the inconsistency surfaces instead of being masked as a zero balance.
+ * An empty stream under a `'ledger'` marker means the accreditation was
+ * promoted with zero activity. This is legitimate for accreditations that
+ * never received waste records, so the function returns zero balances
+ * instead of throwing.
  *
  * @param {import('../domain/model.js').WasteBalance} balance
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
@@ -28,9 +28,10 @@ export const resolveBalanceAmounts = async (balance, streamRepository) => {
   )
 
   if (!latest) {
-    throw Boom.internal(
-      `Waste balance ${balance.accreditationId} has canonicalSource 'ledger' but no stream events`
-    )
+    return {
+      ...balance,
+      ...ZERO_BALANCE
+    }
   }
 
   return {

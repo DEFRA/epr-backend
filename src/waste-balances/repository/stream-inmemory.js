@@ -73,6 +73,76 @@ const doAppend = (storage, event) => {
 }
 
 /**
+ * Migration PAE-1382: delete all events for a partition.
+ *
+ * @param {StreamEvent[]} storage
+ * @param {string} registrationId
+ * @param {string | null} accreditationId
+ * @returns {number}
+ */
+const doDeleteByPartition = (storage, registrationId, accreditationId) => {
+  const before = storage.length
+  const remaining = storage.filter(
+    (event) => !matchesPartition(event, registrationId, accreditationId)
+  )
+  storage.length = 0
+  storage.push(...remaining)
+  return before - remaining.length
+}
+
+/**
+ * Migration PAE-1382: insert multiple events in one call.
+ *
+ * @param {StreamEvent[]} storage
+ * @param {StreamEventInsert[]} events
+ * @returns {StreamEvent[]}
+ */
+const doBulkAppend = (storage, events) => {
+  if (events.length === 0) {
+    return []
+  }
+
+  const first = events[0]
+  const partitionEvents = storage.filter((existing) =>
+    matchesPartition(existing, first.registrationId, first.accreditationId)
+  )
+  const currentMax =
+    partitionEvents.length > 0
+      ? /** @type {StreamEvent} */ (partitionEvents.at(-1)).number
+      : 0
+
+  const expectedStart = currentMax + 1
+
+  if (first.number !== expectedStart) {
+    throw new StreamSequenceError(
+      first.registrationId,
+      first.accreditationId,
+      first.number,
+      expectedStart
+    )
+  }
+
+  for (let i = 1; i < events.length; i++) {
+    const expected = first.number + i
+    if (events[i].number !== expected) {
+      throw new StreamSequenceError(
+        events[i].registrationId,
+        events[i].accreditationId,
+        events[i].number,
+        expected
+      )
+    }
+  }
+
+  return events.map((event) => {
+    const validated = validateStreamEventInsert(event)
+    const persisted = { id: randomUUID(), ...validated }
+    storage.push(persisted)
+    return structuredClone(persisted)
+  })
+}
+
+/**
  * @param {Array<StreamEvent>} [initialEvents]
  * @returns {import('./stream-port.js').WasteBalanceStreamRepositoryFactory}
  */
@@ -144,6 +214,11 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
         .sort((a, b) => a.number - b.number)
 
       return structuredClone(matches)
-    }
+    },
+
+    deleteByPartition: async (registrationId, accreditationId) =>
+      doDeleteByPartition(storage, registrationId, accreditationId),
+
+    bulkAppendEvents: async (events) => doBulkAppend(storage, events)
   })
 }
