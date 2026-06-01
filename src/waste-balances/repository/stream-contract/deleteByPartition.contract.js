@@ -2,13 +2,21 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { buildStreamEvent } from '../stream-test-data.js'
 
+/**
+ * @typedef {object} StreamContractContext
+ * @property {import('../stream-port.js').WasteBalanceStreamRepositoryFactory} streamRepository
+ */
+
 export const testDeleteByPartitionBehaviour = (it) => {
   describe('deleteByPartition (@migration PAE-1382)', () => {
+    /** @type {import('../stream-port.js').WasteBalanceStreamRepository} */
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (/** @type {StreamContractContext} */ { streamRepository }) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('deletes all events for the given partition and returns the count', async () => {
       await repository.appendEvent(
@@ -67,7 +75,43 @@ export const testDeleteByPartitionBehaviour = (it) => {
         'acc-keep'
       )
       expect(kept).not.toBeNull()
-      expect(kept.registrationId).toBe('reg-keep')
+      expect(kept?.registrationId).toBe('reg-keep')
+    })
+
+    it("deletes one accreditation's partition without touching the same registration's registered-only stream", async () => {
+      await repository.appendEvent(
+        buildStreamEvent({
+          registrationId: 'reg-shared',
+          accreditationId: 'acc-1',
+          number: 1
+        })
+      )
+      await repository.appendEvent(
+        buildStreamEvent({
+          registrationId: 'reg-shared',
+          accreditationId: null,
+          number: 1,
+          payload: { summaryLogId: 'reg-only-log', creditTotal: 0 },
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      )
+
+      const count = await repository.deleteByPartition('reg-shared', 'acc-1')
+
+      expect(count).toBe(1)
+
+      const accreditationStream = await repository.findLatestByPartition(
+        'reg-shared',
+        'acc-1'
+      )
+      expect(accreditationStream).toBeNull()
+
+      const registeredOnlyStream = await repository.findLatestByPartition(
+        'reg-shared',
+        null
+      )
+      expect(registeredOnlyStream).not.toBeNull()
+      expect(registeredOnlyStream?.accreditationId).toBeNull()
     })
   })
 }
