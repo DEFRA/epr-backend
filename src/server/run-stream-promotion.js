@@ -72,8 +72,7 @@ const findEmbeddedBalances = async (db) => {
 /**
  * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
- * @returns {Promise<{ events: Array, registration: { id: string } } | null>}
- *   null when the accreditation has no active registration (nothing to rebuild)
+ * @returns {Promise<{ events: Array, registration: { id: string } }>}
  */
 const rebuildEvents = async (row, deps) => {
   const sources = await loadAccreditationSources(row, deps)
