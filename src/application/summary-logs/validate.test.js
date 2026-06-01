@@ -1876,7 +1876,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   describe('Validation issues truncation', () => {
-    it('truncates issues to MAX_VALIDATION_ISSUES and records totalIssuesCount', async () => {
+    it('truncates issues to MAX_VALIDATION_ISSUES and records counts pre-cap', async () => {
       const issueCount = MAX_VALIDATION_ISSUES + 50
       const rows = Array.from({ length: issueCount }, (_, i) =>
         buildReceivedLoadRow({
@@ -1898,7 +1898,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.validation.issues).toHaveLength(MAX_VALIDATION_ISSUES)
-      expect(updateCall.validation.totalIssuesCount).toBeGreaterThan(
+      expect(updateCall.validation.counts.total).toBeGreaterThan(
         MAX_VALIDATION_ISSUES
       )
     })
@@ -1957,7 +1957,7 @@ describe('SummaryLogsValidator', () => {
       expect(issueWithActual.context.actual).toBe('bad-code')
     })
 
-    it('always includes totalIssuesCount matching actual issue count', async () => {
+    it('always includes counts.total matching actual issue count', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
@@ -1976,7 +1976,7 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.validation.totalIssuesCount).toBe(
+      expect(updateCall.validation.counts.total).toBe(
         updateCall.validation.issues.length
       )
     })
@@ -2033,7 +2033,7 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
-      const { issues, totalIssuesCount } = updateCall.validation
+      const { issues, counts } = updateCall.validation
 
       // The fatal issue must survive truncation
       const fatalIssues = issues.filter((i) => i.severity === 'fatal')
@@ -2043,8 +2043,8 @@ describe('SummaryLogsValidator', () => {
       // Total stored issues are capped
       expect(issues.length).toBeLessThanOrEqual(MAX_VALIDATION_ISSUES)
 
-      // totalIssuesCount reflects the real pre-cap count
-      expect(totalIssuesCount).toBeGreaterThan(MAX_VALIDATION_ISSUES)
+      // counts.total reflects the real pre-cap count
+      expect(counts.total).toBeGreaterThan(MAX_VALIDATION_ISSUES)
 
       // Status should be invalid (the fatal was detected pre-cap)
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)

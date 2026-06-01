@@ -200,6 +200,34 @@ export const testUpdateBehaviour = (it) => {
       })
 
       describe('validation field', () => {
+        it('updates and retrieves validation counts', async () => {
+          const id = `contract-validation-counts-${randomUUID()}`
+
+          await repository.insert(id, summaryLogFactory.validating())
+          const current = await repository.findById(id)
+
+          await repository.update(id, current.version, {
+            ...transitionStatus(current.summaryLog, SUMMARY_LOG_STATUS.INVALID),
+            validation: {
+              issues: [],
+              counts: { fatal: 22, error: 0, warning: 0, total: 22 }
+            }
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+
+          expect(found.summaryLog.validation.counts).toEqual({
+            fatal: 22,
+            error: 0,
+            warning: 0,
+            total: 22
+          })
+        })
+
         it('updates and retrieves validation issues', async () => {
           const id = `contract-validation-${randomUUID()}`
 

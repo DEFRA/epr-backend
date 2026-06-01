@@ -30,10 +30,11 @@
  * @typedef {Object} Validation
  * @property {ValidationIssue[]} [issues] - Validation issues found during processing
  * @property {Array<{code: string, [k: string]: unknown}>} [failures] - Failure codes from upload rejection
- * @property {number} [totalIssuesCount] - Total number of validation issues found (may exceed issues.length when capped for storage)
+ * @property {ValidationIssueCounts} [counts] - Issue counts by severity (computed pre-cap, so total may exceed issues.length when capped for storage)
  */
 
 /** @import {Loads, LoadsByWasteRecordType} from '#application/summary-logs/load-counts.js' */
+/** @import {ValidationIssueCounts} from '#common/validation/validation-issues.js' */
 /** @import {ProcessingType} from './meta-fields.js' */
 /** @import {SummaryLogStatus} from './status.js' */
 
