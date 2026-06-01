@@ -89,10 +89,10 @@ const rebuildEvents = async (row, deps) => {
 }
 
 /**
- * @param {{ accreditationId: string, organisationId: string, registrationId: string }} row
+ * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
  */
-const promoteAccreditation = async (row, deps) => {
+export const promoteAccreditation = async (row, deps) => {
   const { wasteBalancesRepository, streamRepository } = deps
 
   // Capture version BEFORE rebuilding events. A submission that writes waste
