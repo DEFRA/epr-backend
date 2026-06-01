@@ -70,7 +70,7 @@ const formatDelta = (current, rebuilt) =>
  * @param {EmbeddedBalanceRow} embedded
  * @param {DiagnosticDependencies} deps
  */
-const compareForEmbedded = async (embedded, deps) => {
+export const compareForEmbedded = async (embedded, deps) => {
   const sources = await loadAccreditationSources(embedded, deps)
   const { accreditation, registration, wasteRecords, prns, overseasSites } =
     sources
