@@ -359,6 +359,8 @@ describe('runStreamPromotion', () => {
       .mockResolvedValueOnce({
         accreditationId: 'acc-race',
         version: 1,
+        amount: 0,
+        availableAmount: 0,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
       .mockResolvedValueOnce({
@@ -422,6 +424,8 @@ describe('runStreamPromotion', () => {
     wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
       accreditationId: 'acc-ledger',
       version: 3,
+      amount: 0,
+      availableAmount: 0,
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
     })
 
@@ -473,6 +477,8 @@ describe('runStreamPromotion', () => {
       .mockResolvedValueOnce({
         accreditationId: 'acc-empty',
         version: 1,
+        amount: 0,
+        availableAmount: 0,
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
       })
       .mockResolvedValueOnce({
@@ -635,6 +641,73 @@ describe('runStreamPromotion', () => {
     )
   })
 
+  it('aborts promotion when rebuilt stream is empty but balance is non-zero', async () => {
+    const migratingToArray = vi.fn().mockResolvedValue([])
+    const embeddedToArray = vi.fn().mockResolvedValue([
+      {
+        accreditationId: 'acc-divergent',
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+    ])
+
+    mockFindBalances
+      .mockReturnValueOnce({ toArray: migratingToArray })
+      .mockReturnValueOnce({ toArray: embeddedToArray })
+
+    wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
+      accreditationId: 'acc-divergent',
+      version: 1,
+      amount: 75,
+      availableAmount: 75,
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    })
+
+    organisationsRepository.findById.mockResolvedValue({
+      id: 'org-1',
+      registrations: [
+        {
+          id: 'reg-1',
+          accreditationId: 'acc-divergent',
+          registrationNumber: 'CBDU1',
+          status: 'approved'
+        }
+      ],
+      accreditations: [
+        {
+          id: 'acc-divergent',
+          accreditationNumber: 'CBDA1',
+          status: 'approved'
+        }
+      ]
+    })
+
+    // Active registration resolves, but the rebuild produces no events
+    // (default computeRebuiltStream mock returns events: []). Promoting would
+    // flip to ledger and read back zero, masking the non-zero balance.
+
+    await runStreamPromotion(mockServer)
+
+    // Should not promote: marker never touched, no stream writes
+    expect(
+      wasteBalancesRepository.flipCanonicalSourceToMigrating
+    ).not.toHaveBeenCalled()
+    expect(streamRepository.deleteByPartition).not.toHaveBeenCalled()
+    expect(streamRepository.bulkAppendEvents).not.toHaveBeenCalled()
+
+    // Counted as failed with an error log
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('non-zero balance')
+      })
+    )
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('failed=1')
+      })
+    )
+  })
+
   it('counts as failed when no waste balance exists for accreditation', async () => {
     const migratingToArray = vi.fn().mockResolvedValue([])
     const embeddedToArray = vi.fn().mockResolvedValue([
@@ -707,6 +780,8 @@ describe('runStreamPromotion', () => {
     wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
       accreditationId: 'acc-nolift',
       version: 1,
+      amount: 0,
+      availableAmount: 0,
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
     })
 

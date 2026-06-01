@@ -118,16 +118,23 @@ const promoteAccreditation = async (row, deps) => {
 
   const rebuildResult = await rebuildEvents(row, deps)
 
-  // Guard: if there's no active registration but the embedded balance is
-  // non-zero, something unexpected happened (e.g. a summary log submitted
-  // against a non-approved registration). Abort rather than silently
-  // promoting to an empty stream that would read back zero.
-  if (
-    !rebuildResult &&
-    (captured.amount !== 0 || captured.availableAmount !== 0)
-  ) {
+  // Invariant: a non-zero embedded balance must reconstruct to a non-empty
+  // stream. An empty rebuild — whether from no active registration, or from
+  // authoritative sources that don't account for the balance (e.g. a summary
+  // log submitted against a non-approved registration the rebuild can't see) —
+  // would flip to ledger and read back zero. Abort loudly and leave the
+  // accreditation embedded for the next boot rather than silently zeroing a
+  // real balance.
+  const capturedNonZero =
+    captured.amount !== 0 || captured.availableAmount !== 0
+  const rebuiltStreamEmpty = !rebuildResult || rebuildResult.events.length === 0
+
+  if (capturedNonZero && rebuiltStreamEmpty) {
+    const cause = rebuildResult
+      ? 'rebuilds to an empty stream'
+      : 'has no active registration'
     throw new Error(
-      `Accreditation ${row.accreditationId} has no active registration but a non-zero balance (amount=${captured.amount}, availableAmount=${captured.availableAmount})`
+      `Accreditation ${row.accreditationId} has a non-zero balance (amount=${captured.amount}, availableAmount=${captured.availableAmount}) but ${cause}`
     )
   }
 
