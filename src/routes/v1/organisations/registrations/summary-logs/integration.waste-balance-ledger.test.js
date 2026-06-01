@@ -22,7 +22,7 @@ import {
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
 
-describe('Waste balance stream (Exporter, flag ON)', () => {
+describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
@@ -125,7 +125,6 @@ describe('Waste balance stream (Exporter, flag ON)', () => {
       processingType: 'exporter',
       organisationId,
       registrationId,
-      featureFlagOverrides: { wasteBalanceLedger: true },
       // @ts-expect-error -- TypeScript infers existingWasteBalances as never[] from the default [], WasteBalance[] is correct at runtime
       existingWasteBalances
     })

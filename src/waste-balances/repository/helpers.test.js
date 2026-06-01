@@ -438,8 +438,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
       expect(result).toBeUndefined()
     })
 
-    describe('feature flag dispatch', () => {
-      it('uses the stream path when flag is ON, canonicalSource is ledger, and streamRepository is provided', async () => {
+    describe('canonical source dispatch', () => {
+      it('uses the stream path when canonicalSource is ledger and streamRepository is provided', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -469,7 +469,6 @@ describe('src/waste-balances/repository/helpers.js', () => {
           wasteRecords,
           accreditation,
           dependencies: {
-            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
             streamRepository
           },
           findBalance,
@@ -490,7 +489,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(findBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the embedded path when flag is ON but the existing balance has no marker (legacy doc)', async () => {
+      it('uses the embedded path when the existing balance has no marker (legacy doc)', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -520,8 +519,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           wasteRecords,
           accreditation,
           dependencies: {
-            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
-            ledgerRepository: { insertTransactions: vi.fn() }
+            streamRepository: { appendEvent: vi.fn() }
           },
           findBalance,
           saveBalance,
@@ -532,7 +530,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the embedded path when flag is ON and canonicalSource is migrating — PRN writes during a rebuild treat migrating as embedded', async () => {
+      it('uses the embedded path when canonicalSource is migrating', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -564,8 +562,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           wasteRecords,
           accreditation,
           dependencies: {
-            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
-            ledgerRepository: { insertTransactions: vi.fn() }
+            streamRepository: { appendEvent: vi.fn() }
           },
           findBalance,
           saveBalance,
@@ -577,7 +574,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the embedded path when flag is ON but canonicalSource is still embedded', async () => {
+      it('uses the embedded path when canonicalSource is still embedded', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -608,8 +605,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           wasteRecords,
           accreditation,
           dependencies: {
-            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
-            ledgerRepository: { insertTransactions: vi.fn() }
+            streamRepository: { appendEvent: vi.fn() }
           },
           findBalance,
           saveBalance,
@@ -621,7 +617,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
 
-      it('uses the embedded path when flag is ON and no balance exists yet', async () => {
+      it('uses the embedded path when no balance exists yet', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -643,8 +639,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           wasteRecords,
           accreditation,
           dependencies: {
-            featureFlags: { isWasteBalanceLedgerEnabled: () => true },
-            ledgerRepository: { insertTransactions: vi.fn() }
+            streamRepository: { appendEvent: vi.fn() }
           },
           findBalance,
           saveBalance,
@@ -659,7 +654,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         )
       })
 
-      it('uses the embedded-array path when flag is OFF', async () => {
+      it('uses the embedded path when canonicalSource is ledger but no streamRepository is provided', async () => {
         const wasteRecords = [
           {
             id: 'rec-1',
@@ -674,49 +669,8 @@ describe('src/waste-balances/repository/helpers.js', () => {
           amount: 0,
           availableAmount: 0,
           transactions: [],
-          version: 0
-        }
-        const findBalance = vi.fn().mockResolvedValue(wasteBalance)
-        const saveBalance = vi.fn().mockResolvedValue(undefined)
-        vi.mocked(calculateWasteBalanceUpdates).mockClear()
-        vi.mocked(calculateWasteBalanceUpdates).mockReturnValue({
-          newTransactions: [{ id: 't1' }],
-          newAmount: 100,
-          newAvailableAmount: 100
-        })
-
-        await callPerformUpdate({
-          wasteRecords,
-          accreditation,
-          dependencies: {
-            featureFlags: { isWasteBalanceLedgerEnabled: () => false }
-          },
-          findBalance,
-          saveBalance,
-          user: { id: 'user-1' },
-          overseasSites: ORS_VALIDATION_DISABLED
-        })
-
-        expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
-        expect(saveBalance).toHaveBeenCalledTimes(1)
-      })
-
-      it('uses the v1 path when no featureFlags dependency is provided', async () => {
-        const wasteRecords = [
-          {
-            id: 'rec-1',
-            organisationId: 'org-1',
-            data: {}
-          }
-        ]
-        const accreditation = { id: 'acc-1' }
-        const wasteBalance = {
-          id: 'bal-1',
-          accreditationId: 'acc-1',
-          amount: 0,
-          availableAmount: 0,
-          transactions: [],
-          version: 0
+          version: 1,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
         }
         const findBalance = vi.fn().mockResolvedValue(wasteBalance)
         const saveBalance = vi.fn().mockResolvedValue(undefined)
@@ -737,6 +691,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           overseasSites: ORS_VALIDATION_DISABLED
         })
 
+        expect(calculateWasteBalanceUpdates).toHaveBeenCalledTimes(1)
         expect(saveBalance).toHaveBeenCalledTimes(1)
       })
     })
