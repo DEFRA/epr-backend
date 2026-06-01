@@ -11,7 +11,8 @@ describe('transformValidationResponse', () => {
       expect(result).toEqual({
         validation: {
           failures: [],
-          concerns: {}
+          concerns: {},
+          counts: { fatal: 0, error: 0, warning: 0, total: 0 }
         }
       })
     })
@@ -22,7 +23,8 @@ describe('transformValidationResponse', () => {
       expect(result).toEqual({
         validation: {
           failures: [],
-          concerns: {}
+          concerns: {},
+          counts: { fatal: 0, error: 0, warning: 0, total: 0 }
         }
       })
     })
@@ -33,7 +35,8 @@ describe('transformValidationResponse', () => {
       expect(result).toEqual({
         validation: {
           failures: [],
-          concerns: {}
+          concerns: {},
+          counts: { fatal: 0, error: 0, warning: 0, total: 0 }
         }
       })
     })
@@ -54,7 +57,8 @@ describe('transformValidationResponse', () => {
               expected: 'REG12345'
             }
           }
-        ]
+        ],
+        counts: { fatal: 1, error: 0, warning: 0, total: 1 }
       }
 
       const result = transformValidationResponse(validation)
@@ -70,7 +74,8 @@ describe('transformValidationResponse', () => {
               expected: 'REG12345'
             }
           ],
-          concerns: {}
+          concerns: {},
+          counts: { fatal: 1, error: 0, warning: 0, total: 1 }
         }
       })
     })
@@ -84,7 +89,8 @@ describe('transformValidationResponse', () => {
             message: 'Validation failed',
             code: 'VALIDATION_SYSTEM_ERROR'
           }
-        ]
+        ],
+        counts: { fatal: 1, error: 0, warning: 0, total: 1 }
       }
 
       const result = transformValidationResponse(validation)
@@ -97,7 +103,8 @@ describe('transformValidationResponse', () => {
               errorCode: 'VALIDATION_SYSTEM_ERROR'
             }
           ],
-          concerns: {}
+          concerns: {},
+          counts: { fatal: 1, error: 0, warning: 0, total: 1 }
         }
       })
     })
@@ -123,7 +130,8 @@ describe('transformValidationResponse', () => {
               }
             }
           }
-        ]
+        ],
+        counts: { fatal: 1, error: 0, warning: 0, total: 1 }
       }
 
       const result = transformValidationResponse(validation)
@@ -141,7 +149,8 @@ describe('transformValidationResponse', () => {
               }
             }
           ],
-          concerns: {}
+          concerns: {},
+          counts: { fatal: 1, error: 0, warning: 0, total: 1 }
         }
       })
 
@@ -228,7 +237,8 @@ describe('transformValidationResponse', () => {
               actual: 'invalid-date'
             }
           }
-        ]
+        ],
+        counts: { fatal: 0, error: 2, warning: 0, total: 2 }
       }
 
       const result = transformValidationResponse(validation)
@@ -263,7 +273,8 @@ describe('transformValidationResponse', () => {
                 }
               ]
             }
-          }
+          },
+          counts: { fatal: 0, error: 2, warning: 0, total: 2 }
         }
       })
     })
@@ -644,7 +655,7 @@ describe('transformValidationResponse', () => {
       )
     })
 
-    it('includes totalIssuesCount in fatal response when present', () => {
+    it('includes counts in fatal response when present', () => {
       const validation = {
         issues: [
           {
@@ -654,15 +665,20 @@ describe('transformValidationResponse', () => {
             code: 'VALIDATION_SYSTEM_ERROR'
           }
         ],
-        totalIssuesCount: 5000
+        counts: { fatal: 1, error: 0, warning: 0, total: 5000 }
       }
 
       const result = transformValidationResponse(validation)
 
-      expect(result.validation.totalIssuesCount).toBe(5000)
+      expect(result.validation.counts).toEqual({
+        fatal: 1,
+        error: 0,
+        warning: 0,
+        total: 5000
+      })
     })
 
-    it('includes totalIssuesCount in concerns response when present', () => {
+    it('includes counts in concerns response when present', () => {
       const validation = {
         issues: [
           {
@@ -681,38 +697,45 @@ describe('transformValidationResponse', () => {
             }
           }
         ],
-        totalIssuesCount: 3000
+        counts: { fatal: 0, error: 1, warning: 0, total: 3000 }
       }
 
       const result = transformValidationResponse(validation)
 
-      expect(result.validation.totalIssuesCount).toBe(3000)
+      expect(result.validation.counts).toEqual({
+        fatal: 0,
+        error: 1,
+        warning: 0,
+        total: 3000
+      })
     })
 
-    it('omits totalIssuesCount from response when not present in stored validation', () => {
+    it('synthesizes counts from direct failures when no stored counts (upload rejection)', () => {
       const validation = {
-        issues: [
-          {
-            severity: VALIDATION_SEVERITY.ERROR,
-            category: 'technical',
-            message: 'Invalid value',
-            code: 'VALUE_OUT_OF_RANGE',
-            context: {
-              location: {
-                sheet: 'Received',
-                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-                row: 8,
-                column: 'B',
-                header: 'ROW_ID'
-              }
-            }
-          }
+        failures: [
+          { code: 'FILE_VIRUS_DETECTED', errorCode: 'FILE_VIRUS_DETECTED' }
         ]
       }
 
       const result = transformValidationResponse(validation)
 
-      expect(result.validation.totalIssuesCount).toBeUndefined()
+      expect(result.validation.counts).toEqual({
+        fatal: 1,
+        error: 0,
+        warning: 0,
+        total: 1
+      })
+    })
+
+    it('includes zero counts when there are no issues', () => {
+      const result = transformValidationResponse({})
+
+      expect(result.validation.counts).toEqual({
+        fatal: 0,
+        error: 0,
+        warning: 0,
+        total: 0
+      })
     })
 
     it('passes response schema validation with errorCode', () => {
@@ -740,6 +763,27 @@ describe('transformValidationResponse', () => {
 
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.VALIDATED,
+        ...transformValidationResponse(validation)
+      }
+      const { error } = summaryLogResponseSchema.validate(httpResponse)
+      expect(error).toBeUndefined()
+    })
+
+    it('passes response schema validation with counts', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'technical',
+            message: 'System error',
+            code: 'VALIDATION_SYSTEM_ERROR'
+          }
+        ],
+        counts: { fatal: 1, error: 0, warning: 0, total: 101 }
+      }
+
+      const httpResponse = {
+        status: SUMMARY_LOG_STATUS.INVALID,
         ...transformValidationResponse(validation)
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)
