@@ -524,13 +524,13 @@ const persistValidationResult = async ({
   version
 }) => {
   const allIssues = issues.getAllIssues()
-  const { cappedIssues, totalIssuesCount } = capIssuesForStorage(allIssues)
+  const cappedIssues = capIssuesForStorage(allIssues)
 
   await summaryLogsRepository.update(summaryLogId, version, {
     ...transitionStatus(summaryLog, status),
     validation: {
       issues: cappedIssues,
-      totalIssuesCount
+      counts: issues.getCounts()
     },
     ...(loads && { loads }),
     ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
@@ -724,7 +724,7 @@ const truncateActualValues = (issues) => {
  * Non-fatal issues fill the remaining capacity.
  *
  * @param {ValidationIssue[]} allIssues - All validation issues
- * @returns {{ cappedIssues: ValidationIssue[], totalIssuesCount: number }}
+ * @returns {ValidationIssue[]} The capped, actual-value-truncated issues
  */
 const capIssuesForStorage = (allIssues) => {
   let cappedIssues
@@ -748,8 +748,5 @@ const capIssuesForStorage = (allIssues) => {
 
   truncateActualValues(cappedIssues)
 
-  return {
-    cappedIssues,
-    totalIssuesCount: allIssues.length
-  }
+  return cappedIssues
 }

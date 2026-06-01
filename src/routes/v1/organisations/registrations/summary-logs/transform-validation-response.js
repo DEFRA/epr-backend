@@ -159,9 +159,7 @@ export const transformValidationResponse = (validation) => {
           .filter((i) => i.severity === VALIDATION_SEVERITY.FATAL)
           .map(transformFatalIssue),
         concerns: {},
-        ...(validation.totalIssuesCount && {
-          totalIssuesCount: validation.totalIssuesCount
-        })
+        ...(validation.counts && { counts: validation.counts })
       }
     }
   }
@@ -170,9 +168,7 @@ export const transformValidationResponse = (validation) => {
     validation: {
       failures: [],
       concerns: groupAndTransformRowIssues(issues),
-      ...(validation.totalIssuesCount && {
-        totalIssuesCount: validation.totalIssuesCount
-      })
+      ...(validation.counts && { counts: validation.counts })
     }
   }
 }

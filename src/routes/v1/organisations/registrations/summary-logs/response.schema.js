@@ -59,7 +59,12 @@ export const summaryLogResponseSchema = Joi.object({
   validation: Joi.object({
     failures: Joi.array().items(validationIssueSchema).required(),
     concerns: validationConcernsSchema.required(),
-    totalIssuesCount: Joi.number().integer().optional()
+    counts: Joi.object({
+      fatal: Joi.number().integer().required(),
+      error: Joi.number().integer().required(),
+      warning: Joi.number().integer().required(),
+      total: Joi.number().integer().required()
+    }).optional()
   }).optional(),
   loads: loadsSchema.optional(),
   loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
