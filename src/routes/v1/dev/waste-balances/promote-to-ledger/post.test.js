@@ -146,12 +146,13 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       id: new ObjectId().toHexString()
     }
 
-    // Embedded balance reflecting the above: 200 credited, 50 deducted from available
+    // Embedded balance reflecting the above: 200 credited, 50 deducted from
+    // available. Note: registrationId is intentionally absent — production
+    // waste balance documents never have it (see createNewWasteBalance).
     const wasteBalance = {
       id: new ObjectId().toString(),
       organisationId: organisation.id,
       accreditationId,
-      registrationId,
       schemaVersion: 1,
       version: 1,
       amount: 200,
@@ -333,6 +334,52 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       const { organisation, accreditationId, wasteBalance } = buildTestData()
       wasteBalance.amount = 0
       wasteBalance.availableAmount = 0
+
+      const server = await setupServer({
+        organisations: [organisation],
+        wasteBalances: [wasteBalance]
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: url(accreditationId)
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.result).toBe('promoted')
+      expect(body.eventCount).toBe(0)
+    })
+
+    it('should promote when no active registration links to the accreditation', async () => {
+      const accreditationId = new ObjectId().toString()
+
+      const accreditation = buildAccreditation({
+        id: accreditationId,
+        wasteProcessingType: 'reprocessor',
+        statusHistory: [
+          { status: 'created', updatedAt: new Date('2025-01-01') },
+          { status: 'approved', updatedAt: new Date('2025-02-01') }
+        ]
+      })
+
+      // Organisation has the accreditation but no registration linked to it
+      const organisation = buildOrganisation({
+        registrations: [],
+        accreditations: [accreditation]
+      })
+
+      const wasteBalance = {
+        id: new ObjectId().toString(),
+        organisationId: organisation.id,
+        accreditationId,
+        schemaVersion: 1,
+        version: 1,
+        amount: 0,
+        availableAmount: 0,
+        transactions: [],
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+      }
 
       const server = await setupServer({
         organisations: [organisation],

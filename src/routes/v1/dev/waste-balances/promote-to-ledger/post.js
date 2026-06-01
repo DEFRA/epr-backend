@@ -4,6 +4,14 @@ import Joi from 'joi'
 
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { promoteAccreditation } from '#server/run-stream-promotion.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+
+/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
+const ACTIVE_REGISTRATION_STATUSES = new Set([
+  REG_ACC_STATUS.APPROVED,
+  REG_ACC_STATUS.CANCELLED,
+  REG_ACC_STATUS.SUSPENDED
+])
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 
@@ -73,10 +81,21 @@ async function handler(request, h) {
     summaryLogsRepository: request.summaryLogsRepository
   }
 
+  // registrationId is not stored on the waste balance document, so we
+  // resolve it from the organisation the same way the startup sweep does.
+  const organisation = await request.organisationsRepository.findById(
+    balance.organisationId
+  )
+  const registration = organisation?.registrations.find(
+    (r) =>
+      r.accreditationId === accreditationId &&
+      ACTIVE_REGISTRATION_STATUSES.has(r.status)
+  )
+
   const row = {
     accreditationId,
     organisationId: balance.organisationId,
-    registrationId: balance.registrationId
+    registrationId: registration?.id
   }
 
   const result = await promoteAccreditation(row, deps)
@@ -87,12 +106,17 @@ async function handler(request, h) {
     )
   }
 
-  // Read the event count from the stream after promotion
-  const latestEvent = await streamRepository.findLatestByPartition(
-    balance.registrationId,
-    accreditationId
-  )
-  const eventCount = latestEvent?.number ?? 0
+  // Read the event count from the stream after promotion. When there is
+  // no active registration the sweep promotes with an empty stream, so
+  // there are no events to count.
+  let eventCount = 0
+  if (registration) {
+    const latestEvent = await streamRepository.findLatestByPartition(
+      registration.id,
+      accreditationId
+    )
+    eventCount = latestEvent?.number ?? 0
+  }
 
   return h.response({ result: 'promoted', eventCount }).code(StatusCodes.OK)
 }
