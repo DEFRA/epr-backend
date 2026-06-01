@@ -216,6 +216,20 @@ export const createInMemoryStreamRepository = (initialEvents = []) => {
       return structuredClone(matches)
     },
 
+    /**
+     * @param {string} registrationId
+     * @param {string | null} accreditationId
+     */
+    findAllByPartition: async (registrationId, accreditationId) => {
+      const matches = storage
+        .filter((event) =>
+          matchesPartition(event, registrationId, accreditationId)
+        )
+        .sort((a, b) => a.number - b.number)
+
+      return structuredClone(matches)
+    },
+
     deleteByPartition: async (registrationId, accreditationId) =>
       doDeleteByPartition(storage, registrationId, accreditationId),
 
