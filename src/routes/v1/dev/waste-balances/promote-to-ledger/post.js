@@ -4,14 +4,6 @@ import Joi from 'joi'
 
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { promoteAccreditation } from '#server/run-stream-promotion.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
-
-/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
-const ACTIVE_REGISTRATION_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.CANCELLED,
-  REG_ACC_STATUS.SUSPENDED
-])
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 
@@ -82,14 +74,12 @@ async function handler(request, h) {
   }
 
   // registrationId is not stored on the waste balance document, so we
-  // resolve it from the organisation the same way the startup sweep does.
+  // resolve it from the organisation to query the stream event count.
   const organisation = await request.organisationsRepository.findById(
     balance.organisationId
   )
   const registration = organisation?.registrations.find(
-    (r) =>
-      r.accreditationId === accreditationId &&
-      ACTIVE_REGISTRATION_STATUSES.has(r.status)
+    (r) => r.accreditationId === accreditationId
   )
 
   const result = await promoteAccreditation(
