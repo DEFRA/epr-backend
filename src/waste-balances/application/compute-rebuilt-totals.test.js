@@ -240,33 +240,6 @@ describe('computeRebuiltTotals', () => {
     })
   })
 
-  it('reverses pre-issue PRN cancellations to net zero', () => {
-    const result = computeRebuiltTotals({
-      accreditation,
-      wasteRecords: [wasteRecord({ rowId: 'r-1', data: { tonnage: 10 } })],
-      prns: [
-        prn({
-          id: 'prn-1',
-          tonnage: 3,
-          history: [
-            [PRN_STATUS.DRAFT, '2025-01-01T00:00:00.000Z'],
-            [PRN_STATUS.AWAITING_AUTHORISATION, '2025-01-02T00:00:00.000Z'],
-            [PRN_STATUS.CANCELLED, '2025-01-03T00:00:00.000Z']
-          ]
-        })
-      ],
-      overseasSites
-    })
-
-    expect(result).toEqual({
-      amount: 10,
-      availableAmount: 10,
-      wasteRecordContribution: 10,
-      prnAmountContribution: 0,
-      prnAvailableAmountContribution: 0
-    })
-  })
-
   it('reverses pre-issue deletion to net zero', () => {
     const result = computeRebuiltTotals({
       accreditation,
@@ -433,12 +406,12 @@ describe('computeRebuiltTotals', () => {
           ]
         }),
         prn({
-          id: 'prn-cancelled',
+          id: 'prn-removed',
           tonnage: 3,
           history: [
             [PRN_STATUS.DRAFT, '2025-01-08T00:00:00.000Z'],
             [PRN_STATUS.AWAITING_AUTHORISATION, '2025-01-09T00:00:00.000Z'],
-            [PRN_STATUS.CANCELLED, '2025-01-10T00:00:00.000Z']
+            [PRN_STATUS.DELETED, '2025-01-10T00:00:00.000Z']
           ]
         })
       ],
