@@ -34,7 +34,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
  * }} SetupServerOptions
  */
 
-describe('POST /v1/dev/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/promote-to-ledger', () => {
+describe('POST /v1/dev/organisations/{organisationId}/accreditations/{accreditationId}/promote-to-ledger', () => {
   setupAuthContext()
 
   const { VALID_FROM, VALID_TO } = getValidDateRange()
@@ -183,11 +183,10 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
   /**
    * @param {string} organisationId
-   * @param {string} registrationId
    * @param {string} accreditationId
    */
-  function url(organisationId, registrationId, accreditationId) {
-    return `/v1/dev/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/promote-to-ledger`
+  function url(organisationId, accreditationId) {
+    return `/v1/dev/organisations/${organisationId}/accreditations/${accreditationId}/promote-to-ledger`
   }
 
   /** @param {SetupServerOptions} [options] */
@@ -239,7 +238,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url('org-1', 'reg-1', 'acc-1')
+        url: url('org-1', 'acc-1')
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -252,7 +251,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url('org-1', 'reg-1', '%20')
+        url: url('org-1', '%20')
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -265,7 +264,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url('org-1', 'reg-1', 'nonexistent')
+        url: url('org-1', 'nonexistent')
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -274,8 +273,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
   describe('idempotency', () => {
     it('should return 200 with already-promoted when balance is already ledger', async () => {
-      const { organisation, accreditationId, registrationId, wasteBalance } =
-        buildTestData()
+      const { organisation, accreditationId, wasteBalance } = buildTestData()
       wasteBalance.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
 
       const server = await setupServer({
@@ -285,7 +283,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url(organisation.id, registrationId, accreditationId)
+        url: url(organisation.id, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -299,7 +297,6 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
       const {
         organisation,
         accreditationId,
-        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -333,7 +330,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url(organisation.id, registrationId, accreditationId)
+        url: url(organisation.id, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -342,8 +339,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
   describe('happy path', () => {
     it('should promote a zero-balance accreditation with no event history', async () => {
-      const { organisation, accreditationId, registrationId, wasteBalance } =
-        buildTestData()
+      const { organisation, accreditationId, wasteBalance } = buildTestData()
       wasteBalance.amount = 0
       wasteBalance.availableAmount = 0
 
@@ -354,20 +350,18 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url(organisation.id, registrationId, accreditationId)
+        url: url(organisation.id, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body.result).toBe('promoted')
-      expect(body.eventCount).toBe(0)
     })
 
     it('should promote an embedded balance to ledger with non-empty event history', async () => {
       const {
         organisation,
         accreditationId,
-        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -385,13 +379,12 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url(organisation.id, registrationId, accreditationId)
+        url: url(organisation.id, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body.result).toBe('promoted')
-      expect(body.eventCount).toBeGreaterThanOrEqual(3)
 
       const updatedBalance = await /** @type {any} */ (
         server.app.wasteBalancesRepository
@@ -405,7 +398,6 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
       const {
         organisation,
         accreditationId,
-        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -423,7 +415,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url(organisation.id, registrationId, accreditationId)
+        url: url(organisation.id, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -433,7 +425,6 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
       const {
         organisation,
         accreditationId,
-        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -453,7 +444,7 @@ describe('POST /v1/dev/organisations/{organisationId}/registrations/{registratio
 
       const response = await server.inject({
         method: 'POST',
-        url: url(organisation.id, registrationId, accreditationId)
+        url: url(organisation.id, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)

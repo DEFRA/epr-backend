@@ -16,16 +16,15 @@ import { promoteAccreditation } from '#server/run-stream-promotion.js'
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository
  *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository
- *   params: { organisationId: string, registrationId: string, accreditationId: string }
+ *   params: { organisationId: string, accreditationId: string }
  * }} PromoteToLedgerRequest
  */
 
 export const devWasteBalancesPromoteToLedgerPath =
-  '/v1/dev/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/promote-to-ledger'
+  '/v1/dev/organisations/{organisationId}/accreditations/{accreditationId}/promote-to-ledger'
 
 const params = Joi.object({
   organisationId: Joi.string().trim().min(1).required(),
-  registrationId: Joi.string().trim().min(1).required(),
   accreditationId: Joi.string().trim().min(1).required()
 }).messages({
   'any.required': '{#label} is required',
@@ -40,8 +39,8 @@ const params = Joi.object({
  * @param {Object} h - Hapi response toolkit
  */
 async function handler(request, h) {
-  const { organisationId, registrationId, accreditationId } = request.params
-  const { wasteBalancesRepository, streamRepository } = request
+  const { organisationId, accreditationId } = request.params
+  const { wasteBalancesRepository } = request
 
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -66,7 +65,7 @@ async function handler(request, h) {
     { accreditationId, organisationId },
     {
       wasteBalancesRepository,
-      streamRepository,
+      streamRepository: request.streamRepository,
       organisationsRepository: request.organisationsRepository,
       prnRepository: request.packagingRecyclingNotesRepository,
       wasteRecordsRepository: request.wasteRecordsRepository,
@@ -81,13 +80,7 @@ async function handler(request, h) {
     )
   }
 
-  const latestEvent = await streamRepository.findLatestByPartition(
-    registrationId,
-    accreditationId
-  )
-  const eventCount = latestEvent?.number ?? 0
-
-  return h.response({ result: 'promoted', eventCount }).code(StatusCodes.OK)
+  return h.response({ result: 'promoted' }).code(StatusCodes.OK)
 }
 
 export const devWasteBalancesPromoteToLedgerPost = {
