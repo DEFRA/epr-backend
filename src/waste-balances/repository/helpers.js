@@ -190,6 +190,7 @@ const dispatchToStream = async ({
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} [params.user]
@@ -219,7 +220,7 @@ export const performUpdateWasteBalanceTransactions = async ({
     if (
       existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
     ) {
-      await dispatchToStream({
+      const closingBalance = await dispatchToStream({
         annotatedRecords,
         accreditation,
         validatedAccreditationId,
@@ -228,6 +229,17 @@ export const performUpdateWasteBalanceTransactions = async ({
         overseasSites,
         summaryLogId
       })
+      if (closingBalance) {
+        await saveBalance(
+          {
+            ...existingBalance,
+            amount: closingBalance.amount,
+            availableAmount: closingBalance.availableAmount,
+            version: (existingBalance.version || 0) + 1
+          },
+          []
+        )
+      }
       return
     }
 

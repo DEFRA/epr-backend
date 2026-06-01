@@ -489,6 +489,55 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(findBalance).toHaveBeenCalledTimes(1)
       })
 
+      it('syncs document amounts from stream closing balance on the ledger path', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const streamRepository = { appendEvent: vi.fn() }
+        const findBalance = vi.fn().mockResolvedValue({
+          id: 'bal-1',
+          accreditationId: 'acc-1',
+          organisationId: 'org-1',
+          amount: 30,
+          availableAmount: 30,
+          transactions: [],
+          version: 1,
+          schemaVersion: 1,
+          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        })
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(performUpdateViaStream).mockClear()
+        vi.mocked(performUpdateViaStream).mockResolvedValue({
+          amount: 79,
+          availableAmount: 79
+        })
+
+        await callPerformUpdate({
+          wasteRecords,
+          accreditation,
+          dependencies: { streamRepository },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1' },
+          overseasSites: ORS_VALIDATION_DISABLED,
+          summaryLogId: 'log-1'
+        })
+
+        expect(performUpdateViaStream).toHaveBeenCalledTimes(1)
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+        const savedBalance = saveBalance.mock.calls[0][0]
+        expect(savedBalance.amount).toBe(79)
+        expect(savedBalance.availableAmount).toBe(79)
+        expect(savedBalance.version).toBe(2)
+        expect(saveBalance.mock.calls[0][1]).toEqual([])
+      })
+
       it('uses the embedded path when the existing balance has no marker (legacy doc)', async () => {
         const wasteRecords = [
           {
