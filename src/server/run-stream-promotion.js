@@ -89,7 +89,7 @@ const rebuildEvents = async (row, deps) => {
 }
 
 /**
- * @param {{ accreditationId: string, organisationId: string, registrationId: string }} row
+ * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
  */
 export const promoteAccreditation = async (row, deps) => {

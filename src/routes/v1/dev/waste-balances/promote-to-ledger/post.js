@@ -92,13 +92,10 @@ async function handler(request, h) {
       ACTIVE_REGISTRATION_STATUSES.has(r.status)
   )
 
-  const row = {
-    accreditationId,
-    organisationId: balance.organisationId,
-    registrationId: registration?.id
-  }
-
-  const result = await promoteAccreditation(row, deps)
+  const result = await promoteAccreditation(
+    { accreditationId, organisationId: balance.organisationId },
+    deps
+  )
 
   if (result !== 'promoted') {
     throw Boom.internal(
