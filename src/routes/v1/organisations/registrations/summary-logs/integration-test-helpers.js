@@ -616,6 +616,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteRecordsRepository,
     packagingRecyclingNotesRepository,
     organisationsRepository,
+    overseasSitesRepository,
     organisationId,
     registrationId,
     accreditationId,
@@ -673,6 +674,10 @@ const buildComplexTestOrg = ({
     id: registrationId,
     registrationNumber: 'REG-123',
     status: 'approved',
+    statusHistory: [
+      { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
+      { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+    ],
     material,
     wasteProcessingType: processingType,
     reprocessingType,
