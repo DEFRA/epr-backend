@@ -286,4 +286,14 @@ describe('balanceEventsFor', () => {
       balanceEventsFor(PRN_STATUS.DRAFT, PRN_STATUS.DISCARDED, params)
     ).toEqual([])
   })
+
+  it('emits no events for an awaiting-authorisation to cancelled move the state machine forbids', () => {
+    expect(
+      balanceEventsFor(
+        PRN_STATUS.AWAITING_AUTHORISATION,
+        PRN_STATUS.CANCELLED,
+        params
+      )
+    ).toEqual([])
+  })
 })
