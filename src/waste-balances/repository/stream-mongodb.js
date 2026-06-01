@@ -212,6 +212,74 @@ const performFindEventsByPrnIdAfter =
   }
 
 /**
+ * @migration PAE-1382 — delete all events for a partition.
+ * @param {Collection} collection
+ * @returns {(registrationId: string, accreditationId: string | null) => Promise<number>}
+ */
+const performDeleteByPartition =
+  (collection) => async (registrationId, accreditationId) => {
+    const result = await collection.deleteMany({
+      registrationId,
+      accreditationId
+    })
+    return result.deletedCount
+  }
+
+/**
+ * @migration PAE-1382 — insert multiple events in one call.
+ * Validates sequence: events must be numbered sequentially, and the first
+ * event's number must be currentMax + 1 (or 1 if empty partition).
+ * @param {Collection} collection
+ * @returns {(events: import('./stream-schema.js').StreamEventInsert[]) => Promise<import('./stream-schema.js').StreamEvent[]>}
+ */
+const performBulkAppendEvents = (collection) => async (events) => {
+  if (events.length === 0) {
+    return []
+  }
+
+  const validated = events.map(validateStreamEventInsert)
+
+  const first = validated[0]
+
+  const latest = await collection.findOne(
+    {
+      registrationId: first.registrationId,
+      accreditationId: first.accreditationId
+    },
+    { sort: { number: -1 }, projection: { number: 1 } }
+  )
+
+  const expectedStart = (latest?.number ?? 0) + 1
+
+  if (first.number !== expectedStart) {
+    throw new StreamSequenceError(
+      first.registrationId,
+      first.accreditationId,
+      first.number,
+      expectedStart
+    )
+  }
+
+  for (let i = 1; i < validated.length; i++) {
+    const expected = first.number + i
+    if (validated[i].number !== expected) {
+      throw new StreamSequenceError(
+        validated[i].registrationId,
+        validated[i].accreditationId,
+        validated[i].number,
+        expected
+      )
+    }
+  }
+
+  const result = await collection.insertMany(validated)
+
+  return validated.map((event, i) =>
+    toStreamEvent({ _id: result.insertedIds[i], ...event })
+  )
+}
+
+/**
  * Creates a MongoDB-backed stream repository.
  *
  * @param {Db} db
@@ -225,6 +293,8 @@ export const createMongoStreamRepository = async (db) => {
     findLatestByPartition: performFindLatestByPartition(collection),
     findLatestByPartitionAndKind:
       performFindLatestByPartitionAndKind(collection),
-    findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection)
+    findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
+    deleteByPartition: performDeleteByPartition(collection),
+    bulkAppendEvents: performBulkAppendEvents(collection)
   })
 }

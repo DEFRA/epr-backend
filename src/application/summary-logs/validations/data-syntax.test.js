@@ -712,6 +712,57 @@ describe('createDataSyntaxValidator', () => {
 
       expect(result.issues.isValid()).toBe(true)
     })
+
+    /**
+     * @type {Array<{
+     *   scenario: string,
+     *   tables: Record<string, Record<string, unknown>>,
+     *   expectedFatalTables: string[]
+     * }>}
+     */
+    const multiTableCases = [
+      {
+        scenario: 'two tables, earlier one fatal first',
+        tables: {
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 },
+          DATE_TABLE: { ROW_ID: 1001, DATE_FIELD: 'not-a-date' }
+        },
+        expectedFatalTables: ['TEST_TABLE', 'DATE_TABLE']
+      },
+      {
+        scenario: 'two tables, later one fatal first',
+        tables: {
+          DATE_TABLE: { ROW_ID: 1001, DATE_FIELD: 'not-a-date' },
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        },
+        expectedFatalTables: ['TEST_TABLE', 'DATE_TABLE']
+      },
+      {
+        scenario:
+          'three tables on one sheet, a clean table before two failing ones',
+        tables: {
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
+          DATE_TABLE: { ROW_ID: 1001, DATE_FIELD: 'not-a-date' },
+          PATTERN_TABLE: { ROW_ID: 1002, CODE_FIELD: 'invalid' }
+        },
+        expectedFatalTables: ['DATE_TABLE', 'PATTERN_TABLE']
+      }
+    ]
+
+    it.for(multiTableCases)(
+      'should report fatal cell errors for every failing table ($scenario)',
+      ({ tables, expectedFatalTables }) => {
+        const result = validateRows(tables, {
+          location: { sheet: 'Received', row: 7, column: 'A' }
+        })
+
+        const fatalTables = result.issues
+          .getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+          .map((issue) => issue.context?.location?.table)
+
+        expect(fatalTables).toEqual(expect.arrayContaining(expectedFatalTables))
+      }
+    )
   })
 
   describe('unrecognised tables', () => {

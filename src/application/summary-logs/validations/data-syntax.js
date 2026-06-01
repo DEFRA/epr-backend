@@ -133,6 +133,13 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
 const mapMessageToErrorCode = (message) => JOI_MESSAGE_TO_ERROR_CODE[message]
 
 /**
+ * @param {ValidationIssue[]} issues
+ * @returns {boolean} True if any issue is fatal
+ */
+const hasFatal = (issues) =>
+  issues.some((issue) => issue.severity === VALIDATION_SEVERITY.FATAL)
+
+/**
  * Builds a map from header names to their column indices
  *
  * Filters out null headers and EPR markers, returning only valid data headers.
@@ -162,35 +169,24 @@ const buildHeaderToIndexMap = (headers) => {
  *   tableName: string,
  *   headers: Array<string | null>,
  *   requiredHeaders: string[],
- *   location: CellLocation,
- *   issues: ValidationIssuesCollector
+ *   location: CellLocation
  * }} params
+ * @returns {ValidationIssue[]} A fatal issue for each missing required header
  */
-const validateHeaders = ({
-  tableName,
-  headers,
-  requiredHeaders,
-  location,
-  issues
-}) => {
+const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
   const actualHeaders = headers.filter(
     (header) => header !== null && !isEprMarker(header)
   )
 
-  for (const requiredHeader of requiredHeaders) {
-    if (!actualHeaders.includes(requiredHeader)) {
-      issues.addFatal(
-        VALIDATION_CATEGORY.TECHNICAL,
-        `Missing required header '${requiredHeader}' in table '${tableName}'`,
-        VALIDATION_CODE.HEADER_REQUIRED,
-        {
-          location,
-          expected: requiredHeader,
-          actual: actualHeaders
-        }
-      )
-    }
-  }
+  return requiredHeaders
+    .filter((requiredHeader) => !actualHeaders.includes(requiredHeader))
+    .map((requiredHeader) => ({
+      severity: VALIDATION_SEVERITY.FATAL,
+      category: VALIDATION_CATEGORY.TECHNICAL,
+      message: `Missing required header '${requiredHeader}' in table '${tableName}'`,
+      code: VALIDATION_CODE.HEADER_REQUIRED,
+      context: { location, expected: requiredHeader, actual: actualHeaders }
+    }))
 }
 
 /**
@@ -292,33 +288,6 @@ const toApplicationIssue = ({
 }
 
 /**
- * Records each row-level issue onto the run-level issues collector, preserving
- * its severity (fatal vs error).
- *
- * @param {ValidationIssue[]} rowIssues
- * @param {ValidationIssuesCollector} issues
- */
-const recordIssues = (rowIssues, issues) => {
-  for (const rowIssue of rowIssues) {
-    if (rowIssue.severity === 'fatal') {
-      issues.addFatal(
-        rowIssue.category,
-        rowIssue.message,
-        rowIssue.code,
-        rowIssue.context
-      )
-    } else {
-      issues.addError(
-        rowIssue.category,
-        rowIssue.message,
-        rowIssue.code,
-        rowIssue.context
-      )
-    }
-  }
-}
-
-/**
  * Checks whether a row should be filtered out before validation.
  *
  * Rows are filtered when the row ID field contains template artefacts
@@ -359,20 +328,18 @@ const isTemplateRow = (rowObject, rowIdField) => {
  *   headerToIndexMap: Map<string, number>,
  *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
  *   domainSchema: TableSchema,
- *   location: CellLocation,
- *   issues: ValidationIssuesCollector
+ *   location: CellLocation
  * }} params
- * @returns {ValidatedRow[]}
+ * @returns {{ issues: ValidationIssue[], rows: ValidatedRow[] }}
  */
 const validateRows = ({
   tableName,
   headerToIndexMap,
   rows,
   domainSchema,
-  location,
-  issues
+  location
 }) => {
-  return rows.flatMap(({ rowNumber, values }) => {
+  const validatedRows = rows.flatMap(({ rowNumber, values }) => {
     /** @type {Record<string, unknown>} */
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
@@ -399,8 +366,6 @@ const validateRows = ({
       })
     )
 
-    recordIssues(rowIssues, issues)
-
     return [
       {
         data: rowObject,
@@ -410,6 +375,11 @@ const validateRows = ({
       }
     ]
   })
+
+  return {
+    issues: validatedRows.flatMap((row) => row.issues),
+    rows: validatedRows
+  }
 }
 
 /**
@@ -418,44 +388,40 @@ const validateRows = ({
  * @param {{
  *   tableName: string,
  *   tableData: DataSection,
- *   domainSchema: TableSchema,
- *   issues: ValidationIssuesCollector
+ *   domainSchema: TableSchema
  * }} params
- * @returns {ValidatedTableSection} Validated table data with rows converted to ValidatedRow[]
+ * @returns {{ issues: ValidationIssue[], table: ValidatedTableSection }} Validated table data (rows as ValidatedRow[]) and the issues it produced
  */
-const validateTable = ({ tableName, tableData, domainSchema, issues }) => {
+const validateTable = ({ tableName, tableData, domainSchema }) => {
   const { headers, rows, location } = tableData
 
-  validateHeaders({
+  const headerIssues = validateHeaders({
     tableName,
     headers,
     requiredHeaders: domainSchema.requiredHeaders,
-    location,
-    issues
+    location
   })
 
-  if (issues.isFatal()) {
-    return { ...tableData, rows: [] }
+  if (hasFatal(headerIssues)) {
+    return { table: { ...tableData, rows: [] }, issues: headerIssues }
   }
 
   const headerToIndexMap = buildHeaderToIndexMap(headers)
 
-  const validatedRows = validateRows({
+  const { rows: validatedRows, issues: rowIssues } = validateRows({
     tableName,
     headerToIndexMap,
     rows,
     domainSchema,
-    location,
-    issues
+    location
   })
 
-  if (issues.isFatal()) {
-    return { ...tableData, rows: [] }
-  }
-
   return {
-    ...tableData,
-    rows: validatedRows
+    table: {
+      ...tableData,
+      rows: hasFatal(rowIssues) ? [] : validatedRows
+    },
+    issues: [...headerIssues, ...rowIssues]
   }
 }
 
@@ -484,13 +450,13 @@ const validateTable = ({ tableName, tableData, domainSchema, issues }) => {
  * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
 export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
-  const issues = createValidationIssues()
-
   const data = parsed?.data || {}
   const processingType = parsed?.meta?.PROCESSING_TYPE?.value
   const getTableSchema = createTableSchemaGetter(processingType, schemaRegistry)
   /** @type {ValidatedSummaryLog['data']} */
   const validatedTables = {}
+  /** @type {ValidationIssue[]} */
+  const allIssues = []
 
   for (const [tableName, tableData] of Object.entries(data)) {
     const domainSchema = getTableSchema(tableName)
@@ -500,12 +466,13 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
         ? { sheet: tableData.location.sheet, table: tableName }
         : { table: tableName }
 
-      issues.addFatal(
-        VALIDATION_CATEGORY.TECHNICAL,
-        `Unrecognised table '${tableName}' has no schema for this processing type`,
-        VALIDATION_CODE.TABLE_UNRECOGNISED,
-        { location }
-      )
+      allIssues.push({
+        severity: VALIDATION_SEVERITY.FATAL,
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: `Unrecognised table '${tableName}' has no schema for this processing type`,
+        code: VALIDATION_CODE.TABLE_UNRECOGNISED,
+        context: { location }
+      })
 
       // Keep unvalidated tables as-is for downstream processing.
       validatedTables[tableName] = /** @type {ValidatedTableSection} */ (
@@ -514,16 +481,18 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
       continue
     }
 
-    validatedTables[tableName] = validateTable({
+    const { issues: tableIssues, table } = validateTable({
       tableName,
       tableData,
-      domainSchema,
-      issues
+      domainSchema
     })
+
+    validatedTables[tableName] = table
+    allIssues.push(...tableIssues)
   }
 
   return {
-    issues,
+    issues: createValidationIssues(allIssues),
     validatedData: {
       ...parsed,
       data: validatedTables

@@ -1,5 +1,4 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
@@ -7,16 +6,8 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
+import { loadAccreditationSources } from '#server/load-accreditation-sources.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-
-/** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
-const ACTIVE_REGISTRATION_STATUSES = new Set([
-  REG_ACC_STATUS.APPROVED,
-  REG_ACC_STATUS.CANCELLED,
-  REG_ACC_STATUS.SUSPENDED
-])
 
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const LOCK_NAME = 'balance-divergence-diagnostic'
@@ -63,19 +54,8 @@ const findEmbeddedWasteBalances = async (db) => {
   return /** @type {EmbeddedBalanceRow[]} */ (/** @type {unknown} */ (docs))
 }
 
-/**
- * Map a summary log document from findAllByOrgReg into the shape that
- * computeRebuiltStream expects. Uses summaryLog.file.id (the file
- * identifier stored on waste record versions) rather than the document
- * _id, which is a different namespace.
- *
- * @param {{ summaryLog: { file: { id: string }, status: string, submittedAt?: string } }} doc
- */
-export const toStreamSummaryLog = ({ summaryLog }) => ({
-  id: summaryLog.file.id,
-  status: summaryLog.status,
-  submittedAt: summaryLog.submittedAt
-})
+// Re-export for callers that import from here
+export { toStreamSummaryLog } from '#server/load-accreditation-sources.js'
 
 const formatDelta = (current, rebuilt) =>
   Number((rebuilt - current).toFixed(10))
@@ -91,48 +71,9 @@ const formatDelta = (current, rebuilt) =>
  * @param {DiagnosticDependencies} deps
  */
 const compareForEmbedded = async (embedded, deps) => {
-  const {
-    organisationsRepository,
-    prnRepository,
-    wasteRecordsRepository,
-    overseasSitesRepository,
-    summaryLogsRepository
-  } = deps
-
-  const organisation = await organisationsRepository.findById(
-    embedded.organisationId
-  )
-  const accreditation = organisation.accreditations.find(
-    (a) => a.id === embedded.accreditationId
-  )
-  if (!accreditation) {
-    throw new Error(
-      `Accreditation ${embedded.accreditationId} not found on organisation ${embedded.organisationId}`
-    )
-  }
-  const registration = organisation.registrations.find(
-    (r) =>
-      r.accreditationId === embedded.accreditationId &&
-      ACTIVE_REGISTRATION_STATUSES.has(r.status)
-  )
-  if (!registration) {
-    throw new Error(
-      `No registration links to accreditation ${embedded.accreditationId} on organisation ${embedded.organisationId}`
-    )
-  }
-
-  const wasteRecords = await wasteRecordsRepository.findByRegistration(
-    embedded.organisationId,
-    registration.id
-  )
-  const prns = await prnRepository.findByAccreditation(embedded.accreditationId)
-
-  const overseasSites = await resolveOverseasSites(
-    organisationsRepository,
-    overseasSitesRepository,
-    embedded.organisationId,
-    registration.id
-  )
+  const sources = await loadAccreditationSources(embedded, deps)
+  const { accreditation, registration, wasteRecords, prns, overseasSites } =
+    sources
 
   const rebuilt = computeRebuiltTotals({
     accreditation,
@@ -141,21 +82,14 @@ const compareForEmbedded = async (embedded, deps) => {
     overseasSites
   })
 
-  const summaryLogDocs = await summaryLogsRepository.findAllByOrgReg(
-    embedded.organisationId,
-    registration.id
-  )
-
   const stream = computeRebuiltStream({
     accreditation,
+    registrationId: registration.id,
+    organisationId: embedded.organisationId,
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs: summaryLogDocs
-      .filter(
-        ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
-      )
-      .map(toStreamSummaryLog)
+    summaryLogs: sources.summaryLogs
   })
 
   return buildComparison(
@@ -204,7 +138,8 @@ const buildComparison = (
     rebuilt.availableAmount,
     stream.availableAmount
   ),
-  streamEventCount: stream.events.length
+  streamEventCount: stream.events.length,
+  backfilledActorCount: stream.backfilledActorCount
 })
 
 const isDivergent = (comparison) =>
@@ -247,6 +182,16 @@ const formatErrorLine = (embedded, error) =>
     `error="${error.message}"`
   ].join(' ')
 
+const formatBackfillLine = (comparison) =>
+  [
+    'Waste-balance rebuild used backfill actor:',
+    `organisationId=${comparison.organisationId}`,
+    `registrationNumber=${comparison.registrationNumber}`,
+    `accreditationNumber=${comparison.accreditationNumber}`,
+    `backfilledActorCount=${comparison.backfilledActorCount}`,
+    `streamEventCount=${comparison.streamEventCount}`
+  ].join(' ')
+
 /**
  * @param {import('mongodb').Db} db
  * @param {DiagnosticDependencies} deps
@@ -266,6 +211,9 @@ const runDiagnostic = async (db, deps) => {
     scanned += 1
     try {
       const comparison = await compareForEmbedded(row, deps)
+      if (comparison.backfilledActorCount > 0) {
+        logger.warn({ message: formatBackfillLine(comparison) })
+      }
       if (isDivergent(comparison)) {
         changed += 1
         logger.info({ message: formatDivergenceLine(comparison) })

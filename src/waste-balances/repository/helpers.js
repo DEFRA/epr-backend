@@ -169,12 +169,11 @@ const dispatchToStream = async ({
 /**
  * Shared logic for updating waste balance transactions.
  *
- * Dispatches on the `wasteBalanceLedger` feature flag and the
- * per-accreditation `canonicalSource` marker:
- * - flag OFF — embedded `transactions[]` array
- * - flag ON, marker `'ledger'` — event stream path
- * - flag ON, marker `'embedded'`, `'migrating'`, or no balance yet — embedded
- *   `transactions[]` array
+ * Dispatches on the per-accreditation `canonicalSource` marker, gated by
+ * `streamRepository` presence (matching the PRN write paths in helpers-prn):
+ * - marker `'ledger'` and streamRepository available — event stream path
+ * - marker `'embedded'`, `'migrating'`, no balance yet, or no streamRepository
+ *   — embedded `transactions[]` array
  *
  * `'migrating'` deliberately routes to the embedded path: a per-accreditation
  * rebuild that flipped the marker via `flipCanonicalSourceToMigrating` keeps
@@ -191,7 +190,6 @@ const dispatchToStream = async ({
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} [params.user]
@@ -216,7 +214,7 @@ export const performUpdateWasteBalanceTransactions = async ({
 
   const validatedAccreditationId = validateAccreditationId(accreditation.id)
 
-  if (dependencies.featureFlags?.isWasteBalanceLedgerEnabled()) {
+  if (dependencies.streamRepository) {
     const existingBalance = await findBalance(validatedAccreditationId)
     if (
       existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
