@@ -157,7 +157,8 @@ describe('runStreamPromotion', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: [],
       amount: 0,
-      availableAmount: 0
+      availableAmount: 0,
+      backfilledActorCount: 0
     })
   })
 
@@ -284,7 +285,8 @@ describe('runStreamPromotion', () => {
     vi.mocked(computeRebuiltStream).mockReturnValue({
       events: builtEvents,
       amount: 100,
-      availableAmount: 100
+      availableAmount: 100,
+      backfilledActorCount: 0
     })
 
     await runStreamPromotion(mockServer)
