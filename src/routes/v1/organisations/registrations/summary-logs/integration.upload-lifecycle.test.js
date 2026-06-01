@@ -136,7 +136,8 @@ describe('Summary logs upload lifecycle', () => {
           status: SUMMARY_LOG_STATUS.VALIDATED,
           validation: {
             failures: [],
-            concerns: {}
+            concerns: {},
+            counts: { fatal: 0, error: 0, warning: 0, total: 0 }
           },
           loads: createEmptyLoads(),
           loadsByWasteRecordType: [
@@ -231,7 +232,8 @@ describe('Summary logs upload lifecycle', () => {
             status: UPLOAD_STATUS.REJECTED,
             validation: {
               failures: [{ code: 'FILE_REJECTED', errorCode: 'FILE_REJECTED' }],
-              concerns: {}
+              concerns: {},
+              counts: { fatal: 1, error: 0, warning: 0, total: 1 }
             }
           })
         )

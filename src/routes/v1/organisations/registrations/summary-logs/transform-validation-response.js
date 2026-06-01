@@ -113,16 +113,38 @@ const groupAndTransformRowIssues = (issues) => {
 }
 
 /**
+ * Resolves the issue counts for the response. Uses the pre-cap counts the
+ * validator stored; on the direct upload-rejection path (no stored counts) the
+ * failures are all fatal, so derive from their length; otherwise zero. Always
+ * returns a counts object so the response contract can require it.
+ *
+ * @param {Validation} [validation]
+ * @returns {{ fatal: number, error: number, warning: number, total: number }}
+ */
+const resolveCounts = (validation) => {
+  if (validation?.counts) {
+    return validation.counts
+  }
+
+  const fatal = validation?.failures?.length ?? 0
+
+  return { fatal, error: 0, warning: 0, total: fatal }
+}
+
+/**
  * Transforms internal validation structure to HTTP response format
  *
  * Implements the table-keyed response structure with:
  * - `failures`: Array of fatal meta-level errors (XOR with concerns)
  * - `concerns`: Object with table-keyed row-level errors and warnings
+ * - `counts`: Issue counts by severity (always present)
  *
  * @param {Validation} [validation] - The validation object from database
  * @returns {Object} Transformed validation for HTTP response
  */
 export const transformValidationResponse = (validation) => {
+  const counts = resolveCounts(validation)
+
   // Handle direct failures (e.g., from upload rejection)
   if (validation?.failures && validation.failures.length > 0) {
     const failures =
@@ -135,7 +157,8 @@ export const transformValidationResponse = (validation) => {
           ...f,
           errorCode: f.errorCode ?? f.code
         })),
-        concerns: {}
+        concerns: {},
+        counts
       }
     }
   }
@@ -144,7 +167,8 @@ export const transformValidationResponse = (validation) => {
     return {
       validation: {
         failures: [],
-        concerns: {}
+        concerns: {},
+        counts
       }
     }
   }
@@ -159,7 +183,7 @@ export const transformValidationResponse = (validation) => {
           .filter((i) => i.severity === VALIDATION_SEVERITY.FATAL)
           .map(transformFatalIssue),
         concerns: {},
-        ...(validation.counts && { counts: validation.counts })
+        counts
       }
     }
   }
@@ -168,7 +192,7 @@ export const transformValidationResponse = (validation) => {
     validation: {
       failures: [],
       concerns: groupAndTransformRowIssues(issues),
-      ...(validation.counts && { counts: validation.counts })
+      counts
     }
   }
 }

@@ -6,6 +6,8 @@ import {
   loadsByWasteRecordTypeSchema
 } from '#domain/summary-logs/loads-schema.js'
 
+const countSchema = Joi.number().integer().min(0).required()
+
 const validationIssueSchema = Joi.object({
   type: Joi.string().valid('error', 'warning').optional(),
   /** @deprecated Use errorCode for specific validation codes */
@@ -60,11 +62,11 @@ export const summaryLogResponseSchema = Joi.object({
     failures: Joi.array().items(validationIssueSchema).required(),
     concerns: validationConcernsSchema.required(),
     counts: Joi.object({
-      fatal: Joi.number().integer().required(),
-      error: Joi.number().integer().required(),
-      warning: Joi.number().integer().required(),
-      total: Joi.number().integer().required()
-    }).optional()
+      fatal: countSchema,
+      error: countSchema,
+      warning: countSchema,
+      total: countSchema
+    }).required()
   }).optional(),
   loads: loadsSchema.optional(),
   loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),

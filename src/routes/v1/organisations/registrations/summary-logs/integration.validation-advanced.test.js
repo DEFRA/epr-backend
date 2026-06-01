@@ -801,7 +801,8 @@ describe('Advanced validation scenarios', () => {
       const payload = JSON.parse(response.payload)
       expect(payload.validation).toEqual({
         failures: [],
-        concerns: {}
+        concerns: {},
+        counts: { fatal: 0, error: 0, warning: 0, total: 0 }
       })
     })
   })
