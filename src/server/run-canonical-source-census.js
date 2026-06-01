@@ -27,35 +27,34 @@ export const countWasteBalancesByCanonicalSource = async (db) => {
 }
 
 /**
+ * Documents written before `canonicalSource` was introduced have no value, but
+ * the read path treats anything that isn't `ledger` as embedded — so a missing
+ * or unrecognised value counts as embedded here too.
+ *
  * @param {CanonicalSourceCount[]} rows
  */
 const formatCensusLine = (rows) => {
-  const known = {
-    [WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED]: 0,
-    [WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING]: 0,
-    [WASTE_BALANCE_CANONICAL_SOURCE.LEDGER]: 0
-  }
-  let unknown = 0
+  let embedded = 0
+  let migrating = 0
+  let ledger = 0
 
   for (const row of rows) {
-    if (row._id !== null && Object.hasOwn(known, row._id)) {
-      known[row._id] += row.count
+    if (row._id === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+      ledger += row.count
+    } else if (row._id === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING) {
+      migrating += row.count
     } else {
-      unknown += row.count
+      embedded += row.count
     }
   }
 
-  const embedded = known[WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED]
-  const migrating = known[WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING]
-  const ledger = known[WASTE_BALANCE_CANONICAL_SOURCE.LEDGER]
-  const total = embedded + migrating + ledger + unknown
+  const total = embedded + migrating + ledger
 
   return [
     'Waste balance canonicalSource census:',
     `embedded=${embedded}`,
     `migrating=${migrating}`,
     `ledger=${ledger}`,
-    `unknown=${unknown}`,
     `total=${total}`
   ].join(' ')
 }

@@ -75,11 +75,11 @@ describe('runCanonicalSourceCensus', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste balance canonicalSource census: embedded=10 migrating=3 ledger=7 unknown=0 total=20'
+        'Waste balance canonicalSource census: embedded=10 migrating=3 ledger=7 total=20'
     })
   })
 
-  it('buckets missing or unrecognised canonicalSource values as unknown and includes them in the total', async () => {
+  it('counts docs with a missing or unrecognised canonicalSource as embedded', async () => {
     mockToArray.mockResolvedValue([
       { _id: 'embedded', count: 5 },
       { _id: null, count: 2 },
@@ -90,7 +90,7 @@ describe('runCanonicalSourceCensus', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste balance canonicalSource census: embedded=5 migrating=0 ledger=0 unknown=3 total=8'
+        'Waste balance canonicalSource census: embedded=8 migrating=0 ledger=0 total=8'
     })
   })
 
@@ -101,7 +101,7 @@ describe('runCanonicalSourceCensus', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste balance canonicalSource census: embedded=0 migrating=0 ledger=0 unknown=0 total=0'
+        'Waste balance canonicalSource census: embedded=0 migrating=0 ledger=0 total=0'
     })
   })
 
