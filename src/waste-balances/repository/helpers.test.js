@@ -654,6 +654,54 @@ describe('src/waste-balances/repository/helpers.js', () => {
         )
       })
 
+      it('uses the stream path and creates a ledger balance when no balance exists and the ledger flag is on', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1' }
+        const streamRepository = { appendEvent: vi.fn() }
+        const featureFlags = {
+          isWasteBalanceLedgerEnabled: () => true
+        }
+        const findBalance = vi.fn().mockResolvedValue(null)
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(performUpdateViaStream).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
+
+        await callPerformUpdate({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            streamRepository,
+            featureFlags
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1', email: 'user@test.com' },
+          overseasSites: ORS_VALIDATION_DISABLED,
+          summaryLogId: 'log-1'
+        })
+
+        // Should dispatch to stream, not embedded path
+        expect(performUpdateViaStream).toHaveBeenCalledTimes(1)
+        expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
+
+        // Should create a shell balance doc with ledger source
+        expect(saveBalance).toHaveBeenCalledTimes(1)
+        const savedBalance = saveBalance.mock.calls[0][0]
+        expect(savedBalance.canonicalSource).toBe(
+          WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        )
+        expect(savedBalance.registrationId).toBe('reg-1')
+        // Shell doc should have empty transactions
+        expect(saveBalance.mock.calls[0][1]).toEqual([])
+      })
+
       it('uses the embedded path when canonicalSource is ledger but no streamRepository is provided', async () => {
         const wasteRecords = [
           {

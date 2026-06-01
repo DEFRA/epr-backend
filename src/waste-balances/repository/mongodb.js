@@ -229,7 +229,10 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
       $setOnInsert: {
         _id: updatedBalance.id,
         organisationId: updatedBalance.organisationId,
-        canonicalSource: updatedBalance.canonicalSource
+        canonicalSource: updatedBalance.canonicalSource,
+        ...(updatedBalance.registrationId !== undefined && {
+          registrationId: updatedBalance.registrationId
+        })
       }
     }),
     { upsert: true }
