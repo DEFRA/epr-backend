@@ -145,10 +145,7 @@ const promoteAccreditation = async (row, deps) => {
   // than appending on top of a partial write. An alternative would be to
   // skip the delete and let bulkAppendEvents fail on a sequence conflict,
   // but that turns a recoverable restart into a stuck accreditation.
-  await streamRepository.deleteByPartition(
-    registration.id,
-    row.accreditationId
-  )
+  await streamRepository.deleteByPartition(registration.id, row.accreditationId)
   await streamRepository.bulkAppendEvents(events)
 
   // Use the ORIGINAL captured version, not a re-read. If a concurrent
