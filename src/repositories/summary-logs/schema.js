@@ -43,12 +43,22 @@ const fileSchema = Joi.object({
 
 const metaSchema = Joi.object().pattern(Joi.string(), Joi.any())
 
+const nonNegativeInteger = Joi.number().integer().min(0).required()
+
+const validationSchema = Joi.object({
+  issues: Joi.array().items(Joi.object()).optional(),
+  failures: Joi.array().items(Joi.object()).optional(),
+  counts: Joi.object({
+    fatal: nonNegativeInteger,
+    error: nonNegativeInteger,
+    warning: nonNegativeInteger,
+    total: nonNegativeInteger
+  }).optional()
+})
+
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
-  validation: Joi.object({
-    issues: Joi.array().items(Joi.object()).optional(),
-    failures: Joi.array().items(Joi.object()).optional()
-  }).optional(),
+  validation: validationSchema.optional(),
   file: Joi.when('status', {
     is: SUMMARY_LOG_STATUS.PREPROCESSING,
     then: fileSchema.optional(),
@@ -77,10 +87,7 @@ export const summaryLogInsertSchema = Joi.object({
 
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
-  validation: Joi.object({
-    issues: Joi.array().items(Joi.object()).optional(),
-    failures: Joi.array().items(Joi.object()).optional()
-  }).optional(),
+  validation: validationSchema.optional(),
   loads: loadsSchema.optional(),
   loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   file: fileSchema.optional(),

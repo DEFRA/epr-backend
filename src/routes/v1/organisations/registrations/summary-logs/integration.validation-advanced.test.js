@@ -26,6 +26,8 @@ import {
   createTestInfrastructure
 } from './integration-test-helpers.js'
 
+/** @import {Organisation} from '#domain/organisations/model.js' */
+
 describe('Advanced validation scenarios', () => {
   let server
   let organisationId
@@ -295,7 +297,10 @@ describe('Advanced validation scenarios', () => {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
-        debug: vi.fn()
+        debug: vi.fn(),
+        trace: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn()
       }
       const uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
@@ -315,7 +320,7 @@ describe('Advanced validation scenarios', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        /** @type {Organisation} */ (testOrg)
       ])()
 
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
@@ -491,7 +496,10 @@ describe('Advanced validation scenarios', () => {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
-        debug: vi.fn()
+        debug: vi.fn(),
+        trace: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn()
       }
       const uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
@@ -510,7 +518,7 @@ describe('Advanced validation scenarios', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        /** @type {Organisation} */ (testOrg)
       ])()
 
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
@@ -767,7 +775,10 @@ describe('Advanced validation scenarios', () => {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn(),
-        debug: vi.fn()
+        debug: vi.fn(),
+        trace: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn()
       }
       summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -801,7 +812,8 @@ describe('Advanced validation scenarios', () => {
       const payload = JSON.parse(response.payload)
       expect(payload.validation).toEqual({
         failures: [],
-        concerns: {}
+        concerns: {},
+        counts: { fatal: 0, error: 0, warning: 0, total: 0 }
       })
     })
   })
