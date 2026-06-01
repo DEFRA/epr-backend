@@ -167,6 +167,43 @@ const dispatchToStream = async ({
 }
 
 /**
+ * Brand new accreditation with ledger flag on: create a shell balance doc
+ * so that findByAccreditationId returns something and resolveBalanceAmounts
+ * can read canonicalSource + registrationId to query the stream. Amounts
+ * stay at zero on the document; reads resolve them from the stream's
+ * closing balance.
+ */
+const createLedgerBalanceAndDispatch = async ({
+  annotatedRecords,
+  accreditation,
+  validatedAccreditationId,
+  dependencies,
+  saveBalance,
+  user,
+  overseasSites,
+  summaryLogId
+}) => {
+  const newBalance = {
+    ...createNewWasteBalance(
+      validatedAccreditationId,
+      annotatedRecords[0]?.organisationId
+    ),
+    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+    registrationId: annotatedRecords[0]?.registrationId
+  }
+  await saveBalance(newBalance, [])
+  await dispatchToStream({
+    annotatedRecords,
+    accreditation,
+    validatedAccreditationId,
+    dependencies,
+    user,
+    overseasSites,
+    summaryLogId
+  })
+}
+
+/**
  * Shared logic for updating waste balance transactions.
  *
  * Dispatches on the per-accreditation `canonicalSource` marker, gated by
@@ -232,29 +269,16 @@ export const performUpdateWasteBalanceTransactions = async ({
       return
     }
 
-    // Brand new accreditation with ledger flag on: create a shell balance
-    // doc so that findByAccreditationId returns something and
-    // resolveBalanceAmounts can read canonicalSource + registrationId to
-    // query the stream. Amounts stay at zero on the document; reads resolve
-    // them from the stream's closing balance.
     if (
       !existingBalance &&
       dependencies.featureFlags?.isWasteBalanceLedgerEnabled()
     ) {
-      const newBalance = {
-        ...createNewWasteBalance(
-          validatedAccreditationId,
-          annotatedRecords[0]?.organisationId
-        ),
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-        registrationId: annotatedRecords[0]?.registrationId
-      }
-      await saveBalance(newBalance, [])
-      await dispatchToStream({
+      await createLedgerBalanceAndDispatch({
         annotatedRecords,
         accreditation,
         validatedAccreditationId,
         dependencies,
+        saveBalance,
         user,
         overseasSites,
         summaryLogId
