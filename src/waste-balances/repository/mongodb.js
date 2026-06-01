@@ -101,9 +101,13 @@ const performFlipCanonicalSourceToMigrating =
 
 const performFlipCanonicalSourceToLedger =
   (db) =>
-  async ({ accreditationId, capturedVersion }) => {
+  async ({ accreditationId, registrationId, capturedVersion }) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
     const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+    const $set = {
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+      registrationId
+    }
     const updated = await collection.findOneAndUpdate(
       {
         accreditationId: validatedAccreditationId,
@@ -111,7 +115,7 @@ const performFlipCanonicalSourceToLedger =
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
       },
       {
-        $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER },
+        $set,
         $unset: { migratingSince: '' }
       },
       { returnDocument: 'after' }
