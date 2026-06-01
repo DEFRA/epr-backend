@@ -8,6 +8,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { TABLE_SCHEMAS as EXPORTER_TABLE_SCHEMAS } from '#domain/summary-logs/table-schemas/exporter/index.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -964,6 +965,85 @@ describe('SummaryLogsValidator integration', () => {
       expect(serialised).not.toContain(piiValue)
       expect(serialised).not.toContain(testOrg.id)
       expect(serialised).not.toContain(testOrg.registrations[0].id)
+    })
+  })
+
+  describe('cross-sheet error capture', () => {
+    const accreditationNumber = 'ACC-002'
+
+    const exporterMetadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-456',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'EXPORTER',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 5,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      },
+      ACCREDITATION_NUMBER: {
+        value: accreditationNumber,
+        location: { sheet: 'Cover', row: 5, column: 'B' }
+      }
+    }
+
+    /**
+     * @param {{ requiredHeaders: string[] }} schema - Only requiredHeaders is used, to fix the column order
+     * @param {number} rowNumber
+     * @param {Record<string, unknown>} overrides - Cell values keyed by header; absent headers default to null
+     * @returns {{ rowNumber: number, values: unknown[] }}
+     */
+    const rowForTable = (schema, rowNumber, overrides) => ({
+      rowNumber,
+      values: schema.requiredHeaders.map((header) => overrides[header] ?? null)
+    })
+
+    it('should capture cell errors from every sheet, not just the first', async () => {
+      const { updated } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'REG-456',
+        accreditationNumber,
+        metadata: exporterMetadata,
+        data: {
+          RECEIVED_LOADS_FOR_EXPORT: {
+            location: { sheet: 'Exported', row: 7, column: 'A' },
+            headers:
+              EXPORTER_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
+            rows: [
+              rowForTable(EXPORTER_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_EXPORT, 8, {
+                ROW_ID: 1000,
+                DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
+              })
+            ]
+          },
+          SENT_ON_LOADS: {
+            location: { sheet: 'Sent on', row: 7, column: 'A' },
+            headers: EXPORTER_TABLE_SCHEMAS.SENT_ON_LOADS.requiredHeaders,
+            rows: [
+              rowForTable(EXPORTER_TABLE_SCHEMAS.SENT_ON_LOADS, 8, {
+                ROW_ID: 5000,
+                DATE_LOAD_LEFT_SITE: 'not-a-date'
+              })
+            ]
+          }
+        }
+      })
+
+      const erroringSheets = updated.summaryLog.validation.issues.map(
+        (issue) => issue.context?.location?.sheet
+      )
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(erroringSheets).toEqual(
+        expect.arrayContaining(['Exported', 'Sent on'])
+      )
     })
   })
 })
