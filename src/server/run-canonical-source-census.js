@@ -21,7 +21,7 @@ const CENSUS_PIPELINE = [
 export const countWasteBalancesByCanonicalSource = async (db) => {
   const docs = await db
     .collection(WASTE_BALANCES_COLLECTION)
-    .aggregate(CENSUS_PIPELINE, { allowDiskUse: true })
+    .aggregate(CENSUS_PIPELINE)
     .toArray()
   return /** @type {CanonicalSourceCount[]} */ (/** @type {unknown} */ (docs))
 }
