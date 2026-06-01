@@ -167,6 +167,43 @@ const dispatchToStream = async ({
 }
 
 /**
+ * Brand new accreditation with ledger flag on: create a shell balance doc
+ * so that findByAccreditationId returns something and resolveBalanceAmounts
+ * can read canonicalSource + registrationId to query the stream. Amounts
+ * stay at zero on the document; reads resolve them from the stream's
+ * closing balance.
+ */
+const createLedgerBalanceAndDispatch = async ({
+  annotatedRecords,
+  accreditation,
+  validatedAccreditationId,
+  dependencies,
+  saveBalance,
+  user,
+  overseasSites,
+  summaryLogId
+}) => {
+  const newBalance = {
+    ...createNewWasteBalance(
+      validatedAccreditationId,
+      annotatedRecords[0]?.organisationId
+    ),
+    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+    registrationId: annotatedRecords[0]?.registrationId
+  }
+  await saveBalance(newBalance, [])
+  await dispatchToStream({
+    annotatedRecords,
+    accreditation,
+    validatedAccreditationId,
+    dependencies,
+    user,
+    overseasSites,
+    summaryLogId
+  })
+}
+
+/**
  * Shared logic for updating waste balance transactions.
  *
  * Dispatches on the per-accreditation `canonicalSource` marker, gated by
@@ -190,6 +227,7 @@ const dispatchToStream = async ({
  * @param {Object} params.dependencies
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('../repository/stream-port.js').WasteBalanceStreamRepository} [params.dependencies.streamRepository]
+ * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [params.dependencies.featureFlags]
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('../domain/model.js').WasteBalance, newTransactions: any[], user?: any) => Promise<void>} params.saveBalance
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} [params.user]
@@ -224,6 +262,23 @@ export const performUpdateWasteBalanceTransactions = async ({
         accreditation,
         validatedAccreditationId,
         dependencies,
+        user,
+        overseasSites,
+        summaryLogId
+      })
+      return
+    }
+
+    if (
+      !existingBalance &&
+      dependencies.featureFlags?.isWasteBalanceLedgerEnabled()
+    ) {
+      await createLedgerBalanceAndDispatch({
+        annotatedRecords,
+        accreditation,
+        validatedAccreditationId,
+        dependencies,
+        saveBalance,
         user,
         overseasSites,
         summaryLogId
