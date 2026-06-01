@@ -18,5 +18,6 @@ export const mongoWasteBalancesRepositoryPlugin = {
     const repository = factory()
 
     registerRepository(server, 'wasteBalancesRepository', () => repository)
+    registerRepository(server, 'streamRepository', () => streamRepository)
   }
 }
