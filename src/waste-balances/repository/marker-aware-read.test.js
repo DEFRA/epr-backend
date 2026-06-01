@@ -110,11 +110,11 @@ describe('resolveBalanceAmounts', () => {
   it('passes undefined registrationId through to the stream lookup', async () => {
     const balance = buildBalance({
       accreditationId: 'acc-no-reg',
+      registrationId: undefined,
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
       amount: 999,
       availableAmount: 999
     })
-    delete balance.registrationId
     const stream = buildStream({
       closingBalance: { amount: 298.25, availableAmount: 298.25 }
     })
