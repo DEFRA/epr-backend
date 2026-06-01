@@ -21,7 +21,20 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () => {
+/** @import {WasteBalance} from '#waste-balances/domain/model.js' */
+
+/**
+ * @typedef {{
+ *   featureFlagOverrides?: Record<string, boolean>
+ *   organisations?: object[]
+ *   prns?: object[]
+ *   wasteRecords?: object[]
+ *   wasteBalances?: Partial<WasteBalance>[]
+ *   summaryLogs?: { id: string, summaryLog: object }[]
+ * }} SetupServerOptions
+ */
+
+describe('POST /v1/dev/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/promote-to-ledger', () => {
   setupAuthContext()
 
   const { VALID_FROM, VALID_TO } = getValidDateRange()
@@ -65,7 +78,6 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       accreditations: [accreditation]
     })
 
-    // A submitted summary log that will produce a credit event
     const summaryLog = summaryLogFactory.submitted({
       organisationId: organisation.id,
       registrationId,
@@ -73,8 +85,6 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       file: { id: summaryLogFileId }
     })
 
-    // A waste record whose version references the summary log, with enough
-    // fields filled for classifyForWasteBalance to return INCLUDED with 200t
     const wasteRecord = buildWasteRecord({
       organisationId: organisation.id,
       registrationId,
@@ -123,14 +133,12 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       ]
     })
 
-    // A PRN that has been issued (draft → awaiting_authorisation → awaiting_acceptance),
-    // debiting 50 tonnes from the available balance
     const prn = {
       ...buildAwaitingAcceptancePrn({
         organisation: {
           id: String(organisation.orgId),
-          name: organisation.name,
-          tradingName: organisation.name
+          name: 'Test Organisation',
+          tradingName: 'Test Organisation'
         },
         registrationId,
         accreditation: {
@@ -146,9 +154,9 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       id: new ObjectId().toHexString()
     }
 
-    // Embedded balance reflecting the above: 200 credited, 50 deducted from
-    // available. Note: registrationId is intentionally absent — production
-    // waste balance documents never have it (see createNewWasteBalance).
+    // Note: registrationId is intentionally absent — production waste balance
+    // documents never have it (see createNewWasteBalance).
+    /** @type {Partial<WasteBalance>} */
     const wasteBalance = {
       id: new ObjectId().toString(),
       organisationId: organisation.id,
@@ -173,10 +181,16 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
     }
   }
 
-  function url(accreditationId) {
-    return `/v1/dev/waste-balances/${accreditationId}/promote-to-ledger`
+  /**
+   * @param {string} organisationId
+   * @param {string} registrationId
+   * @param {string} accreditationId
+   */
+  function url(organisationId, registrationId, accreditationId) {
+    return `/v1/dev/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/promote-to-ledger`
   }
 
+  /** @param {SetupServerOptions} [options] */
   async function setupServer({
     featureFlagOverrides = {},
     organisations = [],
@@ -206,14 +220,12 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
     })
 
     // Seed waste balances into the in-memory store
-    const storage = server.app.wasteBalancesRepository._getStorageForTesting()
-    for (const wb of wasteBalances) {
-      storage.push(wb)
-    }
+    const wbRepo = /** @type {any} */ (server.app.wasteBalancesRepository)
+    wbRepo._getStorageForTesting().push(...wasteBalances)
 
-    // Seed summary logs via the repository insert method
+    const slRepo = /** @type {any} */ (server.app.summaryLogsRepository)
     for (const { id, summaryLog } of summaryLogs) {
-      await server.app.summaryLogsRepository.insert(id, summaryLog)
+      await slRepo.insert(id, summaryLog)
     }
 
     return server
@@ -227,7 +239,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url('abc123')
+        url: url('org-1', 'reg-1', 'acc-1')
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -240,7 +252,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url('%20')
+        url: url('org-1', 'reg-1', '%20')
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -253,7 +265,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url('nonexistent-accreditation-id')
+        url: url('org-1', 'reg-1', 'nonexistent')
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -262,7 +274,8 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
   describe('idempotency', () => {
     it('should return 200 with already-promoted when balance is already ledger', async () => {
-      const { organisation, accreditationId, wasteBalance } = buildTestData()
+      const { organisation, accreditationId, registrationId, wasteBalance } =
+        buildTestData()
       wasteBalance.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
 
       const server = await setupServer({
@@ -272,7 +285,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url(accreditationId)
+        url: url(organisation.id, registrationId, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -286,6 +299,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       const {
         organisation,
         accreditationId,
+        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -303,26 +317,23 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       // Simulate a version conflict by bumping the balance version
       // after the handler reads it but before promoteAccreditation flips
-      const storage = server.app.wasteBalancesRepository._getStorageForTesting()
+      const repo = /** @type {any} */ (server.app.wasteBalancesRepository)
+      const storage = repo._getStorageForTesting()
       const original = storage.find(
-        (wb) => wb.accreditationId === accreditationId
+        (/** @type {any} */ wb) => wb.accreditationId === accreditationId
       )
 
-      // Intercept flipCanonicalSourceToMigrating to bump version first
-      const originalFlip =
-        server.app.wasteBalancesRepository.flipCanonicalSourceToMigrating
-      vi.spyOn(
-        server.app.wasteBalancesRepository,
-        'flipCanonicalSourceToMigrating'
-      ).mockImplementation(async (params) => {
-        // Bump the version so the optimistic lock misses
-        original.version += 1
-        return originalFlip(params)
-      })
+      const originalFlip = repo.flipCanonicalSourceToMigrating
+      vi.spyOn(repo, 'flipCanonicalSourceToMigrating').mockImplementation(
+        async (/** @type {any} */ params) => {
+          original.version += 1
+          return originalFlip(params)
+        }
+      )
 
       const response = await server.inject({
         method: 'POST',
-        url: url(accreditationId)
+        url: url(organisation.id, registrationId, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -331,7 +342,8 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
   describe('happy path', () => {
     it('should promote a zero-balance accreditation with no event history', async () => {
-      const { organisation, accreditationId, wasteBalance } = buildTestData()
+      const { organisation, accreditationId, registrationId, wasteBalance } =
+        buildTestData()
       wasteBalance.amount = 0
       wasteBalance.availableAmount = 0
 
@@ -342,53 +354,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url(accreditationId)
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const body = JSON.parse(response.payload)
-      expect(body.result).toBe('promoted')
-      expect(body.eventCount).toBe(0)
-    })
-
-    it('should promote when no active registration links to the accreditation', async () => {
-      const accreditationId = new ObjectId().toString()
-
-      const accreditation = buildAccreditation({
-        id: accreditationId,
-        wasteProcessingType: 'reprocessor',
-        statusHistory: [
-          { status: 'created', updatedAt: new Date('2025-01-01') },
-          { status: 'approved', updatedAt: new Date('2025-02-01') }
-        ]
-      })
-
-      // Organisation has the accreditation but no registration linked to it
-      const organisation = buildOrganisation({
-        registrations: [],
-        accreditations: [accreditation]
-      })
-
-      const wasteBalance = {
-        id: new ObjectId().toString(),
-        organisationId: organisation.id,
-        accreditationId,
-        schemaVersion: 1,
-        version: 1,
-        amount: 0,
-        availableAmount: 0,
-        transactions: [],
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      }
-
-      const server = await setupServer({
-        organisations: [organisation],
-        wasteBalances: [wasteBalance]
-      })
-
-      const response = await server.inject({
-        method: 'POST',
-        url: url(accreditationId)
+        url: url(organisation.id, registrationId, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -401,6 +367,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       const {
         organisation,
         accreditationId,
+        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -418,20 +385,17 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url(accreditationId)
+        url: url(organisation.id, registrationId, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body.result).toBe('promoted')
-      // Summary log submission + PRN created + PRN issued = 3 events
       expect(body.eventCount).toBeGreaterThanOrEqual(3)
 
-      // Verify the canonical source flipped to ledger
-      const updatedBalance =
-        await server.app.wasteBalancesRepository.findByAccreditationId(
-          accreditationId
-        )
+      const updatedBalance = await /** @type {any} */ (
+        server.app.wasteBalancesRepository
+      ).findByAccreditationId(accreditationId)
       expect(updatedBalance.canonicalSource).toBe(
         WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       )
@@ -441,6 +405,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       const {
         organisation,
         accreditationId,
+        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -458,7 +423,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url(accreditationId)
+        url: url(organisation.id, registrationId, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -468,6 +433,7 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
       const {
         organisation,
         accreditationId,
+        registrationId,
         summaryLog,
         summaryLogFileId,
         wasteRecord,
@@ -487,17 +453,16 @@ describe('POST /v1/dev/waste-balances/{accreditationId}/promote-to-ledger', () =
 
       const response = await server.inject({
         method: 'POST',
-        url: url(accreditationId)
+        url: url(organisation.id, registrationId, accreditationId)
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body.result).toBe('promoted')
 
-      const updatedBalance =
-        await server.app.wasteBalancesRepository.findByAccreditationId(
-          accreditationId
-        )
+      const updatedBalance = await /** @type {any} */ (
+        server.app.wasteBalancesRepository
+      ).findByAccreditationId(accreditationId)
       expect(updatedBalance.canonicalSource).toBe(
         WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       )

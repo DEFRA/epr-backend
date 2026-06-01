@@ -16,14 +16,16 @@ import { promoteAccreditation } from '#server/run-stream-promotion.js'
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository
  *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository
- *   params: { accreditationId: string }
+ *   params: { organisationId: string, registrationId: string, accreditationId: string }
  * }} PromoteToLedgerRequest
  */
 
 export const devWasteBalancesPromoteToLedgerPath =
-  '/v1/dev/waste-balances/{accreditationId}/promote-to-ledger'
+  '/v1/dev/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/promote-to-ledger'
 
 const params = Joi.object({
+  organisationId: Joi.string().trim().min(1).required(),
+  registrationId: Joi.string().trim().min(1).required(),
   accreditationId: Joi.string().trim().min(1).required()
 }).messages({
   'any.required': '{#label} is required',
@@ -38,10 +40,9 @@ const params = Joi.object({
  * @param {Object} h - Hapi response toolkit
  */
 async function handler(request, h) {
-  const { accreditationId } = request.params
+  const { organisationId, registrationId, accreditationId } = request.params
   const { wasteBalancesRepository, streamRepository } = request
 
-  // Look up the waste balance
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
@@ -51,40 +52,27 @@ async function handler(request, h) {
     )
   }
 
-  // Already promoted: idempotent no-op
   if (balance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
     return h.response({ result: 'already-promoted' }).code(StatusCodes.OK)
   }
 
-  // Stuck migrating: reset to embedded so promoteAccreditation can proceed
   if (balance.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING) {
     await wasteBalancesRepository.resetCanonicalSourceToEmbedded({
       accreditationId
     })
   }
 
-  const deps = {
-    wasteBalancesRepository,
-    streamRepository,
-    organisationsRepository: request.organisationsRepository,
-    prnRepository: request.packagingRecyclingNotesRepository,
-    wasteRecordsRepository: request.wasteRecordsRepository,
-    overseasSitesRepository: request.overseasSitesRepository,
-    summaryLogsRepository: request.summaryLogsRepository
-  }
-
-  // registrationId is not stored on the waste balance document, so we
-  // resolve it from the organisation to query the stream event count.
-  const organisation = await request.organisationsRepository.findById(
-    balance.organisationId
-  )
-  const registration = organisation?.registrations.find(
-    (r) => r.accreditationId === accreditationId
-  )
-
   const result = await promoteAccreditation(
-    { accreditationId, organisationId: balance.organisationId },
-    deps
+    { accreditationId, organisationId },
+    {
+      wasteBalancesRepository,
+      streamRepository,
+      organisationsRepository: request.organisationsRepository,
+      prnRepository: request.packagingRecyclingNotesRepository,
+      wasteRecordsRepository: request.wasteRecordsRepository,
+      overseasSitesRepository: request.overseasSitesRepository,
+      summaryLogsRepository: request.summaryLogsRepository
+    }
   )
 
   if (result !== 'promoted') {
@@ -93,17 +81,11 @@ async function handler(request, h) {
     )
   }
 
-  // Read the event count from the stream after promotion. When there is
-  // no active registration the sweep promotes with an empty stream, so
-  // there are no events to count.
-  let eventCount = 0
-  if (registration) {
-    const latestEvent = await streamRepository.findLatestByPartition(
-      registration.id,
-      accreditationId
-    )
-    eventCount = latestEvent?.number ?? 0
-  }
+  const latestEvent = await streamRepository.findLatestByPartition(
+    registrationId,
+    accreditationId
+  )
+  const eventCount = latestEvent?.number ?? 0
 
   return h.response({ result: 'promoted', eventCount }).code(StatusCodes.OK)
 }
