@@ -99,10 +99,14 @@ jobs:
           fail-on-severity: moderate
 
   test-journey:
-    name: Run Journey Tests
+    name: Run Journey Tests (ledger=${{ matrix.ledger }})
     runs-on: ubuntu-latest
     needs: pr-prep
     if: needs.pr-prep.outputs.docs-only != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        ledger: [false, true]
     steps:
       - uses: actions/checkout@v6
 
@@ -131,6 +135,8 @@ jobs:
         with:
           epr-backend: ${{github.sha}}
           branch: ${{ steps.journey-branch.outputs.ref }}
+          waste-balance-ledger: ${{ matrix.ledger }}
+          artifact-suffix: -ledger-${{ matrix.ledger }}
 
       - name: Write journey test summary
         if: always()
@@ -185,3 +191,18 @@ jobs:
           EOF
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  journey-tests:
+    name: Run Journey Tests
+    runs-on: ubuntu-latest
+    needs: test-journey
+    if: always()
+    steps:
+      - name: Check journey test results
+        run: |
+          RESULT="${{ needs.test-journey.result }}"
+          if [ "$RESULT" = "failure" ] || [ "$RESULT" = "cancelled" ]; then
+            echo "Journey tests reported '$RESULT'"
+            exit 1
+          fi
+          echo "Journey tests reported '$RESULT'"
