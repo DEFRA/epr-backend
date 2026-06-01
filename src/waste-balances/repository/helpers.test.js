@@ -1246,7 +1246,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
           appendEvent: vi.fn(),
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
-          findEventsByPrnIdAfter: vi.fn()
+          findEventsByPrnIdAfter: vi.fn(),
+          deleteByPartition: vi.fn(),
+          bulkAppendEvents: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
@@ -1477,7 +1479,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
           appendEvent: vi.fn(),
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
-          findEventsByPrnIdAfter: vi.fn()
+          findEventsByPrnIdAfter: vi.fn(),
+          deleteByPartition: vi.fn(),
+          bulkAppendEvents: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
@@ -1711,7 +1715,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
           appendEvent: vi.fn(),
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
-          findEventsByPrnIdAfter: vi.fn()
+          findEventsByPrnIdAfter: vi.fn(),
+          deleteByPartition: vi.fn(),
+          bulkAppendEvents: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
@@ -1902,7 +1908,9 @@ describe('src/waste-balances/repository/helpers.js', () => {
           appendEvent: vi.fn(),
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
-          findEventsByPrnIdAfter: vi.fn()
+          findEventsByPrnIdAfter: vi.fn(),
+          deleteByPartition: vi.fn(),
+          bulkAppendEvents: vi.fn()
         })
       const findBalance = vi.fn().mockResolvedValue(existingBalance)
       const saveBalance = vi.fn()
