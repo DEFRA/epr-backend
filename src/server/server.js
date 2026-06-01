@@ -44,6 +44,7 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
 import { runBalanceDivergenceDiagnostic } from '#server/run-balance-divergence-diagnostic.js'
 import { runBalanceSizeDiagnostic } from '#server/run-balance-size-diagnostic.js'
+import { runCanonicalSourceCensus } from '#server/run-canonical-source-census.js'
 import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
 import { runStreamPromotion } from '#server/run-stream-promotion.js'
 
@@ -227,6 +228,7 @@ async function createServer(options = {}) {
     runRowIdCollisionDiagnostic(server)
     runBalanceDivergenceDiagnostic(server)
     runBalanceSizeDiagnostic(server)
+    runCanonicalSourceCensus(server)
     runStreamPromotion(server)
   })
 
