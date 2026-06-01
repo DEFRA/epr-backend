@@ -47,6 +47,36 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
       expect(after.migratingSince).toBeUndefined()
     })
 
+    it('persists registrationId to the balance document when provided', async ({
+      insertWasteBalance,
+      streamRepository
+    }) => {
+      const balance = buildWasteBalance({
+        accreditationId: 'acc-flip-regid',
+        version: 3,
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
+        migratingSince: '2025-01-01T00:00:00.000Z'
+      })
+      await insertWasteBalance(balance)
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: 'acc-flip-regid',
+          registrationId: 'reg-resolved',
+          number: 1,
+          closingBalance: { amount: 0, availableAmount: 0 }
+        })
+      )
+
+      await repository.flipCanonicalSourceToLedger({
+        accreditationId: 'acc-flip-regid',
+        registrationId: 'reg-resolved',
+        capturedVersion: 3
+      })
+
+      const after = await repository.findByAccreditationId('acc-flip-regid')
+      expect(after.registrationId).toBe('reg-resolved')
+    })
+
     it('returns the migrating post-state and leaves the marker alone when versions diverge', async ({
       insertWasteBalance
     }) => {

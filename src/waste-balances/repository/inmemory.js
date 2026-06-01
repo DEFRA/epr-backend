@@ -116,7 +116,7 @@ const performFlipCanonicalSourceToMigrating =
 
 const performFlipCanonicalSourceToLedger =
   (wasteBalanceStorage) =>
-  async ({ accreditationId, capturedVersion }) => {
+  async ({ accreditationId, registrationId, capturedVersion }) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
     const current = wasteBalanceStorage.find(
       (b) => b.accreditationId === validatedAccreditationId
@@ -130,6 +130,9 @@ const performFlipCanonicalSourceToLedger =
     ) {
       current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       delete current.migratingSince
+      if (registrationId !== undefined) {
+        current.registrationId = registrationId
+      }
     }
     return { canonicalSource: current.canonicalSource }
   }
