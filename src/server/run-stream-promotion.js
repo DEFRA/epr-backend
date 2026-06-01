@@ -76,15 +76,7 @@ const findEmbeddedBalances = async (db) => {
  *   null when the accreditation has no active registration (nothing to rebuild)
  */
 const rebuildEvents = async (row, deps) => {
-  let sources
-  try {
-    sources = await loadAccreditationSources(row, deps)
-  } catch (error) {
-    if (error.message?.startsWith('No registration links to accreditation')) {
-      return null
-    }
-    throw error
-  }
+  const sources = await loadAccreditationSources(row, deps)
   const { events } = computeRebuiltStream({
     accreditation: sources.accreditation,
     registrationId: sources.registration.id,
@@ -119,22 +111,17 @@ const promoteAccreditation = async (row, deps) => {
   const rebuildResult = await rebuildEvents(row, deps)
 
   // Invariant: a non-zero embedded balance must reconstruct to a non-empty
-  // stream. An empty rebuild — whether from no active registration, or from
-  // authoritative sources that don't account for the balance (e.g. a summary
-  // log submitted against a non-approved registration the rebuild can't see) —
-  // would flip to ledger and read back zero. Abort loudly and leave the
-  // accreditation embedded for the next boot rather than silently zeroing a
-  // real balance.
+  // stream. An empty rebuild from authoritative sources that don't account
+  // for the balance (e.g. a summary log submitted against a non-approved
+  // registration the rebuild can't see) would flip to ledger and read back
+  // zero. Abort loudly and leave the accreditation embedded for the next
+  // boot rather than silently zeroing a real balance.
   const capturedNonZero =
     captured.amount !== 0 || captured.availableAmount !== 0
-  const rebuiltStreamEmpty = !rebuildResult || rebuildResult.events.length === 0
 
-  if (capturedNonZero && rebuiltStreamEmpty) {
-    const cause = rebuildResult
-      ? 'rebuilds to an empty stream'
-      : 'has no active registration'
+  if (capturedNonZero && rebuildResult.events.length === 0) {
     throw new Error(
-      `Accreditation ${row.accreditationId} has a non-zero balance (amount=${captured.amount}, availableAmount=${captured.availableAmount}) but ${cause}`
+      `Accreditation ${row.accreditationId} has a non-zero balance (amount=${captured.amount}, availableAmount=${captured.availableAmount}) but rebuilds to an empty stream`
     )
   }
 
@@ -151,24 +138,18 @@ const promoteAccreditation = async (row, deps) => {
     return 'skipped'
   }
 
-  if (rebuildResult) {
-    const { events, registration } = rebuildResult
-    // Idempotency: if a previous boot crashed between bulkAppendEvents and
-    // flipCanonicalSourceToLedger, stale events may exist. Deleting first
-    // means a restart always replays from the authoritative sources rather
-    // than appending on top of a partial write. An alternative would be to
-    // skip the delete and let bulkAppendEvents fail on a sequence conflict,
-    // but that turns a recoverable restart into a stuck accreditation.
-    await streamRepository.deleteByPartition(
-      registration.id,
-      row.accreditationId
-    )
-    await streamRepository.bulkAppendEvents(events)
-  } else {
-    logger.info({
-      message: `Stream promotion: no active registration for accreditation ${row.accreditationId}, promoting with empty stream`
-    })
-  }
+  const { events, registration } = rebuildResult
+  // Idempotency: if a previous boot crashed between bulkAppendEvents and
+  // flipCanonicalSourceToLedger, stale events may exist. Deleting first
+  // means a restart always replays from the authoritative sources rather
+  // than appending on top of a partial write. An alternative would be to
+  // skip the delete and let bulkAppendEvents fail on a sequence conflict,
+  // but that turns a recoverable restart into a stuck accreditation.
+  await streamRepository.deleteByPartition(
+    registration.id,
+    row.accreditationId
+  )
+  await streamRepository.bulkAppendEvents(events)
 
   // Use the ORIGINAL captured version, not a re-read. If a concurrent
   // mutation (PRN op or summary log upload) bumped version while we were
@@ -177,7 +158,7 @@ const promoteAccreditation = async (row, deps) => {
   const ledgerResult =
     await wasteBalancesRepository.flipCanonicalSourceToLedger({
       accreditationId: row.accreditationId,
-      registrationId: rebuildResult?.registration.id,
+      registrationId: registration.id,
       capturedVersion: captured.version
     })
 

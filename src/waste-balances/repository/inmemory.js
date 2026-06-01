@@ -130,9 +130,7 @@ const performFlipCanonicalSourceToLedger =
     ) {
       current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
       delete current.migratingSince
-      if (registrationId !== undefined) {
-        current.registrationId = registrationId
-      }
+      current.registrationId = registrationId
     }
     return { canonicalSource: current.canonicalSource }
   }

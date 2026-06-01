@@ -532,7 +532,7 @@ describe('runStreamPromotion', () => {
     )
   })
 
-  it('promotes with empty stream when no active registration exists', async () => {
+  it('counts as failed when no active registration exists', async () => {
     const migratingToArray = vi.fn().mockResolvedValue([])
     const embeddedToArray = vi.fn().mockResolvedValue([
       {
@@ -564,79 +564,11 @@ describe('runStreamPromotion', () => {
 
     await runStreamPromotion(mockServer)
 
-    // No stream writes for accreditations without active registrations
-    expect(streamRepository.deleteByPartition).not.toHaveBeenCalled()
-    expect(streamRepository.bulkAppendEvents).not.toHaveBeenCalled()
-
-    // Still flips to ledger (no registrationId available)
-    expect(
-      wasteBalancesRepository.flipCanonicalSourceToLedger
-    ).toHaveBeenCalledWith({
-      accreditationId: 'acc-noreg',
-      registrationId: undefined,
-      capturedVersion: 1
-    })
-
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('no active registration')
-      })
-    )
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('promoted=1')
-      })
-    )
-  })
-
-  it('aborts promotion when no active registration but balance is non-zero', async () => {
-    const migratingToArray = vi.fn().mockResolvedValue([])
-    const embeddedToArray = vi.fn().mockResolvedValue([
-      {
-        accreditationId: 'acc-surprise',
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      }
-    ])
-
-    mockFindBalances
-      .mockReturnValueOnce({ toArray: migratingToArray })
-      .mockReturnValueOnce({ toArray: embeddedToArray })
-
-    wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
-      accreditationId: 'acc-surprise',
-      version: 1,
-      amount: 50,
-      availableAmount: 50,
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-    })
-
-    organisationsRepository.findById.mockResolvedValue({
-      id: 'org-1',
-      registrations: [],
-      accreditations: [
-        {
-          id: 'acc-surprise',
-          accreditationNumber: 'CBDA1',
-          status: 'approved'
-        }
-      ]
-    })
-
-    await runStreamPromotion(mockServer)
-
-    // Should not promote: marker never touched, no stream writes
     expect(
       wasteBalancesRepository.flipCanonicalSourceToMigrating
     ).not.toHaveBeenCalled()
     expect(streamRepository.deleteByPartition).not.toHaveBeenCalled()
 
-    // Counted as failed with an error log
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('non-zero balance')
-      })
-    )
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining('failed=1')

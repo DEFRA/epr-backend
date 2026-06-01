@@ -106,7 +106,7 @@ const performFlipCanonicalSourceToLedger =
     const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
     const $set = {
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-      ...(registrationId !== undefined && { registrationId })
+      registrationId
     }
     const updated = await collection.findOneAndUpdate(
       {
