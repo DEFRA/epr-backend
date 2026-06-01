@@ -148,7 +148,7 @@ const dispatchToStream = async ({
   overseasSites,
   summaryLogId
 }) => {
-  await performUpdateViaStream({
+  return performUpdateViaStream({
     wasteRecords: annotatedRecords,
     accreditation: { ...accreditation, id: validatedAccreditationId },
     streamRepository:
@@ -231,8 +231,8 @@ export const performUpdateWasteBalanceTransactions = async ({
       return
     }
 
-    // Brand new accreditation with ledger flag on: create a shell balance
-    // doc and dispatch straight to the stream, bypassing the embedded path.
+    // Brand new accreditation with ledger flag on: dispatch to stream first,
+    // then create the balance doc with the closing balance from the event.
     // Without this, the first write would create an embedded doc that
     // marker-aware-read would never consult (it reads from the stream for
     // ledger docs), silently losing the first submission's data.
@@ -240,16 +240,7 @@ export const performUpdateWasteBalanceTransactions = async ({
       !existingBalance &&
       dependencies.featureFlags?.isWasteBalanceLedgerEnabled()
     ) {
-      const newBalance = {
-        ...createNewWasteBalance(
-          validatedAccreditationId,
-          annotatedRecords[0]?.organisationId
-        ),
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-        registrationId: annotatedRecords[0]?.registrationId
-      }
-      await saveBalance(newBalance, [])
-      await dispatchToStream({
+      const closingBalance = await dispatchToStream({
         annotatedRecords,
         accreditation,
         validatedAccreditationId,
@@ -258,6 +249,19 @@ export const performUpdateWasteBalanceTransactions = async ({
         overseasSites,
         summaryLogId
       })
+      const newBalance = {
+        ...createNewWasteBalance(
+          validatedAccreditationId,
+          annotatedRecords[0]?.organisationId
+        ),
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
+        registrationId: annotatedRecords[0]?.registrationId,
+        ...(closingBalance && {
+          amount: closingBalance.amount,
+          availableAmount: closingBalance.availableAmount
+        })
+      }
+      await saveBalance(newBalance, [])
       return
     }
   }

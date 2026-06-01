@@ -671,6 +671,10 @@ describe('src/waste-balances/repository/helpers.js', () => {
         const findBalance = vi.fn().mockResolvedValue(null)
         const saveBalance = vi.fn().mockResolvedValue(undefined)
         vi.mocked(performUpdateViaStream).mockClear()
+        vi.mocked(performUpdateViaStream).mockResolvedValue({
+          amount: 30,
+          availableAmount: 30
+        })
         vi.mocked(calculateWasteBalanceUpdates).mockClear()
 
         await callPerformUpdate({
@@ -691,14 +695,16 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(performUpdateViaStream).toHaveBeenCalledTimes(1)
         expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
 
-        // Should create a shell balance doc with ledger source
+        // Should create a balance doc with ledger source and stream amounts
         expect(saveBalance).toHaveBeenCalledTimes(1)
         const savedBalance = saveBalance.mock.calls[0][0]
         expect(savedBalance.canonicalSource).toBe(
           WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
         )
         expect(savedBalance.registrationId).toBe('reg-1')
-        // Shell doc should have empty transactions
+        expect(savedBalance.amount).toBe(30)
+        expect(savedBalance.availableAmount).toBe(30)
+        // No embedded transactions
         expect(saveBalance.mock.calls[0][1]).toEqual([])
       })
 
