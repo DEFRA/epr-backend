@@ -308,11 +308,12 @@ describe('runStreamPromotion', () => {
     // Step f: bulk append rebuilt events
     expect(streamRepository.bulkAppendEvents).toHaveBeenCalledWith(builtEvents)
 
-    // Step h: flip migrating -> ledger
+    // Step h: flip migrating -> ledger (persists registrationId)
     expect(
       wasteBalancesRepository.flipCanonicalSourceToLedger
     ).toHaveBeenCalledWith({
       accreditationId: 'acc-1',
+      registrationId: 'reg-1',
       capturedVersion: 1
     })
 
@@ -382,6 +383,7 @@ describe('runStreamPromotion', () => {
       wasteBalancesRepository.flipCanonicalSourceToLedger
     ).toHaveBeenCalledWith({
       accreditationId: 'acc-race',
+      registrationId: 'reg-1',
       capturedVersion: 1
     })
 
@@ -566,11 +568,12 @@ describe('runStreamPromotion', () => {
     expect(streamRepository.deleteByPartition).not.toHaveBeenCalled()
     expect(streamRepository.bulkAppendEvents).not.toHaveBeenCalled()
 
-    // Still flips to ledger
+    // Still flips to ledger (no registrationId available)
     expect(
       wasteBalancesRepository.flipCanonicalSourceToLedger
     ).toHaveBeenCalledWith({
       accreditationId: 'acc-noreg',
+      registrationId: undefined,
       capturedVersion: 1
     })
 

@@ -177,6 +177,7 @@ const promoteAccreditation = async (row, deps) => {
   const ledgerResult =
     await wasteBalancesRepository.flipCanonicalSourceToLedger({
       accreditationId: row.accreditationId,
+      registrationId: rebuildResult?.registration.id,
       capturedVersion: captured.version
     })
 

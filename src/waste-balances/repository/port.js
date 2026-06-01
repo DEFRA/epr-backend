@@ -76,6 +76,10 @@
 /**
  * @typedef {Object} FlipCanonicalSourceToLedgerParams
  * @property {string} accreditationId
+ * @property {string} [registrationId] - Resolved during the promotion sweep
+ *   from the organisation's registration. Persisted to the balance document
+ *   so the ledger read path can look up stream events by partition. Not
+ *   required when the caller is not the promotion sweep (e.g. tests).
  * @property {number} capturedVersion - The `version` observed on the
  *   `'migrating'` doc at the start of step 3 of a per-accreditation rebuild
  *   (after authoritative history has been replayed into the ledger). The flip
