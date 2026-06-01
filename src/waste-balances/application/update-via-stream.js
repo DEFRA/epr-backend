@@ -24,9 +24,6 @@ import { getTargetAmount } from './target-amount.js'
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  * @param {string} params.summaryLogId
- * @returns {Promise<{ amount: number, availableAmount: number } | undefined>}
- *   The stream event's closing balance, or `undefined` when there are no
- *   waste records to process.
  */
 export const performUpdateViaStream = async ({
   wasteRecords,
@@ -73,6 +70,4 @@ export const performUpdateViaStream = async ({
     newTransactions: [event],
     user
   })
-
-  return event.closingBalance
 }

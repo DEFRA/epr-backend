@@ -148,7 +148,7 @@ const dispatchToStream = async ({
   overseasSites,
   summaryLogId
 }) => {
-  return performUpdateViaStream({
+  await performUpdateViaStream({
     wasteRecords: annotatedRecords,
     accreditation: { ...accreditation, id: validatedAccreditationId },
     streamRepository:
@@ -220,7 +220,7 @@ export const performUpdateWasteBalanceTransactions = async ({
     if (
       existingBalance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
     ) {
-      const closingBalance = await dispatchToStream({
+      await dispatchToStream({
         annotatedRecords,
         accreditation,
         validatedAccreditationId,
@@ -229,51 +229,36 @@ export const performUpdateWasteBalanceTransactions = async ({
         overseasSites,
         summaryLogId
       })
-      if (closingBalance) {
-        await saveBalance(
-          {
-            ...existingBalance,
-            amount: closingBalance.amount,
-            availableAmount: closingBalance.availableAmount,
-            version: (existingBalance.version || 0) + 1
-          },
-          []
-        )
-      }
       return
     }
 
-    // Brand new accreditation with ledger flag on: dispatch to stream first,
-    // then create the balance doc with the closing balance from the event.
-    // Without this, the first write would create an embedded doc that
-    // marker-aware-read would never consult (it reads from the stream for
-    // ledger docs), silently losing the first submission's data.
+    // Brand new accreditation with ledger flag on: create a shell balance
+    // doc so that findByAccreditationId returns something and
+    // resolveBalanceAmounts can read canonicalSource + registrationId to
+    // query the stream. Amounts stay at zero on the document; reads resolve
+    // them from the stream's closing balance.
     if (
       !existingBalance &&
       dependencies.featureFlags?.isWasteBalanceLedgerEnabled()
     ) {
-      const closingBalance = await dispatchToStream({
-        annotatedRecords,
-        accreditation,
-        validatedAccreditationId,
-        dependencies,
-        user,
-        overseasSites,
-        summaryLogId
-      })
       const newBalance = {
         ...createNewWasteBalance(
           validatedAccreditationId,
           annotatedRecords[0]?.organisationId
         ),
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-        registrationId: annotatedRecords[0]?.registrationId,
-        ...(closingBalance && {
-          amount: closingBalance.amount,
-          availableAmount: closingBalance.availableAmount
-        })
+        registrationId: annotatedRecords[0]?.registrationId
       }
       await saveBalance(newBalance, [])
+      await dispatchToStream({
+        annotatedRecords,
+        accreditation,
+        validatedAccreditationId,
+        dependencies,
+        user,
+        overseasSites,
+        summaryLogId
+      })
       return
     }
   }
