@@ -10,7 +10,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 import {
   buildAccreditation,
-  buildOrganisation,
+  buildReadOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 
@@ -106,7 +106,7 @@ describe('csv-columns', () => {
     const dataFieldColumns = buildDataFieldColumns([])
 
     const baseInput = {
-      org: buildOrganisation({
+      org: buildReadOrganisation({
         companyDetails: { name: 'Acme Ltd' }
       }),
       registration: /** @type {Registration} */ (

@@ -82,7 +82,7 @@ export const buildAccreditation = (overrides = {}) => {
   return accreditation
 }
 
-/** @returns {import('#domain/organisations/model.js').Organisation} */
+/** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
 export const buildOrganisation = (overrides = {}) => {
   // Build a mapping from old accreditation IDs to new ones
   // This ensures registration.accreditationId links are preserved
@@ -135,11 +135,31 @@ export const buildOrganisation = (overrides = {}) => {
   initializeStatusForItems(org.registrations)
   initializeStatusForItems(org.accreditations)
 
-  const status = overrides.status ?? getCurrentStatus(org)
+  // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
+  // Accreditation/Registration types require computed 'status' that only exists after read
+  return org
+}
 
-  // @ts-expect-error JSON fixture has widened types (string vs union literals) on
-  // nested registration/accreditation fields that only narrow after a repository read
-  return { ...org, status }
+/**
+ * Builds an organisation as returned from a repository read, with the computed
+ * top-level and nested 'status' fields the read path derives from statusHistory.
+ * Use this for tests that consume an organisation (vs insert it).
+ *
+ * @param {object} [overrides]
+ * @returns {import('#domain/organisations/model.js').Organisation}
+ */
+export const buildReadOrganisation = (overrides = {}) => {
+  const org = buildOrganisation(overrides)
+
+  for (const registration of org.registrations) {
+    registration.status = registration.status ?? getCurrentStatus(registration)
+  }
+  for (const accreditation of org.accreditations) {
+    accreditation.status =
+      accreditation.status ?? getCurrentStatus(accreditation)
+  }
+
+  return { ...org, status: overrides.status ?? getCurrentStatus(org) }
 }
 
 /**
