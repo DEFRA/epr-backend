@@ -8,7 +8,6 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -27,7 +26,14 @@ const APPENDED_WATERMARK = 5
 const USER = { id: 'user-789', name: 'Test User' }
 const EVENT_AT = new Date('2026-02-01T12:00:00.000Z')
 
-const buildLogger = () => createMockLogger()
+const buildLogger = () => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn()
+})
 
 const buildLedgerBalance = (overrides = {}) => ({
   accreditationId: ACC_ID,

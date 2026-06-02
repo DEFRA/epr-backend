@@ -4,7 +4,6 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { buildFile, buildPendingFile, summaryLogFactory } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
@@ -220,7 +219,12 @@ export const testOptimisticConcurrency = (it) => {
       it('logs version conflict with appropriate event metadata', async ({
         summaryLogsRepositoryFactory
       }) => {
-        const logger = createMockLogger()
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
         const repository = summaryLogsRepositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
@@ -262,7 +266,12 @@ export const testOptimisticConcurrency = (it) => {
       it('includes error details in log when version conflict occurs', async ({
         summaryLogsRepositoryFactory
       }) => {
-        const logger = createMockLogger()
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
         const repository = summaryLogsRepositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
@@ -288,10 +297,10 @@ export const testOptimisticConcurrency = (it) => {
           output: { statusCode: 409 }
         })
 
-        const logCall = vi.mocked(logger.error).mock.calls[0][0]
+        const logCall = logger.error.mock.calls[0][0]
         expect(logCall.err).toBeInstanceOf(Error)
         const expectedVersion = 2
-        expect(logCall.err?.message).toBe(
+        expect(logCall.err.message).toBe(
           `Version conflict: attempted to update with version ${initial.version} but current version is ${expectedVersion}`
         )
       })

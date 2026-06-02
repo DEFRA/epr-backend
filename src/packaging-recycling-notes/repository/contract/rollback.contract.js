@@ -1,6 +1,5 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
@@ -153,7 +152,12 @@ export const testRollbackBehaviour = (it) => {
     it('logs the version conflict via the repository logger', async ({
       prnRepositoryFactory
     }) => {
-      const logger = createMockLogger()
+      const logger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
       const repo = prnRepositoryFactory(logger)
       const created = await repo.create(buildAwaitingAcceptancePrn())
 

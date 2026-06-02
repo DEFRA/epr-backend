@@ -12,7 +12,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('sqs-consumer')
 vi.mock('@aws-sdk/client-sqs', () => ({
@@ -65,7 +64,17 @@ describe('createCommandQueueConsumer', () => {
       })
     }
 
-    logger = createMockLogger()
+    logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      child: vi.fn(() => ({
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        child: vi.fn()
+      }))
+    }
 
     summaryLogsRepository = {
       findById: vi.fn(),
@@ -369,7 +378,12 @@ describe('createCommandQueueConsumer', () => {
     })
 
     it('creates child logger for timeout_error when context.traceId is present', async () => {
-      const childLogger = createMockLogger()
+      const childLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        child: vi.fn()
+      }
       logger.child.mockReturnValue(childLogger)
 
       summaryLogsRepository.findById.mockResolvedValue({
@@ -543,7 +557,12 @@ describe('createCommandQueueConsumer', () => {
 
     describe('trace context', () => {
       it('creates child logger with trace ID when context.traceId is present', async () => {
-        const childLogger = createMockLogger()
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
         logger.child.mockReturnValue(childLogger)
 
         const mockValidator = vi.fn()
@@ -616,7 +635,12 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('strips context from payload before passing to handler', async () => {
-        const childLogger = createMockLogger()
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
         logger.child.mockReturnValue(childLogger)
 
         const mockValidator = vi.fn()
@@ -637,7 +661,12 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('passes child logger through deps to handler.execute', async () => {
-        const childLogger = createMockLogger()
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
         logger.child.mockReturnValue(childLogger)
 
         summaryLogsRepository.findById.mockResolvedValue({
@@ -672,7 +701,12 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('passes child logger through deps to handleCommandError on failure', async () => {
-        const childLogger = createMockLogger()
+        const childLogger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          child: vi.fn()
+        }
         logger.child.mockReturnValue(childLogger)
 
         const transientError = new Error('Database timeout')

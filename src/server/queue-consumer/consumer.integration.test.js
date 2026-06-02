@@ -14,7 +14,6 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
@@ -69,7 +68,16 @@ describe('SQS command queue consumer integration', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
-    logger = createMockLogger()
+    logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      child: vi.fn()
+    }
+    // The consumer wraps the logger in a trace-bound child when the envelope
+    // carries a traceId (PAE-1340). Returning `this` keeps every assertion
+    // looking at a single logger object.
+    logger.child.mockReturnValue(logger)
 
     summaryLogsRepository = {
       findById: vi.fn().mockResolvedValue(null),

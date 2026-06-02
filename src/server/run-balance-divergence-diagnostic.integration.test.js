@@ -9,7 +9,6 @@ import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 import { toStreamSummaryLog } from './run-balance-divergence-diagnostic.js'
 
@@ -40,7 +39,12 @@ vi.mock(
 const DATABASE_NAME = 'epr-backend'
 
 const mockS3Config = /** @type {any} */ ({})
-const mockLogger = createMockLogger()
+const mockLogger = /** @type {any} */ ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+})
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {

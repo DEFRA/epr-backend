@@ -33,7 +33,6 @@ import {
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 
 import { config } from '#root/config.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { createNonProdDataReset } from './mongodb.js'
 import { nonProdDataResetPlugin } from './mongodb.plugin.js'
 
@@ -72,7 +71,15 @@ const COLLECTIONS = [
 ]
 
 const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
-const mockLogger = createMockLogger()
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: vi.fn()
+}
 
 /**
  * @typedef {object} ResetTestFixtures

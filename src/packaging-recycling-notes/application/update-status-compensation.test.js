@@ -13,7 +13,6 @@ import {
   buildAwaitingAcceptancePrn,
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -28,7 +27,15 @@ const updatePrnStatus =
     updatePrnStatusUntyped
   )
 
-const buildLogger = () => createMockLogger()
+const buildLogger = () => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: vi.fn()
+})
 
 const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'
@@ -369,19 +376,19 @@ describe('updatePrnStatus compensation', () => {
       ).rejects.toBe(forwardError)
 
       expect(logger.error).toHaveBeenCalledTimes(2)
-      const [forwardLog] = vi.mocked(logger.error).mock.calls[0]
-      const [compensationLog] = vi.mocked(logger.error).mock.calls[1]
+      const [forwardLog] = logger.error.mock.calls[0]
+      const [compensationLog] = logger.error.mock.calls[1]
 
       expect(forwardLog.err).toBe(forwardError)
-      expect(forwardLog.event?.action).toBe('compensation_failure')
-      expect(forwardLog.event?.reference).toBe(PRN_ID)
+      expect(forwardLog.event.action).toBe('compensation_failure')
+      expect(forwardLog.event.reference).toBe(PRN_ID)
       expect(forwardLog.message).toContain(PRN_ID)
       expect(forwardLog.message).toContain(PRN_STATUS.AWAITING_AUTHORISATION)
       expect(forwardLog.message).toContain(PRN_STATUS.AWAITING_ACCEPTANCE)
 
       expect(compensationLog.err).toBe(compensationError)
-      expect(compensationLog.event?.action).toBe('compensation_failure')
-      expect(compensationLog.event?.reference).toBe(PRN_ID)
+      expect(compensationLog.event.action).toBe('compensation_failure')
+      expect(compensationLog.event.reference).toBe(PRN_ID)
       expect(compensationLog.message).toContain(PRN_ID)
       expect(compensationLog.message).toContain(
         PRN_STATUS.AWAITING_AUTHORISATION

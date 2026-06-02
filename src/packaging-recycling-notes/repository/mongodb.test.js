@@ -1,8 +1,7 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { buildAwaitingAuthorisationPrn } from './contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
@@ -10,6 +9,7 @@ import { PrnNumberConflictError } from './port.js'
 
 /**
  * @typedef {import('mongodb').Db} Db
+ * @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('./port.js').PackagingRecyclingNotesRepository} PrnRepository
  */
@@ -20,7 +20,16 @@ const DATABASE_NAME = 'epr-backend'
 const asDb = (/** @type {unknown} */ stub) => /** @type {Db} */ (stub)
 
 /** A complete TypedLogger stub for tests that only execute paths preceding any log call. */
-const stubLogger = () => createMockLogger()
+const stubLogger = () =>
+  /** @type {TypedLogger} */ ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn()
+  })
 
 const it = mongoIt.extend({
   mongoClient: async (/** @type {*} */ { db }, use) => {

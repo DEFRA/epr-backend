@@ -1,6 +1,5 @@
 import Joi from 'joi'
 
-import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 
 vi.mock('#application/summary-logs/validate.js')
@@ -18,7 +17,7 @@ describe('summaryLogCommandHandlers', () => {
 
   beforeEach(() => {
     deps = {
-      logger: createMockLogger(),
+      logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
       summaryLogsRepository: { findById: vi.fn(), update: vi.fn() },
       organisationsRepository: {},
       wasteRecordsRepository: {},

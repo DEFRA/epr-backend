@@ -12,7 +12,6 @@ import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -27,7 +26,15 @@ const updatePrnStatus =
     updatePrnStatusUntyped
   )
 
-const noopLogger = () => createMockLogger()
+const noopLogger = () => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: vi.fn()
+})
 
 const PRN_ID = '507f1f77bcf86cd799439011'
 const ORG_ID = 'org-123'

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import {
   applyWasteBalanceEffects,
@@ -10,7 +10,6 @@ import { createInMemoryStreamRepository } from '#waste-balances/repository/strea
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
-import { createMockLogger } from '#test/mock-logger.js'
 
 const REGISTRATION_ID = 'reg-1'
 const ACCREDITATION_ID = 'acc-1'
@@ -18,7 +17,15 @@ const ORGANISATION_ID = 'org-1'
 const SEEDED_EVENT_NUMBER = 1
 const APPENDED_EVENT_NUMBER = 2
 
-const buildLogger = () => createMockLogger()
+const buildLogger = () => ({
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: vi.fn()
+})
 
 /**
  * A ledger-backed in-memory repository seeded with one stream event so the

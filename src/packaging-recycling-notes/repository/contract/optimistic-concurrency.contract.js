@@ -1,6 +1,5 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { buildAwaitingAuthorisationPrn, buildDraftPrn } from './test-data.js'
 
 const updaterUser = { id: 'user-raiser', name: 'Raiser User' }
@@ -200,7 +199,12 @@ export const testOptimisticConcurrency = (it) => {
       it('logs version conflict with database/version_conflict_detected event metadata', async ({
         prnRepositoryFactory
       }) => {
-        const logger = createMockLogger()
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
         const repo = prnRepositoryFactory(logger)
         const created = await repo.create(buildDraftPrn())
         await updateToAwaitingAuthorisation(repo, created)
@@ -226,7 +230,12 @@ export const testOptimisticConcurrency = (it) => {
       it('includes the conflict message on the logged error', async ({
         prnRepositoryFactory
       }) => {
-        const logger = createMockLogger()
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
         const repo = prnRepositoryFactory(logger)
         const created = await repo.create(buildDraftPrn())
         await updateToAwaitingAuthorisation(repo, created)
@@ -236,10 +245,10 @@ export const testOptimisticConcurrency = (it) => {
           output: { statusCode: 409 }
         })
 
-        const logCall = vi.mocked(logger.error).mock.calls[0][0]
+        const logCall = logger.error.mock.calls[0][0]
         expect(logCall.err).toBeInstanceOf(Error)
         const expectedCurrentVersion = 2
-        expect(logCall.err?.message).toBe(
+        expect(logCall.err.message).toBe(
           `Version conflict: attempted to update PRN ${created.id} with version ${created.version} but current version is ${expectedCurrentVersion}`
         )
       })
