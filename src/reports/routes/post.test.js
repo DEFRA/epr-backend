@@ -11,6 +11,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { buildAwaitingAcceptancePrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   buildOrganisation,
+  buildOrganisationWithRegistration,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import {
@@ -237,15 +238,28 @@ describe(`POST ${reportsPostPath}`, () => {
     })
 
     it('returns 400 with structured cadence when accredited registration uses quarterly cadence', async () => {
-      const { server, organisationId, registrationId } = await createServer({
+      const accreditationId = new ObjectId().toString()
+      const registration = buildRegistration({
         wasteProcessingType: 'reprocessor',
-        accreditationId: new ObjectId().toString()
+        accreditationId
+      })
+      const org = buildOrganisationWithRegistration(registration, 'approved')
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([org])
+
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory,
+          wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+          reportsRepository: createInMemoryReportsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ reports: true })
       })
 
       const response = await makeRequest(
         server,
-        organisationId,
-        registrationId,
+        org.id,
+        registration.id,
         2025,
         'quarterly',
         1
@@ -575,11 +589,9 @@ describe(`POST ${reportsPostPath}`, () => {
         wasteProcessingType: 'reprocessor',
         accreditationId
       })
-      const org = buildOrganisation({ registrations: [registration] })
+      const org = buildOrganisationWithRegistration(registration, 'approved')
       const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository()
-      const organisationsRepository = organisationsRepositoryFactory()
-      await organisationsRepository.insert(org)
+        createInMemoryOrganisationsRepository([org])
 
       const server = await createTestServer({
         repositories: {

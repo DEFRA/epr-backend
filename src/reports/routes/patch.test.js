@@ -9,6 +9,7 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildOrganisation,
+  buildOrganisationWithRegistration,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { buildCreateReportParams } from '#reports/repository/contract/test-data.js'
@@ -675,21 +676,44 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       })
 
       it('returns 400 when patching tonnageNotExported for an accredited exporter', async () => {
-        const { server, organisationId, registrationId } =
-          await createServerWithReport(
-            {
-              wasteProcessingType: 'exporter',
-              accreditationId: new ObjectId().toString()
-            },
-            { prn: { issuedTonnage: 100 } }
-          )
+        const accreditationId = new ObjectId().toString()
+        const registration = buildRegistration({
+          wasteProcessingType: 'exporter',
+          accreditationId
+        })
+        const org = buildOrganisationWithRegistration(registration, 'approved')
 
-        const response = await patchReport(
-          server,
-          organisationId,
-          registrationId,
-          { tonnageNotExported: 10 }
+        const organisationsRepositoryFactory =
+          createInMemoryOrganisationsRepository([org])
+
+        const reportsRepositoryFactory = createInMemoryReportsRepository()
+        const reportsRepository = reportsRepositoryFactory()
+        await reportsRepository.createReport(
+          buildCreateReportParams({
+            organisationId: org.id,
+            registrationId: registration.id,
+            year: 2025,
+            cadence: 'quarterly',
+            period: 1,
+            startDate: '2025-01-01',
+            endDate: '2025-03-31',
+            dueDate: '2025-04-20',
+            prn: { issuedTonnage: 100 }
+          })
         )
+
+        const server = await createTestServer({
+          repositories: {
+            organisationsRepository: organisationsRepositoryFactory,
+            wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
+            reportsRepository: reportsRepositoryFactory
+          },
+          featureFlags: createInMemoryFeatureFlags({ reports: true })
+        })
+
+        const response = await patchReport(server, org.id, registration.id, {
+          tonnageNotExported: 10
+        })
 
         expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
       })

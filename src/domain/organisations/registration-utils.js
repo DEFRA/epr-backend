@@ -59,6 +59,20 @@ export function resolveAccreditationNumber(registration, org) {
 }
 
 /**
+ * Returns true when the registration is linked to an accreditation that is
+ * live (approved or suspended). Presence of accreditationId alone is not
+ * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
+ * state has never been active and must be treated as registered-only.
+ *
+ * @param {{ accreditation: { status?: string } | null }} registration
+ * @returns {boolean}
+ */
+export function isRegistrationAccredited(registration) {
+  const status = registration.accreditation?.status
+  return ACTIVE_ACCREDITATION_STATUSES.has(/** @type {RegAccStatus} */ (status))
+}
+
+/**
  * Returns the active Accreditation object for a registration by looking up
  * accreditationId in org.accreditations. Only approved/suspended accreditations
  * are returned. Returns null when accreditationId is absent, no match is found,

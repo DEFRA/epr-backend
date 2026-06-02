@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   getReportableRegistrations,
+  isRegistrationAccredited,
   resolveAccreditationNumber,
   resolveAccreditation
 } from './registration-utils.js'
@@ -130,6 +131,31 @@ describe('getReportableRegistrations', () => {
     const result = getReportableRegistrations([org])
 
     expect(result[0].org).toBe(org)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isRegistrationAccredited
+// ---------------------------------------------------------------------------
+
+describe('isRegistrationAccredited', () => {
+  it.each([
+    { status: 'approved', expected: true },
+    { status: 'suspended', expected: true },
+    { status: 'created', expected: false },
+    { status: 'rejected', expected: false },
+    { status: 'cancelled', expected: false }
+  ])(
+    'returns $expected when linked accreditation status is $status',
+    ({ status, expected }) => {
+      expect(isRegistrationAccredited({ accreditation: { status } })).toBe(
+        expected
+      )
+    }
+  )
+
+  it('returns false when accreditation is null', () => {
+    expect(isRegistrationAccredited({ accreditation: null })).toBe(false)
   })
 })
 

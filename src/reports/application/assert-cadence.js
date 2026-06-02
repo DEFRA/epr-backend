@@ -1,5 +1,6 @@
 import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { CADENCE } from '#reports/domain/cadence.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 
 /**
@@ -12,11 +13,11 @@ import { errorCodes } from '#reports/enums/error-codes.js'
  * fields for indexed logging, and `output.payload.cadence` for API clients.
  *
  * @param {Cadence} cadence
- * @param {{ accreditationId?: string | null }} registration
+ * @param {{ accreditation: { status?: string } | null }} registration
  * @returns {void}
  */
 export const assertCadence = (cadence, registration) => {
-  const expected = registration.accreditationId
+  const expected = isRegistrationAccredited(registration)
     ? CADENCE.monthly
     : CADENCE.quarterly
 
