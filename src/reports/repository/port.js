@@ -78,9 +78,9 @@
 /**
  * @typedef {Object} PrnData
  * @property {number} issuedTonnage
- * @property {number} [totalRevenue]
- * @property {number} [averagePricePerTonne]
- * @property {number} freeTonnage
+ * @property {number | null} [totalRevenue]
+ * @property {number | null} [averagePricePerTonne]
+ * @property {number | null} freeTonnage
  */
 
 /**

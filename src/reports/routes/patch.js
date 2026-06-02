@@ -8,6 +8,7 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import {
   periodParamsSchema,
   standardUserAuth,
@@ -87,7 +88,7 @@ function guardReportDataFields(payload, report, registration) {
   if ('tonnageNotExported' in payload) {
     const isRegisteredOnlyExporter =
       registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER &&
-      !registration.accreditationId
+      !isRegistrationAccredited(registration)
     if (!isRegisteredOnlyExporter) {
       throw Boom.badRequest(
         'tonnageNotExported can only be set for registered-only exporters'
