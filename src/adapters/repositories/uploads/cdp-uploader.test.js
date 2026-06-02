@@ -5,7 +5,10 @@ import { createUploadsRepository } from './cdp-uploader.js'
 
 // Extend base fixture with contract test specific fixtures
 const it = baseIt.extend({
-  uploadsRepository: async ({ s3Client, cdpUploaderStack }, use) => {
+  uploadsRepository: async (
+    { s3Client, cdpUploaderStack },
+    /** @type {(repository: import('#domain/uploads/repository/port.js').UploadsRepository) => Promise<void>} */ use
+  ) => {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
@@ -16,7 +19,10 @@ const it = baseIt.extend({
     await use(repository)
   },
 
-  performUpload: async ({ cdpUploaderStack }, use) => {
+  performUpload: async (
+    { cdpUploaderStack },
+    /** @type {(upload: (uploadId: string, buffer: Buffer) => Promise<void>) => Promise<void>} */ use
+  ) => {
     await use(async (uploadId, buffer) => {
       const uploadUrlPath = `/upload-and-scan/${uploadId}`
 
@@ -49,10 +55,11 @@ const it = baseIt.extend({
   }
 })
 
-describe('CDP Uploader uploads repository', () => {
-  // Enable callback receiver for contract tests - must be called before tests run
-  it.scoped({ needsCallbackReceiver: true })
+// Enable callback receiver for contract tests. needsCallbackReceiver is
+// file-scoped, so the override must be declared at the top level of the file.
+it.scoped({ needsCallbackReceiver: true })
 
+describe('CDP Uploader uploads repository', () => {
   testUploadsRepositoryContract(it)
 
   // SonarCloud cannot detect dynamically registered contract tests above.

@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { findRowIdCollisions } from './run-row-id-collision-diagnostic.js'
@@ -6,10 +6,13 @@ import { findRowIdCollisions } from './run-row-id-collision-diagnostic.js'
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'waste-records'
 
+/** @typedef {{ database: import('mongodb').Db }} DatabaseContext */
+
 const it = mongoIt.extend({
-  db: async ({ db: uri }, use) => {
+  database: async (/** @type {{ db: string }} */ { db: uri }, use) => {
     const client = await MongoClient.connect(uri)
     const database = client.db(DATABASE_NAME)
+    await database.collection(COLLECTION_NAME).deleteMany({})
     await use(database)
     await client.close()
   }
@@ -33,16 +36,16 @@ const wasteRecord = (overrides = {}) => ({
 })
 
 describe('findRowIdCollisions (integration)', () => {
-  beforeEach(async ({ db }) => {
-    await db.collection(COLLECTION_NAME).deleteMany({})
+  it('returns empty when no records exist', async (/** @type {DatabaseContext} */ {
+    database
+  }) => {
+    expect(await findRowIdCollisions(database)).toEqual([])
   })
 
-  it('returns empty when no records exist', async ({ db }) => {
-    expect(await findRowIdCollisions(db)).toEqual([])
-  })
-
-  it('returns empty when every rowId has a single type', async ({ db }) => {
-    await db.collection(COLLECTION_NAME).insertMany([
+  it('returns empty when every rowId has a single type', async (/** @type {DatabaseContext} */ {
+    database
+  }) => {
+    await database.collection(COLLECTION_NAME).insertMany([
       wasteRecord({ rowId: 'row-1', type: 'received' }),
       wasteRecord({ rowId: 'row-2', type: 'received' }),
       wasteRecord({
@@ -52,20 +55,20 @@ describe('findRowIdCollisions (integration)', () => {
       })
     ])
 
-    expect(await findRowIdCollisions(db)).toEqual([])
+    expect(await findRowIdCollisions(database)).toEqual([])
   })
 
-  it('flags a registration where one rowId appears under two types', async ({
-    db
+  it('flags a registration where one rowId appears under two types', async (/** @type {DatabaseContext} */ {
+    database
   }) => {
-    await db
+    await database
       .collection(COLLECTION_NAME)
       .insertMany([
         wasteRecord({ rowId: 'row-42', type: 'received' }),
         wasteRecord({ rowId: 'row-42', type: 'processed' })
       ])
 
-    expect(await findRowIdCollisions(db)).toEqual([
+    expect(await findRowIdCollisions(database)).toEqual([
       {
         _id: { organisationId: 'org-A', registrationId: 'reg-1' },
         collidingRowIds: 1,
@@ -74,10 +77,10 @@ describe('findRowIdCollisions (integration)', () => {
     ])
   })
 
-  it('counts every doc involved in each collision across all rowIds', async ({
-    db
+  it('counts every doc involved in each collision across all rowIds', async (/** @type {DatabaseContext} */ {
+    database
   }) => {
-    await db.collection(COLLECTION_NAME).insertMany([
+    await database.collection(COLLECTION_NAME).insertMany([
       // rowId 1 → 2 types = 2 docs
       wasteRecord({ rowId: 'row-1', type: 'received' }),
       wasteRecord({ rowId: 'row-1', type: 'processed' }),
@@ -89,7 +92,7 @@ describe('findRowIdCollisions (integration)', () => {
       wasteRecord({ rowId: 'row-3', type: 'received' })
     ])
 
-    expect(await findRowIdCollisions(db)).toEqual([
+    expect(await findRowIdCollisions(database)).toEqual([
       {
         _id: { organisationId: 'org-A', registrationId: 'reg-1' },
         collidingRowIds: 2,
@@ -98,8 +101,10 @@ describe('findRowIdCollisions (integration)', () => {
     ])
   })
 
-  it('keeps collisions in different registrations separate', async ({ db }) => {
-    await db.collection(COLLECTION_NAME).insertMany([
+  it('keeps collisions in different registrations separate', async (/** @type {DatabaseContext} */ {
+    database
+  }) => {
+    await database.collection(COLLECTION_NAME).insertMany([
       wasteRecord({
         organisationId: 'org-A',
         registrationId: 'reg-1',
@@ -126,7 +131,7 @@ describe('findRowIdCollisions (integration)', () => {
       })
     ])
 
-    expect(await findRowIdCollisions(db)).toEqual([
+    expect(await findRowIdCollisions(database)).toEqual([
       {
         _id: { organisationId: 'org-A', registrationId: 'reg-1' },
         collidingRowIds: 1,
@@ -140,10 +145,10 @@ describe('findRowIdCollisions (integration)', () => {
     ])
   })
 
-  it('does not conflate rowId collisions across registrations within the same organisation', async ({
-    db
+  it('does not conflate rowId collisions across registrations within the same organisation', async (/** @type {DatabaseContext} */ {
+    database
   }) => {
-    await db.collection(COLLECTION_NAME).insertMany([
+    await database.collection(COLLECTION_NAME).insertMany([
       wasteRecord({
         registrationId: 'reg-1',
         rowId: 'row-1',
@@ -156,6 +161,6 @@ describe('findRowIdCollisions (integration)', () => {
       })
     ])
 
-    expect(await findRowIdCollisions(db)).toEqual([])
+    expect(await findRowIdCollisions(database)).toEqual([])
   })
 })

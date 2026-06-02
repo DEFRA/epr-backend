@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { findTopWasteBalancesBySize } from './run-balance-size-diagnostic.js'
@@ -6,10 +6,13 @@ import { findTopWasteBalancesBySize } from './run-balance-size-diagnostic.js'
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'waste-balances'
 
+/** @typedef {{ database: import('mongodb').Db }} DatabaseContext */
+
 const it = mongoIt.extend({
-  db: async ({ db: uri }, use) => {
+  database: async (/** @type {{ db: string }} */ { db: uri }, use) => {
     const client = await MongoClient.connect(uri)
     const database = client.db(DATABASE_NAME)
+    await database.collection(COLLECTION_NAME).deleteMany({})
     await use(database)
     await client.close()
   }
@@ -56,18 +59,16 @@ const balance = ({
 })
 
 describe('findTopWasteBalancesBySize (integration)', () => {
-  beforeEach(async ({ db }) => {
-    await db.collection(COLLECTION_NAME).deleteMany({})
-  })
-
-  it('returns empty when no balances exist', async ({ db }) => {
-    expect(await findTopWasteBalancesBySize(db)).toEqual([])
-  })
-
-  it('orders results by descending bsonSize and returns transactionCount alongside', async ({
-    db
+  it('returns empty when no balances exist', async (/** @type {DatabaseContext} */ {
+    database
   }) => {
-    await db.collection(COLLECTION_NAME).insertMany([
+    expect(await findTopWasteBalancesBySize(database)).toEqual([])
+  })
+
+  it('orders results by descending bsonSize and returns transactionCount alongside', async (/** @type {DatabaseContext} */ {
+    database
+  }) => {
+    await database.collection(COLLECTION_NAME).insertMany([
       balance({
         id: 'bal-small',
         accreditationId: 'acc-small',
@@ -85,7 +86,7 @@ describe('findTopWasteBalancesBySize (integration)', () => {
       })
     ])
 
-    const rows = await findTopWasteBalancesBySize(db)
+    const rows = await findTopWasteBalancesBySize(database)
 
     expect(rows.map((r) => r.accreditationId)).toEqual([
       'acc-big',
@@ -97,8 +98,10 @@ describe('findTopWasteBalancesBySize (integration)', () => {
     expect(rows[1].bsonSize).toBeGreaterThan(rows[2].bsonSize)
   })
 
-  it('excludes ledger-canonical balances from the snapshot', async ({ db }) => {
-    await db.collection(COLLECTION_NAME).insertMany([
+  it('excludes ledger-canonical balances from the snapshot', async (/** @type {DatabaseContext} */ {
+    database
+  }) => {
+    await database.collection(COLLECTION_NAME).insertMany([
       balance({
         id: 'bal-emb',
         accreditationId: 'acc-emb',
@@ -119,7 +122,7 @@ describe('findTopWasteBalancesBySize (integration)', () => {
       })
     ])
 
-    const rows = await findTopWasteBalancesBySize(db)
+    const rows = await findTopWasteBalancesBySize(database)
 
     expect(rows.map((r) => r.accreditationId).sort()).toEqual([
       'acc-emb',
@@ -127,8 +130,8 @@ describe('findTopWasteBalancesBySize (integration)', () => {
     ])
   })
 
-  it('caps results at 10 even when more embedded balances exist', async ({
-    db
+  it('caps results at 10 even when more embedded balances exist', async (/** @type {DatabaseContext} */ {
+    database
   }) => {
     const docs = Array.from({ length: 15 }, (_, i) =>
       balance({
@@ -137,9 +140,9 @@ describe('findTopWasteBalancesBySize (integration)', () => {
         transactionCount: 15 - i
       })
     )
-    await db.collection(COLLECTION_NAME).insertMany(docs)
+    await database.collection(COLLECTION_NAME).insertMany(docs)
 
-    const rows = await findTopWasteBalancesBySize(db)
+    const rows = await findTopWasteBalancesBySize(database)
 
     expect(rows).toHaveLength(10)
   })
