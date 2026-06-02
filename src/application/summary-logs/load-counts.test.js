@@ -31,6 +31,8 @@ const createValidatedWasteRecord = ({
   previousVersions = [],
   change = 'created'
 }) => ({
+  tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   record: {
     organisationId: 'org-1',
     registrationId: 'reg-1',
@@ -298,8 +300,8 @@ describe('countByWasteBalanceInclusion', () => {
     })
   })
 
-  describe('skips IGNORED rows (suspended accreditation silent exclusion)', () => {
-    it('does not count IGNORED rows in any category', () => {
+  describe('counts IGNORED rows as excluded (suspended accreditation)', () => {
+    it('counts IGNORED rows as excluded, not invisible', () => {
       const wasteRecords = [
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
@@ -319,10 +321,10 @@ describe('countByWasteBalanceInclusion', () => {
       })
 
       expect(result.added.included.count).toBe(1)
-      expect(result.added.excluded.count).toBe(0)
+      expect(result.added.excluded.count).toBe(1)
     })
 
-    it('silently excludes IGNORED rows across added, adjusted, and unchanged categories', () => {
+    it('counts IGNORED added and adjusted rows as excluded, skips IGNORED unchanged rows', () => {
       const wasteRecords = [
         // Added, IGNORED (suspended accreditation)
         createValidatedWasteRecord({
@@ -367,12 +369,43 @@ describe('countByWasteBalanceInclusion', () => {
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
-      // Only the non-IGNORED record should appear
       expect(result.added.included.count).toBe(1)
-      expect(result.added.excluded.count).toBe(0)
+      expect(result.added.excluded.count).toBe(1)
       expect(result.adjusted.included.count).toBe(0)
-      expect(result.adjusted.excluded.count).toBe(0)
+      expect(result.adjusted.excluded.count).toBe(1)
       expect(result.unchanged.included.count).toBe(0)
+      expect(result.unchanged.excluded.count).toBe(0)
+    })
+
+    it('counts a re-uploaded row with changed dates (UPDATED + IGNORED) as adjusted.excluded', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          outcome: ROW_OUTCOME.IGNORED,
+          previousVersions: [
+            {
+              id: 'prev-ver-1',
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: {
+                id: PREVIOUS_SUMMARY_LOG_ID,
+                uri: 's3://bucket/old-key'
+              },
+              data: { ROW_ID: '10001' }
+            }
+          ]
+        })
+      ]
+
+      const result = countByWasteBalanceInclusion({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.adjusted.excluded.count).toBe(1)
+      expect(result.adjusted.included.count).toBe(0)
+      expect(result.added.excluded.count).toBe(0)
       expect(result.unchanged.excluded.count).toBe(0)
     })
   })
@@ -381,6 +414,8 @@ describe('countByWasteBalanceInclusion', () => {
     it('handles record with missing summaryLog gracefully (classifies as unchanged)', () => {
       const wasteRecords = [
         {
+          tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
           record: {
             organisationId: 'org-1',
             registrationId: 'reg-1',
@@ -404,7 +439,10 @@ describe('countByWasteBalanceInclusion', () => {
       ]
 
       const result = countByWasteBalanceInclusion({
-        wasteRecords,
+        wasteRecords:
+          /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord[]} */ (
+            /** @type {unknown} */ (wasteRecords)
+          ),
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -417,6 +455,8 @@ describe('countByWasteBalanceInclusion', () => {
     it('handles empty versions array gracefully', () => {
       const wasteRecords = [
         {
+          tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
           record: {
             organisationId: 'org-1',
             registrationId: 'reg-1',
@@ -446,6 +486,8 @@ describe('countByWasteBalanceInclusion', () => {
     it('truncates rowId arrays at 100 but totals reflect full count', () => {
       // Create 150 records - all added/included
       const wasteRecords = Array.from({ length: 150 }, (_, i) => ({
+        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
         record: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -488,6 +530,8 @@ describe('countByWasteBalanceInclusion', () => {
     it('truncates each category independently', () => {
       // Create 120 added/included and 120 added/excluded records
       const includedRecords = Array.from({ length: 120 }, (_, i) => ({
+        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
         record: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -513,6 +557,8 @@ describe('countByWasteBalanceInclusion', () => {
       }))
 
       const excludedRecords = Array.from({ length: 120 }, (_, i) => ({
+        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
         record: {
           organisationId: 'org-1',
           registrationId: 'reg-1',
@@ -545,7 +591,11 @@ describe('countByWasteBalanceInclusion', () => {
       }))
 
       const result = countByWasteBalanceInclusion({
-        wasteRecords: [...includedRecords, ...excludedRecords],
+        wasteRecords:
+          /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord[]} */ ([
+            ...includedRecords,
+            ...excludedRecords
+          ]),
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -778,6 +828,8 @@ describe('countByValidity', () => {
   describe('truncation', () => {
     it('truncates rowId arrays at 100 but totals reflect full count', () => {
       const wasteRecords = Array.from({ length: 150 }, (_, i) => ({
+        tableName: 'RECEIVED_LOADS_FOR_EXPORT',
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
         record: {
           organisationId: 'org-1',
           registrationId: 'reg-1',

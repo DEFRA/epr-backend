@@ -22,6 +22,7 @@ describe('waste-balances stream repository - in-memory implementation', () => {
     expect(repository.findLatestByPartition).toBeTypeOf('function')
     expect(repository.findLatestByPartitionAndKind).toBeTypeOf('function')
     expect(repository.findEventsByPrnIdAfter).toBeTypeOf('function')
+    expect(repository.findAllByPartition).toBeTypeOf('function')
   })
 
   testStreamRepositoryContract(extendedIt)
