@@ -95,6 +95,38 @@ export const createSystemLogsRepository = async (db) => {
         nextCursor,
         prevCursor
       }
+    },
+
+    async findSubmittersBySummaryLogIds(summaryLogIds) {
+      /** @type {Map<string, import('./port.js').SystemLogSubmitter>} */
+      const submitters = new Map()
+      if (summaryLogIds.length === 0) {
+        return submitters
+      }
+
+      const docs = await db
+        .collection(SYSTEM_LOGS_COLLECTION_NAME)
+        .find({
+          'context.summaryLogId': { $in: summaryLogIds },
+          'event.subCategory': 'summary-log',
+          'event.action': 'submit'
+        })
+        .project({
+          'context.summaryLogId': 1,
+          'createdBy.id': 1,
+          'createdBy.email': 1,
+          'createdBy.name': 1
+        })
+        .toArray()
+
+      for (const doc of docs) {
+        submitters.set(doc.context.summaryLogId, {
+          id: doc.createdBy.id,
+          name: doc.createdBy.email ?? doc.createdBy.name
+        })
+      }
+
+      return submitters
     }
   })
 }

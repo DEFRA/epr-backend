@@ -31,17 +31,18 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
  */
 
 /**
  * Load the organisation, registration, and accreditation for a balance row,
  * then fetch all authoritative sources needed to rebuild the event stream
- * or recompute totals. The row's embedded waste-balance transactions recover
- * the real submitting actor for each historical summary log, so the rebuilt
- * stream attributes submissions to the person who made them rather than the
+ * or recompute totals. Recovers the real submitting actor for each historical
+ * summary log from the system-logs audit trail, so the rebuilt stream
+ * attributes submissions to the person who made them rather than the
  * backfill actor.
  *
- * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
+ * @param {{ accreditationId: string, organisationId: string }} row
  * @param {AccreditationSourceDeps} deps
  */
 export const loadAccreditationSources = async (row, deps) => {
@@ -50,7 +51,8 @@ export const loadAccreditationSources = async (row, deps) => {
     prnRepository,
     wasteRecordsRepository,
     overseasSitesRepository,
-    summaryLogsRepository
+    summaryLogsRepository,
+    systemLogsRepository
   } = deps
 
   const organisation = await organisationsRepository.findById(
@@ -91,9 +93,13 @@ export const loadAccreditationSources = async (row, deps) => {
     registration.id
   )
 
+  const summaryLogDocIds = summaryLogDocs.map((doc) => String(doc.id))
+  const systemLogSubmitters =
+    await systemLogsRepository.findSubmittersBySummaryLogIds(summaryLogDocIds)
+
   const submitters = buildSummaryLogSubmitters({
-    transactions: row.transactions,
-    wasteRecords
+    systemLogSubmitters,
+    summaryLogDocs
   })
 
   const summaryLogs = summaryLogDocs

@@ -1,7 +1,10 @@
 import { describe, expect } from 'vitest'
 import { randomUUID } from 'crypto'
 
-import { buildSystemLog } from './contract/test-data.js'
+import {
+  buildSystemLog,
+  buildSummaryLogSubmitEvent
+} from './contract/test-data.js'
 
 /** @import {SystemLogsRepository} from './port.js' */
 
@@ -453,6 +456,110 @@ export const testSystemLogsRepositoryContract = (it) => {
         expect(result.nextCursor).toBeNull()
         expect(result.prevCursor).toBeNull()
       })
+    })
+  })
+
+  describe('findSubmittersBySummaryLogIds', () => {
+    it('returns the submitter for each summary log ID', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSummaryLogSubmitEvent({
+          summaryLogId: 'sl-1',
+          userId: 'user-a',
+          email: 'alice@example.com'
+        })
+      )
+      await repository.insert(
+        buildSummaryLogSubmitEvent({
+          summaryLogId: 'sl-2',
+          userId: 'user-b',
+          email: 'bob@example.com'
+        })
+      )
+
+      const result = await repository.findSubmittersBySummaryLogIds([
+        'sl-1',
+        'sl-2'
+      ])
+
+      expect(result.get('sl-1')).toEqual({
+        id: 'user-a',
+        name: 'alice@example.com'
+      })
+      expect(result.get('sl-2')).toEqual({
+        id: 'user-b',
+        name: 'bob@example.com'
+      })
+    })
+
+    it('ignores non-submit events for the same summary log ID', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      const uniqueId = `sl-download-only-${randomUUID()}`
+      await repository.insert({
+        createdAt: new Date(),
+        createdBy: { id: 'user-a', email: 'alice@example.com', scope: [] },
+        event: {
+          category: 'waste-reporting',
+          subCategory: 'summary-log',
+          action: 'download'
+        },
+        context: { summaryLogId: uniqueId }
+      })
+
+      const result = await repository.findSubmittersBySummaryLogIds([uniqueId])
+
+      expect(result.size).toBe(0)
+    })
+
+    it('returns an empty map when no IDs match', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      const result = await repository.findSubmittersBySummaryLogIds([
+        'no-such-id'
+      ])
+
+      expect(result.size).toBe(0)
+    })
+
+    it('returns an empty map for an empty input array', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      const result = await repository.findSubmittersBySummaryLogIds([])
+
+      expect(result.size).toBe(0)
+    })
+
+    it('excludes summary log IDs not in the requested set', async ({
+      systemLogsRepository
+    }) => {
+      /** @type {SystemLogsRepository} */
+      const repository = systemLogsRepository()
+
+      await repository.insert(
+        buildSummaryLogSubmitEvent({ summaryLogId: 'sl-1', userId: 'user-a' })
+      )
+      await repository.insert(
+        buildSummaryLogSubmitEvent({ summaryLogId: 'sl-2', userId: 'user-b' })
+      )
+
+      const result = await repository.findSubmittersBySummaryLogIds(['sl-1'])
+
+      expect(result.size).toBe(1)
+      expect(result.has('sl-1')).toBe(true)
     })
   })
 }

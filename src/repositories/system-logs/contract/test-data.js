@@ -27,3 +27,34 @@ export const buildSystemLog = ({
     ...(id !== undefined && { id })
   }
 })
+
+/**
+ * @param {object} params
+ * @param {string} params.summaryLogId
+ * @param {string} [params.organisationId]
+ * @param {string} [params.registrationId]
+ * @param {string} [params.userId]
+ * @param {string} [params.email]
+ * @param {Date} [params.createdAt]
+ */
+export const buildSummaryLogSubmitEvent = ({
+  summaryLogId,
+  organisationId = 'org-1',
+  registrationId = 'reg-1',
+  userId = 'user-001',
+  email = 'user@email.com',
+  createdAt = new Date()
+}) => ({
+  createdAt,
+  createdBy: { id: userId, email, scope: [] },
+  event: {
+    category: 'waste-reporting',
+    subCategory: 'summary-log',
+    action: 'submit'
+  },
+  context: {
+    summaryLogId,
+    organisationId,
+    registrationId
+  }
+})

@@ -62,7 +62,7 @@ async function handler(request, h) {
   }
 
   const result = await promoteAccreditation(
-    { accreditationId, organisationId, transactions: balance.transactions },
+    { accreditationId, organisationId },
     {
       wasteBalancesRepository,
       streamRepository: request.streamRepository,
@@ -70,7 +70,8 @@ async function handler(request, h) {
       prnRepository: request.packagingRecyclingNotesRepository,
       wasteRecordsRepository: request.wasteRecordsRepository,
       overseasSitesRepository: request.overseasSitesRepository,
-      summaryLogsRepository: request.summaryLogsRepository
+      summaryLogsRepository: request.summaryLogsRepository,
+      systemLogsRepository: request.systemLogsRepository
     }
   )
 

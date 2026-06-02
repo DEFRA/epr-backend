@@ -3,6 +3,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
@@ -18,7 +19,6 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {string} organisationId
  * @property {number} amount
  * @property {number} availableAmount
- * @property {Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction>} [transactions]
  */
 
 /**
@@ -28,6 +28,7 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
  */
 
 /**
@@ -47,8 +48,7 @@ const findEmbeddedWasteBalances = async (db) => {
           accreditationId: 1,
           organisationId: 1,
           amount: 1,
-          availableAmount: 1,
-          transactions: 1
+          availableAmount: 1
         }
       }
     )
@@ -261,13 +261,17 @@ const buildDependencies = async (server) => {
   const summaryLogsRepository = (
     await createSummaryLogsRepository(server.db, /** @type {any} */ ({}))
   )(logger)
+  const systemLogsRepository = (
+    await createSystemLogsRepository(server.db)
+  )(logger)
 
   return /** @type {DiagnosticDependencies} */ ({
     organisationsRepository,
     wasteRecordsRepository,
     prnRepository,
     overseasSitesRepository,
-    summaryLogsRepository
+    summaryLogsRepository,
+    systemLogsRepository
   })
 }
 

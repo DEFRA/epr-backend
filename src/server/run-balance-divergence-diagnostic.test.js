@@ -10,6 +10,7 @@ import { computeRebuiltStream } from '#waste-balances/application/compute-rebuil
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnostic.js'
 
@@ -44,6 +45,9 @@ vi.mock('#application/waste-records/resolve-overseas-sites.js', () => ({
 vi.mock('#repositories/summary-logs/mongodb.js', () => ({
   createSummaryLogsRepository: vi.fn()
 }))
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn()
+}))
 
 describe('runBalanceDivergenceDiagnostic', () => {
   let mockServer
@@ -53,6 +57,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
   let prnRepository
   let overseasSitesRepository
   let summaryLogsRepository
+  let systemLogsRepository
   let mockToArray
   let mockFind
   let collectionByName
@@ -127,6 +132,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
     }
     vi.mocked(createSummaryLogsRepository).mockResolvedValue(
       () => summaryLogsRepository
+    )
+
+    systemLogsRepository = {
+      findSubmittersBySummaryLogIds: vi.fn().mockResolvedValue(new Map())
+    }
+    vi.mocked(createSystemLogsRepository).mockResolvedValue(
+      () => systemLogsRepository
     )
 
     vi.mocked(computeRebuiltTotals).mockReturnValue(
@@ -649,20 +661,14 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
-  it('recovers the real submitter from the embedded transactions and threads it into computeRebuiltStream', async () => {
+  it('recovers the real submitter from system-logs and threads it into computeRebuiltStream', async () => {
     const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
         organisationId: 'org-1',
         amount: 0,
-        availableAmount: 0,
-        transactions: [
-          {
-            createdBy: { id: 'user-9', name: 'real@example.com' },
-            entities: [{ currentVersionId: 'ver-1' }]
-          }
-        ]
+        availableAmount: 0
       }
     ])
     registrations['org-1'] = [
@@ -685,18 +691,16 @@ describe('runBalanceDivergenceDiagnostic', () => {
         }
       }
     ])
-    const wasteRecords = [
-      {
-        rowId: 'r-1',
-        type: 'received',
-        versions: [{ id: 'ver-1', summaryLog: { id: 'file-id-1' } }]
-      }
-    ]
-    wasteRecordsRepository.findByRegistration.mockResolvedValue(wasteRecords)
+    systemLogsRepository.findSubmittersBySummaryLogIds.mockResolvedValue(
+      new Map([['doc-id-1', { id: 'user-9', name: 'real@example.com' }]])
+    )
     prnRepository.findByAccreditation.mockResolvedValue([])
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
+    expect(
+      systemLogsRepository.findSubmittersBySummaryLogIds
+    ).toHaveBeenCalledWith(['doc-id-1'])
     expect(computeRebuiltStream).toHaveBeenCalledWith(
       expect.objectContaining({
         summaryLogs: [

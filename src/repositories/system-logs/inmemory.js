@@ -80,6 +80,28 @@ export function createSystemLogsRepository() {
           nextCursor,
           prevCursor
         }
+      },
+
+      async findSubmittersBySummaryLogIds(summaryLogIds) {
+        /** @type {Map<string, import('./port.js').SystemLogSubmitter>} */
+        const submitters = new Map()
+        if (summaryLogIds.length === 0) {
+          return submitters
+        }
+        const idSet = new Set(summaryLogIds)
+        for (const item of storage) {
+          if (
+            item.event?.subCategory === 'summary-log' &&
+            item.event?.action === 'submit' &&
+            idSet.has(item.context?.summaryLogId)
+          ) {
+            submitters.set(item.context.summaryLogId, {
+              id: item.createdBy.id,
+              name: item.createdBy.email ?? item.createdBy.name
+            })
+          }
+        }
+        return submitters
       }
     }
   }

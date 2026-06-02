@@ -1,62 +1,33 @@
-import { BACKFILL_ACTOR } from '../repository/stream-schema.js'
-
 /**
- * @param {Array<{ versions: Array<{ id: string, summaryLog: { id: string } }> }>} wasteRecords
- * @returns {Map<string, string>}
- */
-const indexSummaryLogIdByVersion = (wasteRecords) => {
-  const summaryLogIdByVersion = new Map()
-  for (const record of wasteRecords) {
-    for (const version of record.versions ?? []) {
-      summaryLogIdByVersion.set(version.id, version.summaryLog.id)
-    }
-  }
-  return summaryLogIdByVersion
-}
-
-/**
- * Recover the real submitting actor for each historical summary log from the
- * embedded waste-balance transactions. The submitting session is not persisted
- * on the summary-log document or the waste-record version, but every embedded
- * waste-balance transaction stamps `createdBy` with the submitting user and
- * links the waste-record version it credited via `currentVersionId`. Each
- * version carries the `summaryLog.id` of the submission that produced it, so
- * the chain transaction.createdBy → currentVersionId → version → summaryLog.id
- * yields a summary-log-id → actor map straight from authoritative sources.
- *
- * The system placeholder actor is rejected: it is the rebuild's own marker for
- * "no real actor", so accepting it would falsely report a submission as
- * recovered and hide the gap from the divergence diagnostic. Submissions that
- * predate the SQS submit path may carry no recoverable actor at all; those are
- * left to fall back to the backfill actor rather than be credited to a
- * placeholder.
- *
- * Sourced from the embedded waste-balance document's `transactions` and the
- * registration's waste records; typed structurally to the fields consumed.
+ * Build a map from summary-log file ID to the submitting actor, sourced from
+ * the system-logs collection. Each summary-log submission audit event records
+ * the submitter's identity keyed by the summary-log document _id
+ * (`context.summaryLogId`). The summary-log documents carry both the document
+ * _id and the file identifier (`file.id`) that the stream uses as its natural
+ * key. This function joins the two namespaces so callers can look up submitters
+ * by the file-level ID that computeRebuiltStream expects.
  *
  * @param {Object} params
- * @param {Array<{ createdBy?: { id: string, name: string }, entities?: Array<{ currentVersionId: string }> }>} [params.transactions]
- * @param {Array<{ versions: Array<{ id: string, summaryLog: { id: string } }> }>} params.wasteRecords
+ * @param {Map<string, import('../repository/stream-schema.js').StreamUserSummary>} params.systemLogSubmitters
+ *   Map from summary-log document _id to the submitting actor, as returned by
+ *   systemLogsRepository.findSubmittersBySummaryLogIds.
+ * @param {Array<{ id: *, summaryLog: { file: { id: string } } }>} params.summaryLogDocs
+ *   Summary-log documents from findAllByOrgReg (id = document _id, summaryLog.file.id = file key).
  * @returns {Map<string, import('../repository/stream-schema.js').StreamUserSummary>}
+ *   Map from summary-log file ID to actor.
  */
-export const buildSummaryLogSubmitters = ({ transactions, wasteRecords }) => {
-  const summaryLogIdByVersion = indexSummaryLogIdByVersion(wasteRecords)
-
+export const buildSummaryLogSubmitters = ({
+  systemLogSubmitters,
+  summaryLogDocs
+}) => {
+  /** @type {Map<string, import('../repository/stream-schema.js').StreamUserSummary>} */
   const submitters = new Map()
-  for (const transaction of transactions ?? []) {
-    const { createdBy } = transaction
-    if (createdBy === undefined || createdBy.id === BACKFILL_ACTOR.id) {
-      continue
-    }
-    for (const entity of transaction.entities ?? []) {
-      const summaryLogId = summaryLogIdByVersion.get(entity.currentVersionId)
-      if (summaryLogId === undefined || submitters.has(summaryLogId)) {
-        continue
-      }
-      submitters.set(summaryLogId, {
-        id: createdBy.id,
-        name: createdBy.name
-      })
+
+  for (const doc of summaryLogDocs) {
+    const docId = String(doc.id)
+    const submitter = systemLogSubmitters.get(docId)
+    if (submitter) {
+      submitters.set(doc.summaryLog.file.id, submitter)
     }
   }
 

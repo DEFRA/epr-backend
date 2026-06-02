@@ -37,9 +37,14 @@
  */
 
 /**
+ * @typedef {{ id: string, name: string }} SystemLogSubmitter
+ */
+
+/**
  * @typedef {{
  *   insert: (systemLog: SystemLog) => Promise<void>
  *   find: (params: FindParams) => Promise<PaginatedSystemLogs>
+ *   findSubmittersBySummaryLogIds: (summaryLogIds: string[]) => Promise<Map<string, SystemLogSubmitter>>
  * }} SystemLogsRepository
  */
 
