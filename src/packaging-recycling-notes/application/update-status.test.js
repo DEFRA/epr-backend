@@ -9,6 +9,11 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import {
+  createMockOrganisationsRepository,
+  createMockPackagingRecyclingNotesRepository,
+  createMockWasteBalancesRepository
+} from '#test/mock-repositories.js'
 
 const mockRecordStatusTransition = vi.fn()
 
@@ -20,11 +25,11 @@ vi.mock('./metrics.js', () => ({
 
 const { updatePrnStatus } = await import('./update-status.js')
 
-const defaultOrganisationsRepository = {
+const defaultOrganisationsRepository = createMockOrganisationsRepository({
   findAccreditationById: vi.fn().mockResolvedValue({
     submittedToRegulator: REGULATOR.EA
   })
-}
+})
 
 const mockLogger = {
   info: vi.fn(),
@@ -35,13 +40,7 @@ const mockLogger = {
   fatal: vi.fn()
 }
 
-const createMockPrnRepository = (overrides = {}) => ({
-  create: vi.fn(),
-  findById: vi.fn(),
-  findByAccreditation: vi.fn(),
-  updateStatus: vi.fn(),
-  ...overrides
-})
+const createMockPrnRepository = createMockPackagingRecyclingNotesRepository
 
 describe('updatePrnStatus', () => {
   beforeEach(() => {
@@ -55,7 +54,7 @@ describe('updatePrnStatus', () => {
     const prnRepository = createMockPrnRepository({
       findById: vi.fn().mockResolvedValue(null)
     })
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
     await expect(
       updatePrnStatus({
@@ -82,7 +81,7 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
     await expect(
       updatePrnStatus({
@@ -109,7 +108,7 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
     await expect(
       updatePrnStatus({
@@ -136,7 +135,7 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
     // DRAFT cannot transition directly to AWAITING_ACCEPTANCE (must go via AWAITING_AUTHORISATION)
     await expect(
@@ -164,7 +163,7 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
     })
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
     // Only PRODUCER can transition from awaiting_acceptance to accepted
     await expect(
@@ -192,7 +191,7 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
     })
-    const wasteBalancesRepository = {}
+    const wasteBalancesRepository = createMockWasteBalancesRepository()
 
     await expect(
       updatePrnStatus({
@@ -224,14 +223,14 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
       })
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await updatePrnStatus({
       prnRepository,
@@ -267,9 +266,9 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.DRAFT }
       })
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue(null)
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -306,14 +305,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockResolvedValue(updatedPrn)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await updatePrnStatus({
       prnRepository,
@@ -353,14 +352,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockResolvedValue(updatedPrn)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
-    }
+    })
 
     const result = await updatePrnStatus({
       prnRepository,
@@ -406,14 +405,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockResolvedValue(updatedPrn)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     const result = await updatePrnStatus({
       prnRepository,
@@ -459,14 +458,14 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await updatePrnStatus({
       prnRepository,
@@ -502,14 +501,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockResolvedValue(updatedPrn)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await updatePrnStatus({
       prnRepository,
@@ -551,9 +550,9 @@ describe('updatePrnStatus', () => {
         status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
       })
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue(null)
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -591,14 +590,14 @@ describe('updatePrnStatus', () => {
         .mockRejectedValueOnce(new PrnNumberConflictError('WE26000001'))
         .mockResolvedValueOnce(updatedPrn)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     const result = await updatePrnStatus({
       prnRepository,
@@ -645,14 +644,14 @@ describe('updatePrnStatus', () => {
         .fn()
         .mockRejectedValue(new PrnNumberConflictError('collision'))
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -684,17 +683,17 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn()
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
-    const organisationsRepository = {
+    })
+    const organisationsRepository = createMockOrganisationsRepository({
       findAccreditationById: vi.fn().mockResolvedValue(null)
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -726,20 +725,20 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn()
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
-    const organisationsRepository = {
+    })
+    const organisationsRepository = createMockOrganisationsRepository({
       findAccreditationById: vi.fn().mockResolvedValue({
         submittedToRegulator: REGULATOR.EA,
         status: 'suspended'
       })
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -772,14 +771,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockRejectedValue(dbError)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -810,14 +809,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockResolvedValue(null)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -847,14 +846,14 @@ describe('updatePrnStatus', () => {
       }),
       updateStatus: vi.fn().mockResolvedValue(null)
     })
-    const wasteBalancesRepository = {
+    const wasteBalancesRepository = createMockWasteBalancesRepository({
       findByAccreditationId: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
       }),
       deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-    }
+    })
 
     await expect(
       updatePrnStatus({
@@ -884,14 +883,14 @@ describe('updatePrnStatus', () => {
         }),
         updateStatus: vi.fn()
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 500,
           availableAmount: 50
         }),
         deductAvailableBalanceForPrnCreation: vi.fn()
-      }
+      })
 
       await expect(
         updatePrnStatus({
@@ -930,14 +929,14 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 50,
           availableAmount: 200
         }),
         deductTotalBalanceForPrnIssue: vi.fn()
-      }
+      })
 
       await expect(
         updatePrnStatus({
@@ -974,14 +973,14 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 500,
           availableAmount: 100
         }),
         deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1012,12 +1011,12 @@ describe('updatePrnStatus', () => {
         }),
         updateStatus: vi.fn()
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 500
         })
-      }
+      })
 
       await expect(
         updatePrnStatus({
@@ -1051,12 +1050,12 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           availableAmount: 200
         })
-      }
+      })
 
       await expect(
         updatePrnStatus({
@@ -1090,14 +1089,14 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 50,
           availableAmount: 200
         }),
         deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1134,14 +1133,14 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 1000,
           availableAmount: 1000
         }),
         deductAvailableBalanceForPrnCreation: vi.fn().mockResolvedValue({})
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1184,14 +1183,14 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 1000,
           availableAmount: 1000
         }),
         deductTotalBalanceForPrnIssue: vi.fn().mockResolvedValue({})
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1218,7 +1217,7 @@ describe('updatePrnStatus', () => {
       const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue(null)
       })
-      const wasteBalancesRepository = {}
+      const wasteBalancesRepository = createMockWasteBalancesRepository()
 
       await expect(
         updatePrnStatus({
@@ -1247,7 +1246,7 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.DRAFT }
         })
       })
-      const wasteBalancesRepository = {}
+      const wasteBalancesRepository = createMockWasteBalancesRepository()
 
       await expect(
         updatePrnStatus({
@@ -1285,7 +1284,7 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.DISCARDED }
         })
       })
-      const wasteBalancesRepository = {}
+      const wasteBalancesRepository = createMockWasteBalancesRepository()
 
       const result = await updatePrnStatus({
         prnRepository,
@@ -1325,9 +1324,9 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.DISCARDED }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         creditAvailableBalanceForPrnCancellation: vi.fn()
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1357,7 +1356,7 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION }
         })
       })
-      const wasteBalancesRepository = {}
+      const wasteBalancesRepository = createMockWasteBalancesRepository()
 
       await expect(
         updatePrnStatus({
@@ -1391,12 +1390,12 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.CANCELLED }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi
           .fn()
           .mockResolvedValue({ accreditationId: 'acc-456' }),
         creditFullBalanceForIssuedPrnCancellation: vi.fn().mockResolvedValue({})
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1436,9 +1435,9 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.CANCELLED }
         })
       })
-      const wasteBalancesRepository = {
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue(null)
-      }
+      })
 
       await expect(
         updatePrnStatus({
@@ -1459,7 +1458,7 @@ describe('updatePrnStatus', () => {
 
   describe('deletion waste balance credit', () => {
     it('credits available waste balance when deleting from awaiting_authorisation', async () => {
-      const prnRepository = {
+      const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
           organisation: { id: 'org-123' },
@@ -1473,13 +1472,13 @@ describe('updatePrnStatus', () => {
           id: '507f1f77bcf86cd799439011',
           status: { currentStatus: PRN_STATUS.DELETED }
         })
-      }
-      const wasteBalancesRepository = {
+      })
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi
           .fn()
           .mockResolvedValue({ accreditationId: 'acc-456' }),
         creditAvailableBalanceForPrnCancellation: vi.fn().mockResolvedValue({})
-      }
+      })
 
       await updatePrnStatus({
         prnRepository,
@@ -1505,7 +1504,7 @@ describe('updatePrnStatus', () => {
     })
 
     it('throws error when deleting awaiting_authorisation PRN without waste balance', async () => {
-      const prnRepository = {
+      const prnRepository = createMockPrnRepository({
         findById: vi.fn().mockResolvedValue({
           id: '507f1f77bcf86cd799439011',
           organisation: { id: 'org-123' },
@@ -1521,10 +1520,10 @@ describe('updatePrnStatus', () => {
           status: { currentStatus: PRN_STATUS.DELETED }
         }),
         rollbackPendingCancellation: vi.fn().mockResolvedValue({})
-      }
-      const wasteBalancesRepository = {
+      })
+      const wasteBalancesRepository = createMockWasteBalancesRepository({
         findByAccreditationId: vi.fn().mockResolvedValue(null)
-      }
+      })
 
       await expect(
         updatePrnStatus({

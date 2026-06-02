@@ -14,6 +14,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -250,7 +251,9 @@ describe('Repeated uploads of identical data', () => {
         extractor: summaryLogExtractor,
         wasteRecordRepository: wasteRecordsRepository,
         organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        overseasSitesRepository: createMockOverseasSitesRepository({
+          findByIds: vi.fn().mockResolvedValue([])
+        })
       })
 
       const summaryLogsWorker = {

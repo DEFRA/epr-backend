@@ -19,6 +19,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -360,7 +361,9 @@ describe('Submission and placeholder tests', () => {
         extractor: transformationExtractor,
         wasteRecordRepository: wasteRecordsRepository,
         organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        overseasSitesRepository: createMockOverseasSitesRepository({
+          findByIds: vi.fn().mockResolvedValue([])
+        })
       })
 
       const submitterWorker = {
