@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createMockSqsClient } from '#test/mock-sqs-client.js'
 import { commandQueueConsumerPlugin } from './queue-consumer.plugin.js'
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
@@ -53,7 +54,7 @@ describe('commandQueueConsumerPlugin', () => {
       })
     }
 
-    mockSqsClient = { destroy: vi.fn() }
+    mockSqsClient = createMockSqsClient()
     mockConsumer = { start: vi.fn(), stop: vi.fn() }
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
