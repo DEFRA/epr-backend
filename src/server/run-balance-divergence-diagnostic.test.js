@@ -136,7 +136,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
     vi.mocked(resolveOverseasSites).mockResolvedValue({})
   })
@@ -217,7 +218,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 7,
       availableAmount: 5,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -267,7 +269,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 95,
       availableAmount: 80,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -392,7 +395,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 7,
       availableAmount: 7,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -541,7 +545,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 5,
       availableAmount: 5,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -728,7 +733,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 95,
       availableAmount: 75,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -809,7 +815,8 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [buildStreamEvent()],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)

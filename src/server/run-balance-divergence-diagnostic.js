@@ -140,7 +140,7 @@ const buildComparison = (
   ),
   streamEventCount: stream.events.length,
   backfilledActorCount: stream.backfilledActorCount,
-  backfilledActorCountByKind: stream.backfilledActorCountByKind ?? {}
+  backfilledActorCountByKind: stream.backfilledActorCountByKind
 })
 
 const isDivergent = (comparison) =>
