@@ -201,8 +201,11 @@ const buildSummaryLogEvents = ({
 /**
  * Build the stream event for a single PRN status-history entry, or null when
  * the transition is a valid state-machine move that produces no balance event.
- * Throws when the transition cannot occur in the PRN state machine at all,
- * surfacing corrupt source history.
+ * An idempotent same-state repeat (a duplicate history entry left by a
+ * concurrent double-submit) collapses to a no-op — no PRN transition is a
+ * self-loop, so a repeat of the prior status carries no change. Throws when a
+ * move to a *different* state cannot occur in the PRN state machine, surfacing
+ * genuinely corrupt source history.
  *
  * @param {Object} params
  * @param {{ id: string, tonnage: number, status: { history: Array<{ status: string, at: Date, by?: { id: string, name: string } }> } }} params.prn
@@ -221,6 +224,11 @@ const prnTransitionEvent = ({
   const history = prn.status.history
   const prevStatus = index === 0 ? null : history[index - 1].status
   const newStatus = history[index].status
+
+  if (prevStatus !== null && prevStatus === newStatus) {
+    return null
+  }
+
   const kind = prnTransitionToStreamKind(prevStatus, newStatus)
 
   if (kind === null) {
