@@ -287,6 +287,9 @@ const extendedFixtures = {
   }
 }
 
+// Declare the exact fixture context consumers depend on. Object-form extend
+// over file-scoped fixtures widens each entry to a value-or-tuple union, so the
+// inferred context is too loose for the contract test to use directly.
 const extendedTest = baseTest.extend(extendedFixtures)
 
 /** @type {import('vitest').TestAPI<CdpUploaderFixtures>} */
