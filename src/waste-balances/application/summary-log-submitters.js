@@ -35,7 +35,7 @@ const indexSummaryLogIdByVersion = (wasteRecords) => {
  * registration's waste records; typed structurally to the fields consumed.
  *
  * @param {Object} params
- * @param {Array<{ createdBy?: { id: string, name: string }, entities?: Array<{ currentVersionId: string }> }>} [params.transactions]
+ * @param {Array<{ createdBy?: { id: string, name: string } | null, entities?: Array<{ currentVersionId: string }> }>} [params.transactions]
  * @param {Array<{ versions: Array<{ id: string, summaryLog: { id: string } }> }>} params.wasteRecords
  * @returns {Map<string, import('../repository/stream-schema.js').StreamUserSummary>}
  */
@@ -45,7 +45,7 @@ export const buildSummaryLogSubmitters = ({ transactions, wasteRecords }) => {
   const submitters = new Map()
   for (const transaction of transactions ?? []) {
     const { createdBy } = transaction
-    if (createdBy === undefined || createdBy.id === BACKFILL_ACTOR.id) {
+    if (createdBy?.id === undefined || createdBy.id === BACKFILL_ACTOR.id) {
       continue
     }
     for (const entity of transaction.entities ?? []) {

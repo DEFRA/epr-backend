@@ -80,6 +80,28 @@ describe('buildSummaryLogSubmitters', () => {
     expect(submitters.has('sl-1')).toBe(false)
   })
 
+  it('skips historical transactions whose createdBy serialised to null', () => {
+    const wasteRecords = [
+      wasteRecordWithVersions([versionWithSummaryLog('v1', 'sl-1')])
+    ]
+    const transactions = [creditTransaction(null, 'v1')]
+
+    const submitters = buildSummaryLogSubmitters({ transactions, wasteRecords })
+
+    expect(submitters.has('sl-1')).toBe(false)
+  })
+
+  it('skips a transaction whose actor carries no id', () => {
+    const wasteRecords = [
+      wasteRecordWithVersions([versionWithSummaryLog('v1', 'sl-1')])
+    ]
+    const transactions = [creditTransaction({ name: 'alice@example.com' }, 'v1')]
+
+    const submitters = buildSummaryLogSubmitters({ transactions, wasteRecords })
+
+    expect(submitters.has('sl-1')).toBe(false)
+  })
+
   it('rejects the system placeholder actor so it never masquerades as a real submitter', () => {
     const wasteRecords = [
       wasteRecordWithVersions([versionWithSummaryLog('v1', 'sl-1')])
