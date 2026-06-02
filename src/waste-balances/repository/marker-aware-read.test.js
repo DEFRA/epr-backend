@@ -77,6 +77,7 @@ describe('resolveBalanceAmounts', () => {
     expect(result.amount).toBe(50)
     expect(result.availableAmount).toBe(30)
     expect(stream.findLatestByPartition).not.toHaveBeenCalled()
+    expect(logger.info).not.toHaveBeenCalled()
   })
 
   it('substitutes amounts from the latest stream event when marker is ledger', async () => {
@@ -131,6 +132,7 @@ describe('resolveBalanceAmounts', () => {
 
     expect(logger.info).toHaveBeenCalledTimes(1)
     const { message } = vi.mocked(logger.info).mock.calls[0][0]
+    expect(message).toContain('Ledger marker resolved against empty stream')
     expect(message).toContain('accreditationId=acc-empty')
     expect(message).toContain('registrationId=reg-empty')
   })
