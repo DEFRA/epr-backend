@@ -3,6 +3,7 @@ import { MongoClient } from 'mongodb'
 import { describe, expect } from 'vitest'
 import { createOverseasSitesRepository } from './mongodb.js'
 import { testOverseasSitesRepositoryContract } from './port.contract.js'
+import { createMockDb } from '#test/mock-db.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -35,23 +36,11 @@ describe('MongoDB overseas sites repository', () => {
     it('creates name_country compound index when no index exists', async () => {
       const createdIndexes = []
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
+      const mockDb = createMockDb({
         createIndex: async (fields, options) => {
           createdIndexes.push({ fields, options })
-        },
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        },
-        deleteOne: async () => ({ deletedCount: 0 }),
-        findOneAndUpdate: async () => null
-      }
+        }
+      })
 
       await createOverseasSitesRepository(mockDb)
 
@@ -69,23 +58,11 @@ describe('MongoDB overseas sites repository', () => {
       const nsError = new Error('ns not found')
       nsError.codeName = 'NamespaceNotFound'
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
+      const mockDb = createMockDb({
         createIndex: async () => {
           throw nsError
-        },
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        },
-        deleteOne: async () => ({ deletedCount: 0 }),
-        findOneAndUpdate: async () => null
-      }
+        }
+      })
 
       const factory = await createOverseasSitesRepository(mockDb)
       expect(factory).toBeTypeOf('function')
@@ -95,23 +72,11 @@ describe('MongoDB overseas sites repository', () => {
       const connectionError = new Error('Connection refused')
       connectionError.codeName = 'NetworkError'
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
+      const mockDb = createMockDb({
         createIndex: async () => {
           throw connectionError
-        },
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return { toArray: async () => [] }
-        },
-        deleteOne: async () => ({ deletedCount: 0 }),
-        findOneAndUpdate: async () => null
-      }
+        }
+      })
 
       await expect(createOverseasSitesRepository(mockDb)).rejects.toThrow(
         'Connection refused'

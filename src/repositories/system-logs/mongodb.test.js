@@ -4,6 +4,7 @@ import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
+import { createMockDb } from '#test/mock-db.js'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -35,17 +36,19 @@ describe('Mongo DB system logs repository', () => {
     }
 
     let callCount = 0
-    const mockDb = {
+    const mockDb = createMockDb({
       collection: () => {
         callCount++
         // First call is for createIndex during setup - let it pass
         if (callCount === 1) {
-          return { createIndex: async () => {} }
+          return /** @type {import('mongodb').Collection} */ (
+            /** @type {unknown} */ ({ createIndex: async () => {} })
+          )
         }
         // Subsequent calls fail
         throw new Error('error accessing db')
       }
-    }
+    })
     const collectionSpy = vi.spyOn(mockDb, 'collection')
 
     const repositoryFactory = await createSystemLogsRepository(mockDb)

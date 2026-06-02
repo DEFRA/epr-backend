@@ -4,6 +4,7 @@ import { MongoClient } from 'mongodb'
 import { createReportsRepository } from './mongodb.js'
 import { testReportsRepositoryContract } from './port.contract.js'
 import { buildCreateReportParams } from '#root/reports/repository/contract/test-data.js'
+import { createMockDb } from '#test/mock-db.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -40,15 +41,12 @@ describe('MongoDB reports repository', () => {
       const unexpectedError = new Error('Database connection lost')
       unexpectedError.code = 'ECONNREFUSED'
 
-      const mockDb = {
-        collection: function () {
-          return this
-        },
+      const mockDb = createMockDb({
         createIndex: async () => {},
         insertOne: async () => {
           throw unexpectedError
         }
-      }
+      })
 
       const factory = await createReportsRepository(mockDb)
       const repository = factory()
