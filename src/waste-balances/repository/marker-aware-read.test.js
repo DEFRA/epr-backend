@@ -1,7 +1,14 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { logger } from '#common/helpers/logging/logger.js'
 
 import { resolveBalanceAmounts } from './marker-aware-read.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
+
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: vi.fn()
+  }
+}))
 
 const buildBalance = (overrides = {}) => ({
   id: 'bal-1',
@@ -39,6 +46,10 @@ const buildStream = (latest) => ({
 })
 
 describe('resolveBalanceAmounts', () => {
+  beforeEach(() => {
+    vi.mocked(logger.info).mockClear()
+  })
+
   it('leaves an embedded balance unchanged', async () => {
     const balance = buildBalance({
       canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED,
@@ -89,6 +100,7 @@ describe('resolveBalanceAmounts', () => {
     )
     expect(result.amount).toBe(200)
     expect(result.availableAmount).toBe(175)
+    expect(logger.info).not.toHaveBeenCalled()
   })
 
   it('returns zero balances when marker is ledger but stream is empty', async () => {
@@ -105,6 +117,32 @@ describe('resolveBalanceAmounts', () => {
 
     expect(result.amount).toBe(0)
     expect(result.availableAmount).toBe(0)
+  })
+
+  it('logs at info when a ledger marker resolves against an empty stream', async () => {
+    const balance = buildBalance({
+      accreditationId: 'acc-empty',
+      registrationId: 'reg-empty',
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+    })
+    const stream = buildStream(null)
+
+    await resolveBalanceAmounts(balance, stream)
+
+    expect(logger.info).toHaveBeenCalledTimes(1)
+    const { message } = vi.mocked(logger.info).mock.calls[0][0]
+    expect(message).toContain('accreditationId=acc-empty')
+    expect(message).toContain('registrationId=reg-empty')
+  })
+
+  it('does not log on the embedded path', async () => {
+    const balance = buildBalance({
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    })
+
+    await resolveBalanceAmounts(balance, buildStream(null))
+
+    expect(logger.info).not.toHaveBeenCalled()
   })
 
   it('preserves all non-amount fields', async () => {

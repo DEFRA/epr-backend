@@ -1,3 +1,5 @@
+import { logger } from '#common/helpers/logging/logger.js'
+
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import { ZERO_BALANCE } from './stream-schema.js'
 
@@ -9,9 +11,11 @@ import { ZERO_BALANCE } from './stream-schema.js'
  * the embedded write path is still authoritative for them.
  *
  * An empty stream under a `'ledger'` marker means the accreditation was
- * promoted with zero activity. This is legitimate for accreditations that
- * never received waste records, so the function returns zero balances
- * instead of throwing.
+ * promoted before any summary log was submitted, so it has no events yet. This
+ * is correct behaviour, and the function returns zero balances rather than
+ * throwing. An info-level log makes the zeroing observable in the read path
+ * without implying a fault: a populated accreditation resolving to zero would
+ * be a problem, but that is caught at promotion time, not here.
  *
  * @param {import('../domain/model.js').WasteBalance} balance
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
@@ -28,6 +32,13 @@ export const resolveBalanceAmounts = async (balance, streamRepository) => {
   )
 
   if (!latest) {
+    logger.info({
+      message:
+        `Ledger marker resolved against empty stream, returning zero balance:` +
+        ` registrationId=${balance.registrationId}` +
+        ` accreditationId=${balance.accreditationId}`
+    })
+
     return {
       ...balance,
       ...ZERO_BALANCE
