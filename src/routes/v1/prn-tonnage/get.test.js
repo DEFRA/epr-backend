@@ -6,6 +6,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { aggregatePrnTonnage } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('#application/prn-tonnage/aggregate-prn-tonnage.js', () => ({
   aggregatePrnTonnage: vi.fn()
@@ -13,10 +14,7 @@ vi.mock('#application/prn-tonnage/aggregate-prn-tonnage.js', () => ({
 
 describe('getPrnTonnage route handler', () => {
   const mockDb = {}
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn()
-  }
+  const mockLogger = createMockLogger()
 
   const mockCode = vi.fn()
   const mockResponse = vi.fn(() => ({
