@@ -30,15 +30,52 @@ const CREDENTIALS = {
   secretAccessKey: 'test'
 }
 
+/** @type {boolean} */
+const NEEDS_CALLBACK_RECEIVER_DEFAULT = false
+
+/**
+ * @typedef {object} CdpUploaderStack
+ * @property {import('testcontainers').StartedNetwork} network
+ * @property {{ endpoint: string, region: string, credentials: typeof CREDENTIALS }} floci
+ * @property {{ host: string, port: number, url: string }} redis
+ * @property {{ url: string }} cdpUploader
+ */
+
+/** @typedef {import('#adapters/repositories/uploads/test-helpers/callback-receiver.js').CallbackReceiver} CallbackReceiver */
+/** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
+/** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
+
+/**
+ * @typedef {object} CdpUploaderFixtures
+ * @property {boolean} needsCallbackReceiver
+ * @property {CallbackReceiver} callbackReceiver
+ * @property {CdpUploaderStack} cdpUploaderStack
+ * @property {S3Client} s3Client
+ * @property {UploadsRepository} uploadsRepository
+ */
+
 // Configuration flag for whether tests need the callback receiver
-// Use it.scoped({ needsCallbackReceiver: true }) in describe blocks that need it
+// Use it.scoped({ needsCallbackReceiver: true }) in describe blocks that need it.
+// File-scoped so the file-scoped callbackReceiver fixture may depend on it.
+/** @type {{ needsCallbackReceiver: [boolean, { scope: 'file' }] }} */
 const configFixtures = {
-  needsCallbackReceiver: false
+  needsCallbackReceiver: [NEEDS_CALLBACK_RECEIVER_DEFAULT, { scope: 'file' }]
 }
 
 // Callback receiver fixture - only creates if needsCallbackReceiver is true
 // Must be file-scoped and run BEFORE cdpUploaderStack to ensure exposeHostPorts
 // is called before containers start
+/**
+ * @type {{
+ *   callbackReceiver: [
+ *     (
+ *       context: { needsCallbackReceiver: boolean },
+ *       use: (receiver: CallbackReceiver | null) => Promise<void>
+ *     ) => Promise<void>,
+ *     { scope: 'file' }
+ *   ]
+ * }}
+ */
 const callbackReceiverFixture = {
   callbackReceiver: [
     async ({ needsCallbackReceiver }, use) => {
@@ -59,6 +96,17 @@ const callbackReceiverFixture = {
   ]
 }
 
+/**
+ * @type {{
+ *   cdpUploaderStack: [
+ *     (
+ *       context: { callbackReceiver: CallbackReceiver | null },
+ *       use: (stack: CdpUploaderStack) => Promise<void>
+ *     ) => Promise<void>,
+ *     { scope: 'file' }
+ *   ]
+ * }}
+ */
 const cdpUploaderStackFixture = {
   // Depends on callbackReceiver to ensure correct initialisation order
   cdpUploaderStack: [
@@ -209,7 +257,10 @@ const extendedFixtures = {
   ...callbackReceiverFixture,
   ...cdpUploaderStackFixture,
 
-  s3Client: async ({ cdpUploaderStack }, use) => {
+  s3Client: async (
+    { cdpUploaderStack },
+    /** @type {(client: S3Client) => Promise<void>} */ use
+  ) => {
     const client = createS3Client({
       region: cdpUploaderStack.floci.region,
       endpoint: cdpUploaderStack.floci.endpoint,
@@ -221,7 +272,10 @@ const extendedFixtures = {
     client.destroy()
   },
 
-  uploadsRepository: async ({ s3Client, cdpUploaderStack }, use) => {
+  uploadsRepository: async (
+    { s3Client, cdpUploaderStack },
+    /** @type {(repository: UploadsRepository) => Promise<void>} */ use
+  ) => {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
@@ -233,4 +287,10 @@ const extendedFixtures = {
   }
 }
 
-export const it = baseTest.extend(extendedFixtures)
+// Declare the exact fixture context consumers depend on. Object-form extend
+// over file-scoped fixtures widens each entry to a value-or-tuple union, so the
+// inferred context is too loose for the contract test to use directly.
+const extendedTest = baseTest.extend(extendedFixtures)
+
+/** @type {import('vitest').TestAPI<CdpUploaderFixtures>} */
+export const it = extendedTest
