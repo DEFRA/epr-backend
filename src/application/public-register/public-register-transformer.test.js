@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb'
 import { transform } from './public-register-transformer.js'
 import {
   buildAccreditation,
-  buildOrganisation,
+  buildReadOrganisation,
   buildRegistration,
   getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
@@ -70,7 +70,7 @@ describe('transform', () => {
   }
 
   const createTestOrganisation = (overrides = {}) => {
-    return buildOrganisation({
+    return buildReadOrganisation({
       companyDetails: {
         name: 'Waste Ltd',
         tradingName: 'Waste Recovery',
@@ -289,7 +289,7 @@ describe('transform', () => {
   )
 
   it('should filter out registrations with unapproved statuses', async () => {
-    const org = buildOrganisation({
+    const org = buildReadOrganisation({
       companyDetails: {
         name: 'Waste Ltd',
         registeredAddress: baseAddress
@@ -321,7 +321,7 @@ describe('transform', () => {
   it('should filter out accreditations with unapproved statuses', async () => {
     const accreditationId = new ObjectId()
 
-    const org = buildOrganisation({
+    const org = buildReadOrganisation({
       companyDetails: {
         name: 'Waste Ltd',
         registeredAddress: baseAddress
@@ -379,7 +379,7 @@ describe('transform', () => {
   })
 
   it('should not return any rows for organisations with no registrations', async () => {
-    const org = buildOrganisation({
+    const org = buildReadOrganisation({
       registrations: [],
       accreditations: []
     })
@@ -390,7 +390,7 @@ describe('transform', () => {
   })
 
   it('should handle mixed scenarios with multiple organisations', async () => {
-    const org1 = buildOrganisation({
+    const org1 = buildReadOrganisation({
       companyDetails: {
         name: 'Multi Material Ltd',
         registeredAddress: baseAddress
@@ -435,7 +435,7 @@ describe('transform', () => {
       ]
     })
 
-    const org2 = buildOrganisation({
+    const org2 = buildReadOrganisation({
       companyDetails: {
         name: 'Exporter Ltd',
         tradingName: null,
@@ -456,7 +456,7 @@ describe('transform', () => {
       ]
     })
 
-    const org3 = buildOrganisation({
+    const org3 = buildReadOrganisation({
       registrations: [],
       accreditations: []
     })
@@ -578,7 +578,16 @@ describe('transform', () => {
       return { org, entries }
     }
 
-    const period = { label: 'Jan Report', key: '2026:monthly:1' }
+    const period = {
+      key: '2026:monthly:1',
+      cadence: 'monthly',
+      year: 2026,
+      period: 1,
+      label: 'Jan Report',
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
+      dueDate: '2026-02-28'
+    }
     const periods = [period]
 
     it("returns 'N/A' when the period key is absent from submittedDates", async () => {
@@ -606,7 +615,7 @@ describe('transform', () => {
     const testOrgId = 999999
     const normalOrgId = 500001
 
-    const testOrg = buildOrganisation({
+    const testOrg = buildReadOrganisation({
       orgId: testOrgId,
       companyDetails: {
         name: 'Test Organisation',
@@ -626,7 +635,7 @@ describe('transform', () => {
       ]
     })
 
-    const normalOrg = buildOrganisation({
+    const normalOrg = buildReadOrganisation({
       orgId: normalOrgId,
       companyDetails: {
         name: 'Normal Organisation',

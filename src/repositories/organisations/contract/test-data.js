@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import { createInitialStatusHistory } from '../helpers.js'
+import { getCurrentStatus } from '../status.js'
 
 const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
@@ -137,6 +138,28 @@ export const buildOrganisation = (overrides = {}) => {
   // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
   // Accreditation/Registration types require computed 'status' that only exists after read
   return org
+}
+
+/**
+ * Builds an organisation as returned from a repository read, with the computed
+ * top-level and nested 'status' fields the read path derives from statusHistory.
+ * Use this for tests that consume an organisation (vs insert it).
+ *
+ * @param {object} [overrides]
+ * @returns {import('#domain/organisations/model.js').Organisation}
+ */
+export const buildReadOrganisation = (overrides = {}) => {
+  const org = buildOrganisation(overrides)
+
+  for (const registration of org.registrations) {
+    registration.status = registration.status ?? getCurrentStatus(registration)
+  }
+  for (const accreditation of org.accreditations) {
+    accreditation.status =
+      accreditation.status ?? getCurrentStatus(accreditation)
+  }
+
+  return { ...org, status: overrides.status ?? getCurrentStatus(org) }
 }
 
 /**
