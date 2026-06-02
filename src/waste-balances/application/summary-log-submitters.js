@@ -1,6 +1,20 @@
 import { BACKFILL_ACTOR } from '../repository/stream-schema.js'
 
 /**
+ * @param {Array<{ versions: Array<{ id: string, summaryLog: { id: string } }> }>} wasteRecords
+ * @returns {Map<string, string>}
+ */
+const indexSummaryLogIdByVersion = (wasteRecords) => {
+  const summaryLogIdByVersion = new Map()
+  for (const record of wasteRecords) {
+    for (const version of record.versions ?? []) {
+      summaryLogIdByVersion.set(version.id, version.summaryLog.id)
+    }
+  }
+  return summaryLogIdByVersion
+}
+
+/**
  * Recover the real submitting actor for each historical summary log from the
  * embedded waste-balance transactions. The submitting session is not persisted
  * on the summary-log document or the waste-record version, but every embedded
@@ -26,19 +40,12 @@ import { BACKFILL_ACTOR } from '../repository/stream-schema.js'
  * @returns {Map<string, import('../repository/stream-schema.js').StreamUserSummary>}
  */
 export const buildSummaryLogSubmitters = ({ transactions, wasteRecords }) => {
-  const summaryLogIdByVersion = new Map()
-  for (const record of wasteRecords) {
-    for (const version of record.versions ?? []) {
-      summaryLogIdByVersion.set(version.id, version.summaryLog.id)
-    }
-  }
+  const summaryLogIdByVersion = indexSummaryLogIdByVersion(wasteRecords)
 
   const submitters = new Map()
   for (const transaction of transactions ?? []) {
-    if (
-      !transaction.createdBy ||
-      transaction.createdBy.id === BACKFILL_ACTOR.id
-    ) {
+    const { createdBy } = transaction
+    if (createdBy === undefined || createdBy.id === BACKFILL_ACTOR.id) {
       continue
     }
     for (const entity of transaction.entities ?? []) {
@@ -47,8 +54,8 @@ export const buildSummaryLogSubmitters = ({ transactions, wasteRecords }) => {
         continue
       }
       submitters.set(summaryLogId, {
-        id: transaction.createdBy.id,
-        name: transaction.createdBy.name
+        id: createdBy.id,
+        name: createdBy.name
       })
     }
   }
