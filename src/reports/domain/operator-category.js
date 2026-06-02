@@ -1,5 +1,5 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { isRegistrationAccredited } from './is-registration-accredited.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 
 /**
  * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
