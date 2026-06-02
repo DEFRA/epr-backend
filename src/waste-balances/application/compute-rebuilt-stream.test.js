@@ -1171,6 +1171,41 @@ describe('computeRebuiltStream', () => {
       })
     })
 
+    it('keys each transition in one PRN history by its own event type', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 10,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z')
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-22T00:00:00.000Z')
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.backfilledActorCount).toBe(2)
+      expect(result.backfilledActorCountByKind).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: 1,
+        [STREAM_EVENT_KIND.PRN_ISSUED]: 1
+      })
+    })
+
     it('tallies repeated backfills of the same event type', () => {
       const result = computeRebuiltStream({
         accreditation,
