@@ -649,6 +649,68 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
   })
 
+  it('recovers the real submitter from the embedded transactions and threads it into computeRebuiltStream', async () => {
+    const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0,
+        transactions: [
+          {
+            createdBy: { id: 'user-9', name: 'real@example.com' },
+            entities: [{ currentVersionId: 'ver-1' }]
+          }
+        ]
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [accreditation]
+    summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
+      {
+        id: 'doc-id-1',
+        version: 1,
+        summaryLog: {
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z',
+          file: { id: 'file-id-1', name: 'test.xlsx', uri: 's3://bucket/key' }
+        }
+      }
+    ])
+    const wasteRecords = [
+      {
+        rowId: 'r-1',
+        type: 'received',
+        versions: [{ id: 'ver-1', summaryLog: { id: 'file-id-1' } }]
+      }
+    ]
+    wasteRecordsRepository.findByRegistration.mockResolvedValue(wasteRecords)
+    prnRepository.findByAccreditation.mockResolvedValue([])
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(computeRebuiltStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summaryLogs: [
+          {
+            id: 'file-id-1',
+            status: 'submitted',
+            submittedAt: '2025-01-01T00:00:00Z',
+            submittedBy: { id: 'user-9', name: 'real@example.com' }
+          }
+        ]
+      })
+    )
+  })
+
   it('filters out failure-status summary logs that may lack a file field before mapping', async () => {
     const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
     setEmbeddedBalances([

@@ -5,23 +5,18 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
-import { STREAM_EVENT_KIND, ZERO_BALANCE } from '../repository/stream-schema.js'
+import {
+  BACKFILL_ACTOR,
+  STREAM_EVENT_KIND,
+  ZERO_BALANCE
+} from '../repository/stream-schema.js'
 import {
   closingForSummaryLogSubmitted,
   closingForPrn
 } from './stream-closing-balance.js'
 import { getTargetAmount } from './target-amount.js'
 
-/**
- * Attribution for backfilled events with no recoverable real actor. The
- * submitting session for historical summary-log submissions is not persisted
- * on the summary-log document or the waste-record version, so a backfill
- * supplies it out of band where it can; absent that, events are attributed to
- * the system.
- *
- * @type {Readonly<import('../repository/stream-schema.js').StreamUserSummary>}
- */
-export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
+export { BACKFILL_ACTOR }
 
 /**
  * Reconstruct a waste record's data as it existed at a given submission
