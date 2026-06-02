@@ -185,7 +185,7 @@ const formatErrorLine = (embedded, error) =>
 
 const formatBackfillByKind = (byKind) =>
   Object.keys(byKind)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .map((kind) => `${kind}:${byKind[kind]}`)
     .join(',')
 
