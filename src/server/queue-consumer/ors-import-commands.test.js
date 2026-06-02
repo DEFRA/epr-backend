@@ -1,5 +1,6 @@
 import Joi from 'joi'
 
+import { createMockLogger } from '#test/mock-logger.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
 
 vi.mock('#overseas-sites/application/process-import.js')
@@ -15,7 +16,7 @@ describe('orsImportCommandHandlers', () => {
 
   beforeEach(() => {
     deps = {
-      logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+      logger: createMockLogger(),
       orsImportsRepository: { updateStatus: vi.fn() },
       uploadsRepository: {},
       overseasSitesRepository: {},

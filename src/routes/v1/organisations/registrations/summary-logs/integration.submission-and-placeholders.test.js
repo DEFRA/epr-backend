@@ -20,6 +20,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -69,12 +70,7 @@ describe('Submission and placeholder tests', () => {
 
     beforeEach(async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -735,12 +731,7 @@ describe('Submission and placeholder tests', () => {
 
     beforeEach(async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 

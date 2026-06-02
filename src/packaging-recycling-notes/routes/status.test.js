@@ -12,6 +12,7 @@ import {
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
@@ -122,15 +123,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeEach(() => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])(
+          createMockLogger()
+        )
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })
@@ -902,15 +897,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeEach(() => {
       packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([mockPrn])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
+        createInMemoryPackagingRecyclingNotesRepository([mockPrn])(
+          createMockLogger()
+        )
       vi.spyOn(packagingRecyclingNotesRepository, 'findById')
       vi.spyOn(packagingRecyclingNotesRepository, 'updateStatus')
     })

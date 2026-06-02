@@ -1,5 +1,6 @@
-import { describe, beforeEach, expect, vi } from 'vitest'
+import { describe, beforeEach, expect } from 'vitest'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { buildDraftPrn, buildAwaitingAuthorisationPrn } from './test-data.js'
 
 /** @typedef {import('../port.js').PackagingRecyclingNotesRepository} PrnRepository */
@@ -291,12 +292,7 @@ export const testUpdateStatusBehaviour = (it) => {
       it('logs watermark regression with database/watermark_regression_detected event metadata', async ({
         prnRepositoryFactory
       }) => {
-        const logger = {
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn()
-        }
+        const logger = createMockLogger()
         const repo = prnRepositoryFactory(logger)
         const created = await repo.create(buildDraftPrn())
         const watermarked = await repo.updateStatus({

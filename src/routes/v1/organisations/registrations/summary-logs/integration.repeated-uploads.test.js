@@ -15,6 +15,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -58,12 +59,7 @@ describe('Repeated uploads of identical data', () => {
     let secondUploadResponse
 
     beforeEach(async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
 
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)

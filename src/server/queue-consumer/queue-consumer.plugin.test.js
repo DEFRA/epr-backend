@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { commandQueueConsumerPlugin } from './queue-consumer.plugin.js'
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
@@ -25,10 +26,7 @@ describe('commandQueueConsumerPlugin', () => {
 
   beforeEach(() => {
     server = {
-      logger: {
-        info: vi.fn(),
-        error: vi.fn()
-      },
+      logger: createMockLogger(),
       events: {
         on: vi.fn()
       },

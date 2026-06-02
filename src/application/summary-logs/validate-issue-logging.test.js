@@ -1,5 +1,6 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { VALIDATION_CATEGORY, VALIDATION_CODE } from '#common/enums/index.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 import { logValidationIssues } from './validate-issue-logging.js'
 
@@ -11,15 +12,7 @@ describe('logValidationIssues', () => {
   let logger
 
   beforeEach(() => {
-    logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-      trace: vi.fn(),
-      fatal: vi.fn(),
-      child: () => logger
-    }
+    logger = createMockLogger()
   })
 
   const summaryLog = /** @type {SubmittedSummaryLog} */ ({

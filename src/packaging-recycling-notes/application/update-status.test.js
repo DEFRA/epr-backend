@@ -9,6 +9,7 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 const mockRecordStatusTransition = vi.fn()
 
@@ -26,14 +27,7 @@ const defaultOrganisationsRepository = {
   })
 }
 
-const mockLogger = {
-  info: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn(),
-  trace: vi.fn(),
-  fatal: vi.fn()
-}
+const mockLogger = createMockLogger()
 
 const createMockPrnRepository = (overrides = {}) => ({
   create: vi.fn(),

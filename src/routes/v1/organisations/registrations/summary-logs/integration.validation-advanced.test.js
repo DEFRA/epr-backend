@@ -9,6 +9,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
@@ -293,15 +294,7 @@ describe('Advanced validation scenarios', () => {
 
     beforeEach(async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-        trace: vi.fn(),
-        fatal: vi.fn(),
-        child: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       const uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -492,15 +485,7 @@ describe('Advanced validation scenarios', () => {
 
     beforeEach(async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-        trace: vi.fn(),
-        fatal: vi.fn(),
-        child: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       const uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -771,15 +756,7 @@ describe('Advanced validation scenarios', () => {
 
     beforeEach(async () => {
       summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn(),
-        trace: vi.fn(),
-        fatal: vi.fn(),
-        child: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       await summaryLogsRepository.insert(

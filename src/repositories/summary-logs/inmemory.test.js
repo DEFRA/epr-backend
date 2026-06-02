@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { describe, vi, expect, it as base } from 'vitest'
+import { describe, expect, it as base } from 'vitest'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
@@ -13,12 +14,7 @@ const it = base.extend({
   },
 
   summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
+    const mockLogger = createMockLogger()
     const repository = summaryLogsRepositoryFactory(mockLogger)
     await use(repository)
   }
@@ -31,7 +27,7 @@ describe('In-memory summary logs repository', () => {
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
@@ -53,7 +49,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
@@ -72,7 +68,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies on update', async () => {
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`

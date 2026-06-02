@@ -9,6 +9,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -22,12 +23,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
   const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    })
+    const summaryLogsRepository =
+      summaryLogsRepositoryFactory(createMockLogger())
 
     const server = await createTestServer({
       repositories: {

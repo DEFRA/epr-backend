@@ -1,5 +1,6 @@
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
@@ -25,14 +26,7 @@ describe('Mongo DB system logs repository', () => {
   })
 
   it('fails gracefully and logs an error when DB write fails', async () => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-      trace: vi.fn(),
-      fatal: vi.fn()
-    }
+    const mockLogger = createMockLogger()
 
     let callCount = 0
     const mockDb = {

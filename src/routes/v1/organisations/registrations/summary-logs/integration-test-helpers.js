@@ -18,6 +18,7 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 import { asStandardUser } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
@@ -430,14 +431,7 @@ export const createTestInfrastructure = async (
   extractorData,
   { reprocessingType = 'input' } = {}
 ) => {
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn()
-  }
+  const mockLogger = createMockLogger()
 
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
   const uploadsRepository = createInMemoryUploadsRepository()
@@ -493,14 +487,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn()
-  }
+  const mockLogger = createMockLogger()
   const uploadsRepository = createInMemoryUploadsRepository()
   const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
