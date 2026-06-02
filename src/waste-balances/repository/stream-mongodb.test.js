@@ -7,7 +7,10 @@ import {
   ensureStreamCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './stream-mongodb.js'
-import { buildStreamEvent } from './stream-test-data.js'
+import {
+  buildStreamEvent,
+  buildPrnCreatedEvent
+} from './stream-test-data.js'
 import { testStreamRepositoryContract } from './stream-port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -85,6 +88,44 @@ describe('ensureStreamCollection', () => {
         number: 1
       })
     })
+
+    it('creates the prn_idempotency partial-unique index scoped to PRN events', async (/** @type {*} */ {
+      streamCollection
+    }) => {
+      const indexes = await streamCollection.indexes()
+      expect(indexKeyFor(indexes, 'prn_idempotency')).toEqual({
+        registrationId: 1,
+        accreditationId: 1,
+        kind: 1,
+        'payload.prnId': 1
+      })
+      expect(indexOptionFor(indexes, 'prn_idempotency', 'unique')).toBe(true)
+      expect(
+        indexOptionFor(indexes, 'prn_idempotency', 'partialFilterExpression')
+      ).toEqual({ 'payload.prnId': { $exists: true } })
+    })
+
+    it('creates the summary_log_idempotency partial-unique index scoped to summary-log events', async (/** @type {*} */ {
+      streamCollection
+    }) => {
+      const indexes = await streamCollection.indexes()
+      expect(indexKeyFor(indexes, 'summary_log_idempotency')).toEqual({
+        registrationId: 1,
+        accreditationId: 1,
+        kind: 1,
+        'payload.summaryLogId': 1
+      })
+      expect(
+        indexOptionFor(indexes, 'summary_log_idempotency', 'unique')
+      ).toBe(true)
+      expect(
+        indexOptionFor(
+          indexes,
+          'summary_log_idempotency',
+          'partialFilterExpression'
+        )
+      ).toEqual({ 'payload.summaryLogId': { $exists: true } })
+    })
   })
 
   describe('idempotency', () => {
@@ -112,6 +153,44 @@ describe('MongoDB stream repository', () => {
 
   describe('stream repository contract', () => {
     testStreamRepositoryContract(it)
+  })
+
+  describe('appendEvent idempotency', () => {
+    it('returns the persisted event when a PRN natural key is re-appended', async (/** @type {*} */ {
+      streamRepository,
+      streamCollection
+    }) => {
+      const repository = streamRepository()
+      const first = await repository.appendEvent(
+        buildPrnCreatedEvent({ number: 1 })
+      )
+
+      const retried = await repository.appendEvent(
+        buildPrnCreatedEvent({ number: 2 })
+      )
+
+      expect(retried.id).toBe(first.id)
+      expect(retried.number).toBe(1)
+      expect(await streamCollection.countDocuments({})).toBe(1)
+    })
+
+    it('returns the persisted event when a summary-log natural key is re-appended', async (/** @type {*} */ {
+      streamRepository,
+      streamCollection
+    }) => {
+      const repository = streamRepository()
+      const first = await repository.appendEvent(
+        buildStreamEvent({ number: 1 })
+      )
+
+      const retried = await repository.appendEvent(
+        buildStreamEvent({ number: 2 })
+      )
+
+      expect(retried.id).toBe(first.id)
+      expect(retried.number).toBe(1)
+      expect(await streamCollection.countDocuments({})).toBe(1)
+    })
   })
 
   describe('appendEvent error translation', () => {

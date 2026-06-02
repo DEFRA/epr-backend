@@ -53,6 +53,29 @@ export async function ensureStreamCollection(db) {
     { name: 'prn_watermark_catchup' }
   )
 
+  await collection.createIndex(
+    { registrationId: 1, accreditationId: 1, kind: 1, 'payload.prnId': 1 },
+    {
+      name: 'prn_idempotency',
+      unique: true,
+      partialFilterExpression: { 'payload.prnId': { $exists: true } }
+    }
+  )
+
+  await collection.createIndex(
+    {
+      registrationId: 1,
+      accreditationId: 1,
+      kind: 1,
+      'payload.summaryLogId': 1
+    },
+    {
+      name: 'summary_log_idempotency',
+      unique: true,
+      partialFilterExpression: { 'payload.summaryLogId': { $exists: true } }
+    }
+  )
+
   return collection
 }
 
@@ -68,8 +91,14 @@ const toStreamEvent = (doc) => {
  * Classify a MongoDB E11000 duplicate key error by inspecting the
  * `keyPattern` on the write error to determine which index was violated.
  *
+ * The slot index `(registrationId, accreditationId, number)` maps to a
+ * `StreamSlotConflictError`. The per-kind natural-key indexes
+ * (`payload.prnId` / `payload.summaryLogId`) signal that the same logical
+ * event is already persisted, so the append is a safe no-op.
+ *
  * @param {unknown} error
  * @param {StreamEventInsert} event
+ * @returns {StreamSlotConflictError | { naturalKeyConflict: true } | undefined}
  */
 const classifyDuplicateKeyError = (error, event) => {
   const writeError = findDuplicateKeyWriteError(error)
@@ -83,6 +112,13 @@ const classifyDuplicateKeyError = (error, event) => {
       event.accreditationId,
       event.number
     )
+  }
+
+  if (
+    writeError.keyPattern?.['payload.prnId'] ||
+    writeError.keyPattern?.['payload.summaryLogId']
+  ) {
+    return { naturalKeyConflict: true }
   }
 
   return undefined
@@ -158,11 +194,39 @@ const performAppendEvent = (collection) => async (event) => {
     return toStreamEvent({ _id: result.insertedId, ...validated })
   } catch (error) {
     const classified = classifyDuplicateKeyError(error, validated)
-    if (classified) {
+    if (classified instanceof StreamSlotConflictError) {
       throw classified
+    }
+    if (classified) {
+      return findEventByNaturalKey(collection, validated)
     }
     throw error
   }
+}
+
+/**
+ * Fetch the event already persisted under the same per-kind natural key.
+ *
+ * @param {Collection} collection
+ * @param {StreamEventInsert} event
+ * @returns {Promise<StreamEvent>}
+ */
+const findEventByNaturalKey = async (collection, event) => {
+  const payloadIdField =
+    'prnId' in event.payload ? 'payload.prnId' : 'payload.summaryLogId'
+  const payloadIdValue =
+    'prnId' in event.payload
+      ? event.payload.prnId
+      : event.payload.summaryLogId
+
+  const doc = await collection.findOne({
+    registrationId: event.registrationId,
+    accreditationId: event.accreditationId,
+    kind: event.kind,
+    [payloadIdField]: payloadIdValue
+  })
+
+  return toStreamEvent(doc)
 }
 
 /**
