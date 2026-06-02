@@ -56,7 +56,8 @@ describe('computeRebuiltStream', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
   })
 
@@ -1115,6 +1116,7 @@ describe('computeRebuiltStream', () => {
       })
 
       expect(result.backfilledActorCount).toBe(0)
+      expect(result.backfilledActorCountByKind).toEqual({})
     })
 
     it('counts a summary-log event with no submitter', () => {
@@ -1129,6 +1131,9 @@ describe('computeRebuiltStream', () => {
       })
 
       expect(result.backfilledActorCount).toBe(1)
+      expect(result.backfilledActorCountByKind).toEqual({
+        [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: 1
+      })
     })
 
     it('counts a PRN event whose history entry has no actor', () => {
@@ -1143,9 +1148,12 @@ describe('computeRebuiltStream', () => {
       })
 
       expect(result.backfilledActorCount).toBe(1)
+      expect(result.backfilledActorCountByKind).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: 1
+      })
     })
 
-    it('sums backfilled summary-log and PRN events', () => {
+    it('breaks the backfilled count down by event type', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1157,6 +1165,27 @@ describe('computeRebuiltStream', () => {
       })
 
       expect(result.backfilledActorCount).toBe(2)
+      expect(result.backfilledActorCountByKind).toEqual({
+        [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: 1,
+        [STREAM_EVENT_KIND.PRN_CREATED]: 1
+      })
+    })
+
+    it('tallies repeated backfills of the same event type', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [],
+        prns: [createdPrn('prn-1'), createdPrn('prn-2')],
+        overseasSites,
+        summaryLogs: []
+      })
+
+      expect(result.backfilledActorCount).toBe(2)
+      expect(result.backfilledActorCountByKind).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: 2
+      })
     })
 
     it('reports zero for an empty stream', () => {
@@ -1171,6 +1200,7 @@ describe('computeRebuiltStream', () => {
       })
 
       expect(result.backfilledActorCount).toBe(0)
+      expect(result.backfilledActorCountByKind).toEqual({})
     })
   })
 })

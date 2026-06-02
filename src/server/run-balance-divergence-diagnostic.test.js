@@ -770,14 +770,18 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [buildStreamEvent(), buildStreamEvent(), buildStreamEvent()],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 2
+      backfilledActorCount: 2,
+      backfilledActorCountByKind: {
+        'summary-log-submitted': 1,
+        'prn-created': 1
+      }
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste-balance rebuild used backfill actor: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 backfilledActorCount=2 streamEventCount=3'
+        'Waste-balance rebuild used backfill actor: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 backfilledActorCount=2 backfilledActorCountByKind=prn-created:1,summary-log-submitted:1 streamEventCount=3'
     })
   })
 

@@ -139,7 +139,8 @@ const buildComparison = (
     stream.availableAmount
   ),
   streamEventCount: stream.events.length,
-  backfilledActorCount: stream.backfilledActorCount
+  backfilledActorCount: stream.backfilledActorCount,
+  backfilledActorCountByKind: stream.backfilledActorCountByKind ?? {}
 })
 
 const isDivergent = (comparison) =>
@@ -182,6 +183,12 @@ const formatErrorLine = (embedded, error) =>
     `error="${error.message}"`
   ].join(' ')
 
+const formatBackfillByKind = (byKind) =>
+  Object.keys(byKind)
+    .sort()
+    .map((kind) => `${kind}:${byKind[kind]}`)
+    .join(',')
+
 const formatBackfillLine = (comparison) =>
   [
     'Waste-balance rebuild used backfill actor:',
@@ -189,6 +196,7 @@ const formatBackfillLine = (comparison) =>
     `registrationNumber=${comparison.registrationNumber}`,
     `accreditationNumber=${comparison.accreditationNumber}`,
     `backfilledActorCount=${comparison.backfilledActorCount}`,
+    `backfilledActorCountByKind=${formatBackfillByKind(comparison.backfilledActorCountByKind)}`,
     `streamEventCount=${comparison.streamEventCount}`
   ].join(' ')
 
