@@ -15,9 +15,15 @@ export const testOrgStatusTransitionBehaviour = (it) => {
     let repository
     const { VALID_FROM, VALID_TO } = getValidDateRange()
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('invalid transitions', () => {
       it('rejects transition from CREATED to ACTIVE', async () => {

@@ -6,9 +6,15 @@ export const testFindAllByPartitionBehaviour = (it) => {
   describe('findAllByPartition', () => {
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
+          streamRepository
+        }
+      ) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('returns an empty array when no events exist for the partition', async () => {
       const result = await repository.findAllByPartition(

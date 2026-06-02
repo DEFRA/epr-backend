@@ -22,9 +22,15 @@ export const testRollbackBehaviour = (it) => {
   describe('rollbackIssuance', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('reverts status from AWAITING_ACCEPTANCE back to AWAITING_AUTHORISATION', async () => {
       const created = await repository.create(buildAwaitingAcceptancePrn())
@@ -259,9 +265,15 @@ export const testRollbackBehaviour = (it) => {
   describe('rollbackPendingCancellation', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('reverts status from CANCELLED to AWAITING_AUTHORISATION', async () => {
       const created = await repository.create(
@@ -406,9 +418,15 @@ export const testRollbackBehaviour = (it) => {
   describe('rollbackIssuedCancellation', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('reverts status from CANCELLED to AWAITING_CANCELLATION', async () => {
       const created = await repository.create(

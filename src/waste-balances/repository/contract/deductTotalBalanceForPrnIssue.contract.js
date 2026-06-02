@@ -10,9 +10,15 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
   describe('deductTotalBalanceForPrnIssue', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('deducts tonnage from total balance only', async ({
       insertWasteBalance

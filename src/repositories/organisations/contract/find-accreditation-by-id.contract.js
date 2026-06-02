@@ -10,9 +10,15 @@ export const testFindAccreditationByIdBehaviour = (it) => {
   describe('findAccreditationById', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns accreditation when both organisation ID and accreditation ID are valid', async () => {
       const accreditation1 = buildAccreditation({

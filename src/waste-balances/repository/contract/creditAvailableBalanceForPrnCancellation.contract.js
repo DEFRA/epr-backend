@@ -10,9 +10,15 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
   describe('creditAvailableBalanceForPrnCancellation', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('credits tonnage back to available balance only', async ({
       insertWasteBalance

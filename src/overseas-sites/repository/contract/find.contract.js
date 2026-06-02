@@ -5,9 +5,15 @@ export const testFindBehaviour = (it) => {
   describe('findById', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('returns null for non-existent id', async () => {
       const result = await repository.findById('000000000000000000000000')
@@ -30,9 +36,15 @@ export const testFindBehaviour = (it) => {
   describe('findAll', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('returns empty array when no sites exist', async () => {
       const result = await repository.findAll()

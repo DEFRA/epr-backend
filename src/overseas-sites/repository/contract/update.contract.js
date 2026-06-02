@@ -5,9 +5,15 @@ export const testUpdateBehaviour = (it) => {
   describe('update', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('returns null when updating non-existent site', async () => {
       const result = await repository.update('000000000000000000000000', {

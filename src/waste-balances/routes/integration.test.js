@@ -44,34 +44,40 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
   const accreditationId2 = '507f191e810c19729de860ea'
   const nonExistentId = '000000000000000000000000'
 
-  beforeEach(async ({ mongoClient }) => {
-    const collection = mongoClient
-      .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
-
-    await collection.deleteMany({})
-
-    await collection.insertMany([
-      {
-        accreditationId: accreditationId1,
-        organisationId,
-        amount: 1000,
-        availableAmount: 750,
-        transactions: [],
-        version: 1,
-        schemaVersion: 1
-      },
-      {
-        accreditationId: accreditationId2,
-        organisationId,
-        amount: 2500,
-        availableAmount: 2500,
-        transactions: [],
-        version: 1,
-        schemaVersion: 1
+  beforeEach(
+    async (
+      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
+        mongoClient
       }
-    ])
-  })
+    ) => {
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_COLLECTION_NAME)
+
+      await collection.deleteMany({})
+
+      await collection.insertMany([
+        {
+          accreditationId: accreditationId1,
+          organisationId,
+          amount: 1000,
+          availableAmount: 750,
+          transactions: [],
+          version: 1,
+          schemaVersion: 1
+        },
+        {
+          accreditationId: accreditationId2,
+          organisationId,
+          amount: 2500,
+          availableAmount: 2500,
+          transactions: [],
+          version: 1,
+          schemaVersion: 1
+        }
+      ])
+    }
+  )
 
   it('fetches waste balances from MongoDB for multiple IDs', async ({
     server

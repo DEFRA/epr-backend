@@ -7,9 +7,15 @@ export const testAppendEventBehaviour = (it) => {
   describe('appendEvent', () => {
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
+          streamRepository
+        }
+      ) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('persists an event and returns the stored event with an id', async () => {
       const event = buildStreamEvent({

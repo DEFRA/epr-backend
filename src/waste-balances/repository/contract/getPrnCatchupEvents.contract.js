@@ -31,9 +31,15 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
   describe('getPrnCatchupEvents', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('returns an empty array when no balance document exists', async () => {
       const result = await repository.getPrnCatchupEvents(

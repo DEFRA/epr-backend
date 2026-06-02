@@ -22,9 +22,15 @@ export const testOptimisticConcurrency = (it) => {
   describe('optimistic concurrency', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     describe('version control', () => {
       it('initializes version to 1 on insert', async () => {

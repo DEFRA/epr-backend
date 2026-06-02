@@ -12,9 +12,15 @@ export const testUpdateBehaviour = (it) => {
   describe('update', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     describe('basic behaviour', () => {
       it('updates an existing summary log', async () => {

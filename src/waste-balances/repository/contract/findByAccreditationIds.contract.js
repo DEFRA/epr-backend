@@ -7,9 +7,15 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
   describe('findByAccreditationIds', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('returns empty array when no waste balances exist', async () => {
       const result = await repository.findByAccreditationIds([

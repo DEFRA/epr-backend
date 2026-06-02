@@ -5,9 +5,15 @@ export const testInsertBehaviour = (it) => {
   describe('insert', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('basic behaviour', () => {
       it('inserts an organisation without error', async () => {

@@ -8,9 +8,15 @@ export const testFlipCanonicalSourceToMigratingBehaviour = (it) => {
   describe('flipCanonicalSourceToMigrating', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('flips the marker from embedded to migrating when the captured version matches and stamps migratingSince', async ({
       insertWasteBalance

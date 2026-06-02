@@ -17,9 +17,15 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
   describe('registration/accreditation status transitions', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('registration status transitions', () => {
       describe('transitions from CREATED', () => {

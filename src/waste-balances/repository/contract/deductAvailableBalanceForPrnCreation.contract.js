@@ -9,9 +9,15 @@ export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
   describe('deductAvailableBalanceForPrnCreation', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('deducts tonnage from available balance only', async ({
       insertWasteBalance

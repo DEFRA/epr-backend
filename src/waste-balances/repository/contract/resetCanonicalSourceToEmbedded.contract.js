@@ -8,9 +8,15 @@ export const testResetCanonicalSourceToEmbeddedBehaviour = (it) => {
   describe('resetCanonicalSourceToEmbedded', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('resets the marker from migrating back to embedded and clears migratingSince — unconditional, no version filter', async ({
       insertWasteBalance

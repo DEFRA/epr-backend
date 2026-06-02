@@ -19,9 +19,15 @@ export const testFindPeriodicReportsBehaviour = (it) => {
   describe('findPeriodicReports', () => {
     let repository
 
-    beforeEach(async ({ reportsRepository }) => {
-      repository = reportsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
+          reportsRepository
+        }
+      ) => {
+        repository = reportsRepository()
+      }
+    )
 
     it('returns empty array when no reports exist for org/reg', async () => {
       const result = await repository.findPeriodicReports({

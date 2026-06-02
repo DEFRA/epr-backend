@@ -20,9 +20,15 @@ export const testCreateReportBehaviour = (it) => {
   describe('createReport', () => {
     let repository
 
-    beforeEach(async ({ reportsRepository }) => {
-      repository = reportsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
+          reportsRepository
+        }
+      ) => {
+        repository = reportsRepository()
+      }
+    )
 
     it('creates a report with in_progress status and correct initial fields', async () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Manager' }

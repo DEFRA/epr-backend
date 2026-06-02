@@ -7,9 +7,15 @@ export const testAppendStreamEventBehaviour = (it) => {
   describe('appendStreamEvent', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('appends a status-only stream event on the ledger path', async ({
       insertWasteBalance,

@@ -22,12 +22,18 @@ const it = mongoIt.extend({
 })
 
 describe('MongoDB waste records repository', () => {
-  beforeEach(async ({ mongoClient }) => {
-    await mongoClient
-      .db(DATABASE_NAME)
-      .collection(COLLECTION_NAME)
-      .deleteMany({})
-  })
+  beforeEach(
+    async (
+      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
+        mongoClient
+      }
+    ) => {
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+        .deleteMany({})
+    }
+  )
 
   describe('waste records repository contract', () => {
     testWasteRecordsRepositoryContract(it)

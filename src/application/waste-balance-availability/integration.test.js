@@ -66,11 +66,17 @@ describe('aggregateAvailableBalance - Integration', () => {
 
   let db
 
-  beforeEach(async ({ mongoClient }) => {
-    db = mongoClient.db(DATABASE_NAME)
-    await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-    await db.collection(WASTE_BALANCES_COLLECTION).deleteMany({})
-  })
+  beforeEach(
+    async (
+      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
+        mongoClient
+      }
+    ) => {
+      db = mongoClient.db(DATABASE_NAME)
+      await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
+      await db.collection(WASTE_BALANCES_COLLECTION).deleteMany({})
+    }
+  )
 
   it('aggregates available balance by material', async () => {
     await db

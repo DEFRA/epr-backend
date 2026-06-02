@@ -5,9 +5,15 @@ export const testCreateBehaviour = (it) => {
   describe('create', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     describe('basic behaviour', () => {
       it('creates a PRN and returns it with an id', async () => {
