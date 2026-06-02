@@ -971,14 +971,14 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Row 10001 should be IGNORED and thus excluded from all counts
+      // Row 10001 is IGNORED (outside accreditation range) and counted as excluded
       expect(updateCall.loads.added.valid.count).toBe(1)
       expect(updateCall.loads.added.valid.rowIds).toEqual([10000])
       expect(updateCall.loads.added.included.rowIds).toEqual([10000])
 
-      // Verify 10001 is not in any count
       expect(updateCall.loads.added.invalid.count).toBe(0)
-      expect(updateCall.loads.added.excluded.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(1)
+      expect(updateCall.loads.added.excluded.rowIds).toEqual([10001])
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
