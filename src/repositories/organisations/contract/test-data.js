@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import { createInitialStatusHistory } from '../helpers.js'
+import { getCurrentStatus } from '../status.js'
 
 const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
@@ -81,7 +82,7 @@ export const buildAccreditation = (overrides = {}) => {
   return accreditation
 }
 
-/** @returns {Omit<import('#domain/organisations/model.js').Organisation, 'status'>} */
+/** @returns {import('#domain/organisations/model.js').Organisation} */
 export const buildOrganisation = (overrides = {}) => {
   // Build a mapping from old accreditation IDs to new ones
   // This ensures registration.accreditationId links are preserved
@@ -134,9 +135,11 @@ export const buildOrganisation = (overrides = {}) => {
   initializeStatusForItems(org.registrations)
   initializeStatusForItems(org.accreditations)
 
-  // @ts-expect-error JSON fixture has widened types (string vs union literals) and the
-  // Accreditation/Registration types require computed 'status' that only exists after read
-  return org
+  const status = overrides.status ?? getCurrentStatus(org)
+
+  // @ts-expect-error JSON fixture has widened types (string vs union literals) on
+  // nested registration/accreditation fields that only narrow after a repository read
+  return { ...org, status }
 }
 
 /**
