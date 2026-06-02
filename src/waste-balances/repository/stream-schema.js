@@ -41,6 +41,18 @@ export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
  */
 
 /**
+ * Attribution for events with no recoverable real actor. The submitting
+ * session for historical summary-log submissions is not persisted on the
+ * summary-log document or the waste-record version, so a rebuild supplies the
+ * real actor out of band where it can; absent that, events are attributed to
+ * the system. Its id is also the marker the submitter recovery rejects, so a
+ * placeholder can never masquerade as a recovered real actor.
+ *
+ * @type {Readonly<StreamUserSummary>}
+ */
+export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
+
+/**
  * @typedef {{ summaryLogId: string, creditTotal: number }} SummaryLogSubmittedPayload
  */
 

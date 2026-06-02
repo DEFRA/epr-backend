@@ -48,12 +48,13 @@ const findEmbeddedBalances = async (db) => {
           _id: 0,
           accreditationId: 1,
           organisationId: 1,
-          registrationId: 1
+          registrationId: 1,
+          transactions: 1
         }
       }
     )
     .toArray()
-  return /** @type {{ accreditationId: string, organisationId: string, registrationId: string }[]} */ (
+  return /** @type {{ accreditationId: string, organisationId: string, registrationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }[]} */ (
     /** @type {unknown} */ (docs)
   )
 }
@@ -70,7 +71,7 @@ const findEmbeddedBalances = async (db) => {
  */
 
 /**
- * @param {{ accreditationId: string, organisationId: string }} row
+ * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
  * @param {PromotionDependencies} deps
  * @returns {Promise<{ events: Array, registration: { id: string } }>}
  */
@@ -89,7 +90,7 @@ const rebuildEvents = async (row, deps) => {
 }
 
 /**
- * @param {{ accreditationId: string, organisationId: string }} row
+ * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
  * @param {PromotionDependencies} deps
  */
 export const promoteAccreditation = async (row, deps) => {

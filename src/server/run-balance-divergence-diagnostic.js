@@ -18,6 +18,7 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {string} organisationId
  * @property {number} amount
  * @property {number} availableAmount
+ * @property {Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction>} [transactions]
  */
 
 /**
@@ -46,7 +47,8 @@ const findEmbeddedWasteBalances = async (db) => {
           accreditationId: 1,
           organisationId: 1,
           amount: 1,
-          availableAmount: 1
+          availableAmount: 1,
+          transactions: 1
         }
       }
     )

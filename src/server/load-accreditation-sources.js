@@ -1,6 +1,7 @@
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { buildSummaryLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
 
 /** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
 const ACTIVE_REGISTRATION_STATUSES = new Set([
@@ -35,9 +36,12 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
 /**
  * Load the organisation, registration, and accreditation for a balance row,
  * then fetch all authoritative sources needed to rebuild the event stream
- * or recompute totals.
+ * or recompute totals. The row's embedded waste-balance transactions recover
+ * the real submitting actor for each historical summary log, so the rebuilt
+ * stream attributes submissions to the person who made them rather than the
+ * backfill actor.
  *
- * @param {{ accreditationId: string, organisationId: string }} row
+ * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
  * @param {AccreditationSourceDeps} deps
  */
 export const loadAccreditationSources = async (row, deps) => {
@@ -87,11 +91,20 @@ export const loadAccreditationSources = async (row, deps) => {
     registration.id
   )
 
+  const submitters = buildSummaryLogSubmitters({
+    transactions: row.transactions,
+    wasteRecords
+  })
+
   const summaryLogs = summaryLogDocs
     .filter(
       ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
     )
     .map(toStreamSummaryLog)
+    .map((summaryLog) => {
+      const submittedBy = submitters.get(summaryLog.id)
+      return submittedBy ? { ...summaryLog, submittedBy } : summaryLog
+    })
 
   return {
     accreditation,
