@@ -9,9 +9,15 @@ export const testDataIsolationBehaviour = (it) => {
   describe('data isolation', () => {
     let repository
 
-    beforeEach(async ({ wasteRecordsRepository }) => {
-      repository = await wasteRecordsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteRecordsRepository: import('../port.js').WasteRecordsRepositoryFactory }} */ {
+          wasteRecordsRepository
+        }
+      ) => {
+        repository = await wasteRecordsRepository()
+      }
+    )
 
     describe('findByRegistration isolation', () => {
       it('returns independent copies that cannot modify stored data', async () => {

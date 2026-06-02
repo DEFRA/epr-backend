@@ -5,9 +5,15 @@ export const testFindAllIdsBehaviour = (it) => {
   describe('findAllIds', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns empty sets when no organisations exist', async () => {
       const result = await repository.findAllIds()

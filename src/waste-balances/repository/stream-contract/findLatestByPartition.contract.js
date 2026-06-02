@@ -6,9 +6,15 @@ export const testFindLatestByPartitionBehaviour = (it) => {
   describe('findLatestByPartition', () => {
     let repository
 
-    beforeEach(async ({ streamRepository }) => {
-      repository = await streamRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ streamRepository: import('../stream-port.js').WasteBalanceStreamRepositoryFactory }} */ {
+          streamRepository
+        }
+      ) => {
+        repository = await streamRepository()
+      }
+    )
 
     it('returns null when no events exist for the partition', async () => {
       const result = await repository.findLatestByPartition(

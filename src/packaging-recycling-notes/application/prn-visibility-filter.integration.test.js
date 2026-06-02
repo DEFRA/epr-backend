@@ -42,21 +42,27 @@ describe('PRN visibility filter - integration with real MongoDB', () => {
     authorization: `Bearer ${generateExternalApiToken(externalApiClientId)}`
   }
 
-  beforeEach(async ({ mongoClient }) => {
-    db = mongoClient.db(DATABASE_NAME)
-    await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-    await db.collection(PRNS_COLLECTION).deleteMany({})
+  beforeEach(
+    async (
+      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
+        mongoClient
+      }
+    ) => {
+      db = mongoClient.db(DATABASE_NAME)
+      await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
+      await db.collection(PRNS_COLLECTION).deleteMany({})
 
-    const { insertedIds } = await db
-      .collection(ORGANISATIONS_COLLECTION)
-      .insertMany([
-        { orgId: TEST_ORG_NUMERIC_ID, version: 1 },
-        { orgId: REAL_ORG_NUMERIC_ID, version: 1 }
-      ])
+      const { insertedIds } = await db
+        .collection(ORGANISATIONS_COLLECTION)
+        .insertMany([
+          { orgId: TEST_ORG_NUMERIC_ID, version: 1 },
+          { orgId: REAL_ORG_NUMERIC_ID, version: 1 }
+        ])
 
-    testOrgHexId = insertedIds[0].toHexString()
-    realOrgHexId = insertedIds[1].toHexString()
-  })
+      testOrgHexId = insertedIds[0].toHexString()
+      realOrgHexId = insertedIds[1].toHexString()
+    }
+  )
 
   afterEach(async () => {
     await server?.stop()

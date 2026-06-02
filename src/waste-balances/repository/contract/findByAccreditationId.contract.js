@@ -7,9 +7,15 @@ export const testFindByAccreditationIdBehaviour = (it) => {
   describe('findByAccreditationId', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('returns null when no waste balance exists for the accreditation', async () => {
       const result = await repository.findByAccreditationId('acc-nonexistent')

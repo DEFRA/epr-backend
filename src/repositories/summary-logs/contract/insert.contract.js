@@ -15,9 +15,15 @@ export const testInsertBehaviour = (it) => {
   describe('insert', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     describe('basic behaviour', () => {
       it('inserts a summary log without error', async () => {

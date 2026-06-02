@@ -8,9 +8,15 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
   describe('flipCanonicalSourceToLedger', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteBalancesRepository: import('../port.js').WasteBalancesRepositoryFactory }} */ {
+          wasteBalancesRepository
+        }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('flips the marker from migrating to ledger when the captured version matches and clears migratingSince', async ({
       insertWasteBalance,

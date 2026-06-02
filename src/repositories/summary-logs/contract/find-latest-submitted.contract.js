@@ -17,9 +17,15 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
   describe('findLatestSubmittedForOrgReg', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     it('returns null when no submitted summary logs exist for org/reg', async () => {
       const { organisationId, registrationId } = generateOrgReg()

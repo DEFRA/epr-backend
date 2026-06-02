@@ -6,9 +6,15 @@ export const testGetDownloadUrlBehaviour = (it) => {
   describe('getDownloadUrl', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     it('returns a download URL for a submitted summary log', async () => {
       const id = `contract-${randomUUID()}`

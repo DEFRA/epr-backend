@@ -17,9 +17,15 @@ export const testFindReportByIdBehaviour = (it) => {
   describe('findReportById', () => {
     let repository
 
-    beforeEach(async ({ reportsRepository }) => {
-      repository = reportsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
+          reportsRepository
+        }
+      ) => {
+        repository = reportsRepository()
+      }
+    )
 
     it('returns the report for a known reportId', async () => {
       const changedBy = { id: 'user-1', name: 'Alice', position: 'Officer' }

@@ -72,11 +72,19 @@ const it = base.extend({
 })
 
 describe('In-memory form submissions repository', () => {
-  beforeEach(async ({ accreditations, registrations, organisations }) => {
-    accreditations.length = 0
-    registrations.length = 0
-    organisations.length = 0
-  })
+  beforeEach(
+    async (
+      /** @type {{ accreditations: Object[], registrations: Object[], organisations: Object[] }} */ {
+        accreditations,
+        registrations,
+        organisations
+      }
+    ) => {
+      accreditations.length = 0
+      registrations.length = 0
+      organisations.length = 0
+    }
+  )
 
   it('should create repository instance', async ({
     formSubmissionsRepository

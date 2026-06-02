@@ -9,9 +9,15 @@ export const testAppendVersionsBehaviour = (it) => {
   describe('appendVersions', () => {
     let repository
 
-    beforeEach(async ({ wasteRecordsRepository }) => {
-      repository = await wasteRecordsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteRecordsRepository: import('../port.js').WasteRecordsRepositoryFactory }} */ {
+          wasteRecordsRepository
+        }
+      ) => {
+        repository = await wasteRecordsRepository()
+      }
+    )
 
     it('creates new waste record with first version', async () => {
       const wasteRecordVersions = toWasteRecordVersions({

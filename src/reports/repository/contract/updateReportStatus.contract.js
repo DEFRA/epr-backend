@@ -11,9 +11,15 @@ export const testUpdateReportStatusBehaviour = (it) => {
 
     const changedBy = { id: 'user-2', name: 'Bob', position: 'Reviewer' }
 
-    beforeEach(async ({ reportsRepository }) => {
-      repository = reportsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ reportsRepository: import('../port.js').ReportsRepositoryFactory }} */ {
+          reportsRepository
+        }
+      ) => {
+        repository = reportsRepository()
+      }
+    )
 
     it('transitions in_progress → ready_to_submit, sets slot and appends history', async () => {
       const { id: reportId } = await repository.createReport(

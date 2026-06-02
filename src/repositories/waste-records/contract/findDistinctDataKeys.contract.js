@@ -5,9 +5,15 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
   describe('findDistinctDataKeys', () => {
     let repository
 
-    beforeEach(async ({ wasteRecordsRepository }) => {
-      repository = await wasteRecordsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ wasteRecordsRepository: import('../port.js').WasteRecordsRepositoryFactory }} */ {
+          wasteRecordsRepository
+        }
+      ) => {
+        repository = await wasteRecordsRepository()
+      }
+    )
 
     it('returns an empty array when no records exist', async () => {
       const result = await repository.findDistinctDataKeys()

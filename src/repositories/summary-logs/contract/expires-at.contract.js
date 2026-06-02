@@ -8,9 +8,15 @@ export const testExpiresAtBehaviour = (it) => {
   describe('expiresAt field', () => {
     let repository
 
-    beforeEach(async ({ summaryLogsRepository }) => {
-      repository = summaryLogsRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ summaryLogsRepository: import('../port.js').SummaryLogsRepository }} */ {
+          summaryLogsRepository
+        }
+      ) => {
+        repository = summaryLogsRepository
+      }
+    )
 
     describe('insert', () => {
       it('stores and retrieves expiresAt as a Date', async () => {

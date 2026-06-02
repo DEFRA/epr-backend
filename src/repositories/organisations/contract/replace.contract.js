@@ -18,9 +18,15 @@ export const testReplaceBehaviour = (it) => {
     // Date strings for validFrom/validTo
     const { VALID_FROM, VALID_TO } = getValidDateRange()
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('basic behaviour', () => {
       it('updates organisation level fields successfully', async () => {

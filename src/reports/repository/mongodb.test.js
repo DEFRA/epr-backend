@@ -22,10 +22,16 @@ const it = mongoIt.extend({
 })
 
 describe('MongoDB reports repository', () => {
-  beforeEach(async ({ mongoClient }) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    await database.collection('reports').deleteMany({})
-  })
+  beforeEach(
+    async (
+      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
+        mongoClient
+      }
+    ) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database.collection('reports').deleteMany({})
+    }
+  )
 
   it('creates a repository', ({ reportsRepository }) => {
     expect(reportsRepository).toBeDefined()

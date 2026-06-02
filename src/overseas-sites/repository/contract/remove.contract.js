@@ -5,9 +5,15 @@ export const testRemoveBehaviour = (it) => {
   describe('remove', () => {
     let repository
 
-    beforeEach(async ({ overseasSitesRepository }) => {
-      repository = overseasSitesRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ overseasSitesRepository: import('../port.js').OverseasSitesRepository }} */ {
+          overseasSitesRepository
+        }
+      ) => {
+        repository = overseasSitesRepository
+      }
+    )
 
     it('returns null when removing non-existent site', async () => {
       const result = await repository.remove('000000000000000000000000')

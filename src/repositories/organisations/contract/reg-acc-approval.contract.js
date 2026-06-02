@@ -23,9 +23,15 @@ export const testRegAccApprovalValidation = (it) => {
   describe('approval validation', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     describe('accreditation approval validation', () => {
       it('rejects when approved accreditation has no linked approved registration', async () => {

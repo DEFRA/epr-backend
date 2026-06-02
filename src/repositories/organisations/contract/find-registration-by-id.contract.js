@@ -11,9 +11,15 @@ export const testFindRegistrationByIdBehaviour = (it) => {
   describe('findRegistrationById', () => {
     let repository
 
-    beforeEach(async ({ organisationsRepository }) => {
-      repository = await organisationsRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {{ organisationsRepository: import('../port.js').OrganisationsRepositoryFactory }} */ {
+          organisationsRepository
+        }
+      ) => {
+        repository = await organisationsRepository()
+      }
+    )
 
     it('returns registration when both organisation ID and registration ID are valid', async () => {
       const registration1 = buildRegistration({

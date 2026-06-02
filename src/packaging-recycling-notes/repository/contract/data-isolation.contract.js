@@ -5,9 +5,15 @@ export const testDataIsolation = (it) => {
   describe('data isolation', () => {
     let repository
 
-    beforeEach(async ({ prnRepository }) => {
-      repository = prnRepository
-    })
+    beforeEach(
+      async (
+        /** @type {{ prnRepository: import('../port.js').PackagingRecyclingNotesRepository }} */ {
+          prnRepository
+        }
+      ) => {
+        repository = prnRepository
+      }
+    )
 
     it('returns cloned data from findById that cannot mutate storage', async () => {
       const created = await repository.create(buildDraftPrn())
