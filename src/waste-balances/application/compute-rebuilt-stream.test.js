@@ -857,6 +857,130 @@ describe('computeRebuiltStream', () => {
       expect(result.events).toHaveLength(0)
     })
 
+    it('collapses a duplicate same-state history entry to a single event', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        wasteRecords: [
+          {
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            type: 'received',
+            data: { processingType: 'INPUT', tonnage: 100 },
+            versions: [
+              {
+                summaryLog: { id: 'sl-1' },
+                data: { processingType: 'INPUT', tonnage: 100 }
+              }
+            ],
+            excludedFromWasteBalance: false
+          }
+        ],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z')
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z')
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-22T00:00:00.000Z')
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-23T00:00:00.000Z')
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [
+          {
+            id: 'sl-1',
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            submittedAt: '2025-01-15T10:00:00.000Z'
+          }
+        ]
+      })
+
+      const issued = result.events.filter(
+        (e) => e.kind === STREAM_EVENT_KIND.PRN_ISSUED
+      )
+      expect(issued).toHaveLength(1)
+      expect(result.amount).toBe(70)
+      expect(result.availableAmount).toBe(70)
+    })
+
+    it('collapses a duplicate awaiting_authorisation entry to a single PRN_CREATED', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId: 'reg-1',
+        organisationId: 'org-1',
+        wasteRecords: [
+          {
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            type: 'received',
+            data: { processingType: 'INPUT', tonnage: 100 },
+            versions: [
+              {
+                summaryLog: { id: 'sl-1' },
+                data: { processingType: 'INPUT', tonnage: 100 }
+              }
+            ],
+            excludedFromWasteBalance: false
+          }
+        ],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z')
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z')
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-22T00:00:00.000Z')
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [
+          {
+            id: 'sl-1',
+            status: SUMMARY_LOG_STATUS.SUBMITTED,
+            submittedAt: '2025-01-15T10:00:00.000Z'
+          }
+        ]
+      })
+
+      const created = result.events.filter(
+        (e) => e.kind === STREAM_EVENT_KIND.PRN_CREATED
+      )
+      expect(created).toHaveLength(1)
+      expect(result.amount).toBe(100)
+      expect(result.availableAmount).toBe(70)
+    })
+
     it('throws when a history entry transitions from an unrecognised status', () => {
       expect(() =>
         computeRebuiltStream({

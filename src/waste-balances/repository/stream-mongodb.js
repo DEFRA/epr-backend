@@ -212,6 +212,20 @@ const performFindEventsByPrnIdAfter =
   }
 
 /**
+ * @param {Collection} collection
+ * @returns {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent[]>}
+ */
+const performFindAllByPartition =
+  (collection) => async (registrationId, accreditationId) => {
+    const docs = await collection
+      .find({ registrationId, accreditationId })
+      .sort({ number: 1 })
+      .toArray()
+
+    return docs.map(toStreamEvent)
+  }
+
+/**
  * @migration PAE-1382 — delete all events for a partition.
  * @param {Collection} collection
  * @returns {(registrationId: string, accreditationId: string | null) => Promise<number>}
@@ -294,6 +308,7 @@ export const createMongoStreamRepository = async (db) => {
     findLatestByPartitionAndKind:
       performFindLatestByPartitionAndKind(collection),
     findEventsByPrnIdAfter: performFindEventsByPrnIdAfter(collection),
+    findAllByPartition: performFindAllByPartition(collection),
     deleteByPartition: performDeleteByPartition(collection),
     bulkAppendEvents: performBulkAppendEvents(collection)
   })

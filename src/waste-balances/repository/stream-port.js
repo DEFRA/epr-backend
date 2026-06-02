@@ -100,6 +100,9 @@ export class StreamSequenceError extends Error {
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified partition, with `number > afterNumber`, ordered by
  *   `number` ascending.
+ * @property {(registrationId: string, accreditationId: string | null) => Promise<StreamEvent[]>} findAllByPartition
+ *   Return all events for the given partition, ordered by `number`
+ *   ascending. Returns an empty array if the partition has no events.
  * @property {(registrationId: string, accreditationId: string | null) => Promise<number>} deleteByPartition
  *   Migration PAE-1382: delete all events for the given partition.
  *   Returns the number of deleted events. No-op on empty partition.
