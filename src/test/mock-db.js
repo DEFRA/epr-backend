@@ -56,9 +56,8 @@ export const createMockDb = (overrides = {}) => {
   )
 
   const collectionFactory =
-    collectionOverride ?? (/** @type {(name: string) => Collection} */ (
-      () => collection
-    ))
+    collectionOverride ??
+    /** @type {(name: string) => Collection} */ (() => collection)
 
   return /** @type {Db} */ (
     /** @type {unknown} */ ({

@@ -2,6 +2,9 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { ObjectId } from 'mongodb'
 import { describe, expect, it, vi } from 'vitest'
 import { createSeedData } from './create-update.js'
+import { createMockDb as createSharedMockDb } from '#test/mock-db.js'
+
+/** @import { Collection } from 'mongodb' */
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
@@ -126,17 +129,19 @@ function createMockDb({
   find = () => ({ toArray: async () => [] })
 } = {}) {
   const insertions = []
-  return {
-    insertions,
-    mockDb: {
-      collection: (collectionName) => ({
-        insertMany: (items) => {
-          insertions.push({ collectionName, items })
-          return { insertedIds: [] }
-        },
-        countDocuments,
-        find
-      })
-    }
-  }
+  const mockDb = createSharedMockDb({
+    collection: (collectionName) =>
+      /** @type {Collection} */ (
+        /** @type {unknown} */ ({
+          insertMany: (items) => {
+            insertions.push({ collectionName, items })
+            return { insertedIds: [] }
+          },
+          countDocuments,
+          find
+        })
+      )
+  })
+
+  return { insertions, mockDb }
 }
