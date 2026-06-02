@@ -159,7 +159,8 @@ export const countByValidity = ({ wasteRecords, summaryLogId }) =>
 
 /**
  * Classifies loads by included/excluded for waste-balance table rows only.
- * Skips IGNORED rows.
+ * IGNORED rows are counted as excluded for added and adjusted loads.
+ * IGNORED unchanged loads are skipped — re-uploaded with no data change, so no new user action to surface.
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste-balance table records only
@@ -167,26 +168,27 @@ export const countByValidity = ({ wasteRecords, summaryLogId }) =>
  * @returns {{ added: InclusionCounts, unchanged: InclusionCounts, adjusted: InclusionCounts }}
  */
 export const countByWasteBalanceInclusion = ({ wasteRecords, summaryLogId }) =>
-  wasteRecords
-    .filter((wr) => wr.outcome !== ROW_OUTCOME.IGNORED)
-    .reduce(
-      (acc, { record, outcome }) => {
-        const status = determineRecordStatus(record, summaryLogId)
-        const key = outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
-        return {
-          ...acc,
-          [status]: {
-            ...acc[status],
-            [key]: addToCategory(acc[status][key], record.rowId)
-          }
-        }
-      },
-      {
-        added: emptyInclusionBucket(),
-        unchanged: emptyInclusionBucket(),
-        adjusted: emptyInclusionBucket()
+  wasteRecords.reduce(
+    (acc, { record, outcome }) => {
+      const status = determineRecordStatus(record, summaryLogId)
+      if (outcome === ROW_OUTCOME.IGNORED && status === 'unchanged') {
+        return acc
       }
-    )
+      const key = outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
+      return {
+        ...acc,
+        [status]: {
+          ...acc[status],
+          [key]: addToCategory(acc[status][key], record.rowId)
+        }
+      }
+    },
+    {
+      added: emptyInclusionBucket(),
+      unchanged: emptyInclusionBucket(),
+      adjusted: emptyInclusionBucket()
+    }
+  )
 
 /**
  * Merges validation results (valid/invalid) and classification results (included/excluded)

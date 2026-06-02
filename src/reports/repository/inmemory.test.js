@@ -3,8 +3,9 @@ import { createInMemoryReportsRepository } from './inmemory.js'
 import { testReportsRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
-  reportsRepository: async ({ reportsStorage }, use) => {
-    await use(createInMemoryReportsRepository(reportsStorage))
+  // eslint-disable-next-line no-empty-pattern
+  reportsRepository: async ({}, use) => {
+    await use(createInMemoryReportsRepository())
   }
 })
 

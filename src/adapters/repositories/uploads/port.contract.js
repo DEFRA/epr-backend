@@ -22,7 +22,8 @@ const TEST_FILE_PATH = path.resolve(
  * Contract test for the uploads repository.
  * Tests the full round-trip: initiate upload → callback received → retrieve file.
  *
- * @param {import('vitest').TestAPI<ContractTestFixtures>} it - Vitest test function extended with required fixtures
+ * @template {ContractTestFixtures} T
+ * @param {import('vitest').TestAPI<T>} it - Vitest test function extended with required fixtures
  */
 export const testUploadsRepositoryContract = (it) => {
   describe('uploads repository contract', () => {

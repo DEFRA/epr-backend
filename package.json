@@ -105,13 +105,12 @@
     "unzipper": "0.10.14"
   },
   "overrides": {
-    "axios": "1.16.1",
     "fast-xml-parser": "5.7.3",
     "glob": "11.1.0",
     "uuid": "14.0.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.18",
+    "@vitest/coverage-v8": "4.1.7",
     "@vitest/eslint-plugin": "1.6.9",
     "eslint": "9.39.2",
     "eslint-import-resolver-typescript": "4.4.4",
@@ -126,7 +125,7 @@
     "testcontainers": "11.12.0",
     "tinybench": "6.0.0",
     "typescript": "5.9.3",
-    "vitest": "4.0.18",
+    "vitest": "4.1.7",
     "vitest-mongodb": "1.0.3"
   }
 }
