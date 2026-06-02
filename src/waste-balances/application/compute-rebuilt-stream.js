@@ -123,6 +123,52 @@ const actorOf = (actor) =>
   actor ? { id: actor.id, name: actor.name } : { ...BACKFILL_ACTOR }
 
 /**
+ * Sparse count of backfilled-actor events keyed by the stream event kind that
+ * fell back. Only kinds with at least one fallback appear.
+ *
+ * @typedef {Partial<Record<import('../repository/stream-schema.js').StreamEventKind, number>>} BackfillTally
+ */
+
+/**
+ * Record one event-kind's fallback to the backfill actor in a per-kind tally.
+ *
+ * @param {BackfillTally} byKind
+ * @param {import('../repository/stream-schema.js').StreamEventKind} kind
+ */
+const tallyBackfill = (byKind, kind) => {
+  byKind[kind] = (byKind[kind] ?? 0) + 1
+}
+
+/**
+ * Combine per-kind backfill tallies, summing counts for shared kinds.
+ *
+ * @param {BackfillTally[]} tallies
+ * @returns {BackfillTally}
+ */
+const mergeBackfillTallies = (tallies) => {
+  const merged = /** @type {BackfillTally} */ ({})
+  for (const tally of tallies) {
+    for (const [rawKind, count] of Object.entries(tally)) {
+      const kind =
+        /** @type {import('../repository/stream-schema.js').StreamEventKind} */ (
+          rawKind
+        )
+      merged[kind] = (merged[kind] ?? 0) + count
+    }
+  }
+  return merged
+}
+
+/**
+ * Total backfilled-actor events across every kind in a tally.
+ *
+ * @param {BackfillTally} byKind
+ * @returns {number}
+ */
+const totalBackfilled = (byKind) =>
+  Object.values(byKind).reduce((sum, count) => sum + count, 0)
+
+/**
  * Build summary-log-submitted events, threading the running set of seen
  * summary-log ids so each submission credits the waste-record data as it
  * stood at that point.
@@ -155,7 +201,7 @@ const buildSummaryLogEvents = ({
 
   const seenSummaryLogIds = new Set()
   const events = []
-  let backfilledActorCount = 0
+  const backfilledActorCountByKind = /** @type {BackfillTally} */ ({})
 
   for (const summaryLog of submitted) {
     seenSummaryLogIds.add(summaryLog.id)
@@ -181,7 +227,10 @@ const buildSummaryLogEvents = ({
     // exactly one backfilled event — no need to gate on emission as the PRN
     // builder does.
     if (!summaryLog.submittedBy) {
-      backfilledActorCount += 1
+      tallyBackfill(
+        backfilledActorCountByKind,
+        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
+      )
     }
 
     events.push({
@@ -195,7 +244,7 @@ const buildSummaryLogEvents = ({
     })
   }
 
-  return { events, backfilledActorCount }
+  return { events, backfilledActorCountByKind }
 }
 
 /**
@@ -272,7 +321,7 @@ const buildPrnHistoryEvents = ({
 }) => {
   const history = prn.status.history
   const events = []
-  let backfilledActorCount = 0
+  const backfilledActorCountByKind = /** @type {BackfillTally} */ ({})
 
   for (let i = 0; i < history.length; i++) {
     const event = prnTransitionEvent({
@@ -287,11 +336,11 @@ const buildPrnHistoryEvents = ({
     }
     events.push(event)
     if (!history[i].by) {
-      backfilledActorCount += 1
+      tallyBackfill(backfilledActorCountByKind, event.kind)
     }
   }
 
-  return { events, backfilledActorCount }
+  return { events, backfilledActorCountByKind }
 }
 
 /**
@@ -320,9 +369,8 @@ const buildPrnEvents = ({
 
   return {
     events: perPrn.flatMap(({ events }) => events),
-    backfilledActorCount: perPrn.reduce(
-      (sum, { backfilledActorCount }) => sum + backfilledActorCount,
-      0
+    backfilledActorCountByKind: mergeBackfillTallies(
+      perPrn.map(({ backfilledActorCountByKind }) => backfilledActorCountByKind)
     )
   }
 }
@@ -346,8 +394,10 @@ const buildChronologicalEvents = (params) => {
 
   return {
     events: [...summaryLog.events, ...prn.events],
-    backfilledActorCount:
-      summaryLog.backfilledActorCount + prn.backfilledActorCount
+    backfilledActorCountByKind: mergeBackfillTallies([
+      summaryLog.backfilledActorCountByKind,
+      prn.backfilledActorCountByKind
+    ])
   }
 }
 
@@ -439,8 +489,9 @@ const byStreamOrder = (a, b) =>
  * source history that violates the PRN state machine — so the sequence is
  * seedable into the stream store, not only a totals cross-check. Also reports
  * `backfilledActorCount`: how many events fell back to the backfill actor
- * because no real actor was recoverable, so callers can surface attribution
- * gaps.
+ * because no real actor was recoverable, and `backfilledActorCountByKind`: the
+ * same total broken down by stream event kind, so callers can surface
+ * attribution gaps and see which event kinds drive them.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
@@ -460,22 +511,30 @@ export const computeRebuiltStream = ({
   overseasSites,
   summaryLogs
 }) => {
-  const { events: unsorted, backfilledActorCount } = buildChronologicalEvents({
-    accreditation,
-    registrationId,
-    organisationId,
-    wasteRecords,
-    prns,
-    overseasSites,
-    summaryLogs
-  })
+  const { events: unsorted, backfilledActorCountByKind } =
+    buildChronologicalEvents({
+      accreditation,
+      registrationId,
+      organisationId,
+      wasteRecords,
+      prns,
+      overseasSites,
+      summaryLogs
+    })
+
+  const backfilledActorCount = totalBackfilled(backfilledActorCountByKind)
 
   unsorted.sort(byStreamOrder)
 
   const events = replayStream(unsorted)
 
   if (events.length === 0) {
-    return { events, ...ZERO_BALANCE, backfilledActorCount }
+    return {
+      events,
+      ...ZERO_BALANCE,
+      backfilledActorCount,
+      backfilledActorCountByKind
+    }
   }
 
   const finalBalance =
@@ -487,6 +546,7 @@ export const computeRebuiltStream = ({
     events,
     amount: finalBalance.amount,
     availableAmount: finalBalance.availableAmount,
-    backfilledActorCount
+    backfilledActorCount,
+    backfilledActorCountByKind
   }
 }
