@@ -7,6 +7,17 @@ import {
 } from './csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
+import {
+  buildAccreditation,
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
+
+/**
+ * @typedef {import('#domain/organisations/registration.js').Registration} Registration
+ * @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation
+ */
 
 describe('csv-columns', () => {
   describe('METADATA_COLUMNS', () => {
@@ -95,13 +106,19 @@ describe('csv-columns', () => {
     const dataFieldColumns = buildDataFieldColumns([])
 
     const baseInput = {
-      org: { companyDetails: { name: 'Acme Ltd' } },
-      registration: {
-        material: 'plastic',
-        submittedToRegulator: 'ea'
-      },
-      accreditation: { status: 'approved' },
-      record: {
+      org: buildOrganisation({
+        companyDetails: { name: 'Acme Ltd' }
+      }),
+      registration: /** @type {Registration} */ (
+        buildRegistration({
+          material: 'plastic',
+          submittedToRegulator: 'ea'
+        })
+      ),
+      accreditation: /** @type {Accreditation} */ (
+        /** @type {unknown} */ (buildAccreditation({ status: 'approved' }))
+      ),
+      record: buildWasteRecord({
         type: WASTE_RECORD_TYPE.RECEIVED,
         rowId: '1001',
         data: {
@@ -109,9 +126,8 @@ describe('csv-columns', () => {
           DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
           GROSS_WEIGHT: 10,
           TONNAGE_RECEIVED_FOR_RECYCLING: 9
-        },
-        versions: [{ summaryLog: { id: 'sl-1' } }]
-      },
+        }
+      }),
       summaryLogEntry: {
         submittedAt: '2026-04-15T09:00:00Z'
       },

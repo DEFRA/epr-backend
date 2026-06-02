@@ -578,7 +578,16 @@ describe('transform', () => {
       return { org, entries }
     }
 
-    const period = { label: 'Jan Report', key: '2026:monthly:1' }
+    const period = {
+      key: '2026:monthly:1',
+      cadence: 'monthly',
+      year: 2026,
+      period: 1,
+      label: 'Jan Report',
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
+      dueDate: '2026-02-28'
+    }
     const periods = [period]
 
     it("returns 'N/A' when the period key is absent from submittedDates", async () => {
