@@ -321,7 +321,7 @@ describe('computeRebuiltStream', () => {
                 at: new Date('2025-01-21T00:00:00.000Z')
               },
               {
-                status: PRN_STATUS.CANCELLED,
+                status: PRN_STATUS.DELETED,
                 at: new Date('2025-01-22T00:00:00.000Z')
               }
             ]
@@ -338,7 +338,7 @@ describe('computeRebuiltStream', () => {
       ]
     })
 
-    // PRN created then cancelled pre-issue: net zero effect on balance
+    // PRN created then removed pre-issue: net zero effect on balance
     expect(result.amount).toBe(100)
     expect(result.availableAmount).toBe(100)
   })
@@ -773,6 +773,44 @@ describe('computeRebuiltStream', () => {
                   },
                   {
                     status: PRN_STATUS.AWAITING_CANCELLATION,
+                    at: new Date('2025-01-22T00:00:00.000Z'),
+                    by: { id: 'sig-1', name: 'Sam Signatory' }
+                  }
+                ]
+              }
+            }
+          ],
+          overseasSites,
+          summaryLogs: []
+        })
+      ).toThrow(/prn-1/)
+    })
+
+    it('throws on a pre-issue cancellation that does not exist in the state machine', () => {
+      expect(() =>
+        computeRebuiltStream({
+          accreditation,
+          registrationId,
+          organisationId,
+          wasteRecords: [],
+          prns: [
+            {
+              id: 'prn-1',
+              tonnage: 10,
+              status: {
+                history: [
+                  {
+                    status: PRN_STATUS.DRAFT,
+                    at: new Date('2025-01-20T00:00:00.000Z'),
+                    by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                  },
+                  {
+                    status: PRN_STATUS.AWAITING_AUTHORISATION,
+                    at: new Date('2025-01-21T00:00:00.000Z'),
+                    by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                  },
+                  {
+                    status: PRN_STATUS.CANCELLED,
                     at: new Date('2025-01-22T00:00:00.000Z'),
                     by: { id: 'sig-1', name: 'Sam Signatory' }
                   }

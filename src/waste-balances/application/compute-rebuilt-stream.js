@@ -53,16 +53,23 @@ const reconstructDataAtSubmission = (versions, seenSummaryLogIds) => {
   return data
 }
 
-/** @type {Map<string, import('../repository/stream-schema.js').StreamEventKind>} */
+/**
+ * Maps a PRN status transition to the stream event kind it implies, replayed
+ * from a PRN's status history. Entries must be transitions the state machine
+ * (`PRN_STATUS_TRANSITIONS`) permits.
+ *
+ * Scaffolding for the embedded→ledger migration: it synthesises events for
+ * legacy PRNs that have no stream of their own. Once every accreditation is on
+ * the ledger, balances fold from persisted events and this replay — along with
+ * its re-enumeration of the state machine's transitions — retires.
+ *
+ * @type {Map<string, import('../repository/stream-schema.js').StreamEventKind>}
+ */
 const PRN_TRANSITION_MAP = new Map([
   [`*→${PRN_STATUS.AWAITING_AUTHORISATION}`, STREAM_EVENT_KIND.PRN_CREATED],
   [
     `${PRN_STATUS.AWAITING_AUTHORISATION}→${PRN_STATUS.AWAITING_ACCEPTANCE}`,
     STREAM_EVENT_KIND.PRN_ISSUED
-  ],
-  [
-    `${PRN_STATUS.AWAITING_AUTHORISATION}→${PRN_STATUS.CANCELLED}`,
-    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
   ],
   [
     `${PRN_STATUS.AWAITING_AUTHORISATION}→${PRN_STATUS.DELETED}`,

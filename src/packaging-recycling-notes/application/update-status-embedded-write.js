@@ -77,8 +77,14 @@ const ROLLBACK_METHOD_BY_TRANSITION = {
  * embedded path predates event sourcing — it doesn't emit stream events, it
  * just mutates the balance document directly. Missing entry means the
  * transition is lifecycle-only (no balance change) and just stamps the PRN.
+ * Keys must be transitions the state machine (`PRN_STATUS_TRANSITIONS`)
+ * actually permits.
+ *
+ * Scaffolding for the embedded→ledger migration: this whole path retires once
+ * every accreditation is on the ledger, leaving the state-machine decider as
+ * the single place a transition's balance consequence is defined.
  */
-const EMBEDDED_BALANCE_EFFECTS = Object.freeze({
+export const EMBEDDED_BALANCE_EFFECTS = Object.freeze({
   [`${PRN_STATUS.DRAFT}|${PRN_STATUS.AWAITING_AUTHORISATION}`]: {
     apply: deductWasteBalanceIfNeeded,
     log: 'deduct_available'
@@ -88,10 +94,6 @@ const EMBEDDED_BALANCE_EFFECTS = Object.freeze({
     log: 'deduct_total'
   },
   [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]: {
-    apply: creditWasteBalanceIfNeeded,
-    log: 'credit_available'
-  },
-  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.CANCELLED}`]: {
     apply: creditWasteBalanceIfNeeded,
     log: 'credit_available'
   },

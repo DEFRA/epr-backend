@@ -225,7 +225,13 @@ export function logWasteBalanceUpdate(
 /**
  * Transition table keyed by `${currentStatus}|${newStatus}`. Each entry names
  * the stream event kind the transition writes. Transitions without an entry
- * have no balance effect.
+ * have no balance effect. Keys must be transitions the state machine
+ * (`PRN_STATUS_TRANSITIONS`) actually permits.
+ *
+ * Scaffolding for the embedded→ledger migration: it re-enumerates transitions
+ * the state machine already owns. The durable model derives the event a
+ * transition writes from the state machine itself (the command decider), so
+ * this table retires once the migration completes.
  *
  * @type {Record<string, StreamEventKind>}
  */
@@ -238,8 +244,6 @@ const TRANSITION_TO_EVENT_KIND = Object.freeze({
     STREAM_EVENT_KIND.PRN_ACCEPTED,
   [`${PRN_STATUS.AWAITING_ACCEPTANCE}|${PRN_STATUS.AWAITING_CANCELLATION}`]:
     STREAM_EVENT_KIND.PRN_REJECTED,
-  [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.CANCELLED}`]:
-    STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
   [`${PRN_STATUS.AWAITING_AUTHORISATION}|${PRN_STATUS.DELETED}`]:
     STREAM_EVENT_KIND.PRN_CREATION_CANCELLED,
   [`${PRN_STATUS.AWAITING_CANCELLATION}|${PRN_STATUS.CANCELLED}`]:
