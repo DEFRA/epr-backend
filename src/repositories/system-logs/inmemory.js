@@ -95,9 +95,12 @@ export function createSystemLogsRepository() {
             item.event?.action === 'submit' &&
             idSet.has(item.context?.summaryLogId)
           ) {
+            const createdBy = /** @type {Record<string, string>} */ (
+              item.createdBy
+            )
             submitters.set(item.context.summaryLogId, {
-              id: item.createdBy.id,
-              name: item.createdBy.email ?? item.createdBy.name
+              id: createdBy.id,
+              name: createdBy.email ?? createdBy.name
             })
           }
         }
