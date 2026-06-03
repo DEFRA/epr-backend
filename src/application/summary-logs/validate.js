@@ -655,7 +655,7 @@ export const buildTransactionAmounts = (
     }
 
     const key = `${record.type}:${record.rowId}`
-    const lastVersion = record.versions.at(-1)
+    const lastVersion = record.versions[record.versions.length - 1]
     const isAdjusted =
       lastVersion.summaryLog?.id === summaryLogId &&
       lastVersion.status === VERSION_STATUS.UPDATED
