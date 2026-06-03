@@ -28,10 +28,10 @@ import { ORS_IMPORT_COMMAND } from '#overseas-sites/domain/import-status.js'
  * message carries. The submit route is gated to standard_user scope, so the
  * union is narrowed to human credentials at the boundary.
  *
- * @param {import('#common/hapi-types.js').HapiRequest} request
+ * @param {import('#common/hapi-types.js').AuthenticatedRequest} request
  * @returns {import('#domain/summary-logs/worker/port.js').SubmitUser}
  */
-const extractUser = (request) => {
+export const extractUser = (request) => {
   const { credentials } = request.auth
   if (!('email' in credentials)) {
     throw new Error(
@@ -41,9 +41,7 @@ const extractUser = (request) => {
   return {
     id: credentials.id,
     ...(credentials.name && { name: credentials.name }),
-    // @ts-expect-error narrowed to HumanCredentials by `email in credentials` above; tsc loses the discriminant through Hapi's base Request intersection
     email: credentials.email,
-    // @ts-expect-error narrowed to HumanCredentials by `email in credentials` above; tsc loses the discriminant through Hapi's base Request intersection
     scope: credentials.scope
   }
 }

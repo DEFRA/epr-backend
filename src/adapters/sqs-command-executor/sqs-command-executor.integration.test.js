@@ -99,7 +99,6 @@ describe('SQS command executor integration', () => {
       auth: {
         credentials: {
           id: 'user-123',
-          name: 'Test User',
           email: 'test@example.com',
           scope: ['admin']
         }
@@ -138,55 +137,9 @@ describe('SQS command executor integration', () => {
           summaryLogId,
           user: {
             id: 'user-123',
-            name: 'Test User',
             email: 'test@example.com',
             scope: ['admin']
           }
-        })
-      }
-    )
-
-    it(
-      'omits the name when the human credentials carry none',
-      { timeout: TEST_TIMEOUT },
-      async ({ sqsClient }) => {
-        const executor = await createSqsCommandExecutor({
-          sqsClient,
-          queueName: sqsClient.queueName,
-          logger
-        })
-
-        const namelessRequest = {
-          auth: {
-            credentials: {
-              id: 'user-456',
-              email: 'noname@example.com',
-              scope: ['admin']
-            }
-          }
-        }
-
-        const summaryLogId = `submit-noname-test-${Date.now()}`
-        await executor.summaryLogsWorker.submit(summaryLogId, namelessRequest)
-
-        const { QueueUrl: queueUrl } = await sqsClient.send(
-          new GetQueueUrlCommand({ QueueName: sqsClient.queueName })
-        )
-
-        const response = await sqsClient.send(
-          new ReceiveMessageCommand({
-            QueueUrl: queueUrl,
-            WaitTimeSeconds: 5
-          })
-        )
-
-        expect(response.Messages).toHaveLength(1)
-
-        const message = JSON.parse(response.Messages[0].Body)
-        expect(message.user).toEqual({
-          id: 'user-456',
-          email: 'noname@example.com',
-          scope: ['admin']
         })
       }
     )
