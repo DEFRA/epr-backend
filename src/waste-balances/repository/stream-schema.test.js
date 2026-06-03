@@ -123,7 +123,11 @@ describe('stream event insert schema', () => {
   it('preserves email on createdBy', () => {
     const { value } = validate(
       buildStreamEvent({
-        createdBy: { id: 'user-1', name: 'Test User', email: 'user@example.test' }
+        createdBy: {
+          id: 'user-1',
+          name: 'Test User',
+          email: 'user@example.test'
+        }
       })
     )
     expect(value.createdBy.email).toBe('user@example.test')
