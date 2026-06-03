@@ -4,6 +4,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { summaryLogFactory } from './contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -35,12 +36,7 @@ const it = mongoIt.extend({
   },
 
   summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
+    const mockLogger = createMockLogger()
     const repository = summaryLogsRepositoryFactory(mockLogger)
     await use(repository)
   }
@@ -65,7 +61,7 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
@@ -108,7 +104,7 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
@@ -158,7 +154,7 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config
@@ -205,7 +201,7 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const mockLogger = createMockLogger()
       const repositoryFactory = await createSummaryLogsRepository(
         mockDb,
         mockS3Config

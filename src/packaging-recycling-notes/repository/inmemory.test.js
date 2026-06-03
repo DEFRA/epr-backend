@@ -1,6 +1,7 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { ObjectId } from 'mongodb'
-import { it as base, describe, expect, vi } from 'vitest'
+import { it as base, describe, expect } from 'vitest'
 import {
   buildAwaitingAuthorisationPrn,
   buildCancelledPrn
@@ -16,12 +17,7 @@ const it = base.extend({
   },
 
   prnRepository: async ({ prnRepositoryFactory }, use) => {
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
+    const mockLogger = createMockLogger()
     const repository = prnRepositoryFactory(mockLogger)
     await use(repository)
   }
@@ -160,12 +156,9 @@ describe('in-memory adapter legacy documents without a version field', () => {
 
   base('reads back as version 1', async () => {
     const { id, prn } = buildVersionlessSeed()
-    const repository = createInMemoryPackagingRecyclingNotesRepository([prn])({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    })
+    const repository = createInMemoryPackagingRecyclingNotesRepository([prn])(
+      createMockLogger()
+    )
 
     const found = await repository.findById(id)
 
@@ -177,12 +170,7 @@ describe('in-memory adapter legacy documents without a version field', () => {
     async () => {
       const { id, prn } = buildVersionlessSeed()
       const repository = createInMemoryPackagingRecyclingNotesRepository([prn])(
-        {
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn()
-        }
+        createMockLogger()
       )
 
       const updated = await repository.updateStatus({
