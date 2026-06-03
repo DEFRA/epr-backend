@@ -7,6 +7,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createWasteBalancesRepository } from '#waste-balances/repository/mongodb.js'
 import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
@@ -40,6 +41,9 @@ vi.mock('#overseas-sites/repository/mongodb.js', () => ({
 vi.mock('#repositories/summary-logs/mongodb.js', () => ({
   createSummaryLogsRepository: vi.fn()
 }))
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn()
+}))
 vi.mock('#waste-balances/repository/mongodb.js', () => ({
   createWasteBalancesRepository: vi.fn()
 }))
@@ -63,6 +67,7 @@ describe('runStreamPromotion', () => {
   let wasteRecordsRepository
   let prnRepository
   let summaryLogsRepository
+  let systemLogsRepository
   let mockFindBalances
   let mockToArray
 
@@ -150,6 +155,13 @@ describe('runStreamPromotion', () => {
       () => summaryLogsRepository
     )
 
+    systemLogsRepository = {
+      findSummaryLogSubmitActors: vi.fn().mockResolvedValue([])
+    }
+    vi.mocked(createSystemLogsRepository).mockResolvedValue(
+      () => systemLogsRepository
+    )
+
     vi.mocked(createOverseasSitesRepository).mockResolvedValue(
       () => /** @type {*} */ ({})
     )
@@ -158,7 +170,8 @@ describe('runStreamPromotion', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
   })
 
@@ -286,7 +299,8 @@ describe('runStreamPromotion', () => {
       events: builtEvents,
       amount: 100,
       availableAmount: 100,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runStreamPromotion(mockServer)

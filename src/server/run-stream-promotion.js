@@ -4,6 +4,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createWasteBalancesRepository } from '#waste-balances/repository/mongodb.js'
 import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
@@ -48,13 +49,12 @@ const findEmbeddedBalances = async (db) => {
           _id: 0,
           accreditationId: 1,
           organisationId: 1,
-          registrationId: 1,
-          transactions: 1
+          registrationId: 1
         }
       }
     )
     .toArray()
-  return /** @type {{ accreditationId: string, organisationId: string, registrationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }[]} */ (
+  return /** @type {{ accreditationId: string, organisationId: string, registrationId: string }[]} */ (
     /** @type {unknown} */ (docs)
   )
 }
@@ -68,10 +68,11 @@ const findEmbeddedBalances = async (db) => {
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
  */
 
 /**
- * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
+ * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
  * @returns {Promise<{ events: Array, registration: { id: string } }>}
  */
@@ -90,7 +91,7 @@ const rebuildEvents = async (row, deps) => {
 }
 
 /**
- * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
+ * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
  */
 export const promoteAccreditation = async (row, deps) => {
@@ -199,6 +200,9 @@ const buildDependencies = async (server) => {
   const summaryLogsRepository = (
     await createSummaryLogsRepository(server.db, /** @type {any} */ ({}))
   )(logger)
+  const systemLogsRepository = (await createSystemLogsRepository(server.db))(
+    logger
+  )
 
   return {
     wasteBalancesRepository,
@@ -207,7 +211,8 @@ const buildDependencies = async (server) => {
     wasteRecordsRepository,
     prnRepository,
     overseasSitesRepository,
-    summaryLogsRepository
+    summaryLogsRepository,
+    systemLogsRepository
   }
 }
 
