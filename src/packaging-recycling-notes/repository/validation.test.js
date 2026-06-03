@@ -87,6 +87,28 @@ describe('validatePrnRead', () => {
     expect(result.schemaVersion).toBe(2)
   })
 
+  it('accepts ledger actors that carry only an id (no name)', () => {
+    const idOnlyActor = { id: 'user-1' }
+    const at = new Date('2025-06-15T12:00:00.000Z')
+    const data = buildReadDocument({
+      createdBy: idOnlyActor,
+      updatedBy: idOnlyActor,
+      status: {
+        currentStatus: 'draft',
+        currentStatusAt: at,
+        created: { at, by: idOnlyActor },
+        history: [{ status: 'draft', at, by: idOnlyActor }]
+      }
+    })
+
+    const result = validatePrnRead(data)
+
+    expect(result.createdBy).toEqual(idOnlyActor)
+    expect(result.updatedBy).toEqual(idOnlyActor)
+    expect(result.status.created.by).toEqual(idOnlyActor)
+    expect(result.status.history[0].by).toEqual(idOnlyActor)
+  })
+
   it('strips MongoDB _id from read documents', () => {
     const objectId = new ObjectId()
     const data = { ...buildReadDocument(), _id: objectId }

@@ -49,12 +49,12 @@ const accreditationSchema = Joi.object({
 
 const userSummarySchema = Joi.object({
   id: Joi.string().required(),
-  name: Joi.string().required()
+  name: Joi.string()
 })
 
 const actorSchema = Joi.object({
   id: Joi.string().required(),
-  name: Joi.string().required(),
+  name: Joi.string(),
   position: Joi.string().optional()
 })
 
