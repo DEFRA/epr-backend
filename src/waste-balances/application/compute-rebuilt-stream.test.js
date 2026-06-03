@@ -570,7 +570,7 @@ describe('computeRebuiltStream', () => {
       ...(submittedBy ? { submittedBy } : {})
     })
 
-    it('attributes PRN events to the actor on the status history entry, reduced to id and name', () => {
+    it('attributes PRN events to the actor on the status history entry, carrying its identity slots', () => {
       const signatory = {
         id: 'sig-7',
         name: 'Sam Signatory',
@@ -617,7 +617,11 @@ describe('computeRebuiltStream', () => {
     })
 
     it('attributes summary-log events to the supplied submitter', () => {
-      const submitter = { id: 'usr-9', name: 'submitter@example.com' }
+      const submitter = {
+        id: 'usr-9',
+        email: 'submitter@example.com',
+        scope: ['standard_user']
+      }
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1111,7 +1115,7 @@ describe('computeRebuiltStream', () => {
         prns: [createdPrn('prn-1', { id: 'rep-1', name: 'Rita Reprocessor' })],
         overseasSites,
         summaryLogs: [
-          submittedLog('sl-1', { id: 'usr-9', name: 'submitter@example.com' })
+          submittedLog('sl-1', { id: 'usr-9', email: 'submitter@example.com' })
         ]
       })
 

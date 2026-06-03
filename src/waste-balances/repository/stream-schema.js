@@ -35,9 +35,17 @@ const PRN_KINDS = new Set([
 export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
 
 /**
+ * Best view of the actor behind an event. `id` is always known; the remaining
+ * slots are present only when the source supplies a real value for them, absent
+ * otherwise. A value is never written to a slot it does not belong in — an email
+ * goes only in `email`, an id only in `id` — so an actor never asserts that a
+ * person's name is their email or their id.
+ *
  * @typedef {Object} StreamUserSummary
  * @property {string} id
- * @property {string} name
+ * @property {string} [name]
+ * @property {string} [email]
+ * @property {string[]} [scope]
  */
 
 /**
@@ -87,7 +95,9 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 const userSummarySchema = Joi.object({
   id: Joi.string().required(),
-  name: Joi.string().required()
+  name: Joi.string(),
+  email: Joi.string(),
+  scope: Joi.array().items(Joi.string())
 })
 
 const balanceSnapshotSchema = Joi.object({

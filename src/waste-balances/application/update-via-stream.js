@@ -58,7 +58,7 @@ export const performUpdateViaStream = async ({
     {
       kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
       payload: { summaryLogId, creditTotal },
-      createdBy: { id: user.id, name: user.email }
+      createdBy: { id: user.id, email: user.email, scope: user.scope }
     }
   )
 

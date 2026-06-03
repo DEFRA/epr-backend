@@ -13,6 +13,28 @@ describe('buildSystemLogSubmitters', () => {
       submitActors: [
         {
           summaryLogId: 'doc-1',
+          createdBy: {
+            id: 'user-1',
+            email: 'alice@example.com',
+            scope: ['standard_user']
+          }
+        }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      id: 'user-1',
+      email: 'alice@example.com',
+      scope: ['standard_user']
+    })
+  })
+
+  it('records an empty role list as no scopes rather than dropping it', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-1',
           createdBy: { id: 'user-1', email: 'alice@example.com', scope: [] }
         }
       ],
@@ -21,7 +43,25 @@ describe('buildSystemLogSubmitters', () => {
 
     expect(submitters.get('file-1')).toEqual({
       id: 'user-1',
-      name: 'alice@example.com'
+      email: 'alice@example.com',
+      scope: []
+    })
+  })
+
+  it('leaves scope absent when the audit never recorded roles', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-1',
+          createdBy: { id: 'user-1', email: 'alice@example.com' }
+        }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      id: 'user-1',
+      email: 'alice@example.com'
     })
   })
 
@@ -96,7 +136,8 @@ describe('buildSystemLogSubmitters', () => {
 
     expect(submitters.get('file-1')).toEqual({
       id: 'user-1',
-      name: 'alice@example.com'
+      email: 'alice@example.com',
+      scope: []
     })
   })
 

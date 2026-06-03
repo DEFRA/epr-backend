@@ -56,7 +56,7 @@ export const buildTransaction = (
     id: randomUUID(),
     type,
     createdAt: new Date().toISOString(),
-    createdBy: { id: user.id, name: user.email },
+    createdBy: { id: user.id, email: user.email, scope: user.scope },
     amount,
     openingAmount,
     closingAmount,

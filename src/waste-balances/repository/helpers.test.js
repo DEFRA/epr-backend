@@ -1123,8 +1123,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CREATED
       )
       expect(transaction.createdBy).toEqual({
-        id: 'user-abc',
-        name: 'user-abc'
+        id: 'user-abc'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1355,8 +1354,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_ISSUED
       )
       expect(transaction.createdBy).toEqual({
-        id: 'user-abc',
-        name: 'user-abc'
+        id: 'user-abc'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1588,8 +1586,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
       )
       expect(transaction.createdBy).toEqual({
-        id: 'user-abc',
-        name: 'user-abc'
+        id: 'user-abc'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()
@@ -1824,8 +1821,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED_POST_ISSUE
       )
       expect(transaction.createdBy).toEqual({
-        id: 'user-abc',
-        name: 'user-abc'
+        id: 'user-abc'
       })
       expect(transaction.id).toBeDefined()
       expect(transaction.createdAt).toBeDefined()

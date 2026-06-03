@@ -55,7 +55,8 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       expect(balance.transactions[0].amount).toBe(10.5)
       expect(balance.transactions[0].createdBy).toEqual({
         id: user.id,
-        name: user.email
+        email: user.email,
+        scope: user.scope
       })
       expect(balance.amount).toBe(10.5)
     })

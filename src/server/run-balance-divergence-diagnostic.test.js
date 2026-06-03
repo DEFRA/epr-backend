@@ -712,7 +712,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
             id: 'file-id-1',
             status: 'submitted',
             submittedAt: '2025-01-01T00:00:00Z',
-            submittedBy: { id: 'user-9', name: 'real@example.com' }
+            submittedBy: { id: 'user-9', email: 'real@example.com', scope: [] }
           }
         ]
       })
@@ -767,7 +767,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
             id: 'file-id-1',
             status: 'submitted',
             submittedAt: '2025-01-01T00:00:00Z',
-            submittedBy: { id: 'sys-user', name: 'sys@example.com' }
+            submittedBy: { id: 'sys-user', email: 'sys@example.com', scope: [] }
           }
         ]
       })

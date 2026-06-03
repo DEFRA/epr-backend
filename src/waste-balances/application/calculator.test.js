@@ -80,7 +80,11 @@ describe('Waste Balance Calculator', () => {
     email: 'user-1@example.test',
     scope: ['standard_user']
   }
-  const expectedCreatedBy = { id: testUser.id, name: testUser.email }
+  const expectedCreatedBy = {
+    id: testUser.id,
+    email: testUser.email,
+    scope: testUser.scope
+  }
 
   const emptyBalance = {
     id: 'bal-1',

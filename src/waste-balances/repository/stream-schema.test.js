@@ -82,6 +82,27 @@ describe('stream event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('accepts an actor carrying only an id', () => {
+    const { error } = validate(buildStreamEvent({ createdBy: { id: 'usr-1' } }))
+    expect(error).toBeUndefined()
+  })
+
+  it('accepts an actor carrying email and scope but no name', () => {
+    const { error } = validate(
+      buildStreamEvent({
+        createdBy: { id: 'usr-1', email: 'a@example.com', scope: ['admin'] }
+      })
+    )
+    expect(error).toBeUndefined()
+  })
+
+  it('rejects an actor with no id', () => {
+    const { error } = validate(
+      buildStreamEvent({ createdBy: { email: 'a@example.com' } })
+    )
+    expect(error).toBeDefined()
+  })
+
   it('rejects unknown kind values', () => {
     const { error } = validate(buildStreamEvent({ kind: 'unknown-kind' }))
     expect(error).toBeDefined()

@@ -109,13 +109,27 @@ const isStructurallyValidPrnTransition = (fromStatus, toStatus) =>
   (PRN_STATUS_TRANSITIONS[fromStatus] ?? []).some((t) => t.status === toStatus)
 
 /**
- * Reduce a PRN status-history actor to the stream's user-summary shape.
+ * Reduce a source actor to the stream's user-summary shape, carrying each piece
+ * of identity in its own slot and dropping any field the summary has no slot for
+ * (a PRN history actor may carry e.g. a `position`). Falls back to the backfill
+ * actor when no real actor was recoverable. A value is never moved into a slot it
+ * does not belong in.
  *
- * @param {{ id: string, name: string } | undefined} actor
+ * @param {{ id: string, name?: string, email?: string, scope?: string[] } | undefined} actor
  * @returns {import('../repository/stream-schema.js').StreamUserSummary}
  */
-const actorOf = (actor) =>
-  actor ? { id: actor.id, name: actor.name } : { ...BACKFILL_ACTOR }
+const actorOf = (actor) => {
+  if (!actor) {
+    return { ...BACKFILL_ACTOR }
+  }
+  const { id, name, email, scope } = actor
+  return {
+    id,
+    ...(name !== undefined && { name }),
+    ...(email !== undefined && { email }),
+    ...(scope !== undefined && { scope })
+  }
+}
 
 /**
  * Sparse count of backfilled-actor events keyed by the stream event kind that

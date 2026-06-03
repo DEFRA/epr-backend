@@ -168,7 +168,7 @@ export function validateTransition(currentStatus, newStatus, actor) {
 /**
  * @typedef {{
  *   id: string;
- *   name: string;
+ *   name?: string;
  *   position?: string;
  * }} Actor
  */

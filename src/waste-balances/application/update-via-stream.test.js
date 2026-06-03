@@ -294,7 +294,11 @@ describe('performUpdateViaStream', () => {
         'reg-1',
         accreditationId
       )
-      expect(latest.createdBy).toEqual({ id: user.id, name: user.email })
+      expect(latest.createdBy).toEqual({
+        id: user.id,
+        email: user.email,
+        scope: user.scope
+      })
     })
   })
 })

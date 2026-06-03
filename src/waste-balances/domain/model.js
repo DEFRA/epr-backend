@@ -33,9 +33,16 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  */
 
 /**
+ * Best view of the actor behind a transaction. `id` is always known; the
+ * remaining slots are present only when the source supplies a real value for
+ * them, absent otherwise. A value is never written to a slot it does not belong
+ * in — an email goes only in `email`, an id only in `id`.
+ *
  * @typedef {Object} UserSummary
  * @property {string} id - User ID
- * @property {string} name - Name
+ * @property {string} [name] - Name
+ * @property {string} [email] - Email
+ * @property {string[]} [scope] - Roles
  */
 
 /**

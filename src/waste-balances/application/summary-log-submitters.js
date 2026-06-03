@@ -3,23 +3,35 @@
  */
 
 /**
- * Reduce a submit-audit actor to the stream's `{ id, name }` summary, or `null`
- * when it carries no usable identity. A human actor's email is its only captured
- * label, so it stands in for the name; an actor with no id, or with neither a
- * name nor an email, has nothing real to attribute and is rejected rather than
- * relabelled with its id — so missing data stays visible downstream (the
- * submission falls back to backfill) instead of being masked by a fabricated
- * name. Shared with the unusable-actor count so both read identity the same way.
+ * Reduce a submit-audit actor to the stream's user summary, carrying each piece
+ * of identity in its own slot — name, email and scope present only when the
+ * source recorded them. A recorded-but-empty scope (`[]`, "this actor has no
+ * roles") is kept and distinguished from an unrecorded one (absent, "we never
+ * captured roles"). An actor with no id, or with neither a name nor an email,
+ * has nothing real to attribute and is rejected (returns `null`) rather than
+ * relabelled — so missing data stays visible downstream (the submission falls
+ * back to backfill) instead of being masked by a fabricated label. A value is
+ * never moved into a slot it does not belong in: an email stays in `email`,
+ * never becomes a `name`. Shared with the unusable-actor count so both read
+ * identity the same way.
  *
  * @param {SubmitAuditActor} [createdBy]
  * @returns {import('../repository/stream-schema.js').StreamUserSummary | null}
  */
 export const toStreamActor = (createdBy) => {
-  const name = createdBy?.name ?? createdBy?.email
-  if (createdBy?.id === undefined || name === undefined) {
+  if (createdBy?.id === undefined) {
     return null
   }
-  return { id: createdBy.id, name }
+  const { id, name, email, scope } = createdBy
+  if (name === undefined && email === undefined) {
+    return null
+  }
+  return {
+    id,
+    ...(name !== undefined && { name }),
+    ...(email !== undefined && { email }),
+    ...(scope !== undefined && { scope })
+  }
 }
 
 /**
@@ -28,8 +40,8 @@ export const toStreamActor = (createdBy) => {
  * keys on the summary-log document id (`context.summaryLogId`); the stream keys
  * on `summaryLog.file.id`, a different namespace, so the summary-log documents
  * bridge document id → file id. Each actor is reduced to the stream's
- * `{ id, name }` summary by `toStreamActor`, which rejects actors with no usable
- * identity so missing data is never masked by a fabricated name.
+ * user summary by `toStreamActor`, which rejects actors with no usable identity
+ * so missing data is never masked by a fabricated label.
  *
  * A document submitted more than once keeps the most recent audit: callers
  * supply `submitActors` newest-first, so the first one seen for a file id wins.

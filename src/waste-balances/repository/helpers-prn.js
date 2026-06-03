@@ -31,7 +31,7 @@ export const buildPrnCreationTransaction = ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: userId },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: currentBalance.amount, // Total unchanged
@@ -83,7 +83,7 @@ const appendPrnStreamEvent = async ({
     {
       kind: streamKind,
       payload: { prnId, amount: tonnage },
-      createdBy: { id: userId, name: userId }
+      createdBy: { id: userId }
     }
   )
 
@@ -237,7 +237,7 @@ export const buildPrnIssuedTransaction = ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: userId },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: toNumber(subtract(currentBalance.amount, tonnage)), // Total deducted
@@ -343,7 +343,7 @@ export const buildPrnCancellationTransaction = ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: userId },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: currentBalance.amount, // Total unchanged
@@ -382,7 +382,7 @@ export const buildIssuedPrnCancellationTransaction = ({
   id: randomUUID(),
   type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
   createdAt: new Date().toISOString(),
-  createdBy: { id: userId, name: userId },
+  createdBy: { id: userId },
   amount: tonnage,
   openingAmount: currentBalance.amount,
   closingAmount: toNumber(add(currentBalance.amount, tonnage)),
