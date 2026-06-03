@@ -13,6 +13,7 @@ import {
   linkItemsToOrganisations,
   linkRegistrationToAccreditations
 } from '#formsubmission/link-form-submissions.js'
+import { createMockFormSubmissionsRepository } from '#test/mock-repositories.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -104,12 +105,12 @@ describe('MigrationOrchestrator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    formsSubmissionRepository = {
+    formsSubmissionRepository = createMockFormSubmissionsRepository({
       findOrganisationById: vi.fn(),
       findRegistrationById: vi.fn(),
       findAccreditationById: vi.fn(),
       findAllFormSubmissionIds: vi.fn()
-    }
+    })
 
     organisationsRepository = {
       insert: vi.fn(),

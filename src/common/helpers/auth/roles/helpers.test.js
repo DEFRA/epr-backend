@@ -10,6 +10,7 @@ import {
   isInitialUser,
   isOrganisationsDiscoveryReq
 } from './helpers.js'
+import { createMockOrganisationsRepository } from '#test/mock-repositories.js'
 
 describe('getOrgDataFromDefraIdToken', () => {
   it('should parse relationships and identify current relationship', () => {
@@ -630,9 +631,9 @@ describe('findOrganisationMatches', () => {
       id: 'org-1',
       linkedDefraOrganisation: { orgId: 'defra-123' }
     }
-    const mockRepository = {
+    const mockRepository = createMockOrganisationsRepository({
       findByLinkedDefraOrgId: vi.fn().mockResolvedValue(mockOrg)
-    }
+    })
 
     const result = await findOrganisationMatches('defra-123', mockRepository)
 
@@ -643,9 +644,9 @@ describe('findOrganisationMatches', () => {
   })
 
   it('should return null when no organisation is linked', async () => {
-    const mockRepository = {
+    const mockRepository = createMockOrganisationsRepository({
       findByLinkedDefraOrgId: vi.fn().mockResolvedValue(null)
-    }
+    })
 
     const result = await findOrganisationMatches('non-existent', mockRepository)
 
