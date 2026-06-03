@@ -9,6 +9,8 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { createSystemLogsRepository as createInMemorySystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import { compareForEmbedded } from '#server/run-balance-divergence-diagnostic.js'
 
 import {
@@ -59,7 +61,8 @@ const rebuildComparison = (env, embeddedBalance) =>
       prnRepository: env.packagingRecyclingNotesRepository,
       wasteRecordsRepository: env.wasteRecordsRepository,
       overseasSitesRepository: env.overseasSitesRepository,
-      summaryLogsRepository: env.summaryLogsRepository
+      summaryLogsRepository: env.summaryLogsRepository,
+      systemLogsRepository: createInMemorySystemLogsRepository()(logger)
     }
   )
 
