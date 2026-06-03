@@ -170,7 +170,8 @@ describe('runStreamPromotion', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
   })
 
@@ -298,7 +299,8 @@ describe('runStreamPromotion', () => {
       events: builtEvents,
       amount: 100,
       availableAmount: 100,
-      backfilledActorCount: 0
+      backfilledActorCount: 0,
+      backfilledActorCountByKind: {}
     })
 
     await runStreamPromotion(mockServer)

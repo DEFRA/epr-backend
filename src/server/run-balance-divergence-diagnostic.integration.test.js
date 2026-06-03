@@ -64,16 +64,18 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  // @ts-expect-error vitest cannot resolve chained fixture types
   summaryLogsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
     const factory = await createSummaryLogsRepository(database, mockS3Config)
     await use(factory(mockLogger))
   },
 
-  // @ts-expect-error vitest cannot resolve chained fixture types
   wasteRecordsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
     const factory = await createWasteRecordsRepository(database)
     await use(factory())
   },

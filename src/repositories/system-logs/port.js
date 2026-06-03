@@ -27,7 +27,7 @@
  *   userId?: string
  *   subCategory?: string
  *   limit: number
- *   cursor?: string
+ *   cursor?: string | null
  *   direction?: 'next' | 'prev'
  * }} FindParams
  */
