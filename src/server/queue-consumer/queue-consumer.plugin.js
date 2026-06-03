@@ -19,7 +19,8 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
- *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository
+ *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository,
+ *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
  * }} QueueConsumerRepositories
  */
 
@@ -31,7 +32,8 @@ export const commandQueueConsumerPlugin = {
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
-    'uploadsRepository'
+    'uploadsRepository',
+    'reportsRepository'
   ],
 
   register: async (
@@ -55,7 +57,8 @@ export const commandQueueConsumerPlugin = {
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      wasteBalancesRepository
+      wasteBalancesRepository,
+      reportsRepository
     } = /** @type {QueueConsumerRepositories} */ (server.app)
 
     const summaryLogExtractor = createSummaryLogExtractor({
@@ -83,6 +86,7 @@ export const commandQueueConsumerPlugin = {
         organisationsRepository,
         wasteRecordsRepository,
         wasteBalancesRepository,
+        reportsRepository,
         summaryLogExtractor
       }
 

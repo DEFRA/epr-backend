@@ -151,6 +151,38 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
   })
 
+  describe('loadsByPeriodStatus in response', () => {
+    const createLoadsByPeriodStatus = () => ({
+      open: {
+        added: { included: { count: 3, tonnes: 15 }, excluded: { count: 1 } },
+        adjusted: { included: { count: 0, tonnes: 0 }, excluded: { count: 0 } }
+      },
+      closed: {
+        added: { included: { count: 2, tonnes: 10 }, excluded: { count: 0 } },
+        adjusted: { included: { count: 1, tonnes: 5 }, excluded: { count: 0 } }
+      }
+    })
+
+    it('includes loadsByPeriodStatus when present', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      const loadsByPeriodStatus = createLoadsByPeriodStatus()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validated({ organisationId, registrationId })
+      )
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        loadsByPeriodStatus
+      })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload.loadsByPeriodStatus).toEqual(loadsByPeriodStatus)
+    })
+  })
+
   describe('meta fields in response', () => {
     it('includes processingType and material when meta exists', async () => {
       const { server, summaryLogsRepository } = await createServer()

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { ObjectId } from 'mongodb'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -15,6 +16,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
 /** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
@@ -119,13 +121,15 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata, data)
 
     const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+    const reportsRepository = createInMemoryReportsRepository()()
 
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
-      summaryLogExtractor: extractor
+      summaryLogExtractor: extractor,
+      reportsRepository
     })
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
@@ -1044,6 +1048,287 @@ describe('SummaryLogsValidator integration', () => {
       expect(erroringSheets).toEqual(
         expect.arrayContaining(['Exported', 'Sent on'])
       )
+    })
+  })
+
+  describe('loadsByPeriodStatus', () => {
+    const organisationId = new ObjectId().toString()
+    const registrationId = new ObjectId().toString()
+    const accreditationId = new ObjectId().toString()
+    const accreditationNumber = 'ACC-PS-001'
+
+    const createTestOrgWithObjectIds = () => {
+      const org = buildOrganisation()
+      org.id = organisationId
+      org.status = ORGANISATION_STATUS.ACTIVE
+
+      org.registrations = [
+        {
+          id: registrationId,
+          registrationNumber: 'REG-PS-001',
+          status: 'approved',
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'input',
+          formSubmission: { id: registrationId, time: new Date() },
+          submittedToRegulator: 'ea',
+          accreditationId,
+          statusHistory: [
+            { status: 'approved', updatedAt: new Date().toISOString() }
+          ]
+        }
+      ]
+
+      org.accreditations = [
+        {
+          id: accreditationId,
+          accreditationNumber,
+          status: 'approved',
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'input',
+          formSubmission: { id: accreditationId, time: new Date() },
+          submittedToRegulator: 'ea',
+          statusHistory: [
+            { status: 'approved', updatedAt: new Date().toISOString() }
+          ]
+        }
+      ]
+
+      return org
+    }
+
+    const metadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-PS-001',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'REPROCESSOR_INPUT',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 5,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      },
+      ACCREDITATION_NUMBER: {
+        value: accreditationNumber,
+        location: { sheet: 'Cover', row: 5, column: 'B' }
+      }
+    }
+
+    /**
+     * Builds a submitted report document for seeding the in-memory store.
+     */
+    const buildSubmittedReport = ({
+      year,
+      cadence,
+      period,
+      startDate,
+      endDate,
+      dueDate
+    }) => {
+      const id = new ObjectId().toString()
+      const now = new Date().toISOString()
+      return {
+        id,
+        version: 1,
+        schemaVersion: 1,
+        submissionNumber: 1,
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period,
+        startDate,
+        endDate,
+        dueDate,
+        status: {
+          currentStatus: 'submitted',
+          currentStatusAt: now,
+          created: {
+            at: now,
+            by: { id: 'user-1', name: 'Test', position: 'Tester' }
+          },
+          submitted: {
+            at: now,
+            by: { id: 'user-1', name: 'Test', position: 'Tester' }
+          },
+          history: [
+            {
+              status: 'submitted',
+              at: now,
+              by: { id: 'user-1', name: 'Test', position: 'Tester' }
+            }
+          ]
+        }
+      }
+    }
+
+    it('classifies loads into open and closed periods for accredited reprocessor', async () => {
+      const testOrg = createTestOrgWithObjectIds()
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+      const summaryLog = summaryLogFactory.validating({
+        organisationId,
+        registrationId
+      })
+      const summaryLogId = randomUUID()
+
+      // Seed a single submitted report for Jan 2026 (period 1) => closed
+      // Period 2 (Feb) has no report => open
+      const reportsMap = new Map()
+      const submittedReport = buildSubmittedReport({
+        year: 2026,
+        cadence: 'monthly',
+        period: 1,
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+        dueDate: '2026-02-20'
+      })
+      reportsMap.set(submittedReport.id, submittedReport)
+
+      const reportsRepository = createInMemoryReportsRepository(reportsMap)()
+
+      const extractor = createInMemorySummaryLogExtractor({
+        [summaryLog.file.id]: {
+          meta: metadata,
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              location: { sheet: 'Received', row: 7, column: 'A' },
+              headers: [
+                'ROW_ID',
+                'DATE_RECEIVED_FOR_REPROCESSING',
+                'EWC_CODE',
+                'DESCRIPTION_WASTE',
+                'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING',
+                'SUPPLIER_NAME',
+                'SUPPLIER_ADDRESS',
+                'SUPPLIER_POSTCODE',
+                'SUPPLIER_EMAIL',
+                'SUPPLIER_PHONE_NUMBER',
+                'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+                'YOUR_REFERENCE',
+                'WEIGHBRIDGE_TICKET',
+                'CARRIER_NAME',
+                'CBD_REG_NUMBER',
+                'CARRIER_VEHICLE_REGISTRATION_NUMBER'
+              ],
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    1000,
+                    new Date('2026-01-15'), // Jan => period 1 (closed)
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                  ]
+                },
+                {
+                  rowNumber: 9,
+                  values: [
+                    1001,
+                    new Date('2026-02-10'), // Feb => period 2 (open)
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      })
+
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        logger,
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor: extractor,
+        reportsRepository
+      })
+
+      await summaryLogsRepository.insert(summaryLogId, summaryLog)
+      await validateSummaryLog(summaryLogId).catch((err) => err)
+
+      const updated = await waitForVersion(
+        summaryLogsRepository,
+        summaryLogId,
+        2
+      )
+
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.loadsByPeriodStatus).toBeDefined()
+
+      const { open, closed } = updated.summaryLog.loadsByPeriodStatus
+
+      // Jan load => closed period, added, excluded (missing required waste balance fields)
+      expect(closed.added.excluded.count).toBe(1)
+
+      // Feb load => open period, added, excluded
+      expect(open.added.excluded.count).toBe(1)
+
+      // No included loads (waste balance fields are null)
+      expect(closed.added.included.count).toBe(0)
+      expect(open.added.included.count).toBe(0)
     })
   })
 })

@@ -57,6 +57,7 @@ export const MIN_TEMPLATE_VERSIONS = {
 /**
  * @typedef {Object} TableSchema
  * @property {string} rowIdField - Field name containing the row identifier
+ * @property {string} reportingDateField - Field name containing the date used for reporting period classification
  * @property {string} wasteRecordType - The waste record type this table maps to (e.g. 'received', 'exported')
  * @property {string} sheetName - The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
  * @property {(rowData: Record<string, any>, rowIndex: number) => {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata

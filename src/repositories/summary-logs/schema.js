@@ -3,6 +3,7 @@ import Joi from 'joi'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   loadsSchema,
+  loadsByPeriodStatusSchema,
   loadsByWasteRecordTypeSchema
 } from '#domain/summary-logs/loads-schema.js'
 
@@ -89,6 +90,7 @@ export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
   validation: validationSchema.optional(),
   loads: loadsSchema.optional(),
+  loadsByPeriodStatus: loadsByPeriodStatusSchema.optional(),
   loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),

@@ -43,6 +43,7 @@ const ALL_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
+  reportingDateField: FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   sheetName: 'Received',
   rowTransformer: createRowTransformer({

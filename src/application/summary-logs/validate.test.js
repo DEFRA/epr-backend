@@ -249,7 +249,10 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      summaryLogExtractor
+      summaryLogExtractor,
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      })
     })
   })
 
@@ -672,7 +675,10 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      summaryLogExtractor
+      summaryLogExtractor,
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      })
     })
 
     const result = await brokenValidate(summaryLogId).catch((err) => err)
