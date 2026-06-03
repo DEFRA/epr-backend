@@ -645,13 +645,17 @@ export const buildTransactionAmounts = (
 ) => {
   const amounts = new Map()
   for (const { record, outcome } of wasteBalanceRecords) {
-    if (outcome !== ROW_OUTCOME.INCLUDED) continue
+    if (outcome !== ROW_OUTCOME.INCLUDED) {
+      continue
+    }
     const schema = findSchemaForProcessingType(processingType, record.type)
     const newAmount = getTransactionAmount(schema, record.data, registration)
-    if (newAmount === 0) continue
+    if (newAmount === 0) {
+      continue
+    }
 
     const key = `${record.type}:${record.rowId}`
-    const lastVersion = record.versions[record.versions.length - 1]
+    const lastVersion = record.versions.at(-1)
     const isAdjusted =
       lastVersion.summaryLog?.id === summaryLogId &&
       lastVersion.status === VERSION_STATUS.UPDATED
@@ -667,6 +671,73 @@ export const buildTransactionAmounts = (
     }
   }
   return amounts
+}
+
+/**
+ * Computes loadsByPeriodStatus for a validated summary log.
+ * Returns null if the summary log is not validated or if the reports lookup fails.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {string} params.summaryLogId
+ * @param {Registration} params.registration
+ * @param {string} params.processingType
+ * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} params.existingRecordsMap
+ * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {string} params.loggingContext
+ * @param {TypedLogger} params.logger
+ * @returns {Promise<import('./period-status.js').LoadsByPeriodStatus | null>}
+ */
+const computeLoadsByPeriodStatus = async ({
+  wasteRecords,
+  wasteBalanceRecords,
+  summaryLogId,
+  registration,
+  processingType,
+  existingRecordsMap,
+  reportsRepository,
+  organisationId,
+  registrationId,
+  loggingContext,
+  logger
+}) => {
+  try {
+    const submittedReports = await reportsRepository.findPeriodicReports({
+      organisationId,
+      registrationId
+    })
+
+    const transactionAmounts = buildTransactionAmounts(
+      wasteBalanceRecords,
+      registration,
+      processingType,
+      summaryLogId,
+      existingRecordsMap
+    )
+
+    return classifyByPeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords,
+      summaryLogId,
+      registration,
+      submittedReports,
+      tableSchemas: PROCESSING_TYPE_TABLES[processingType],
+      transactionAmounts
+    })
+  } catch (err) {
+    logger.warn({
+      message: `Failed to classify loads by period status: ${loggingContext}`,
+      err,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+    return null
+  }
 }
 
 /**
@@ -756,49 +827,27 @@ export const createSummaryLogsValidator = ({
       wasteRecords
     })
 
-    let loadsByPeriodStatus = null
-    if (
+    const canClassifyPeriodStatus =
       status === SUMMARY_LOG_STATUS.VALIDATED &&
       wasteRecords &&
       registration &&
       existingRecordsMap
-    ) {
-      try {
-        const submittedReports = await reportsRepository.findPeriodicReports({
-          organisationId: summaryLog.organisationId,
-          registrationId: summaryLog.registrationId
-        })
 
-        const transactionAmounts = buildTransactionAmounts(
-          wasteBalanceRecords,
-          registration,
-          processingType,
-          summaryLogId,
-          existingRecordsMap
-        )
-
-        const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-        loadsByPeriodStatus = classifyByPeriodStatus({
+    const loadsByPeriodStatus = canClassifyPeriodStatus
+      ? await computeLoadsByPeriodStatus({
           wasteRecords,
           wasteBalanceRecords,
           summaryLogId,
           registration,
-          submittedReports,
-          tableSchemas,
-          transactionAmounts
+          processingType,
+          existingRecordsMap,
+          reportsRepository,
+          organisationId: summaryLog.organisationId,
+          registrationId: summaryLog.registrationId,
+          loggingContext,
+          logger
         })
-      } catch (err) {
-        logger.warn({
-          message: `Failed to classify loads by period status: ${loggingContext}`,
-          err,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-          }
-        })
-      }
-    }
+      : null
 
     await persistValidationResult({
       issues,

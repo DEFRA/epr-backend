@@ -50,12 +50,18 @@ const emptyResult = () => ({
  * @returns {'added' | 'adjusted' | 'unchanged'}
  */
 const determineRecordStatus = (record, summaryLogId) => {
-  const lastVersion = record.versions[record.versions.length - 1]
-  if (lastVersion.summaryLog?.id !== summaryLogId) {
+  const lastVersion = record.versions.at(-1)
+  if (lastVersion?.summaryLog?.id !== summaryLogId) {
     return 'unchanged'
   }
   return lastVersion.status === VERSION_STATUS.CREATED ? 'added' : 'adjusted'
 }
+
+/** Position of the year portion in an ISO date string (YYYY-MM-DD) */
+const YEAR_END = 4
+/** Position of the month portion in an ISO date string */
+const MONTH_START = 5
+const MONTH_END = 7
 
 /**
  * Normalises a date value to an ISO string (YYYY-MM-DD or YYYY-MM).
@@ -71,14 +77,13 @@ const toIsoDate = (dateValue) =>
 
 /**
  * Extracts the month number (1-12) from a date value.
- * Handles Date objects, YYYY-MM-DD and YYYY-MM formats.
  *
  * @param {string | Date} dateValue
  * @returns {number}
  */
 const extractMonth = (dateValue) => {
   const str = toIsoDate(dateValue)
-  return Number(str.slice(5, 7))
+  return Number(str.slice(MONTH_START, MONTH_END))
 }
 
 /**
@@ -87,7 +92,8 @@ const extractMonth = (dateValue) => {
  * @param {string | Date} dateValue
  * @returns {number}
  */
-const extractYear = (dateValue) => Number(toIsoDate(dateValue).slice(0, 4))
+const extractYear = (dateValue) =>
+  Number(toIsoDate(dateValue).slice(0, YEAR_END))
 
 /**
  * Builds a set of closed period keys from submitted reports.
@@ -106,7 +112,9 @@ const buildClosedPeriods = (submittedReports, cadence) => {
   const closed = new Set()
   for (const periodicReport of submittedReports) {
     const slots = periodicReport.reports[cadence]
-    if (!slots) continue
+    if (!slots) {
+      continue
+    }
     for (const [period, slot] of Object.entries(slots)) {
       const hasBeenSubmitted =
         slot.current?.status === REPORT_STATUS.SUBMITTED ||
@@ -131,6 +139,71 @@ const monthToPeriod = (month, cadence) => {
   return Math.ceil(month / monthsPerPeriod)
 }
 
+/** @param {ValidatedWasteRecord['record']} record */
+const recordKey = (record) => `${record.type}:${record.rowId}`
+
+/**
+ * Classifies a single waste record into the appropriate period status bucket.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord} params.wasteRecord
+ * @param {string} params.summaryLogId
+ * @param {Set<string>} params.closedPeriods
+ * @param {Set<string>} params.wasteBalanceRowKeys
+ * @param {string} params.cadence
+ * @param {Object<string, { reportingDateField: string }>} params.tableSchemas
+ * @param {Map<string, number>} params.transactionAmounts
+ * @param {LoadsByPeriodStatus} params.result
+ */
+const classifyRecord = ({
+  wasteRecord,
+  summaryLogId,
+  closedPeriods,
+  wasteBalanceRowKeys,
+  cadence,
+  tableSchemas,
+  transactionAmounts,
+  result
+}) => {
+  const { record, outcome } = wasteRecord
+
+  if (outcome === ROW_OUTCOME.IGNORED) {
+    return
+  }
+
+  const status = determineRecordStatus(record, summaryLogId)
+  if (status === 'unchanged') {
+    return
+  }
+
+  const schema = tableSchemas[wasteRecord.tableName]
+  if (!schema) {
+    return
+  }
+
+  const dateValue = record.data[schema.reportingDateField]
+  if (!dateValue) {
+    return
+  }
+
+  const period = monthToPeriod(extractMonth(dateValue), cadence)
+  const periodKey = `${extractYear(dateValue)}:${period}`
+  const periodStatus = closedPeriods.has(periodKey) ? 'closed' : 'open'
+
+  const key = recordKey(record)
+  const isIncluded =
+    outcome === ROW_OUTCOME.INCLUDED && wasteBalanceRowKeys.has(key)
+
+  const bucket = result[periodStatus][status]
+
+  if (isIncluded) {
+    bucket.included.count += 1
+    bucket.included.tonnes += transactionAmounts.get(key) ?? 0
+  } else {
+    bucket.excluded.count += 1
+  }
+}
+
 /**
  * Classifies waste records by reporting period status (open/closed).
  *
@@ -141,7 +214,7 @@ const monthToPeriod = (month, cadence) => {
  * @param {Registration} params.registration
  * @param {PeriodicReport[]} params.submittedReports
  * @param {Object<string, { reportingDateField: string, wasteRecordType: string }>} params.tableSchemas
- * @param {Map<string, number>} params.transactionAmounts - rowId => tonnage for included waste-balance records
+ * @param {Map<string, number>} params.transactionAmounts - "type:rowId" => waste balance impact
  * @returns {LoadsByPeriodStatus}
  */
 export const classifyByPeriodStatus = ({
@@ -161,48 +234,21 @@ export const classifyByPeriodStatus = ({
 
   const closedPeriods = buildClosedPeriods(submittedReports, cadence)
 
-  /** @param {ValidatedWasteRecord['record']} record */
-  const recordKey = (record) => `${record.type}:${record.rowId}`
-
   const wasteBalanceRowKeys = new Set(
     wasteBalanceRecords.map((wr) => recordKey(wr.record))
   )
 
   for (const wasteRecord of wasteRecords) {
-    const { record, outcome } = wasteRecord
-
-    // Skip IGNORED records (outside accreditation date range)
-    if (outcome === ROW_OUTCOME.IGNORED) continue
-
-    // Skip unchanged records (not displayed on check page)
-    const status = determineRecordStatus(record, summaryLogId)
-    if (status === 'unchanged') continue
-
-    // Look up the table schema to find the reporting date field
-    const schema = tableSchemas[wasteRecord.tableName]
-    if (!schema) continue
-
-    const dateValue = record.data[schema.reportingDateField]
-    if (!dateValue) continue
-
-    const year = extractYear(dateValue)
-    const month = extractMonth(dateValue)
-    const period = monthToPeriod(month, cadence)
-    const periodKey = `${year}:${period}`
-
-    const periodStatus = closedPeriods.has(periodKey) ? 'closed' : 'open'
-    const key = recordKey(record)
-    const isIncluded =
-      outcome === ROW_OUTCOME.INCLUDED && wasteBalanceRowKeys.has(key)
-
-    const bucket = result[periodStatus][status]
-
-    if (isIncluded) {
-      bucket.included.count += 1
-      bucket.included.tonnes += transactionAmounts.get(key) ?? 0
-    } else {
-      bucket.excluded.count += 1
-    }
+    classifyRecord({
+      wasteRecord,
+      summaryLogId,
+      closedPeriods,
+      wasteBalanceRowKeys,
+      cadence,
+      tableSchemas,
+      transactionAmounts,
+      result
+    })
   }
 
   return result
