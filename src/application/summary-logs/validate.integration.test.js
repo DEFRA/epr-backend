@@ -1058,43 +1058,42 @@ describe('SummaryLogsValidator integration', () => {
     const accreditationNumber = 'ACC-PS-001'
 
     const createTestOrgWithObjectIds = () => {
-      const org = buildOrganisation()
-      org.id = organisationId
-      org.status = ORGANISATION_STATUS.ACTIVE
+      const registration = {
+        id: registrationId,
+        registrationNumber: 'REG-PS-001',
+        material: 'paper',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        formSubmission: { id: registrationId, time: new Date() },
+        submittedToRegulator: 'ea',
+        accreditationId
+      }
 
-      org.registrations = [
-        {
-          id: registrationId,
-          registrationNumber: 'REG-PS-001',
-          status: 'approved',
-          material: 'paper',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          formSubmission: { id: registrationId, time: new Date() },
-          submittedToRegulator: 'ea',
-          accreditationId,
-          statusHistory: [
-            { status: 'approved', updatedAt: new Date().toISOString() }
-          ]
-        }
-      ]
+      const accreditation = {
+        id: accreditationId,
+        accreditationNumber,
+        status: 'approved',
+        material: 'paper',
+        wasteProcessingType: 'reprocessor',
+        formSubmission: { id: accreditationId, time: new Date() },
+        submittedToRegulator: 'ea'
+      }
 
-      org.accreditations = [
-        {
-          id: accreditationId,
-          accreditationNumber,
-          status: 'approved',
-          material: 'paper',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          formSubmission: { id: accreditationId, time: new Date() },
-          submittedToRegulator: 'ea',
-          statusHistory: [
-            { status: 'approved', updatedAt: new Date().toISOString() }
-          ]
-        }
-      ]
+      const org = {
+        ...buildOrganisation({
+          registrations: [registration],
+          accreditations: [accreditation]
+        }),
+        id: organisationId,
+        status: ORGANISATION_STATUS.ACTIVE
+      }
 
+      // status is derived from statusHistory; append 'approved' so
+      // isRegistrationAccredited returns true
+      org.accreditations[0].statusHistory.push({
+        status: 'approved',
+        updatedAt: new Date()
+      })
       return org
     }
 

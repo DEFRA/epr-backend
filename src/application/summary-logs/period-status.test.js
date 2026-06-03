@@ -3,9 +3,21 @@ import { classifyByPeriodStatus } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {PeriodicReport} from '#reports/repository/port.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
+
+/** @type {Registration} */
+const accreditedRegistration = /** @type {any} */ ({
+  accreditation: { status: 'approved' }
+})
+
+/** @type {Registration} */
+const registeredOnlyRegistration = /** @type {any} */ ({})
+
 /**
- * @param {object} overrides
- * @returns {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord}
+ * @param {object} [overrides]
+ * @returns {ValidatedWasteRecord}
  */
 const buildWasteRecord = ({
   rowId = '1000',
@@ -16,27 +28,32 @@ const buildWasteRecord = ({
   summaryLogId = 'sl-1',
   tableName = 'RECEIVED_LOADS_FOR_REPROCESSING',
   wasteRecordType = 'received'
-} = {}) => ({
-  record: {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    rowId,
-    type: wasteRecordType,
-    data: { [dateField]: date },
-    versions: [
-      {
-        summaryLog: { id: summaryLogId },
-        status:
-          change === 'CREATED' ? VERSION_STATUS.CREATED : VERSION_STATUS.UPDATED
-      }
-    ]
-  },
-  issues: [],
-  outcome,
-  change,
-  tableName,
-  wasteRecordType
-})
+} = {}) =>
+  /** @type {ValidatedWasteRecord} */ (
+    /** @type {unknown} */ ({
+      record: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId,
+        type: wasteRecordType,
+        data: { [dateField]: date },
+        versions: [
+          {
+            summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
+            status:
+              change === 'CREATED'
+                ? VERSION_STATUS.CREATED
+                : VERSION_STATUS.UPDATED
+          }
+        ]
+      },
+      issues: [],
+      outcome,
+      change,
+      tableName,
+      wasteRecordType
+    })
+  )
 
 const SUMMARY_LOG_ID = 'sl-1'
 
@@ -73,7 +90,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([['received:1000', 10]])
@@ -88,8 +105,11 @@ describe('classifyByPeriodStatus', () => {
       ]
 
       // Period 1 (Jan) for monthly cadence has a previous submission => closed
+      /** @type {PeriodicReport[]} */
       const submittedReports = [
         {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
           year: 2026,
           reports: {
             monthly: {
@@ -98,7 +118,15 @@ describe('classifyByPeriodStatus', () => {
                 endDate: '2026-01-31',
                 dueDate: '2026-02-20',
                 current: null,
-                previousSubmissions: [{ id: 'report-1' }]
+                previousSubmissions: [
+                  {
+                    id: 'report-1',
+                    status: 'submitted',
+                    submissionNumber: 1,
+                    submittedAt: null,
+                    submittedBy: null
+                  }
+                ]
               }
             }
           }
@@ -109,7 +137,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports,
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([['received:1000', 10]])
@@ -124,8 +152,11 @@ describe('classifyByPeriodStatus', () => {
         buildWasteRecord({ date: '2026-01-15', tonnage: 10 })
       ]
 
+      /** @type {PeriodicReport[]} */
       const submittedReports = [
         {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
           year: 2026,
           reports: {
             monthly: {
@@ -133,7 +164,13 @@ describe('classifyByPeriodStatus', () => {
                 startDate: '2026-01-01',
                 endDate: '2026-01-31',
                 dueDate: '2026-02-20',
-                current: { id: 'report-1', status: 'submitted' },
+                current: {
+                  id: 'report-1',
+                  status: 'submitted',
+                  submissionNumber: 1,
+                  submittedAt: null,
+                  submittedBy: null
+                },
                 previousSubmissions: []
               }
             }
@@ -145,7 +182,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports,
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([['received:1000', 10]])
@@ -172,8 +209,11 @@ describe('classifyByPeriodStatus', () => {
       ]
 
       // Q1 (period 1) is closed
+      /** @type {PeriodicReport[]} */
       const submittedReports = [
         {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
           year: 2026,
           reports: {
             quarterly: {
@@ -182,7 +222,15 @@ describe('classifyByPeriodStatus', () => {
                 endDate: '2026-03-31',
                 dueDate: '2026-04-20',
                 current: null,
-                previousSubmissions: [{ id: 'report-q1' }]
+                previousSubmissions: [
+                  {
+                    id: 'report-q1',
+                    status: 'submitted',
+                    submissionNumber: 1,
+                    submittedAt: null,
+                    submittedBy: null
+                  }
+                ]
               }
             }
           }
@@ -193,7 +241,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: {},
+        registration: registeredOnlyRegistration,
         submittedReports,
         tableSchemas,
         transactionAmounts: new Map()
@@ -211,7 +259,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([['received:1000', 5]])
@@ -229,7 +277,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -249,15 +297,19 @@ describe('classifyByPeriodStatus', () => {
         })
       ]
       // The record's last version doesn't match summaryLogId => unchanged
-      wasteRecords[0].record.versions = [
-        { summaryLog: { id: 'other-sl' }, status: VERSION_STATUS.CREATED }
-      ]
+      wasteRecords[0].record.versions =
+        /** @type {ValidatedWasteRecord['record']['versions']} */ ([
+          {
+            summaryLog: { id: 'other-sl', uri: 's3://bucket/old' },
+            status: VERSION_STATUS.CREATED
+          }
+        ])
 
       const result = classifyByPeriodStatus({
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -273,7 +325,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -289,7 +341,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords: [],
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -308,7 +360,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([
@@ -331,7 +383,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([
@@ -350,7 +402,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -362,8 +414,11 @@ describe('classifyByPeriodStatus', () => {
     it('ignores submitted reports for a different cadence', () => {
       const wasteRecords = [buildWasteRecord({ date: '2026-01-15' })]
 
+      /** @type {PeriodicReport[]} */
       const submittedReports = [
         {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
           year: 2026,
           reports: {
             quarterly: {
@@ -371,7 +426,13 @@ describe('classifyByPeriodStatus', () => {
                 startDate: '2026-01-01',
                 endDate: '2026-03-31',
                 dueDate: '2026-04-20',
-                current: { id: 'r-1', status: 'submitted' },
+                current: {
+                  id: 'r-1',
+                  status: 'submitted',
+                  submissionNumber: 1,
+                  submittedAt: null,
+                  submittedBy: null
+                },
                 previousSubmissions: []
               }
             }
@@ -384,7 +445,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports,
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -398,8 +459,11 @@ describe('classifyByPeriodStatus', () => {
     it('treats open periods with in_progress reports as open', () => {
       const wasteRecords = [buildWasteRecord({ date: '2026-01-15' })]
 
+      /** @type {PeriodicReport[]} */
       const submittedReports = [
         {
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
           year: 2026,
           reports: {
             monthly: {
@@ -407,7 +471,13 @@ describe('classifyByPeriodStatus', () => {
                 startDate: '2026-01-01',
                 endDate: '2026-01-31',
                 dueDate: '2026-02-20',
-                current: { id: 'r-1', status: 'in_progress' },
+                current: {
+                  id: 'r-1',
+                  status: 'in_progress',
+                  submissionNumber: 1,
+                  submittedAt: null,
+                  submittedBy: null
+                },
                 previousSubmissions: []
               }
             }
@@ -419,7 +489,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports,
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -436,7 +506,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -452,7 +522,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
@@ -468,7 +538,7 @@ describe('classifyByPeriodStatus', () => {
         wasteRecords,
         wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
-        registration: { accreditation: { status: 'approved' } },
+        registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map()
