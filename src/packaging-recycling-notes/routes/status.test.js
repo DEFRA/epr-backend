@@ -936,10 +936,16 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/packaging-recycling-notes/${prnId}/status`,
-        ...asStandardUser({
-          linkedOrgId: organisationId,
-          name: 'Ada Lovelace'
-        }),
+        auth: {
+          strategy: 'access-token',
+          credentials: {
+            scope: ['standard_user'],
+            id: 'test-user-id',
+            name: 'Ada Lovelace',
+            email: 'ada@example.com',
+            linkedOrgId: organisationId
+          }
+        },
         payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
       })
 
@@ -955,7 +961,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         createdBy: {
           id: 'test-user-id',
           name: 'Ada Lovelace',
-          email: 'test@example.com'
+          email: 'ada@example.com'
         }
       })
     })

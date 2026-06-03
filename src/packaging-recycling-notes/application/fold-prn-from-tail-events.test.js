@@ -104,8 +104,15 @@ describe('foldPrnFromTailEvents', () => {
 
       const expectedActor = { id: 'user-1', name: 'Test User' }
       expect(result.updatedBy).toEqual(expectedActor)
-      expect(result.status.created.by).toEqual(expectedActor)
-      expect(result.status.history.at(-1).by).toEqual(expectedActor)
+      expect(result.status.created).toEqual({
+        at: event.createdAt,
+        by: expectedActor
+      })
+      expect(result.status.history.at(-1)).toEqual({
+        status: PRN_STATUS.AWAITING_AUTHORISATION,
+        at: event.createdAt,
+        by: expectedActor
+      })
     })
 
     it('prn-issued sets currentStatus awaiting_acceptance and issued slot', () => {
