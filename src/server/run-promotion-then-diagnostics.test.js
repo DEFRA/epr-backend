@@ -32,8 +32,9 @@ describe('runPromotionThenDiagnostics', () => {
   })
 
   it('should not start diagnostics until promotion completes', async () => {
-    let resolvePromotion
-    runStreamPromotion.mockReturnValue(
+    /** @type {Function} */
+    let resolvePromotion = () => {}
+    vi.mocked(runStreamPromotion).mockReturnValue(
       new Promise((resolve) => {
         resolvePromotion = resolve
       })
@@ -62,7 +63,9 @@ describe('runPromotionThenDiagnostics', () => {
   })
 
   it('should still run diagnostics if promotion rejects', async () => {
-    runStreamPromotion.mockRejectedValue(new Error('promotion failed'))
+    vi.mocked(runStreamPromotion).mockRejectedValue(
+      new Error('promotion failed')
+    )
 
     await runPromotionThenDiagnostics(server)
 
