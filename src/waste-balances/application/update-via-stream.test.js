@@ -52,6 +52,7 @@ const accreditation = {
 const overseasSites = /** @type {*} */ (new Map())
 const user = {
   id: 'user-1',
+  name: 'Test User',
   email: 'user@example.test',
   scope: ['standard_user']
 }
@@ -279,7 +280,7 @@ describe('performUpdateViaStream', () => {
   })
 
   describe('actor attribution', () => {
-    it('stamps createdBy from the SubmitUser', async () => {
+    it('stamps createdBy with the submitter id, name and email', async () => {
       await performUpdateViaStream({
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
@@ -294,7 +295,32 @@ describe('performUpdateViaStream', () => {
         'reg-1',
         accreditationId
       )
-      expect(latest.createdBy).toEqual({ id: user.id, name: user.email })
+      expect(latest.createdBy).toEqual({
+        id: user.id,
+        name: user.name,
+        email: user.email
+      })
+    })
+
+    it('omits name when the submitter has none, keeping the email distinct', async () => {
+      await performUpdateViaStream({
+        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
+        accreditation,
+        streamRepository,
+        dependencies: { systemLogsRepository },
+        user: { id: 'user-2', email: 'noname@example.test', scope: [] },
+        overseasSites,
+        summaryLogId: 'log-A'
+      })
+
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+      expect(latest.createdBy).toEqual({
+        id: 'user-2',
+        email: 'noname@example.test'
+      })
     })
   })
 })

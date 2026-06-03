@@ -166,9 +166,13 @@ export function validateTransition(currentStatus, newStatus, actor) {
  */
 
 /**
+ * Records who performed a PRN operation. `id` is the proof of the actor;
+ * `name` and `position` are best-view enrichment, present only when the source
+ * carries them.
+ *
  * @typedef {{
  *   id: string;
- *   name: string;
+ *   name?: string;
  *   position?: string;
  * }} Actor
  */

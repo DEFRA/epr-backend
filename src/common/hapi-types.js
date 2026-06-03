@@ -38,6 +38,15 @@
  */
 
 /**
+ * The slice of a request a command executor consumes: the authenticated
+ * credentials. A full HapiRequest satisfies this, so route handlers pass their
+ * request unchanged while callers that only need to project credentials are
+ * spared constructing an entire request.
+ *
+ * @typedef {{ auth: { credentials: MachineCredentials | HumanCredentials } }} AuthenticatedRequest
+ */
+
+/**
  * Omit the base `logger` so our TypedLogger overrides hapi-pino's augmented
  * pino.Logger instead of intersecting with it. Without the Omit, calls like
  * `request.logger.warn({ ...non-allowlisted fields })` resolve to pino's
