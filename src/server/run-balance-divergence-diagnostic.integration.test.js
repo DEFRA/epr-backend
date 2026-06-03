@@ -3,17 +3,24 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
+import { buildSystemLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
 
 import { toStreamSummaryLog } from './run-balance-divergence-diagnostic.js'
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn()
+}))
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: vi.fn()
 }))
 
 vi.mock(
@@ -54,18 +61,28 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  // @ts-expect-error vitest cannot resolve chained fixture types
   summaryLogsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
     const factory = await createSummaryLogsRepository(database, mockS3Config)
     await use(factory(mockLogger))
   },
 
-  // @ts-expect-error vitest cannot resolve chained fixture types
   wasteRecordsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db(DATABASE_NAME)
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
     const factory = await createWasteRecordsRepository(database)
     await use(factory())
+  },
+
+  systemLogsRepository: async ({ mongoClient }, use) => {
+    const database = /** @type {import('mongodb').MongoClient} */ (
+      mongoClient
+    ).db(DATABASE_NAME)
+    const factory = await createSystemLogsRepository(database)
+    await use(factory(mockLogger))
   }
 })
 
@@ -169,5 +186,137 @@ describe('balance divergence diagnostic (integration)', () => {
     // creditTotal is 0 — the exact bug we observed in production
     expect(result.amount).toBe(202.47)
     expect(result.events).toHaveLength(1)
+  })
+
+  it('attributes the submission to the submitter recorded by the real submit audit, bridging document id to file id', async ({
+    summaryLogsRepository,
+    wasteRecordsRepository,
+    systemLogsRepository
+  }) => {
+    const slRepo =
+      /** @type {import('#repositories/summary-logs/port.js').SummaryLogsRepository} */ (
+        summaryLogsRepository
+      )
+    const wrRepo =
+      /** @type {import('#repositories/waste-records/port.js').WasteRecordsRepository} */ (
+        wasteRecordsRepository
+      )
+    const sysRepo =
+      /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
+        systemLogsRepository
+      )
+
+    const organisationId = new ObjectId().toString()
+    const registrationId = new ObjectId().toString()
+    const docId = new ObjectId().toString()
+
+    // 1. Submit a summary log: insert the document, then record the submit
+    //    audit through the real auditing path. The audit stamps
+    //    context.summaryLogId with the DOCUMENT id, not the file id.
+    await slRepo.insert(
+      docId,
+      summaryLogFactory.submitted({
+        organisationId,
+        registrationId,
+        submittedAt: '2025-01-15T10:00:00.000Z'
+      })
+    )
+
+    const summaryLogDocs = await slRepo.findAllByOrgReg(
+      organisationId,
+      registrationId
+    )
+    const fileId = summaryLogDocs[0].summaryLog.file.id
+    expect(summaryLogDocs[0].id).toBe(docId)
+    expect(docId).not.toBe(fileId)
+
+    const submitter = {
+      id: 'user-1',
+      email: 'alice@example.com',
+      scope: ['standardUser']
+    }
+    await auditSummaryLogSubmit(
+      /** @type {any} */ ({
+        auth: { credentials: submitter },
+        systemLogsRepository: sysRepo
+      }),
+      { summaryLogId: docId, organisationId, registrationId }
+    )
+
+    // 2. Seed waste records through the real write path — versions[].summaryLog.id
+    //    is set to the file id, the other half of the namespace the bridge spans.
+    /** @type {any} */
+    const parsedData = {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['ROW_ID', 'GROSS_WEIGHT'],
+          rows: [{ rowNumber: 2, values: ['row-1', 202.47] }]
+        }
+      }
+    }
+
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
+      extractor: createInMemorySummaryLogExtractor({ [fileId]: parsedData }),
+      wasteRecordRepository: wrRepo,
+      organisationsRepository: { findRegistrationById: async () => null },
+      overseasSitesRepository: { findByIds: async () => [] }
+    })
+
+    await sync(
+      {
+        file: { id: fileId, uri: 's3://bucket/key' },
+        organisationId,
+        registrationId
+      },
+      { id: 'test-user', email: 'test@example.com', scope: [] }
+    )
+
+    const wasteRecords = await wrRepo.findByRegistration(
+      organisationId,
+      registrationId
+    )
+
+    // 3. Read the submit audit back and bridge document id -> file id. The audit
+    //    keys on docId; the bridge resolves it to the version's file id.
+    const submitActors = await sysRepo.findSummaryLogSubmitActors([docId])
+    expect(submitActors).toEqual([
+      { summaryLogId: docId, createdBy: submitter }
+    ])
+
+    const submitters = buildSystemLogSubmitters({
+      submitActors,
+      summaryLogDocs
+    })
+    expect(submitters.get(fileId)).toEqual({
+      id: 'user-1',
+      name: 'alice@example.com'
+    })
+
+    // 4. Migrate: replay the stream with the recovered submitter attached and
+    //    confirm the event is credited to the real submitter, not the backfill
+    //    actor.
+    const summaryLogs = summaryLogDocs.map(toStreamSummaryLog).map((sl) => {
+      const recovered = submitters.get(sl.id)
+      return recovered ? { ...sl, submittedBy: recovered } : sl
+    })
+
+    const result = computeRebuiltStream({
+      accreditation: { id: 'acc-1' },
+      registrationId,
+      organisationId,
+      wasteRecords,
+      prns: [],
+      overseasSites: {},
+      summaryLogs
+    })
+
+    expect(result.amount).toBe(202.47)
+    expect(result.backfilledActorCount).toBe(0)
+    expect(result.events[0].createdBy).toEqual({
+      id: 'user-1',
+      name: 'alice@example.com'
+    })
   })
 })

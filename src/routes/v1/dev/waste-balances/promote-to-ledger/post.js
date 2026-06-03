@@ -16,6 +16,7 @@ import { promoteAccreditation } from '#server/run-stream-promotion.js'
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository
  *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository
+ *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
  *   params: { organisationId: string, accreditationId: string }
  * }} PromoteToLedgerRequest
  */
@@ -70,7 +71,8 @@ async function handler(request, h) {
       prnRepository: request.packagingRecyclingNotesRepository,
       wasteRecordsRepository: request.wasteRecordsRepository,
       overseasSitesRepository: request.overseasSitesRepository,
-      summaryLogsRepository: request.summaryLogsRepository
+      summaryLogsRepository: request.summaryLogsRepository,
+      systemLogsRepository: request.systemLogsRepository
     }
   )
 

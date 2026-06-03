@@ -1,11 +1,17 @@
 /**
+ * The actor on a system log. A human session carries an email and scope; a
+ * machine credential carries a name instead. Both always carry an id.
+ *
+ * @typedef {(
+ *   | { id: string, email: string, scope: string[] }
+ *   | { id: string, name: string }
+ * )} SystemLogActor
+ */
+
+/**
  * @typedef {{
  *   createdAt: Date
- *   createdBy: {
- *     id: string
- *     email: string
- *     scope: string[]
- *   }
+ *   createdBy: SystemLogActor
  *   event: {
  *     category: string
  *     subCategory: string
@@ -21,7 +27,7 @@
  *   userId?: string
  *   subCategory?: string
  *   limit: number
- *   cursor?: string
+ *   cursor?: string | null
  *   direction?: 'next' | 'prev'
  * }} FindParams
  */
@@ -38,8 +44,16 @@
 
 /**
  * @typedef {{
+ *   summaryLogId: string
+ *   createdBy: SystemLog['createdBy']
+ * }} SummaryLogSubmitActor
+ */
+
+/**
+ * @typedef {{
  *   insert: (systemLog: SystemLog) => Promise<void>
  *   find: (params: FindParams) => Promise<PaginatedSystemLogs>
+ *   findSummaryLogSubmitActors: (summaryLogIds: string[]) => Promise<SummaryLogSubmitActor[]>
  * }} SystemLogsRepository
  */
 

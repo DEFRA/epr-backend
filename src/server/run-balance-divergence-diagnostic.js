@@ -3,6 +3,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
@@ -27,6 +28,7 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
  */
 
 /**
@@ -92,26 +94,30 @@ export const compareForEmbedded = async (embedded, deps) => {
     summaryLogs: sources.summaryLogs
   })
 
-  return buildComparison(
+  return buildComparison({
     embedded,
     registration,
     accreditation,
     rebuilt,
     stream,
     wasteRecords,
-    prns
-  )
+    prns,
+    submitterProvenance: sources.submitterProvenance,
+    unusableSubmitAudit: sources.unusableSubmitAudit
+  })
 }
 
-const buildComparison = (
+const buildComparison = ({
   embedded,
   registration,
   accreditation,
   rebuilt,
   stream,
   wasteRecords,
-  prns
-) => ({
+  prns,
+  submitterProvenance,
+  unusableSubmitAudit
+}) => ({
   organisationId: embedded.organisationId,
   registrationNumber: registration.registrationNumber,
   accreditationNumber: accreditation.accreditationNumber ?? '<none>',
@@ -140,7 +146,9 @@ const buildComparison = (
   ),
   streamEventCount: stream.events.length,
   backfilledActorCount: stream.backfilledActorCount,
-  backfilledActorCountByKind: stream.backfilledActorCountByKind
+  backfilledActorCountByKind: stream.backfilledActorCountByKind,
+  submitterProvenance,
+  unusableSubmitAudit
 })
 
 const isDivergent = (comparison) =>
@@ -189,6 +197,9 @@ const formatBackfillByKind = (byKind) =>
     .map((kind) => `${kind}:${byKind[kind]}`)
     .join(',')
 
+const formatProvenance = (provenance) =>
+  `systemLog:${provenance.systemLog},backfill:${provenance.backfill}`
+
 const formatBackfillLine = (comparison) =>
   [
     'Waste-balance rebuild used backfill actor:',
@@ -197,8 +208,26 @@ const formatBackfillLine = (comparison) =>
     `accreditationNumber=${comparison.accreditationNumber}`,
     `backfilledActorCount=${comparison.backfilledActorCount}`,
     `backfilledActorCountByKind=${formatBackfillByKind(comparison.backfilledActorCountByKind)}`,
+    `submitterProvenance=${formatProvenance(comparison.submitterProvenance)}`,
     `streamEventCount=${comparison.streamEventCount}`
   ].join(' ')
+
+const formatUnusableSubmitAuditLine = (comparison) =>
+  [
+    'Waste-balance submit audit carries an unusable actor:',
+    `organisationId=${comparison.organisationId}`,
+    `registrationNumber=${comparison.registrationNumber}`,
+    `accreditationNumber=${comparison.accreditationNumber}`,
+    `unusableSubmitAudit=${comparison.unusableSubmitAudit}`
+  ].join(' ')
+
+const submittedSummaryLogCount = (provenance) =>
+  provenance.systemLog + provenance.backfill
+
+const accumulateProvenance = (totals, provenance) => {
+  totals.systemLog += provenance.systemLog
+  totals.backfill += provenance.backfill
+}
 
 /**
  * @param {import('mongodb').Db} db
@@ -214,11 +243,18 @@ const runDiagnostic = async (db, deps) => {
   let scanned = 0
   let changed = 0
   let failed = 0
+  const provenanceTotals = { systemLog: 0, backfill: 0 }
+  let unusableSubmitAuditTotal = 0
 
   for (const row of embedded) {
     scanned += 1
     try {
       const comparison = await compareForEmbedded(row, deps)
+      accumulateProvenance(provenanceTotals, comparison.submitterProvenance)
+      unusableSubmitAuditTotal += comparison.unusableSubmitAudit
+      if (comparison.unusableSubmitAudit > 0) {
+        logger.warn({ message: formatUnusableSubmitAuditLine(comparison) })
+      }
       if (comparison.backfilledActorCount > 0) {
         logger.warn({ message: formatBackfillLine(comparison) })
       }
@@ -233,7 +269,7 @@ const runDiagnostic = async (db, deps) => {
   }
 
   logger.info({
-    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed}`
+    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} submittedSummaryLogs=${submittedSummaryLogCount(provenanceTotals)} submitterProvenance=${formatProvenance(provenanceTotals)} unusableSubmitAudit=${unusableSubmitAuditTotal}`
   })
 }
 
@@ -259,13 +295,17 @@ const buildDependencies = async (server) => {
   const summaryLogsRepository = (
     await createSummaryLogsRepository(server.db, /** @type {any} */ ({}))
   )(logger)
+  const systemLogsRepository = (await createSystemLogsRepository(server.db))(
+    logger
+  )
 
   return /** @type {DiagnosticDependencies} */ ({
     organisationsRepository,
     wasteRecordsRepository,
     prnRepository,
     overseasSitesRepository,
-    summaryLogsRepository
+    summaryLogsRepository,
+    systemLogsRepository
   })
 }
 
