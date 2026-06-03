@@ -140,8 +140,10 @@ const RPD_INITIATED_PRN_KINDS = new Set([
  * Reduce a PRN history actor for the transition it performed. An RPD-initiated
  * accept or reject is the external system acting, identified by its id alone:
  * any name the source recorded is a system label, not a person, so it is
- * dropped rather than attributed. Every other transition keeps the recoverable
- * human actor.
+ * dropped rather than attributed. An RPD-initiated transition whose history
+ * entry names no actor has no id to keep, so it falls through to the backfill
+ * actor like any other unattributed event. Every other transition keeps the
+ * recoverable human actor.
  *
  * @param {import('../repository/stream-schema.js').StreamEventKind} kind
  * @param {{ id: string, name?: string } | undefined} actor
