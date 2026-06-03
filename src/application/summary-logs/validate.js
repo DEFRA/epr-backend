@@ -97,7 +97,8 @@ const extractSummaryLog = async ({
  * }} params
  * @returns {Promise<{
  *   wasteRecords: ValidatedWasteRecord[],
- *   issues: ValidationIssuesCollector
+ *   issues: ValidationIssuesCollector,
+ *   existingRecordsMap: Map<string, import('#domain/waste-records/model.js').WasteRecord>
  * }>}
  */
 const transformAndValidateData = async ({
@@ -759,7 +760,8 @@ export const createSummaryLogsValidator = ({
     if (
       status === SUMMARY_LOG_STATUS.VALIDATED &&
       wasteRecords &&
-      registration
+      registration &&
+      existingRecordsMap
     ) {
       try {
         const submittedReports = await reportsRepository.findPeriodicReports({
