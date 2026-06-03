@@ -11,7 +11,8 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
-  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE,
+  WASTE_BALANCE_CANONICAL_SOURCE
 } from '../domain/model.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
@@ -94,7 +95,8 @@ describe('Waste Balance Calculator', () => {
     version: 1,
     amount: 0,
     availableAmount: 0,
-    transactions: []
+    transactions: [],
+    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
   }
 
   it('AC01a: Should create transactions for valid PRN records (Export Tonnage)', () => {
