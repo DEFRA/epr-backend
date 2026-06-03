@@ -68,11 +68,12 @@ const performFind =
   }
 
 const performFindSummaryLogSubmitActors =
-  (storage) => async (organisationId) => {
+  (storage) => async (summaryLogIds) => {
+    const idSet = new Set(summaryLogIds)
     return storage
       .filter(
         (item) =>
-          item.context?.organisationId === organisationId &&
+          idSet.has(item.context?.summaryLogId) &&
           item.event?.subCategory === SUMMARY_LOG_SUB_CATEGORY &&
           item.event?.action === SUMMARY_LOG_SUBMIT_ACTION
       )

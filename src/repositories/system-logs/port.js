@@ -53,7 +53,7 @@
  * @typedef {{
  *   insert: (systemLog: SystemLog) => Promise<void>
  *   find: (params: FindParams) => Promise<PaginatedSystemLogs>
- *   findSummaryLogSubmitActors: (organisationId: string) => Promise<SummaryLogSubmitActor[]>
+ *   findSummaryLogSubmitActors: (summaryLogIds: string[]) => Promise<SummaryLogSubmitActor[]>
  * }} SystemLogsRepository
  */
 

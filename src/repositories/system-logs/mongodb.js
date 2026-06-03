@@ -85,12 +85,16 @@ const performFind =
     }
   }
 
-const performFindSummaryLogSubmitActors = (db) => async (organisationId) => {
+const performFindSummaryLogSubmitActors = (db) => async (summaryLogIds) => {
+  if (summaryLogIds.length === 0) {
+    return []
+  }
+
   const docs = await db
     .collection(SYSTEM_LOGS_COLLECTION_NAME)
     .find(
       {
-        'context.organisationId': organisationId,
+        'context.summaryLogId': { $in: summaryLogIds },
         'event.subCategory': SUMMARY_LOG_SUB_CATEGORY,
         'event.action': SUMMARY_LOG_SUBMIT_ACTION
       },

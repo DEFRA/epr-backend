@@ -19,7 +19,6 @@ const LOCK_NAME = 'balance-divergence-diagnostic'
  * @property {string} organisationId
  * @property {number} amount
  * @property {number} availableAmount
- * @property {Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction>} [transactions]
  */
 
 /**
@@ -49,8 +48,7 @@ const findEmbeddedWasteBalances = async (db) => {
           accreditationId: 1,
           organisationId: 1,
           amount: 1,
-          availableAmount: 1,
-          transactions: 1
+          availableAmount: 1
         }
       }
     )
@@ -105,7 +103,6 @@ export const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     submitterProvenance: sources.submitterProvenance,
-    submitterAgreement: sources.submitterAgreement,
     unusableSubmitAudit: sources.unusableSubmitAudit
   })
 }
@@ -119,7 +116,6 @@ const buildComparison = ({
   wasteRecords,
   prns,
   submitterProvenance,
-  submitterAgreement,
   unusableSubmitAudit
 }) => ({
   organisationId: embedded.organisationId,
@@ -152,7 +148,6 @@ const buildComparison = ({
   backfilledActorCount: stream.backfilledActorCount,
   backfilledActorCountByKind: stream.backfilledActorCountByKind,
   submitterProvenance,
-  submitterAgreement,
   unusableSubmitAudit
 })
 
@@ -203,7 +198,7 @@ const formatBackfillByKind = (byKind) =>
     .join(',')
 
 const formatProvenance = (provenance) =>
-  `systemLog:${provenance.systemLog},transaction:${provenance.transaction},backfill:${provenance.backfill}`
+  `systemLog:${provenance.systemLog},backfill:${provenance.backfill}`
 
 const formatBackfillLine = (comparison) =>
   [
@@ -217,16 +212,6 @@ const formatBackfillLine = (comparison) =>
     `streamEventCount=${comparison.streamEventCount}`
   ].join(' ')
 
-const formatAgreementMismatchLine = (comparison) =>
-  [
-    'Waste-balance submitter source disagreement:',
-    `organisationId=${comparison.organisationId}`,
-    `registrationNumber=${comparison.registrationNumber}`,
-    `accreditationNumber=${comparison.accreditationNumber}`,
-    `submitterAgreementCompared=${comparison.submitterAgreement.comparedCount}`,
-    `submitterAgreementMismatched=${comparison.submitterAgreement.mismatchedCount}`
-  ].join(' ')
-
 const formatUnusableSubmitAuditLine = (comparison) =>
   [
     'Waste-balance submit audit carries an unusable actor:',
@@ -237,11 +222,10 @@ const formatUnusableSubmitAuditLine = (comparison) =>
   ].join(' ')
 
 const submittedSummaryLogCount = (provenance) =>
-  provenance.systemLog + provenance.transaction + provenance.backfill
+  provenance.systemLog + provenance.backfill
 
 const accumulateProvenance = (totals, provenance) => {
   totals.systemLog += provenance.systemLog
-  totals.transaction += provenance.transaction
   totals.backfill += provenance.backfill
 }
 
@@ -259,8 +243,7 @@ const runDiagnostic = async (db, deps) => {
   let scanned = 0
   let changed = 0
   let failed = 0
-  const provenanceTotals = { systemLog: 0, transaction: 0, backfill: 0 }
-  const agreementTotals = { comparedCount: 0, mismatchedCount: 0 }
+  const provenanceTotals = { systemLog: 0, backfill: 0 }
   let unusableSubmitAuditTotal = 0
 
   for (const row of embedded) {
@@ -268,14 +251,7 @@ const runDiagnostic = async (db, deps) => {
     try {
       const comparison = await compareForEmbedded(row, deps)
       accumulateProvenance(provenanceTotals, comparison.submitterProvenance)
-      agreementTotals.comparedCount +=
-        comparison.submitterAgreement.comparedCount
-      agreementTotals.mismatchedCount +=
-        comparison.submitterAgreement.mismatchedCount
       unusableSubmitAuditTotal += comparison.unusableSubmitAudit
-      if (comparison.submitterAgreement.mismatchedCount > 0) {
-        logger.warn({ message: formatAgreementMismatchLine(comparison) })
-      }
       if (comparison.unusableSubmitAudit > 0) {
         logger.warn({ message: formatUnusableSubmitAuditLine(comparison) })
       }
@@ -293,7 +269,7 @@ const runDiagnostic = async (db, deps) => {
   }
 
   logger.info({
-    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} submittedSummaryLogs=${submittedSummaryLogCount(provenanceTotals)} submitterProvenance=${formatProvenance(provenanceTotals)} submitterAgreement=compared:${agreementTotals.comparedCount},mismatched:${agreementTotals.mismatchedCount} unusableSubmitAudit=${unusableSubmitAuditTotal}`
+    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} submittedSummaryLogs=${submittedSummaryLogCount(provenanceTotals)} submitterProvenance=${formatProvenance(provenanceTotals)} unusableSubmitAudit=${unusableSubmitAuditTotal}`
   })
 }
 

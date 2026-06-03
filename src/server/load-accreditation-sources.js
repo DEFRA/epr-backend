@@ -2,9 +2,7 @@ import { resolveOverseasSites } from '#application/waste-records/resolve-oversea
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
-  buildSummaryLogSubmitters,
   buildSystemLogSubmitters,
-  resolveSummaryLogSubmitters,
   toStreamActor
 } from '#waste-balances/application/summary-log-submitters.js'
 
@@ -40,40 +38,23 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
  */
 
 /**
- * @typedef {{ systemLog: number, transaction: number, backfill: number }} SubmitterProvenance
+ * @typedef {{ systemLog: number, backfill: number }} SubmitterProvenance
  */
 
 /**
- * Recover each submitted summary log's real submitter, preferring the submit
- * system-log audit over the embedded transaction actor and falling back to the
- * backfill actor. Counts the source that supplied each submitter
- * (`submitterProvenance`), cross-checks the two recoverable sources where they
- * overlap (`submitterAgreement`), and counts submit-audit rows that carry no
- * usable actor (`unusableSubmitAudit`) so dirty audit data surfaces as its own
- * number rather than hiding inside the backfill count.
+ * Recover each submitted summary log's real submitter from the submit system-log
+ * audit, falling back to the backfill actor when the audit names no usable
+ * submitter. Counts how many submitters were recovered from the audit versus
+ * left to backfill (`submitterProvenance`) and counts submit-audit rows that
+ * carry no usable actor (`unusableSubmitAudit`) so dirty audit data surfaces as
+ * its own number rather than hiding inside the backfill count.
  *
  * @param {Object} params
  * @param {Array<{ summaryLogId: string, createdBy?: import('#waste-balances/application/summary-log-submitters.js').SubmitAuditActor }>} params.submitActors
  * @param {Array<{ id: string, summaryLog: { file: { id: string }, status: string, submittedAt?: string } }>} params.summaryLogDocs
- * @param {Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction>} [params.transactions]
- * @param {Array<{ versions: Array<{ id: string, summaryLog: { id: string } }> }>} params.wasteRecords
  */
-const recoverSubmitters = ({
-  submitActors,
-  summaryLogDocs,
-  transactions,
-  wasteRecords
-}) => {
-  const { submitters, agreement } = resolveSummaryLogSubmitters({
-    systemLogSubmitters: buildSystemLogSubmitters({
-      submitActors,
-      summaryLogDocs
-    }),
-    transactionSubmitters: buildSummaryLogSubmitters({
-      transactions,
-      wasteRecords
-    })
-  })
+const recoverSubmitters = ({ submitActors, summaryLogDocs }) => {
+  const submitters = buildSystemLogSubmitters({ submitActors, summaryLogDocs })
 
   const submittedDocs = summaryLogDocs.filter(
     ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
@@ -86,23 +67,22 @@ const recoverSubmitters = ({
   ).length
 
   /** @type {SubmitterProvenance} */
-  const submitterProvenance = { systemLog: 0, transaction: 0, backfill: 0 }
+  const submitterProvenance = { systemLog: 0, backfill: 0 }
   const summaryLogs = submittedDocs
     .map(toStreamSummaryLog)
     .map((summaryLog) => {
-      const resolved = submitters.get(summaryLog.id)
-      if (!resolved) {
+      const submitter = submitters.get(summaryLog.id)
+      if (!submitter) {
         submitterProvenance.backfill += 1
         return summaryLog
       }
-      submitterProvenance[resolved.source] += 1
-      return { ...summaryLog, submittedBy: resolved.submitter }
+      submitterProvenance.systemLog += 1
+      return { ...summaryLog, submittedBy: submitter }
     })
 
   return {
     summaryLogs,
     submitterProvenance,
-    submitterAgreement: agreement,
     unusableSubmitAudit
   }
 }
@@ -112,16 +92,14 @@ const recoverSubmitters = ({
  * then fetch all authoritative sources needed to rebuild the event stream
  * or recompute totals. Each historical summary log's real submitting actor is
  * recovered from the dedicated submit system-log audit, falling back to the
- * embedded waste-balance transaction actor and then the backfill actor, so the
- * rebuilt stream attributes submissions to the person who made them. The source
- * that supplied each submitter is counted (`submitterProvenance`) and the two
- * recoverable sources are cross-checked where they overlap
- * (`submitterAgreement`) so coverage and source agreement are measurable before
- * cutover. Submit-audit rows for these submissions that carry no usable actor are
- * counted too (`unusableSubmitAudit`) so dirty audit data surfaces as its own
- * number rather than hiding inside the backfill count.
+ * backfill actor, so the rebuilt stream attributes submissions to the person who
+ * made them. How many submitters were recovered versus backfilled is counted
+ * (`submitterProvenance`) so coverage is measurable before cutover, and
+ * submit-audit rows for these submissions that carry no usable actor are counted
+ * too (`unusableSubmitAudit`) so dirty audit data surfaces as its own number
+ * rather than hiding inside the backfill count.
  *
- * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
+ * @param {{ accreditationId: string, organisationId: string }} row
  * @param {AccreditationSourceDeps} deps
  */
 export const loadAccreditationSources = async (row, deps) => {
@@ -171,21 +149,15 @@ export const loadAccreditationSources = async (row, deps) => {
     row.organisationId,
     registration.id
   )
-  const submitActors = await systemLogsRepository.findSummaryLogSubmitActors(
-    row.organisationId
-  )
+  const summaryLogDocIds = summaryLogDocs.map((doc) => String(doc.id))
+  const submitActors =
+    await systemLogsRepository.findSummaryLogSubmitActors(summaryLogDocIds)
 
-  const {
-    summaryLogs,
-    submitterProvenance,
-    submitterAgreement,
-    unusableSubmitAudit
-  } = recoverSubmitters({
-    submitActors,
-    summaryLogDocs,
-    transactions: row.transactions,
-    wasteRecords
-  })
+  const { summaryLogs, submitterProvenance, unusableSubmitAudit } =
+    recoverSubmitters({
+      submitActors,
+      summaryLogDocs
+    })
 
   return {
     accreditation,
@@ -195,7 +167,6 @@ export const loadAccreditationSources = async (row, deps) => {
     overseasSites,
     summaryLogs,
     submitterProvenance,
-    submitterAgreement,
     unusableSubmitAudit
   }
 }

@@ -10,10 +10,7 @@ import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
-import {
-  buildSystemLogSubmitters,
-  resolveSummaryLogSubmitters
-} from '#waste-balances/application/summary-log-submitters.js'
+import { buildSystemLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
 
 import { toStreamSummaryLog } from './run-balance-divergence-diagnostic.js'
@@ -283,30 +280,26 @@ describe('balance divergence diagnostic (integration)', () => {
 
     // 3. Read the submit audit back and bridge document id -> file id. The audit
     //    keys on docId; the bridge resolves it to the version's file id.
-    const submitActors =
-      await sysRepo.findSummaryLogSubmitActors(organisationId)
+    const submitActors = await sysRepo.findSummaryLogSubmitActors([docId])
     expect(submitActors).toEqual([
       { summaryLogId: docId, createdBy: submitter }
     ])
 
-    const { submitters } = resolveSummaryLogSubmitters({
-      systemLogSubmitters: buildSystemLogSubmitters({
-        submitActors,
-        summaryLogDocs
-      }),
-      transactionSubmitters: new Map()
+    const submitters = buildSystemLogSubmitters({
+      submitActors,
+      summaryLogDocs
     })
     expect(submitters.get(fileId)).toEqual({
-      submitter: { id: 'user-1', name: 'alice@example.com' },
-      source: 'systemLog'
+      id: 'user-1',
+      name: 'alice@example.com'
     })
 
     // 4. Migrate: replay the stream with the recovered submitter attached and
     //    confirm the event is credited to the real submitter, not the backfill
     //    actor.
     const summaryLogs = summaryLogDocs.map(toStreamSummaryLog).map((sl) => {
-      const resolved = submitters.get(sl.id)
-      return resolved ? { ...sl, submittedBy: resolved.submitter } : sl
+      const recovered = submitters.get(sl.id)
+      return recovered ? { ...sl, submittedBy: recovered } : sl
     })
 
     const result = computeRebuiltStream({
