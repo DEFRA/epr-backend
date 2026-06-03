@@ -1,12 +1,19 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import {
+  PROCESSING_TYPE_TABLES,
+  findSchemaForProcessingType
+} from '#domain/summary-logs/table-schemas/index.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { MONTHS_PER_PERIOD } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {PeriodicReport} from '#reports/repository/port.js' */
+/** @import {PeriodicReport, ReportsRepository} from '#reports/repository/port.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * @typedef {Object} PeriodStatusBucket
@@ -252,4 +259,138 @@ export const classifyByPeriodStatus = ({
   }
 
   return result
+}
+
+/**
+ * Computes the transaction amount for a record's data via classifyForWasteBalance.
+ * Returns 0 if the record is not INCLUDED.
+ *
+ * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} schema
+ * @param {Record<string, any>} data
+ * @param {Registration} registration
+ * @returns {number}
+ */
+const getTransactionAmount = (schema, data, registration) => {
+  const result = schema?.classifyForWasteBalance?.(data, {
+    accreditation: registration.accreditation,
+    overseasSites: ORS_VALIDATION_DISABLED
+  })
+  return result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
+}
+
+/**
+ * Builds a map of "type:rowId" => waste balance impact for included waste-balance records.
+ *
+ * For added records, the impact is the full transaction amount.
+ * For adjusted records, the impact is the delta: new amount minus old amount.
+ *
+ * @param {ValidatedWasteRecord[]} wasteBalanceRecords
+ * @param {Registration} registration
+ * @param {string} processingType
+ * @param {string} summaryLogId
+ * @param {Map<string, WasteRecord>} existingRecordsMap
+ * @returns {Map<string, number>}
+ */
+export const buildTransactionAmounts = (
+  wasteBalanceRecords,
+  registration,
+  processingType,
+  summaryLogId,
+  existingRecordsMap
+) => {
+  const amounts = new Map()
+  for (const { record, outcome } of wasteBalanceRecords) {
+    if (outcome !== ROW_OUTCOME.INCLUDED) {
+      continue
+    }
+    const schema = findSchemaForProcessingType(processingType, record.type)
+    const newAmount = getTransactionAmount(schema, record.data, registration)
+    if (newAmount === 0) {
+      continue
+    }
+
+    const key = `${record.type}:${record.rowId}`
+    const lastVersion = record.versions[record.versions.length - 1]
+    const isAdjusted =
+      lastVersion.summaryLog?.id === summaryLogId &&
+      lastVersion.status === VERSION_STATUS.UPDATED
+
+    if (isAdjusted) {
+      const existing = existingRecordsMap.get(key)
+      const oldAmount = existing
+        ? getTransactionAmount(schema, existing.data, registration)
+        : 0
+      amounts.set(key, newAmount - oldAmount)
+    } else {
+      amounts.set(key, newAmount)
+    }
+  }
+  return amounts
+}
+
+/**
+ * Computes loadsByPeriodStatus for a validated summary log.
+ * Returns null if the reports lookup fails.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {string} params.summaryLogId
+ * @param {Registration} params.registration
+ * @param {string} params.processingType
+ * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {ReportsRepository} params.reportsRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {string} params.loggingContext
+ * @param {TypedLogger} params.logger
+ * @returns {Promise<LoadsByPeriodStatus | null>}
+ */
+export const computeLoadsByPeriodStatus = async ({
+  wasteRecords,
+  wasteBalanceRecords,
+  summaryLogId,
+  registration,
+  processingType,
+  existingRecordsMap,
+  reportsRepository,
+  organisationId,
+  registrationId,
+  loggingContext,
+  logger
+}) => {
+  try {
+    const submittedReports = await reportsRepository.findPeriodicReports({
+      organisationId,
+      registrationId
+    })
+
+    const transactionAmounts = buildTransactionAmounts(
+      wasteBalanceRecords,
+      registration,
+      processingType,
+      summaryLogId,
+      existingRecordsMap
+    )
+
+    return classifyByPeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords,
+      summaryLogId,
+      registration,
+      submittedReports,
+      tableSchemas: PROCESSING_TYPE_TABLES[processingType],
+      transactionAmounts
+    })
+  } catch (err) {
+    logger.warn({
+      message: `Failed to classify loads by period status: ${loggingContext}`,
+      err,
+      event: {
+        category: 'server',
+        action: 'process_failure'
+      }
+    })
+    return null
+  }
 }

@@ -7,10 +7,10 @@ import Boom from '@hapi/boom'
 
 import {
   createSummaryLogsValidator,
-  buildTransactionAmounts,
   MAX_VALIDATION_ISSUES,
   MAX_ACTUAL_LENGTH
 } from './validate.js'
+import { buildTransactionAmounts } from './period-status.js'
 import {
   createEmptyLoadCategory,
   createEmptyLoadValidity
