@@ -76,7 +76,7 @@ describe('classifyByPeriodStatus', () => {
         registration: { accreditation: { status: 'approved' } },
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
-        transactionAmounts: new Map([['1000', 10]])
+        transactionAmounts: new Map([['received:1000', 10]])
       })
 
       expect(result.open.added.included).toEqual({ count: 1, tonnes: 10 })
@@ -112,7 +112,7 @@ describe('classifyByPeriodStatus', () => {
         registration: { accreditation: { status: 'approved' } },
         submittedReports,
         tableSchemas: TABLE_SCHEMAS,
-        transactionAmounts: new Map([['1000', 10]])
+        transactionAmounts: new Map([['received:1000', 10]])
       })
 
       expect(result.closed.added.included).toEqual({ count: 1, tonnes: 10 })
@@ -148,7 +148,7 @@ describe('classifyByPeriodStatus', () => {
         registration: { accreditation: { status: 'approved' } },
         submittedReports,
         tableSchemas: TABLE_SCHEMAS,
-        transactionAmounts: new Map([['1000', 10]])
+        transactionAmounts: new Map([['received:1000', 10]])
       })
 
       expect(result.closed.added.included).toEqual({ count: 1, tonnes: 10 })
@@ -214,7 +214,7 @@ describe('classifyByPeriodStatus', () => {
         registration: { accreditation: { status: 'approved' } },
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
-        transactionAmounts: new Map([['1000', 5]])
+        transactionAmounts: new Map([['received:1000', 5]])
       })
 
       expect(result.open.adjusted.included).toEqual({ count: 1, tonnes: 5 })
@@ -312,8 +312,8 @@ describe('classifyByPeriodStatus', () => {
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([
-          ['1000', 10],
-          ['1001', 20]
+          ['received:1000', 10],
+          ['received:1001', 20]
         ])
       })
 
@@ -335,8 +335,8 @@ describe('classifyByPeriodStatus', () => {
         submittedReports: [],
         tableSchemas: TABLE_SCHEMAS,
         transactionAmounts: new Map([
-          ['1000', 7.5],
-          ['1001', 2.5]
+          ['received:1000', 7.5],
+          ['received:1001', 2.5]
         ])
       })
 

@@ -16,6 +16,7 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
+import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   PROCESSING_TYPE_TABLES,
@@ -139,7 +140,7 @@ const transformAndValidateData = async ({
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })
 
-  return { wasteRecords, issues }
+  return { wasteRecords, issues, existingRecordsMap }
 }
 
 /**
@@ -186,6 +187,7 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {Registration} [registration] - The fetched registration (only present after successful meta validation)
+ * @property {Map<string, import('#domain/waste-records/model.js').WasteRecord>} [existingRecordsMap] - Existing waste records keyed by "type:rowId"
  */
 
 /**
@@ -309,6 +311,7 @@ const performValidationChecks = async ({
   let wasteRecords = null
   let meta
   let registration
+  let existingRecordsMap
 
   try {
     const parsed = await extractSummaryLog({
@@ -363,6 +366,7 @@ const performValidationChecks = async ({
     })
 
     wasteRecords = dataResult.wasteRecords
+    existingRecordsMap = dataResult.existingRecordsMap
 
     markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
@@ -376,7 +380,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta, registration }
+  return { issues, wasteRecords, meta, registration, existingRecordsMap }
 }
 
 /**
@@ -601,32 +605,64 @@ const classifyLoads = ({
 }
 
 /**
- * Builds a map of rowId => transactionAmount for included waste-balance records.
+ * Computes the transaction amount for a record's data via classifyForWasteBalance.
+ * Returns 0 if the record is not INCLUDED.
  *
- * Re-invokes classifyForWasteBalance to extract the tonnage. This mirrors
- * the call in markIgnoredByDateRange but collects the transaction amounts
- * rather than modifying outcomes.
+ * @param {import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} schema
+ * @param {Record<string, any>} data
+ * @param {Registration} registration
+ * @returns {number}
+ */
+const getTransactionAmount = (schema, data, registration) => {
+  const result = schema?.classifyForWasteBalance?.(data, {
+    accreditation: registration.accreditation,
+    overseasSites: ORS_VALIDATION_DISABLED
+  })
+  return result?.outcome === ROW_OUTCOME.INCLUDED ? result.transactionAmount : 0
+}
+
+/**
+ * Builds a map of rowId => waste balance impact for included waste-balance records.
+ *
+ * For added records, the impact is the full transaction amount.
+ * For adjusted records, the impact is the delta: new amount minus old amount.
+ * This reflects the actual change each record makes to the waste balance.
  *
  * @param {ValidatedWasteRecord[]} wasteBalanceRecords
  * @param {Registration} registration
  * @param {string} processingType
+ * @param {string} summaryLogId
+ * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} existingRecordsMap - keyed by "type:rowId"
  * @returns {Map<string, number>}
  */
-const buildTransactionAmounts = (
+export const buildTransactionAmounts = (
   wasteBalanceRecords,
   registration,
-  processingType
+  processingType,
+  summaryLogId,
+  existingRecordsMap
 ) => {
   const amounts = new Map()
   for (const { record, outcome } of wasteBalanceRecords) {
     if (outcome !== ROW_OUTCOME.INCLUDED) continue
     const schema = findSchemaForProcessingType(processingType, record.type)
-    const result = schema?.classifyForWasteBalance?.(record.data, {
-      accreditation: registration.accreditation,
-      overseasSites: ORS_VALIDATION_DISABLED
-    })
-    if (result?.outcome === ROW_OUTCOME.INCLUDED) {
-      amounts.set(record.rowId, result.transactionAmount)
+    const newAmount = getTransactionAmount(schema, record.data, registration)
+    if (newAmount === 0) continue
+
+    const key = `${record.type}:${record.rowId}`
+    const lastVersion = record.versions[record.versions.length - 1]
+    const isAdjusted =
+      lastVersion.summaryLog?.id === summaryLogId &&
+      lastVersion.status === VERSION_STATUS.UPDATED
+
+    if (isAdjusted) {
+      const existing = existingRecordsMap.get(key)
+      const oldAmount = existing
+        ? getTransactionAmount(schema, existing.data, registration)
+        : 0
+      amounts.set(key, newAmount - oldAmount)
+    } else {
+      amounts.set(key, newAmount)
     }
   }
   return amounts
@@ -677,7 +713,7 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration } =
+    const { issues, wasteRecords, meta, registration, existingRecordsMap } =
       await performValidationChecks({
         summaryLogId,
         summaryLog,
@@ -734,7 +770,9 @@ export const createSummaryLogsValidator = ({
         const transactionAmounts = buildTransactionAmounts(
           wasteBalanceRecords,
           registration,
-          processingType
+          processingType,
+          summaryLogId,
+          existingRecordsMap
         )
 
         const tableSchemas = PROCESSING_TYPE_TABLES[processingType]

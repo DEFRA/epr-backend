@@ -161,8 +161,11 @@ export const classifyByPeriodStatus = ({
 
   const closedPeriods = buildClosedPeriods(submittedReports, cadence)
 
-  const wasteBalanceRowIds = new Set(
-    wasteBalanceRecords.map((wr) => wr.record.rowId)
+  /** @param {ValidatedWasteRecord['record']} record */
+  const recordKey = (record) => `${record.type}:${record.rowId}`
+
+  const wasteBalanceRowKeys = new Set(
+    wasteBalanceRecords.map((wr) => recordKey(wr.record))
   )
 
   for (const wasteRecord of wasteRecords) {
@@ -188,14 +191,15 @@ export const classifyByPeriodStatus = ({
     const periodKey = `${year}:${period}`
 
     const periodStatus = closedPeriods.has(periodKey) ? 'closed' : 'open'
+    const key = recordKey(record)
     const isIncluded =
-      outcome === ROW_OUTCOME.INCLUDED && wasteBalanceRowIds.has(record.rowId)
+      outcome === ROW_OUTCOME.INCLUDED && wasteBalanceRowKeys.has(key)
 
     const bucket = result[periodStatus][status]
 
     if (isIncluded) {
       bucket.included.count += 1
-      bucket.included.tonnes += transactionAmounts.get(record.rowId) ?? 0
+      bucket.included.tonnes += transactionAmounts.get(key) ?? 0
     } else {
       bucket.excluded.count += 1
     }

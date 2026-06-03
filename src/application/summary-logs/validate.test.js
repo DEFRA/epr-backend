@@ -7,6 +7,7 @@ import Boom from '@hapi/boom'
 
 import {
   createSummaryLogsValidator,
+  buildTransactionAmounts,
   MAX_VALIDATION_ISSUES,
   MAX_ACTUAL_LENGTH
 } from './validate.js'
@@ -2055,5 +2056,106 @@ describe('SummaryLogsValidator', () => {
       // Status should be invalid (the fatal was detected pre-cap)
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
     })
+  })
+})
+
+describe('buildTransactionAmounts', () => {
+  const summaryLogId = 'sl-1'
+  const registration = {
+    accreditation: {
+      validFrom: '2025-01-01',
+      validTo: '2025-12-31',
+      statusHistory: [
+        { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+      ]
+    }
+  }
+
+  const buildRecord = ({ rowId, tonnage, status, slId = summaryLogId }) => ({
+    record: {
+      type: 'received',
+      rowId: String(rowId),
+      data: {
+        ROW_ID: rowId,
+        DATE_RECEIVED_FOR_REPROCESSING: '2025-06-15',
+        EWC_CODE: '20 01 01',
+        DESCRIPTION_WASTE: 'Paper - other',
+        WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+        GROSS_WEIGHT: tonnage + 10,
+        TARE_WEIGHT: 5,
+        PALLET_WEIGHT: 2,
+        NET_WEIGHT: tonnage + 3,
+        BAILING_WIRE_PROTOCOL: 'No',
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
+        WEIGHT_OF_NON_TARGET_MATERIALS: 3,
+        RECYCLABLE_PROPORTION_PERCENTAGE: 1,
+        TONNAGE_RECEIVED_FOR_RECYCLING: tonnage
+      },
+      versions: [
+        {
+          summaryLog: { id: slId },
+          status
+        }
+      ]
+    },
+    outcome: 'INCLUDED'
+  })
+
+  it('returns full amount for added records', () => {
+    const records = [
+      buildRecord({ rowId: 1000, tonnage: 50, status: 'created' })
+    ]
+    const result = buildTransactionAmounts(
+      records,
+      registration,
+      'REPROCESSOR_INPUT',
+      summaryLogId,
+      new Map()
+    )
+    expect(result.get('received:1000')).toBe(50)
+  })
+
+  it('returns delta for adjusted records', () => {
+    const records = [
+      buildRecord({ rowId: 1000, tonnage: 80, status: 'updated' })
+    ]
+    const existingRecordsMap = new Map([
+      [
+        'received:1000',
+        {
+          type: 'received',
+          rowId: '1000',
+          data: {
+            ...records[0].record.data,
+            TONNAGE_RECEIVED_FOR_RECYCLING: 50,
+            GROSS_WEIGHT: 60,
+            NET_WEIGHT: 53
+          }
+        }
+      ]
+    ])
+    const result = buildTransactionAmounts(
+      records,
+      registration,
+      'REPROCESSOR_INPUT',
+      summaryLogId,
+      existingRecordsMap
+    )
+    expect(result.get('received:1000')).toBe(30) // 80 - 50
+  })
+
+  it('returns full amount when adjusted record has no existing record', () => {
+    const records = [
+      buildRecord({ rowId: 1000, tonnage: 80, status: 'updated' })
+    ]
+    const result = buildTransactionAmounts(
+      records,
+      registration,
+      'REPROCESSOR_INPUT',
+      summaryLogId,
+      new Map()
+    )
+    expect(result.get('received:1000')).toBe(80) // 80 - 0
   })
 })
