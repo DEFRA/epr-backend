@@ -5,13 +5,22 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../../domain/model.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testDeductAvailableBalanceForPrnCreationBehaviour = (it) => {
   describe('deductAvailableBalanceForPrnCreation', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('deducts tonnage from available balance only', async ({
       insertWasteBalance

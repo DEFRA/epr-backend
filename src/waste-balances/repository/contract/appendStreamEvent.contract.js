@@ -3,13 +3,22 @@ import { buildWasteBalance } from './test-data.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { STREAM_EVENT_KIND } from '../stream-schema.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testAppendStreamEventBehaviour = (it) => {
   describe('appendStreamEvent', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('appends a status-only stream event on the ledger path', async ({
       insertWasteBalance,

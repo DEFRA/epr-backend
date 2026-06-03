@@ -4,13 +4,22 @@ import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
 import { buildStreamEvent } from '../stream-test-data.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testFlipCanonicalSourceToMigratingBehaviour = (it) => {
   describe('flipCanonicalSourceToMigrating', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('flips the marker from embedded to migrating when the captured version matches and stamps migratingSince', async ({
       insertWasteBalance

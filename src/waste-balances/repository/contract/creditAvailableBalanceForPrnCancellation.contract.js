@@ -6,13 +6,22 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../../domain/model.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
   describe('creditAvailableBalanceForPrnCancellation', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('credits tonnage back to available balance only', async ({
       insertWasteBalance
