@@ -1296,6 +1296,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
           findEventsByPrnIdAfter: vi.fn(),
+          findAllByPartition: vi.fn(),
           deleteByPartition: vi.fn(),
           bulkAppendEvents: vi.fn()
         })
@@ -1543,6 +1544,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
           findEventsByPrnIdAfter: vi.fn(),
+          findAllByPartition: vi.fn(),
           deleteByPartition: vi.fn(),
           bulkAppendEvents: vi.fn()
         })
@@ -1779,6 +1781,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
           findEventsByPrnIdAfter: vi.fn(),
+          findAllByPartition: vi.fn(),
           deleteByPartition: vi.fn(),
           bulkAppendEvents: vi.fn()
         })
@@ -1972,6 +1975,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           findLatestByPartition: vi.fn(),
           findLatestByPartitionAndKind: vi.fn(),
           findEventsByPrnIdAfter: vi.fn(),
+          findAllByPartition: vi.fn(),
           deleteByPartition: vi.fn(),
           bulkAppendEvents: vi.fn()
         })
