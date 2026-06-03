@@ -77,13 +77,37 @@ export const buildSummaryLogSubmitters = ({ transactions, wasteRecords }) => {
 }
 
 /**
+ * @typedef {{ id?: string, name?: string, email?: string, scope?: string[] } | null} SubmitAuditActor
+ */
+
+/**
+ * Reduce a submit-audit actor to the stream's `{ id, name }` summary, or `null`
+ * when it carries no usable identity. A human actor's email is its only captured
+ * label, so it stands in for the name; an actor with no id, or with neither a
+ * name nor an email, has nothing real to attribute and is rejected rather than
+ * relabelled with its id — so missing data stays visible downstream (the
+ * submission falls back to backfill) instead of being masked by a fabricated
+ * name. Shared with the unusable-actor count so both read identity the same way.
+ *
+ * @param {SubmitAuditActor} [createdBy]
+ * @returns {import('../repository/stream-schema.js').StreamUserSummary | null}
+ */
+export const toStreamActor = (createdBy) => {
+  const name = createdBy?.name ?? createdBy?.email
+  if (createdBy?.id === undefined || name === undefined) {
+    return null
+  }
+  return { id: createdBy.id, name }
+}
+
+/**
  * Recover the real submitting actor for each historical summary log from the
  * dedicated submit system-log audit. The audit names the submitter directly but
  * keys on the summary-log document id (`context.summaryLogId`); the stream keys
  * on `summaryLog.file.id`, a different namespace, so the summary-log documents
- * bridge document id → file id. The audit's actor is a non-machine
- * `{ id, email }` or a machine `{ id, name }`, reduced here to the stream's
- * `{ id, name }` summary.
+ * bridge document id → file id. Each actor is reduced to the stream's
+ * `{ id, name }` summary by `toStreamActor`, which rejects actors with no usable
+ * identity so missing data is never masked by a fabricated name.
  *
  * A document submitted more than once keeps the most recent audit: callers
  * supply `submitActors` newest-first, so the first one seen for a file id wins.
@@ -95,7 +119,7 @@ export const buildSummaryLogSubmitters = ({ transactions, wasteRecords }) => {
  * the rebuild's own placeholder.
  *
  * @param {Object} params
- * @param {Array<{ summaryLogId: string, createdBy?: { id?: string, name?: string, email?: string, scope?: string[] } | null }>} params.submitActors
+ * @param {Array<{ summaryLogId: string, createdBy?: SubmitAuditActor }>} params.submitActors
  * @param {Array<{ id: string, summaryLog: { file?: { id?: string } } }>} params.summaryLogDocs
  * @returns {Map<string, import('../repository/stream-schema.js').StreamUserSummary>}
  */
@@ -110,17 +134,15 @@ export const buildSystemLogSubmitters = ({ submitActors, summaryLogDocs }) => {
 
   const submitters = new Map()
   for (const { summaryLogId, createdBy } of submitActors) {
-    if (createdBy?.id === undefined) {
+    const actor = toStreamActor(createdBy)
+    if (actor === null) {
       continue
     }
     const fileId = fileIdByDocId.get(summaryLogId)
     if (fileId === undefined || submitters.has(fileId)) {
       continue
     }
-    submitters.set(fileId, {
-      id: createdBy.id,
-      name: createdBy.name ?? createdBy.email ?? createdBy.id
-    })
+    submitters.set(fileId, actor)
   }
 
   return submitters

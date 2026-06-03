@@ -4,7 +4,8 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   buildSummaryLogSubmitters,
   buildSystemLogSubmitters,
-  resolveSummaryLogSubmitters
+  resolveSummaryLogSubmitters,
+  toStreamActor
 } from '#waste-balances/application/summary-log-submitters.js'
 
 /** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
@@ -52,7 +53,9 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
  * that supplied each submitter is counted (`submitterProvenance`) and the two
  * recoverable sources are cross-checked where they overlap
  * (`submitterAgreement`) so coverage and source agreement are measurable before
- * cutover.
+ * cutover. Submit-audit rows for these submissions that carry no usable actor are
+ * counted too (`unusableSubmitAudit`) so dirty audit data surfaces as its own
+ * number rather than hiding inside the backfill count.
  *
  * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
  * @param {AccreditationSourceDeps} deps
@@ -119,12 +122,19 @@ export const loadAccreditationSources = async (row, deps) => {
     })
   })
 
+  const submittedDocs = summaryLogDocs.filter(
+    ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
+  )
+
+  const submittedDocIds = new Set(submittedDocs.map((doc) => doc.id))
+  const unusableSubmitAudit = submitActors.filter(
+    ({ summaryLogId, createdBy }) =>
+      submittedDocIds.has(summaryLogId) && toStreamActor(createdBy) === null
+  ).length
+
   /** @type {SubmitterProvenance} */
   const submitterProvenance = { systemLog: 0, transaction: 0, backfill: 0 }
-  const summaryLogs = summaryLogDocs
-    .filter(
-      ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
-    )
+  const summaryLogs = submittedDocs
     .map(toStreamSummaryLog)
     .map((summaryLog) => {
       const resolved = submitters.get(summaryLog.id)
@@ -144,6 +154,7 @@ export const loadAccreditationSources = async (row, deps) => {
     overseasSites,
     summaryLogs,
     submitterProvenance,
-    submitterAgreement: agreement
+    submitterAgreement: agreement,
+    unusableSubmitAudit
   }
 }

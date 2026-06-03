@@ -105,7 +105,8 @@ export const compareForEmbedded = async (embedded, deps) => {
     wasteRecords,
     prns,
     submitterProvenance: sources.submitterProvenance,
-    submitterAgreement: sources.submitterAgreement
+    submitterAgreement: sources.submitterAgreement,
+    unusableSubmitAudit: sources.unusableSubmitAudit
   })
 }
 
@@ -118,7 +119,8 @@ const buildComparison = ({
   wasteRecords,
   prns,
   submitterProvenance,
-  submitterAgreement
+  submitterAgreement,
+  unusableSubmitAudit
 }) => ({
   organisationId: embedded.organisationId,
   registrationNumber: registration.registrationNumber,
@@ -150,7 +152,8 @@ const buildComparison = ({
   backfilledActorCount: stream.backfilledActorCount,
   backfilledActorCountByKind: stream.backfilledActorCountByKind,
   submitterProvenance,
-  submitterAgreement
+  submitterAgreement,
+  unusableSubmitAudit
 })
 
 const isDivergent = (comparison) =>
@@ -224,6 +227,18 @@ const formatAgreementMismatchLine = (comparison) =>
     `submitterAgreementMismatched=${comparison.submitterAgreement.mismatchedCount}`
   ].join(' ')
 
+const formatUnusableSubmitAuditLine = (comparison) =>
+  [
+    'Waste-balance submit audit carries an unusable actor:',
+    `organisationId=${comparison.organisationId}`,
+    `registrationNumber=${comparison.registrationNumber}`,
+    `accreditationNumber=${comparison.accreditationNumber}`,
+    `unusableSubmitAudit=${comparison.unusableSubmitAudit}`
+  ].join(' ')
+
+const submittedSummaryLogCount = (provenance) =>
+  provenance.systemLog + provenance.transaction + provenance.backfill
+
 const accumulateProvenance = (totals, provenance) => {
   totals.systemLog += provenance.systemLog
   totals.transaction += provenance.transaction
@@ -246,6 +261,7 @@ const runDiagnostic = async (db, deps) => {
   let failed = 0
   const provenanceTotals = { systemLog: 0, transaction: 0, backfill: 0 }
   const agreementTotals = { comparedCount: 0, mismatchedCount: 0 }
+  let unusableSubmitAuditTotal = 0
 
   for (const row of embedded) {
     scanned += 1
@@ -256,8 +272,12 @@ const runDiagnostic = async (db, deps) => {
         comparison.submitterAgreement.comparedCount
       agreementTotals.mismatchedCount +=
         comparison.submitterAgreement.mismatchedCount
+      unusableSubmitAuditTotal += comparison.unusableSubmitAudit
       if (comparison.submitterAgreement.mismatchedCount > 0) {
         logger.warn({ message: formatAgreementMismatchLine(comparison) })
+      }
+      if (comparison.unusableSubmitAudit > 0) {
+        logger.warn({ message: formatUnusableSubmitAuditLine(comparison) })
       }
       if (comparison.backfilledActorCount > 0) {
         logger.warn({ message: formatBackfillLine(comparison) })
@@ -273,7 +293,7 @@ const runDiagnostic = async (db, deps) => {
   }
 
   logger.info({
-    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} submitterProvenance=${formatProvenance(provenanceTotals)} submitterAgreement=compared:${agreementTotals.comparedCount},mismatched:${agreementTotals.mismatchedCount}`
+    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} submittedSummaryLogs=${submittedSummaryLogCount(provenanceTotals)} submitterProvenance=${formatProvenance(provenanceTotals)} submitterAgreement=compared:${agreementTotals.comparedCount},mismatched:${agreementTotals.mismatchedCount} unusableSubmitAudit=${unusableSubmitAuditTotal}`
   })
 }
 

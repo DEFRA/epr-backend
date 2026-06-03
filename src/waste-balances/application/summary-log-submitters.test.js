@@ -237,7 +237,7 @@ describe('buildSystemLogSubmitters', () => {
     })
   })
 
-  it('falls back to the actor id when it names neither a name nor an email', () => {
+  it('leaves an actor unrecovered when it carries neither a name nor an email', () => {
     const submitters = buildSystemLogSubmitters({
       submitActors: [
         {
@@ -248,10 +248,7 @@ describe('buildSystemLogSubmitters', () => {
       summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
     })
 
-    expect(submitters.get('file-1')).toEqual({
-      id: 'user-1',
-      name: 'user-1'
-    })
+    expect(submitters.size).toBe(0)
   })
 
   it('ignores a submit audit whose summary-log document is absent', () => {
