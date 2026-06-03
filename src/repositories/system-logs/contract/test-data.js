@@ -5,7 +5,9 @@
  * @param {string} [overrides.userId]
  * @param {string} [overrides.email]
  * @param {string} [overrides.subCategory]
+ * @param {string} [overrides.action]
  * @param {*} [overrides.id]
+ * @param {string} [overrides.summaryLogId]
  */
 export const buildSystemLog = ({
   organisationId,
@@ -13,17 +15,20 @@ export const buildSystemLog = ({
   userId = 'user-001',
   email = 'user@email.com',
   subCategory = 'test-sub-category',
-  id
+  action = 'test-action',
+  id,
+  summaryLogId
 } = {}) => ({
   createdAt,
   createdBy: { id: userId, email, scope: [] },
   event: {
     category: 'test-category',
     subCategory,
-    action: 'test-action'
+    action
   },
   context: {
     ...(organisationId !== undefined && { organisationId }),
-    ...(id !== undefined && { id })
+    ...(id !== undefined && { id }),
+    ...(summaryLogId !== undefined && { summaryLogId })
   }
 })

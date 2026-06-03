@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import { BACKFILL_ACTOR } from '../repository/stream-schema.js'
-import { buildSummaryLogSubmitters } from './summary-log-submitters.js'
+import {
+  buildSummaryLogSubmitters,
+  buildSystemLogSubmitters,
+  resolveSummaryLogSubmitters,
+  SUBMITTER_SOURCE
+} from './summary-log-submitters.js'
+
+const summaryLogDoc = (docId, fileId) => ({
+  id: docId,
+  summaryLog: { file: { id: fileId } }
+})
 
 const versionWithSummaryLog = (versionId, summaryLogId) => ({
   id: versionId,
@@ -187,5 +197,151 @@ describe('buildSummaryLogSubmitters', () => {
     })
 
     expect(submitters.size).toBe(0)
+  })
+})
+
+describe('buildSystemLogSubmitters', () => {
+  it('bridges the audit document id to the file id and credits the submitter', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-1',
+          createdBy: { id: 'user-1', email: 'alice@example.com', scope: [] }
+        }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      id: 'user-1',
+      name: 'alice@example.com'
+    })
+  })
+
+  it('names a machine submitter by its name rather than an email', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        { summaryLogId: 'doc-1', createdBy: { id: 'machine-1', name: 'worker' } }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.get('file-1')).toEqual({ id: 'machine-1', name: 'worker' })
+  })
+
+  it('ignores a submit audit whose summary-log document is absent', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-missing',
+          createdBy: { id: 'user-1', email: 'alice@example.com', scope: [] }
+        }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.size).toBe(0)
+  })
+
+  it('ignores a submit audit whose actor carries no id', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [{ summaryLogId: 'doc-1', createdBy: null }],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.size).toBe(0)
+  })
+
+  it('keeps the first actor when two audits reference the same document', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-1',
+          createdBy: { id: 'user-1', email: 'alice@example.com', scope: [] }
+        },
+        {
+          summaryLogId: 'doc-1',
+          createdBy: { id: 'user-2', email: 'bob@example.com', scope: [] }
+        }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      id: 'user-1',
+      name: 'alice@example.com'
+    })
+  })
+
+  it('skips summary-log documents that carry no file id', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-1',
+          createdBy: { id: 'user-1', email: 'alice@example.com', scope: [] }
+        }
+      ],
+      summaryLogDocs: [{ id: 'doc-1', summaryLog: {} }]
+    })
+
+    expect(submitters.size).toBe(0)
+  })
+})
+
+describe('resolveSummaryLogSubmitters', () => {
+  const alice = { id: 'user-1', name: 'alice@example.com' }
+  const bob = { id: 'user-2', name: 'bob@example.com' }
+
+  it('prefers the system-log submitter over the transaction submitter', () => {
+    const { submitters } = resolveSummaryLogSubmitters({
+      systemLogSubmitters: new Map([['file-1', alice]]),
+      transactionSubmitters: new Map([['file-1', bob]])
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      submitter: alice,
+      source: SUBMITTER_SOURCE.SYSTEM_LOG
+    })
+  })
+
+  it('falls back to the transaction submitter where the system log has none', () => {
+    const { submitters } = resolveSummaryLogSubmitters({
+      systemLogSubmitters: new Map(),
+      transactionSubmitters: new Map([['file-1', bob]])
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      submitter: bob,
+      source: SUBMITTER_SOURCE.TRANSACTION
+    })
+  })
+
+  it('counts no disagreement when overlapping sources name the same actor id', () => {
+    const { agreement } = resolveSummaryLogSubmitters({
+      systemLogSubmitters: new Map([['file-1', alice]]),
+      transactionSubmitters: new Map([
+        ['file-1', { id: 'user-1', name: 'alice' }]
+      ])
+    })
+
+    expect(agreement).toEqual({ comparedCount: 1, mismatchedCount: 0 })
+  })
+
+  it('counts a disagreement when overlapping sources name different actor ids', () => {
+    const { agreement } = resolveSummaryLogSubmitters({
+      systemLogSubmitters: new Map([['file-1', alice]]),
+      transactionSubmitters: new Map([['file-1', bob]])
+    })
+
+    expect(agreement).toEqual({ comparedCount: 1, mismatchedCount: 1 })
+  })
+
+  it('compares only the summary logs both sources resolve', () => {
+    const { agreement } = resolveSummaryLogSubmitters({
+      systemLogSubmitters: new Map([['file-1', alice]]),
+      transactionSubmitters: new Map([['file-2', bob]])
+    })
+
+    expect(agreement).toEqual({ comparedCount: 0, mismatchedCount: 0 })
   })
 })

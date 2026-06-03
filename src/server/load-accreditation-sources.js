@@ -1,7 +1,11 @@
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { buildSummaryLogSubmitters } from '#waste-balances/application/summary-log-submitters.js'
+import {
+  buildSummaryLogSubmitters,
+  buildSystemLogSubmitters,
+  resolveSummaryLogSubmitters
+} from '#waste-balances/application/summary-log-submitters.js'
 
 /** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
 const ACTIVE_REGISTRATION_STATUSES = new Set([
@@ -31,15 +35,24 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepository} wasteRecordsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepository
+ * @property {import('#repositories/system-logs/port.js').SystemLogsRepository} systemLogsRepository
+ */
+
+/**
+ * @typedef {{ systemLog: number, transaction: number, backfill: number }} SubmitterProvenance
  */
 
 /**
  * Load the organisation, registration, and accreditation for a balance row,
  * then fetch all authoritative sources needed to rebuild the event stream
- * or recompute totals. The row's embedded waste-balance transactions recover
- * the real submitting actor for each historical summary log, so the rebuilt
- * stream attributes submissions to the person who made them rather than the
- * backfill actor.
+ * or recompute totals. Each historical summary log's real submitting actor is
+ * recovered from the dedicated submit system-log audit, falling back to the
+ * embedded waste-balance transaction actor and then the backfill actor, so the
+ * rebuilt stream attributes submissions to the person who made them. The source
+ * that supplied each submitter is counted (`submitterProvenance`) and the two
+ * recoverable sources are cross-checked where they overlap
+ * (`submitterAgreement`) so coverage and source agreement are measurable before
+ * cutover.
  *
  * @param {{ accreditationId: string, organisationId: string, transactions?: Array<import('#waste-balances/domain/model.js').WasteBalanceTransaction> }} row
  * @param {AccreditationSourceDeps} deps
@@ -50,7 +63,8 @@ export const loadAccreditationSources = async (row, deps) => {
     prnRepository,
     wasteRecordsRepository,
     overseasSitesRepository,
-    summaryLogsRepository
+    summaryLogsRepository,
+    systemLogsRepository
   } = deps
 
   const organisation = await organisationsRepository.findById(
@@ -90,20 +104,36 @@ export const loadAccreditationSources = async (row, deps) => {
     row.organisationId,
     registration.id
   )
+  const submitActors = await systemLogsRepository.findSummaryLogSubmitActors(
+    row.organisationId
+  )
 
-  const submitters = buildSummaryLogSubmitters({
-    transactions: row.transactions,
-    wasteRecords
+  const { submitters, agreement } = resolveSummaryLogSubmitters({
+    systemLogSubmitters: buildSystemLogSubmitters({
+      submitActors,
+      summaryLogDocs
+    }),
+    transactionSubmitters: buildSummaryLogSubmitters({
+      transactions: row.transactions,
+      wasteRecords
+    })
   })
 
+  /** @type {SubmitterProvenance} */
+  const submitterProvenance = { systemLog: 0, transaction: 0, backfill: 0 }
   const summaryLogs = summaryLogDocs
     .filter(
       ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
     )
     .map(toStreamSummaryLog)
     .map((summaryLog) => {
-      const submittedBy = submitters.get(summaryLog.id)
-      return submittedBy ? { ...summaryLog, submittedBy } : summaryLog
+      const resolved = submitters.get(summaryLog.id)
+      if (!resolved) {
+        submitterProvenance.backfill += 1
+        return summaryLog
+      }
+      submitterProvenance[resolved.source] += 1
+      return { ...summaryLog, submittedBy: resolved.submitter }
     })
 
   return {
@@ -112,6 +142,8 @@ export const loadAccreditationSources = async (row, deps) => {
     wasteRecords,
     prns,
     overseasSites,
-    summaryLogs
+    summaryLogs,
+    submitterProvenance,
+    submitterAgreement: agreement
   }
 }

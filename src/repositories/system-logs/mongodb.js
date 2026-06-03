@@ -1,4 +1,8 @@
 import { ObjectId } from 'mongodb'
+import {
+  SUMMARY_LOG_SUB_CATEGORY,
+  SUMMARY_LOG_SUBMIT_ACTION
+} from '#root/auditing/summary-logs.js'
 import { buildPage } from './pagination.js'
 
 export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
@@ -95,6 +99,28 @@ export const createSystemLogsRepository = async (db) => {
         nextCursor,
         prevCursor
       }
+    },
+
+    async findSummaryLogSubmitActors(organisationId) {
+      const docs = await db
+        .collection(SYSTEM_LOGS_COLLECTION_NAME)
+        .find(
+          {
+            'context.organisationId': organisationId,
+            'event.subCategory': SUMMARY_LOG_SUB_CATEGORY,
+            'event.action': SUMMARY_LOG_SUBMIT_ACTION
+          },
+          {
+            projection: { _id: 0, 'context.summaryLogId': 1, createdBy: 1 },
+            sort: { _id: -1 }
+          }
+        )
+        .toArray()
+
+      return docs.map((doc) => ({
+        summaryLogId: doc.context.summaryLogId,
+        createdBy: doc.createdBy
+      }))
     }
   })
 }

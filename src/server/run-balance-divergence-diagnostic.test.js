@@ -10,6 +10,7 @@ import { computeRebuiltStream } from '#waste-balances/application/compute-rebuil
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 
 import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnostic.js'
 
@@ -44,6 +45,9 @@ vi.mock('#application/waste-records/resolve-overseas-sites.js', () => ({
 vi.mock('#repositories/summary-logs/mongodb.js', () => ({
   createSummaryLogsRepository: vi.fn()
 }))
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn()
+}))
 
 describe('runBalanceDivergenceDiagnostic', () => {
   let mockServer
@@ -53,6 +57,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
   let prnRepository
   let overseasSitesRepository
   let summaryLogsRepository
+  let systemLogsRepository
   let mockToArray
   let mockFind
   let collectionByName
@@ -129,6 +134,13 @@ describe('runBalanceDivergenceDiagnostic', () => {
       () => summaryLogsRepository
     )
 
+    systemLogsRepository = {
+      findSummaryLogSubmitActors: vi.fn().mockResolvedValue([])
+    }
+    vi.mocked(createSystemLogsRepository).mockResolvedValue(
+      () => systemLogsRepository
+    )
+
     vi.mocked(computeRebuiltTotals).mockReturnValue(
       /** @type {any} */ ({ amount: 0, availableAmount: 0 })
     )
@@ -187,7 +199,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=0 changed=0 failed=0'
+        'Waste-balance divergence diagnostic: scanned=0 changed=0 failed=0 submitterProvenance=systemLog:0,transaction:0,backfill:0 submitterAgreement=compared:0,mismatched:0'
     })
   })
 
@@ -234,7 +246,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(perAccreditationLines).toHaveLength(0)
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 submitterProvenance=systemLog:0,transaction:0,backfill:0 submitterAgreement=compared:0,mismatched:0'
     })
   })
 
@@ -281,7 +293,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=1 failed=0'
+        'Waste-balance divergence diagnostic: scanned=1 changed=1 failed=0 submitterProvenance=systemLog:0,transaction:0,backfill:0 submitterAgreement=compared:0,mismatched:0'
     })
   })
 
@@ -475,7 +487,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1 submitterProvenance=systemLog:0,transaction:0,backfill:0 submitterAgreement=compared:0,mismatched:0'
     })
   })
 
@@ -560,7 +572,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1'
+        'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1 submitterProvenance=systemLog:0,transaction:0,backfill:0 submitterAgreement=compared:0,mismatched:0'
     })
   })
 
@@ -711,6 +723,87 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
   })
 
+  it('prefers the system-log submitter, counts its provenance and warns when it disagrees with the transaction actor', async () => {
+    const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0,
+        transactions: [
+          {
+            createdBy: { id: 'txn-user', name: 'txn@example.com' },
+            entities: [{ currentVersionId: 'ver-1' }]
+          }
+        ]
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [accreditation]
+    summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
+      {
+        id: 'doc-id-1',
+        version: 1,
+        summaryLog: {
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z',
+          file: { id: 'file-id-1', name: 'test.xlsx', uri: 's3://bucket/key' }
+        }
+      }
+    ])
+    systemLogsRepository.findSummaryLogSubmitActors.mockResolvedValue([
+      {
+        summaryLogId: 'doc-id-1',
+        createdBy: { id: 'sys-user', email: 'sys@example.com', scope: [] }
+      }
+    ])
+    wasteRecordsRepository.findByRegistration.mockResolvedValue([
+      {
+        rowId: 'r-1',
+        type: 'received',
+        versions: [{ id: 'ver-1', summaryLog: { id: 'file-id-1' } }]
+      }
+    ])
+    prnRepository.findByAccreditation.mockResolvedValue([])
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(computeRebuiltStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summaryLogs: [
+          {
+            id: 'file-id-1',
+            status: 'submitted',
+            submittedAt: '2025-01-01T00:00:00Z',
+            submittedBy: { id: 'sys-user', name: 'sys@example.com' }
+          }
+        ]
+      })
+    )
+
+    const disagreementLine = vi
+      .mocked(logger.warn)
+      .mock.calls.map(([arg]) => arg?.message ?? '')
+      .find((message) =>
+        message.startsWith('Waste-balance submitter source disagreement:')
+      )
+    expect(disagreementLine).toContain('submitterAgreementCompared=1')
+    expect(disagreementLine).toContain('submitterAgreementMismatched=1')
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 submitterProvenance=systemLog:1,transaction:0,backfill:0 submitterAgreement=compared:1,mismatched:1'
+    })
+  })
+
   it('filters out failure-status summary logs that may lack a file field before mapping', async () => {
     const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
     setEmbeddedBalances([
@@ -849,7 +942,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste-balance rebuild used backfill actor: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 backfilledActorCount=2 backfilledActorCountByKind=prn-created:1,summary-log-submitted:1 streamEventCount=3'
+        'Waste-balance rebuild used backfill actor: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 backfilledActorCount=2 backfilledActorCountByKind=prn-created:1,summary-log-submitted:1 submitterProvenance=systemLog:0,transaction:0,backfill:0 streamEventCount=3'
     })
   })
 

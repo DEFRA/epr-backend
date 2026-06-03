@@ -1,5 +1,9 @@
 /** @import {SystemLog} from './port.js' */
 
+import {
+  SUMMARY_LOG_SUB_CATEGORY,
+  SUMMARY_LOG_SUBMIT_ACTION
+} from '#root/auditing/summary-logs.js'
 import { buildPage } from './pagination.js'
 
 /** Encode a numeric ID as a 24-char hex string (matching ObjectId format) */
@@ -80,6 +84,21 @@ export function createSystemLogsRepository() {
           nextCursor,
           prevCursor
         }
+      },
+
+      async findSummaryLogSubmitActors(organisationId) {
+        return storage
+          .filter(
+            (item) =>
+              item.context?.organisationId === organisationId &&
+              item.event?.subCategory === SUMMARY_LOG_SUB_CATEGORY &&
+              item.event?.action === SUMMARY_LOG_SUBMIT_ACTION
+          )
+          .sort((a, b) => b._internalId - a._internalId)
+          .map((item) => ({
+            summaryLogId: item.context.summaryLogId,
+            createdBy: item.createdBy
+          }))
       }
     }
   }
