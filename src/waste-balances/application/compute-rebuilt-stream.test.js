@@ -660,7 +660,7 @@ describe('computeRebuiltStream', () => {
         (e) => e.kind === STREAM_EVENT_KIND.PRN_ACCEPTED
       )
       expect(accepted?.createdBy).toEqual({ id: 'rpd-client' })
-      expect('name' in /** @type {object} */ (accepted?.createdBy)).toBe(false)
+      expect(accepted?.createdBy).not.toHaveProperty('name')
     })
 
     it('attributes a producer reject to the RPD system identity, id only', () => {
@@ -707,7 +707,7 @@ describe('computeRebuiltStream', () => {
         (e) => e.kind === STREAM_EVENT_KIND.PRN_REJECTED
       )
       expect(rejected?.createdBy).toEqual({ id: 'rpd-client' })
-      expect('name' in /** @type {object} */ (rejected?.createdBy)).toBe(false)
+      expect(rejected?.createdBy).not.toHaveProperty('name')
     })
 
     it('attributes summary-log events to the supplied submitter', () => {
