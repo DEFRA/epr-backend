@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} SubmitUser
  * @property {string} id
+ * @property {string} [name]
  * @property {string} email
  * @property {string[]} scope
  */

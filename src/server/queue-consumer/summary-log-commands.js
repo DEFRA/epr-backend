@@ -28,6 +28,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 const userSchema = Joi.object({
   id: Joi.string().required(),
+  name: Joi.string(),
   email: Joi.string().required(),
   scope: Joi.array().items(Joi.string()).required()
 })

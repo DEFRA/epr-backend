@@ -5,15 +5,12 @@
 
 /**
  * @param {Actor} actor
- * @returns {{ fullName: string; jobTitle?: string }}
+ * @returns {{ fullName?: string; jobTitle?: string }}
  */
-const mapUserSummary = (actor) => {
-  const summary = { fullName: actor.name }
-  if (actor.position) {
-    summary.jobTitle = actor.position
-  }
-  return summary
-}
+const mapUserSummary = (actor) => ({
+  ...(actor.name && { fullName: actor.name }),
+  ...(actor.position && { jobTitle: actor.position })
+})
 
 /**
  * @param {PackagingRecyclingNote['status']} status

@@ -35,9 +35,14 @@ const PRN_KINDS = new Set([
 export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
 
 /**
+ * Best-view actor for a stream event. `id` always identifies the actor; `name`
+ * and `email` are present only when the source carries a real value, and are
+ * left absent otherwise.
+ *
  * @typedef {Object} StreamUserSummary
  * @property {string} id
- * @property {string} name
+ * @property {string} [name]
+ * @property {string} [email]
  */
 
 /**
@@ -87,7 +92,8 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 const userSummarySchema = Joi.object({
   id: Joi.string().required(),
-  name: Joi.string().required()
+  name: Joi.string(),
+  email: Joi.string()
 })
 
 const balanceSnapshotSchema = Joi.object({
