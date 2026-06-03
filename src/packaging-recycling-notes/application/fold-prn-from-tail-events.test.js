@@ -91,6 +91,23 @@ describe('foldPrnFromTailEvents', () => {
       expect(result.lastAppliedEventNumber).toBe(1)
     })
 
+    it('narrows the event actor to id and name, dropping the stream-only email', () => {
+      const prn = basePrn()
+      const event = buildEvent(
+        STREAM_EVENT_KIND.PRN_CREATED,
+        1,
+        '2026-02-01T12:00:00.000Z',
+        { id: 'user-1', name: 'Test User', email: 'test@example.com' }
+      )
+
+      const result = foldPrnFromTailEvents(prn, [event])
+
+      const expectedActor = { id: 'user-1', name: 'Test User' }
+      expect(result.updatedBy).toEqual(expectedActor)
+      expect(result.status.created.by).toEqual(expectedActor)
+      expect(result.status.history.at(-1).by).toEqual(expectedActor)
+    })
+
     it('prn-issued sets currentStatus awaiting_acceptance and issued slot', () => {
       const prn = basePrn()
       const event = buildEvent(

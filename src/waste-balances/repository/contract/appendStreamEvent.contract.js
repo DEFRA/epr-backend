@@ -24,13 +24,19 @@ export const testAppendStreamEventBehaviour = (it) => {
 
       await insertWasteBalance(wasteBalance)
 
+      const createdBy = {
+        id: 'user-abc',
+        name: 'Ada Lovelace',
+        email: 'ada@example.com'
+      }
+
       const appended = await repository.appendStreamEvent({
         accreditationId: 'acc-append-1',
         registrationId: 'reg-1',
         organisationId: 'org-1',
         prnId: 'prn-1',
         tonnage: 10,
-        createdBy: { id: 'user-abc' },
+        createdBy,
         streamKind: STREAM_EVENT_KIND.PRN_ACCEPTED
       })
 
@@ -41,6 +47,8 @@ export const testAppendStreamEventBehaviour = (it) => {
       expect(appended.number).toBe(latest.number)
       expect(appended.kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
       expect(appended.payload).toEqual({ prnId: 'prn-1', amount: 10 })
+      expect(appended.createdBy).toEqual(createdBy)
+      expect(latest.createdBy).toEqual(createdBy)
     })
 
     it('throws on the embedded path', async ({ insertWasteBalance }) => {
