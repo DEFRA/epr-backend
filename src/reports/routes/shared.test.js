@@ -42,12 +42,15 @@ describe('extractChangedBy', () => {
     expect(extractChangedBy(entraAdminUser).name).toBeUndefined()
   })
 
-  it('produces a value userSummarySchema accepts for both providers', () => {
-    expect(
-      userSummarySchema.validate(extractChangedBy(defraIdStandardUser)).error
-    ).toBeUndefined()
-    expect(
-      userSummarySchema.validate(extractChangedBy(entraAdminUser)).error
-    ).toBeUndefined()
+  it('produces a value userSummarySchema accepts and preserves email for both providers', () => {
+    const defraId = userSummarySchema.validate(
+      extractChangedBy(defraIdStandardUser)
+    )
+    expect(defraId.error).toBeUndefined()
+    expect(defraId.value.email).toBe('ada@example.com')
+
+    const entra = userSummarySchema.validate(extractChangedBy(entraAdminUser))
+    expect(entra.error).toBeUndefined()
+    expect(entra.value.email).toBe('maintainer@example.com')
   })
 })
