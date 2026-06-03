@@ -1092,7 +1092,7 @@ describe('SummaryLogsValidator integration', () => {
       // isRegistrationAccredited returns true
       org.accreditations[0].statusHistory.push({
         status: 'approved',
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       })
       return org
     }
