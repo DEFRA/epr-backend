@@ -42,11 +42,7 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
-import { runBalanceDivergenceDiagnostic } from '#server/run-balance-divergence-diagnostic.js'
-import { runBalanceSizeDiagnostic } from '#server/run-balance-size-diagnostic.js'
-import { runCanonicalSourceCensus } from '#server/run-canonical-source-census.js'
-import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagnostic.js'
-import { runStreamPromotion } from '#server/run-stream-promotion.js'
+import { runPromotionThenDiagnostics } from '#server/run-promotion-then-diagnostics.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -225,11 +221,7 @@ async function createServer(options = {}) {
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
-    runRowIdCollisionDiagnostic(server)
-    runBalanceDivergenceDiagnostic(server)
-    runBalanceSizeDiagnostic(server)
-    runCanonicalSourceCensus(server)
-    runStreamPromotion(server)
+    runPromotionThenDiagnostics(server)
   })
 
   return server
