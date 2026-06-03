@@ -105,7 +105,9 @@ describe('buildSummaryLogSubmitters', () => {
     const wasteRecords = [
       wasteRecordWithVersions([versionWithSummaryLog('v1', 'sl-1')])
     ]
-    const transactions = [creditTransaction({ name: 'alice@example.com' }, 'v1')]
+    const transactions = [
+      creditTransaction({ name: 'alice@example.com' }, 'v1')
+    ]
 
     const submitters = buildSummaryLogSubmitters({ transactions, wasteRecords })
 
@@ -221,12 +223,18 @@ describe('buildSystemLogSubmitters', () => {
   it('names a machine submitter by its name rather than an email', () => {
     const submitters = buildSystemLogSubmitters({
       submitActors: [
-        { summaryLogId: 'doc-1', createdBy: { id: 'machine-1', name: 'worker' } }
+        {
+          summaryLogId: 'doc-1',
+          createdBy: { id: 'machine-1', name: 'worker' }
+        }
       ],
       summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
     })
 
-    expect(submitters.get('file-1')).toEqual({ id: 'machine-1', name: 'worker' })
+    expect(submitters.get('file-1')).toEqual({
+      id: 'machine-1',
+      name: 'worker'
+    })
   })
 
   it('ignores a submit audit whose summary-log document is absent', () => {

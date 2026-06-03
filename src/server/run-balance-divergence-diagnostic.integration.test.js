@@ -285,7 +285,9 @@ describe('balance divergence diagnostic (integration)', () => {
     //    keys on docId; the bridge resolves it to the version's file id.
     const submitActors =
       await sysRepo.findSummaryLogSubmitActors(organisationId)
-    expect(submitActors).toEqual([{ summaryLogId: docId, createdBy: submitter }])
+    expect(submitActors).toEqual([
+      { summaryLogId: docId, createdBy: submitter }
+    ])
 
     const { submitters } = resolveSummaryLogSubmitters({
       systemLogSubmitters: buildSystemLogSubmitters({

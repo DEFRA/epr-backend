@@ -252,7 +252,8 @@ const runDiagnostic = async (db, deps) => {
     try {
       const comparison = await compareForEmbedded(row, deps)
       accumulateProvenance(provenanceTotals, comparison.submitterProvenance)
-      agreementTotals.comparedCount += comparison.submitterAgreement.comparedCount
+      agreementTotals.comparedCount +=
+        comparison.submitterAgreement.comparedCount
       agreementTotals.mismatchedCount +=
         comparison.submitterAgreement.mismatchedCount
       if (comparison.submitterAgreement.mismatchedCount > 0) {

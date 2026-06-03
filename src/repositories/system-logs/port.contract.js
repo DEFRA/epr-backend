@@ -476,8 +476,7 @@ export const testSystemLogsRepositoryContract = (it) => {
         })
       )
 
-      const actors =
-        await repository.findSummaryLogSubmitActors(organisationId)
+      const actors = await repository.findSummaryLogSubmitActors(organisationId)
 
       expect(actors).toEqual([
         {
@@ -528,8 +527,7 @@ export const testSystemLogsRepositoryContract = (it) => {
         })
       )
 
-      const actors =
-        await repository.findSummaryLogSubmitActors(organisationId)
+      const actors = await repository.findSummaryLogSubmitActors(organisationId)
 
       expect(actors.map((actor) => actor.summaryLogId)).toEqual(['doc-keep'])
     })
@@ -559,8 +557,7 @@ export const testSystemLogsRepositoryContract = (it) => {
         })
       )
 
-      const actors =
-        await repository.findSummaryLogSubmitActors(organisationId)
+      const actors = await repository.findSummaryLogSubmitActors(organisationId)
 
       expect(actors.map((actor) => actor.summaryLogId)).toEqual(['mine'])
     })
@@ -603,8 +600,7 @@ export const testSystemLogsRepositoryContract = (it) => {
         })
       )
 
-      const actors =
-        await repository.findSummaryLogSubmitActors(organisationId)
+      const actors = await repository.findSummaryLogSubmitActors(organisationId)
 
       expect(actors[0].createdBy.id).toBe('latest-user')
     })
