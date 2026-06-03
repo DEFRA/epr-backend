@@ -77,12 +77,6 @@ jobs:
       pull-requests: write
     steps:
       - uses: DEFRA/epr-re-ex-service/.github/actions/lint-types-tests@main
-        with:
-          include-globs: |
-            **/*.test.js
-            **/test-helpers/**
-            **/test-fixtures.js
-            **/*.d.ts
 
   dependency-review:
     name: Dependency Review
