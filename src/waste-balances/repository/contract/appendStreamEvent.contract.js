@@ -30,7 +30,7 @@ export const testAppendStreamEventBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-1',
         tonnage: 10,
-        userId: 'user-abc',
+        createdBy: { id: 'user-abc' },
         streamKind: STREAM_EVENT_KIND.PRN_ACCEPTED
       })
 
@@ -58,7 +58,7 @@ export const testAppendStreamEventBehaviour = (it) => {
           organisationId: 'org-1',
           prnId: 'prn-2',
           tonnage: 10,
-          userId: 'user-abc',
+          createdBy: { id: 'user-abc' },
           streamKind: STREAM_EVENT_KIND.PRN_REJECTED
         })
       ).rejects.toThrow(/ledger-only/)
@@ -72,7 +72,7 @@ export const testAppendStreamEventBehaviour = (it) => {
           organisationId: 'org-1',
           prnId: 'prn-3',
           tonnage: 10,
-          userId: 'user-abc',
+          createdBy: { id: 'user-abc' },
           streamKind: STREAM_EVENT_KIND.PRN_ACCEPTED
         })
       ).rejects.toThrow(/ledger-only/)

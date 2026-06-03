@@ -1154,7 +1154,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50.5,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1187,7 +1187,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50.5,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1224,7 +1224,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
-          userId: 'user-xyz'
+          createdBy: { id: 'user-xyz' }
         },
         findBalance,
         saveBalance
@@ -1262,7 +1262,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          createdBy: { id: 'user-123' }
         },
         findBalance,
         saveBalance
@@ -1310,7 +1310,11 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          createdBy: {
+            id: 'user-abc',
+            name: 'Ada Lovelace',
+            email: 'ada@example.com'
+          }
         },
         findBalance,
         saveBalance,
@@ -1318,6 +1322,16 @@ describe('src/waste-balances/repository/helpers.js', () => {
       })
 
       expect(appendToStream).toHaveBeenCalledTimes(1)
+      expect(appendToStream).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          createdBy: {
+            id: 'user-abc',
+            name: 'Ada Lovelace',
+            email: 'ada@example.com'
+          }
+        })
+      )
       expect(saveBalance).not.toHaveBeenCalled()
     })
   })
@@ -1386,7 +1400,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1419,7 +1433,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1456,7 +1470,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
-          userId: 'user-xyz'
+          createdBy: { id: 'user-xyz' }
         },
         findBalance,
         saveBalance
@@ -1494,7 +1508,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          createdBy: { id: 'user-123' }
         },
         findBalance,
         saveBalance
@@ -1543,7 +1557,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance,
@@ -1619,7 +1633,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1653,7 +1667,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             organisationId: 'org-1',
             prnId: 'prn-123',
             tonnage: 50,
-            userId: 'user-abc'
+            createdBy: { id: 'user-abc' }
           },
           findBalance,
           saveBalance
@@ -1691,7 +1705,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-456',
           tonnage: 25,
-          userId: 'user-xyz'
+          createdBy: { id: 'user-xyz' }
         },
         findBalance,
         saveBalance
@@ -1729,7 +1743,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          createdBy: { id: 'user-123' }
         },
         findBalance,
         saveBalance
@@ -1779,7 +1793,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 50,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance,
@@ -1855,7 +1869,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1889,7 +1903,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
             organisationId: 'org-1',
             prnId: 'prn-123',
             tonnage: 60,
-            userId: 'user-abc'
+            createdBy: { id: 'user-abc' }
           },
           findBalance,
           saveBalance
@@ -1922,7 +1936,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance
@@ -1972,7 +1986,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
           organisationId: 'org-1',
           prnId: 'prn-123',
           tonnage: 60,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         },
         findBalance,
         saveBalance,

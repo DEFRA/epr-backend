@@ -200,7 +200,7 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-during-rebuild',
         tonnage: 5,
-        userId: 'user-1'
+        createdBy: { id: 'user-1' }
       })
 
       const result = await repository.flipCanonicalSourceToLedger({

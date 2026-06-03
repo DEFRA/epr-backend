@@ -253,7 +253,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       prnId: '507f1f77bcf86cd799439011',
       tonnage: 100,
-      userId: 'user-789'
+      createdBy: { id: 'user-789', name: 'Test User' }
     })
   })
 
@@ -531,7 +531,7 @@ describe('updatePrnStatus', () => {
       organisationId: 'org-123',
       prnId: '507f1f77bcf86cd799439011',
       tonnage: 75,
-      userId: 'user-789'
+      createdBy: { id: 'user-789', name: 'Test User' }
     })
   })
 
@@ -1418,7 +1418,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         prnId: '507f1f77bcf86cd799439011',
         tonnage: 60,
-        userId: 'user-789'
+        createdBy: { id: 'user-789', name: 'Test User' }
       })
     })
 
@@ -1500,7 +1500,7 @@ describe('updatePrnStatus', () => {
         organisationId: 'org-123',
         prnId: '507f1f77bcf86cd799439011',
         tonnage: 75,
-        userId: 'user-789'
+        createdBy: { id: 'user-789', name: 'Test User' }
       })
     })
 
