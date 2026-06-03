@@ -616,6 +616,100 @@ describe('computeRebuiltStream', () => {
       expect(issued?.createdBy).toEqual({ id: 'sig-7', name: 'Sam Signatory' })
     })
 
+    it('attributes a producer accept to the RPD system identity, id only', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-22T00:00:00.000Z'),
+                  by: { id: 'sig-1', name: 'Sam Signatory' }
+                },
+                {
+                  status: PRN_STATUS.ACCEPTED,
+                  at: new Date('2025-01-23T00:00:00.000Z'),
+                  by: { id: 'rpd-client', name: 'RPD' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      const accepted = result.events.find(
+        (e) => e.kind === STREAM_EVENT_KIND.PRN_ACCEPTED
+      )
+      expect(accepted?.createdBy).toEqual({ id: 'rpd-client' })
+      expect('name' in /** @type {object} */ (accepted?.createdBy)).toBe(false)
+    })
+
+    it('attributes a producer reject to the RPD system identity, id only', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-22T00:00:00.000Z'),
+                  by: { id: 'sig-1', name: 'Sam Signatory' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_CANCELLATION,
+                  at: new Date('2025-01-23T00:00:00.000Z'),
+                  by: { id: 'rpd-client', name: 'RPD' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      const rejected = result.events.find(
+        (e) => e.kind === STREAM_EVENT_KIND.PRN_REJECTED
+      )
+      expect(rejected?.createdBy).toEqual({ id: 'rpd-client' })
+      expect('name' in /** @type {object} */ (rejected?.createdBy)).toBe(false)
+    })
+
     it('attributes summary-log events to the supplied submitter', () => {
       const submitter = { id: 'usr-9', name: 'submitter@example.com' }
       const result = computeRebuiltStream({

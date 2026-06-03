@@ -122,6 +122,35 @@ const actorOf = (actor) =>
     : { ...BACKFILL_ACTOR }
 
 /**
+ * Stream event kinds whose PRN transitions only the producer can perform, and
+ * the producer reaches the service solely through the external RPD API on
+ * machine credentials. The PRN state machine grants `AWAITING_ACCEPTANCE →
+ * ACCEPTED` and `→ AWAITING_CANCELLATION` to `PRODUCER` alone, and no internal
+ * route lets a human leave `AWAITING_ACCEPTANCE`, so an accept or reject is
+ * always the RPD system acting — never a person.
+ *
+ * @type {Set<import('../repository/stream-schema.js').StreamEventKind>}
+ */
+const RPD_INITIATED_PRN_KINDS = new Set([
+  STREAM_EVENT_KIND.PRN_ACCEPTED,
+  STREAM_EVENT_KIND.PRN_REJECTED
+])
+
+/**
+ * Reduce a PRN history actor for the transition it performed. An RPD-initiated
+ * accept or reject is the external system acting, identified by its id alone:
+ * any name the source recorded is a system label, not a person, so it is
+ * dropped rather than attributed. Every other transition keeps the recoverable
+ * human actor.
+ *
+ * @param {import('../repository/stream-schema.js').StreamEventKind} kind
+ * @param {{ id: string, name?: string } | undefined} actor
+ * @returns {import('../repository/stream-schema.js').StreamUserSummary}
+ */
+const prnActorOf = (kind, actor) =>
+  RPD_INITIATED_PRN_KINDS.has(kind) && actor ? { id: actor.id } : actorOf(actor)
+
+/**
  * Sparse count of backfilled-actor events keyed by the stream event kind that
  * fell back. Only kinds with at least one fallback appear.
  *
@@ -298,7 +327,7 @@ const prnTransitionEvent = ({
     registrationId,
     accreditationId: accreditation.id,
     organisationId,
-    createdBy: actorOf(history[index].by)
+    createdBy: prnActorOf(kind, history[index].by)
   }
 }
 
