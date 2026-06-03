@@ -40,6 +40,7 @@ const extractUser = (request) => {
   }
   return {
     id: credentials.id,
+    ...(credentials.name && { name: credentials.name }),
     // @ts-expect-error narrowed to HumanCredentials by `email in credentials` above; tsc loses the discriminant through Hapi's base Request intersection
     email: credentials.email,
     // @ts-expect-error narrowed to HumanCredentials by `email in credentials` above; tsc loses the discriminant through Hapi's base Request intersection

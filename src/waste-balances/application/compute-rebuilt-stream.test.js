@@ -634,6 +634,21 @@ describe('computeRebuiltStream', () => {
       expect(result.events[0].createdBy).toEqual(submitter)
     })
 
+    it('keeps an id-only submitter id-only, without fabricating a name', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [],
+        overseasSites,
+        summaryLogs: [submittedLog({ id: 'usr-9' })]
+      })
+
+      expect(result.events[0].createdBy).toEqual({ id: 'usr-9' })
+      expect('name' in result.events[0].createdBy).toBe(false)
+    })
+
     it('falls back to a system backfill actor when no submitter is supplied', () => {
       const result = computeRebuiltStream({
         accreditation,

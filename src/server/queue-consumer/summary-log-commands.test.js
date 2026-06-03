@@ -138,6 +138,20 @@ describe('summaryLogCommandHandlers', () => {
         expect(error).toBeUndefined()
       })
 
+      it('accepts a user carrying a name', () => {
+        const { error } = handler.payloadSchema.validate({
+          summaryLogId: 'log-123',
+          user: {
+            id: 'user-1',
+            name: 'Test User',
+            email: 'test@example.com',
+            scope: ['operator']
+          }
+        })
+
+        expect(error).toBeUndefined()
+      })
+
       it('requires summaryLogId', () => {
         const { error } = handler.payloadSchema.validate({})
 
