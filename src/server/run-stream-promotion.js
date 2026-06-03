@@ -200,9 +200,9 @@ const buildDependencies = async (server) => {
   const summaryLogsRepository = (
     await createSummaryLogsRepository(server.db, /** @type {any} */ ({}))
   )(logger)
-  const systemLogsRepository = (
-    await createSystemLogsRepository(server.db)
-  )(logger)
+  const systemLogsRepository = (await createSystemLogsRepository(server.db))(
+    logger
+  )
 
   return {
     wasteBalancesRepository,

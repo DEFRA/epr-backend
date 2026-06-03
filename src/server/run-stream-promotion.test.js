@@ -154,11 +154,9 @@ describe('runStreamPromotion', () => {
       () => summaryLogsRepository
     )
 
-    vi.mocked(createSystemLogsRepository).mockResolvedValue(
-      () => ({
-        findSubmittersBySummaryLogIds: vi.fn().mockResolvedValue(new Map())
-      })
-    )
+    vi.mocked(createSystemLogsRepository).mockResolvedValue(() => ({
+      findSubmittersBySummaryLogIds: vi.fn().mockResolvedValue(new Map())
+    }))
 
     vi.mocked(createOverseasSitesRepository).mockResolvedValue(
       () => /** @type {*} */ ({})
