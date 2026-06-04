@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSystemLogSubmitters } from './summary-log-submitters.js'
+import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
+import {
+  addAttribution,
+  buildSystemLogSubmitters,
+  classifyActorAttribution,
+  emptyAttributionCounts,
+  formatAttributionMatrix,
+  mergeAttributionMatrices,
+  toStreamActor
+} from './summary-log-submitters.js'
 
 const summaryLogDoc = (docId, fileId) => ({
   id: docId,
@@ -65,7 +74,7 @@ describe('buildSystemLogSubmitters', () => {
     })
   })
 
-  it('leaves an actor unrecovered when it carries neither a name nor an email', () => {
+  it('recovers an id-only actor as a real, attributable actor', () => {
     const submitters = buildSystemLogSubmitters({
       submitActors: [
         {
@@ -76,7 +85,7 @@ describe('buildSystemLogSubmitters', () => {
       summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
     })
 
-    expect(submitters.size).toBe(0)
+    expect(submitters.get('file-1')).toEqual({ id: 'user-1' })
   })
 
   it('ignores a submit audit whose summary-log document is absent', () => {
@@ -135,5 +144,327 @@ describe('buildSystemLogSubmitters', () => {
     })
 
     expect(submitters.size).toBe(0)
+  })
+})
+
+describe('toStreamActor', () => {
+  it('carries a name and an email distinctly when the audit holds both', () => {
+    expect(
+      toStreamActor({
+        id: 'user-1',
+        name: 'Alice Submitter',
+        email: 'alice@example.com'
+      })
+    ).toEqual({
+      id: 'user-1',
+      name: 'Alice Submitter',
+      email: 'alice@example.com'
+    })
+  })
+
+  it('carries only the name when the audit holds no email', () => {
+    expect(toStreamActor({ id: 'machine-1', name: 'worker' })).toEqual({
+      id: 'machine-1',
+      name: 'worker'
+    })
+  })
+
+  it('carries only the email when the audit holds no name', () => {
+    expect(toStreamActor({ id: 'user-1', email: 'alice@example.com' })).toEqual(
+      { id: 'user-1', email: 'alice@example.com' }
+    )
+  })
+
+  it('carries an id-only actor as a real, attributable actor', () => {
+    expect(toStreamActor({ id: 'user-1' })).toEqual({ id: 'user-1' })
+  })
+
+  it('rejects an actor that carries no id', () => {
+    expect(toStreamActor({ name: 'Alice', email: 'alice@example.com' })).toBe(
+      null
+    )
+  })
+
+  it('rejects an absent actor', () => {
+    expect(toStreamActor(undefined)).toBe(null)
+    expect(toStreamActor(null)).toBe(null)
+  })
+})
+
+describe('classifyActorAttribution', () => {
+  it('counts an actor carrying both a name and an email', () => {
+    expect(
+      classifyActorAttribution({
+        id: 'user-1',
+        name: 'Alice',
+        email: 'alice@example.com'
+      })
+    ).toEqual({
+      nameAndEmail: 1,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 0,
+      scope: 0
+    })
+  })
+
+  it('counts a name-only actor', () => {
+    expect(classifyActorAttribution({ id: 'user-1', name: 'Alice' })).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 1,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 0,
+      scope: 0
+    })
+  })
+
+  it('counts an email-only actor', () => {
+    expect(
+      classifyActorAttribution({ id: 'user-1', email: 'alice@example.com' })
+    ).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 1,
+      idOnly: 0,
+      noActor: 0,
+      scope: 0
+    })
+  })
+
+  it('counts an id-only actor as a real, attributed actor', () => {
+    expect(classifyActorAttribution({ id: 'user-1' })).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 1,
+      noActor: 0,
+      scope: 0
+    })
+  })
+
+  it('counts an actor-less event as a true backfill with no id', () => {
+    expect(classifyActorAttribution(null)).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 1,
+      scope: 0
+    })
+    expect(classifyActorAttribution(undefined)).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 1,
+      scope: 0
+    })
+    expect(
+      classifyActorAttribution({ name: 'Alice', email: 'alice@example.com' })
+    ).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 1,
+      scope: 0
+    })
+  })
+
+  it('counts scope presence alongside the label combination', () => {
+    expect(
+      classifyActorAttribution({
+        id: 'user-1',
+        email: 'alice@example.com',
+        scope: ['standard_user']
+      })
+    ).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 1,
+      idOnly: 0,
+      noActor: 0,
+      scope: 1
+    })
+  })
+
+  it('does not count an empty scope array as scope presence', () => {
+    expect(
+      classifyActorAttribution({
+        id: 'user-1',
+        email: 'alice@example.com',
+        scope: []
+      })
+    ).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 1,
+      idOnly: 0,
+      noActor: 0,
+      scope: 0
+    })
+  })
+})
+
+describe('emptyAttributionCounts', () => {
+  it('starts every cell at zero', () => {
+    expect(emptyAttributionCounts()).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 0,
+      scope: 0
+    })
+  })
+
+  it('returns a fresh object each call', () => {
+    expect(emptyAttributionCounts()).not.toBe(emptyAttributionCounts())
+  })
+})
+
+describe('addAttribution', () => {
+  it('records an actor under its event kind', () => {
+    const matrix = {}
+    addAttribution(matrix, STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED, {
+      id: 'user-1',
+      name: 'Alice',
+      email: 'alice@example.com'
+    })
+
+    expect(matrix).toEqual({
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 1,
+        nameOnly: 0,
+        emailOnly: 0,
+        idOnly: 0,
+        noActor: 0,
+        scope: 0
+      }
+    })
+  })
+
+  it('accumulates several actors of the same kind', () => {
+    const matrix = {}
+    addAttribution(matrix, STREAM_EVENT_KIND.PRN_CREATED, {
+      id: 'user-1',
+      name: 'Alice'
+    })
+    addAttribution(matrix, STREAM_EVENT_KIND.PRN_CREATED, { id: 'user-2' })
+    addAttribution(matrix, STREAM_EVENT_KIND.PRN_CREATED, null)
+
+    expect(matrix[STREAM_EVENT_KIND.PRN_CREATED]).toEqual({
+      nameAndEmail: 0,
+      nameOnly: 1,
+      emailOnly: 0,
+      idOnly: 1,
+      noActor: 1,
+      scope: 0
+    })
+  })
+})
+
+describe('mergeAttributionMatrices', () => {
+  it('sums counts per kind per cell across matrices', () => {
+    const a = {
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 1,
+        nameOnly: 0,
+        emailOnly: 2,
+        idOnly: 0,
+        noActor: 1,
+        scope: 3
+      }
+    }
+    const b = {
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 0,
+        nameOnly: 1,
+        emailOnly: 1,
+        idOnly: 4,
+        noActor: 0,
+        scope: 1
+      },
+      [STREAM_EVENT_KIND.PRN_ACCEPTED]: {
+        nameAndEmail: 0,
+        nameOnly: 2,
+        emailOnly: 0,
+        idOnly: 0,
+        noActor: 0,
+        scope: 0
+      }
+    }
+
+    expect(mergeAttributionMatrices([a, b])).toEqual({
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 1,
+        nameOnly: 1,
+        emailOnly: 3,
+        idOnly: 4,
+        noActor: 1,
+        scope: 4
+      },
+      [STREAM_EVENT_KIND.PRN_ACCEPTED]: {
+        nameAndEmail: 0,
+        nameOnly: 2,
+        emailOnly: 0,
+        idOnly: 0,
+        noActor: 0,
+        scope: 0
+      }
+    })
+  })
+
+  it('returns an empty matrix when given no matrices', () => {
+    expect(mergeAttributionMatrices([])).toEqual({})
+  })
+})
+
+describe('formatAttributionMatrix', () => {
+  it('renders each kind with its cell counts, kinds sorted', () => {
+    const matrix = {
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 2,
+        nameOnly: 0,
+        emailOnly: 1,
+        idOnly: 3,
+        noActor: 1,
+        scope: 2
+      },
+      [STREAM_EVENT_KIND.PRN_CREATED]: {
+        nameAndEmail: 0,
+        nameOnly: 4,
+        emailOnly: 0,
+        idOnly: 0,
+        noActor: 2,
+        scope: 0
+      }
+    }
+
+    expect(formatAttributionMatrix(matrix)).toBe(
+      'prn-created{displayAndContact:0,displayOnly:4,contactOnly:0,idOnly:0,noActor:2,scope:0};' +
+        'summary-log-submitted{displayAndContact:2,displayOnly:0,contactOnly:1,idOnly:3,noActor:1,scope:2}'
+    )
+  })
+
+  it('renders an empty matrix as an empty string', () => {
+    expect(formatAttributionMatrix({})).toBe('')
+  })
+
+  it('renders no cell label that CDP PII masking would redact', () => {
+    const matrix = {
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 1,
+        nameOnly: 1,
+        emailOnly: 1,
+        idOnly: 1,
+        noActor: 1,
+        scope: 1
+      }
+    }
+
+    expect(formatAttributionMatrix(matrix)).not.toMatch(/name|email/i)
   })
 })

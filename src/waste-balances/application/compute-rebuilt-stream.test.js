@@ -56,8 +56,7 @@ describe('computeRebuiltStream', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
   })
 
@@ -1219,9 +1218,19 @@ describe('computeRebuiltStream', () => {
     })
   })
 
-  describe('backfilled actor count', () => {
+  describe('per-event-kind PRN actor attribution', () => {
     const registrationId = 'reg-1'
     const organisationId = 'org-1'
+
+    const counts = (overrides) => ({
+      nameAndEmail: 0,
+      nameOnly: 0,
+      emailOnly: 0,
+      idOnly: 0,
+      noActor: 0,
+      scope: 0,
+      ...overrides
+    })
 
     const submittedLog = (id, submittedBy) => ({
       id,
@@ -1244,7 +1253,7 @@ describe('computeRebuiltStream', () => {
       }
     })
 
-    it('reports zero when every event carries a real actor', () => {
+    it('classifies a PRN history actor that carries a name', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1252,33 +1261,31 @@ describe('computeRebuiltStream', () => {
         wasteRecords: [],
         prns: [createdPrn('prn-1', { id: 'rep-1', name: 'Rita Reprocessor' })],
         overseasSites,
-        summaryLogs: [
-          submittedLog('sl-1', { id: 'usr-9', name: 'submitter@example.com' })
-        ]
+        summaryLogs: []
       })
 
-      expect(result.backfilledActorCount).toBe(0)
-      expect(result.backfilledActorCountByKind).toEqual({})
+      expect(result.attributionMatrix).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: counts({ nameOnly: 1 })
+      })
     })
 
-    it('counts a summary-log event with no submitter', () => {
+    it('classifies a PRN history actor identified only by its id', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
         organisationId,
         wasteRecords: [],
-        prns: [],
+        prns: [createdPrn('prn-1', { id: 'rep-1' })],
         overseasSites,
-        summaryLogs: [submittedLog('sl-1')]
+        summaryLogs: []
       })
 
-      expect(result.backfilledActorCount).toBe(1)
-      expect(result.backfilledActorCountByKind).toEqual({
-        [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: 1
+      expect(result.attributionMatrix).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: counts({ idOnly: 1 })
       })
     })
 
-    it('counts a PRN event whose history entry has no actor', () => {
+    it('classifies a PRN event whose history entry has no actor', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1289,13 +1296,12 @@ describe('computeRebuiltStream', () => {
         summaryLogs: []
       })
 
-      expect(result.backfilledActorCount).toBe(1)
-      expect(result.backfilledActorCountByKind).toEqual({
-        [STREAM_EVENT_KIND.PRN_CREATED]: 1
+      expect(result.attributionMatrix).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: counts({ noActor: 1 })
       })
     })
 
-    it('breaks the backfilled count down by event type', () => {
+    it('does not count summary-log submissions, which the recovery path owns', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1306,10 +1312,8 @@ describe('computeRebuiltStream', () => {
         summaryLogs: [submittedLog('sl-1')]
       })
 
-      expect(result.backfilledActorCount).toBe(2)
-      expect(result.backfilledActorCountByKind).toEqual({
-        [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: 1,
-        [STREAM_EVENT_KIND.PRN_CREATED]: 1
+      expect(result.attributionMatrix).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: counts({ noActor: 1 })
       })
     })
 
@@ -1341,14 +1345,13 @@ describe('computeRebuiltStream', () => {
         summaryLogs: []
       })
 
-      expect(result.backfilledActorCount).toBe(2)
-      expect(result.backfilledActorCountByKind).toEqual({
-        [STREAM_EVENT_KIND.PRN_CREATED]: 1,
-        [STREAM_EVENT_KIND.PRN_ISSUED]: 1
+      expect(result.attributionMatrix).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: counts({ noActor: 1 }),
+        [STREAM_EVENT_KIND.PRN_ISSUED]: counts({ noActor: 1 })
       })
     })
 
-    it('tallies repeated backfills of the same event type', () => {
+    it('tallies repeated events of the same kind', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1359,13 +1362,12 @@ describe('computeRebuiltStream', () => {
         summaryLogs: []
       })
 
-      expect(result.backfilledActorCount).toBe(2)
-      expect(result.backfilledActorCountByKind).toEqual({
-        [STREAM_EVENT_KIND.PRN_CREATED]: 2
+      expect(result.attributionMatrix).toEqual({
+        [STREAM_EVENT_KIND.PRN_CREATED]: counts({ noActor: 2 })
       })
     })
 
-    it('reports zero for an empty stream', () => {
+    it('reports an empty matrix for an empty stream', () => {
       const result = computeRebuiltStream({
         accreditation,
         registrationId,
@@ -1376,8 +1378,7 @@ describe('computeRebuiltStream', () => {
         summaryLogs: []
       })
 
-      expect(result.backfilledActorCount).toBe(0)
-      expect(result.backfilledActorCountByKind).toEqual({})
+      expect(result.attributionMatrix).toEqual({})
     })
   })
 })
