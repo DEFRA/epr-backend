@@ -44,7 +44,7 @@ export { MAX_ACTUAL_LENGTH } from './validate-issue-logging.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
