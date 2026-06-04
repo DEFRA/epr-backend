@@ -291,7 +291,7 @@ describe('balance divergence diagnostic (integration)', () => {
     })
     expect(submitters.get(fileId)).toEqual({
       id: 'user-1',
-      name: 'alice@example.com'
+      email: 'alice@example.com'
     })
 
     // 4. Migrate: replay the stream with the recovered submitter attached and
@@ -316,7 +316,7 @@ describe('balance divergence diagnostic (integration)', () => {
     expect(result.backfilledActorCount).toBe(0)
     expect(result.events[0].createdBy).toEqual({
       id: 'user-1',
-      name: 'alice@example.com'
+      email: 'alice@example.com'
     })
   })
 })
