@@ -3,8 +3,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   VALIDATION_CATEGORY,
-  VALIDATION_CODE,
-  VALIDATION_SEVERITY
+  VALIDATION_CODE
 } from '#common/enums/index.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
@@ -31,6 +30,7 @@ import {
 } from './load-counts.js'
 import { computeLoadsByPeriodStatus } from './period-status.js'
 import {
+  capIssuesForStorage,
   logValidationIssues,
   MAX_VALIDATION_ISSUES
 } from './validate-issue-logging.js'
@@ -40,8 +40,7 @@ import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 
 export { MAX_VALIDATION_ISSUES }
-
-export const MAX_ACTUAL_LENGTH = 200
+export { MAX_ACTUAL_LENGTH } from './validate-issue-logging.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
@@ -786,56 +785,4 @@ export const createSummaryLogsValidator = ({
       }
     })
   }
-}
-
-/** @param {ValidationIssue[]} issues */
-const truncateActualValues = (issues) => {
-  for (const issue of issues) {
-    if (
-      typeof issue.context?.actual === 'string' &&
-      issue.context.actual.length > MAX_ACTUAL_LENGTH
-    ) {
-      issue.context.actual =
-        issue.context.actual.slice(0, MAX_ACTUAL_LENGTH) + '…'
-    }
-  }
-}
-
-/**
- * Caps the issues array and truncates long actual values for MongoDB storage.
- *
- * Both the issue count and per-issue actual values are bounded to prevent
- * the summary log document exceeding MongoDB's 16 MiB BSON limit.
- * @see https://eaflood.atlassian.net/browse/PAE-1244
- *
- * Fatal issues are always preserved — they determine the summary log status
- * and are required by the frontend to render specific error messages.
- * Non-fatal issues fill the remaining capacity.
- *
- * @param {ValidationIssue[]} allIssues - All validation issues
- * @returns {ValidationIssue[]} The capped, actual-value-truncated issues
- */
-const capIssuesForStorage = (allIssues) => {
-  let cappedIssues
-
-  if (allIssues.length <= MAX_VALIDATION_ISSUES) {
-    cappedIssues = allIssues
-  } else {
-    const fatal = allIssues.filter(
-      (issue) => issue.severity === VALIDATION_SEVERITY.FATAL
-    )
-    const nonFatal = allIssues.filter(
-      (issue) => issue.severity !== VALIDATION_SEVERITY.FATAL
-    )
-    const cappedFatal = fatal.slice(0, MAX_VALIDATION_ISSUES)
-    const nonFatalSlots = Math.max(
-      0,
-      MAX_VALIDATION_ISSUES - cappedFatal.length
-    )
-    cappedIssues = [...cappedFatal, ...nonFatal.slice(0, nonFatalSlots)]
-  }
-
-  truncateActualValues(cappedIssues)
-
-  return cappedIssues
 }
