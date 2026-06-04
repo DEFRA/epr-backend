@@ -170,8 +170,7 @@ describe('runStreamPromotion', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
   })
 
@@ -232,6 +231,26 @@ describe('runStreamPromotion', () => {
     ).toHaveBeenCalledWith({
       accreditationId: 'acc-stuck'
     })
+  })
+
+  it('enumerates legacy documents with no canonicalSource as embedded so the sweep migrates them too', async () => {
+    await runStreamPromotion(mockServer)
+
+    expect(mockFindBalances).toHaveBeenNthCalledWith(
+      2,
+      {
+        canonicalSource: {
+          $in: [WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED, null]
+        }
+      },
+      expect.objectContaining({
+        projection: expect.objectContaining({
+          accreditationId: 1,
+          organisationId: 1,
+          registrationId: 1
+        })
+      })
+    )
   })
 
   it('promotes an embedded accreditation through the full lifecycle', async () => {
@@ -299,8 +318,7 @@ describe('runStreamPromotion', () => {
       events: builtEvents,
       amount: 100,
       availableAmount: 100,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runStreamPromotion(mockServer)
