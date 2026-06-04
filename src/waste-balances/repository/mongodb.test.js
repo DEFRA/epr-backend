@@ -26,11 +26,7 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  streamRepository: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient },
-    use
-  ) => {
+  streamRepository: async ({ mongoClient }, use) => {
     const database = /** @type {import('mongodb').MongoClient} */ (
       mongoClient
     ).db(DATABASE_NAME)
@@ -38,11 +34,7 @@ const it = mongoIt.extend({
     await use(factory())
   },
 
-  wasteBalancesRepository: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient, streamRepository },
-    use
-  ) => {
+  wasteBalancesRepository: async ({ mongoClient, streamRepository }, use) => {
     const database = /** @type {import('mongodb').MongoClient} */ (
       mongoClient
     ).db(DATABASE_NAME)
@@ -55,11 +47,7 @@ const it = mongoIt.extend({
     await use(factory)
   },
 
-  insertWasteBalance: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient },
-    use
-  ) => {
+  insertWasteBalance: async ({ mongoClient }, use) => {
     await use(async (wasteBalance) => {
       await /** @type {import('mongodb').MongoClient} */ (mongoClient)
         .db(DATABASE_NAME)
@@ -68,11 +56,7 @@ const it = mongoIt.extend({
     })
   },
 
-  insertWasteBalances: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient },
-    use
-  ) => {
+  insertWasteBalances: async ({ mongoClient }, use) => {
     await use(async (wasteBalances) => {
       await /** @type {import('mongodb').MongoClient} */ (mongoClient)
         .db(DATABASE_NAME)
@@ -118,6 +102,92 @@ describe('MongoDB waste balances repository', () => {
 
     describe('waste balances repository contract', () => {
       testWasteBalancesRepositoryContract(it)
+    })
+  })
+
+  describe('legacy documents with no canonicalSource marker', () => {
+    beforeEach(
+      async (
+        // @ts-expect-error -- vitest .extend() fixture typing
+        { mongoClient }
+      ) => {
+        await /** @type {import('mongodb').MongoClient} */ (mongoClient)
+          .db(DATABASE_NAME)
+          .collection(WASTE_BALANCE_COLLECTION_NAME)
+          .deleteMany({})
+      }
+    )
+
+    const buildRepository = async (mongoClient) => {
+      const db = /** @type {import('mongodb').MongoClient} */ (mongoClient).db(
+        DATABASE_NAME
+      )
+      const streamRepository = (await createMongoStreamRepository(db))()
+      const factory = await createWasteBalancesRepository(db, {
+        streamRepository
+      })
+      return { db, repository: factory() }
+    }
+
+    it('flips a document that has no canonicalSource field to migrating — absence reads as embedded', async ({
+      mongoClient
+    }) => {
+      const { db, repository } = await buildRepository(mongoClient)
+      await db.collection(WASTE_BALANCE_COLLECTION_NAME).insertOne(
+        /** @type {*} */ ({
+          _id: '00000000-0000-0000-0000-000000000020',
+          accreditationId: 'acc-legacy-unmarked',
+          organisationId: 'org-legacy',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 2,
+          schemaVersion: 1
+        })
+      )
+
+      const result = await repository.flipCanonicalSourceToMigrating({
+        accreditationId: 'acc-legacy-unmarked',
+        capturedVersion: 2
+      })
+
+      expect(result).toEqual({
+        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      })
+      const after = await repository.findByAccreditationId(
+        'acc-legacy-unmarked'
+      )
+      expect(after?.canonicalSource).toBe(
+        WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
+      )
+      expect(after?.migratingSince).toBeDefined()
+    })
+
+    it('leaves a fieldless document untouched when the captured version diverges', async ({
+      mongoClient
+    }) => {
+      const { db, repository } = await buildRepository(mongoClient)
+      await db.collection(WASTE_BALANCE_COLLECTION_NAME).insertOne(
+        /** @type {*} */ ({
+          _id: '00000000-0000-0000-0000-000000000021',
+          accreditationId: 'acc-legacy-stale',
+          organisationId: 'org-legacy',
+          amount: 0,
+          availableAmount: 0,
+          transactions: [],
+          version: 5,
+          schemaVersion: 1
+        })
+      )
+
+      await repository.flipCanonicalSourceToMigrating({
+        accreditationId: 'acc-legacy-stale',
+        capturedVersion: 4
+      })
+
+      const after = await repository.findByAccreditationId('acc-legacy-stale')
+      expect(after?.canonicalSource).toBeUndefined()
+      expect(after?.migratingSince).toBeUndefined()
     })
   })
 
