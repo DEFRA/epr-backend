@@ -43,7 +43,14 @@ const findEmbeddedBalances = async (db) => {
   const docs = await db
     .collection(WASTE_BALANCES_COLLECTION)
     .find(
-      { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED },
+      {
+        // A missing canonicalSource reads as embedded everywhere else
+        // (read path, census, divergence diagnostic); $in with null matches
+        // documents that have no field so the sweep enumerates them too.
+        canonicalSource: {
+          $in: [WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED, null]
+        }
+      },
       {
         projection: {
           _id: 0,
