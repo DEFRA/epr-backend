@@ -22,12 +22,14 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
   const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory({
+    /** @type {import('#common/helpers/logging/logger.js').TypedLogger} */
+    const mockLogger = /** @type {any} */ ({
       info: vi.fn(),
       error: vi.fn(),
       warn: vi.fn(),
       debug: vi.fn()
     })
+    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
     const server = await createTestServer({
       repositories: {
@@ -271,13 +273,14 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         summaryLogId,
         summaryLogFactory.invalid({ organisationId, registrationId })
       )
-      await summaryLogsRepository.update(summaryLogId, 1, {
-        meta: {
-          PROCESSING_TYPE: null,
-          MATERIAL: null,
-          ACCREDITATION_NUMBER: null
-        }
+      // Null values can exist in MongoDB; verify they're omitted from the response
+      /** @type {import('#domain/summary-logs/model.js').SummaryLogMeta} */
+      const nullMeta = /** @type {any} */ ({
+        PROCESSING_TYPE: null,
+        MATERIAL: null,
+        ACCREDITATION_NUMBER: null
       })
+      await summaryLogsRepository.update(summaryLogId, 1, { meta: nullMeta })
       await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
