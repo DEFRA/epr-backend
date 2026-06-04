@@ -13,7 +13,7 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 /** @import {PeriodicReport, ReportsRepository} from '#reports/repository/port.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {WasteRecord, WasteRecordVersion} from '#domain/waste-records/model.js' */
 
 /**
  * @typedef {Object} PeriodStatusBucket
@@ -310,7 +310,9 @@ export const buildTransactionAmounts = (
     }
 
     const key = `${record.type}:${record.rowId}`
-    const lastVersion = record.versions[record.versions.length - 1]
+    const lastVersion = /** @type {WasteRecordVersion} */ (
+      record.versions.at(-1)
+    )
     const isAdjusted =
       lastVersion.summaryLog?.id === summaryLogId &&
       lastVersion.status === VERSION_STATUS.UPDATED
