@@ -4,5 +4,5 @@
     "github>DEFRA/epr-re-ex-service//renovate-presets/default",
     "github>DEFRA/epr-re-ex-service//renovate-presets/defra-node"
   ],
-  "enabledManagers": ["dockerfile"]
+  "enabledManagers": ["dockerfile", "nvm", "custom.regex"]
 }
