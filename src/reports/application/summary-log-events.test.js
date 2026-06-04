@@ -1,36 +1,41 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import {
-  REPORT_STATUS,
-  REPORT_STATUS_SLOT
-} from '#reports/domain/report-status.js'
 import { STALE_REASON } from '#reports/domain/stale.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
-  DEFAULT_CHANGED_BY,
   DEFAULT_ORG_ID,
-  DEFAULT_REG_ID
+  DEFAULT_REG_ID,
+  DEFAULT_CHANGED_BY
 } from '#reports/repository/contract/test-data.js'
 import { onSummaryLogUploaded } from './summary-log-events.js'
 
-const mockAuditMarkReportStale = vi.fn()
+// helpers
+
+import {
+  REPORT_STATUS,
+  REPORT_STATUS_SLOT
+} from '#reports/domain/report-status.js'
+
+const mockAuditMarkReportsStale = vi.fn()
 
 vi.mock('#reports/application/audit.js', () => ({
-  auditMarkReportStale: (...args) => mockAuditMarkReportStale(...args)
+  auditMarkReportsStale: (...args) => mockAuditMarkReportsStale(...args)
 }))
 
 const buildSystemLogsRepository = () => ({
   insert: vi.fn().mockResolvedValue(undefined),
+  insertMany: vi.fn().mockResolvedValue(undefined),
   find: vi.fn(),
   findSummaryLogSubmitActors: vi.fn()
 })
 
 const FIXED_NOW = '2025-06-01T12:00:00.000Z'
+const DEFAULT_SL_ID = 'sl-id-new-000000000000000000000001'
 
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(FIXED_NOW))
-  mockAuditMarkReportStale.mockResolvedValue(undefined)
+  mockAuditMarkReportsStale.mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -48,6 +53,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      summaryLogId: DEFAULT_SL_ID,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -55,60 +61,22 @@ describe('onSummaryLogUploaded', () => {
     const updated = await reportsRepositoryFactory().findReportById(reportId)
     expect(updated.stale).toEqual({
       at: FIXED_NOW,
-      reason: STALE_REASON.SUMMARY_LOG_CHANGED
-    })
-  })
-
-  it('marks a ready_to_submit report as stale', async () => {
-    const reportsRepositoryFactory = createInMemoryReportsRepository()
-    const repo = reportsRepositoryFactory()
-
-    const { id: reportId } = await repo.createReport(buildCreateReportParams())
-    await repo.updateReportStatus({
-      reportId,
-      version: 1,
-      status: REPORT_STATUS.READY_TO_SUBMIT,
-      slot: REPORT_STATUS_SLOT.READY,
-      changedBy: DEFAULT_CHANGED_BY
-    })
-
-    await onSummaryLogUploaded({
-      organisationId: DEFAULT_ORG_ID,
-      registrationId: DEFAULT_REG_ID,
-      reportsRepository: reportsRepositoryFactory(),
-      systemLogsRepository: buildSystemLogsRepository()
-    })
-
-    const updated = await reportsRepositoryFactory().findReportById(reportId)
-    expect(updated.stale).toEqual({
-      at: FIXED_NOW,
-      reason: STALE_REASON.SUMMARY_LOG_CHANGED
+      reason: STALE_REASON.SUMMARY_LOG_CHANGED,
+      summaryLogId: DEFAULT_SL_ID
     })
   })
 
   it('does not mark a submitted report as stale', async () => {
     const reportsRepositoryFactory = createInMemoryReportsRepository()
-    const repo = reportsRepositoryFactory()
 
-    const { id: reportId } = await repo.createReport(buildCreateReportParams())
-    await repo.updateReportStatus({
-      reportId,
-      version: 1,
-      status: REPORT_STATUS.READY_TO_SUBMIT,
-      slot: REPORT_STATUS_SLOT.READY,
-      changedBy: DEFAULT_CHANGED_BY
-    })
-    await repo.updateReportStatus({
-      reportId,
-      version: 2,
-      status: REPORT_STATUS.SUBMITTED,
-      slot: REPORT_STATUS_SLOT.SUBMITTED,
-      changedBy: DEFAULT_CHANGED_BY
-    })
+    const { id: reportId } = await createAndSubmitReport(
+      reportsRepositoryFactory()
+    )
 
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      summaryLogId: DEFAULT_SL_ID,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -118,10 +86,9 @@ describe('onSummaryLogUploaded', () => {
   })
 
   it('marks all active reports as stale when multiple exist', async () => {
+    const MONTHLY_PERIODS = { January: 1, February: 2 }
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const repo = reportsRepositoryFactory()
-
-    const MONTHLY_PERIODS = { January: 1, February: 2 }
 
     const { id: id1 } = await repo.createReport(
       buildCreateReportParams({
@@ -140,6 +107,7 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      summaryLogId: DEFAULT_SL_ID,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -152,7 +120,7 @@ describe('onSummaryLogUploaded', () => {
     expect(updated2.stale?.reason).toBe(STALE_REASON.SUMMARY_LOG_CHANGED)
   })
 
-  it('audits each stale report', async () => {
+  it('audits stale reports in a single batch call', async () => {
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const repo = reportsRepositoryFactory()
 
@@ -163,17 +131,24 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      summaryLogId: DEFAULT_SL_ID,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository
     })
 
-    expect(mockAuditMarkReportStale).toHaveBeenCalledExactlyOnceWith(
+    expect(mockAuditMarkReportsStale).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         systemLogsRepository,
         organisationId: DEFAULT_ORG_ID,
         registrationId: DEFAULT_REG_ID,
-        previous: expect.objectContaining({ version: 1 }),
-        next: expect.objectContaining({ version: 2, stale: expect.any(Object) })
+        reportsMarkedStale: expect.arrayContaining([
+          expect.objectContaining({
+            stale: expect.objectContaining({
+              reason: STALE_REASON.SUMMARY_LOG_CHANGED,
+              summaryLogId: DEFAULT_SL_ID
+            })
+          })
+        ])
       })
     )
   })
@@ -182,10 +157,30 @@ describe('onSummaryLogUploaded', () => {
     await onSummaryLogUploaded({
       organisationId: DEFAULT_ORG_ID,
       registrationId: DEFAULT_REG_ID,
+      summaryLogId: DEFAULT_SL_ID,
       reportsRepository: createInMemoryReportsRepository()(),
       systemLogsRepository: buildSystemLogsRepository()
     })
 
-    expect(mockAuditMarkReportStale).not.toHaveBeenCalled()
+    expect(mockAuditMarkReportsStale).not.toHaveBeenCalled()
   })
 })
+
+async function createAndSubmitReport(repo) {
+  const { id } = await repo.createReport(buildCreateReportParams())
+  await repo.updateReportStatus({
+    reportId: id,
+    version: 1,
+    status: REPORT_STATUS.READY_TO_SUBMIT,
+    slot: REPORT_STATUS_SLOT.READY,
+    changedBy: DEFAULT_CHANGED_BY
+  })
+  await repo.updateReportStatus({
+    reportId: id,
+    version: 2,
+    status: REPORT_STATUS.SUBMITTED,
+    slot: REPORT_STATUS_SLOT.SUBMITTED,
+    changedBy: DEFAULT_CHANGED_BY
+  })
+  return { id }
+}

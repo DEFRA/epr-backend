@@ -2,12 +2,13 @@ import Boom from '@hapi/boom'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { STALE_REASON } from '#reports/domain/stale.js'
 import {
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
-  validateMarkReportStale,
+  validateMarkActiveReportsStale,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -284,31 +285,75 @@ const findReportsByStatus = async (
   return structuredClone(matching)
 }
 
+const ACTIVE_STATUSES = [
+  REPORT_STATUS.IN_PROGRESS,
+  REPORT_STATUS.READY_TO_SUBMIT
+]
+
 /**
  * @param {Map<string, Object>} reports
- * @param {string} reportId
- * @param {number} version
- * @param {import('./port.js').ReportStale} stale
- * @returns {Promise<import('./port.js').Report>}
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} summaryLogId
+ * @param {string} uploadedAt
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
-const markReportStale = async (reports, reportId, version, stale) => {
-  validateMarkReportStale({ reportId, version, stale })
+const markActiveReportsStale = async (
+  reports,
+  organisationId,
+  registrationId,
+  summaryLogId,
+  uploadedAt
+) => {
+  validateMarkActiveReportsStale({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt
+  })
 
-  const existing = reports.get(reportId)
-
-  if (!existing) {
-    throw Boom.notFound(`Report not found: ${reportId}`)
+  const stale = {
+    at: uploadedAt,
+    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
+    summaryLogId
   }
 
-  if (existing.version !== version) {
-    throw Boom.conflict(
-      `Version conflict: expected version ${version} for report ${reportId}`
+  let modifiedCount = 0
+
+  for (const [id, report] of reports) {
+    if (
+      report.organisationId === organisationId &&
+      report.registrationId === registrationId &&
+      ACTIVE_STATUSES.includes(report.status.currentStatus) &&
+      report.stale?.summaryLogId !== summaryLogId &&
+      report.source?.summaryLogId !== summaryLogId
+    ) {
+      reports.set(id, { ...report, stale, version: report.version + 1 })
+      modifiedCount++
+    }
+  }
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  return [...reports.values()]
+    .filter(
+      (r) =>
+        r.organisationId === organisationId &&
+        r.registrationId === registrationId &&
+        r.stale?.summaryLogId === summaryLogId
     )
-  }
-
-  const updated = { ...existing, stale, version: existing.version + 1 }
-  reports.set(reportId, updated)
-  return structuredClone(updated)
+    .map((r) =>
+      structuredClone({
+        reportId: r.id,
+        year: r.year,
+        cadence: r.cadence,
+        period: r.period,
+        submissionNumber: r.submissionNumber,
+        stale: r.stale
+      })
+    )
 }
 
 /**
@@ -332,7 +377,18 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     findAllPeriodicReports: () => findAllPeriodicReports(reports),
     findReportsByStatus: (organisationId, registrationId, statuses) =>
       findReportsByStatus(reports, organisationId, registrationId, statuses),
-    markReportStale: (reportId, version, stale) =>
-      markReportStale(reports, reportId, version, stale)
+    markActiveReportsStale: (
+      organisationId,
+      registrationId,
+      summaryLogId,
+      uploadedAt
+    ) =>
+      markActiveReportsStale(
+        reports,
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt
+      )
   })
 }

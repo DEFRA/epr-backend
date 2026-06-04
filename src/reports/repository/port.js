@@ -88,7 +88,20 @@
  */
 
 /**
- * @typedef {{ at: string, reason: string }} ReportStale
+ * @typedef {{ at: string, reason: string, summaryLogId?: string }} ReportStale
+ */
+
+/**
+ * Per-report result returned by {@link ReportsRepository.markActiveReportsStale}.
+ * Contains the fields needed to audit the stale transition.
+ *
+ * @typedef {Object} MarkReportStaleResult
+ * @property {string} reportId
+ * @property {number} year
+ * @property {string} cadence
+ * @property {number} period
+ * @property {number} submissionNumber
+ * @property {ReportStale} stale
  */
 
 /**
@@ -235,7 +248,10 @@
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
  * @property {(organisationId: string, registrationId: string, statuses: ReportStatus[]) => Promise<Report[]>} findReportsByStatus
- * @property {(reportId: string, version: number, stale: ReportStale) => Promise<Report>} markReportStale
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStale
+ *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
+ *   skipping any report already built from `summaryLogId` or already stale from it.
+ *   Returns the per-report stale details for auditing.
  */
 
 /**

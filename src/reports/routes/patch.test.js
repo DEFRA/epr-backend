@@ -894,21 +894,18 @@ describe(`PATCH ${reportsPatchPath}`, () => {
 
   describe('when report is stale', () => {
     it('returns 409 with summary_log_changed code', async () => {
-      const {
-        server,
+      const { server, organisationId, registrationId, reportsRepository } =
+        await createServer({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+      await reportsRepository.markActiveReportsStale(
         organisationId,
         registrationId,
-        reportId,
-        reportsRepository
-      } = await createServer({
-        wasteProcessingType: 'reprocessor',
-        accreditationId: undefined
-      })
-
-      await reportsRepository.markReportStale(reportId, 1, {
-        at: new Date().toISOString(),
-        reason: 'summary_log_changed'
-      })
+        'sl-new',
+        new Date().toISOString()
+      )
 
       const response = await patchReport(
         server,

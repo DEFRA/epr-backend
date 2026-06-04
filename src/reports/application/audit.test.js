@@ -13,7 +13,7 @@ const {
   auditReportStatusTransition,
   auditReportCreate,
   auditReportDelete,
-  auditMarkReportStale
+  auditMarkReportsStale
 } = await import('./audit.js')
 
 const mockInsert = vi.fn()
@@ -258,106 +258,82 @@ describe('auditReportDelete', () => {
   })
 })
 
-describe('auditMarkReportStale', () => {
+describe('auditMarkReportsStale', () => {
   const systemActor = { id: 'system', email: 'system', scope: [] }
-  const params = {
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    year: 2025,
-    cadence: 'quarterly',
-    period: 1,
-    submissionNumber: 1,
-    reportId: 'rep-1',
-    previous: {
-      id: 'rep-1',
-      version: 1,
-      status: { currentStatus: 'in_progress' }
-    },
-    next: {
-      id: 'rep-1',
-      version: 2,
-      status: { currentStatus: 'in_progress' },
-      stale: { at: '2025-01-01T00:00:00.000Z', reason: 'summary_log_changed' }
-    }
+  const mockInsertMany = vi.fn()
+
+  const stale = {
+    at: '2025-06-01T12:00:00.000Z',
+    reason: 'summary_log_changed',
+    summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
   }
 
-  it('sends CDP audit event', async () => {
-    await auditMarkReportStale({
-      systemLogsRepository:
-        /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
-          /** @type {unknown} */ ({
-            insert: mockInsert,
-            find: vi.fn(),
-            findSummaryLogSubmitActors: vi.fn()
-          })
-        ),
-      ...params
-    })
-
-    expect(mockAudit).toHaveBeenCalledWith({
-      event: {
-        category: 'waste-reporting',
-        subCategory: 'reports',
-        action: 'mark-stale'
-      },
-      context: params,
-      user: systemActor
-    })
-  })
-
-  it('records system log', async () => {
-    await auditMarkReportStale({
-      systemLogsRepository:
-        /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
-          /** @type {unknown} */ ({
-            insert: mockInsert,
-            find: vi.fn(),
-            findSummaryLogSubmitActors: vi.fn()
-          })
-        ),
-      ...params
-    })
-
-    expect(mockInsert).toHaveBeenCalledWith({
-      createdAt: new Date('2025-06-01T12:00:00.000Z'),
-      createdBy: systemActor,
-      event: {
-        category: 'waste-reporting',
-        subCategory: 'reports',
-        action: 'mark-stale'
-      },
-      context: params
-    })
-  })
-
-  it('strips previous and next in CDP audit event when payload is oversized', async () => {
-    const veryLongString = randomBytes(1e6).toString('hex')
-    const oversizedParams = {
-      ...params,
-      previous: {
-        ...params.previous,
-        veryLongString
-      },
-      next: {
-        ...params.next,
-        veryLongString
-      }
+  const reportsMarkedStale = [
+    {
+      reportId: 'rep-1',
+      year: 2025,
+      cadence: 'quarterly',
+      period: 1,
+      submissionNumber: 1,
+      stale
     }
+  ]
 
-    await auditMarkReportStale({
-      systemLogsRepository:
-        /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
-          /** @type {unknown} */ ({
-            insert: mockInsert,
-            find: vi.fn(),
-            findSummaryLogSubmitActors: vi.fn()
-          })
-        ),
-      ...oversizedParams
+  const buildSystemLogsRepository = () =>
+    /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
+      /** @type {unknown} */ ({
+        insert: mockInsert,
+        insertMany: mockInsertMany,
+        find: vi.fn(),
+        findSummaryLogSubmitActors: vi.fn()
+      })
+    )
+
+  beforeEach(() => {
+    mockInsertMany.mockResolvedValue(undefined)
+  })
+
+  it('sends one CDP audit event per report', async () => {
+    await auditMarkReportsStale({
+      systemLogsRepository: buildSystemLogsRepository(),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      reportsMarkedStale
     })
 
-    expect(mockAudit).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockAudit).toHaveBeenCalledExactlyOnceWith({
+      user: systemActor,
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'reports',
+        action: 'mark-stale'
+      },
+      context: {
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        year: 2025,
+        cadence: 'quarterly',
+        period: 1,
+        submissionNumber: 1,
+        reportId: 'rep-1',
+        previous: { stale: null },
+        next: { stale }
+      }
+    })
+  })
+
+  it('batch-inserts one system log per report', async () => {
+    await auditMarkReportsStale({
+      systemLogsRepository: buildSystemLogsRepository(),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      reportsMarkedStale
+    })
+
+    expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
+      {
+        createdAt: new Date('2025-06-01T12:00:00.000Z'),
+        createdBy: systemActor,
         event: {
           category: 'waste-reporting',
           subCategory: 'reports',
@@ -371,22 +347,11 @@ describe('auditMarkReportStale', () => {
           period: 1,
           submissionNumber: 1,
           reportId: 'rep-1',
-          previous: { status: 'in_progress' },
-          next: { status: 'in_progress', stale: params.next.stale }
+          previous: { stale: null },
+          next: { stale }
         }
-      })
-    )
-
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'mark-stale'
-        },
-        context: oversizedParams
-      })
-    )
+      }
+    ])
   })
 })
 

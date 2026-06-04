@@ -47,11 +47,16 @@ function buildConsumerDeps(server, { config }) {
     systemLogsRepository
   } = /** @type {QueueConsumerRepositories} */ (server.app)
 
-  // Pre-wired closure: captures repos at plugin level; receives org/reg at call time
-  const onSummaryLogSubmittedReportHook = (organisationId, registrationId) =>
+  // Pre-wired closure: captures repos at plugin level; receives org/reg/sl-id at call time
+  const onSummaryLogSubmittedReportHook = (
+    organisationId,
+    registrationId,
+    summaryLogId
+  ) =>
     onSummaryLogUploaded({
       organisationId,
       registrationId,
+      summaryLogId,
       reportsRepository,
       systemLogsRepository
     })

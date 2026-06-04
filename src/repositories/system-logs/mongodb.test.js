@@ -62,4 +62,39 @@ describe('Mongo DB system logs repository', () => {
     expect(collectionSpy).toHaveBeenCalled()
     expect(mockLogger.error).toHaveBeenCalled()
   })
+
+  it('fails gracefully and logs an error when insertMany DB write fails', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn()
+    }
+
+    let callCount = 0
+    const mockDb = {
+      collection: () => {
+        callCount++
+        if (callCount === 1) {
+          return { createIndex: async () => {} }
+        }
+        throw new Error('error accessing db')
+      }
+    }
+
+    const repositoryFactory = await createSystemLogsRepository(mockDb)
+    const repository = repositoryFactory(mockLogger)
+
+    const payload = {
+      createdAt: new Date(),
+      event: { category: 'c', action: 'a' },
+      context: { organisationId: randomUUID() }
+    }
+
+    await repository.insertMany([payload])
+
+    expect(mockLogger.error).toHaveBeenCalled()
+  })
 })

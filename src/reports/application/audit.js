@@ -2,6 +2,7 @@ import {
   extractUserDetails,
   isPayloadSmallEnoughToAudit,
   recordSystemLog,
+  recordSystemLogs,
   safeAudit
 } from '#auditing/helpers.js'
 
@@ -149,78 +150,46 @@ export async function auditReportDelete(request, params) {
 }
 
 /**
- * Audits a system-triggered markReportStale operation via CDP audit and system logs.
- * Takes systemLogsRepository directly — no Hapi request (system actor, not user-triggered).
+ * Audits a bulk markActiveReportsStale operation via CDP audit and system logs.
+ * Emits one CDP audit event and one system-log record per report.
+ * Uses {@link recordSystemLogs} for a single DB round-trip across all records.
  * @param {{
  *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
  *   organisationId: string,
  *   registrationId: string,
- *   year: number,
- *   cadence: string,
- *   period: number,
- *   submissionNumber: number,
- *   reportId: string,
- *   previous: object,
- *   next: object
+ *   reportsMarkedStale: import('#reports/repository/port.js').MarkReportStaleResult[]
  * }} params
  */
-export async function auditMarkReportStale({
+export async function auditMarkReportsStale({
   systemLogsRepository,
   organisationId,
   registrationId,
-  year,
-  cadence,
-  period,
-  submissionNumber,
-  reportId,
-  previous,
-  next
+  reportsMarkedStale
 }) {
-  const payload = {
-    event: {
-      category: AUDIT_CATEGORY,
-      subCategory: AUDIT_SUB_CATEGORY,
-      action: 'mark-stale'
-    },
-    context: {
-      organisationId,
-      registrationId,
-      year,
-      cadence,
-      period,
-      submissionNumber,
-      reportId,
-      previous,
-      next
-    },
-    user: SYSTEM_ACTOR
-  }
-
-  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
-    ? payload
-    : {
-        ...payload,
-        context: {
-          organisationId,
-          registrationId,
-          year,
-          cadence,
-          period,
-          submissionNumber,
-          reportId,
-          previous: { status: previous.status?.currentStatus },
-          next: { status: next.status?.currentStatus, stale: next.stale }
-        }
+  const payloads = reportsMarkedStale.map(
+    ({ reportId, year, cadence, period, submissionNumber, stale }) => ({
+      user: SYSTEM_ACTOR,
+      event: {
+        category: AUDIT_CATEGORY,
+        subCategory: AUDIT_SUB_CATEGORY,
+        action: 'mark-stale'
+      },
+      context: {
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period,
+        submissionNumber,
+        reportId,
+        previous: { stale: null },
+        next: { stale }
       }
+    })
+  )
 
-  safeAudit(safeAuditingPayload)
-
-  await systemLogsRepository.insert({
-    createdAt: new Date(),
-    createdBy: SYSTEM_ACTOR,
-    event: payload.event,
-    context: payload.context
-  })
+  payloads.forEach((p) => safeAudit(p))
+  await recordSystemLogs(systemLogsRepository, payloads)
 }
 
 /**

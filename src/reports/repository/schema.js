@@ -5,7 +5,6 @@ import {
 } from '#domain/organisations/model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { STALE_REASON } from '#reports/domain/stale.js'
 import Joi from 'joi'
 
 const START_YEAR = 2024
@@ -216,13 +215,9 @@ export const findReportByIdSchema = Joi.string()
   .guid({ version: 'uuidv4' })
   .required()
 
-export const markReportStaleSchema = Joi.object({
-  reportId: Joi.string().required(),
-  version: Joi.number().integer().min(1).required(),
-  stale: Joi.object({
-    at: Joi.string().isoDate().required(),
-    reason: Joi.string()
-      .valid(...Object.values(STALE_REASON))
-      .required()
-  }).required()
+export const markActiveReportsStaleSchema = Joi.object({
+  organisationId: MONGO_ID_SCHEMA,
+  registrationId: MONGO_ID_SCHEMA,
+  summaryLogId: Joi.string().required(),
+  uploadedAt: Joi.string().isoDate().required()
 })

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { audit } from '@defra/cdp-auditing'
 import { logger } from '#common/helpers/logging/logger.js'
-import { safeAudit } from './helpers.js'
+import { safeAudit, recordSystemLogs } from './helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -105,5 +105,60 @@ describe('safeAudit', () => {
     expect(audit).toHaveBeenCalledWith({
       event: payload.event
     })
+  })
+})
+
+describe('recordSystemLogs', () => {
+  const mockInsert = vi.fn()
+  const mockInsertMany = vi.fn()
+
+  const buildPayload = (id) => ({
+    user: { id: `user-${id}`, email: `user${id}@example.com`, scope: [] },
+    event: { category: 'test', subCategory: 'test', action: 'test' },
+    context: { id }
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockInsert.mockResolvedValue(undefined)
+    mockInsertMany.mockResolvedValue(undefined)
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-01T12:00:00.000Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('calls insertMany when the repository supports it', async () => {
+    const repository = { insert: mockInsert, insertMany: mockInsertMany }
+    const payload = buildPayload(1)
+
+    await recordSystemLogs(repository, [payload])
+
+    expect(mockInsertMany).toHaveBeenCalledExactlyOnceWith([
+      {
+        createdAt: new Date('2025-06-01T12:00:00.000Z'),
+        createdBy: payload.user,
+        event: payload.event,
+        context: payload.context
+      }
+    ])
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('falls back to individual inserts when insertMany is absent', async () => {
+    const repository = { insert: mockInsert }
+    const payloads = [buildPayload(1), buildPayload(2)]
+
+    await recordSystemLogs(repository, payloads)
+
+    expect(mockInsert).toHaveBeenCalledTimes(2)
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ createdBy: payloads[0].user })
+    )
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ createdBy: payloads[1].user })
+    )
   })
 })

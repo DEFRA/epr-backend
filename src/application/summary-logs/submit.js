@@ -21,7 +21,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
- * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
+ * @property {(organisationId: string, registrationId: string, summaryLogId: string) => Promise<void>} onSummaryLogSubmittedReportHook
  */
 
 /**
@@ -92,6 +92,12 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
   await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
 
+  await onSummaryLogSubmittedReportHook(
+    summaryLog.organisationId,
+    summaryLog.registrationId,
+    summaryLogId
+  )
+
   await summaryLogsRepository.update(
     summaryLogId,
     version,
@@ -102,11 +108,6 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     status: SUMMARY_LOG_STATUS.SUBMITTED,
     processingType
   })
-
-  await onSummaryLogSubmittedReportHook(
-    summaryLog.organisationId,
-    summaryLog.registrationId
-  )
 
   logger.info({
     message: `Summary log submitted: ${loggingContext}, created=${created}, updated=${updated}`,

@@ -6,7 +6,7 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
-  validateMarkReportStale,
+  validateMarkActiveReportsStale,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -16,6 +16,7 @@ import {
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
 import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
+import { STALE_REASON } from '#root/reports/domain/stale.js'
 
 /**
  * @import {
@@ -374,30 +375,84 @@ const performFindReportsByStatus = async (
   return docs.map(({ _id, ...report }) => report)
 }
 
+const ACTIVE_STATUSES = [
+  REPORT_STATUS.IN_PROGRESS,
+  REPORT_STATUS.READY_TO_SUBMIT
+]
+
 /**
- * Sets `stale` on a single report using optimistic locking.
+ * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
+ * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
  *
  * @param {Db} db
- * @param {string} reportId
- * @param {number} version
- * @param {import('./port.js').ReportStale} stale
- * @returns {Promise<Report>}
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} summaryLogId
+ * @param {string} uploadedAt
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
-const performMarkReportStale = async (db, reportId, version, stale) => {
-  validateMarkReportStale({ reportId, version, stale })
+const performMarkActiveReportsStale = async (
+  db,
+  organisationId,
+  registrationId,
+  summaryLogId,
+  uploadedAt
+) => {
+  validateMarkActiveReportsStale({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt
+  })
 
-  const doc = await reportsCollection(db).findOneAndUpdate(
-    { id: reportId, version },
-    { $set: { stale }, $inc: { version: 1 } },
-    { returnDocument: 'after', projection: { _id: 0 } }
-  )
-
-  if (!doc) {
-    return throwNotFoundOrConflict(db, reportId, version)
+  const stale = {
+    at: uploadedAt,
+    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
+    summaryLogId
   }
 
-  const { _id, ...report } = doc
-  return report
+  const filter = {
+    organisationId,
+    registrationId,
+    'status.currentStatus': { $in: ACTIVE_STATUSES },
+    'stale.summaryLogId': { $ne: summaryLogId },
+    'source.summaryLogId': { $ne: summaryLogId }
+  }
+
+  const { modifiedCount } = await reportsCollection(db).updateMany(filter, {
+    $set: { stale },
+    $inc: { version: 1 }
+  })
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  const updatedDocs = await reportsCollection(db)
+    .find(
+      { organisationId, registrationId, 'stale.summaryLogId': summaryLogId },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          submissionNumber: 1,
+          stale: 1
+        }
+      }
+    )
+    .toArray()
+
+  return updatedDocs.map((d) => ({
+    reportId: d.id,
+    year: d.year,
+    cadence: d.cadence,
+    period: d.period,
+    submissionNumber: d.submissionNumber,
+    stale: /** @type {import('./port.js').ReportStale} */ (d.stale)
+  }))
 }
 
 /**
@@ -419,7 +474,18 @@ export const createReportsRepository = async (db) => {
     findReportById: (reportId) => performFindReportById(db, reportId),
     findReportsByStatus: (organisationId, registrationId, statuses) =>
       performFindReportsByStatus(db, organisationId, registrationId, statuses),
-    markReportStale: (reportId, version, stale) =>
-      performMarkReportStale(db, reportId, version, stale)
+    markActiveReportsStale: (
+      organisationId,
+      registrationId,
+      summaryLogId,
+      uploadedAt
+    ) =>
+      performMarkActiveReportsStale(
+        db,
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt
+      )
   })
 }

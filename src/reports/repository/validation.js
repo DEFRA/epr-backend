@@ -6,7 +6,7 @@ import {
   deleteReportParamsSchema,
   findPeriodicReportsSchema,
   findReportByIdSchema,
-  markReportStaleSchema
+  markActiveReportsStaleSchema
 } from './schema.js'
 
 /**
@@ -104,11 +104,11 @@ export const validateFindReportById = (reportId) => {
 }
 
 /**
- * @param {{ reportId: string, version: number, stale: import('./port.js').ReportStale }} params
- * @returns {{ reportId: string, version: number, stale: import('./port.js').ReportStale }}
+ * @param {{ organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string }} params
+ * @returns {{ organisationId: string, registrationId: string, summaryLogId: string, uploadedAt: string }}
  */
-export const validateMarkReportStale = (params) => {
-  const { error, value } = markReportStaleSchema.validate(params, {
+export const validateMarkActiveReportsStale = (params) => {
+  const { error, value } = markActiveReportsStaleSchema.validate(params, {
     abortEarly: false
   })
 

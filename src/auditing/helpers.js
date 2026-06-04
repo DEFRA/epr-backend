@@ -35,6 +35,29 @@ async function recordSystemLog(request, { user, ...restPayload }) {
 }
 
 /**
+ * Batch analogue of {@link recordSystemLog} for system-triggered audits (no Hapi request available).
+ * Uses {@link SystemLogsRepository.insertMany} for a single DB round-trip.
+ *
+ * @param {SystemLogsRepository} systemLogsRepository
+ * @param {Array<{ user: object } & object>} payloads
+ */
+async function recordSystemLogs(systemLogsRepository, payloads) {
+  const records = payloads.map(({ user, ...restPayload }) => ({
+    createdAt: new Date(),
+    createdBy: user,
+    ...restPayload
+  }))
+
+  if (systemLogsRepository.insertMany) {
+    return systemLogsRepository.insertMany(records)
+  }
+
+  for (const record of records) {
+    await systemLogsRepository.insert(record)
+  }
+}
+
+/**
  * Check if payload is small enough for CDP auditing library.
  * Large payloads cause errors and the audit event is lost.
  * @param {object} payload
@@ -73,5 +96,6 @@ export {
   extractUserDetails,
   isPayloadSmallEnoughToAudit,
   recordSystemLog,
+  recordSystemLogs,
   safeAudit
 }

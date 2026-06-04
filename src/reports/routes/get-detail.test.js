@@ -1067,7 +1067,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         })
 
         const reportsRepository = reportsRepositoryFactory()
-        const { id: reportId } = await reportsRepository.createReport(
+        await reportsRepository.createReport(
           /** @type {import('#reports/repository/port.js').CreateReportParams} */ (
             /** @type {unknown} */ ({
               organisationId,
@@ -1099,10 +1099,12 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           )
         )
 
-        await reportsRepository.markReportStale(reportId, 1, {
-          at: new Date().toISOString(),
-          reason: 'summary_log_changed'
-        })
+        await reportsRepository.markActiveReportsStale(
+          organisationId,
+          String(registrationId),
+          'sl-new',
+          new Date().toISOString()
+        )
 
         const response = await server.inject({
           method: 'GET',

@@ -1,14 +1,15 @@
-import { STALE_REASON } from '#reports/domain/stale.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { auditMarkReportStale } from '#reports/application/audit.js'
+import { logger } from '#common/helpers/logging/logger.js'
+import { auditMarkReportsStale } from '#reports/application/audit.js'
 
 /**
  * Called after a new summary log is successfully submitted for an org/reg.
- * Marks all in-progress/ready-to-submit reports as stale and audits each change.
+ * Bulk-marks all active (in_progress / ready_to_submit) reports as stale
+ * and audits the changes in a single batch.
  *
  * @param {{
  *   organisationId: string,
  *   registrationId: string,
+ *   summaryLogId: string,
  *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
  *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
  * }} params
@@ -17,36 +18,29 @@ import { auditMarkReportStale } from '#reports/application/audit.js'
 export async function onSummaryLogUploaded({
   organisationId,
   registrationId,
+  summaryLogId,
   reportsRepository,
   systemLogsRepository
 }) {
-  const reports = await reportsRepository.findReportsByStatus(
+  const uploadedAt = new Date().toISOString()
+
+  const reportsMarkedStale = await reportsRepository.markActiveReportsStale(
     organisationId,
     registrationId,
-    [REPORT_STATUS.IN_PROGRESS, REPORT_STATUS.READY_TO_SUBMIT]
+    summaryLogId,
+    uploadedAt
   )
 
-  const now = new Date().toISOString()
-  const stale = { at: now, reason: STALE_REASON.SUMMARY_LOG_CHANGED }
+  if (reportsMarkedStale.length > 0) {
+    logger.info({
+      message: `Reports marked as stale: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+    })
 
-  for (const report of reports) {
-    const updated = await reportsRepository.markReportStale(
-      report.id,
-      report.version,
-      stale
-    )
-
-    await auditMarkReportStale({
+    await auditMarkReportsStale({
       systemLogsRepository,
       organisationId,
       registrationId,
-      year: report.year,
-      cadence: report.cadence,
-      period: report.period,
-      submissionNumber: report.submissionNumber,
-      reportId: report.id,
-      previous: report,
-      next: updated
+      reportsMarkedStale
     })
   }
 }
