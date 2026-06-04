@@ -2,31 +2,56 @@ import { isIncludedInWasteBalance } from './is-included-in-waste-balance.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { buildWasteRecord } from '#repositories/waste-records/contract/test-data.js'
 
 describe('isIncludedInWasteBalance', () => {
-  const accreditation = {
+  const accreditationBase = {
     id: 'acc-1',
+    accreditationNumber: 'ACC-1',
     validFrom: '2026-01-01',
     validTo: '2027-01-01',
-    statusHistory: []
+    statusHistory: [],
+    formSubmission: { id: 'fs-1', time: new Date('2026-01-01T00:00:00.000Z') },
+    material: 'plastic',
+    prnIssuance: {
+      incomeBusinessPlan: [],
+      signatories: [],
+      tonnageBand: 'up_to_500'
+    },
+    submittedToRegulator: 'ea',
+    submitterContactDetails: {
+      fullName: 'Test User',
+      email: 'test@example.com',
+      phone: '01234567890'
+    },
+    wasteProcessingType: 'reprocessor'
+  }
+
+  /** @type {import('#domain/organisations/accreditation.js').Accreditation} */
+  const accreditation = { ...accreditationBase, status: 'approved' }
+
+  /** @type {import('#domain/organisations/accreditation.js').Accreditation} */
+  const registeredOnlyAccreditation = {
+    ...accreditationBase,
+    status: 'created'
   }
 
   it('returns false when record.excludedFromWasteBalance is true', () => {
-    const record = {
+    const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
       excludedFromWasteBalance: true
-    }
+    })
     expect(
       isIncludedInWasteBalance(record, accreditation, ORS_VALIDATION_DISABLED)
     ).toBe(false)
   })
 
   it('returns false when no schema can be found for the record', () => {
-    const record = {
+    const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: { processingType: 'NOT_A_REAL_TYPE' }
-    }
+    })
     expect(
       isIncludedInWasteBalance(record, accreditation, ORS_VALIDATION_DISABLED)
     ).toBe(false)
@@ -34,10 +59,10 @@ describe('isIncludedInWasteBalance', () => {
 
   it('returns false when the schema does not have classifyForWasteBalance', () => {
     // SENT_ON records typically lack classifyForWasteBalance
-    const record = {
+    const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.SENT_ON,
       data: { processingType: PROCESSING_TYPES.EXPORTER }
-    }
+    })
     expect(
       isIncludedInWasteBalance(record, accreditation, ORS_VALIDATION_DISABLED)
     ).toBe(false)
@@ -45,7 +70,7 @@ describe('isIncludedInWasteBalance', () => {
 
   it('returns true when classifyForWasteBalance returns INCLUDED', () => {
     // A reprocessor RECEIVED record with all required fields should classify INCLUDED
-    const record = {
+    const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
         processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -64,15 +89,14 @@ describe('isIncludedInWasteBalance', () => {
         RECYCLABLE_PROPORTION_PERCENTAGE: 100,
         TONNAGE_RECEIVED_FOR_RECYCLING: 9
       }
-    }
+    })
     expect(
       isIncludedInWasteBalance(record, accreditation, ORS_VALIDATION_DISABLED)
     ).toBe(true)
   })
 
   it('returns false for a registered-only accreditation even when the record would otherwise be INCLUDED', () => {
-    const registeredOnlyAccreditation = { ...accreditation, status: 'created' }
-    const record = {
+    const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
         processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -91,7 +115,7 @@ describe('isIncludedInWasteBalance', () => {
         RECYCLABLE_PROPORTION_PERCENTAGE: 100,
         TONNAGE_RECEIVED_FOR_RECYCLING: 9
       }
-    }
+    })
     expect(
       isIncludedInWasteBalance(
         record,
@@ -102,7 +126,7 @@ describe('isIncludedInWasteBalance', () => {
   })
 
   it('returns false when classifyForWasteBalance returns EXCLUDED (PRN already issued)', () => {
-    const record = {
+    const record = buildWasteRecord({
       type: WASTE_RECORD_TYPE.EXPORTED,
       data: {
         processingType: PROCESSING_TYPES.EXPORTER,
@@ -129,7 +153,7 @@ describe('isIncludedInWasteBalance', () => {
         OSR_ID: '099',
         DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE: 'No'
       }
-    }
+    })
     expect(
       isIncludedInWasteBalance(record, accreditation, ORS_VALIDATION_DISABLED)
     ).toBe(false)
