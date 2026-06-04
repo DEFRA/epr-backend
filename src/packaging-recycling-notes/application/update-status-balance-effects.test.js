@@ -70,7 +70,7 @@ const balanceParamsFor = (overrides) => ({
   accreditationId: ACCREDITATION_ID,
   registrationId: REGISTRATION_ID,
   organisationId: ORGANISATION_ID,
-  userId: 'user-1',
+  createdBy: { id: 'user-1' },
   ...overrides
 })
 

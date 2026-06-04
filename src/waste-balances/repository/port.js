@@ -5,7 +5,7 @@
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {import('./stream-schema.js').StreamUserSummary} createdBy
  */
 
 /**
@@ -15,7 +15,7 @@
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {import('./stream-schema.js').StreamUserSummary} createdBy
  */
 
 /**
@@ -25,7 +25,7 @@
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {import('./stream-schema.js').StreamUserSummary} createdBy
  */
 
 /**
@@ -35,7 +35,7 @@
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {import('./stream-schema.js').StreamUserSummary} createdBy
  */
 
 /**
@@ -45,7 +45,7 @@
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {import('./stream-schema.js').StreamUserSummary} createdBy
  * @property {import('./stream-schema.js').StreamEventKind} streamKind
  */
 

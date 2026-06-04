@@ -6,13 +6,22 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../../domain/model.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
   describe('deductTotalBalanceForPrnIssue', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('deducts tonnage from total balance only', async ({
       insertWasteBalance
@@ -33,7 +42,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-123',
         tonnage: 50,
-        userId: 'user-abc'
+        createdBy: { id: 'user-abc' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-1')
@@ -60,7 +69,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-456',
         tonnage: 25.5,
-        userId: 'user-xyz'
+        createdBy: { id: 'user-xyz' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-2')
@@ -91,7 +100,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-789',
         tonnage: 30,
-        userId: 'user-123'
+        createdBy: { id: 'user-123' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-3')
@@ -109,7 +118,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-999',
         tonnage: 10,
-        userId: 'user-456'
+        createdBy: { id: 'user-456' }
       })
 
       const result = await repository.findByAccreditationId('acc-nonexistent')
@@ -136,7 +145,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-ledger',
         tonnage: 10,
-        userId: 'user-abc'
+        createdBy: { id: 'user-abc' }
       })
 
       const latest = await streamRepository.findLatestByPartition(
@@ -162,7 +171,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-embedded',
         tonnage: 10,
-        userId: 'user-abc'
+        createdBy: { id: 'user-abc' }
       })
 
       expect(watermark).toBeNull()
@@ -195,7 +204,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-marker',
         tonnage: 1,
-        userId: 'user-1'
+        createdBy: { id: 'user-1' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-marker')
@@ -216,7 +225,7 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-111',
         tonnage: 10,
-        userId: 'user-789'
+        createdBy: { id: 'user-789' }
       })
 
       const result = await repository.findByAccreditationId('acc-issue-4')
