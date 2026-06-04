@@ -703,6 +703,44 @@ describe('src/waste-balances/repository/helpers.js', () => {
         expect(saveBalance.mock.calls[0][1]).toEqual([])
       })
 
+      it('creates no balance doc or stream event for a registered-only accreditation even with the ledger flag on', async () => {
+        const wasteRecords = [
+          {
+            id: 'rec-1',
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            data: {}
+          }
+        ]
+        const accreditation = { id: 'acc-1', status: 'created' }
+        const streamRepository = { appendEvent: vi.fn() }
+        const featureFlags = {
+          isWasteBalanceLedgerEnabled: () => true
+        }
+        const findBalance = vi.fn().mockResolvedValue(null)
+        const saveBalance = vi.fn().mockResolvedValue(undefined)
+        vi.mocked(performUpdateViaStream).mockClear()
+        vi.mocked(calculateWasteBalanceUpdates).mockClear()
+
+        await callPerformUpdate({
+          wasteRecords,
+          accreditation,
+          dependencies: {
+            streamRepository,
+            featureFlags
+          },
+          findBalance,
+          saveBalance,
+          user: { id: 'user-1', email: 'user@test.com' },
+          overseasSites: ORS_VALIDATION_DISABLED,
+          summaryLogId: 'log-1'
+        })
+
+        expect(performUpdateViaStream).not.toHaveBeenCalled()
+        expect(calculateWasteBalanceUpdates).not.toHaveBeenCalled()
+        expect(saveBalance).not.toHaveBeenCalled()
+      })
+
       it('uses the embedded path when canonicalSource is ledger but no streamRepository is provided', async () => {
         const wasteRecords = [
           {

@@ -30,7 +30,7 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
 })
 
 /**
- * @typedef {{ skipped: 'registered-only', accreditation: import('#domain/organisations/accreditation.js').Accreditation }} RegisteredOnlySkip
+ * @typedef {{ skipped: 'registered-only' }} RegisteredOnlySkip
  */
 
 /**
@@ -149,10 +149,7 @@ export const loadAccreditationSources = async (row, deps) => {
     )
   }
   if (isRegisteredOnlyAccreditation(accreditation)) {
-    return /** @type {RegisteredOnlySkip} */ ({
-      skipped: 'registered-only',
-      accreditation
-    })
+    return /** @type {RegisteredOnlySkip} */ ({ skipped: 'registered-only' })
   }
   const registration = organisation.registrations.find(
     (r) =>

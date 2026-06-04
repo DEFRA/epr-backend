@@ -8,6 +8,7 @@ import {
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import { isRegisteredOnlyAccreditation } from '#domain/organisations/accreditation.js'
 
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
@@ -247,6 +248,14 @@ export const performUpdateWasteBalanceTransactions = async ({
   const annotatedRecords = markExcludedRecords(wasteRecords)
 
   if (annotatedRecords.length === 0) {
+    return
+  }
+
+  // A registered-only accreditation (status 'created'/'rejected') holds no
+  // waste balance. Return before either write path so no balance doc is
+  // created or maintained — neither an embedded array nor a ledger shell doc
+  // with its stream event — keeping reg-only at zero per the committed design.
+  if (isRegisteredOnlyAccreditation(accreditation)) {
     return
   }
 
