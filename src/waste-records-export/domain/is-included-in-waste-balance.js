@@ -1,5 +1,6 @@
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { isRegisteredOnlyAccreditation } from '#domain/organisations/accreditation.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -9,7 +10,9 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * Boolean version of waste-balances/application/calculator#getTargetAmount.
  * Returns true iff the record currently counts toward the waste balance for
  * its accreditation. Mirrors the same logic; differs only by returning a
- * boolean rather than a tonnage.
+ * boolean rather than a tonnage — including the registered-only accreditation
+ * gate, so an accreditation that never reached an accredited state includes
+ * no records.
  *
  * @param {WasteRecord} record
  * @param {Accreditation | null} accreditation
@@ -22,6 +25,10 @@ export const isIncludedInWasteBalance = (
   overseasSites
 ) => {
   if (record.excludedFromWasteBalance) {
+    return false
+  }
+
+  if (isRegisteredOnlyAccreditation(accreditation)) {
     return false
   }
 

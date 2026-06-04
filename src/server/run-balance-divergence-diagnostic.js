@@ -78,6 +78,9 @@ const formatDelta = (current, rebuilt) =>
  */
 export const compareForEmbedded = async (embedded, deps) => {
   const sources = await loadAccreditationSources(embedded, deps)
+  if ('skipped' in sources) {
+    return { skipped: sources.skipped }
+  }
   const { accreditation, registration, wasteRecords, prns, overseasSites } =
     sources
 
@@ -229,6 +232,7 @@ const runDiagnostic = async (db, deps) => {
 
   let scanned = 0
   let changed = 0
+  let skipped = 0
   let failed = 0
   /** @type {import('#waste-balances/application/summary-log-submitters.js').AttributionMatrix} */
   let attributionTotals = {}
@@ -237,6 +241,10 @@ const runDiagnostic = async (db, deps) => {
     scanned += 1
     try {
       const comparison = await compareForEmbedded(row, deps)
+      if ('skipped' in comparison) {
+        skipped += 1
+        continue
+      }
       attributionTotals = mergeAttributionMatrices([
         attributionTotals,
         comparison.attributionMatrix
@@ -255,7 +263,7 @@ const runDiagnostic = async (db, deps) => {
   }
 
   logger.info({
-    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} attributionMatrix=${formatAttributionMatrix(attributionTotals)}`
+    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} skipped=${skipped} failed=${failed} attributionMatrix=${formatAttributionMatrix(attributionTotals)}`
   })
 }
 

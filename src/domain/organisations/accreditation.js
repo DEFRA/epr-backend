@@ -1,3 +1,5 @@
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+
 /** @import {RegAccStatus, User} from '#domain/organisations/model.js' */
 
 /**
@@ -76,4 +78,22 @@
  * @typedef {AccreditationApproved | AccreditationOther} Accreditation
  */
 
-export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
+const REGISTERED_ONLY_STATUSES = /** @type {Set<RegAccStatus>} */ (
+  new Set([REG_ACC_STATUS.CREATED, REG_ACC_STATUS.REJECTED])
+)
+
+/**
+ * Returns true when an accreditation has never reached an accredited state —
+ * it is still 'created' or was 'rejected'. Such a registered-only entity holds
+ * no waste balance: it never had a valid accreditation period to accrue
+ * against. A 'cancelled' accreditation was once approved (cancelled is only
+ * reachable via approved -> suspended -> cancelled) and so is not
+ * registered-only — its historical balance is legitimate.
+ *
+ * @param {{ status?: string } | null | undefined} accreditation
+ * @returns {boolean}
+ */
+export const isRegisteredOnlyAccreditation = (accreditation) =>
+  REGISTERED_ONLY_STATUSES.has(
+    /** @type {RegAccStatus} */ (accreditation?.status)
+  )

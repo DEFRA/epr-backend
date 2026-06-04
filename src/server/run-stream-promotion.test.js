@@ -533,6 +533,56 @@ describe('runStreamPromotion', () => {
     ).toHaveBeenCalled()
   })
 
+  it('skips a registered-only accreditation without erroring', async () => {
+    const migratingToArray = vi.fn().mockResolvedValue([])
+    const embeddedToArray = vi.fn().mockResolvedValue([
+      {
+        accreditationId: 'acc-regonly',
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+    ])
+
+    mockFindBalances
+      .mockReturnValueOnce({ toArray: migratingToArray })
+      .mockReturnValueOnce({ toArray: embeddedToArray })
+
+    wasteBalancesRepository.findByAccreditationId.mockResolvedValue({
+      accreditationId: 'acc-regonly',
+      version: 1,
+      amount: 40458.86,
+      availableAmount: 40458.86,
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+    })
+
+    organisationsRepository.findById.mockResolvedValue({
+      id: 'org-1',
+      registrations: [
+        {
+          id: 'reg-1',
+          accreditationId: 'acc-regonly',
+          registrationNumber: 'CBDU1',
+          status: 'created'
+        }
+      ],
+      accreditations: [{ id: 'acc-regonly', status: 'created' }]
+    })
+
+    await runStreamPromotion(mockServer)
+
+    expect(
+      wasteBalancesRepository.flipCanonicalSourceToMigrating
+    ).not.toHaveBeenCalled()
+    expect(streamRepository.deleteByPartition).not.toHaveBeenCalled()
+    expect(logger.error).not.toHaveBeenCalled()
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('promoted=0 skipped=1 failed=0')
+      })
+    )
+  })
+
   it('counts as failed when accreditation is not found on organisation', async () => {
     const migratingToArray = vi.fn().mockResolvedValue([])
     const embeddedToArray = vi.fn().mockResolvedValue([

@@ -1,5 +1,6 @@
 import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { isRegisteredOnlyAccreditation } from '#domain/organisations/accreditation.js'
 
 /**
  * Per-record waste-balance contribution shared between the embedded
@@ -8,6 +9,13 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * inputs). Both must consult the same classification, otherwise the
  * stored embedded balance and its rebuilt counterpart drift apart.
  *
+ * A registered-only accreditation (status 'created' or 'rejected') never
+ * contributes: it holds no waste balance because it never reached an
+ * accredited period to accrue against. The date-range classification keys
+ * off validFrom/validTo, which a registered-only accreditation can still
+ * carry, so the status is gated explicitly here rather than relying on the
+ * dates being absent.
+ *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @param {Object} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
@@ -15,6 +23,9 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  */
 export const getTargetAmount = (record, accreditation, overseasSites) => {
   if (record.excludedFromWasteBalance) {
+    return 0
+  }
+  if (isRegisteredOnlyAccreditation(accreditation)) {
     return 0
   }
   const schema = findSchemaForProcessingType(

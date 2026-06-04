@@ -134,8 +134,10 @@ const prn = ({
 /** @type {import('#domain/organisations/accreditation.js').Accreditation} */
 const accreditation = {
   id: 'acc-1',
-  status: 'created',
-  statusHistory: [{ status: 'created', updatedAt: '2025-01-01T00:00:00.000Z' }],
+  status: 'cancelled',
+  statusHistory: [
+    { status: 'approved', updatedAt: '2025-01-01T00:00:00.000Z' }
+  ],
   formSubmission: { id: 'form-1', time: new Date('2025-01-01T00:00:00.000Z') },
   material: 'glass',
   prnIssuance: {

@@ -70,6 +70,37 @@ describe('isIncludedInWasteBalance', () => {
     ).toBe(true)
   })
 
+  it('returns false for a registered-only accreditation even when the record would otherwise be INCLUDED', () => {
+    const registeredOnlyAccreditation = { ...accreditation, status: 'created' }
+    const record = {
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: {
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+        ROW_ID: '1001',
+        DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+        EWC_CODE: '15 01 02',
+        DESCRIPTION_WASTE: 'Plastic packaging',
+        WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
+        GROSS_WEIGHT: 10,
+        TARE_WEIGHT: 1,
+        PALLET_WEIGHT: 0,
+        NET_WEIGHT: 9,
+        BAILING_WIRE_PROTOCOL: 'No',
+        HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Sampling',
+        WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+        RECYCLABLE_PROPORTION_PERCENTAGE: 100,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 9
+      }
+    }
+    expect(
+      isIncludedInWasteBalance(
+        record,
+        registeredOnlyAccreditation,
+        ORS_VALIDATION_DISABLED
+      )
+    ).toBe(false)
+  })
+
   it('returns false when classifyForWasteBalance returns EXCLUDED (PRN already issued)', () => {
     const record = {
       type: WASTE_RECORD_TYPE.EXPORTED,

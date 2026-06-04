@@ -198,7 +198,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=0 changed=0 failed=0 attributionMatrix='
+        'Waste-balance divergence diagnostic: scanned=0 changed=0 skipped=0 failed=0 attributionMatrix='
     })
   })
 
@@ -244,7 +244,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(perAccreditationLines).toHaveLength(0)
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix='
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 skipped=0 failed=0 attributionMatrix='
     })
   })
 
@@ -290,7 +290,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=1 failed=0 attributionMatrix='
+        'Waste-balance divergence diagnostic: scanned=1 changed=1 skipped=0 failed=0 attributionMatrix='
     })
   })
 
@@ -375,7 +375,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
   })
 
-  it('logs accreditationNumber=<none> for accreditations that have not been issued one yet', async () => {
+  it('logs accreditationNumber=<none> for an accreditation with no number', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-pending',
@@ -392,7 +392,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
         status: 'approved'
       }
     ]
-    accreditations['org-1'] = [{ id: 'acc-pending', status: 'created' }]
+    accreditations['org-1'] = [{ id: 'acc-pending', status: 'cancelled' }]
     vi.mocked(computeRebuiltTotals).mockReturnValue({
       amount: 7,
       availableAmount: 7,
@@ -411,7 +411,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=created wasteRecordCount=0 wasteRecordContribution=7 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=0 streamAmount=7 streamAvailableAmount=7 streamDeltaAmount=0 streamDeltaAvailableAmount=0 streamEventCount=0'
+        'Waste-balance divergence affected accreditation: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=<none> currentAmount=10 rebuiltAmount=7 deltaAmount=-3 currentAvailableAmount=10 rebuiltAvailableAmount=7 deltaAvailableAmount=-3 registrationStatus=approved accreditationStatus=cancelled wasteRecordCount=0 wasteRecordContribution=7 prnCount=0 prnAmountContribution=0 prnAvailableAmountContribution=0 streamAmount=7 streamAvailableAmount=7 streamDeltaAmount=0 streamDeltaAvailableAmount=0 streamEventCount=0'
     })
   })
 
@@ -462,7 +462,9 @@ describe('runBalanceDivergenceDiagnostic', () => {
         availableAmount: 10
       }
     ])
-    accreditations['org-1'] = [{ id: 'acc-1', accreditationNumber: 'ACC-1' }]
+    accreditations['org-1'] = [
+      { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
+    ]
     registrations['org-1'] = [
       {
         id: 'reg-1',
@@ -483,7 +485,35 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1 attributionMatrix='
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 skipped=0 failed=1 attributionMatrix='
+    })
+  })
+
+  it('counts a registered-only accreditation as skipped without logging a failure', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-regonly',
+        organisationId: 'org-1',
+        amount: 40458.86,
+        availableAmount: 40458.86
+      }
+    ])
+    accreditations['org-1'] = [{ id: 'acc-regonly', status: 'created' }]
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-regonly',
+        registrationNumber: 'REG-1',
+        status: 'created'
+      }
+    ]
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 skipped=1 failed=0 attributionMatrix='
     })
   })
 
@@ -567,7 +597,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1 attributionMatrix='
+        'Waste-balance divergence diagnostic: scanned=2 changed=0 skipped=0 failed=1 attributionMatrix='
     })
   })
 
@@ -804,7 +834,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:0,displayOnly:0,contactOnly:1,idOnly:0,noActor:0,scope:0}'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 skipped=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:0,displayOnly:0,contactOnly:1,idOnly:0,noActor:0,scope:0}'
     })
   })
 
@@ -877,7 +907,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:1,displayOnly:0,contactOnly:0,idOnly:0,noActor:0,scope:1}'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 skipped=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:1,displayOnly:0,contactOnly:0,idOnly:0,noActor:0,scope:1}'
     })
   })
 
@@ -937,7 +967,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:0,displayOnly:0,contactOnly:0,idOnly:1,noActor:0,scope:0}'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 skipped=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:0,displayOnly:0,contactOnly:0,idOnly:1,noActor:0,scope:0}'
     })
   })
 

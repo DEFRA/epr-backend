@@ -1,5 +1,6 @@
 import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { isRegisteredOnlyAccreditation } from '#domain/organisations/accreditation.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   addAttribution,
@@ -27,6 +28,10 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
   status: summaryLog.status,
   submittedAt: summaryLog.submittedAt
 })
+
+/**
+ * @typedef {{ skipped: 'registered-only', accreditation: import('#domain/organisations/accreditation.js').Accreditation }} RegisteredOnlySkip
+ */
 
 /**
  * @typedef {Object} AccreditationSourceDeps
@@ -113,6 +118,12 @@ const recoverSubmitters = ({ submitActors, summaryLogDocs }) => {
  * at all, plus scope presence — so coverage is measurable per kind before
  * cutover.
  *
+ * A registered-only accreditation (status 'created' or 'rejected') holds no
+ * waste balance and has no authoritative history to rebuild, so it returns the
+ * `{ skipped: 'registered-only' }` discriminant before the active-registration
+ * lookup. Callers count it as skipped rather than treating the absent active
+ * registration as a rebuild failure.
+ *
  * @param {{ accreditationId: string, organisationId: string }} row
  * @param {AccreditationSourceDeps} deps
  */
@@ -136,6 +147,12 @@ export const loadAccreditationSources = async (row, deps) => {
     throw new Error(
       `Accreditation ${row.accreditationId} not found on organisation ${row.organisationId}`
     )
+  }
+  if (isRegisteredOnlyAccreditation(accreditation)) {
+    return /** @type {RegisteredOnlySkip} */ ({
+      skipped: 'registered-only',
+      accreditation
+    })
   }
   const registration = organisation.registrations.find(
     (r) =>

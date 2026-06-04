@@ -81,10 +81,13 @@ const findEmbeddedBalances = async (db) => {
 /**
  * @param {{ accreditationId: string, organisationId: string }} row
  * @param {PromotionDependencies} deps
- * @returns {Promise<{ events: Array, registration: { id: string } }>}
+ * @returns {Promise<{ skipped: 'registered-only' } | { events: Array, registration: { id: string } }>}
  */
 const rebuildEvents = async (row, deps) => {
   const sources = await loadAccreditationSources(row, deps)
+  if ('skipped' in sources) {
+    return { skipped: sources.skipped }
+  }
   const { events } = computeRebuiltStream({
     accreditation: sources.accreditation,
     registrationId: sources.registration.id,
@@ -117,6 +120,17 @@ export const promoteAccreditation = async (row, deps) => {
   }
 
   const rebuildResult = await rebuildEvents(row, deps)
+
+  // Registered-only accreditation (status 'created'/'rejected') holds no waste
+  // balance and has nothing to rebuild. Skip it rather than failing on the
+  // absent active registration, so a stray invalid embedded doc never re-trips
+  // the per-boot error alarm.
+  if ('skipped' in rebuildResult) {
+    logger.info({
+      message: `Stream promotion: skipping registered-only accreditation ${row.accreditationId}`
+    })
+    return 'skipped'
+  }
 
   // Invariant: a non-zero embedded balance must reconstruct to a non-empty
   // stream. An empty rebuild from authoritative sources that don't account
