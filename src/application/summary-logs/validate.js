@@ -6,7 +6,6 @@ import {
   VALIDATION_CODE
 } from '#common/enums/index.js'
 import { isNil } from '#common/helpers/is-nil.js'
-import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -31,16 +30,18 @@ import {
 import { computeLoadsByPeriodStatus } from './period-status.js'
 import {
   capIssuesForStorage,
-  logValidationIssues,
-  MAX_VALIDATION_ISSUES
+  logValidationIssues
 } from './validate-issue-logging.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
+import { recordValidationMetrics } from './validate-metrics.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 
-export { MAX_VALIDATION_ISSUES }
-export { MAX_ACTUAL_LENGTH } from './validate-issue-logging.js'
+export {
+  MAX_VALIDATION_ISSUES,
+  MAX_ACTUAL_LENGTH
+} from './validate-issue-logging.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
@@ -383,85 +384,6 @@ const performValidationChecks = async ({
 }
 
 /**
- * Records validation issue metrics grouped by severity × category
- *
- * @param {ValidationIssuesCollector} issues - Validation issues object
- * @param {string} processingType - The processing type for the metric dimension
- */
-const recordValidationIssueMetrics = async (issues, processingType) => {
-  const allIssues = issues.getAllIssues()
-  if (allIssues.length === 0) {
-    return
-  }
-
-  // Count issues by severity × category
-  const counts = new Map()
-  for (const issue of allIssues) {
-    const key = `${issue.severity}:${issue.category}`
-    counts.set(key, (counts.get(key) || 0) + 1)
-  }
-
-  // Record metrics for each combination
-  for (const [key, count] of counts) {
-    const [severity, category] = key.split(':')
-    await summaryLogMetrics.recordValidationIssues(
-      {
-        severity:
-          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationSeverity} */ (
-            severity
-          ),
-        category:
-          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationCategory} */ (
-            category
-          ),
-        processingType: /** @type {ProcessingType} */ (processingType)
-      },
-      count
-    )
-  }
-}
-
-/**
- * Records row outcome metrics grouped by outcome
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords - Waste records with outcomes
- * @param {string} processingType - The processing type for the metric dimension
- */
-const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
-  if (!wasteRecords || wasteRecords.length === 0) {
-    return
-  }
-
-  // Count by outcome
-  const counts = {
-    [ROW_OUTCOME.INCLUDED]: 0,
-    [ROW_OUTCOME.EXCLUDED]: 0,
-    [ROW_OUTCOME.REJECTED]: 0,
-    [ROW_OUTCOME.IGNORED]: 0
-  }
-
-  for (const { outcome } of wasteRecords) {
-    counts[outcome]++
-  }
-
-  // Record metrics for each outcome with non-zero count
-  for (const [outcome, count] of Object.entries(counts)) {
-    if (count > 0) {
-      await summaryLogMetrics.recordRowOutcome(
-        {
-          outcome:
-            /** @type {import('#common/helpers/metrics/summary-logs.js').RowOutcome} */ (
-              outcome
-            ),
-          processingType: /** @type {ProcessingType} */ (processingType)
-        },
-        count
-      )
-    }
-  }
-}
-
-/**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
  * @param {string} summaryLogId
  */
@@ -477,32 +399,6 @@ const assertValidatingStatus = (result, summaryLogId) => {
       `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
     )
   }
-}
-
-/**
- * Records all validation-related metrics.
- *
- * @param {Object} params
- * @param {ValidationIssuesCollector} params.issues
- * @param {ProcessingType} params.processingType
- * @param {SummaryLogStatus} params.status
- * @param {number} params.validationDurationMs
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
- */
-const recordValidationMetrics = async ({
-  issues,
-  processingType,
-  status,
-  validationDurationMs,
-  wasteBalanceRecords
-}) => {
-  await summaryLogMetrics.recordValidationDuration(
-    { processingType },
-    validationDurationMs
-  )
-  await summaryLogMetrics.recordStatusTransition({ status, processingType })
-  await recordValidationIssueMetrics(issues, processingType)
-  await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 }
 
 /**
