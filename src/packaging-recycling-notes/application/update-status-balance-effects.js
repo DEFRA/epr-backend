@@ -27,7 +27,7 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
  * @property {string} organisationId
  * @property {string} prnId
  * @property {number} tonnage
- * @property {string} userId
+ * @property {import('#waste-balances/repository/stream-schema.js').StreamUserSummary} createdBy
  */
 
 /**
@@ -52,7 +52,7 @@ export async function deductWasteBalanceIfNeeded(
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -68,7 +68,7 @@ export async function deductWasteBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      userId
+      createdBy
     })
   } else {
     throw Boom.badRequest(
@@ -93,7 +93,7 @@ export async function deductTotalBalanceIfNeeded(
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -109,7 +109,7 @@ export async function deductTotalBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      userId
+      createdBy
     })
   } else {
     throw Boom.badRequest(
@@ -135,7 +135,7 @@ export async function creditWasteBalanceIfNeeded(
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -147,7 +147,7 @@ export async function creditWasteBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      userId
+      createdBy
     })
   } else {
     throw Boom.badRequest(
@@ -173,7 +173,7 @@ export async function creditFullBalanceIfNeeded(
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = params
   const balance =
     await wasteBalancesRepository.findByAccreditationId(accreditationId)
@@ -185,7 +185,7 @@ export async function creditFullBalanceIfNeeded(
       organisationId,
       prnId,
       tonnage,
-      userId
+      createdBy
     })
   } else {
     throw Boom.badRequest(
