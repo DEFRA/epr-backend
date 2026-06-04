@@ -142,6 +142,13 @@ describe('stream event insert schema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('accepts createdBy with id only — no name, no email', () => {
+    const { error } = validate(
+      buildStreamEvent({ createdBy: { id: 'user-1' } })
+    )
+    expect(error).toBeUndefined()
+  })
+
   it('accepts accreditationId: null for registered-only streams', () => {
     const { error } = validate(buildStreamEvent({ accreditationId: null }))
     expect(error).toBeUndefined()
