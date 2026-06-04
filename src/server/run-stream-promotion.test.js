@@ -170,8 +170,7 @@ describe('runStreamPromotion', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
   })
 
@@ -299,8 +298,7 @@ describe('runStreamPromotion', () => {
       events: builtEvents,
       amount: 100,
       availableAmount: 100,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runStreamPromotion(mockServer)

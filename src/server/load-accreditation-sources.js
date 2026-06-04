@@ -2,9 +2,10 @@ import { resolveOverseasSites } from '#application/waste-records/resolve-oversea
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
-  buildSystemLogSubmitters,
-  toStreamActor
+  addAttribution,
+  buildSystemLogSubmitters
 } from '#waste-balances/application/summary-log-submitters.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 /** @type {Set<import('#domain/organisations/registration.js').Registration['status']>} */
 const ACTIVE_REGISTRATION_STATUSES = new Set([
@@ -38,16 +39,31 @@ export const toStreamSummaryLog = ({ summaryLog }) => ({
  */
 
 /**
- * @typedef {{ systemLog: number, backfill: number }} SubmitterProvenance
+ * Map each summary-log document id to the audit actor that attributes its
+ * submission. Callers supply `submitActors` newest-first, so the first audit row
+ * seen for a document wins, matching how the submitter map resolves a
+ * resubmitted document.
+ *
+ * @param {Array<{ summaryLogId: string, createdBy?: import('#waste-balances/application/summary-log-submitters.js').SubmitAuditActor }>} submitActors
+ * @returns {Map<string, import('#waste-balances/application/summary-log-submitters.js').SubmitAuditActor | undefined>}
  */
+const auditActorByDocId = (submitActors) => {
+  const byDocId = new Map()
+  for (const { summaryLogId, createdBy } of submitActors) {
+    if (!byDocId.has(summaryLogId)) {
+      byDocId.set(summaryLogId, createdBy)
+    }
+  }
+  return byDocId
+}
 
 /**
  * Recover each submitted summary log's real submitter from the submit system-log
- * audit, falling back to the backfill actor when the audit names no usable
- * submitter. Counts how many submitters were recovered from the audit versus
- * left to backfill (`submitterProvenance`) and counts submit-audit rows that
- * carry no usable actor (`unusableSubmitAudit`) so dirty audit data surfaces as
- * its own number rather than hiding inside the backfill count.
+ * audit, falling back to the backfill actor only when no actor is attributable.
+ * Alongside, build the SUMMARY_LOG_SUBMITTED row of the per-event-kind
+ * attribution matrix: each submitted log is classified by the labels its audit
+ * actor carries (name, email, id-only, or no actor at all), with scope presence
+ * tallied too, so attribution quality is visible per kind before cutover.
  *
  * @param {Object} params
  * @param {Array<{ summaryLogId: string, createdBy?: import('#waste-balances/application/summary-log-submitters.js').SubmitAuditActor }>} params.submitActors
@@ -60,30 +76,28 @@ const recoverSubmitters = ({ submitActors, summaryLogDocs }) => {
     ({ summaryLog }) => summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED
   )
 
-  const submittedDocIds = new Set(submittedDocs.map((doc) => doc.id))
-  const unusableSubmitAudit = submitActors.filter(
-    ({ summaryLogId, createdBy }) =>
-      submittedDocIds.has(summaryLogId) && toStreamActor(createdBy) === null
-  ).length
+  const auditActors = auditActorByDocId(submitActors)
 
-  /** @type {SubmitterProvenance} */
-  const submitterProvenance = { systemLog: 0, backfill: 0 }
+  /** @type {import('#waste-balances/application/summary-log-submitters.js').AttributionMatrix} */
+  const attributionMatrix = {}
+  for (const doc of submittedDocs) {
+    addAttribution(
+      attributionMatrix,
+      STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+      auditActors.get(doc.id)
+    )
+  }
+
   const summaryLogs = submittedDocs
     .map(toStreamSummaryLog)
     .map((summaryLog) => {
       const submitter = submitters.get(summaryLog.id)
-      if (!submitter) {
-        submitterProvenance.backfill += 1
-        return summaryLog
-      }
-      submitterProvenance.systemLog += 1
-      return { ...summaryLog, submittedBy: submitter }
+      return submitter ? { ...summaryLog, submittedBy: submitter } : summaryLog
     })
 
   return {
     summaryLogs,
-    submitterProvenance,
-    unusableSubmitAudit
+    attributionMatrix
   }
 }
 
@@ -92,12 +106,12 @@ const recoverSubmitters = ({ submitActors, summaryLogDocs }) => {
  * then fetch all authoritative sources needed to rebuild the event stream
  * or recompute totals. Each historical summary log's real submitting actor is
  * recovered from the dedicated submit system-log audit, falling back to the
- * backfill actor, so the rebuilt stream attributes submissions to the person who
- * made them. How many submitters were recovered versus backfilled is counted
- * (`submitterProvenance`) so coverage is measurable before cutover, and
- * submit-audit rows for these submissions that carry no usable actor are counted
- * too (`unusableSubmitAudit`) so dirty audit data surfaces as its own number
- * rather than hiding inside the backfill count.
+ * backfill actor only when no actor is attributable, so the rebuilt stream
+ * attributes submissions to the person who made them. The SUMMARY_LOG_SUBMITTED
+ * row of the per-event-kind attribution matrix (`attributionMatrix`) records the
+ * label quality of each submission's actor — name, email, id-only, or no actor
+ * at all, plus scope presence — so coverage is measurable per kind before
+ * cutover.
  *
  * @param {{ accreditationId: string, organisationId: string }} row
  * @param {AccreditationSourceDeps} deps
@@ -153,11 +167,10 @@ export const loadAccreditationSources = async (row, deps) => {
   const submitActors =
     await systemLogsRepository.findSummaryLogSubmitActors(summaryLogDocIds)
 
-  const { summaryLogs, submitterProvenance, unusableSubmitAudit } =
-    recoverSubmitters({
-      submitActors,
-      summaryLogDocs
-    })
+  const { summaryLogs, attributionMatrix } = recoverSubmitters({
+    submitActors,
+    summaryLogDocs
+  })
 
   return {
     accreditation,
@@ -166,7 +179,6 @@ export const loadAccreditationSources = async (row, deps) => {
     prns,
     overseasSites,
     summaryLogs,
-    submitterProvenance,
-    unusableSubmitAudit
+    attributionMatrix
   }
 }

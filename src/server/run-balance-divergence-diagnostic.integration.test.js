@@ -313,7 +313,7 @@ describe('balance divergence diagnostic (integration)', () => {
     })
 
     expect(result.amount).toBe(202.47)
-    expect(result.backfilledActorCount).toBe(0)
+    expect(result.attributionMatrix).toEqual({})
     expect(result.events[0].createdBy).toEqual({
       id: 'user-1',
       email: 'alice@example.com'

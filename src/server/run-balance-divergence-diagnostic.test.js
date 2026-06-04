@@ -148,8 +148,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
     vi.mocked(resolveOverseasSites).mockResolvedValue({})
   })
@@ -199,7 +198,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=0 changed=0 failed=0 submittedSummaryLogs=0 submitterProvenance=systemLog:0,backfill:0 unusableSubmitAudit=0'
+        'Waste-balance divergence diagnostic: scanned=0 changed=0 failed=0 attributionMatrix='
     })
   })
 
@@ -230,8 +229,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 7,
       availableAmount: 5,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -246,7 +244,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(perAccreditationLines).toHaveLength(0)
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 submittedSummaryLogs=0 submitterProvenance=systemLog:0,backfill:0 unusableSubmitAudit=0'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix='
     })
   })
 
@@ -281,8 +279,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 95,
       availableAmount: 80,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -293,7 +290,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=1 failed=0 submittedSummaryLogs=0 submitterProvenance=systemLog:0,backfill:0 unusableSubmitAudit=0'
+        'Waste-balance divergence diagnostic: scanned=1 changed=1 failed=0 attributionMatrix='
     })
   })
 
@@ -407,8 +404,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 7,
       availableAmount: 7,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -487,7 +483,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1 submittedSummaryLogs=0 submitterProvenance=systemLog:0,backfill:0 unusableSubmitAudit=0'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=1 attributionMatrix='
     })
   })
 
@@ -557,8 +553,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 5,
       availableAmount: 5,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -572,7 +567,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     )
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1 submittedSummaryLogs=0 submitterProvenance=systemLog:0,backfill:0 unusableSubmitAudit=0'
+        'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1 attributionMatrix='
     })
   })
 
@@ -775,11 +770,84 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 submittedSummaryLogs=1 submitterProvenance=systemLog:1,backfill:0 unusableSubmitAudit=0'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{nameAndEmail:0,nameOnly:0,emailOnly:1,idOnly:0,noActor:0,scope:0}'
     })
   })
 
-  it('counts and warns when a submitted log has a submit audit whose actor has no usable identity', async () => {
+  it('classifies a resubmitted document by its newest audit actor only', async () => {
+    const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-001' }
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-1',
+        organisationId: 'org-1',
+        amount: 0,
+        availableAmount: 0
+      }
+    ])
+    registrations['org-1'] = [
+      {
+        id: 'reg-1',
+        accreditationId: 'acc-1',
+        registrationNumber: 'REG-1',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-1'] = [accreditation]
+    summaryLogsRepository.findAllByOrgReg.mockResolvedValue([
+      {
+        id: 'doc-id-1',
+        version: 1,
+        summaryLog: {
+          status: 'submitted',
+          submittedAt: '2025-01-01T00:00:00Z',
+          file: { id: 'file-id-1', name: 'test.xlsx', uri: 's3://bucket/key' }
+        }
+      }
+    ])
+    systemLogsRepository.findSummaryLogSubmitActors.mockResolvedValue([
+      {
+        summaryLogId: 'doc-id-1',
+        createdBy: {
+          id: 'newest-user',
+          name: 'Newest Submitter',
+          email: 'newest@example.com',
+          scope: ['standard_user']
+        }
+      },
+      {
+        summaryLogId: 'doc-id-1',
+        createdBy: { id: 'older-user', email: 'older@example.com', scope: [] }
+      }
+    ])
+    wasteRecordsRepository.findByRegistration.mockResolvedValue([])
+    prnRepository.findByAccreditation.mockResolvedValue([])
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(computeRebuiltStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summaryLogs: [
+          {
+            id: 'file-id-1',
+            status: 'submitted',
+            submittedAt: '2025-01-01T00:00:00Z',
+            submittedBy: {
+              id: 'newest-user',
+              name: 'Newest Submitter',
+              email: 'newest@example.com'
+            }
+          }
+        ]
+      })
+    )
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{nameAndEmail:1,nameOnly:0,emailOnly:0,idOnly:0,noActor:0,scope:1}'
+    })
+  })
+
+  it('attributes an id-only submit-audit actor as a real, id-only actor', async () => {
     const accreditation = { id: 'acc-1', accreditationNumber: 'ACC-1' }
     setEmbeddedBalances([
       {
@@ -818,19 +886,24 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    const unusableLine = vi
-      .mocked(logger.warn)
-      .mock.calls.map(([arg]) => arg?.message ?? '')
-      .find((message) =>
-        message.startsWith(
-          'Waste-balance submit audit carries an unusable actor:'
-        )
-      )
-    expect(unusableLine).toContain('unusableSubmitAudit=1')
+    expect(computeRebuiltStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summaryLogs: [
+          {
+            id: 'file-id-1',
+            status: 'submitted',
+            submittedAt: '2025-01-01T00:00:00Z',
+            submittedBy: { id: 'sys-user' }
+          }
+        ]
+      })
+    )
+
+    expect(logger.warn).not.toHaveBeenCalled()
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 submittedSummaryLogs=1 submitterProvenance=systemLog:0,backfill:1 unusableSubmitAudit=1'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{nameAndEmail:0,nameOnly:0,emailOnly:0,idOnly:1,noActor:0,scope:0}'
     })
   })
 
@@ -918,8 +991,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [],
       amount: 95,
       availableAmount: 75,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {}
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
@@ -937,7 +1009,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(divergenceLines[0][0].message).toContain('streamEventCount=0')
   })
 
-  it('warns with a tagged key=value line when the rebuild used the backfill actor', async () => {
+  it('warns with a tagged key=value line when an event has no attributable actor', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
@@ -961,10 +1033,15 @@ describe('runBalanceDivergenceDiagnostic', () => {
       events: [buildStreamEvent(), buildStreamEvent(), buildStreamEvent()],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 2,
-      backfilledActorCountByKind: {
-        'summary-log-submitted': 1,
-        'prn-created': 1
+      attributionMatrix: {
+        'prn-created': {
+          nameAndEmail: 0,
+          nameOnly: 1,
+          emailOnly: 0,
+          idOnly: 1,
+          noActor: 1,
+          scope: 0
+        }
       }
     })
 
@@ -972,11 +1049,11 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste-balance rebuild used backfill actor: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 backfilledActorCount=2 backfilledActorCountByKind=prn-created:1,summary-log-submitted:1 submitterProvenance=systemLog:0,backfill:0 streamEventCount=3'
+        'Waste-balance rebuild has unattributed events: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 attributionMatrix=prn-created{nameAndEmail:0,nameOnly:1,emailOnly:0,idOnly:1,noActor:1,scope:0} streamEventCount=3'
     })
   })
 
-  it('does not warn when every rebuilt event carried a real actor', async () => {
+  it('does not warn when every event is attributed, even if only by id', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
@@ -997,11 +1074,19 @@ describe('runBalanceDivergenceDiagnostic', () => {
       { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
     ]
     vi.mocked(computeRebuiltStream).mockReturnValue({
-      events: [buildStreamEvent()],
+      events: [buildStreamEvent(), buildStreamEvent()],
       amount: 0,
       availableAmount: 0,
-      backfilledActorCount: 0,
-      backfilledActorCountByKind: {}
+      attributionMatrix: {
+        'prn-created': {
+          nameAndEmail: 0,
+          nameOnly: 1,
+          emailOnly: 0,
+          idOnly: 1,
+          noActor: 0,
+          scope: 0
+        }
+      }
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
