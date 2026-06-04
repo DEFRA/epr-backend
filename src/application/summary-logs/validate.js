@@ -605,6 +605,102 @@ const classifyLoads = ({
 }
 
 /**
+ * Classifies loads, computes period status, records metrics, and persists the result.
+ *
+ * @param {Object} params
+ * @param {ValidationResult & { registration?: Registration, existingRecordsMap?: Map<string, import('#domain/waste-records/model.js').WasteRecord> }} params.validationResult
+ * @param {string} params.summaryLogId
+ * @param {SubmittedSummaryLog} params.summaryLog
+ * @param {number} params.validationDurationMs
+ * @param {string} params.loggingContext
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
+ * @param {ReportsRepository} params.reportsRepository
+ * @param {TypedLogger} params.logger
+ * @param {number} params.version
+ */
+const classifyAndPersist = async ({
+  validationResult: {
+    issues,
+    wasteRecords,
+    meta,
+    registration,
+    existingRecordsMap
+  },
+  summaryLogId,
+  summaryLog,
+  validationDurationMs,
+  loggingContext,
+  summaryLogsRepository,
+  reportsRepository,
+  logger,
+  version
+}) => {
+  const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+
+  const status = issues.isFatal()
+    ? SUMMARY_LOG_STATUS.INVALID
+    : SUMMARY_LOG_STATUS.VALIDATED
+
+  const wasteBalanceRecords = filterWasteBalanceRecords(
+    wasteRecords,
+    processingType
+  )
+
+  await recordValidationMetrics({
+    issues,
+    processingType,
+    status,
+    validationDurationMs,
+    wasteBalanceRecords
+  })
+
+  const { loads, loadsByWasteRecordType } = classifyLoads({
+    processingType,
+    status,
+    summaryLogId,
+    wasteBalanceRecords,
+    wasteRecords
+  })
+
+  const canClassifyPeriodStatus =
+    status === SUMMARY_LOG_STATUS.VALIDATED &&
+    wasteRecords &&
+    registration &&
+    existingRecordsMap
+
+  const loadsByPeriodStatus = canClassifyPeriodStatus
+    ? await computeLoadsByPeriodStatus({
+        wasteRecords,
+        wasteBalanceRecords,
+        summaryLogId,
+        registration,
+        processingType,
+        existingRecordsMap,
+        reportsRepository,
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId,
+        loggingContext,
+        logger
+      })
+    : null
+
+  await persistValidationResult({
+    issues,
+    loads,
+    loadsByWasteRecordType,
+    loadsByPeriodStatus,
+    meta,
+    status,
+    summaryLog,
+    summaryLogId,
+    summaryLogsRepository,
+    version
+  })
+
+  return status
+}
+
+/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -664,65 +760,21 @@ export const createSummaryLogsValidator = ({
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
-    const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-
-    const status = issues.isFatal()
-      ? SUMMARY_LOG_STATUS.INVALID
-      : SUMMARY_LOG_STATUS.VALIDATED
-
-    const wasteBalanceRecords = filterWasteBalanceRecords(
-      wasteRecords,
-      processingType
-    )
-
-    await recordValidationMetrics({
-      issues,
-      processingType,
-      status,
-      validationDurationMs,
-      wasteBalanceRecords
-    })
-
-    const { loads, loadsByWasteRecordType } = classifyLoads({
-      processingType,
-      status,
+    const status = await classifyAndPersist({
+      validationResult: {
+        issues,
+        wasteRecords,
+        meta,
+        registration,
+        existingRecordsMap
+      },
       summaryLogId,
-      wasteBalanceRecords,
-      wasteRecords
-    })
-
-    const canClassifyPeriodStatus =
-      status === SUMMARY_LOG_STATUS.VALIDATED &&
-      wasteRecords &&
-      registration &&
-      existingRecordsMap
-
-    const loadsByPeriodStatus = canClassifyPeriodStatus
-      ? await computeLoadsByPeriodStatus({
-          wasteRecords,
-          wasteBalanceRecords,
-          summaryLogId,
-          registration,
-          processingType,
-          existingRecordsMap,
-          reportsRepository,
-          organisationId: summaryLog.organisationId,
-          registrationId: summaryLog.registrationId,
-          loggingContext,
-          logger
-        })
-      : null
-
-    await persistValidationResult({
-      issues,
-      loads,
-      loadsByWasteRecordType,
-      loadsByPeriodStatus,
-      meta,
-      status,
       summaryLog,
-      summaryLogId,
+      validationDurationMs,
+      loggingContext,
       summaryLogsRepository,
+      reportsRepository,
+      logger,
       version
     })
 
