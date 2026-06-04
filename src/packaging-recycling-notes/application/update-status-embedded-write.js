@@ -109,7 +109,7 @@ export const EMBEDDED_BALANCE_EFFECTS = Object.freeze({
  * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {PrnStatus} currentStatus
  * @property {PrnStatus} newStatus
- * @property {{accreditationId: string, registrationId: string, organisationId: string, prnId: string, tonnage: number, userId: string}} params
+ * @property {{accreditationId: string, registrationId: string, organisationId: string, prnId: string, tonnage: number, createdBy: import('#waste-balances/repository/stream-schema.js').StreamUserSummary}} params
  */
 
 /**
@@ -221,7 +221,11 @@ export async function applyStatusUpdate({
 
   const operationSlot = STATUS_OPERATION_SLOT[newStatus]
   if (operationSlot) {
-    updateParams.operation = { slot: operationSlot, at: now, by: user }
+    updateParams.operation = {
+      slot: operationSlot,
+      at: now,
+      by: { id: user.id, name: user.name }
+    }
   }
 
   const updatedPrn = await prnRepository.updateStatus(updateParams)
@@ -356,7 +360,7 @@ export async function performCreation({
       organisationId,
       prnId: id,
       tonnage: prn.tonnage,
-      userId: user.id
+      createdBy: user
     }
   })
 
@@ -381,7 +385,7 @@ export async function performCreation({
           organisationId,
           prnId: id,
           tonnage: prn.tonnage,
-          userId: user.id
+          createdBy: user
         }),
       {
         forwardError,
@@ -441,7 +445,7 @@ export async function performTransition({
         organisationId,
         prnId: id,
         tonnage: prn.tonnage,
-        userId: user.id
+        createdBy: user
       }
     })
   } catch (forwardError) {
@@ -454,7 +458,7 @@ export async function performTransition({
         prnRepository[rollbackMethod]({
           id,
           expectedVersion: updatedPrn.version,
-          updatedBy: user,
+          updatedBy: { id: user.id, name: user.name },
           updatedAt: now,
           lastAppliedEventNumber: updatedPrn.lastAppliedEventNumber
         }),

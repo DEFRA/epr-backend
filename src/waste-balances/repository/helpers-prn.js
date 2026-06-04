@@ -59,7 +59,7 @@ export const buildPrnCreationTransaction = ({
  * @param {string} params.organisationId
  * @param {string} params.prnId
  * @param {number} params.tonnage
- * @param {string} params.userId
+ * @param {import('./stream-schema.js').StreamUserSummary} params.createdBy
  * @param {import('./stream-schema.js').StreamEventKind} params.streamKind
  * @returns {Promise<import('./stream-port.js').StreamEvent>} The appended event.
  */
@@ -70,7 +70,7 @@ const appendPrnStreamEvent = async ({
   organisationId,
   prnId,
   tonnage,
-  userId,
+  createdBy,
   streamKind
 }) =>
   appendToStream(
@@ -83,7 +83,7 @@ const appendPrnStreamEvent = async ({
     {
       kind: streamKind,
       payload: { prnId, amount: tonnage },
-      createdBy: { id: userId, name: userId }
+      createdBy
     }
   )
 
@@ -101,7 +101,7 @@ const appendPrnStreamEvent = async ({
  * @param {string} params.appendParams.organisationId
  * @param {string} params.appendParams.prnId
  * @param {number} params.appendParams.tonnage
- * @param {string} params.appendParams.userId
+ * @param {import('./stream-schema.js').StreamUserSummary} params.appendParams.createdBy
  * @param {import('./stream-schema.js').StreamEventKind} params.appendParams.streamKind
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} [params.dependencies]
@@ -119,7 +119,7 @@ export const performAppendPrnStreamEvent = async ({
     organisationId,
     prnId,
     tonnage,
-    userId,
+    createdBy,
     streamKind
   } = appendParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
@@ -142,7 +142,7 @@ export const performAppendPrnStreamEvent = async ({
     organisationId,
     prnId,
     tonnage,
-    userId,
+    createdBy,
     streamKind
   })
 }
@@ -172,7 +172,7 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -193,7 +193,7 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
       organisationId,
       prnId,
       tonnage,
-      userId,
+      createdBy,
       streamKind: STREAM_EVENT_KIND.PRN_CREATED
     })
   }
@@ -201,7 +201,7 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
   const transaction = buildPrnCreationTransaction({
     prnId,
     tonnage,
-    userId,
+    userId: createdBy.id,
     currentBalance: wasteBalance
   })
 
@@ -278,7 +278,7 @@ export const performDeductTotalBalanceForPrnIssue = async ({
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = deductParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -299,7 +299,7 @@ export const performDeductTotalBalanceForPrnIssue = async ({
       organisationId,
       prnId,
       tonnage,
-      userId,
+      createdBy,
       streamKind: STREAM_EVENT_KIND.PRN_ISSUED
     })
   }
@@ -307,7 +307,7 @@ export const performDeductTotalBalanceForPrnIssue = async ({
   const transaction = buildPrnIssuedTransaction({
     prnId,
     tonnage,
-    userId,
+    userId: createdBy.id,
     currentBalance: wasteBalance
   })
 
@@ -426,7 +426,7 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -449,7 +449,7 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
       organisationId,
       prnId,
       tonnage,
-      userId,
+      createdBy,
       streamKind: STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE
     })
   }
@@ -457,7 +457,7 @@ export const performCreditFullBalanceForIssuedPrnCancellation = async ({
   const transaction = buildIssuedPrnCancellationTransaction({
     prnId,
     tonnage,
-    userId,
+    userId: createdBy.id,
     currentBalance: wasteBalance
   })
 
@@ -499,7 +499,7 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
     organisationId,
     prnId,
     tonnage,
-    userId
+    createdBy
   } = creditParams
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -522,7 +522,7 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
       organisationId,
       prnId,
       tonnage,
-      userId,
+      createdBy,
       streamKind: STREAM_EVENT_KIND.PRN_CREATION_CANCELLED
     })
   }
@@ -530,7 +530,7 @@ export const performCreditAvailableBalanceForPrnCancellation = async ({
   const transaction = buildPrnCancellationTransaction({
     prnId,
     tonnage,
-    userId,
+    userId: createdBy.id,
     currentBalance: wasteBalance
   })
 

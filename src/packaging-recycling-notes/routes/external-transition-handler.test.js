@@ -110,6 +110,7 @@ const buildBalance = (canonicalSource) => ({
 })
 
 let server
+let streamRepository
 
 /**
  * Starts a test server wired with real in-memory adapters: the PRN store, the
@@ -122,7 +123,7 @@ let server
  * @param {string} params.canonicalSource
  */
 const startServer = async ({ currentStatus, events, canonicalSource }) => {
-  const streamRepository = createInMemoryStreamRepository(events)()
+  streamRepository = createInMemoryStreamRepository(events)()
   server = await createTestServer({
     config: {
       packagingRecyclingNotesExternalApi: {
@@ -171,6 +172,29 @@ describe('external PRN transition read-side fold', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+  })
+
+  it('attributes a live RPD accept to the RPD service with no email', async () => {
+    await startServer({
+      currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+      events: [],
+      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url: acceptUrl,
+      headers: authHeaders
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+
+    const latest = await streamRepository.findLatestByPartition(REG_ID, ACC_ID)
+    expect(latest.kind).toBe(STREAM_EVENT_KIND.PRN_ACCEPTED)
+    expect(latest.createdBy).toEqual({
+      id: externalApiClientId,
+      name: 'RPD'
+    })
   })
 
   it('accepts an embedded PRN even when the stream shows it cancelled', async () => {

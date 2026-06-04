@@ -45,7 +45,7 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  * @property {string} organisationId
  * @property {string} registrationId
  * @property {string} accreditationId
- * @property {{ id: string; name: string }} user
+ * @property {{ id: string; name: string; email?: string }} user
  * @property {PrnStatus} currentStatus
  * @property {Date} now
  * @property {string} id
@@ -190,7 +190,7 @@ async function performLedgerWrite({
     organisationId,
     prnId: id,
     tonnage: prn.tonnage,
-    userId: user.id
+    createdBy: user
   })
 
   /* c8 ignore next 5 - defensive: the only legal transition with no balance events (DRAFT→DISCARDED) is handled before this branch */
@@ -268,7 +268,7 @@ const dispatchStatusWrite = async (ctx) =>
  * @param {string} params.accreditationId
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnStatus} params.newStatus
  * @param {import('#packaging-recycling-notes/domain/model.js').PrnActor} params.actor
- * @param {{ id: string; name: string }} params.user
+ * @param {{ id: string; name: string; email?: string }} params.user
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} [params.providedPrn] - Optional pre-fetched PRN to avoid duplicate fetch
  * @param {Date} [params.updatedAt] - Optional timestamp override (defaults to now)
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
@@ -306,7 +306,7 @@ export async function updatePrnStatus({
     id,
     version: prn.version,
     status: newStatus,
-    updatedBy: user,
+    updatedBy: { id: user.id, name: user.name },
     updatedAt: now,
     lastAppliedEventNumber: prn.lastAppliedEventNumber
   }
