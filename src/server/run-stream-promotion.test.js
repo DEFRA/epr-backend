@@ -233,6 +233,26 @@ describe('runStreamPromotion', () => {
     })
   })
 
+  it('enumerates legacy documents with no canonicalSource as embedded so the sweep migrates them too', async () => {
+    await runStreamPromotion(mockServer)
+
+    expect(mockFindBalances).toHaveBeenNthCalledWith(
+      2,
+      {
+        canonicalSource: {
+          $in: [WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED, null]
+        }
+      },
+      expect.objectContaining({
+        projection: expect.objectContaining({
+          accreditationId: 1,
+          organisationId: 1,
+          registrationId: 1
+        })
+      })
+    )
+  })
+
   it('promotes an embedded accreditation through the full lifecycle', async () => {
     const migratingToArray = vi.fn().mockResolvedValue([])
     const embeddedToArray = vi.fn().mockResolvedValue([
