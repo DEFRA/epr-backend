@@ -16,7 +16,7 @@ import { getProjectedPrnByNumber } from '#packaging-recycling-notes/application/
 
 /**
  * @import { Request, Lifecycle } from '@hapi/hapi'
- * @import { HapiRequest } from '#common/hapi-types.js'
+ * @import { HapiRequest, MachineCredentials } from '#common/hapi-types.js'
  * @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { WasteBalancesRepository } from '#waste-balances/repository/port.js'
@@ -82,9 +82,14 @@ export function createExternalTransitionHandler({
           ? new Date(payload[timestampField])
           : new Date()
 
-        const user = /** @type {{ id: string; name: string }} */ (
+        // RPD reaches this route through the machine-credential strategy, which
+        // identifies the service in the name slot. Select id and name into the
+        // actor explicitly so the machine marker never travels downstream; no
+        // email exists for a service identity.
+        const { id, name } = /** @type {MachineCredentials} */ (
           request.auth.credentials
         )
+        const user = { id, name }
 
         const updatedPrn = await updatePrnStatus({
           prnRepository: packagingRecyclingNotesRepository,
