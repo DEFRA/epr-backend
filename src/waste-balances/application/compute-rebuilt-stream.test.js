@@ -615,6 +615,96 @@ describe('computeRebuiltStream', () => {
       expect(issued?.createdBy).toEqual({ id: 'sig-7', name: 'Sam Signatory' })
     })
 
+    it('attributes a human-initiated PRN transition to its id and name, never an email', () => {
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      const created =
+        /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+          result.events.find((e) => e.kind === STREAM_EVENT_KIND.PRN_CREATED)
+        )
+      expect(created.createdBy).toEqual({
+        id: 'rep-1',
+        name: 'Rita Reprocessor'
+      })
+      expect('email' in created.createdBy).toBe(false)
+    })
+
+    it('attributes an RPD-initiated PRN transition to its id and the name RPD, never an email', () => {
+      const rpdActor = { id: 'rpd-client', name: 'RPD' }
+      const result = computeRebuiltStream({
+        accreditation,
+        registrationId,
+        organisationId,
+        wasteRecords: [submittedRecord(100)],
+        prns: [
+          {
+            id: 'prn-1',
+            tonnage: 30,
+            status: {
+              history: [
+                {
+                  status: PRN_STATUS.DRAFT,
+                  at: new Date('2025-01-20T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_AUTHORISATION,
+                  at: new Date('2025-01-21T00:00:00.000Z'),
+                  by: { id: 'rep-1', name: 'Rita Reprocessor' }
+                },
+                {
+                  status: PRN_STATUS.AWAITING_ACCEPTANCE,
+                  at: new Date('2025-01-22T00:00:00.000Z'),
+                  by: { id: 'sig-7', name: 'Sam Signatory' }
+                },
+                {
+                  status: PRN_STATUS.ACCEPTED,
+                  at: new Date('2025-01-23T00:00:00.000Z'),
+                  by: rpdActor
+                }
+              ]
+            }
+          }
+        ],
+        overseasSites,
+        summaryLogs: [submittedLog()]
+      })
+
+      const accepted =
+        /** @type {import('../repository/stream-schema.js').StreamEventInsert} */ (
+          result.events.find((e) => e.kind === STREAM_EVENT_KIND.PRN_ACCEPTED)
+        )
+      expect(accepted.createdBy).toEqual({ id: 'rpd-client', name: 'RPD' })
+      expect('email' in accepted.createdBy).toBe(false)
+    })
+
     it('attributes summary-log events to the supplied submitter', () => {
       const submitter = { id: 'usr-9', name: 'submitter@example.com' }
       const result = computeRebuiltStream({
