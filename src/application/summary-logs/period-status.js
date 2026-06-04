@@ -299,10 +299,10 @@ export const buildTransactionAmounts = (
   existingRecordsMap
 ) => {
   const amounts = new Map()
-  for (const { record, outcome } of wasteBalanceRecords) {
-    if (outcome !== ROW_OUTCOME.INCLUDED) {
-      continue
-    }
+  const included = wasteBalanceRecords.filter(
+    ({ outcome }) => outcome === ROW_OUTCOME.INCLUDED
+  )
+  for (const { record } of included) {
     const schema = findSchemaForProcessingType(processingType, record.type)
     const newAmount = getTransactionAmount(schema, record.data, registration)
     if (newAmount === 0) {
@@ -310,7 +310,7 @@ export const buildTransactionAmounts = (
     }
 
     const key = `${record.type}:${record.rowId}`
-    const lastVersion = record.versions[record.versions.length - 1]
+    const lastVersion = record.versions.at(-1)
     const isAdjusted =
       lastVersion.summaryLog?.id === summaryLogId &&
       lastVersion.status === VERSION_STATUS.UPDATED
