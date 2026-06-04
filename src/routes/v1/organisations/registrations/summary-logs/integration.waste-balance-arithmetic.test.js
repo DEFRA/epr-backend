@@ -520,7 +520,7 @@ describe('Waste balance arithmetic integration tests', () => {
         organisationId: env.organisationId,
         prnId: 'other-prn',
         tonnage: 80,
-        userId: 'test-user'
+        createdBy: { id: 'test-user' }
       })
 
       balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
@@ -1059,7 +1059,7 @@ describe('Waste balance arithmetic integration tests', () => {
         organisationId,
         prnId: 'other-prn',
         tonnage: 80,
-        userId: 'test-user'
+        createdBy: { id: 'test-user' }
       })
 
       const result = await transitionPrnStatus(
@@ -1110,7 +1110,7 @@ describe('Waste balance arithmetic integration tests', () => {
         organisationId,
         prnId: 'other-prn',
         tonnage: 20,
-        userId: 'test-user'
+        createdBy: { id: 'test-user' }
       })
 
       await Promise.allSettled([

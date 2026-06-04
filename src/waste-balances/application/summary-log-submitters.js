@@ -3,23 +3,26 @@
  */
 
 /**
- * Reduce a submit-audit actor to the stream's `{ id, name }` summary, or `null`
- * when it carries no usable identity. A human actor's email is its only captured
- * label, so it stands in for the name; an actor with no id, or with neither a
- * name nor an email, has nothing real to attribute and is rejected rather than
- * relabelled with its id — so missing data stays visible downstream (the
- * submission falls back to backfill) instead of being masked by a fabricated
- * name. Shared with the unusable-actor count so both read identity the same way.
+ * Reduce a submit-audit actor to the stream's `{ id, name?, email? }` summary,
+ * or `null` when it carries no usable identity. The `id` is the proof of the
+ * actor; `name` and `email` are distinct labels, each carried only when the
+ * audit holds it. An actor with no id, or with neither a name nor an email, has
+ * nothing real to attribute, so it is rejected and the submission falls back to
+ * backfill — keeping missing data visible downstream. Shared with the
+ * unusable-actor count so both read identity the same way.
  *
  * @param {SubmitAuditActor} [createdBy]
  * @returns {import('../repository/stream-schema.js').StreamUserSummary | null}
  */
 export const toStreamActor = (createdBy) => {
-  const name = createdBy?.name ?? createdBy?.email
-  if (createdBy?.id === undefined || name === undefined) {
+  if (createdBy?.id === undefined || (!createdBy.name && !createdBy.email)) {
     return null
   }
-  return { id: createdBy.id, name }
+  return {
+    id: createdBy.id,
+    ...(createdBy.name && { name: createdBy.name }),
+    ...(createdBy.email && { email: createdBy.email })
+  }
 }
 
 /**
@@ -28,8 +31,8 @@ export const toStreamActor = (createdBy) => {
  * keys on the summary-log document id (`context.summaryLogId`); the stream keys
  * on `summaryLog.file.id`, a different namespace, so the summary-log documents
  * bridge document id → file id. Each actor is reduced to the stream's
- * `{ id, name }` summary by `toStreamActor`, which rejects actors with no usable
- * identity so missing data is never masked by a fabricated name.
+ * `{ id, name?, email? }` summary by `toStreamActor`, which rejects actors with
+ * no usable identity, keeping missing data visible downstream.
  *
  * A document submitted more than once keeps the most recent audit: callers
  * supply `submitActors` newest-first, so the first one seen for a file id wins.

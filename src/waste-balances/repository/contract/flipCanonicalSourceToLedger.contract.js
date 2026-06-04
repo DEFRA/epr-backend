@@ -4,13 +4,22 @@ import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
 import { buildStreamEvent } from '../stream-test-data.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
   describe('flipCanonicalSourceToLedger', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('flips the marker from migrating to ledger when the captured version matches and clears migratingSince', async ({
       insertWasteBalance,
@@ -200,7 +209,7 @@ export const testFlipCanonicalSourceToLedgerBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-during-rebuild',
         tonnage: 5,
-        userId: 'user-1'
+        createdBy: { id: 'user-1' }
       })
 
       const result = await repository.flipCanonicalSourceToLedger({
