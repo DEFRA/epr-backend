@@ -8,7 +8,7 @@ const summaryLogDoc = (docId, fileId) => ({
 })
 
 describe('buildSystemLogSubmitters', () => {
-  it('bridges the audit document id to the file id and credits the submitter', () => {
+  it('bridges the audit document id to the file id and credits the submitter by email', () => {
     const submitters = buildSystemLogSubmitters({
       submitActors: [
         {
@@ -21,7 +21,30 @@ describe('buildSystemLogSubmitters', () => {
 
     expect(submitters.get('file-1')).toEqual({
       id: 'user-1',
-      name: 'alice@example.com'
+      email: 'alice@example.com'
+    })
+  })
+
+  it('carries a name and an email distinctly when the audit holds both', () => {
+    const submitters = buildSystemLogSubmitters({
+      submitActors: [
+        {
+          summaryLogId: 'doc-1',
+          createdBy: {
+            id: 'user-1',
+            name: 'Alice Submitter',
+            email: 'alice@example.com',
+            scope: []
+          }
+        }
+      ],
+      summaryLogDocs: [summaryLogDoc('doc-1', 'file-1')]
+    })
+
+    expect(submitters.get('file-1')).toEqual({
+      id: 'user-1',
+      name: 'Alice Submitter',
+      email: 'alice@example.com'
     })
   })
 
@@ -96,7 +119,7 @@ describe('buildSystemLogSubmitters', () => {
 
     expect(submitters.get('file-1')).toEqual({
       id: 'user-1',
-      name: 'alice@example.com'
+      email: 'alice@example.com'
     })
   })
 
