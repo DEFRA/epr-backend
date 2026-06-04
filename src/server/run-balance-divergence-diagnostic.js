@@ -194,21 +194,21 @@ const formatErrorLine = (embedded, error) =>
   ].join(' ')
 
 /**
- * Whether any event in the matrix lacks full name+email attribution — either an
- * id-only actor (real but unlabelled) or no actor at all. These are the gaps an
- * operator wants flagged per accreditation before cutover.
+ * Whether any event could not be attributed to an actor at all (no id — a true
+ * backfill). This is the unexpected case worth flagging per accreditation. An
+ * id-only or name-only actor is real and merely lacks some display labels, which
+ * is expected for historical data — PRN history never carries an email — so it
+ * is captured in the aggregate matrix rather than warned on per accreditation.
  *
  * @param {import('#waste-balances/application/summary-log-submitters.js').AttributionMatrix} matrix
  * @returns {boolean}
  */
-const hasAttributionGap = (matrix) =>
-  Object.values(matrix).some(
-    (counts) => counts.idOnly > 0 || counts.noActor > 0
-  )
+const hasUnattributedEvent = (matrix) =>
+  Object.values(matrix).some((counts) => counts.noActor > 0)
 
-const formatAttributionLine = (comparison) =>
+const formatUnattributedLine = (comparison) =>
   [
-    'Waste-balance rebuild actor attribution gap:',
+    'Waste-balance rebuild has unattributed events:',
     `organisationId=${comparison.organisationId}`,
     `registrationNumber=${comparison.registrationNumber}`,
     `accreditationNumber=${comparison.accreditationNumber}`,
@@ -241,8 +241,8 @@ const runDiagnostic = async (db, deps) => {
         attributionTotals,
         comparison.attributionMatrix
       ])
-      if (hasAttributionGap(comparison.attributionMatrix)) {
-        logger.warn({ message: formatAttributionLine(comparison) })
+      if (hasUnattributedEvent(comparison.attributionMatrix)) {
+        logger.warn({ message: formatUnattributedLine(comparison) })
       }
       if (isDivergent(comparison)) {
         changed += 1

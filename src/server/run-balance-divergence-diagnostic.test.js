@@ -899,15 +899,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       })
     )
 
-    const attributionLine = vi
-      .mocked(logger.warn)
-      .mock.calls.map(([arg]) => arg?.message ?? '')
-      .find((message) =>
-        message.startsWith('Waste-balance rebuild actor attribution gap:')
-      )
-    expect(attributionLine).toContain(
-      'attributionMatrix=summary-log-submitted{nameAndEmail:0,nameOnly:0,emailOnly:0,idOnly:1,noActor:0,scope:0}'
-    )
+    expect(logger.warn).not.toHaveBeenCalled()
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -1017,7 +1009,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(divergenceLines[0][0].message).toContain('streamEventCount=0')
   })
 
-  it('warns with a tagged key=value line when an event lacks full attribution', async () => {
+  it('warns with a tagged key=value line when an event has no attributable actor', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
@@ -1044,7 +1036,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
       attributionMatrix: {
         'prn-created': {
           nameAndEmail: 0,
-          nameOnly: 0,
+          nameOnly: 1,
           emailOnly: 0,
           idOnly: 1,
           noActor: 1,
@@ -1057,11 +1049,11 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste-balance rebuild actor attribution gap: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 attributionMatrix=prn-created{nameAndEmail:0,nameOnly:0,emailOnly:0,idOnly:1,noActor:1,scope:0} streamEventCount=3'
+        'Waste-balance rebuild has unattributed events: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 attributionMatrix=prn-created{nameAndEmail:0,nameOnly:1,emailOnly:0,idOnly:1,noActor:1,scope:0} streamEventCount=3'
     })
   })
 
-  it('does not warn when every rebuilt event carried a real actor', async () => {
+  it('does not warn when every event is attributed, even if only by id', async () => {
     setEmbeddedBalances([
       {
         accreditationId: 'acc-1',
@@ -1082,10 +1074,19 @@ describe('runBalanceDivergenceDiagnostic', () => {
       { id: 'acc-1', accreditationNumber: 'ACC-1', status: 'approved' }
     ]
     vi.mocked(computeRebuiltStream).mockReturnValue({
-      events: [buildStreamEvent()],
+      events: [buildStreamEvent(), buildStreamEvent()],
       amount: 0,
       availableAmount: 0,
-      attributionMatrix: {}
+      attributionMatrix: {
+        'prn-created': {
+          nameAndEmail: 0,
+          nameOnly: 1,
+          emailOnly: 0,
+          idOnly: 1,
+          noActor: 0,
+          scope: 0
+        }
+      }
     })
 
     await runBalanceDivergenceDiagnostic(mockServer)
