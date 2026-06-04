@@ -82,10 +82,6 @@ export function createExternalTransitionHandler({
           ? new Date(payload[timestampField])
           : new Date()
 
-        // RPD reaches this route through the machine-credential strategy, which
-        // identifies the service in the name slot. Select id and name into the
-        // actor explicitly so the machine marker never travels downstream; no
-        // email exists for a service identity.
         const { id, name } = /** @type {MachineCredentials} */ (
           request.auth.credentials
         )

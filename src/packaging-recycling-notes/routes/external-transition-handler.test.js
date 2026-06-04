@@ -175,9 +175,6 @@ describe('external PRN transition read-side fold', () => {
   })
 
   it('attributes a live RPD accept to the RPD service with no email', async () => {
-    // RPD drives the accept through the machine-credential strategy. The stream
-    // event it writes must carry the RPD service identity in the name slot and
-    // no email — RPD is a genuine service name, not a fabricated human.
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
       events: [],
