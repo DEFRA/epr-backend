@@ -11,6 +11,10 @@ import {
   ZERO_BALANCE
 } from '../repository/stream-schema.js'
 import {
+  addAttribution,
+  mergeAttributionMatrices
+} from './summary-log-submitters.js'
+import {
   closingForSummaryLogSubmitted,
   closingForPrn
 } from './stream-closing-balance.js'
@@ -126,52 +130,6 @@ const actorOf = (actor) =>
     : { ...BACKFILL_ACTOR }
 
 /**
- * Sparse count of backfilled-actor events keyed by the stream event kind that
- * fell back. Only kinds with at least one fallback appear.
- *
- * @typedef {Partial<Record<import('../repository/stream-schema.js').StreamEventKind, number>>} BackfillTally
- */
-
-/**
- * Record one event-kind's fallback to the backfill actor in a per-kind tally.
- *
- * @param {BackfillTally} byKind
- * @param {import('../repository/stream-schema.js').StreamEventKind} kind
- */
-const tallyBackfill = (byKind, kind) => {
-  byKind[kind] = (byKind[kind] ?? 0) + 1
-}
-
-/**
- * Combine per-kind backfill tallies, summing counts for shared kinds.
- *
- * @param {BackfillTally[]} tallies
- * @returns {BackfillTally}
- */
-const mergeBackfillTallies = (tallies) => {
-  const merged = /** @type {BackfillTally} */ ({})
-  for (const tally of tallies) {
-    for (const [rawKind, count] of Object.entries(tally)) {
-      const kind =
-        /** @type {import('../repository/stream-schema.js').StreamEventKind} */ (
-          rawKind
-        )
-      merged[kind] = (merged[kind] ?? 0) + count
-    }
-  }
-  return merged
-}
-
-/**
- * Total backfilled-actor events across every kind in a tally.
- *
- * @param {BackfillTally} byKind
- * @returns {number}
- */
-const totalBackfilled = (byKind) =>
-  Object.values(byKind).reduce((sum, count) => sum + count, 0)
-
-/**
  * Build summary-log-submitted events, threading the running set of seen
  * summary-log ids so each submission credits the waste-record data as it
  * stood at that point.
@@ -204,7 +162,6 @@ const buildSummaryLogEvents = ({
 
   const seenSummaryLogIds = new Set()
   const events = []
-  const backfilledActorCountByKind = /** @type {BackfillTally} */ ({})
 
   for (const summaryLog of submitted) {
     seenSummaryLogIds.add(summaryLog.id)
@@ -226,16 +183,6 @@ const buildSummaryLogEvents = ({
       creditTotal = toNumber(add(creditTotal, amount))
     }
 
-    // One event is emitted per submitted log, so a missing submitter is
-    // exactly one backfilled event — no need to gate on emission as the PRN
-    // builder does.
-    if (!summaryLog.submittedBy) {
-      tallyBackfill(
-        backfilledActorCountByKind,
-        STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-      )
-    }
-
     events.push({
       timestamp: new Date(summaryLog.submittedAt),
       kind: STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
@@ -247,7 +194,7 @@ const buildSummaryLogEvents = ({
     })
   }
 
-  return { events, backfilledActorCountByKind }
+  return events
 }
 
 /**
@@ -307,8 +254,9 @@ const prnTransitionEvent = ({
 }
 
 /**
- * Build the events from a single PRN's status history, counting those that
- * fall back to the system backfill actor because the history entry names none.
+ * Build the events from a single PRN's status history, classifying each event's
+ * acting actor into the per-event-kind attribution matrix by the labels the
+ * history entry carries (name, id-only, or no actor at all).
  *
  * @param {Object} params
  * @param {Object} params.prn
@@ -324,7 +272,8 @@ const buildPrnHistoryEvents = ({
 }) => {
   const history = prn.status.history
   const events = []
-  const backfilledActorCountByKind = /** @type {BackfillTally} */ ({})
+  /** @type {import('./summary-log-submitters.js').AttributionMatrix} */
+  const attributionMatrix = {}
 
   for (let i = 0; i < history.length; i++) {
     const event = prnTransitionEvent({
@@ -338,12 +287,10 @@ const buildPrnHistoryEvents = ({
       continue
     }
     events.push(event)
-    if (!history[i].by) {
-      tallyBackfill(backfilledActorCountByKind, event.kind)
-    }
+    addAttribution(attributionMatrix, event.kind, history[i].by)
   }
 
-  return { events, backfilledActorCountByKind }
+  return { events, attributionMatrix }
 }
 
 /**
@@ -372,15 +319,18 @@ const buildPrnEvents = ({
 
   return {
     events: perPrn.flatMap(({ events }) => events),
-    backfilledActorCountByKind: mergeBackfillTallies(
-      perPrn.map(({ backfilledActorCountByKind }) => backfilledActorCountByKind)
+    attributionMatrix: mergeAttributionMatrices(
+      perPrn.map(({ attributionMatrix }) => attributionMatrix)
     )
   }
 }
 
 /**
- * Build an unsorted list of chronologically timestamped event tuples
- * from summary log submissions and PRN status transitions.
+ * Build an unsorted list of chronologically timestamped event tuples from
+ * summary log submissions and PRN status transitions. The PRN events carry the
+ * PRN rows of the per-event-kind attribution matrix; the SUMMARY_LOG_SUBMITTED
+ * row is owned by the submitter-recovery path, which sees the raw submit-audit
+ * actor (with its scope), so it is not re-counted here.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
@@ -392,15 +342,12 @@ const buildPrnEvents = ({
  * @param {Array<{ id: string, status: string, submittedAt?: string, submittedBy?: import('../repository/stream-schema.js').StreamUserSummary }>} params.summaryLogs
  */
 const buildChronologicalEvents = (params) => {
-  const summaryLog = buildSummaryLogEvents(params)
+  const summaryLogEvents = buildSummaryLogEvents(params)
   const prn = buildPrnEvents(params)
 
   return {
-    events: [...summaryLog.events, ...prn.events],
-    backfilledActorCountByKind: mergeBackfillTallies([
-      summaryLog.backfilledActorCountByKind,
-      prn.backfilledActorCountByKind
-    ])
+    events: [...summaryLogEvents, ...prn.events],
+    attributionMatrix: prn.attributionMatrix
   }
 }
 
@@ -491,10 +438,12 @@ const byStreamOrder = (a, b) =>
  * registration / organisation context and actor attribution, and throw on
  * source history that violates the PRN state machine — so the sequence is
  * seedable into the stream store, not only a totals cross-check. Also reports
- * `backfilledActorCount`: how many events fell back to the backfill actor
- * because no real actor was recoverable, and `backfilledActorCountByKind`: the
- * same total broken down by stream event kind, so callers can surface
- * attribution gaps and see which event kinds drive them.
+ * the PRN rows of the per-event-kind attribution matrix (`attributionMatrix`):
+ * for each PRN event kind, how many events carried which actor-label
+ * combination (name, id-only, or no actor at all), so callers can surface
+ * attribution quality and see which kinds carry it. The SUMMARY_LOG_SUBMITTED
+ * row is contributed by the submitter-recovery path, which sees the raw audit
+ * actor and its scope.
  *
  * @param {Object} params
  * @param {{ id: string }} params.accreditation
@@ -514,18 +463,15 @@ export const computeRebuiltStream = ({
   overseasSites,
   summaryLogs
 }) => {
-  const { events: unsorted, backfilledActorCountByKind } =
-    buildChronologicalEvents({
-      accreditation,
-      registrationId,
-      organisationId,
-      wasteRecords,
-      prns,
-      overseasSites,
-      summaryLogs
-    })
-
-  const backfilledActorCount = totalBackfilled(backfilledActorCountByKind)
+  const { events: unsorted, attributionMatrix } = buildChronologicalEvents({
+    accreditation,
+    registrationId,
+    organisationId,
+    wasteRecords,
+    prns,
+    overseasSites,
+    summaryLogs
+  })
 
   unsorted.sort(byStreamOrder)
 
@@ -535,8 +481,7 @@ export const computeRebuiltStream = ({
     return {
       events,
       ...ZERO_BALANCE,
-      backfilledActorCount,
-      backfilledActorCountByKind
+      attributionMatrix
     }
   }
 
@@ -549,7 +494,6 @@ export const computeRebuiltStream = ({
     events,
     amount: finalBalance.amount,
     availableAmount: finalBalance.availableAmount,
-    backfilledActorCount,
-    backfilledActorCountByKind
+    attributionMatrix
   }
 }

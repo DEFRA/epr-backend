@@ -7,6 +7,10 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { computeRebuiltTotals } from '#waste-balances/application/compute-rebuilt-totals.js'
 import { computeRebuiltStream } from '#waste-balances/application/compute-rebuilt-stream.js'
+import {
+  formatAttributionMatrix,
+  mergeAttributionMatrices
+} from '#waste-balances/application/summary-log-submitters.js'
 import { loadAccreditationSources } from '#server/load-accreditation-sources.js'
 import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 
@@ -102,8 +106,10 @@ export const compareForEmbedded = async (embedded, deps) => {
     stream,
     wasteRecords,
     prns,
-    submitterProvenance: sources.submitterProvenance,
-    unusableSubmitAudit: sources.unusableSubmitAudit
+    attributionMatrix: mergeAttributionMatrices([
+      sources.attributionMatrix,
+      stream.attributionMatrix
+    ])
   })
 }
 
@@ -115,8 +121,7 @@ const buildComparison = ({
   stream,
   wasteRecords,
   prns,
-  submitterProvenance,
-  unusableSubmitAudit
+  attributionMatrix
 }) => ({
   organisationId: embedded.organisationId,
   registrationNumber: registration.registrationNumber,
@@ -145,10 +150,7 @@ const buildComparison = ({
     stream.availableAmount
   ),
   streamEventCount: stream.events.length,
-  backfilledActorCount: stream.backfilledActorCount,
-  backfilledActorCountByKind: stream.backfilledActorCountByKind,
-  submitterProvenance,
-  unusableSubmitAudit
+  attributionMatrix
 })
 
 const isDivergent = (comparison) =>
@@ -191,43 +193,28 @@ const formatErrorLine = (embedded, error) =>
     `error="${error.message}"`
   ].join(' ')
 
-const formatBackfillByKind = (byKind) =>
-  Object.keys(byKind)
-    .sort((a, b) => a.localeCompare(b))
-    .map((kind) => `${kind}:${byKind[kind]}`)
-    .join(',')
+/**
+ * Whether any event in the matrix lacks full name+email attribution — either an
+ * id-only actor (real but unlabelled) or no actor at all. These are the gaps an
+ * operator wants flagged per accreditation before cutover.
+ *
+ * @param {import('#waste-balances/application/summary-log-submitters.js').AttributionMatrix} matrix
+ * @returns {boolean}
+ */
+const hasAttributionGap = (matrix) =>
+  Object.values(matrix).some(
+    (counts) => counts.idOnly > 0 || counts.noActor > 0
+  )
 
-const formatProvenance = (provenance) =>
-  `systemLog:${provenance.systemLog},backfill:${provenance.backfill}`
-
-const formatBackfillLine = (comparison) =>
+const formatAttributionLine = (comparison) =>
   [
-    'Waste-balance rebuild used backfill actor:',
+    'Waste-balance rebuild actor attribution gap:',
     `organisationId=${comparison.organisationId}`,
     `registrationNumber=${comparison.registrationNumber}`,
     `accreditationNumber=${comparison.accreditationNumber}`,
-    `backfilledActorCount=${comparison.backfilledActorCount}`,
-    `backfilledActorCountByKind=${formatBackfillByKind(comparison.backfilledActorCountByKind)}`,
-    `submitterProvenance=${formatProvenance(comparison.submitterProvenance)}`,
+    `attributionMatrix=${formatAttributionMatrix(comparison.attributionMatrix)}`,
     `streamEventCount=${comparison.streamEventCount}`
   ].join(' ')
-
-const formatUnusableSubmitAuditLine = (comparison) =>
-  [
-    'Waste-balance submit audit carries an unusable actor:',
-    `organisationId=${comparison.organisationId}`,
-    `registrationNumber=${comparison.registrationNumber}`,
-    `accreditationNumber=${comparison.accreditationNumber}`,
-    `unusableSubmitAudit=${comparison.unusableSubmitAudit}`
-  ].join(' ')
-
-const submittedSummaryLogCount = (provenance) =>
-  provenance.systemLog + provenance.backfill
-
-const accumulateProvenance = (totals, provenance) => {
-  totals.systemLog += provenance.systemLog
-  totals.backfill += provenance.backfill
-}
 
 /**
  * @param {import('mongodb').Db} db
@@ -243,20 +230,19 @@ const runDiagnostic = async (db, deps) => {
   let scanned = 0
   let changed = 0
   let failed = 0
-  const provenanceTotals = { systemLog: 0, backfill: 0 }
-  let unusableSubmitAuditTotal = 0
+  /** @type {import('#waste-balances/application/summary-log-submitters.js').AttributionMatrix} */
+  let attributionTotals = {}
 
   for (const row of embedded) {
     scanned += 1
     try {
       const comparison = await compareForEmbedded(row, deps)
-      accumulateProvenance(provenanceTotals, comparison.submitterProvenance)
-      unusableSubmitAuditTotal += comparison.unusableSubmitAudit
-      if (comparison.unusableSubmitAudit > 0) {
-        logger.warn({ message: formatUnusableSubmitAuditLine(comparison) })
-      }
-      if (comparison.backfilledActorCount > 0) {
-        logger.warn({ message: formatBackfillLine(comparison) })
+      attributionTotals = mergeAttributionMatrices([
+        attributionTotals,
+        comparison.attributionMatrix
+      ])
+      if (hasAttributionGap(comparison.attributionMatrix)) {
+        logger.warn({ message: formatAttributionLine(comparison) })
       }
       if (isDivergent(comparison)) {
         changed += 1
@@ -269,7 +255,7 @@ const runDiagnostic = async (db, deps) => {
   }
 
   logger.info({
-    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} submittedSummaryLogs=${submittedSummaryLogCount(provenanceTotals)} submitterProvenance=${formatProvenance(provenanceTotals)} unusableSubmitAudit=${unusableSubmitAuditTotal}`
+    message: `Waste-balance divergence diagnostic: scanned=${scanned} changed=${changed} failed=${failed} attributionMatrix=${formatAttributionMatrix(attributionTotals)}`
   })
 }
 
