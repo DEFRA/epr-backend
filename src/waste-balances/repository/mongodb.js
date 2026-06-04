@@ -76,7 +76,11 @@ const performFlipCanonicalSourceToMigrating =
       {
         accreditationId: validatedAccreditationId,
         version: capturedVersion,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
+        // A missing canonicalSource reads as embedded; $in with null matches
+        // legacy documents that have no field so the flip lands on them too.
+        canonicalSource: {
+          $in: [WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED, null]
+        }
       },
       {
         $set: {

@@ -104,6 +104,9 @@ const performFlipCanonicalSourceToMigrating =
     if (!current) {
       return null
     }
+    // The mongodb adapter also treats an absent canonicalSource as embedded;
+    // in memory every balance carries a marker from save onwards, so a strict
+    // equality check covers the only states that can occur here.
     if (
       current.version === capturedVersion &&
       current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
