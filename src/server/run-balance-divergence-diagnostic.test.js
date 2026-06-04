@@ -474,7 +474,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
           'No registration links to accreditation acc-1'
@@ -503,14 +503,14 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
           'Waste-balance divergence rebuild failed: organisationId=org-1 accreditationId=acc-orphan'
         )
       })
     )
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
           'No registration links to accreditation acc-orphan'
@@ -558,7 +558,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     await runBalanceDivergenceDiagnostic(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
+    expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
           'Waste-balance divergence rebuild failed: organisationId=org-1 accreditationId=acc-bad'
@@ -568,6 +568,40 @@ describe('runBalanceDivergenceDiagnostic', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Waste-balance divergence diagnostic: scanned=2 changed=0 failed=1 attributionMatrix='
+    })
+  })
+
+  it('logs the error with its stack and the accreditation identifiers when a rebuild throws', async () => {
+    setEmbeddedBalances([
+      {
+        accreditationId: 'acc-throws',
+        organisationId: 'org-throws',
+        amount: 10,
+        availableAmount: 10
+      }
+    ])
+    registrations['org-throws'] = [
+      {
+        id: 'reg-throws',
+        accreditationId: 'acc-throws',
+        registrationNumber: 'REG-throws',
+        status: 'approved'
+      }
+    ]
+    accreditations['org-throws'] = [
+      { id: 'acc-throws', accreditationNumber: 'ACC-throws' }
+    ]
+    const rebuildError = new Error('boom rebuilding stream')
+    vi.mocked(computeRebuiltStream).mockImplementation(() => {
+      throw rebuildError
+    })
+
+    await runBalanceDivergenceDiagnostic(mockServer)
+
+    expect(logger.warn).toHaveBeenCalledWith({
+      err: rebuildError,
+      message:
+        'Waste-balance divergence rebuild failed: organisationId=org-throws accreditationId=acc-throws error="boom rebuilding stream"'
     })
   })
 

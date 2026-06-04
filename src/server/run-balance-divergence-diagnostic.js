@@ -250,7 +250,7 @@ const runDiagnostic = async (db, deps) => {
       }
     } catch (error) {
       failed += 1
-      logger.info({ message: formatErrorLine(row, error) })
+      logger.warn({ err: error, message: formatErrorLine(row, error) })
     }
   }
 
