@@ -47,13 +47,16 @@ export function withRegistrationDetails(report, registration) {
 
 /**
  * Extracts a changedBy user summary from request credentials.
+ * Carries name and email distinctly: name is omitted when there is no real
+ * name, and the email is never coerced into the name slot.
  * @param {object} credentials
- * @returns {{ id: string, name: string, position: string }}
+ * @returns {{ id: string, name?: string, email?: string, position: string }}
  */
 export function extractChangedBy(credentials) {
   return {
     id: credentials.id,
-    name: credentials.name ?? credentials.email,
+    ...(credentials.name && { name: credentials.name }),
+    ...(credentials.email && { email: credentials.email }),
     position: credentials.position ?? 'User'
   }
 }

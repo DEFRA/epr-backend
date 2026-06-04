@@ -31,7 +31,8 @@ export const periodSchema = Joi.number()
 
 export const userSummarySchema = Joi.object({
   id: Joi.string().required(),
-  name: Joi.string().required(),
+  name: Joi.string().optional(),
+  email: Joi.string().optional(),
   position: Joi.string().optional()
 }).required()
 
