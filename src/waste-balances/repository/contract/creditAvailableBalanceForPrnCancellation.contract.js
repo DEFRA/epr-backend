@@ -6,13 +6,22 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '../../domain/model.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
   describe('creditAvailableBalanceForPrnCancellation', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('credits tonnage back to available balance only', async ({
       insertWasteBalance
@@ -31,7 +40,7 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-123',
         tonnage: 50,
-        userId: 'user-abc'
+        createdBy: { id: 'user-abc' }
       })
 
       const result = await repository.findByAccreditationId('acc-cancel-1')
@@ -58,7 +67,7 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-456',
         tonnage: 25.5,
-        userId: 'user-xyz'
+        createdBy: { id: 'user-xyz' }
       })
 
       const result = await repository.findByAccreditationId('acc-cancel-2')
@@ -78,7 +87,7 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
           organisationId: 'org-1',
           prnId: 'prn-789',
           tonnage: 10,
-          userId: 'user-123'
+          createdBy: { id: 'user-123' }
         })
       ).rejects.toThrow(Boom.Boom)
     })
@@ -103,7 +112,7 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
           organisationId: 'org-1',
           prnId: 'prn-ledger',
           tonnage: 10,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         })
 
       const latest = await streamRepository.findLatestByPartition(
@@ -130,7 +139,7 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
           organisationId: 'org-1',
           prnId: 'prn-embedded',
           tonnage: 10,
-          userId: 'user-abc'
+          createdBy: { id: 'user-abc' }
         })
 
       expect(watermark).toBeNull()
@@ -150,7 +159,7 @@ export const testCreditAvailableBalanceForPrnCancellationBehaviour = (it) => {
         organisationId: 'org-1',
         prnId: 'prn-999',
         tonnage: 10,
-        userId: 'user-456'
+        createdBy: { id: 'user-456' }
       })
 
       const result = await repository.findByAccreditationId('acc-cancel-3')
