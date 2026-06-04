@@ -26,11 +26,7 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  streamRepository: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient },
-    use
-  ) => {
+  streamRepository: async ({ mongoClient }, use) => {
     const database = /** @type {import('mongodb').MongoClient} */ (
       mongoClient
     ).db(DATABASE_NAME)
@@ -38,11 +34,7 @@ const it = mongoIt.extend({
     await use(factory())
   },
 
-  wasteBalancesRepository: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient, streamRepository },
-    use
-  ) => {
+  wasteBalancesRepository: async ({ mongoClient, streamRepository }, use) => {
     const database = /** @type {import('mongodb').MongoClient} */ (
       mongoClient
     ).db(DATABASE_NAME)
@@ -55,11 +47,7 @@ const it = mongoIt.extend({
     await use(factory)
   },
 
-  insertWasteBalance: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient },
-    use
-  ) => {
+  insertWasteBalance: async ({ mongoClient }, use) => {
     await use(async (wasteBalance) => {
       await /** @type {import('mongodb').MongoClient} */ (mongoClient)
         .db(DATABASE_NAME)
@@ -68,11 +56,7 @@ const it = mongoIt.extend({
     })
   },
 
-  insertWasteBalances: async (
-    // @ts-expect-error -- vitest .extend() fixture typing
-    { mongoClient },
-    use
-  ) => {
+  insertWasteBalances: async ({ mongoClient }, use) => {
     await use(async (wasteBalances) => {
       await /** @type {import('mongodb').MongoClient} */ (mongoClient)
         .db(DATABASE_NAME)
@@ -170,7 +154,9 @@ describe('MongoDB waste balances repository', () => {
       expect(result).toEqual({
         canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
       })
-      const after = await repository.findByAccreditationId('acc-legacy-unmarked')
+      const after = await repository.findByAccreditationId(
+        'acc-legacy-unmarked'
+      )
       expect(after?.canonicalSource).toBe(
         WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
       )
