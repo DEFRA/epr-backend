@@ -33,9 +33,9 @@
  * @typedef {Object} Supplier
  * @property {string} supplierName
  * @property {string} facilityType
- * @property {string} address
- * @property {string} phone
- * @property {string} email
+ * @property {string} supplierAddress
+ * @property {string} supplierPhone
+ * @property {string} supplierEmail
  * @property {number} tonnageReceived
  */
 
@@ -44,8 +44,6 @@
  * @property {string} recipientName
  * @property {string} facilityType
  * @property {string} address
- * @property {string} phone
- * @property {string} email
  * @property {number} tonnageSentOn
  */
 
@@ -90,6 +88,10 @@
  */
 
 /**
+ * @typedef {{ at: string, reason: string }} ReportStale
+ */
+
+/**
  * @typedef {Object} Report
  * @property {string} id
  * @property {number} version
@@ -113,6 +115,7 @@
  * @property {PrnData} [prn]
  * @property {string} [supportingInformation]
  * @property {SourceData} [sourceData]
+ * @property {ReportStale} [stale]
  */
 
 /**
@@ -231,6 +234,8 @@
  * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(reportId: string) => Promise<Report>} findReportById
+ * @property {(organisationId: string, registrationId: string, statuses: ReportStatus[]) => Promise<Report[]>} findReportsByStatus
+ * @property {(reportId: string, version: number, stale: ReportStale) => Promise<Report>} markReportStale
  */
 
 /**

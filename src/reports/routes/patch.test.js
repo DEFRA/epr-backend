@@ -891,6 +891,36 @@ describe(`PATCH ${reportsPatchPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
   })
+
+  describe('when report is stale', () => {
+    it('returns 409 with summary_log_changed code', async () => {
+      const {
+        server,
+        organisationId,
+        registrationId,
+        reportId,
+        reportsRepository
+      } = await createServer({
+        wasteProcessingType: 'reprocessor',
+        accreditationId: undefined
+      })
+
+      await reportsRepository.markReportStale(reportId, 1, {
+        at: new Date().toISOString(),
+        reason: 'summary_log_changed'
+      })
+
+      const response = await patchReport(
+        server,
+        organisationId,
+        registrationId,
+        { supportingInformation: 'notes' }
+      )
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+    })
+  })
 })
 
 describe('buildUpdatedPrn', () => {

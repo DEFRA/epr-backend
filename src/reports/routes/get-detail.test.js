@@ -55,7 +55,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           organisationsRepository: organisationsRepositoryFactory,
           wasteRecordsRepository: wasteRecordsRepositoryFactory
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -920,7 +920,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
             wasteRecordsRepository: wasteRecordsRepositoryFactory,
             reportsRepository: reportsRepositoryFactory
           },
-          featureFlags: createInMemoryFeatureFlags({ reports: true })
+          featureFlags: createInMemoryFeatureFlags()
         })
 
         return {
@@ -943,48 +943,52 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         })
 
         const reportsRepository = reportsRepositoryFactory()
-        await reportsRepository.createReport({
-          organisationId,
-          registrationId,
-          year: 2026,
-          cadence: 'quarterly',
-          period: 1,
-          startDate: '2026-01-01',
-          endDate: '2026-03-31',
-          dueDate: '2026-04-20',
-          changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
-          material: 'plastic',
-          wasteProcessingType: 'reprocessor',
-          recyclingActivity: {
-            suppliers: [
-              {
-                supplierName: 'Grantham Waste',
-                facilityType: 'Baler',
-                tonnageReceived: 42.21
+        await reportsRepository.createReport(
+          /** @type {import('#reports/repository/port.js').CreateReportParams} */ (
+            /** @type {unknown} */ ({
+              organisationId,
+              registrationId,
+              year: 2026,
+              cadence: 'quarterly',
+              period: 1,
+              startDate: '2026-01-01',
+              endDate: '2026-03-31',
+              dueDate: '2026-04-20',
+              changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+              material: 'plastic',
+              wasteProcessingType: 'reprocessor',
+              recyclingActivity: {
+                suppliers: [
+                  {
+                    supplierName: 'Grantham Waste',
+                    facilityType: 'Baler',
+                    tonnageReceived: 42.21
+                  }
+                ],
+                totalTonnageReceived: 42.21,
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              },
+              wasteSent: {
+                tonnageSentToReprocessor: 5,
+                tonnageSentToExporter: 0,
+                tonnageSentToAnotherSite: 0,
+                finalDestinations: [
+                  {
+                    recipientName: 'Lincoln recycling',
+                    facilityType: 'Reprocessor',
+                    tonnageSentOn: 5
+                  }
+                ]
+              },
+              prn: null,
+              source: {
+                summaryLogId: 'sl-1',
+                lastUploadedAt: '2026-04-01T21:22:28.351Z'
               }
-            ],
-            totalTonnageReceived: 42.21,
-            tonnageRecycled: null,
-            tonnageNotRecycled: null
-          },
-          wasteSent: {
-            tonnageSentToReprocessor: 5,
-            tonnageSentToExporter: 0,
-            tonnageSentToAnotherSite: 0,
-            finalDestinations: [
-              {
-                recipientName: 'Lincoln recycling',
-                facilityType: 'Reprocessor',
-                tonnageSentOn: 5
-              }
-            ]
-          },
-          prn: null,
-          source: {
-            summaryLogId: 'sl-1',
-            lastUploadedAt: '2026-04-01T21:22:28.351Z'
-          }
-        })
+            })
+          )
+        )
 
         const response = await makeRequest(
           server,
@@ -1049,6 +1053,65 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(payload.id).toBeUndefined()
         expect(payload.recyclingActivity).toBeDefined()
+      })
+
+      it('returns 409 with summary_log_changed code for a stale report', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportsRepositoryFactory
+        } = await createServerWithReports({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        const reportsRepository = reportsRepositoryFactory()
+        const { id: reportId } = await reportsRepository.createReport(
+          /** @type {import('#reports/repository/port.js').CreateReportParams} */ (
+            /** @type {unknown} */ ({
+              organisationId,
+              registrationId: String(registrationId),
+              year: 2026,
+              cadence: 'quarterly',
+              period: 1,
+              startDate: '2026-01-01',
+              endDate: '2026-03-31',
+              dueDate: '2026-04-20',
+              changedBy: { id: 'user-1', name: 'Test', position: 'Officer' },
+              material: 'plastic',
+              wasteProcessingType: 'reprocessor',
+              recyclingActivity: {
+                suppliers: [],
+                totalTonnageReceived: 0,
+                tonnageRecycled: null,
+                tonnageNotRecycled: null
+              },
+              wasteSent: {
+                tonnageSentToReprocessor: 0,
+                tonnageSentToExporter: 0,
+                tonnageSentToAnotherSite: 0,
+                finalDestinations: []
+              },
+              prn: null,
+              source: { summaryLogId: 'sl-1', lastUploadedAt: null }
+            })
+          )
+        )
+
+        await reportsRepository.markReportStale(reportId, 1, {
+          at: new Date().toISOString(),
+          reason: 'summary_log_changed'
+        })
+
+        const response = await server.inject({
+          method: 'GET',
+          url: makeUrl(organisationId, registrationId, 2026, 'quarterly', 1),
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
       })
     })
 
@@ -1141,7 +1204,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       const response = await server.inject({

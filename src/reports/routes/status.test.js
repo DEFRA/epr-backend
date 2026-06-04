@@ -105,7 +105,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: reportsRepositoryFactory
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -135,7 +135,7 @@ describe(`POST ${reportsStatusPath}`, () => {
           wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
           reportsRepository: createInMemoryReportsRepository()
         },
-        featureFlags: createInMemoryFeatureFlags({ reports: true })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       return {
@@ -535,6 +535,36 @@ describe(`POST ${reportsStatusPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
     })
+
+    describe('when report is stale', () => {
+      it('returns 409 with summary_log_changed code', async () => {
+        const {
+          server,
+          organisationId,
+          registrationId,
+          reportId,
+          reportsRepository
+        } = await createServerWithReport({
+          wasteProcessingType: 'reprocessor',
+          accreditationId: undefined
+        })
+
+        await reportsRepository.markReportStale(reportId, 1, {
+          at: new Date().toISOString(),
+          reason: 'summary_log_changed'
+        })
+
+        const response = await postStatus(
+          server,
+          organisationId,
+          registrationId,
+          { status: 'ready_to_submit', version: 2 }
+        )
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+      })
+    })
   })
 
   describe('when feature flag is disabled', () => {
@@ -544,7 +574,7 @@ describe(`POST ${reportsStatusPath}`, () => {
 
       const server = await createTestServer({
         repositories: {},
-        featureFlags: createInMemoryFeatureFlags({ reports: false })
+        featureFlags: createInMemoryFeatureFlags()
       })
 
       const response = await server.inject({

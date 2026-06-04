@@ -5,6 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { isNil } from '#common/helpers/is-nil.js'
 
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { assertNotStale } from '#reports/domain/stale.js'
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { maxTwoDecimalPlaces } from '#reports/repository/schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -175,6 +176,8 @@ export const reportsPatch = {
         `No report found for ${cadence} period ${period} of ${year}`
       )
     }
+
+    assertNotStale(report)
 
     request.logger.info({
       message: 'PATCH guard: report found',

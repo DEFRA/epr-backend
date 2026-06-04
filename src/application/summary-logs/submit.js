@@ -21,6 +21,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogExtractor
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {import('#domain/summary-logs/worker/port.js').SubmitUser} user
+ * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
  */
 
 /**
@@ -39,7 +40,8 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     wasteBalancesRepository,
     summaryLogExtractor,
     overseasSitesRepository,
-    user
+    user,
+    onSummaryLogSubmittedReportHook
   } = deps
 
   const existing = await summaryLogsRepository.findById(summaryLogId)
@@ -100,6 +102,11 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     status: SUMMARY_LOG_STATUS.SUBMITTED,
     processingType
   })
+
+  await onSummaryLogSubmittedReportHook(
+    summaryLog.organisationId,
+    summaryLog.registrationId
+  )
 
   logger.info({
     message: `Summary log submitted: ${loggingContext}, created=${created}, updated=${updated}`,

@@ -6,6 +6,7 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
+  validateMarkReportStale,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -345,6 +346,61 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
+ * Returns reports for the given org/reg that match one of the provided statuses.
+ *
+ * @param {Db} db
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {import('#reports/domain/report-status.js').ReportStatus[]} statuses
+ * @returns {Promise<Report[]>}
+ */
+const performFindReportsByStatus = async (
+  db,
+  organisationId,
+  registrationId,
+  statuses
+) => {
+  const docs = await reportsCollection(db)
+    .find(
+      {
+        organisationId,
+        registrationId,
+        'status.currentStatus': { $in: statuses }
+      },
+      { projection: { _id: 0 } }
+    )
+    .toArray()
+
+  return docs.map(({ _id, ...report }) => report)
+}
+
+/**
+ * Sets `stale` on a single report using optimistic locking.
+ *
+ * @param {Db} db
+ * @param {string} reportId
+ * @param {number} version
+ * @param {import('./port.js').ReportStale} stale
+ * @returns {Promise<Report>}
+ */
+const performMarkReportStale = async (db, reportId, version, stale) => {
+  validateMarkReportStale({ reportId, version, stale })
+
+  const doc = await reportsCollection(db).findOneAndUpdate(
+    { id: reportId, version },
+    { $set: { stale }, $inc: { version: 1 } },
+    { returnDocument: 'after', projection: { _id: 0 } }
+  )
+
+  if (!doc) {
+    return throwNotFoundOrConflict(db, reportId, version)
+  }
+
+  const { _id, ...report } = doc
+  return report
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -360,6 +416,10 @@ export const createReportsRepository = async (db) => {
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
-    findReportById: (reportId) => performFindReportById(db, reportId)
+    findReportById: (reportId) => performFindReportById(db, reportId),
+    findReportsByStatus: (organisationId, registrationId, statuses) =>
+      performFindReportsByStatus(db, organisationId, registrationId, statuses),
+    markReportStale: (reportId, version, stale) =>
+      performMarkReportStale(db, reportId, version, stale)
   })
 }

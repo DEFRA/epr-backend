@@ -7,6 +7,7 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
+  validateMarkReportStale,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -262,6 +263,55 @@ const findAllPeriodicReports = async (reports) => {
 }
 
 /**
+ * @param {Map<string, Object>} reports
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {import('#reports/domain/report-status.js').ReportStatus[]} statuses
+ * @returns {Promise<import('./port.js').Report[]>}
+ */
+const findReportsByStatus = async (
+  reports,
+  organisationId,
+  registrationId,
+  statuses
+) => {
+  const matching = [...reports.values()].filter(
+    (r) =>
+      r.organisationId === organisationId &&
+      r.registrationId === registrationId &&
+      statuses.includes(r.status.currentStatus)
+  )
+  return structuredClone(matching)
+}
+
+/**
+ * @param {Map<string, Object>} reports
+ * @param {string} reportId
+ * @param {number} version
+ * @param {import('./port.js').ReportStale} stale
+ * @returns {Promise<import('./port.js').Report>}
+ */
+const markReportStale = async (reports, reportId, version, stale) => {
+  validateMarkReportStale({ reportId, version, stale })
+
+  const existing = reports.get(reportId)
+
+  if (!existing) {
+    throw Boom.notFound(`Report not found: ${reportId}`)
+  }
+
+  if (existing.version !== version) {
+    throw Boom.conflict(
+      `Version conflict: expected version ${version} for report ${reportId}`
+    )
+  }
+
+  const updated = { ...existing, stale, version: existing.version + 1 }
+  reports.set(reportId, updated)
+  return structuredClone(updated)
+}
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -279,6 +329,10 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     deleteReport: (params) => deleteReport(reports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params),
-    findAllPeriodicReports: () => findAllPeriodicReports(reports)
+    findAllPeriodicReports: () => findAllPeriodicReports(reports),
+    findReportsByStatus: (organisationId, registrationId, statuses) =>
+      findReportsByStatus(reports, organisationId, registrationId, statuses),
+    markReportStale: (reportId, version, stale) =>
+      markReportStale(reports, reportId, version, stale)
   })
 }

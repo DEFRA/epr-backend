@@ -4,6 +4,7 @@ import {
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { onSummaryLogUploaded } from '#reports/application/summary-log-events.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
 import { orsImportCommandHandlers } from './ors-import-commands.js'
@@ -19,9 +20,54 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  *   summaryLogsRepository: import('#repositories/summary-logs/port.js').SummaryLogsRepository,
  *   organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
  *   wasteRecordsRepository: import('#repositories/waste-records/port.js').WasteRecordsRepository,
- *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository
+ *   wasteBalancesRepository: import('#waste-balances/repository/port.js').WasteBalancesRepository,
+ *   reportsRepository: import('#reports/repository/port.js').ReportsRepository,
+ *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository
  * }} QueueConsumerRepositories
  */
+
+/**
+ * Builds the base consumer dependencies from server app and config.
+ * @param {import('#common/hapi-types.js').HapiServer} server
+ * @param {CommandQueueConsumerPluginOptions} options
+ */
+function buildConsumerDeps(server, { config }) {
+  const sqsClient = createSqsClient({
+    region: config.get('awsRegion'),
+    endpoint: config.get('commandQueue.endpoint')
+  })
+
+  const {
+    uploadsRepository,
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    wasteBalancesRepository,
+    reportsRepository,
+    systemLogsRepository
+  } = /** @type {QueueConsumerRepositories} */ (server.app)
+
+  // Pre-wired closure: captures repos at plugin level; receives org/reg at call time
+  const onSummaryLogSubmittedReportHook = (organisationId, registrationId) =>
+    onSummaryLogUploaded({
+      organisationId,
+      registrationId,
+      reportsRepository,
+      systemLogsRepository
+    })
+
+  return {
+    sqsClient,
+    queueName: config.get('commandQueue.queueName'),
+    uploadsRepository,
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    wasteBalancesRepository,
+    summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
+    onSummaryLogSubmittedReportHook
+  }
+}
 
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
@@ -31,41 +77,19 @@ export const commandQueueConsumerPlugin = {
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
-    'uploadsRepository'
+    'uploadsRepository',
+    'reportsRepository',
+    'systemLogsRepository'
   ],
 
   register: async (
     /** @type {import('#common/hapi-types.js').HapiServer} */ server,
     /** @type {CommandQueueConsumerPluginOptions} */ options
   ) => {
-    const { config } = options
-
-    const queueName = config.get('commandQueue.queueName')
-    const awsRegion = config.get('awsRegion')
-    const sqsEndpoint = config.get('commandQueue.endpoint')
-
-    const sqsClient = createSqsClient({
-      region: awsRegion,
-      endpoint: sqsEndpoint
-    })
-
-    // Access deps registered by other plugins
-    const {
-      uploadsRepository,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository
-    } = /** @type {QueueConsumerRepositories} */ (server.app)
-
-    const summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository
-    })
-
-    // Consumer created lazily on server start to avoid SQS connection during tests
+    const { sqsClient, queueName, uploadsRepository, ...baseDeps } =
+      buildConsumerDeps(server, options)
     let consumer = null
 
-    // Start consuming on server start
     server.events.on('start', async () => {
       server.logger.info({
         message: `Starting SQS command queue consumer for queue: ${queueName}`,
@@ -75,33 +99,30 @@ export const commandQueueConsumerPlugin = {
         }
       })
 
+      const orsExtras = server.app.orsImportsRepository
+        ? {
+            orsImportsRepository: server.app.orsImportsRepository,
+            overseasSitesRepository: server.app.overseasSitesRepository,
+            uploadsRepository,
+            systemLogsRepository: server.app.systemLogsRepository
+          }
+        : {}
+
       const deps = {
         sqsClient,
         queueName,
         logger: server.logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        wasteBalancesRepository,
-        summaryLogExtractor
+        ...baseDeps,
+        ...orsExtras
       }
-
-      const handlers = [...summaryLogCommandHandlers]
-
-      if (server.app.orsImportsRepository) {
-        deps.orsImportsRepository = server.app.orsImportsRepository
-        deps.overseasSitesRepository = server.app.overseasSitesRepository
-        deps.uploadsRepository = uploadsRepository
-        deps.systemLogsRepository = server.app.systemLogsRepository
-        handlers.push(...orsImportCommandHandlers)
-      }
+      const handlers = server.app.orsImportsRepository
+        ? [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
+        : [...summaryLogCommandHandlers]
 
       consumer = await createCommandQueueConsumer(deps, handlers)
-
       consumer.start()
     })
 
-    // Stop consuming on server stop (graceful shutdown)
     server.events.on('stop', async () => {
       server.logger.info({
         message: 'Stopping SQS command queue consumer',

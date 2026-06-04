@@ -5,7 +5,8 @@ import {
   updateReportStatusSchema,
   deleteReportParamsSchema,
   findPeriodicReportsSchema,
-  findReportByIdSchema
+  findReportByIdSchema,
+  markReportStaleSchema
 } from './schema.js'
 
 /**
@@ -94,6 +95,22 @@ export const validateFindPeriodicReports = (params) => {
  */
 export const validateFindReportById = (reportId) => {
   const { error, value } = findReportByIdSchema.validate(reportId)
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {{ reportId: string, version: number, stale: import('./port.js').ReportStale }} params
+ * @returns {{ reportId: string, version: number, stale: import('./port.js').ReportStale }}
+ */
+export const validateMarkReportStale = (params) => {
+  const { error, value } = markReportStaleSchema.validate(params, {
+    abortEarly: false
+  })
 
   if (error) {
     throw Boom.badRequest(error.message)
