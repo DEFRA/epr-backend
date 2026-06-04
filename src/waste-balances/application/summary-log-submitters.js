@@ -144,6 +144,24 @@ export const mergeAttributionMatrices = (matrices) => {
 }
 
 /**
+ * Log labels for each cell. CDP's ingestion pipeline regex-masks log tokens
+ * containing `name` or `email` as potential PII, which would redact those cells
+ * out of the rendered matrix. Render the name/email cells under masking-safe
+ * aliases (`display` for the name label, `contact` for the email label) so the
+ * matrix survives into OpenSearch; the in-memory model keeps its own names.
+ *
+ * @type {Record<typeof ATTRIBUTION_CELLS[number], string>}
+ */
+const CELL_LOG_LABELS = {
+  nameAndEmail: 'displayAndContact',
+  nameOnly: 'displayOnly',
+  emailOnly: 'contactOnly',
+  idOnly: 'idOnly',
+  noActor: 'noActor',
+  scope: 'scope'
+}
+
+/**
  * Render an attribution matrix as a stable, log-friendly string. Kinds are
  * sorted so the line is deterministic; each kind lists its cell counts.
  *
@@ -161,7 +179,8 @@ export const formatAttributionMatrix = (matrix) =>
           )
         ]
       const cells = ATTRIBUTION_CELLS.map(
-        (cell) => `${cell}:${/** @type {ActorAttributionCounts} */ (row)[cell]}`
+        (cell) =>
+          `${CELL_LOG_LABELS[cell]}:${/** @type {ActorAttributionCounts} */ (row)[cell]}`
       ).join(',')
       return `${kind}{${cells}}`
     })
