@@ -444,12 +444,27 @@ describe('formatAttributionMatrix', () => {
     }
 
     expect(formatAttributionMatrix(matrix)).toBe(
-      'prn-created{nameAndEmail:0,nameOnly:4,emailOnly:0,idOnly:0,noActor:2,scope:0};' +
-        'summary-log-submitted{nameAndEmail:2,nameOnly:0,emailOnly:1,idOnly:3,noActor:1,scope:2}'
+      'prn-created{displayAndContact:0,displayOnly:4,contactOnly:0,idOnly:0,noActor:2,scope:0};' +
+        'summary-log-submitted{displayAndContact:2,displayOnly:0,contactOnly:1,idOnly:3,noActor:1,scope:2}'
     )
   })
 
   it('renders an empty matrix as an empty string', () => {
     expect(formatAttributionMatrix({})).toBe('')
+  })
+
+  it('renders no cell label that CDP PII masking would redact', () => {
+    const matrix = {
+      [STREAM_EVENT_KIND.SUMMARY_LOG_SUBMITTED]: {
+        nameAndEmail: 1,
+        nameOnly: 1,
+        emailOnly: 1,
+        idOnly: 1,
+        noActor: 1,
+        scope: 1
+      }
+    }
+
+    expect(formatAttributionMatrix(matrix)).not.toMatch(/name|email/i)
   })
 })

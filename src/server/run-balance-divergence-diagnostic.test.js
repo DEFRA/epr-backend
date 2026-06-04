@@ -770,7 +770,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{nameAndEmail:0,nameOnly:0,emailOnly:1,idOnly:0,noActor:0,scope:0}'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:0,displayOnly:0,contactOnly:1,idOnly:0,noActor:0,scope:0}'
     })
   })
 
@@ -843,7 +843,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{nameAndEmail:1,nameOnly:0,emailOnly:0,idOnly:0,noActor:0,scope:1}'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:1,displayOnly:0,contactOnly:0,idOnly:0,noActor:0,scope:1}'
     })
   })
 
@@ -903,7 +903,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{nameAndEmail:0,nameOnly:0,emailOnly:0,idOnly:1,noActor:0,scope:0}'
+        'Waste-balance divergence diagnostic: scanned=1 changed=0 failed=0 attributionMatrix=summary-log-submitted{displayAndContact:0,displayOnly:0,contactOnly:0,idOnly:1,noActor:0,scope:0}'
     })
   })
 
@@ -1049,7 +1049,7 @@ describe('runBalanceDivergenceDiagnostic', () => {
 
     expect(logger.warn).toHaveBeenCalledWith({
       message:
-        'Waste-balance rebuild has unattributed events: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 attributionMatrix=prn-created{nameAndEmail:0,nameOnly:1,emailOnly:0,idOnly:1,noActor:1,scope:0} streamEventCount=3'
+        'Waste-balance rebuild has unattributed events: organisationId=org-1 registrationNumber=REG-1 accreditationNumber=ACC-1 attributionMatrix=prn-created{displayAndContact:0,displayOnly:1,contactOnly:0,idOnly:1,noActor:1,scope:0} streamEventCount=3'
     })
   })
 
