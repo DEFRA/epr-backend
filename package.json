@@ -30,7 +30,7 @@
     "#waste-records-export/*": "./src/waste-records-export/*"
   },
   "engines": {
-    "node": ">=24.14.0 <25",
+    "node": ">=24.15.0 <25",
     "npm": ">=11.12.1"
   },
   "scripts": {
