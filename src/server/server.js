@@ -42,6 +42,7 @@ import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { copyFormFilesToS3 } from '#server/copy-form-files-to-s3.js'
+import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 
@@ -220,6 +221,7 @@ async function createServer(options = {}) {
   server.ext('onPostStart', () => {
     runFormsDataMigration(server)
     copyFormFilesToS3(server)
+    runOrganisationValidationSweep(server)
   })
 
   return server
