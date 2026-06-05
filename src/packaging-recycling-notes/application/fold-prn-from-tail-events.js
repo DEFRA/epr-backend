@@ -49,7 +49,6 @@ const applyEvent = (prn, event) => {
 
   return {
     ...prn,
-    version: (prn.version ?? 0) + 1,
     updatedAt: event.createdAt,
     updatedBy: by,
     lastAppliedEventNumber: event.number,
@@ -69,7 +68,9 @@ const applyEvent = (prn, event) => {
 /**
  * Left-fold over persisted stream tail events: applies each event in turn,
  * stamping its slot, appending a history entry, advancing currentStatus,
- * updatedAt/By, version and the lastAppliedEventNumber watermark.
+ * updatedAt/By and the lastAppliedEventNumber watermark. The persisted-document
+ * version is owned by the repository's optimistic-concurrency guard, so the
+ * fold leaves it untouched.
  *
  * Pure: returns a new PRN, does not mutate the input. Returns the input
  * reference unchanged when no events are supplied.
