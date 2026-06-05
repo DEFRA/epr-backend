@@ -60,6 +60,9 @@ const buildLatestStreamEventLookupStage = () => ({
   }
 })
 
+// Mirrors resolveBalanceAmounts (waste-balances/repository/marker-aware-read.js):
+// 'ledger' resolves to the latest stream closing balance (zero when the stream
+// is empty); every other marker keeps the document's own availableAmount.
 const buildLedgerAwareAvailableAmountStage = () => ({
   $addFields: {
     availableAmount: {

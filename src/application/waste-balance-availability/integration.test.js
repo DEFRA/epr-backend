@@ -12,6 +12,8 @@ const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
 const CANONICAL_SOURCE_LEDGER = 'ledger'
+const CANONICAL_SOURCE_EMBEDDED = 'embedded'
+const CANONICAL_SOURCE_MIGRATING = 'migrating'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -56,30 +58,46 @@ const createWasteBalance = (
   transactions: []
 })
 
+const createMarkedWasteBalance = (
+  organisationId,
+  registrationId,
+  accreditationId,
+  documentAvailableAmount,
+  canonicalSource
+) => ({
+  ...createWasteBalance(
+    organisationId,
+    accreditationId,
+    documentAvailableAmount
+  ),
+  registrationId,
+  canonicalSource
+})
+
 const createLedgerWasteBalance = (
   organisationId,
   registrationId,
   accreditationId,
   staleAvailableAmount
-) => ({
-  ...createWasteBalance(organisationId, accreditationId, staleAvailableAmount),
-  registrationId,
-  canonicalSource: CANONICAL_SOURCE_LEDGER
-})
+) =>
+  createMarkedWasteBalance(
+    organisationId,
+    registrationId,
+    accreditationId,
+    staleAvailableAmount,
+    CANONICAL_SOURCE_LEDGER
+  )
 
 const createStreamEvent = (
   registrationId,
   accreditationId,
   number,
-  closingAvailableAmount
+  closingBalance
 ) => ({
   registrationId,
   accreditationId,
   number,
-  closingBalance: {
-    amount: closingAvailableAmount,
-    availableAmount: closingAvailableAmount
-  }
+  closingBalance
 })
 
 describe('aggregateAvailableBalance - Integration', () => {
@@ -358,8 +376,14 @@ describe('aggregateAvailableBalance - Integration', () => {
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
       .insertMany([
-        createStreamEvent(regId1, accId1, 1, 250),
-        createStreamEvent(regId1, accId1, 2, 175)
+        createStreamEvent(regId1, accId1, 1, {
+          amount: 900,
+          availableAmount: 250
+        }),
+        createStreamEvent(regId1, accId1, 2, {
+          amount: 800,
+          availableAmount: 175
+        })
       ])
 
     const result = await aggregateAvailableBalance(db)
@@ -412,7 +436,12 @@ describe('aggregateAvailableBalance - Integration', () => {
 
     await db
       .collection(WASTE_BALANCE_EVENTS_COLLECTION)
-      .insertOne(createStreamEvent(regId2, accId2, 1, 50))
+      .insertOne(
+        createStreamEvent(regId2, accId2, 1, {
+          amount: 700,
+          availableAmount: 50
+        })
+      )
 
     const result = await aggregateAvailableBalance(db)
 
@@ -421,5 +450,83 @@ describe('aggregateAvailableBalance - Integration', () => {
       availableAmount: 150
     })
     expect(result.total).toBe(150)
+  })
+
+  it('keeps the document field for an explicit embedded marker, ignoring any stream', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        ])
+      )
+
+    await db
+      .collection(WASTE_BALANCES_COLLECTION)
+      .insertOne(
+        createMarkedWasteBalance(
+          orgId1,
+          regId1,
+          accId1,
+          100,
+          CANONICAL_SOURCE_EMBEDDED
+        )
+      )
+
+    await db
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
+      .insertOne(
+        createStreamEvent(regId1, accId1, 1, {
+          amount: 999,
+          availableAmount: 999
+        })
+      )
+
+    const result = await aggregateAvailableBalance(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      availableAmount: 100
+    })
+    expect(result.total).toBe(100)
+  })
+
+  it('keeps the document field for a migrating marker, ignoring any stream', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        ])
+      )
+
+    await db
+      .collection(WASTE_BALANCES_COLLECTION)
+      .insertOne(
+        createMarkedWasteBalance(
+          orgId1,
+          regId1,
+          accId1,
+          100,
+          CANONICAL_SOURCE_MIGRATING
+        )
+      )
+
+    await db
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
+      .insertOne(
+        createStreamEvent(regId1, accId1, 1, {
+          amount: 999,
+          availableAmount: 999
+        })
+      )
+
+    const result = await aggregateAvailableBalance(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      availableAmount: 100
+    })
+    expect(result.total).toBe(100)
   })
 })
