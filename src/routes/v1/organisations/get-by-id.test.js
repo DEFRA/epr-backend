@@ -136,4 +136,86 @@ describe('GET /v1/organisations/{id}', () => {
       }
     }
   })
+
+  describe('basic-auth strategy', () => {
+    const validCredentials = Buffer.from('basic-auth-user:changeme').toString(
+      'base64'
+    )
+
+    describe('when basic-auth credentials are configured', () => {
+      let basicAuthServer
+      let basicAuthRepository
+
+      beforeEach(async () => {
+        const factory = createInMemoryOrganisationsRepository([])
+        basicAuthRepository = factory()
+
+        basicAuthServer = await createTestServer({
+          config: {
+            basicAuth: {
+              username: 'basic-auth-user',
+              password: 'changeme'
+            }
+          },
+          repositories: { organisationsRepository: factory },
+          featureFlags: createInMemoryFeatureFlags()
+        })
+      })
+
+      it('returns 200 with valid Basic Auth credentials', async () => {
+        const org = buildOrganisation()
+        await basicAuthRepository.insert(org)
+
+        const response = await basicAuthServer.inject({
+          method: 'GET',
+          url: `/v1/organisations/${org.id}`,
+          headers: { Authorization: `Basic ${validCredentials}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+
+      it('returns 401 with wrong password', async () => {
+        const org = buildOrganisation()
+        await basicAuthRepository.insert(org)
+        const encoded = Buffer.from('basic-auth-user:wrong').toString('base64')
+
+        const response = await basicAuthServer.inject({
+          method: 'GET',
+          url: `/v1/organisations/${org.id}`,
+          headers: { Authorization: `Basic ${encoded}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+    })
+
+    describe('when basic-auth credentials are not configured', () => {
+      it('returns 401 with valid Basic Auth credentials', async () => {
+        const factory = createInMemoryOrganisationsRepository([])
+        const repository = factory()
+        const org = buildOrganisation()
+        await repository.insert(org)
+
+        const basicAuthServer = await createTestServer({
+          config: {
+            basicAuth: {
+              username: '', // matches default value in config.js
+              password: '' // matches default value in config.js
+            }
+          },
+          repositories: { organisationsRepository: factory },
+          featureFlags: createInMemoryFeatureFlags()
+        })
+
+        const response = await basicAuthServer.inject({
+          method: 'GET',
+          url: `/v1/organisations/${org.id}`,
+          headers: { Authorization: `Basic ${validCredentials}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
+    })
+  })
 })
