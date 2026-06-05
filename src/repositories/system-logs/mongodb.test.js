@@ -87,13 +87,18 @@ describe('Mongo DB system logs repository', () => {
     const repositoryFactory = await createSystemLogsRepository(mockDb)
     const repository = repositoryFactory(mockLogger)
 
-    const payload = {
-      createdAt: new Date(),
-      event: { category: 'c', action: 'a' },
-      context: { organisationId: randomUUID() }
-    }
+    const payload = /** @type {import('./port.js').SystemLog} */ (
+      /** @type {unknown} */ ({
+        createdAt: new Date(),
+        createdBy: { id: 'system', email: 'system', scope: [] },
+        event: { category: 'c', action: 'a' },
+        context: { organisationId: randomUUID() }
+      })
+    )
 
-    await repository.insertMany([payload])
+    await /** @type {Required<import('./port.js').SystemLogsRepository>} */ (
+      /** @type {unknown} */ (repository)
+    ).insertMany([payload])
 
     expect(mockLogger.error).toHaveBeenCalled()
   })

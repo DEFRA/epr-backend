@@ -15,7 +15,10 @@ import {
   groupAsPeriodicReports,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
-import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  ACTIVE_REPORT_STATUSES
+} from '#root/reports/domain/report-status.js'
 import { STALE_REASON } from '#root/reports/domain/stale.js'
 
 /**
@@ -375,11 +378,6 @@ const performFindReportsByStatus = async (
   return docs.map(({ _id, ...report }) => report)
 }
 
-const ACTIVE_STATUSES = [
-  REPORT_STATUS.IN_PROGRESS,
-  REPORT_STATUS.READY_TO_SUBMIT
-]
-
 /**
  * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
  * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
@@ -414,7 +412,7 @@ const performMarkActiveReportsStale = async (
   const filter = {
     organisationId,
     registrationId,
-    'status.currentStatus': { $in: ACTIVE_STATUSES },
+    'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
     'stale.summaryLogId': { $ne: summaryLogId },
     'source.summaryLogId': { $ne: summaryLogId }
   }

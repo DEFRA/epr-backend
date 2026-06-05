@@ -48,13 +48,7 @@ async function recordSystemLogs(systemLogsRepository, payloads) {
     ...restPayload
   }))
 
-  if (systemLogsRepository.insertMany) {
-    return systemLogsRepository.insertMany(records)
-  }
-
-  for (const record of records) {
-    await systemLogsRepository.insert(record)
-  }
+  await systemLogsRepository.insertMany(records)
 }
 
 /**

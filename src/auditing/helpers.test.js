@@ -131,7 +131,13 @@ describe('recordSystemLogs', () => {
   })
 
   it('calls insertMany when the repository supports it', async () => {
-    const repository = { insert: mockInsert, insertMany: mockInsertMany }
+    const repository =
+      /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
+        /** @type {unknown} */ ({
+          insert: mockInsert,
+          insertMany: mockInsertMany
+        })
+      )
     const payload = buildPayload(1)
 
     await recordSystemLogs(repository, [payload])
@@ -145,20 +151,5 @@ describe('recordSystemLogs', () => {
       }
     ])
     expect(mockInsert).not.toHaveBeenCalled()
-  })
-
-  it('falls back to individual inserts when insertMany is absent', async () => {
-    const repository = { insert: mockInsert }
-    const payloads = [buildPayload(1), buildPayload(2)]
-
-    await recordSystemLogs(repository, payloads)
-
-    expect(mockInsert).toHaveBeenCalledTimes(2)
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ createdBy: payloads[0].user })
-    )
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({ createdBy: payloads[1].user })
-    )
   })
 })

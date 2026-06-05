@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  ACTIVE_REPORT_STATUSES
+} from '#reports/domain/report-status.js'
 import { STALE_REASON } from '#reports/domain/stale.js'
 import {
   validateCreateReport,
@@ -285,11 +288,6 @@ const findReportsByStatus = async (
   return structuredClone(matching)
 }
 
-const ACTIVE_STATUSES = [
-  REPORT_STATUS.IN_PROGRESS,
-  REPORT_STATUS.READY_TO_SUBMIT
-]
-
 /**
  * @param {Map<string, Object>} reports
  * @param {string} organisationId
@@ -324,7 +322,7 @@ const markActiveReportsStale = async (
     if (
       report.organisationId === organisationId &&
       report.registrationId === registrationId &&
-      ACTIVE_STATUSES.includes(report.status.currentStatus) &&
+      ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
       report.stale?.summaryLogId !== summaryLogId &&
       report.source?.summaryLogId !== summaryLogId
     ) {

@@ -52,7 +52,7 @@
 /**
  * @typedef {{
  *   insert: (systemLog: SystemLog) => Promise<void>
- *   insertMany?: (systemLogs: SystemLog[]) => Promise<void>
+ *   insertMany: (systemLogs: SystemLog[]) => Promise<void>
  *   find: (params: FindParams) => Promise<PaginatedSystemLogs>
  *   findSummaryLogSubmitActors: (summaryLogIds: string[]) => Promise<SummaryLogSubmitActor[]>
  * }} SystemLogsRepository

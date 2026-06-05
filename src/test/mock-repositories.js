@@ -82,6 +82,7 @@ export const createMockWasteRecordsRepository = (overrides = {}) => ({
  */
 export const createMockSystemLogsRepository = (overrides = {}) => ({
   insert: vi.fn(),
+  insertMany: vi.fn(),
   find: vi.fn(),
   findSummaryLogSubmitActors: vi.fn(),
   ...overrides
