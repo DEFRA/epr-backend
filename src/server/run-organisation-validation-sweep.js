@@ -42,7 +42,7 @@ const runSweep = async (server) => {
     flagged += 1
     issueCount += issues.length
     for (const issue of issues) {
-      logger.warn({ message: formatIssueLine(org, issue) })
+      logger.info({ message: formatIssueLine(org, issue) })
     }
   }
 
@@ -55,8 +55,10 @@ const runSweep = async (server) => {
  * One-shot startup diagnostic that validates every organisation as a graph and
  * logs anomalies in its embedded registration/accreditation cross-references —
  * the shapes the per-item Joi schema never checks and that only hand-edited
- * production data reaches. Every issue is logged at warn regardless of its
- * severity classification, followed by a single info summary line.
+ * production data reaches. Every issue is logged at info regardless of its
+ * severity classification, followed by a single info summary line. Info keeps
+ * the anomalies queryable without tripping the warn/error OpenSearch alerts on
+ * known legacy data.
  *
  * Read-only, safe under live traffic. Runs under a cross-instance lock so a
  * single pod per deploy executes the scan. Loads the whole organisation
