@@ -10,6 +10,8 @@ import {
 const DATABASE_NAME = 'epr-backend'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
+const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
+const CANONICAL_SOURCE_LEDGER = 'ledger'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -54,6 +56,32 @@ const createWasteBalance = (
   transactions: []
 })
 
+const createLedgerWasteBalance = (
+  organisationId,
+  registrationId,
+  accreditationId,
+  staleAvailableAmount
+) => ({
+  ...createWasteBalance(organisationId, accreditationId, staleAvailableAmount),
+  registrationId,
+  canonicalSource: CANONICAL_SOURCE_LEDGER
+})
+
+const createStreamEvent = (
+  registrationId,
+  accreditationId,
+  number,
+  closingAvailableAmount
+) => ({
+  registrationId,
+  accreditationId,
+  number,
+  closingBalance: {
+    amount: closingAvailableAmount,
+    availableAmount: closingAvailableAmount
+  }
+})
+
 describe('aggregateAvailableBalance - Integration', () => {
   const orgId1 = '507f1f77bcf86cd799439011'
   const orgId2 = '507f1f77bcf86cd799439012'
@@ -70,6 +98,7 @@ describe('aggregateAvailableBalance - Integration', () => {
     db = mongoClient.db(DATABASE_NAME)
     await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
     await db.collection(WASTE_BALANCES_COLLECTION).deleteMany({})
+    await db.collection(WASTE_BALANCE_EVENTS_COLLECTION).deleteMany({})
   })
 
   it('aggregates available balance by material', async () => {
@@ -311,5 +340,86 @@ describe('aggregateAvailableBalance - Integration', () => {
       availableAmount: 100
     })
     expect(result.total).toBe(100)
+  })
+
+  it('uses the latest stream closing balance for a ledger accreditation, not the stale document field', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        ])
+      )
+
+    await db
+      .collection(WASTE_BALANCES_COLLECTION)
+      .insertOne(createLedgerWasteBalance(orgId1, regId1, accId1, 100))
+
+    await db
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
+      .insertMany([
+        createStreamEvent(regId1, accId1, 1, 250),
+        createStreamEvent(regId1, accId1, 2, 175)
+      ])
+
+    const result = await aggregateAvailableBalance(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      availableAmount: 175
+    })
+    expect(result.total).toBe(175)
+  })
+
+  it('reports zero for a ledger accreditation whose stream is empty, ignoring the stale document field', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1)
+        ])
+      )
+
+    await db
+      .collection(WASTE_BALANCES_COLLECTION)
+      .insertOne(createLedgerWasteBalance(orgId1, regId1, accId1, 100))
+
+    const result = await aggregateAvailableBalance(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      availableAmount: 0
+    })
+    expect(result.total).toBe(0)
+  })
+
+  it('sums an embedded document balance and a ledger stream balance together', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC, null, accId1),
+          createRegistration(regId2, MATERIAL.PLASTIC, null, accId2)
+        ])
+      )
+
+    await db
+      .collection(WASTE_BALANCES_COLLECTION)
+      .insertMany([
+        createWasteBalance(orgId1, accId1, 100),
+        createLedgerWasteBalance(orgId1, regId2, accId2, 999)
+      ])
+
+    await db
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION)
+      .insertOne(createStreamEvent(regId2, accId2, 1, 50))
+
+    const result = await aggregateAvailableBalance(db)
+
+    expect(result.materials).toContainEqual({
+      material: MATERIAL.PLASTIC,
+      availableAmount: 150
+    })
+    expect(result.total).toBe(150)
   })
 })

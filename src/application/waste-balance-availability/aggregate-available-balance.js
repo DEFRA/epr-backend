@@ -2,6 +2,8 @@ import {
   buildEffectiveMaterialStages,
   formatMaterialResults
 } from '#application/common/material-aggregation.js'
+import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
+import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/stream-mongodb.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
@@ -33,9 +35,55 @@ const buildMaterialLookupStage = () => ({
   }
 })
 
+const buildLatestStreamEventLookupStage = () => ({
+  $lookup: {
+    from: WASTE_BALANCE_EVENTS_COLLECTION_NAME,
+    let: { regId: '$registrationId', accId: '$accreditationId' },
+    pipeline: [
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $eq: ['$registrationId', '$$regId'] },
+              { $eq: ['$accreditationId', '$$accId'] }
+            ]
+          }
+        }
+      },
+      { $sort: { number: -1 } },
+      { $limit: 1 },
+      {
+        $project: { _id: 0, availableAmount: '$closingBalance.availableAmount' }
+      }
+    ],
+    as: 'latestStreamEvent'
+  }
+})
+
+const buildLedgerAwareAvailableAmountStage = () => ({
+  $addFields: {
+    availableAmount: {
+      $cond: {
+        if: {
+          $eq: ['$canonicalSource', WASTE_BALANCE_CANONICAL_SOURCE.LEDGER]
+        },
+        then: {
+          $ifNull: [
+            { $arrayElemAt: ['$latestStreamEvent.availableAmount', 0] },
+            0
+          ]
+        },
+        else: '$availableAmount'
+      }
+    }
+  }
+})
+
 const buildAggregationPipeline = () => [
   buildMaterialLookupStage(),
   ...buildEffectiveMaterialStages(),
+  buildLatestStreamEventLookupStage(),
+  buildLedgerAwareAvailableAmountStage(),
   {
     $group: {
       _id: '$effectiveMaterial',
