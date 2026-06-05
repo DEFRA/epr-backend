@@ -1286,3 +1286,62 @@ describe('JOI_MESSAGE_TO_ERROR_CODE coverage', () => {
     }
   })
 })
+
+describe('createDataSyntaxValidator with high issue volume', () => {
+  const FIELD_COUNT = 20
+  const ROW_COUNT = 10_000
+  const EXPECTED_ISSUES = FIELD_COUNT * ROW_COUNT
+
+  const fieldNames = Array.from(
+    { length: FIELD_COUNT },
+    (_, index) => `FIELD_${index}`
+  )
+  const headers = ['ROW_ID', ...fieldNames]
+
+  const buildSchemaShape = () => {
+    /** @type {Record<string, import('joi').Schema>} */
+    const shape = { ROW_ID: Joi.number().optional() }
+    for (const name of fieldNames) {
+      shape[name] = Joi.number().greater(0).optional().messages({
+        'number.greater': 'must be greater than 0'
+      })
+    }
+    return shape
+  }
+
+  const registry = {
+    TEST: {
+      WIDE_TABLE: {
+        requiredHeaders: headers,
+        rowIdField: 'ROW_ID',
+        unfilledValues: {},
+        validationSchema: Joi.object(buildSchemaShape())
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        classifyForWasteBalance: buildClassifyForWasteBalance(headers, {})
+      }
+    }
+  }
+
+  it('accumulates a table’s issues without overflowing the call stack', () => {
+    const rows = Array.from({ length: ROW_COUNT }, (_, index) => ({
+      rowNumber: index + 2,
+      values: [1000 + index, ...Array.from({ length: FIELD_COUNT }, () => -1)]
+    }))
+
+    const parsed = /** @type {ParsedSummaryLog} */ ({
+      meta: {
+        PROCESSING_TYPE: { value: 'TEST', location: DEFAULT_TEST_LOCATION }
+      },
+      data: {
+        WIDE_TABLE: { headers, rows, location: DEFAULT_TEST_LOCATION }
+      }
+    })
+
+    const validate = createDataSyntaxValidator(registry)
+
+    const result = validate(parsed)
+
+    expect(result.issues.getAllIssues()).toHaveLength(EXPECTED_ISSUES)
+  }, 30_000)
+})
