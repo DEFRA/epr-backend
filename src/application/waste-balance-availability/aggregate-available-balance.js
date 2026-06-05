@@ -7,13 +7,14 @@ import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCES_COLLECTION = 'waste-balances'
+const ACCREDITATION_ID_FIELD = '$accreditationId'
 
 const buildMaterialLookupStage = () => ({
   $lookup: {
     from: ORGANISATIONS_COLLECTION,
     let: {
       orgId: { $toObjectId: '$organisationId' },
-      accId: '$accreditationId'
+      accId: ACCREDITATION_ID_FIELD
     },
     pipeline: [
       { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
@@ -38,14 +39,14 @@ const buildMaterialLookupStage = () => ({
 const buildLatestStreamEventLookupStage = () => ({
   $lookup: {
     from: WASTE_BALANCE_EVENTS_COLLECTION_NAME,
-    let: { regId: '$registrationId', accId: '$accreditationId' },
+    let: { regId: '$registrationId', accId: ACCREDITATION_ID_FIELD },
     pipeline: [
       {
         $match: {
           $expr: {
             $and: [
               { $eq: ['$registrationId', '$$regId'] },
-              { $eq: ['$accreditationId', '$$accId'] }
+              { $eq: [ACCREDITATION_ID_FIELD, '$$accId'] }
             ]
           }
         }
