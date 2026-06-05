@@ -2,11 +2,10 @@ import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
- * Per-record waste-balance contribution shared between the embedded
- * calculator (records the delta on each summary-log row) and the
- * authoritative-sources rebuild (reproduces the totals from the same
- * inputs). Both must consult the same classification, otherwise the
- * stored embedded balance and its rebuilt counterpart drift apart.
+ * Per-record waste-balance contribution: the tonnage a single summary-log
+ * waste record adds to its accreditation's balance, or zero when the record is
+ * excluded. Consumed when building the stream events for a summary-log
+ * submission.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @param {Object} accreditation

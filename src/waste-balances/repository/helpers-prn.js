@@ -104,7 +104,7 @@ export const performAppendPrnStreamEvent = async ({
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
- * @returns {Promise<import('./stream-port.js').StreamEvent|null>} The appended
+ * @returns {Promise<import('./stream-port.js').StreamEvent | null>} The appended
  *   stream event, or `null` when no balance exists.
  */
 export const performDeductAvailableBalanceForPrnCreation = async ({
@@ -148,7 +148,7 @@ export const performDeductAvailableBalanceForPrnCreation = async ({
  * @param {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} params.findBalance
  * @param {Object} params.dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} params.dependencies.streamRepository
- * @returns {Promise<import('./stream-port.js').StreamEvent|null>} The appended
+ * @returns {Promise<import('./stream-port.js').StreamEvent | null>} The appended
  *   stream event, or `null` when no balance exists.
  */
 export const performDeductTotalBalanceForPrnIssue = async ({

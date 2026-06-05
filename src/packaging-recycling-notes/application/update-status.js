@@ -120,15 +120,11 @@ async function performStreamWrite({
     assertAccreditationNotSuspended(accreditation)
   }
 
-  const applied = await applyWasteBalanceEffects(
+  const streamEvents = await applyWasteBalanceEffects(
     wasteBalancesRepository,
     logger,
     events
   )
-  const streamEvents =
-    /** @type {import('#waste-balances/repository/stream-port.js').StreamEvent[]} */ (
-      applied.filter((e) => e !== null)
-    )
 
   const projection = foldPrnFromTailEvents(prn, streamEvents)
 

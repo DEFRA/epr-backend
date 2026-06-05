@@ -50,8 +50,7 @@ const createWasteBalance = (
   amount: availableAmount,
   availableAmount,
   version: 1,
-  schemaVersion: 1,
-  transactions: []
+  schemaVersion: 1
 })
 
 describe('aggregateAvailableBalance - Integration', () => {

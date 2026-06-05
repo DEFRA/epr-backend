@@ -98,9 +98,10 @@ export const testDeductTotalBalanceForPrnIssueBehaviour = (it) => {
         createdBy: { id: 'user-456' }
       })
 
+      expect(appended).toBeNull()
+
       const result = await repository.findByAccreditationId('acc-nonexistent')
       expect(result).toBeNull()
-      expect(appended).toBeNull()
     })
 
     it('returns the appended stream event', async ({
