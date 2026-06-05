@@ -63,6 +63,21 @@ describe('resolveBalanceAmounts', () => {
     expect(result.availableAmount).toBe(0)
   })
 
+  it('returns zero balances when the balance has no registrationId', async () => {
+    const balance = buildBalance({
+      accreditationId: 'acc-no-reg',
+      registrationId: undefined,
+      amount: 999,
+      availableAmount: 999
+    })
+    const stream = createInMemoryStreamRepository()()
+
+    const result = await resolveBalanceAmounts(balance, stream)
+
+    expect(result.amount).toBe(0)
+    expect(result.availableAmount).toBe(0)
+  })
+
   it('preserves all non-amount fields', async () => {
     const balance = buildBalance({
       accreditationId: 'acc-fields',

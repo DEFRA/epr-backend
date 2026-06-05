@@ -7,17 +7,20 @@ import { ZERO_BALANCE } from './stream-schema.js'
  *
  * An empty stream means the accreditation was created with zero activity —
  * legitimate for accreditations that never received waste records — so the
- * function returns zero balances instead of throwing.
+ * function returns zero balances instead of throwing. A balance with no
+ * registrationId has no stream partition to resolve and resolves the same way.
  *
  * @param {import('../domain/model.js').WasteBalance} balance
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
  * @returns {Promise<import('../domain/model.js').WasteBalance>}
  */
 export const resolveBalanceAmounts = async (balance, streamRepository) => {
-  const latest = await streamRepository.findLatestByPartition(
-    /** @type {string} */ (balance.registrationId),
-    balance.accreditationId
-  )
+  const latest = balance.registrationId
+    ? await streamRepository.findLatestByPartition(
+        balance.registrationId,
+        balance.accreditationId
+      )
+    : null
 
   if (!latest) {
     return {
