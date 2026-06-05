@@ -350,35 +350,6 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
- * Returns reports for the given org/reg that match one of the provided statuses.
- *
- * @param {Db} db
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {import('#reports/domain/report-status.js').ReportStatus[]} statuses
- * @returns {Promise<Report[]>}
- */
-const performFindReportsByStatus = async (
-  db,
-  organisationId,
-  registrationId,
-  statuses
-) => {
-  const docs = await reportsCollection(db)
-    .find(
-      {
-        organisationId,
-        registrationId,
-        'status.currentStatus': { $in: statuses }
-      },
-      { projection: { _id: 0 } }
-    )
-    .toArray()
-
-  return docs.map(({ _id, ...report }) => report)
-}
-
-/**
  * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
  * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
  *
@@ -470,8 +441,6 @@ export const createReportsRepository = async (db) => {
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
     findReportById: (reportId) => performFindReportById(db, reportId),
-    findReportsByStatus: (organisationId, registrationId, statuses) =>
-      performFindReportsByStatus(db, organisationId, registrationId, statuses),
     markActiveReportsStale: (
       organisationId,
       registrationId,

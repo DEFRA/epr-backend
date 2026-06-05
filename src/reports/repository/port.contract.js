@@ -5,7 +5,6 @@ import { testDeleteReportBehaviour } from './contract/deleteReport.contract.js'
 import { testFindPeriodicReportsBehaviour } from './contract/findPeriodicReports.contract.js'
 import { testFindAllPeriodicReportsBehaviour } from './contract/findAllPeriodicReports.contract.js'
 import { testFindReportByIdBehaviour } from './contract/findReportById.contract.js'
-import { testFindReportsByStatusBehaviour } from './contract/findReportsByStatus.contract.js'
 import { testMarkActiveReportsStaleBehaviour } from './contract/markActiveReportsStale.contract.js'
 
 export const testReportsRepositoryContract = (it) => {
@@ -16,6 +15,5 @@ export const testReportsRepositoryContract = (it) => {
   testFindPeriodicReportsBehaviour(it)
   testFindAllPeriodicReportsBehaviour(it)
   testFindReportByIdBehaviour(it)
-  testFindReportsByStatusBehaviour(it)
   testMarkActiveReportsStaleBehaviour(it)
 }

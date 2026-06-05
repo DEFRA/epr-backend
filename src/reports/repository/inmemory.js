@@ -270,28 +270,6 @@ const findAllPeriodicReports = async (reports) => {
  * @param {Map<string, Object>} reports
  * @param {string} organisationId
  * @param {string} registrationId
- * @param {import('#reports/domain/report-status.js').ReportStatus[]} statuses
- * @returns {Promise<import('./port.js').Report[]>}
- */
-const findReportsByStatus = async (
-  reports,
-  organisationId,
-  registrationId,
-  statuses
-) => {
-  const matching = [...reports.values()].filter(
-    (r) =>
-      r.organisationId === organisationId &&
-      r.registrationId === registrationId &&
-      statuses.includes(r.status.currentStatus)
-  )
-  return structuredClone(matching)
-}
-
-/**
- * @param {Map<string, Object>} reports
- * @param {string} organisationId
- * @param {string} registrationId
  * @param {string} summaryLogId
  * @param {string} uploadedAt
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
@@ -373,8 +351,6 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params),
     findAllPeriodicReports: () => findAllPeriodicReports(reports),
-    findReportsByStatus: (organisationId, registrationId, statuses) =>
-      findReportsByStatus(reports, organisationId, registrationId, statuses),
     markActiveReportsStale: (
       organisationId,
       registrationId,
