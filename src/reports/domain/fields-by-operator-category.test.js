@@ -110,12 +110,13 @@ const PROCESSING_TYPES_FOR_OPERATOR_CATEGORY = {
 }
 
 /**
- * Report sections whose date field should match a table schema's
- * reportingDateField. wasteExported and wasteRepatriated are
- * excluded: wasteExported uses a different date field than the
- * table's reportingDateField (accredited exporters slice by
- * DATE_OF_EXPORT, not DATE_RECEIVED_FOR_EXPORT), and
- * wasteRepatriated has no corresponding table schema.
+ * Report sections whose date field should appear in a table schema's
+ * reportingDateFields array. Each entry maps a report section to the
+ * wasteRecordType used to look up the corresponding table schema.
+ *
+ * Excluded sections:
+ * - EXPORTER wasteRepatriated: the accredited exporter template has
+ *   no repatriation date field; the report's slice returns empty.
  *
  * For accredited exporters, wasteReceived draws from the table
  * whose wasteRecordType is EXPORTED (received-loads-for-export),
@@ -137,6 +138,8 @@ const SECTION_TO_WASTE_RECORD_TYPE = {
   },
   EXPORTER_REGISTERED_ONLY: {
     wasteReceived: WASTE_RECORD_TYPE.RECEIVED,
+    wasteExported: WASTE_RECORD_TYPE.EXPORTED,
+    wasteRepatriated: WASTE_RECORD_TYPE.EXPORTED,
     wasteSentOn: WASTE_RECORD_TYPE.SENT_ON
   }
 }

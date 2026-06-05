@@ -26,7 +26,10 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const LOADS_EXPORTED = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateFields: [FIELDS.DATE_OF_EXPORT],
+  reportingDateFields: [
+    FIELDS.DATE_OF_EXPORT,
+    FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
+  ],
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
   sheetName: 'Exported (sections 2 and 3)',
   rowTransformer: createRowTransformer({
