@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict'
 import { describe, it, expect, vi } from 'vitest'
 import {
   performUpdateWasteBalanceTransactions,
@@ -321,7 +322,44 @@ describe('src/waste-balances/repository/helpers.js', () => {
       }
     }
 
-    const user = { id: 'user-1', email: 'user-1@example.test' }
+    const user = {
+      id: 'user-1',
+      email: 'user-1@example.test',
+      scope: ['standard_user']
+    }
+
+    /**
+     * @param {string} id
+     * @returns {import('#domain/organisations/accreditation.js').Accreditation}
+     */
+    const buildTestAccreditation = (id) => ({
+      id,
+      accreditationNumber: 'ACC-123',
+      status: 'approved',
+      validFrom: '2023-01-01',
+      validTo: '2023-12-31',
+      material: 'paper',
+      wasteProcessingType: 'exporter',
+      submittedToRegulator: 'ea',
+      formSubmission: {
+        id: 'form-1',
+        time: new Date('2023-01-01T00:00:00.000Z')
+      },
+      statusHistory: [
+        { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+        { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+      ],
+      prnIssuance: {
+        incomeBusinessPlan: [],
+        signatories: [],
+        tonnageBand: '0-500'
+      },
+      submitterContactDetails: {
+        fullName: 'Test Submitter',
+        email: 'submitter@example.test',
+        phone: '0123456789'
+      }
+    })
 
     it('does nothing when wasteRecords is empty', async () => {
       const { find, save, streamRepository, wasteBalanceStorage } =
@@ -329,7 +367,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords: /** @type {any[]} */ ([]),
-        accreditation: { id: 'acc-1' },
+        accreditation: buildTestAccreditation('acc-1'),
         dependencies: { streamRepository },
         findBalance: find,
         saveBalance: save,
@@ -362,7 +400,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords: [wasteRecord],
-        accreditation: { id: 'acc-new' },
+        accreditation: buildTestAccreditation('acc-new'),
         dependencies: { streamRepository },
         findBalance: find,
         saveBalance: save,
@@ -380,7 +418,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         'reg-1',
         'acc-new'
       )
-      expect(latest).not.toBeNull()
+      assert(latest)
       expect(latest.kind).toBe('summary-log-submitted')
     })
 
@@ -411,7 +449,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
 
       await performUpdateWasteBalanceTransactions({
         wasteRecords: [wasteRecord],
-        accreditation: { id: 'acc-existing' },
+        accreditation: buildTestAccreditation('acc-existing'),
         dependencies: { streamRepository },
         findBalance: find,
         saveBalance: save,
@@ -425,7 +463,7 @@ describe('src/waste-balances/repository/helpers.js', () => {
         'reg-1',
         'acc-existing'
       )
-      expect(latest).not.toBeNull()
+      assert(latest)
       expect(latest.kind).toBe('summary-log-submitted')
     })
   })

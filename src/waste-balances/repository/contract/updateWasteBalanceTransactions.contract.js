@@ -167,8 +167,16 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
       classifyRowSpy
-        .mockReturnValueOnce({ outcome: ROW_OUTCOME.INCLUDED })
-        .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
+        .mockReturnValueOnce({
+          outcome: ROW_OUTCOME.INCLUDED,
+          issues: [],
+          data: {}
+        })
+        .mockReturnValueOnce({
+          outcome: ROW_OUTCOME.REJECTED,
+          issues: [],
+          data: {}
+        })
 
       await repository.updateWasteBalanceTransactions(input, {
         user,

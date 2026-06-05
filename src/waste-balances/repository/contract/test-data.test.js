@@ -131,8 +131,10 @@ describe('buildWasteRecord', () => {
   })
 
   it('applies custom versions when provided', () => {
+    /** @type {import('#domain/waste-records/model.js').WasteRecordVersion[]} */
     const customVersions = [
       {
+        id: 'version-1',
         createdAt: '2025-01-01',
         status: 'created',
         summaryLog: { id: 'log-1', uri: 's3://...' },

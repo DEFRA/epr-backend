@@ -2,13 +2,22 @@ import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteBalance } from './test-data.js'
 import { buildStreamEvent } from '../stream-test-data.js'
 
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
+
 export const testFindByAccreditationIdBehaviour = (it) => {
   describe('findByAccreditationId', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('returns null when no waste balance exists for the accreditation', async () => {
       const result = await repository.findByAccreditationId('acc-nonexistent')

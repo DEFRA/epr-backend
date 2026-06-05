@@ -5,7 +5,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Build a minimal waste balance shell for testing
- * @param {Partial<import('../../domain/model.js').WasteBalance>} [overrides] - Optional overrides for the waste balance
+ * @param {Omit<Partial<import('../../domain/model.js').WasteBalance>, 'id'> & { id?: string | null }} [overrides] - Optional overrides; a null or omitted id triggers a generated one
  * @returns {import('../../domain/model.js').WasteBalance}
  */
 export const buildWasteBalance = (overrides = {}) => {

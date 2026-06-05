@@ -21,8 +21,26 @@ import { createTestServer } from '#test/create-test-server.js'
 
 import { asStandardUser } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
+import assert from 'node:assert/strict'
 
 export { asStandardUser } from '#test/inject-auth.js'
+
+/**
+ * Reads an accreditation's waste balance and asserts it is present, so callers
+ * can read its fields without a null guard at every assertion site.
+ *
+ * @param {{ findByAccreditationId: (accreditationId: string) => Promise<import('#waste-balances/domain/model.js').WasteBalance | null> }} wasteBalancesRepository
+ * @param {string} accreditationId
+ */
+export const getWasteBalance = async (
+  wasteBalancesRepository,
+  accreditationId
+) => {
+  const balance =
+    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  assert(balance)
+  return balance
+}
 
 export const REPROCESSOR_RECEIVED_HEADERS = [
   'ROW_ID',
@@ -332,9 +350,9 @@ const DEFAULT_MAX_ATTEMPTS = 20
  * @param {string} organisationId - Organisation ID
  * @param {string} registrationId - Registration ID
  * @param {string} summaryLogId - Summary log ID
- * @param {object} options - Polling options
- * @param {string} options.waitWhile - Status to wait while (defaults to VALIDATING)
- * @param {number} options.maxAttempts - Maximum poll attempts (defaults to 20)
+ * @param {object} [options] - Polling options
+ * @param {string} [options.waitWhile] - Status to wait while (defaults to VALIDATING)
+ * @param {number} [options.maxAttempts] - Maximum poll attempts (defaults to 20)
  * @returns {Promise<string>} Final status after polling
  */
 export const pollWhileStatus = async (

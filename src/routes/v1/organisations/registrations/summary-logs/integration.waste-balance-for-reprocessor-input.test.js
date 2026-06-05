@@ -12,6 +12,7 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
+  getWasteBalance,
   pollForValidation,
   pollWhileStatus,
   setupWasteBalanceIntegrationEnvironment,
@@ -146,10 +147,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
@@ -176,10 +177,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // 500 (credit) - 100 (debit) = 400
       expect(balance.amount).toBe(400)
@@ -206,8 +207,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       expect(balance.amount).toBe(200)
     })
@@ -238,8 +241,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       await performSubmission(env, summaryLogId, fileId, filename, uploadData)
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // 500 (credit from RECEIVED) - 100 (debit from SENT_ON) = 400.
       // Regression guard: colliding rowIds across the two tables must not
@@ -278,8 +283,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       expect(balance.amount).toBe(200)
     })
@@ -315,8 +322,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // 500 (credit) - 50 (debit) = 450
       // Row 5001 should be ignored
@@ -343,8 +352,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
 
       // Second submission: Revised to PRN Issued (should reverse credit)
@@ -360,8 +371,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
       expect(balance.amount).toBe(0)
     })
 
@@ -393,8 +403,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // Only row 1002 should contribute
       expect(balance.amount).toBe(200)
@@ -432,8 +444,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       expect(balance.amount).toBe(848.73)
     })

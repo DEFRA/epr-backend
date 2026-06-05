@@ -12,6 +12,7 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
+  getWasteBalance,
   pollForValidation,
   setupWasteBalanceIntegrationEnvironment,
   createWasteBalanceMeta,
@@ -153,10 +154,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
@@ -188,8 +189,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
 
@@ -217,8 +220,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
 
       // 100 + 100 = 200 (row 1002 revised down from 200 to 100)
       expect(balance.amount).toBe(200)
@@ -250,10 +252,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       // Only row 2002 should contribute (PRN not issued)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
@@ -288,10 +290,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
-
-      expect(balance).toBeDefined()
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       // Only row 3002 should contribute (within accreditation period)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
@@ -339,8 +341,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
 
       // Second submission: same row ID but date revised to fall outside accreditation period
@@ -362,8 +366,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
 
       // Balance should now be 0 - the credit was reversed
       expect(balance.amount).toBe(0)
@@ -390,8 +393,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
 
       // Second submission: same row but now PRN has been issued
@@ -408,8 +413,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
 
       // Balance should now be 0 - the credit was reversed because PRN was issued
       expect(balance.amount).toBe(0)
@@ -436,8 +440,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // PRN was issued so the row is excluded; the balance resolves to zero
       expect(balance.amount).toBe(0)
@@ -457,8 +463,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
 
       // Balance should now be 100 - credited after PRN status corrected
       expect(balance.amount).toBe(100)
@@ -484,8 +489,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
 
       // Second submission: same row but DATE_RECEIVED_BY_OSR removed.
@@ -503,8 +510,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
 
       // Balance should be 0 — the original credit was reversed
       expect(balance.amount).toBe(0)
@@ -530,8 +536,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         firstUploadData
       )
 
-      let balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      let balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(balance.amount).toBe(100)
 
       // Second submission: same row but GROSS_WEIGHT removed
@@ -547,8 +555,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         secondUploadData
       )
 
-      balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      balance = await getWasteBalance(wasteBalancesRepository, accreditationId)
 
       // Balance should be 0 — the original credit was reversed
       expect(balance.amount).toBe(0)
@@ -574,8 +581,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         uploadData
       )
 
-      const balance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const balance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
 
       // The excluded row contributes nothing, so the balance resolves to zero
       expect(balance.amount).toBe(0)
@@ -605,13 +614,17 @@ describe('Submission and placeholder tests (Exporter)', () => {
           createUploadData([{ rowId: 8001, exportTonnage: rev.tonnage }])
         )
 
-        const balance =
-          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+        const balance = await getWasteBalance(
+          wasteBalancesRepository,
+          accreditationId
+        )
         expect(balance.amount).toBe(rev.expectedBalance)
       }
 
-      const finalBalance =
-        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      const finalBalance = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
+      )
       expect(finalBalance.availableAmount).toBe(200)
     })
   })
