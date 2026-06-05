@@ -176,10 +176,11 @@ describe('getProjectedPrnById', () => {
       prnId: PRN_ID
     })
 
-    // Only event 2 is folded (event 1 is at the watermark): one version bump.
+    // Only event 2 is folded (event 1 is at the watermark): status and the
+    // watermark advance, but version stays with the stored document.
     expect(result?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
     expect(result?.lastAppliedEventNumber).toBe(2)
-    expect(result?.version).toBe(2)
+    expect(result?.version).toBe(1)
   })
 
   it('returns the PRN unchanged when the ledger stream has no later events', async () => {

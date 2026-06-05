@@ -423,7 +423,11 @@ const performPersistProjection = async (
   { projection, expectedVersion }
 ) => {
   const objectId = ObjectId.createFromHexString(projection.id)
-  const { id: _id, ...replacement } = projection
+  // The stored version is the optimistic-concurrency token, owned by this
+  // guard: advance it from the version we matched on, ignoring whatever version
+  // the projection content carries.
+  const { id: _id, version: _version, ...content } = projection
+  const replacement = { ...content, version: expectedVersion + 1 }
 
   try {
     const result = await db.collection(COLLECTION_NAME).findOneAndReplace(

@@ -31,6 +31,7 @@ export const testUpdateStatusBehaviour = (it) => {
         expect(updated.status.currentStatus).toBe(
           PRN_STATUS.AWAITING_AUTHORISATION
         )
+        expect(updated.version).toBe(created.version + 1)
       })
 
       it('adds to status history', async () => {
