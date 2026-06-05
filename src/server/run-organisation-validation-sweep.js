@@ -55,9 +55,8 @@ const runSweep = async (server) => {
  * One-shot startup diagnostic that validates every organisation as a graph and
  * logs anomalies in its embedded registration/accreditation cross-references —
  * the shapes the per-item Joi schema never checks and that only hand-edited
- * production data reaches. Every issue is logged at warn (non-paging; CDP
- * alerts fire only on error-level logs) regardless of its severity
- * classification, followed by a single info summary line.
+ * production data reaches. Every issue is logged at warn regardless of its
+ * severity classification, followed by a single info summary line.
  *
  * Read-only, safe under live traffic. Runs under a cross-instance lock so a
  * single pod per deploy executes the scan. Loads the whole organisation
