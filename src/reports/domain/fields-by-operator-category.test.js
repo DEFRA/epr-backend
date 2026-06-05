@@ -170,9 +170,9 @@ describe('consistency with table schema reportingDateField', () => {
       )
 
       expect(schema).not.toBeNull()
-      expect(sections[section]).toBe(
-        /** @type {NonNullable<typeof schema>} */ (schema).reportingDateField
-      )
+      expect(
+        /** @type {NonNullable<typeof schema>} */ (schema).reportingDateFields
+      ).toContain(sections[section])
     }
   )
 })

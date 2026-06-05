@@ -20,7 +20,7 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const SENT_ON_LOADS = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateField: FIELDS.DATE_LOAD_LEFT_SITE,
+  reportingDateFields: [FIELDS.DATE_LOAD_LEFT_SITE],
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   sheetName: 'Sent on',
   rowTransformer: createRowTransformer({

@@ -103,7 +103,7 @@ const SUPPLEMENTARY_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateField: FIELDS.DATE_RECEIVED_FOR_EXPORT,
+  reportingDateFields: [FIELDS.DATE_RECEIVED_FOR_EXPORT, FIELDS.DATE_OF_EXPORT],
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
   sheetName: 'Exported',
   rowTransformer: createRowTransformer({

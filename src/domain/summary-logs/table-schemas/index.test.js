@@ -270,7 +270,7 @@ describe('table-schemas', () => {
     })
   })
 
-  describe('reportingDateField', () => {
+  describe('reportingDateFields', () => {
     it.each(
       Object.entries(PROCESSING_TYPE_TABLES).flatMap(
         ([processingType, tables]) =>
@@ -281,11 +281,16 @@ describe('table-schemas', () => {
           }))
       )
     )(
-      '$processingType/$tableName has a reportingDateField in requiredHeaders',
+      '$processingType/$tableName has reportingDateFields in requiredHeaders',
       ({ schema }) => {
-        expect(schema.reportingDateField).toBeDefined()
-        expect(typeof schema.reportingDateField).toBe('string')
-        expect(schema.requiredHeaders).toContain(schema.reportingDateField)
+        expect(schema.reportingDateFields).toBeDefined()
+        expect(Array.isArray(schema.reportingDateFields)).toBe(true)
+        expect(schema.reportingDateFields.length).toBeGreaterThan(0)
+
+        for (const field of schema.reportingDateFields) {
+          expect(typeof field).toBe('string')
+          expect(schema.requiredHeaders).toContain(field)
+        }
       }
     )
   })

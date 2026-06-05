@@ -25,7 +25,7 @@ const WASTE_BALANCE_FIELDS = [
  * Tracks waste sent on to other facilities.
  */
 export const SENT_ON_LOADS = {
-  reportingDateField: FIELDS.DATE_LOAD_LEFT_SITE,
+  reportingDateFields: [FIELDS.DATE_LOAD_LEFT_SITE],
   ...createSentOnLoadsSchema(
     ROW_ID_MINIMUMS.SENT_ON_LOADS,
     createRowTransformer({

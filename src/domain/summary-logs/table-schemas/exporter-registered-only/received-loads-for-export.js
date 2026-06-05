@@ -46,7 +46,7 @@ const transformWithMonthSlice = (rowData, rowIndex) => {
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateField: FIELDS.MONTH_RECEIVED_FOR_EXPORT,
+  reportingDateFields: [FIELDS.MONTH_RECEIVED_FOR_EXPORT],
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   sheetName: 'Received (section 1)',
   rowTransformer: transformWithMonthSlice,

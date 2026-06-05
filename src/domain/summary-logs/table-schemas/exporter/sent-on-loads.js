@@ -11,7 +11,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
  * Does not contribute to waste balance.
  */
 export const SENT_ON_LOADS = {
-  reportingDateField: FIELDS.DATE_LOAD_LEFT_SITE,
+  reportingDateFields: [FIELDS.DATE_LOAD_LEFT_SITE],
   ...createSentOnLoadsSchema(
     ROW_ID_MINIMUMS.SENT_ON_LOADS,
     createRowTransformer({
