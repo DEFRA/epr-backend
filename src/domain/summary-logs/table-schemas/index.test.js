@@ -254,6 +254,26 @@ describe('table-schemas', () => {
     })
   })
 
+  describe('reportingDateField', () => {
+    it.each(
+      Object.entries(PROCESSING_TYPE_TABLES).flatMap(
+        ([processingType, tables]) =>
+          Object.entries(tables).map(([tableName, schema]) => ({
+            processingType,
+            tableName,
+            schema
+          }))
+      )
+    )(
+      '$processingType/$tableName has a reportingDateField in requiredHeaders',
+      ({ schema }) => {
+        expect(schema.reportingDateField).toBeDefined()
+        expect(typeof schema.reportingDateField).toBe('string')
+        expect(schema.requiredHeaders).toContain(schema.reportingDateField)
+      }
+    )
+  })
+
   describe('aggregateUnfilledValues', () => {
     it('returns empty object for registry with no unfilledValues', () => {
       const registry = {

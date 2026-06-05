@@ -29,6 +29,7 @@ const ALL_FIELDS = [
  */
 export const REPROCESSED_LOADS = {
   rowIdField: FIELDS.ROW_ID,
+  reportingDateField: FIELDS.DATE_LOAD_LEFT_SITE,
   wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
   sheetName: 'Processed',
   rowTransformer: createRowTransformer({

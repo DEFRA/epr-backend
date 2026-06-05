@@ -10,11 +10,14 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
  * Tracks waste sent on from exporters to other facilities.
  * Does not contribute to waste balance.
  */
-export const SENT_ON_LOADS = createSentOnLoadsSchema(
-  ROW_ID_MINIMUMS.SENT_ON_LOADS,
-  createRowTransformer({
-    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
-    processingType: PROCESSING_TYPES.EXPORTER,
-    rowIdField: FIELDS.ROW_ID
-  })
-)
+export const SENT_ON_LOADS = {
+  reportingDateField: FIELDS.DATE_LOAD_LEFT_SITE,
+  ...createSentOnLoadsSchema(
+    ROW_ID_MINIMUMS.SENT_ON_LOADS,
+    createRowTransformer({
+      wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+      processingType: PROCESSING_TYPES.EXPORTER,
+      rowIdField: FIELDS.ROW_ID
+    })
+  )
+}
