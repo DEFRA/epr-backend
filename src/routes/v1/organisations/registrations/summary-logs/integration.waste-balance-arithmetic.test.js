@@ -10,10 +10,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import {
-  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE,
-  WASTE_BALANCE_CANONICAL_SOURCE
-} from '#waste-balances/domain/model.js'
 
 import {
   asStandardUser,
@@ -923,8 +919,8 @@ describe('Waste balance arithmetic integration tests', () => {
     })
   })
 
-  describe('transaction audit trail', () => {
-    it('should record correct transaction history for series of operations', async () => {
+  describe('balance after a series of credits and debits', () => {
+    it('reflects the net of two credits and two debits', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
@@ -964,32 +960,13 @@ describe('Waste balance arithmetic integration tests', () => {
         accreditationId
       )
 
-      // Verify final amounts
+      // Two credits (100 + 60) raise the total; two raised PRNs (40 + 25)
+      // ringfence the available balance.
       expect(balance.amount).toBe(160) // 100 + 60
       expect(balance.availableAmount).toBe(95) // 160 - 40 - 25
-
-      // Verify we have transactions recorded
-      expect(balance.transactions.length).toBeGreaterThanOrEqual(4)
-
-      // Credits from summary logs
-      const creditTransactions = balance.transactions.filter(
-        (t) => t.type === 'credit'
-      )
-      expect(creditTransactions.length).toBeGreaterThanOrEqual(2)
-
-      // Debits from PRN creation
-      const debitTransactions = balance.transactions.filter(
-        (t) => t.type === 'debit'
-      )
-      expect(debitTransactions.length).toBe(2)
-
-      // Verify PRN debits have correct entity types
-      for (const debit of debitTransactions) {
-        expect(debit.entities[0].type).toBe('prn:created')
-      }
     })
 
-    it('should record deletion credit with PRN_CANCELLED entity type', async () => {
+    it('restores the available balance when a raised PRN is deleted', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
@@ -1004,29 +981,26 @@ describe('Waste balance arithmetic integration tests', () => {
         createUploadData([{ rowId: 1001, exportTonnage: 200 }])
       )
 
-      // Raise PRN for 50
+      // Raise PRN for 50 — ringfences the available balance to 150
       const prn1 = await createPrn(env, 50)
       await transitionPrnStatus(env, prn1.id, PRN_STATUS.AWAITING_AUTHORISATION)
 
-      // Delete it
-      await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
-
-      const balance = await getWasteBalance(
+      const afterRaise = await getWasteBalance(
         wasteBalancesRepository,
         accreditationId
       )
+      expect(afterRaise.amount).toBe(200)
+      expect(afterRaise.availableAmount).toBe(150) // 200 - 50 ringfenced
 
-      // Find the cancellation credit transaction
-      const cancellationTransactions = balance.transactions.filter((t) =>
-        t.entities?.some(
-          (e) => e.type === WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.PRN_CANCELLED
-        )
+      // Delete it — the 50 ringfence is released back to the available balance
+      await transitionPrnStatus(env, prn1.id, PRN_STATUS.DELETED)
+
+      const afterDelete = await getWasteBalance(
+        wasteBalancesRepository,
+        accreditationId
       )
-
-      expect(cancellationTransactions).toHaveLength(1)
-      expect(cancellationTransactions[0].type).toBe('credit')
-      expect(cancellationTransactions[0].amount).toBe(50)
-      expect(cancellationTransactions[0].entities[0].id).toBe(prn1.id)
+      expect(afterDelete.amount).toBe(200) // total unchanged
+      expect(afterDelete.availableAmount).toBe(200) // ringfence released
     })
   })
 
@@ -1282,16 +1256,13 @@ describe('Waste balance arithmetic integration tests', () => {
           schemaVersion: 1,
           version: 0,
           amount: 0,
-          availableAmount: 0,
-          transactions: [],
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+          availableAmount: 0
         }
       ]
       return setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         organisationId,
         registrationId,
-        featureFlagOverrides: { wasteBalanceLedger: true },
         // @ts-expect-error -- existingWasteBalances defaults to never[]; WasteBalance[] is correct at runtime
         existingWasteBalances
       })

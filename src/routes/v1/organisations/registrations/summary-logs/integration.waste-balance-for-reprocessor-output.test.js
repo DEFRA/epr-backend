@@ -161,16 +161,10 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
-
-      const transaction1 = balance.transactions.find((t) => t.amount === 100)
-      expect(transaction1).toBeDefined()
-      expect(transaction1.type).toBe('credit')
-      expect(transaction1.entities[0].id).toBe('3001')
     })
 
     it('should not create transactions from sent on loads', async () => {
@@ -203,7 +197,6 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(1)
 
       // Only the reprocessed load credit — sent-on loads do not contribute
       expect(balance.amount).toBe(100)
@@ -242,9 +235,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('3002')
     })
 
     it('should not create transaction for reprocessed load outside accreditation period', async () => {
@@ -279,9 +270,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('3002')
     })
 
     it('should update waste balance correctly when a reprocessed load is updated', async () => {
@@ -329,13 +318,6 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.amount).toBe(150)
 
-      // Check for the delta transaction
-      const transactions = balance.transactions
-      expect(transactions).toHaveLength(2)
-      const deltaTransaction = transactions[1]
-      expect(deltaTransaction.amount).toBe(50)
-      expect(deltaTransaction.type).toBe('credit')
-
       // 3. Update Submission: 120 tonnes (Decrease)
       const uploadData3 = createUploadData([
         {
@@ -356,12 +338,6 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.amount).toBe(120)
-
-      // Check for the debit transaction
-      expect(balance.transactions).toHaveLength(3)
-      const debitTransaction = balance.transactions[2]
-      expect(debitTransaction.amount).toBe(30)
-      expect(debitTransaction.type).toBe('debit')
     })
   })
 })

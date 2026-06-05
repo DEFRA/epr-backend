@@ -150,18 +150,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
 
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
-
-      const transaction1 = balance.transactions.find(
-        (t) => t.entities[0].id === '1001'
-      )
-      expect(transaction1).toBeDefined()
-      expect(transaction1.type).toBe('credit')
-      expect(transaction1.amount).toBe(100)
     })
 
     it('should update waste balance with debits from sent on loads', async () => {
@@ -188,18 +180,10 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
 
       // 500 (credit) - 100 (debit) = 400
       expect(balance.amount).toBe(400)
       expect(balance.availableAmount).toBe(400)
-
-      const debitTx = balance.transactions.find(
-        (t) => t.entities[0].id === '5001'
-      )
-      expect(debitTx).toBeDefined()
-      expect(debitTx.type).toBe('debit')
-      expect(debitTx.amount).toBe(100)
     })
 
     it('should not create credit transaction if PRN was issued on received load', async () => {
@@ -225,9 +209,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
     it('should compute correct balance when RECEIVED and SENT_ON rows share a rowId', async () => {
@@ -260,22 +242,12 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       // 500 (credit from RECEIVED) - 100 (debit from SENT_ON) = 400.
-      // Regression guard: if the balance calculation ever reverts to
-      // accumulating from the rowId-keyed transaction ledger, the SENT_ON
-      // row would conflate with the RECEIVED row's credit and the closing
-      // balance would drift.
+      // Regression guard: colliding rowIds across the two tables must not
+      // conflate. The credit and debit differ in magnitude, so a dropped or
+      // merged row would not tally to 400.
       expect(balance).toBeDefined()
       expect(balance.amount).toBe(400)
       expect(balance.availableAmount).toBe(400)
-
-      // Both rows must produce a ledger entry — a regression that silently
-      // dropped one of the colliding rows would still tally to 400 by luck
-      // in a single-upload scenario, but would leave only one transaction.
-      expect(balance.transactions).toHaveLength(2)
-      expect(
-        balance.transactions.find((t) => t.type === 'credit')
-      ).toBeDefined()
-      expect(balance.transactions.find((t) => t.type === 'debit')).toBeDefined()
     })
 
     it('should not create transaction for received load outside accreditation period', async () => {
@@ -309,9 +281,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
     it('should not create transaction for sent on load outside accreditation period', async () => {
@@ -351,11 +321,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       // 500 (credit) - 50 (debit) = 450
       // Row 5001 should be ignored
       expect(balance.amount).toBe(450)
-
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.entities[0].id).toBe('5002')
-      expect(debitTx.amount).toBe(50)
     })
 
     it('should handle revisions correctly (credit -> debit)', async () => {
@@ -398,12 +363,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.amount).toBe(0)
-
-      // Should have original credit and corrective debit
-      expect(balance.transactions).toHaveLength(2)
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx.entities[0].id).toBe('1001')
-      expect(debitTx.amount).toBe(100)
     })
 
     it('should not create transaction if mandatory fields are missing (AC01d)', async () => {
@@ -438,9 +397,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       // Only row 1002 should contribute
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
-      expect(balance.transactions[0].entities[0].id).toBe('1002')
     })
 
     it('should correctly calculate tonnage with bailing wire deduction (Requirement Note)', async () => {

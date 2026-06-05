@@ -6,13 +6,6 @@ import {
   balanceEventsFor
 } from './update-status-balance-effects.js'
 import {
-  COLLISION_SUFFIXES,
-  applyStatusUpdate,
-  performCreation,
-  performTransition
-} from './update-status-embedded-write.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
-import {
   PRN_STATUS,
   validateTransition,
   assertAccreditationNotSuspended
@@ -20,6 +13,9 @@ import {
 import { generatePrnNumber } from '#packaging-recycling-notes/domain/prn-number-generator.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
+
+/** Suffixes A-Z for PRN-number collision avoidance on issuance */
+const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -30,9 +26,8 @@ import { foldPrnFromTailEvents } from './fold-prn-from-tail-events.js'
  */
 
 /**
- * The shared context handed to each top-level write strategy (ledger or
- * embedded). Inner helpers (performStreamWrite, applyStatusUpdate,
- * applyEmbeddedBalanceEffect) consume different subsets.
+ * The shared context handed to each write path. The ledger path and the
+ * no-balance-effect discard write consume different subsets.
  *
  * @typedef {Object} PrnWriteContext
  * @property {PackagingRecyclingNotesRepository} prnRepository
@@ -95,8 +90,8 @@ async function persistProjectionWithIssuanceRetry({
 }
 
 /**
- * Event-first write for a migrated accreditation (canonicalSource 'ledger').
- * The balance-affecting events are appended to the stream, then folded onto
+ * Event-first write for a status transition. The balance-affecting events are
+ * appended to the stream, then folded onto
  * the in-memory PRN, then the resulting projection is persisted. There is no
  * compensation: a partial failure (event appended, doc not persisted) is
  * recovered by the read-side catch-up, which folds events after the watermark
@@ -214,45 +209,20 @@ async function performLedgerWrite({
 }
 
 /**
- * Whether the accreditation's balance has migrated to the event-sourced stream
- * (canonicalSource 'ledger'). Read up front so the write ordering is chosen
- * before any side effect runs.
- *
- * @param {WasteBalancesRepository} wasteBalancesRepository
- * @param {string} accreditationId
- * @returns {Promise<boolean>}
- */
-async function isOnLedger(wasteBalancesRepository, accreditationId) {
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
-  return balance?.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-}
-
-/**
- * Selects the embedded-path write strategy. Creation is its own strategy
- * because the balance debit happens before the PRN write; everything else
- * writes the PRN first and applies the balance effect after.
- *
- * @param {PrnStatus} newStatus
- * @returns {(context: PrnWriteContext) => Promise<PackagingRecyclingNote>}
- */
-function selectEmbeddedWriteStrategy(newStatus) {
-  return newStatus === PRN_STATUS.AWAITING_AUTHORISATION
-    ? performCreation
-    : performTransition
-}
-
-/**
- * Picks the write path for a transition: the ledger (event-first) path when
- * the accreditation has migrated, otherwise the embedded-write strategy.
+ * Write a status transition that has no balance effect: the PRN document's
+ * status is stamped directly with no stream event. Used for DRAFT→DISCARDED,
+ * where a never-issued draft is discarded.
  *
  * @param {PrnWriteContext} ctx
  * @returns {Promise<PackagingRecyclingNote>}
  */
-const dispatchStatusWrite = async (ctx) =>
-  (await isOnLedger(ctx.wasteBalancesRepository, ctx.accreditationId))
-    ? performLedgerWrite(ctx)
-    : selectEmbeddedWriteStrategy(ctx.newStatus)(ctx)
+const performDiscardWrite = async ({ prnRepository, updateParams }) => {
+  const updatedPrn = await prnRepository.updateStatus(updateParams)
+  if (!updatedPrn) {
+    throw Boom.badImplementation('Failed to update PRN status')
+  }
+  return updatedPrn
+}
 
 /**
  * Updates PRN status with all business logic
@@ -330,8 +300,8 @@ export async function updatePrnStatus({
 
   const updatedPrn =
     currentStatus === PRN_STATUS.DRAFT && newStatus === PRN_STATUS.DISCARDED
-      ? await applyStatusUpdate(ctx)
-      : await dispatchStatusWrite(ctx)
+      ? await performDiscardWrite(ctx)
+      : await performLedgerWrite(ctx)
 
   await prnMetrics.recordStatusTransition({
     fromStatus: currentStatus,

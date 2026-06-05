@@ -1,5 +1,4 @@
 import { validateAccreditationId } from './validation.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import { performUpdateWasteBalanceTransactions } from './helpers.js'
 import {
   performAppendPrnStreamEvent,
@@ -8,8 +7,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers-prn.js'
-import { resolveBalanceAmounts } from './marker-aware-read.js'
-import { recordWasteBalanceGrowth } from '../application/growth-observability.js'
+import { resolveBalanceAmounts } from './resolve-balance-amounts.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
@@ -67,76 +65,6 @@ const performFindByAccreditationIds =
     )
   }
 
-const performFlipCanonicalSourceToMigrating =
-  (db) =>
-  async ({ accreditationId, capturedVersion }) => {
-    const validatedAccreditationId = validateAccreditationId(accreditationId)
-    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
-    const updated = await collection.findOneAndUpdate(
-      {
-        accreditationId: validatedAccreditationId,
-        version: capturedVersion,
-        // A missing canonicalSource reads as embedded; $in with null matches
-        // legacy documents that have no field so the flip lands on them too.
-        canonicalSource: {
-          $in: [WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED, null]
-        }
-      },
-      {
-        $set: {
-          canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
-          migratingSince: new Date().toISOString()
-        }
-      },
-      { returnDocument: 'after' }
-    )
-    if (updated) {
-      return { canonicalSource: updated.canonicalSource }
-    }
-    const current = await collection.findOne(
-      { accreditationId: validatedAccreditationId },
-      { projection: { canonicalSource: 1 } }
-    )
-    if (!current) {
-      return null
-    }
-    return { canonicalSource: current.canonicalSource }
-  }
-
-const performFlipCanonicalSourceToLedger =
-  (db) =>
-  async ({ accreditationId, registrationId, capturedVersion }) => {
-    const validatedAccreditationId = validateAccreditationId(accreditationId)
-    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
-    const $set = {
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-      registrationId
-    }
-    const updated = await collection.findOneAndUpdate(
-      {
-        accreditationId: validatedAccreditationId,
-        version: capturedVersion,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-      },
-      {
-        $set,
-        $unset: { migratingSince: '' }
-      },
-      { returnDocument: 'after' }
-    )
-    if (updated) {
-      return { canonicalSource: updated.canonicalSource }
-    }
-    const current = await collection.findOne(
-      { accreditationId: validatedAccreditationId },
-      { projection: { canonicalSource: 1 } }
-    )
-    if (!current) {
-      return null
-    }
-    return { canonicalSource: current.canonicalSource }
-  }
-
 const performGetPrnCatchupEvents =
   (db, streamRepository) =>
   async ({ registrationId, accreditationId, prnId, afterEventNumber }) => {
@@ -145,9 +73,9 @@ const performGetPrnCatchupEvents =
       .collection(WASTE_BALANCE_COLLECTION_NAME)
       .findOne(
         { accreditationId: validatedAccreditationId },
-        { projection: { canonicalSource: 1 } }
+        { projection: { _id: 1 } }
       )
-    if (doc?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+    if (!doc) {
       return []
     }
     return streamRepository.findEventsByPrnIdAfter(
@@ -156,35 +84,6 @@ const performGetPrnCatchupEvents =
       prnId,
       afterEventNumber
     )
-  }
-
-const performResetCanonicalSourceToEmbedded =
-  (db) =>
-  async ({ accreditationId }) => {
-    const validatedAccreditationId = validateAccreditationId(accreditationId)
-    const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
-    const updated = await collection.findOneAndUpdate(
-      {
-        accreditationId: validatedAccreditationId,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-      },
-      {
-        $set: { canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED },
-        $unset: { migratingSince: '' }
-      },
-      { returnDocument: 'after' }
-    )
-    if (updated) {
-      return { canonicalSource: updated.canonicalSource }
-    }
-    const current = await collection.findOne(
-      { accreditationId: validatedAccreditationId },
-      { projection: { canonicalSource: 1 } }
-    )
-    if (!current) {
-      return null
-    }
-    return { canonicalSource: current.canonicalSource }
   }
 
 /**
@@ -209,44 +108,33 @@ export const findBalance = (db) => async (id) => {
 }
 
 /**
- * Save a waste balance.
- *
- * The persisted `canonicalSource` is set only on insert via `$setOnInsert` and
- * never on update. The marker is mutated solely by the dedicated lifecycle
- * primitives — `flipCanonicalSourceToMigrating`, `flipCanonicalSourceToLedger`,
- * and `resetCanonicalSourceToEmbedded` — which also own `migratingSince`. Every
- * other write path is `canonicalSource`-blind and never touches
- * `migratingSince`.
+ * Save a waste balance shell document. Amounts and version are set on every
+ * write; identity and registrationId are fixed on insert. Balance movements
+ * live in the event-sourced stream, not on this document.
  *
  * @param {import('mongodb').Db} db
- * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
+ * @returns {(balance: import('../domain/model.js').WasteBalance) => Promise<void>}
  */
-export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
+export const saveBalance = (db) => async (balance) => {
   await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
-    { accreditationId: updatedBalance.accreditationId },
-    /** @type {*} */ ({
+    { accreditationId: balance.accreditationId },
+    {
       $set: {
-        amount: updatedBalance.amount,
-        availableAmount: updatedBalance.availableAmount,
-        version: updatedBalance.version,
-        schemaVersion: updatedBalance.schemaVersion
-      },
-      $push: {
-        transactions: { $each: newTransactions }
+        amount: balance.amount,
+        availableAmount: balance.availableAmount,
+        version: balance.version,
+        schemaVersion: balance.schemaVersion
       },
       $setOnInsert: {
-        _id: updatedBalance.id,
-        organisationId: updatedBalance.organisationId,
-        canonicalSource: updatedBalance.canonicalSource,
-        ...(updatedBalance.registrationId !== undefined && {
-          registrationId: updatedBalance.registrationId
+        _id: balance.id,
+        organisationId: balance.organisationId,
+        ...(balance.registrationId !== undefined && {
+          registrationId: balance.registrationId
         })
       }
-    }),
+    },
     { upsert: true }
   )
-
-  recordWasteBalanceGrowth(updatedBalance, newTransactions)
 }
 
 /**
@@ -255,7 +143,6 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  * @param {Object} dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
 export const createWasteBalancesRepository = async (db, dependencies) => {
@@ -285,7 +172,6 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
       return performDeductAvailableBalanceForPrnCreation({
         deductParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db),
         dependencies
       })
     },
@@ -293,7 +179,6 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
       return performDeductTotalBalanceForPrnIssue({
         deductParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db),
         dependencies
       })
     },
@@ -301,7 +186,6 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
       return performCreditAvailableBalanceForPrnCancellation({
         creditParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db),
         dependencies
       })
     },
@@ -309,7 +193,6 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
       return performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db),
         dependencies
       })
     },
@@ -320,9 +203,6 @@ export const createWasteBalancesRepository = async (db, dependencies) => {
         dependencies
       })
     },
-    flipCanonicalSourceToMigrating: performFlipCanonicalSourceToMigrating(db),
-    flipCanonicalSourceToLedger: performFlipCanonicalSourceToLedger(db),
-    resetCanonicalSourceToEmbedded: performResetCanonicalSourceToEmbedded(db),
     getPrnCatchupEvents: performGetPrnCatchupEvents(db, streamRepository)
   })
 }

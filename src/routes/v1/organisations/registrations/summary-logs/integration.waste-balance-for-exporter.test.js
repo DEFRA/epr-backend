@@ -157,30 +157,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
       expect(balance).toBeDefined()
-      expect(balance.transactions).toHaveLength(2)
 
-      // Check total amount
       // 100 + 200 = 300
       expect(balance.amount).toBe(300)
       expect(balance.availableAmount).toBe(300)
-
-      // Verify individual transactions
-      const transaction1 = balance.transactions.find(
-        (t) => Math.abs(t.amount - 100) < 0.001
-      )
-      const transaction2 = balance.transactions.find(
-        (t) => Math.abs(t.amount - 200) < 0.001
-      )
-
-      expect(transaction1).toBeDefined()
-      expect(transaction1.type).toBe('credit')
-      expect(transaction1.entities).toHaveLength(1)
-      expect(transaction1.entities[0].id).toBe('1001')
-
-      expect(transaction2).toBeDefined()
-      expect(transaction2.type).toBe('credit')
-      expect(transaction2.entities).toHaveLength(1)
-      expect(transaction2.entities[0].id).toBe('1002')
     })
 
     it('should update waste balance correctly when a revised summary log is submitted', async () => {
@@ -240,38 +220,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
       balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      // 100 + 100 = 200
+      // 100 + 100 = 200 (row 1002 revised down from 200 to 100)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
-
-      // Verify transactions
-      expect(balance.transactions).toHaveLength(3)
-
-      // 1. Original credit for row 1001 (100)
-      const tx1 = balance.transactions.find(
-        (t) => t.entities[0].id === '1001' && t.type === 'credit'
-      )
-      expect(tx1).toBeDefined()
-      expect(tx1.amount).toBe(100)
-
-      // 2. Original credit for row 1002 (200)
-      const tx2 = balance.transactions.find(
-        (t) => t.entities[0].id === '1002' && t.type === 'credit'
-      )
-      expect(tx2).toBeDefined()
-      expect(tx2.amount).toBe(200)
-      expect(tx2.entities[0].previousVersionIds).toHaveLength(0)
-      const v1Id = tx2.entities[0].currentVersionId
-      expect(v1Id).toBeDefined()
-
-      // 3. Debit for row 1002 (100) - correction
-      const tx3 = balance.transactions.find(
-        (t) => t.entities[0].id === '1002' && t.type === 'debit'
-      )
-      expect(tx3).toBeDefined()
-      expect(tx3.amount).toBe(100)
-      expect(tx3.entities[0].currentVersionId).not.toBe(v1Id)
-      expect(tx3.entities[0].previousVersionIds).toContain(v1Id)
     })
 
     it('should not create transaction for a row where PRN was already issued', async () => {
@@ -304,15 +255,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       expect(balance).toBeDefined()
       // Only row 2002 should contribute (PRN not issued)
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
-
-      // Verify only the non-PRN-issued row created a transaction
-      const transaction = balance.transactions[0]
-      expect(transaction.entities[0].id).toBe('2002')
-      expect(transaction.type).toBe('credit')
-      expect(transaction.amount).toBe(200)
     })
 
     it('should not create transaction for a row that falls outside the accreditation period', async () => {
@@ -349,14 +293,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
       expect(balance).toBeDefined()
       // Only row 3002 should contribute (within accreditation period)
-      expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(200)
       expect(balance.availableAmount).toBe(200)
-
-      // Verify only the in-period row created a transaction
-      const transaction = balance.transactions[0]
-      expect(transaction.entities[0].id).toBe('3002')
-      expect(transaction.type).toBe('credit')
     })
 
     it('should handle submission with missing mandatory fields', async () => {
@@ -404,7 +342,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.amount).toBe(100)
-      expect(balance.transactions).toHaveLength(1)
 
       // Second submission: same row ID but date revised to fall outside accreditation period
       const secondUploadData = createUploadData([
@@ -431,21 +368,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Balance should now be 0 - the credit was reversed
       expect(balance.amount).toBe(0)
       expect(balance.availableAmount).toBe(0)
-
-      // Should have 2 transactions: original credit and corrective debit
-      expect(balance.transactions).toHaveLength(2)
-
-      // Verify the original credit
-      const creditTx = balance.transactions.find((t) => t.type === 'credit')
-      expect(creditTx).toBeDefined()
-      expect(creditTx.amount).toBe(100)
-      expect(creditTx.entities[0].id).toBe('5001')
-
-      // Verify the corrective debit
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.amount).toBe(100)
-      expect(debitTx.entities[0].id).toBe('5001')
     })
 
     it('should create debit transaction when a row is revised to have PRN issued', async () => {
@@ -471,7 +393,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.amount).toBe(100)
-      expect(balance.transactions).toHaveLength(1)
 
       // Second submission: same row but now PRN has been issued
       const secondUploadData = createUploadData([
@@ -493,18 +414,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Balance should now be 0 - the credit was reversed because PRN was issued
       expect(balance.amount).toBe(0)
       expect(balance.availableAmount).toBe(0)
-
-      // Should have 2 transactions: original credit and corrective debit
-      expect(balance.transactions).toHaveLength(2)
-
-      const creditTx = balance.transactions.find((t) => t.type === 'credit')
-      expect(creditTx).toBeDefined()
-      expect(creditTx.amount).toBe(100)
-
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.amount).toBe(100)
-      expect(debitTx.entities[0].id).toBe('6001')
     })
 
     it('should create credit transaction when a row is revised from PRN issued to no PRN', async () => {
@@ -530,9 +439,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      // No transactions should exist - PRN was issued
-      expect(balance?.transactions?.length ?? 0).toBe(0)
-      expect(balance?.amount ?? 0).toBe(0)
+      // PRN was issued so the row is excluded; the balance resolves to zero
+      expect(balance.amount).toBe(0)
+      expect(balance.availableAmount).toBe(0)
 
       // Second submission: same row but PRN status corrected to No
       const secondUploadData = createUploadData([
@@ -554,12 +463,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Balance should now be 100 - credited after PRN status corrected
       expect(balance.amount).toBe(100)
       expect(balance.availableAmount).toBe(100)
-
-      // Should have 1 credit transaction
-      expect(balance.transactions).toHaveLength(1)
-      expect(balance.transactions[0].type).toBe('credit')
-      expect(balance.transactions[0].amount).toBe(100)
-      expect(balance.transactions[0].entities[0].id).toBe('7001')
     })
 
     it('should create debit transaction when a mandatory field is removed making a row excluded', async () => {
@@ -584,7 +487,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       let balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(balance.amount).toBe(100)
-      expect(balance.transactions).toHaveLength(1)
 
       // Second submission: same row but DATE_RECEIVED_BY_OSR removed.
       // Row should now be EXCLUDED from waste balance and the
@@ -607,19 +509,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Balance should be 0 — the original credit was reversed
       expect(balance.amount).toBe(0)
       expect(balance.availableAmount).toBe(0)
-
-      // Should have 2 transactions: original credit and corrective debit
-      expect(balance.transactions).toHaveLength(2)
-
-      const creditTx = balance.transactions.find((t) => t.type === 'credit')
-      expect(creditTx).toBeDefined()
-      expect(creditTx.amount).toBe(100)
-      expect(creditTx.entities[0].id).toBe('1001')
-
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.amount).toBe(100)
-      expect(debitTx.entities[0].id).toBe('1001')
     })
 
     it('should create debit transaction when gross weight is removed making a row excluded', async () => {
@@ -664,23 +553,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       // Balance should be 0 — the original credit was reversed
       expect(balance.amount).toBe(0)
       expect(balance.availableAmount).toBe(0)
-
-      expect(balance.transactions).toHaveLength(2)
-
-      const debitTx = balance.transactions.find((t) => t.type === 'debit')
-      expect(debitTx).toBeDefined()
-      expect(debitTx.amount).toBe(100)
-      expect(debitTx.entities[0].id).toBe('1001')
     })
 
-    it('should not create any transaction when a new incomplete row is uploaded', async () => {
+    it('should resolve to a zero balance when a new incomplete row is uploaded', async () => {
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })
       const { wasteBalancesRepository, accreditationId } = env
 
       // Upload a row missing DATE_RECEIVED_BY_OSR — excluded from the start.
-      // Should not create a waste balance at all (no transactions needed).
       const uploadData = createUploadData([
         { rowId: 1001, exportTonnage: 100, dateReceivedByOsr: '' }
       ])
@@ -696,9 +577,9 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const balance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
 
-      // No balance should exist — the excluded row produces delta=0
-      // so no transactions are generated and no balance is created
-      expect(balance).toBeNull()
+      // The excluded row contributes nothing, so the balance resolves to zero
+      expect(balance.amount).toBe(0)
+      expect(balance.availableAmount).toBe(0)
     })
 
     it('should track multiple sequential revisions to the same row with correct running balance', async () => {
@@ -727,25 +608,11 @@ describe('Submission and placeholder tests (Exporter)', () => {
         const balance =
           await wasteBalancesRepository.findByAccreditationId(accreditationId)
         expect(balance.amount).toBe(rev.expectedBalance)
-        expect(balance.transactions).toHaveLength(i + 1)
       }
 
       const finalBalance =
         await wasteBalancesRepository.findByAccreditationId(accreditationId)
       expect(finalBalance.availableAmount).toBe(200)
-
-      finalBalance.transactions.forEach((tx) => {
-        expect(tx.entities[0].id).toBe('8001')
-      })
-
-      expect(
-        finalBalance.transactions[0].entities[0].previousVersionIds?.length ?? 0
-      ).toBe(0)
-      for (let i = 1; i < finalBalance.transactions.length; i++) {
-        expect(
-          finalBalance.transactions[i].entities[0].previousVersionIds?.length
-        ).toBeGreaterThan(0)
-      }
     })
   })
 })

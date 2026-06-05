@@ -6,7 +6,6 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 import {
@@ -22,7 +21,7 @@ import {
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
 
-describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
+describe('Waste balance stream (Exporter)', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
@@ -109,9 +108,7 @@ describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
     schemaVersion: 1,
     version: 0,
     amount: 0,
-    availableAmount: 0,
-    transactions: [],
-    canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+    availableAmount: 0
   })
 
   const setupStream = () => {
@@ -165,9 +162,10 @@ describe('Waste balance stream (Exporter, canonicalSource ledger)', () => {
       availableAmount: 300
     })
 
-    const embeddedBalance =
+    const resolvedBalance =
       await wasteBalancesRepository.findByAccreditationId('ACC-123')
-    expect(embeddedBalance?.transactions ?? []).toHaveLength(0)
+    expect(resolvedBalance?.amount).toBe(300)
+    expect(resolvedBalance?.availableAmount).toBe(300)
   })
 
   it('computes correct delta on re-upload with identical data', async () => {
