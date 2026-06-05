@@ -4,6 +4,7 @@ import { runRowIdCollisionDiagnostic } from '#server/run-row-id-collision-diagno
 import { runBalanceDivergenceDiagnostic } from '#server/run-balance-divergence-diagnostic.js'
 import { runBalanceSizeDiagnostic } from '#server/run-balance-size-diagnostic.js'
 import { runCanonicalSourceCensus } from '#server/run-canonical-source-census.js'
+import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 
 /**
  * Sequences ledger promotion before diagnostics. Called as a floating
@@ -23,4 +24,5 @@ export async function runPromotionThenDiagnostics(server) {
   runBalanceDivergenceDiagnostic(server)
   runBalanceSizeDiagnostic(server)
   runCanonicalSourceCensus(server)
+  runOrganisationValidationSweep(server)
 }
