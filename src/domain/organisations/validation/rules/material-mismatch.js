@@ -17,29 +17,26 @@ const evaluate = (org) => {
   const accreditationsById = new Map(
     org.accreditations.map((acc) => [acc.id, acc])
   )
-  /** @type {import('#domain/organisations/validation/issue.js').ValidationIssue[]} */
-  const issues = []
-  for (const reg of org.registrations) {
-    if (reg.accreditationId === undefined) {
-      continue
+  return org.registrations.flatMap((reg) => {
+    const accreditation =
+      reg.accreditationId === undefined
+        ? undefined
+        : accreditationsById.get(reg.accreditationId)
+    if (
+      accreditation === undefined ||
+      reg.material === accreditation.material
+    ) {
+      return []
     }
-    const accreditation = accreditationsById.get(reg.accreditationId)
-    if (accreditation === undefined) {
-      continue
-    }
-    if (reg.material === accreditation.material) {
-      continue
-    }
-    issues.push(
+    return [
       createIssue({
         code: CODE,
         severity: SEVERITY_LEVEL,
         target: registrationTarget(reg.id),
         message: `Registration ${reg.id} material ${reg.material} does not match linked accreditation ${accreditation.id} material ${accreditation.material}`
       })
-    )
-  }
-  return issues
+    ]
+  })
 }
 
 export const materialMismatchRule = {
