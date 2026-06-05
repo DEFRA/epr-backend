@@ -60,7 +60,10 @@ const runSweep = async (server) => {
  * classification, followed by a single info summary line.
  *
  * Read-only, safe under live traffic. Runs under a cross-instance lock so a
- * single pod per deploy executes the scan.
+ * single pod per deploy executes the scan. Loads the whole organisation
+ * population with `findAll` — deliberate, and consistent with the reporting and
+ * export paths: organisations are a bounded top-level set, unlike the
+ * per-transaction waste-balance population the sibling diagnostics stream.
  *
  * @param {Object} server - Hapi server instance
  */

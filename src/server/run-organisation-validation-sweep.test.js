@@ -5,7 +5,8 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  buildAccreditation
 } from '#repositories/organisations/contract/test-data.js'
 
 import { runOrganisationValidationSweep } from './run-organisation-validation-sweep.js'
@@ -96,6 +97,49 @@ describe('runOrganisationValidationSweep', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Organisation validation sweep: scanned=1 flagged=1 issues=1'
+    })
+  })
+
+  it('logs a warning-severity issue at warn, regardless of its severity classification', async () => {
+    const org = buildOrganisation({
+      registrations: [buildRegistration({ accreditationId: undefined })],
+      accreditations: [buildAccreditation({ id: 'acc-orphan' })]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    expect(logger.warn).toHaveBeenCalledTimes(1)
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: `Organisation validation issue: organisationId=${org.id} code=ORPHAN_ACCREDITATION severity=warning targetType=accreditation targetId=acc-orphan message="Accreditation acc-orphan is not referenced by any registration"`
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Organisation validation sweep: scanned=1 flagged=1 issues=1'
+    })
+  })
+
+  it('logs every issue and accumulates the count when one organisation has several', async () => {
+    const org = buildOrganisation({
+      registrations: [buildRegistration({ accreditationId: 'acc-missing' })],
+      accreditations: [buildAccreditation({ id: 'acc-orphan' })]
+    })
+    seedRepositoryWith([org])
+
+    await runOrganisationValidationSweep(mockServer)
+
+    expect(logger.warn).toHaveBeenCalledTimes(2)
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: expect.stringContaining(
+        'code=DANGLING_ACCREDITATION_REF severity=error'
+      )
+    })
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: expect.stringContaining(
+        'code=ORPHAN_ACCREDITATION severity=warning'
+      )
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Organisation validation sweep: scanned=1 flagged=1 issues=2'
     })
   })
 
