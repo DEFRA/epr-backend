@@ -5,6 +5,7 @@ import { runRowIdCollisionDiagnostic } from './run-row-id-collision-diagnostic.j
 import { runBalanceDivergenceDiagnostic } from './run-balance-divergence-diagnostic.js'
 import { runBalanceSizeDiagnostic } from './run-balance-size-diagnostic.js'
 import { runCanonicalSourceCensus } from './run-canonical-source-census.js'
+import { runOrganisationValidationSweep } from './run-organisation-validation-sweep.js'
 
 import { runPromotionThenDiagnostics } from './run-promotion-then-diagnostics.js'
 
@@ -22,6 +23,9 @@ vi.mock('./run-balance-size-diagnostic.js', () => ({
 }))
 vi.mock('./run-canonical-source-census.js', () => ({
   runCanonicalSourceCensus: vi.fn()
+}))
+vi.mock('./run-organisation-validation-sweep.js', () => ({
+  runOrganisationValidationSweep: vi.fn()
 }))
 
 describe('runPromotionThenDiagnostics', () => {
@@ -51,6 +55,7 @@ describe('runPromotionThenDiagnostics', () => {
     expect(runBalanceDivergenceDiagnostic).not.toHaveBeenCalled()
     expect(runBalanceSizeDiagnostic).not.toHaveBeenCalled()
     expect(runCanonicalSourceCensus).not.toHaveBeenCalled()
+    expect(runOrganisationValidationSweep).not.toHaveBeenCalled()
 
     // Now let promotion finish
     resolvePromotion()
@@ -60,6 +65,7 @@ describe('runPromotionThenDiagnostics', () => {
     expect(runBalanceDivergenceDiagnostic).toHaveBeenCalledWith(server)
     expect(runBalanceSizeDiagnostic).toHaveBeenCalledWith(server)
     expect(runCanonicalSourceCensus).toHaveBeenCalledWith(server)
+    expect(runOrganisationValidationSweep).toHaveBeenCalledWith(server)
   })
 
   it('should still run diagnostics if promotion rejects', async () => {
@@ -73,5 +79,6 @@ describe('runPromotionThenDiagnostics', () => {
     expect(runBalanceDivergenceDiagnostic).toHaveBeenCalledWith(server)
     expect(runBalanceSizeDiagnostic).toHaveBeenCalledWith(server)
     expect(runCanonicalSourceCensus).toHaveBeenCalledWith(server)
+    expect(runOrganisationValidationSweep).toHaveBeenCalledWith(server)
   })
 })
