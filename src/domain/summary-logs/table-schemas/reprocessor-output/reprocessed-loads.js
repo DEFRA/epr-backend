@@ -26,6 +26,7 @@ import {
 } from '../shared/classify-helpers.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
@@ -36,7 +37,9 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
  */
 export const REPROCESSED_LOADS = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateFields: [FIELDS.DATE_LOAD_LEFT_SITE],
+  reportingDateFields: Object.values(
+    REPORTING_DATE_FIELDS.REPROCESSOR_OUTPUT.REPROCESSED_LOADS
+  ),
   wasteRecordType: WASTE_RECORD_TYPE.PROCESSED,
   sheetName: 'Processed',
   rowTransformer: createRowTransformer({

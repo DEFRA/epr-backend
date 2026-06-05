@@ -15,6 +15,7 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 const ALL_FIELDS = Object.values(FIELDS)
 
 /**
@@ -26,10 +27,9 @@ const ALL_FIELDS = Object.values(FIELDS)
  */
 export const LOADS_EXPORTED = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateFields: [
-    FIELDS.DATE_OF_EXPORT,
-    FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
-  ],
+  reportingDateFields: Object.values(
+    REPORTING_DATE_FIELDS.EXPORTER_REGISTERED_ONLY.LOADS_EXPORTED
+  ),
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
   sheetName: 'Exported (sections 2 and 3)',
   rowTransformer: createRowTransformer({

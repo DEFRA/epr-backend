@@ -4,6 +4,7 @@ import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#application/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 /**
  * All fields - all optional for REPROCESSOR_OUTPUT
@@ -30,7 +31,9 @@ const ALL_FIELDS = [
  */
 export const SENT_ON_LOADS = {
   rowIdField: FIELDS.ROW_ID,
-  reportingDateFields: [FIELDS.DATE_LOAD_LEFT_SITE],
+  reportingDateFields: Object.values(
+    REPORTING_DATE_FIELDS.REPROCESSOR_OUTPUT.SENT_ON_LOADS
+  ),
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   sheetName: 'Sent on',
   rowTransformer: createRowTransformer({
