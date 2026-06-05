@@ -3,6 +3,9 @@ import {
   SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
   TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY
 } from './aggregation/fields-by-operator-category.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY', () => {
   it('is frozen', () => {
@@ -92,4 +95,84 @@ describe('TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY', () => {
       TONNAGE_RECEIVED_FIELD_BY_OPERATOR_CATEGORY.EXPORTER_REGISTERED_ONLY
     ).toBe('TONNAGE_RECEIVED_FOR_EXPORT')
   })
+})
+
+/**
+ * Operator categories map to one or more processing types in the
+ * summary-log table schemas. For accredited reprocessors, both
+ * input and output use identical date fields so either suffices.
+ */
+const PROCESSING_TYPES_FOR_OPERATOR_CATEGORY = {
+  REPROCESSOR: [PROCESSING_TYPES.REPROCESSOR_INPUT],
+  REPROCESSOR_REGISTERED_ONLY: [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY],
+  EXPORTER: [PROCESSING_TYPES.EXPORTER],
+  EXPORTER_REGISTERED_ONLY: [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]
+}
+
+/**
+ * Report sections whose date field should match a table schema's
+ * reportingDateField. wasteExported and wasteRepatriated are
+ * excluded: wasteExported uses a different date field than the
+ * table's reportingDateField (accredited exporters slice by
+ * DATE_OF_EXPORT, not DATE_RECEIVED_FOR_EXPORT), and
+ * wasteRepatriated has no corresponding table schema.
+ *
+ * For accredited exporters, wasteReceived draws from the table
+ * whose wasteRecordType is EXPORTED (received-loads-for-export),
+ * not RECEIVED. The registered-only exporter variant has a
+ * distinct received-loads table with wasteRecordType RECEIVED.
+ */
+const SECTION_TO_WASTE_RECORD_TYPE = {
+  REPROCESSOR: {
+    wasteReceived: WASTE_RECORD_TYPE.RECEIVED,
+    wasteSentOn: WASTE_RECORD_TYPE.SENT_ON
+  },
+  REPROCESSOR_REGISTERED_ONLY: {
+    wasteReceived: WASTE_RECORD_TYPE.RECEIVED,
+    wasteSentOn: WASTE_RECORD_TYPE.SENT_ON
+  },
+  EXPORTER: {
+    wasteReceived: WASTE_RECORD_TYPE.EXPORTED,
+    wasteSentOn: WASTE_RECORD_TYPE.SENT_ON
+  },
+  EXPORTER_REGISTERED_ONLY: {
+    wasteReceived: WASTE_RECORD_TYPE.RECEIVED,
+    wasteSentOn: WASTE_RECORD_TYPE.SENT_ON
+  }
+}
+
+describe('consistency with table schema reportingDateField', () => {
+  const cases = Object.entries(
+    SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY
+  ).flatMap(([operatorCategory, sections]) =>
+    Object.entries(SECTION_TO_WASTE_RECORD_TYPE[operatorCategory])
+      .filter(([section]) => sections[section] !== undefined)
+      .flatMap(([section, wasteRecordType]) =>
+        PROCESSING_TYPES_FOR_OPERATOR_CATEGORY[operatorCategory].map(
+          (processingType) => ({
+            operatorCategory,
+            section,
+            processingType,
+            wasteRecordType
+          })
+        )
+      )
+  )
+
+  it.each(cases)(
+    '$operatorCategory/$section matches $processingType schema',
+    ({ operatorCategory, section, processingType, wasteRecordType }) => {
+      const sections =
+        SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory]
+      const schema = findSchemaForProcessingType(
+        processingType,
+        wasteRecordType
+      )
+
+      expect(schema).not.toBeNull()
+      expect(sections[section]).toBe(
+        /** @type {NonNullable<typeof schema>} */ (schema).reportingDateField
+      )
+    }
+  )
 })
