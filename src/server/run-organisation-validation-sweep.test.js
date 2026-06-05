@@ -66,7 +66,7 @@ describe('runOrganisationValidationSweep', () => {
     })
   })
 
-  it('emits no warnings and a zero-flagged summary for conforming organisations', async () => {
+  it('emits no issue lines and a zero-flagged summary for conforming organisations', async () => {
     const org = buildOrganisation({
       registrations: [buildRegistration({ accreditationId: undefined })],
       accreditations: []
@@ -76,12 +76,13 @@ describe('runOrganisationValidationSweep', () => {
     await runOrganisationValidationSweep(mockServer)
 
     expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledTimes(1)
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Organisation validation sweep: scanned=1 flagged=0 issues=0'
     })
   })
 
-  it('logs a warning per issue with the org, code, severity and target for a non-conforming organisation', async () => {
+  it('logs an issue line at info with the org, code, severity and target for a non-conforming organisation', async () => {
     const org = buildOrganisation({
       registrations: [buildRegistration({ accreditationId: 'acc-missing' })],
       accreditations: []
@@ -91,8 +92,8 @@ describe('runOrganisationValidationSweep', () => {
     await runOrganisationValidationSweep(mockServer)
 
     const [registration] = org.registrations
-    expect(logger.warn).toHaveBeenCalledTimes(1)
-    expect(logger.warn).toHaveBeenCalledWith({
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
       message: `Organisation validation issue: organisationId=${org.id} code=DANGLING_ACCREDITATION_REF severity=error targetType=registration targetId=${registration.id} message="Registration ${registration.id} references accreditation acc-missing, which does not exist on the organisation"`
     })
     expect(logger.info).toHaveBeenCalledWith({
@@ -100,7 +101,7 @@ describe('runOrganisationValidationSweep', () => {
     })
   })
 
-  it('logs a warning-severity issue at warn, regardless of its severity classification', async () => {
+  it('logs a warning-severity issue at info, regardless of its severity classification', async () => {
     const org = buildOrganisation({
       registrations: [buildRegistration({ accreditationId: undefined })],
       accreditations: [buildAccreditation({ id: 'acc-orphan' })]
@@ -109,8 +110,8 @@ describe('runOrganisationValidationSweep', () => {
 
     await runOrganisationValidationSweep(mockServer)
 
-    expect(logger.warn).toHaveBeenCalledTimes(1)
-    expect(logger.warn).toHaveBeenCalledWith({
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
       message: `Organisation validation issue: organisationId=${org.id} code=ORPHAN_ACCREDITATION severity=warning targetType=accreditation targetId=acc-orphan message="Accreditation acc-orphan is not referenced by any registration"`
     })
     expect(logger.info).toHaveBeenCalledWith({
@@ -127,13 +128,13 @@ describe('runOrganisationValidationSweep', () => {
 
     await runOrganisationValidationSweep(mockServer)
 
-    expect(logger.warn).toHaveBeenCalledTimes(2)
-    expect(logger.warn).toHaveBeenCalledWith({
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining(
         'code=DANGLING_ACCREDITATION_REF severity=error'
       )
     })
-    expect(logger.warn).toHaveBeenCalledWith({
+    expect(logger.info).toHaveBeenCalledWith({
       message: expect.stringContaining(
         'code=ORPHAN_ACCREDITATION severity=warning'
       )
