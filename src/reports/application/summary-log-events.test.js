@@ -60,7 +60,7 @@ describe('onSummaryLogUploaded', () => {
 
     const updated = await reportsRepositoryFactory().findReportById(reportId)
     expect(updated.stale).toEqual({
-      at: FIXED_NOW,
+      uploadedAt: FIXED_NOW,
       reason: STALE_REASON.SUMMARY_LOG_CHANGED,
       summaryLogId: DEFAULT_SL_ID
     })

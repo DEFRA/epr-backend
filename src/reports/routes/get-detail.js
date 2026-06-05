@@ -1,7 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { fetchOrGenerateReportForPeriod } from '#reports/application/report-service.js'
-import { assertNotStale } from '#reports/domain/stale.js'
 import { periodParamsSchema, withRegistrationDetails } from './shared.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
@@ -68,10 +67,6 @@ export const reportsGetDetail = {
       cadence,
       period
     })
-
-    if ('id' in report) {
-      assertNotStale(report)
-    }
 
     // The 'diagnostics' in report check acts as a type discriminator:
     // fetchOrGenerateReportForPeriod returns Report | AggregatedReportDetail,

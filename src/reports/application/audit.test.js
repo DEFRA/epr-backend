@@ -262,8 +262,9 @@ describe('auditMarkReportsStale', () => {
   const systemActor = { id: 'system', email: 'system', scope: [] }
   const mockInsertMany = vi.fn()
 
+  /** @type {import('#reports/repository/port.js').ReportStale} */
   const stale = {
-    at: '2025-06-01T12:00:00.000Z',
+    uploadedAt: '2025-06-01T12:00:00.000Z',
     reason: 'summary_log_changed',
     summaryLogId: 'sl-id-00000000-0000-0000-0000-000000000001'
   }

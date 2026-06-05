@@ -8,6 +8,8 @@ export const STALE_REASON = Object.freeze({
 /**
  * @param {import('#reports/repository/port.js').Report} report
  */
+/** @typedef {(typeof STALE_REASON)[keyof typeof STALE_REASON]} StaleReason */
+
 export const assertNotStale = (report) => {
   if (report.stale && report.status.currentStatus !== REPORT_STATUS.SUBMITTED) {
     const err = Boom.conflict(

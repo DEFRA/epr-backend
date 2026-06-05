@@ -1055,7 +1055,7 @@ describe(`GET ${reportsGetDetailPath}`, () => {
         expect(payload.recyclingActivity).toBeDefined()
       })
 
-      it('returns 409 with summary_log_changed code for a stale report', async () => {
+      it('returns 200 with stale field for a stale report', async () => {
         const {
           server,
           organisationId,
@@ -1099,11 +1099,12 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           )
         )
 
+        const uploadedAt = new Date().toISOString()
         await reportsRepository.markActiveReportsStale(
           organisationId,
           String(registrationId),
           'sl-new',
-          new Date().toISOString()
+          uploadedAt
         )
 
         const response = await server.inject({
@@ -1112,8 +1113,10 @@ describe(`GET ${reportsGetDetailPath}`, () => {
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
-        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(JSON.parse(response.payload).code).toBe('summary_log_changed')
+        const payload = JSON.parse(response.payload)
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(payload.stale.reason).toBe('summary_log_changed')
+        expect(payload.stale.uploadedAt).toBe(uploadedAt)
       })
     })
 

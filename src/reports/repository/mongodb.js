@@ -404,7 +404,7 @@ const performMarkActiveReportsStale = async (
   })
 
   const stale = {
-    at: uploadedAt,
+    uploadedAt,
     reason: STALE_REASON.SUMMARY_LOG_CHANGED,
     summaryLogId
   }

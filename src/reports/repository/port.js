@@ -88,7 +88,7 @@
  */
 
 /**
- * @typedef {{ at: string, reason: string, summaryLogId?: string }} ReportStale
+ * @typedef {{ uploadedAt: string, reason: StaleReason, summaryLogId?: string }} ReportStale
  */
 
 /**
@@ -256,6 +256,10 @@
 
 /**
  * @typedef {() => ReportsRepository} ReportsRepositoryFactory
+ */
+
+/**
+ * @import { StaleReason } from '#reports/domain/stale.js'
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

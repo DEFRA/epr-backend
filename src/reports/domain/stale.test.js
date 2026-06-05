@@ -21,7 +21,7 @@ const buildReport = (overrides = {}) =>
   )
 
 const buildStale = (overrides = {}) => ({
-  at: '2025-01-01T00:00:00.000Z',
+  uploadedAt: '2025-01-01T00:00:00.000Z',
   reason: STALE_REASON.SUMMARY_LOG_CHANGED,
   ...overrides
 })

@@ -44,7 +44,7 @@ export const testMarkActiveReportsStaleBehaviour = (it) => {
         period: expect.any(Number),
         submissionNumber: expect.any(Number),
         stale: {
-          at: UPLOADED_AT,
+          uploadedAt: UPLOADED_AT,
           reason: STALE_REASON.SUMMARY_LOG_CHANGED,
           summaryLogId: SL_ID
         }
