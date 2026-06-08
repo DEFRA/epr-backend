@@ -55,7 +55,6 @@ const COLLECTIONS = [
   'registration',
   'accreditation',
   'packaging-recycling-notes',
-  'waste-balances',
   'waste-balance-events',
   'reports',
   'waste-records',
@@ -196,16 +195,6 @@ const seedDownstreamForOrganisation = async (
     })
   )
 
-  // The waste-balances collection is orphaned: nothing in the app writes to it
-  // any more. Seed a residual shell directly so the cascade's teardown of the
-  // collection stays covered.
-  await database.collection('waste-balances').insertOne({
-    _id: new ObjectId(),
-    accreditationId,
-    organisationId,
-    registrationId
-  })
-
   await repositories.reports.createReport(
     buildCreateReportParams({
       organisationId,
@@ -272,7 +261,6 @@ const seedStagingCollections = async (database, orgId) => {
 
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
-  'waste-balances': 0,
   'waste-balance-events': 0,
   reports: 0,
   'waste-records': 0,
@@ -311,7 +299,6 @@ describe('non-prod data reset (mongo)', () => {
 
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
-        'waste-balances': 1,
         'waste-balance-events': 1,
         reports: 1,
         'waste-records': 1,
@@ -353,11 +340,6 @@ describe('non-prod data reset (mongo)', () => {
         await database
           .collection('packaging-recycling-notes')
           .countDocuments({ 'organisation.id': other.organisationId })
-      ).toBe(1)
-      expect(
-        await database
-          .collection('waste-balances')
-          .countDocuments({ accreditationId: other.accreditationId })
       ).toBe(1)
       expect(
         await database
@@ -456,34 +438,6 @@ describe('non-prod data reset (mongo)', () => {
       expect(second).toEqual(EMPTY_COUNTS)
     })
 
-    it('short-circuits waste-balances when the organisation has no accreditations', async ({
-      database,
-      reset
-    }) => {
-      // Raw insert: we are deliberately constructing a malformed org doc to
-      // exercise the cascade's empty-accreditations branch, which bypasses
-      // adapter-level validation.
-      const orgId = 600001
-      await database.collection('epr-organisations').insertOne({
-        _id: new ObjectId(),
-        orgId,
-        accreditations: [],
-        registrations: []
-      })
-      // An orphan waste-balance with an accreditation id the cascade should not touch.
-      await database.collection('waste-balances').insertOne({
-        _id: new ObjectId(),
-        accreditationId: new ObjectId().toHexString()
-      })
-
-      const counts = await reset.deleteByOrgId(orgId)
-
-      expect(counts['waste-balances']).toBe(0)
-      expect(await database.collection('waste-balances').countDocuments()).toBe(
-        1
-      )
-    })
-
     it('short-circuits overseas-sites when the organisation has no overseas sites', async ({
       database,
       reset
@@ -552,7 +506,6 @@ describe('non-prod data reset (mongo)', () => {
       const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['epr-organisations']).toBe(1)
-      expect(counts['waste-balances']).toBe(0)
       expect(counts['overseas-sites']).toBe(0)
     })
   })
