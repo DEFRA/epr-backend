@@ -1,6 +1,7 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -423,15 +424,17 @@ const computeRecordAmounts = (
 
 /**
  * Computes loadsByPeriodStatus for a validated summary log.
- * Returns null if the reports lookup fails (graceful degradation).
+ * Returns null if preconditions are not met (non-validated status, missing
+ * registration/processingType/existingRecordsMap) or if the reports lookup fails.
  *
  * @param {Object} params
- * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {ValidatedWasteRecord[] | null} params.wasteRecords
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
  * @param {string} params.summaryLogId
- * @param {Registration} params.registration
- * @param {string} params.processingType
- * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {string} params.status
+ * @param {Registration} [params.registration]
+ * @param {string} [params.processingType]
+ * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
  * @param {ReportsRepository} params.reportsRepository
  * @param {string} params.organisationId
  * @param {string} params.registrationId
@@ -444,6 +447,7 @@ export const computeLoadsByPeriodStatus = async ({
   wasteRecords,
   wasteBalanceRecords,
   summaryLogId,
+  status,
   registration,
   processingType,
   existingRecordsMap,
@@ -454,6 +458,16 @@ export const computeLoadsByPeriodStatus = async ({
   logger,
   processingTypeTables
 }) => {
+  if (
+    status !== SUMMARY_LOG_STATUS.VALIDATED ||
+    !wasteRecords ||
+    !registration ||
+    !processingType ||
+    !existingRecordsMap
+  ) {
+    return null
+  }
+
   try {
     const submittedReports = await reportsRepository.findPeriodicReports({
       organisationId,

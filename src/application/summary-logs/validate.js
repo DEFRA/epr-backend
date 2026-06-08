@@ -23,12 +23,7 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import {
-  countByValidity,
-  countByWasteBalanceInclusion,
-  countByWasteRecordType,
-  mergeLoads
-} from './load-counts.js'
+import { classifyLoads } from './load-counts.js'
 import { computeLoadsByPeriodStatus } from './period-status.js'
 import {
   logValidationIssues,
@@ -585,48 +580,6 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
   }) ?? []
 
 /**
- * Computes aggregate and per-waste-record-type load counts for validated summary logs.
- *
- * @param {Object} params
- * @param {string} params.status - Summary log status after validation
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {string} params.summaryLogId
- * @param {ProcessingType} [params.processingType]
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
- */
-const classifyLoads = ({
-  processingType,
-  status,
-  summaryLogId,
-  wasteBalanceRecords,
-  wasteRecords
-}) => {
-  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return { loads: null, loadsByWasteRecordType: null }
-  }
-
-  const loads = mergeLoads(
-    countByValidity({ wasteRecords, summaryLogId }),
-    countByWasteBalanceInclusion({
-      wasteRecords: wasteBalanceRecords,
-      summaryLogId
-    })
-  )
-
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-  const loadsByWasteRecordType = countByWasteRecordType({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    tableSchemas
-  })
-
-  return { loads, loadsByWasteRecordType }
-}
-
-/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -705,28 +658,21 @@ export const createSummaryLogsValidator = ({
       wasteRecords
     })
 
-    const canClassifyPeriodStatus =
-      status === SUMMARY_LOG_STATUS.VALIDATED &&
-      wasteRecords &&
-      registration &&
-      processingType &&
-      existingRecordsMap
-    const loadsByPeriodStatus = canClassifyPeriodStatus
-      ? await computeLoadsByPeriodStatus({
-          wasteRecords,
-          wasteBalanceRecords,
-          summaryLogId,
-          registration,
-          processingType,
-          existingRecordsMap,
-          reportsRepository,
-          organisationId: summaryLog.organisationId,
-          registrationId: summaryLog.registrationId,
-          loggingContext,
-          logger,
-          processingTypeTables: PROCESSING_TYPE_TABLES
-        })
-      : null
+    const loadsByPeriodStatus = await computeLoadsByPeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords,
+      summaryLogId,
+      registration,
+      processingType,
+      existingRecordsMap,
+      reportsRepository,
+      status,
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      loggingContext,
+      logger,
+      processingTypeTables: PROCESSING_TYPE_TABLES
+    })
 
     await persistValidationResult({
       issues,

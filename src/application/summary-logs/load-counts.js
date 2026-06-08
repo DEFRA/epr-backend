@@ -1,5 +1,7 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
@@ -254,4 +256,46 @@ export const countByWasteRecordType = ({
       })
     )
   }))
+}
+
+/**
+ * Computes aggregate and per-waste-record-type load counts for validated summary logs.
+ *
+ * @param {Object} params
+ * @param {string} params.status - Summary log status after validation
+ * @param {ValidatedWasteRecord[] | null} params.wasteRecords
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {string} params.summaryLogId
+ * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} [params.processingType]
+ * @returns {{ loads: Loads | null, loadsByWasteRecordType: LoadsByWasteRecordType | null }}
+ */
+export const classifyLoads = ({
+  processingType,
+  status,
+  summaryLogId,
+  wasteBalanceRecords,
+  wasteRecords
+}) => {
+  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
+    return { loads: null, loadsByWasteRecordType: null }
+  }
+
+  const loads = mergeLoads(
+    countByValidity({ wasteRecords, summaryLogId }),
+    countByWasteBalanceInclusion({
+      wasteRecords: wasteBalanceRecords,
+      summaryLogId
+    })
+  )
+
+  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
+
+  const loadsByWasteRecordType = countByWasteRecordType({
+    wasteRecords,
+    wasteBalanceRecords,
+    summaryLogId,
+    tableSchemas
+  })
+
+  return { loads, loadsByWasteRecordType }
 }
