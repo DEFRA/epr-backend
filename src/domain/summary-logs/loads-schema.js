@@ -28,8 +28,18 @@ export const loadsSchema = Joi.object({
   adjusted: loadValiditySchema.required()
 })
 
-const periodStatusByChangeSchema = Joi.object({
+const includedLoadsSchema = Joi.object({
+  count: Joi.number().integer().min(0).required(),
   tonnageDelta: Joi.number().required()
+})
+
+const excludedLoadsSchema = Joi.object({
+  count: Joi.number().integer().min(0).required()
+})
+
+const periodStatusByChangeSchema = Joi.object({
+  included: includedLoadsSchema.required(),
+  excluded: excludedLoadsSchema.required()
 })
 
 const periodStatusSchema = Joi.object({
