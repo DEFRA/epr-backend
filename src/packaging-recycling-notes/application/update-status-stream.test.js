@@ -112,10 +112,8 @@ const buildLedgerRepositories = (storedPrn, events = []) => {
         organisationId: ORG_ID,
         amount: 1000,
         availableAmount: 1000,
-        transactions: [],
         version: 0,
-        schemaVersion: 1,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        schemaVersion: 1
       }
     ],
     { streamRepository }
