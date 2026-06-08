@@ -21,6 +21,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -70,12 +71,7 @@ describe('Submission and placeholder tests', () => {
 
     beforeEach(async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -106,7 +102,7 @@ describe('Submission and placeholder tests', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        { ...testOrg, status: 'active' }
       ])()
 
       const sharedMeta = {
@@ -360,12 +356,14 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger
       })
 
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: transformationExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
-      })
+      const syncWasteRecords = syncFromSummaryLog(
+        /** @type {any} */ ({
+          extractor: transformationExtractor,
+          wasteRecordRepository: wasteRecordsRepository,
+          organisationsRepository,
+          overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        })
+      )
 
       const submitterWorker = {
         validate: validateSummaryLog,
@@ -373,7 +371,8 @@ describe('Submission and placeholder tests', () => {
           await new Promise((resolve) => setImmediate(resolve))
 
           const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
+          const { version, summaryLog } =
+            /** @type {NonNullable<typeof existing>} */ (existing)
 
           await syncWasteRecords(summaryLog)
 
@@ -739,12 +738,7 @@ describe('Submission and placeholder tests', () => {
 
     beforeEach(async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
       uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -775,7 +769,7 @@ describe('Submission and placeholder tests', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        { ...testOrg, status: 'active' }
       ])()
 
       const excelBuffer = await createExcelWithPlaceholders()
@@ -789,14 +783,13 @@ describe('Submission and placeholder tests', () => {
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,
-        excelBuffer
+        /** @type {any} */ (excelBuffer)
       )
 
       const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
 
       const summaryLogExtractor = createSummaryLogExtractor({
-        uploadsRepository,
-        logger: mockLogger
+        uploadsRepository
       })
 
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
@@ -839,7 +832,7 @@ describe('Submission and placeholder tests', () => {
               fileStatus: UPLOAD_STATUS.COMPLETE,
               contentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              contentLength: excelBuffer.length,
+              contentLength: /** @type {any} */ (excelBuffer).length,
               checksumSha256: 'abc123def456',
               detectedContentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

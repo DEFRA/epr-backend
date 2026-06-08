@@ -18,6 +18,8 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
+import { createMockLogger } from '#test/mock-logger.js'
+
 import {
   asStandardUser,
   buildGetUrl,
@@ -59,12 +61,7 @@ describe('Repeated uploads of identical data', () => {
     let secondUploadResponse
 
     beforeEach(async () => {
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
+      const mockLogger = createMockLogger()
 
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
@@ -100,7 +97,7 @@ describe('Repeated uploads of identical data', () => {
       testOrg.id = organisationId
 
       const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
+        { ...testOrg, status: 'active' }
       ])()
 
       // Define shared metadata and headers
@@ -250,12 +247,14 @@ describe('Repeated uploads of identical data', () => {
         logger: mockLogger
       })
 
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: summaryLogExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
-      })
+      const syncWasteRecords = syncFromSummaryLog(
+        /** @type {any} */ ({
+          extractor: summaryLogExtractor,
+          wasteRecordRepository: wasteRecordsRepository,
+          organisationsRepository,
+          overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        })
+      )
 
       const summaryLogsWorker = {
         validate: validateSummaryLog,
@@ -263,7 +262,8 @@ describe('Repeated uploads of identical data', () => {
           await new Promise((resolve) => setImmediate(resolve))
 
           const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = existing
+          const { version, summaryLog } =
+            /** @type {NonNullable<typeof existing>} */ (existing)
 
           await syncWasteRecords(summaryLog)
 
