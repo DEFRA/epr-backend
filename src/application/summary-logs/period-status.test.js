@@ -151,7 +151,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.closed.added.tonnageDelta).toBe(10)
+      expect(result.closed?.added?.tonnageDelta).toBe(10)
       expect(result.open).toBeNull()
     })
 
@@ -180,7 +180,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(10)
+      expect(result.open?.added?.tonnageDelta).toBe(10)
       expect(result.closed).toBeNull()
     })
 
@@ -209,7 +209,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.closed.added.tonnageDelta).toBe(10)
+      expect(result.closed?.added?.tonnageDelta).toBe(10)
     })
 
     it('skips missing date values but still classifies on present ones', () => {
@@ -238,7 +238,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.closed.added.tonnageDelta).toBe(5)
+      expect(result.closed?.added?.tonnageDelta).toBe(5)
     })
 
     it('skips a record when all date fields are missing', () => {
@@ -282,7 +282,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(10)
+      expect(result.open?.added?.tonnageDelta).toBe(10)
     })
 
     it('classifies a load in a closed period as closed/added/included', () => {
@@ -302,7 +302,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.closed.added.tonnageDelta).toBe(10)
+      expect(result.closed?.added?.tonnageDelta).toBe(10)
       expect(result.open).toBeNull()
     })
 
@@ -347,7 +347,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.closed.added.tonnageDelta).toBe(10)
+      expect(result.closed?.added?.tonnageDelta).toBe(10)
     })
   })
 
@@ -381,7 +381,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.closed.added.tonnageDelta).toBe(8)
+      expect(result.closed?.added?.tonnageDelta).toBe(8)
       expect(result.open).toBeNull()
     })
   })
@@ -402,7 +402,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.adjusted.tonnageDelta).toBe(5)
+      expect(result.open?.adjusted?.tonnageDelta).toBe(5)
     })
   })
 
@@ -420,7 +420,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.open?.added?.tonnageDelta).toBe(0)
     })
 
     it('negative tonnageDelta when an adjusted record becomes excluded', () => {
@@ -452,7 +452,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map([['received:1000', oldRecord]])
       })
 
-      expect(result.open.adjusted.tonnageDelta).toBe(-10)
+      expect(result.open?.adjusted?.tonnageDelta).toBe(-10)
     })
   })
 
@@ -488,8 +488,8 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map([['received:1000', oldRecord]])
       })
 
-      expect(result.closed.adjusted.tonnageDelta).toBe(-10)
-      expect(result.open.adjusted.tonnageDelta).toBe(12)
+      expect(result.closed?.adjusted?.tonnageDelta).toBe(-10)
+      expect(result.open?.adjusted?.tonnageDelta).toBe(12)
     })
 
     it('collapses to net delta when the period does not change', () => {
@@ -522,7 +522,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       // 12 - 10 = +2 net in closed
-      expect(result.closed.adjusted.tonnageDelta).toBe(2)
+      expect(result.closed?.adjusted?.tonnageDelta).toBe(2)
       expect(result.open).toBeNull()
     })
 
@@ -556,7 +556,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map([['received:1000', oldRecord]])
       })
 
-      expect(result.closed.adjusted.tonnageDelta).toBe(-10)
+      expect(result.closed?.adjusted?.tonnageDelta).toBe(-10)
       expect(result.open).toBeNull()
     })
 
@@ -584,7 +584,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.adjusted.tonnageDelta).toBe(8)
+      expect(result.open?.adjusted?.tonnageDelta).toBe(8)
       expect(result.closed).toBeNull()
     })
 
@@ -612,7 +612,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map([['received:1000', oldRecord]])
       })
 
-      expect(result.open.adjusted.tonnageDelta).toBe(0)
+      expect(result.open?.adjusted?.tonnageDelta).toBe(0)
       expect(result.closed).toBeNull()
     })
   })
@@ -712,7 +712,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(10)
+      expect(result.open?.added?.tonnageDelta).toBe(10)
     })
 
     it('defaults to zero tonnageDelta when transactionAmounts has no entry', () => {
@@ -728,7 +728,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.open?.added?.tonnageDelta).toBe(0)
     })
 
     it('ignores submitted reports for a different cadence', () => {
@@ -747,7 +747,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.open?.added?.tonnageDelta).toBe(0)
       expect(result.closed).toBeNull()
     })
 
@@ -790,7 +790,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.open?.added?.tonnageDelta).toBe(0)
       expect(result.closed).toBeNull()
     })
 
@@ -813,7 +813,7 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map()
       })
 
-      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.open?.added?.tonnageDelta).toBe(0)
     })
   })
 })
@@ -1085,7 +1085,8 @@ describe('computeLoadsByPeriodStatus', () => {
 
     expect(result).not.toBeNull()
     expect(
-      /** @type {NonNullable<typeof result>} */ (result).open.added.tonnageDelta
+      /** @type {NonNullable<typeof result>} */ (result).open?.added
+        ?.tonnageDelta
     ).toBe(10)
   })
 

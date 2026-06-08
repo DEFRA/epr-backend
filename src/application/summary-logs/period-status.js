@@ -34,6 +34,11 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
  * @property {PeriodStatus | null} closed
  */
 
+/**
+ * Internal non-null accumulator used during classification.
+ * @typedef {{ open: { added: PeriodStatusByChange, adjusted: PeriodStatusByChange }, closed: { added: PeriodStatusByChange, adjusted: PeriodStatusByChange } }} PeriodAccumulator
+ */
+
 const emptyChangeStatus = () => ({
   tonnageDelta: 0
 })
@@ -226,7 +231,7 @@ const classifyPeriodStatus = (
  * @param {Object<string, { reportingDateFields: string[] }>} params.tableSchemas
  * @param {Map<string, TransactionAmounts>} params.transactionAmounts
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
- * @param {LoadsByPeriodStatus} params.result
+ * @param {PeriodAccumulator} params.result
  * @param {{ open: { added: number, adjusted: number }, closed: { added: number, adjusted: number } }} params.counts
  */
 const classifyRecord = ({
@@ -291,7 +296,7 @@ const classifyRecord = ({
  * @param {(data: Record<string, any>) => 'open' | 'closed' | null} params.classify
  * @param {ValidatedWasteRecord['record']} params.record
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
- * @param {LoadsByPeriodStatus} params.result
+ * @param {PeriodAccumulator} params.result
  * @param {{ open: { added: number, adjusted: number }, closed: { added: number, adjusted: number } }} params.counts
  */
 const classifyAdjustedRecord = ({
