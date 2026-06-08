@@ -43,13 +43,13 @@ const periodStatusByChangeSchema = Joi.object({
 })
 
 const periodStatusSchema = Joi.object({
-  added: periodStatusByChangeSchema.allow(null).required(),
-  adjusted: periodStatusByChangeSchema.allow(null).required()
+  added: periodStatusByChangeSchema.required(),
+  adjusted: periodStatusByChangeSchema.required()
 })
 
 export const loadsByPeriodStatusSchema = Joi.object({
-  open: periodStatusSchema.allow(null).required(),
-  closed: periodStatusSchema.allow(null).required()
+  open: periodStatusSchema.required(),
+  closed: periodStatusSchema.required()
 })
 
 export const loadsByWasteRecordTypeSchema = Joi.array()

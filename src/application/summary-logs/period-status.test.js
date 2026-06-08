@@ -82,9 +82,19 @@ const buildWasteRecord = ({
     })
   )
 
+const emptyChange = () => ({
+  included: { count: 0, tonnageDelta: 0 },
+  excluded: { count: 0 }
+})
+
+const emptyPeriod = () => ({
+  added: emptyChange(),
+  adjusted: emptyChange()
+})
+
 const emptyResult = () => ({
-  open: null,
-  closed: null
+  open: emptyPeriod(),
+  closed: emptyPeriod()
 })
 
 /**
@@ -152,7 +162,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.closed?.added?.included.tonnageDelta).toBe(10)
-      expect(result.open).toBeNull()
+      expect(result.open).toEqual(emptyPeriod())
     })
 
     it('classifies a row as open when all dates are in open periods', () => {
@@ -181,7 +191,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.open?.added?.included.tonnageDelta).toBe(10)
-      expect(result.closed).toBeNull()
+      expect(result.closed).toEqual(emptyPeriod())
     })
 
     it('classifies a row as closed when both dates are in closed periods', () => {
@@ -306,7 +316,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.closed?.added?.included.tonnageDelta).toBe(10)
-      expect(result.open).toBeNull()
+      expect(result.open).toEqual(emptyPeriod())
     })
 
     it('treats a period as closed when current report is submitted', () => {
@@ -385,7 +395,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.closed?.added?.included.tonnageDelta).toBe(8)
-      expect(result.open).toBeNull()
+      expect(result.open).toEqual(emptyPeriod())
     })
   })
 
@@ -530,7 +540,7 @@ describe('classifyByPeriodStatus', () => {
 
       // 12 - 10 = +2 net in closed
       expect(result.closed?.adjusted?.included.tonnageDelta).toBe(2)
-      expect(result.open).toBeNull()
+      expect(result.open).toEqual(emptyPeriod())
     })
 
     it('reverses old period tonnage when all dates are removed', () => {
@@ -564,7 +574,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.closed?.adjusted?.included.tonnageDelta).toBe(-10)
-      expect(result.open).toBeNull()
+      expect(result.open).toEqual(emptyPeriod())
     })
 
     it('attributes full new amount when no old record exists', () => {
@@ -592,7 +602,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.open?.adjusted?.included.tonnageDelta).toBe(8)
-      expect(result.closed).toBeNull()
+      expect(result.closed).toEqual(emptyPeriod())
     })
 
     it('skips counting when neither old nor new data has dates', () => {
@@ -647,7 +657,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.open?.adjusted?.included.tonnageDelta).toBe(0)
-      expect(result.closed).toBeNull()
+      expect(result.closed).toEqual(emptyPeriod())
     })
   })
 
@@ -784,7 +794,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.open?.added?.included.tonnageDelta).toBe(0)
-      expect(result.closed).toBeNull()
+      expect(result.closed).toEqual(emptyPeriod())
     })
 
     it('treats in_progress reports as open', () => {
@@ -827,7 +837,7 @@ describe('classifyByPeriodStatus', () => {
       })
 
       expect(result.open?.added?.included.tonnageDelta).toBe(0)
-      expect(result.closed).toBeNull()
+      expect(result.closed).toEqual(emptyPeriod())
     })
 
     it('handles Date objects as date values', () => {
@@ -1214,9 +1224,9 @@ describe('computeLoadsByPeriodStatus', () => {
           included: { count: 1, tonnageDelta: 0 },
           excluded: { count: 0 }
         },
-        adjusted: null
+        adjusted: emptyChange()
       },
-      closed: null
+      closed: emptyPeriod()
     })
   })
 

@@ -46,19 +46,14 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 
 /**
  * @typedef {Object} PeriodStatus
- * @property {PeriodStatusByChange | null} added
- * @property {PeriodStatusByChange | null} adjusted
+ * @property {PeriodStatusByChange} added
+ * @property {PeriodStatusByChange} adjusted
  */
 
 /**
  * @typedef {Object} LoadsByPeriodStatus
- * @property {PeriodStatus | null} open
- * @property {PeriodStatus | null} closed
- */
-
-/**
- * Internal non-null accumulator used during classification.
- * @typedef {{ open: { added: PeriodStatusByChange, adjusted: PeriodStatusByChange }, closed: { added: PeriodStatusByChange, adjusted: PeriodStatusByChange } }} PeriodAccumulator
+ * @property {PeriodStatus} open
+ * @property {PeriodStatus} closed
  */
 
 const emptyChangeStatus = () => ({
@@ -75,46 +70,6 @@ const emptyResult = () => ({
   open: emptyStatus(),
   closed: emptyStatus()
 })
-
-/**
- * Whether a change bucket has any activity (records or tonnage impact).
- * A bucket with zero records but non-zero tonnageDelta can occur when
- * an adjusted record moves between periods: the old period receives a
- * tonnage reversal but the record is counted in the new period only.
- *
- * @param {PeriodStatusByChange} change
- * @returns {boolean}
- */
-const isActiveChange = (change) =>
-  change.included.count > 0 ||
-  change.excluded.count > 0 ||
-  change.included.tonnageDelta !== 0
-
-/**
- * Replaces empty buckets with null.
- * A bucket is present when it has any records or tonnage impact.
- *
- * @param {PeriodAccumulator} result
- * @returns {LoadsByPeriodStatus}
- */
-const nullifyEmptyBuckets = (result) => {
-  /** @param {{ added: PeriodStatusByChange, adjusted: PeriodStatusByChange }} period */
-  const nullifyPeriod = (period) => {
-    const addedActive = isActiveChange(period.added)
-    const adjustedActive = isActiveChange(period.adjusted)
-    if (!addedActive && !adjustedActive) {
-      return null
-    }
-    return {
-      added: addedActive ? period.added : null,
-      adjusted: adjustedActive ? period.adjusted : null
-    }
-  }
-  return /** @type {LoadsByPeriodStatus} */ ({
-    open: nullifyPeriod(result.open),
-    closed: nullifyPeriod(result.closed)
-  })
-}
 
 /**
  * Determines whether the record was added, adjusted, or unchanged
@@ -270,7 +225,7 @@ const classifyPeriodStatus = (
  * @param {Object<string, { reportingDateFields: string[] }>} params.tableSchemas
  * @param {Map<string, TransactionAmounts>} params.transactionAmounts
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
- * @param {PeriodAccumulator} params.result
+ * @param {LoadsByPeriodStatus} params.result
  */
 const classifyRecord = ({
   wasteRecord,
@@ -340,7 +295,7 @@ const classifyRecord = ({
  * @param {(data: Record<string, any>) => 'open' | 'closed' | null} params.classify
  * @param {ValidatedWasteRecord['record']} params.record
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
- * @param {PeriodAccumulator} params.result
+ * @param {LoadsByPeriodStatus} params.result
  */
 const classifyAdjustedRecord = ({
   key,
@@ -420,7 +375,7 @@ export const classifyByPeriodStatus = ({
     })
   }
 
-  return nullifyEmptyBuckets(result)
+  return result
 }
 
 /**
