@@ -918,6 +918,36 @@ describe('buildTransactionAmounts', () => {
     expect(result.size).toBe(0)
   })
 
+  it('skips adjusted records where both old and new amounts are zero', () => {
+    const wasteBalanceRecords = [
+      buildWasteRecord({ rowId: '1000', change: 'UPDATED' })
+    ]
+
+    const result = buildTransactionAmounts({
+      wasteBalanceRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      existingRecordsMap: new Map(),
+      findSchema: () => stubSchema(0)
+    })
+
+    expect(result.size).toBe(0)
+  })
+
+  it('returns null when findSchema returns null', () => {
+    const wasteBalanceRecords = [
+      buildWasteRecord({ rowId: '1000', change: 'CREATED' })
+    ]
+
+    const result = buildTransactionAmounts({
+      wasteBalanceRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      existingRecordsMap: new Map(),
+      findSchema: () => null
+    })
+
+    expect(result.size).toBe(0)
+  })
+
   it('skips records that are not INCLUDED by classification', () => {
     const wasteBalanceRecords = [
       buildWasteRecord({ rowId: '1000', change: 'CREATED' })
@@ -1097,10 +1127,8 @@ describe('computeLoadsByPeriodStatus', () => {
     )
   })
 
-  it('handles unknown waste record type in findSchema gracefully', async () => {
-    const wasteRecords = [
-      buildWasteRecord({ wasteRecordType: 'unknown', tableName: 'UNKNOWN' })
-    ]
+  it('handles unknown waste record type within a known processing type', async () => {
+    const wasteRecords = [buildWasteRecord({ wasteRecordType: 'unknown' })]
 
     const result = await computeLoadsByPeriodStatus({
       wasteRecords,
@@ -1120,5 +1148,29 @@ describe('computeLoadsByPeriodStatus', () => {
     })
 
     expect(result).toEqual(emptyResult())
+  })
+
+  it('returns null for unknown processing type', async () => {
+    stubLogger.warn.mockClear()
+    const wasteRecords = [buildWasteRecord()]
+
+    const result = await computeLoadsByPeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords: wasteRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      registration: accreditedRegistration,
+      processingType: 'UNKNOWN_TYPE',
+      existingRecordsMap: new Map(),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: async () => []
+      }),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      loggingContext: 'test',
+      logger: stubLogger,
+      processingTypeTables: TABLE_SCHEMAS_FOR_PROCESSING
+    })
+
+    expect(result).toBeNull()
   })
 })
