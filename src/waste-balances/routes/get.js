@@ -70,8 +70,8 @@ export const wasteBalanceGet = {
 
     const balanceMap = wasteBalances.reduce((acc, balance) => {
       acc[balance.accreditationId] = {
-        amount: balance.amount ?? 0,
-        availableAmount: balance.availableAmount ?? 0
+        amount: balance.amount,
+        availableAmount: balance.availableAmount
       }
       return acc
     }, {})

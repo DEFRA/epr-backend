@@ -99,9 +99,6 @@ describe('mock-repositories', () => {
         'creditAvailableBalanceForPrnCancellation',
         'creditFullBalanceForIssuedPrnCancellation',
         'appendStreamEvent',
-        'flipCanonicalSourceToMigrating',
-        'flipCanonicalSourceToLedger',
-        'resetCanonicalSourceToEmbedded',
         'getPrnCatchupEvents'
       ]
     },

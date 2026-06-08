@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
@@ -90,40 +89,34 @@ const buildEvent = (kind, number, createdAt) => ({
   createdBy: eventActor
 })
 
-const buildBalance = (canonicalSource) => ({
+const buildBalance = () => ({
   id: 'wb-1',
   accreditationId: ACC_ID,
+  registrationId: REG_ID,
   organisationId: ORG_ID,
   amount: 100,
   availableAmount: 100,
-  transactions: [],
   version: 0,
-  schemaVersion: 1,
-  canonicalSource
+  schemaVersion: 1
 })
 
 /**
  * Assembles the real in-memory adapters: the PRN store, the event stream, and
- * the waste-balance store that shares that stream. The marker on the seeded
- * balance is what gates whether catch-up events are returned.
+ * the waste-balance store that shares that stream. Catch-up events past the
+ * PRN's watermark are always folded onto the read.
  *
  * @param {object} params
  * @param {PackagingRecyclingNote | null} [params.prn]
  * @param {StreamEvent[]} [params.events]
- * @param {string} [params.canonicalSource]
  */
-const buildRepositories = ({
-  prn = null,
-  events = [],
-  canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-}) => {
+const buildRepositories = ({ prn = null, events = [] }) => {
   const packagingRecyclingNotesRepository =
     createInMemoryPackagingRecyclingNotesRepository(prn ? [prn] : [])(
       noopLogger()
     )
   const streamRepository = createInMemoryStreamRepository(events)()
   const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
-    [buildBalance(canonicalSource)],
+    [buildBalance()],
     { streamRepository }
   )()
   return { packagingRecyclingNotesRepository, wasteBalancesRepository }
@@ -187,30 +180,6 @@ describe('getProjectedPrnById', () => {
     // watermark advance, but version stays with the stored document.
     expect(result?.status.currentStatus).toBe(PRN_STATUS.ACCEPTED)
     expect(result?.lastAppliedEventNumber).toBe(2)
-    expect(result?.version).toBe(1)
-  })
-
-  it('does not fold for an embedded-marker accreditation', async () => {
-    const { packagingRecyclingNotesRepository, wasteBalancesRepository } =
-      buildRepositories({
-        prn: buildPrn(),
-        events: [
-          buildEvent(
-            STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE,
-            1,
-            '2026-02-02T12:00:00.000Z'
-          )
-        ],
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      })
-
-    const result = await getProjectedPrnById({
-      packagingRecyclingNotesRepository,
-      wasteBalancesRepository,
-      prnId: PRN_ID
-    })
-
-    expect(result?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     expect(result?.version).toBe(1)
   })
 

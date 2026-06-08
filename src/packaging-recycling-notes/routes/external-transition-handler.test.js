@@ -9,7 +9,6 @@ import {
   UnauthorisedTransitionError
 } from '#packaging-recycling-notes/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { config } from '#root/config.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -97,16 +96,15 @@ const buildEvent = (kind, number) => ({
   createdBy: { id: 'signatory', name: 'Signatory' }
 })
 
-const buildBalance = (canonicalSource) => ({
+const buildBalance = () => ({
   id: 'wb-1',
   accreditationId: ACC_ID,
+  registrationId: REG_ID,
   organisationId: ORG_ID,
   amount: 100,
   availableAmount: 100,
-  transactions: [],
   version: 0,
-  schemaVersion: 1,
-  canonicalSource
+  schemaVersion: 1
 })
 
 let server
@@ -114,15 +112,15 @@ let streamRepository
 
 /**
  * Starts a test server wired with real in-memory adapters: the PRN store, the
- * event stream, and the waste-balance store sharing that stream. The marker on
- * the seeded balance is what gates whether the read-side fold runs.
+ * event stream, and the waste-balance store sharing that stream. The read-side
+ * fold always runs, bringing the persisted doc current from the stream tail
+ * before the transition decision.
  *
  * @param {object} params
  * @param {PrnStatus} params.currentStatus
  * @param {StreamEvent[]} params.events
- * @param {string} params.canonicalSource
  */
-const startServer = async ({ currentStatus, events, canonicalSource }) => {
+const startServer = async ({ currentStatus, events }) => {
   streamRepository = createInMemoryStreamRepository(events)()
   server = await createTestServer({
     config: {
@@ -137,7 +135,7 @@ const startServer = async ({ currentStatus, events, canonicalSource }) => {
           buildPrn(currentStatus)
         ]),
       wasteBalancesRepository: createInMemoryWasteBalancesRepository(
-        [buildBalance(canonicalSource)],
+        [buildBalance()],
         { streamRepository }
       ),
       organisationsRepository: () => ({})
@@ -161,8 +159,7 @@ describe('external PRN transition read-side fold', () => {
     // the transition decision on the true status, so the accept conflicts.
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      events: [buildEvent(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, 1)],
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      events: [buildEvent(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, 1)]
     })
 
     const response = await server.inject({
@@ -177,8 +174,7 @@ describe('external PRN transition read-side fold', () => {
   it('attributes a live RPD accept to the RPD service with no email', async () => {
     await startServer({
       currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      events: [],
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+      events: []
     })
 
     const response = await server.inject({
@@ -195,24 +191,6 @@ describe('external PRN transition read-side fold', () => {
       id: externalApiClientId,
       name: 'RPD'
     })
-  })
-
-  it('accepts an embedded PRN even when the stream shows it cancelled', async () => {
-    // For an embedded-marker accreditation the fold is a no-op, so the same
-    // stream cancel event is ignored and the accept proceeds off the doc.
-    await startServer({
-      currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-      events: [buildEvent(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE, 1)],
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-    })
-
-    const response = await server.inject({
-      method: 'POST',
-      url: acceptUrl,
-      headers: authHeaders
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
   })
 })
 

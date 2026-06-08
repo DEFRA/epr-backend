@@ -19,6 +19,7 @@ import {
   setupAuthContext,
   cognitoJwksUrl
 } from '#vite/helpers/setup-auth-mocking.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import {
   createMockIssuedPrn,
   generateExternalApiToken
@@ -39,6 +40,24 @@ const authHeaders = {
   authorization: `Bearer ${generateExternalApiToken(externalApiClientId)}`
 }
 
+/**
+ * The PRN_ACCEPTED stream event the ledger-path accept appends. The read-side
+ * fold projects this onto the PRN doc.
+ */
+const buildAcceptedEvent = () => ({
+  id: 'event-4',
+  registrationId: 'reg-456',
+  accreditationId: 'acc-789',
+  organisationId: 'org-123',
+  number: 4,
+  kind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+  payload: { prnId, amount: 100 },
+  openingBalance: { amount: 100, availableAmount: 100 },
+  closingBalance: { amount: 100, availableAmount: 100 },
+  createdAt: new Date('2026-02-03T10:00:00.000Z'),
+  createdBy: { id: externalApiClientId, name: 'RPD' }
+})
+
 describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
   setupAuthContext()
 
@@ -53,13 +72,15 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         findByPrnNumber: vi.fn(),
         create: vi.fn(),
         findByAccreditation: vi.fn(),
-        updateStatus: vi.fn()
+        updateStatus: vi.fn(),
+        persistProjection: vi.fn()
       }
 
       wasteBalancesRepository = {
         findByAccreditationId: vi.fn(),
         findByAccreditationIds: vi.fn(),
         getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
+        appendStreamEvent: vi.fn(),
         deductAvailableBalanceForPrnCreation: vi.fn(),
         deductTotalBalanceForPrnIssue: vi.fn(),
         creditAvailableBalanceForPrnCancellation: vi.fn()
@@ -103,20 +124,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: {
-            currentStatus: PRN_STATUS.ACCEPTED,
-            history: [
-              ...mockPrn.status.history,
-              {
-                status: PRN_STATUS.ACCEPTED,
-                at: new Date(),
-                by: { id: 'rpd', name: 'RPD' }
-              }
-            ]
-          }
-        })
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildAcceptedEvent()
+        )
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
+        )
 
         const response = await server.inject({
           method: 'POST',
@@ -128,15 +141,39 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         expect(response.payload).toBe('')
       })
 
-      it('calls updateStatus with accepted status and PRN id', async () => {
+      it('accepts a caller-provided acceptedAt timestamp in the payload', async () => {
         const mockPrn = createMockIssuedPrn()
         packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildAcceptedEvent()
+        )
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: acceptUrl,
+          headers: authHeaders,
+          payload: { acceptedAt: '2026-02-01T10:30:00Z' }
         })
+
+        expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
+      })
+
+      it('appends a PRN_ACCEPTED stream event and persists the accepted projection attributed to RPD', async () => {
+        const mockPrn = createMockIssuedPrn()
+        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
+          mockPrn
+        )
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildAcceptedEvent()
+        )
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
+        )
 
         await server.inject({
           method: 'POST',
@@ -144,17 +181,24 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
           headers: authHeaders
         })
 
+        expect(wasteBalancesRepository.appendStreamEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            prnId,
+            streamKind: STREAM_EVENT_KIND.PRN_ACCEPTED,
+            createdBy: expect.objectContaining({
+              id: externalApiClientId,
+              name: 'RPD'
+            })
+          })
+        )
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          packagingRecyclingNotesRepository.persistProjection
         ).toHaveBeenCalledWith(
           expect.objectContaining({
-            id: prnId,
-            status: PRN_STATUS.ACCEPTED,
-            operation: expect.objectContaining({
-              slot: 'accepted',
-              by: expect.objectContaining({
-                id: externalApiClientId,
-                name: 'RPD'
+            projection: expect.objectContaining({
+              id: prnId,
+              status: expect.objectContaining({
+                currentStatus: PRN_STATUS.ACCEPTED
               })
             })
           })
@@ -171,66 +215,17 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
         )
       })
 
-      it('uses provided acceptedAt timestamp', async () => {
-        const acceptedAt = '2026-02-01T10:30:00Z'
+      it('does not affect the waste balance', async () => {
         const mockPrn = createMockIssuedPrn()
         packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
-        })
-
-        await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders,
-          payload: { acceptedAt }
-        })
-
-        expect(
-          packagingRecyclingNotesRepository.updateStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            updatedAt: new Date(acceptedAt)
-          })
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildAcceptedEvent()
         )
-      })
-
-      it('uses current time when acceptedAt not provided', async () => {
-        const beforeCall = new Date()
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
-        })
-
-        await server.inject({
-          method: 'POST',
-          url: acceptUrl,
-          headers: authHeaders
-        })
-
-        const callArgs =
-          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
-        expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
-          beforeCall.getTime()
-        )
-      })
-
-      it('does not affect waste balance', async () => {
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
-        )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: { currentStatus: PRN_STATUS.ACCEPTED, history: [] }
-        })
 
         const response = await server.inject({
           method: 'POST',

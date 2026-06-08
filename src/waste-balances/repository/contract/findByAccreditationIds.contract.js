@@ -1,15 +1,23 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '../../domain/model.js'
 import { buildWasteBalance } from './test-data.js'
 import { buildStreamEvent } from '../stream-test-data.js'
+
+/**
+ * @typedef {object} WasteBalanceContractContext
+ * @property {import('../port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ */
 
 export const testFindByAccreditationIdsBehaviour = (it) => {
   describe('findByAccreditationIds', () => {
     let repository
 
-    beforeEach(async ({ wasteBalancesRepository }) => {
-      repository = await wasteBalancesRepository()
-    })
+    beforeEach(
+      async (
+        /** @type {WasteBalanceContractContext} */ { wasteBalancesRepository }
+      ) => {
+        repository = await wasteBalancesRepository()
+      }
+    )
 
     it('returns empty array when no waste balances exist', async () => {
       const result = await repository.findByAccreditationIds([
@@ -20,20 +28,35 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
     })
 
     it('returns waste balances for multiple accreditation IDs', async ({
-      insertWasteBalances
+      insertWasteBalances,
+      streamRepository
     }) => {
       const balance1 = buildWasteBalance({
         accreditationId: 'acc-1',
-        amount: 100,
-        availableAmount: 80
+        registrationId: 'reg-1'
       })
       const balance2 = buildWasteBalance({
         accreditationId: 'acc-2',
-        amount: 200,
-        availableAmount: 150
+        registrationId: 'reg-2'
       })
 
       await insertWasteBalances([balance1, balance2])
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: 'acc-1',
+          registrationId: 'reg-1',
+          number: 1,
+          closingBalance: { amount: 100, availableAmount: 80 }
+        })
+      )
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: 'acc-2',
+          registrationId: 'reg-2',
+          number: 1,
+          closingBalance: { amount: 200, availableAmount: 150 }
+        })
+      )
 
       const result = await repository.findByAccreditationIds(['acc-1', 'acc-2'])
 
@@ -48,15 +71,15 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
     }) => {
       const balance1 = buildWasteBalance({
         accreditationId: 'acc-1',
-        amount: 100
+        registrationId: 'reg-1'
       })
       const balance2 = buildWasteBalance({
         accreditationId: 'acc-2',
-        amount: 200
+        registrationId: 'reg-2'
       })
       const balance3 = buildWasteBalance({
         accreditationId: 'acc-3',
-        amount: 300
+        registrationId: 'reg-3'
       })
 
       await insertWasteBalances([balance1, balance2, balance3])
@@ -70,16 +93,24 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       expect(accIds).not.toContain('acc-2')
     })
 
-    it('returns single waste balance when only one ID matches', async ({
-      insertWasteBalance
+    it('returns single waste balance with amounts resolved from the stream when only one ID matches', async ({
+      insertWasteBalance,
+      streamRepository
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-123',
-        amount: 500,
-        availableAmount: 400
+        registrationId: 'reg-1'
       })
 
       await insertWasteBalance(wasteBalance)
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: 'acc-123',
+          registrationId: 'reg-1',
+          number: 1,
+          closingBalance: { amount: 500, availableAmount: 400 }
+        })
+      )
 
       const result = await repository.findByAccreditationIds(['acc-123'])
 
@@ -110,7 +141,7 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-exists',
-        amount: 100
+        registrationId: 'reg-1'
       })
 
       await insertWasteBalance(wasteBalance)
@@ -130,68 +161,19 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       expect(result).toEqual([])
     })
 
-    it('preserves canonicalSource per balance across the batch', async ({
-      insertWasteBalances,
-      streamRepository
-    }) => {
-      const onEmbedded = buildWasteBalance({
-        accreditationId: 'acc-mixed-embedded',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      })
-      const onLedger = buildWasteBalance({
-        accreditationId: 'acc-mixed-ledger',
-        registrationId: 'reg-1',
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-      })
-
-      await insertWasteBalances([onEmbedded, onLedger])
-      await streamRepository.appendEvent(
-        buildStreamEvent({
-          accreditationId: 'acc-mixed-ledger',
-          registrationId: 'reg-1',
-          number: 1,
-          closingBalance: { amount: 0, availableAmount: 0 }
-        })
-      )
-
-      const result = await repository.findByAccreditationIds([
-        'acc-mixed-embedded',
-        'acc-mixed-ledger'
-      ])
-
-      const byId = Object.fromEntries(result.map((b) => [b.accreditationId, b]))
-      expect(byId['acc-mixed-embedded'].canonicalSource).toBe(
-        WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      )
-      expect(byId['acc-mixed-ledger'].canonicalSource).toBe(
-        WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-      )
-    })
-
-    describe('marker-aware amount resolution per balance', () => {
-      it('substitutes amounts only for balances whose marker is ledger', async ({
+    describe('amount resolution per balance from the stream', () => {
+      it('resolves amounts independently for each balance and zeroes those with no events', async ({
         insertWasteBalances,
         streamRepository
       }) => {
         await insertWasteBalances([
           buildWasteBalance({
-            accreditationId: 'acc-batch-embedded',
-            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED,
-            amount: 100,
-            availableAmount: 80
-          }),
-          buildWasteBalance({
-            accreditationId: 'acc-batch-migrating',
-            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING,
-            amount: 200,
-            availableAmount: 150
+            accreditationId: 'acc-batch-empty',
+            registrationId: 'reg-empty'
           }),
           buildWasteBalance({
             accreditationId: 'acc-batch-ledger',
-            registrationId: 'reg-1',
-            canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
-            amount: 999,
-            availableAmount: 999
+            registrationId: 'reg-1'
           })
         ])
 
@@ -213,42 +195,40 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
         )
 
         const result = await repository.findByAccreditationIds([
-          'acc-batch-embedded',
-          'acc-batch-migrating',
+          'acc-batch-empty',
           'acc-batch-ledger'
         ])
 
         const byId = Object.fromEntries(
           result.map((b) => [b.accreditationId, b])
         )
-        expect(byId['acc-batch-embedded'].amount).toBe(100)
-        expect(byId['acc-batch-embedded'].availableAmount).toBe(80)
-        expect(byId['acc-batch-migrating'].amount).toBe(200)
-        expect(byId['acc-batch-migrating'].availableAmount).toBe(150)
+        expect(byId['acc-batch-empty'].amount).toBe(0)
+        expect(byId['acc-batch-empty'].availableAmount).toBe(0)
         expect(byId['acc-batch-ledger'].amount).toBe(75)
         expect(byId['acc-batch-ledger'].availableAmount).toBe(60)
       })
     })
 
-    it('returns waste balance with all fields intact', async ({
-      insertWasteBalance
+    it('returns waste balance with identity fields intact', async ({
+      insertWasteBalance,
+      streamRepository
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-full',
         organisationId: 'org-test',
-        amount: 250,
-        availableAmount: 200,
-        version: 3,
-        transactions: [
-          {
-            _id: 'txn-1',
-            type: 'credit',
-            amount: 250
-          }
-        ]
+        registrationId: 'reg-1',
+        version: 3
       })
 
       await insertWasteBalance(wasteBalance)
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: 'acc-full',
+          registrationId: 'reg-1',
+          number: 1,
+          closingBalance: { amount: 250, availableAmount: 200 }
+        })
+      )
 
       const result = await repository.findByAccreditationIds(['acc-full'])
 
@@ -258,7 +238,6 @@ export const testFindByAccreditationIdsBehaviour = (it) => {
       expect(result[0].amount).toBe(250)
       expect(result[0].availableAmount).toBe(200)
       expect(result[0].version).toBe(3)
-      expect(result[0].transactions).toBeDefined()
     })
   })
 }

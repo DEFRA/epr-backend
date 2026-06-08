@@ -12,6 +12,7 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
+  getWasteBalance,
   pollForValidation,
   setupWasteBalanceIntegrationEnvironment,
   createWasteBalanceMeta,
@@ -104,11 +105,11 @@ describe('ORS waste balance validation (VAL014)', () => {
 
     await uploadAndSubmit(env, 'sl-ors-approved', 'file-ors-1', uploadData)
 
-    const balance =
-      await wasteBalancesRepository.findByAccreditationId(accreditationId)
+    const balance = await getWasteBalance(
+      wasteBalancesRepository,
+      accreditationId
+    )
 
-    expect(balance).toBeDefined()
-    expect(balance.transactions).toHaveLength(1)
     expect(balance.amount).toBe(100)
   })
 
@@ -132,13 +133,14 @@ describe('ORS waste balance validation (VAL014)', () => {
 
     await uploadAndSubmit(env, 'sl-ors-unapproved', 'file-ors-2', uploadData)
 
-    const balance =
-      await wasteBalancesRepository.findByAccreditationId(accreditationId)
+    const balance = await getWasteBalance(
+      wasteBalancesRepository,
+      accreditationId
+    )
 
-    expect(balance).toBeDefined()
-    // Only row 2002 (approved ORS) should contribute
-    expect(balance.transactions).toHaveLength(1)
+    // Only row 2002 (approved ORS, 150t) contributes; row 2001 (unapproved
+    // ORS, 200t) is excluded — a total of 150 rather than 350 or 200 proves
+    // both the inclusion of 2002 and the exclusion of 2001.
     expect(balance.amount).toBe(150)
-    expect(balance.transactions[0].entities[0].id).toBe('2002')
   })
 })
