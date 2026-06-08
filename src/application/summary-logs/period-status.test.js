@@ -833,20 +833,23 @@ describe('buildTransactionAmounts', () => {
    *
    * @param {number} amount
    */
-  const stubSchema = (amount) => ({
-    classifyForWasteBalance: () => ({
-      outcome: ROW_OUTCOME.INCLUDED,
-      reasons: [],
-      transactionAmount: amount
+  /** @param {number} amount */
+  const stubSchema = (amount) =>
+    /** @type {any} */ ({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: amount
+      })
     })
-  })
 
-  const stubSchemaExcluded = () => ({
-    classifyForWasteBalance: () => ({
-      outcome: ROW_OUTCOME.EXCLUDED,
-      reasons: [{ code: 'MISSING_REQUIRED_FIELD' }]
+  const stubSchemaExcluded = () =>
+    /** @type {any} */ ({
+      classifyForWasteBalance: () => ({
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: 'MISSING_REQUIRED_FIELD' }]
+      })
     })
-  })
 
   it('returns the full transaction amount for added records', () => {
     const wasteBalanceRecords = [
@@ -879,13 +882,13 @@ describe('buildTransactionAmounts', () => {
     })
 
     /** Schema stub that reads NET_WEIGHT from data */
-    const dataSensitiveSchema = {
+    const dataSensitiveSchema = /** @type {any} */ ({
       classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [],
         transactionAmount: Number(data.NET_WEIGHT)
       })
-    }
+    })
 
     const result = buildTransactionAmounts({
       wasteBalanceRecords,
@@ -967,7 +970,7 @@ describe('buildTransactionAmounts', () => {
       data: { NET_WEIGHT: '10' }
     })
 
-    const dataSensitiveSchema = {
+    const dataSensitiveSchema = /** @type {any} */ ({
       classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => {
         const weight = Number(data.NET_WEIGHT)
         if (!weight) {
@@ -979,7 +982,7 @@ describe('buildTransactionAmounts', () => {
           transactionAmount: weight
         }
       }
-    }
+    })
 
     const result = buildTransactionAmounts({
       wasteBalanceRecords,
@@ -1000,13 +1003,13 @@ describe('buildTransactionAmounts', () => {
       })
     ]
 
-    const dataSensitiveSchema = {
+    const dataSensitiveSchema = /** @type {any} */ ({
       classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [],
         transactionAmount: Number(data.NET_WEIGHT)
       })
-    }
+    })
 
     const result = buildTransactionAmounts({
       wasteBalanceRecords,
@@ -1024,7 +1027,7 @@ describe('computeLoadsByPeriodStatus', () => {
     warn: vi.fn()
   })
 
-  const TABLE_SCHEMAS_FOR_PROCESSING = {
+  const TABLE_SCHEMAS_FOR_PROCESSING = /** @type {any} */ ({
     REPROCESSOR_INPUT: {
       RECEIVED_LOADS_FOR_REPROCESSING: {
         reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
@@ -1036,7 +1039,7 @@ describe('computeLoadsByPeriodStatus', () => {
         })
       }
     }
-  }
+  })
 
   it('returns classified loads when reports lookup succeeds', async () => {
     const wasteRecords = [buildWasteRecord()]
@@ -1048,9 +1051,9 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: {
+      reportsRepository: /** @type {any} */ ({
         findPeriodicReports: async () => []
-      },
+      }),
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test',
@@ -1059,7 +1062,9 @@ describe('computeLoadsByPeriodStatus', () => {
     })
 
     expect(result).not.toBeNull()
-    expect(result.open.added.tonnageDelta).toBe(10)
+    expect(
+      /** @type {NonNullable<typeof result>} */ (result).open.added.tonnageDelta
+    ).toBe(10)
   })
 
   it('returns null and logs a warning when reports lookup fails', async () => {
@@ -1072,11 +1077,11 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: {
+      reportsRepository: /** @type {any} */ ({
         findPeriodicReports: async () => {
           throw new Error('database unavailable')
         }
-      },
+      }),
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test-context',
@@ -1104,9 +1109,9 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: {
+      reportsRepository: /** @type {any} */ ({
         findPeriodicReports: async () => []
-      },
+      }),
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test',

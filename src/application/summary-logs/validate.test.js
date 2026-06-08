@@ -249,7 +249,9 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      reportsRepository: { findPeriodicReports: async () => [] },
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: async () => []
+      }),
       summaryLogExtractor
     })
   })
@@ -673,7 +675,9 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
-      reportsRepository: { findPeriodicReports: async () => [] },
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: async () => []
+      }),
       summaryLogExtractor
     })
 
