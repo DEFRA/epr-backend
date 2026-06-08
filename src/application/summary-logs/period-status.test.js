@@ -596,6 +596,34 @@ describe('classifyByPeriodStatus', () => {
       expect(result.open.adjusted.tonnageDelta).toBe(8)
       expect(result.closed.adjusted.tonnageDelta).toBe(0)
     })
+
+    it('treats missing transactionAmounts entry as zero for adjusted record', () => {
+      const oldRecord = /** @type {any} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+      })
+
+      const wasteRecords = [
+        buildWasteRecord({
+          change: 'UPDATED',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-20' }
+        })
+      ]
+
+      const result = classifyByPeriodStatus({
+        wasteRecords,
+        summaryLogId: SUMMARY_LOG_ID,
+        registration: accreditedRegistration,
+        submittedReports: [],
+        tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map([['received:1000', oldRecord]])
+      })
+
+      expect(result.open.adjusted.tonnageDelta).toBe(0)
+      expect(result.closed.adjusted.tonnageDelta).toBe(0)
+    })
   })
 
   describe('skipped records', () => {
@@ -1062,5 +1090,30 @@ describe('computeLoadsByPeriodStatus', () => {
         message: expect.stringContaining('test-context')
       })
     )
+  })
+
+  it('handles unknown waste record type in findSchema gracefully', async () => {
+    const wasteRecords = [
+      buildWasteRecord({ wasteRecordType: 'unknown', tableName: 'UNKNOWN' })
+    ]
+
+    const result = await computeLoadsByPeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords: wasteRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      registration: accreditedRegistration,
+      processingType: 'REPROCESSOR_INPUT',
+      existingRecordsMap: new Map(),
+      reportsRepository: {
+        findPeriodicReports: async () => []
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      loggingContext: 'test',
+      logger: stubLogger,
+      processingTypeTables: TABLE_SCHEMAS_FOR_PROCESSING
+    })
+
+    expect(result).toEqual(emptyResult())
   })
 })
