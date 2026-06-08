@@ -12,7 +12,7 @@ const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_BALANCE_EVENTS_COLLECTION = 'waste-balance-events'
 
 const it = mongoIt.extend({
-  mongoClient: async (/** @type {{ db: string }} */ { db }, use) => {
+  mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
     await client.close()

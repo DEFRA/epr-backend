@@ -87,7 +87,6 @@ const mockLogger = {
 const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
-      // @ts-expect-error -- vitest fixture db is a string URL at runtime
       const client = await MongoClient.connect(db)
       await use(client)
       await client.close()
