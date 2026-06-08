@@ -24,14 +24,14 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 
 /**
  * @typedef {Object} PeriodStatus
- * @property {PeriodStatusByChange} added
- * @property {PeriodStatusByChange} adjusted
+ * @property {PeriodStatusByChange | null} added
+ * @property {PeriodStatusByChange | null} adjusted
  */
 
 /**
  * @typedef {Object} LoadsByPeriodStatus
- * @property {PeriodStatus} open
- * @property {PeriodStatus} closed
+ * @property {PeriodStatus | null} open
+ * @property {PeriodStatus | null} closed
  */
 
 const emptyChangeStatus = () => ({
@@ -43,11 +43,34 @@ const emptyStatus = () => ({
   adjusted: emptyChangeStatus()
 })
 
-/** @returns {LoadsByPeriodStatus} */
 const emptyResult = () => ({
   open: emptyStatus(),
   closed: emptyStatus()
 })
+
+const emptyCounts = () => ({
+  open: { added: 0, adjusted: 0 },
+  closed: { added: 0, adjusted: 0 }
+})
+
+/**
+ * Replaces empty buckets with null based on record counts.
+ * A bucket is present (even with tonnageDelta: 0) when at least one
+ * record was classified into it.
+ */
+const nullifyEmptyBuckets = (result, counts) => {
+  const nullifyPeriod = (period, periodCounts) => {
+    if (periodCounts.added === 0 && periodCounts.adjusted === 0) return null
+    return {
+      added: periodCounts.added > 0 ? period.added : null,
+      adjusted: periodCounts.adjusted > 0 ? period.adjusted : null
+    }
+  }
+  return /** @type {LoadsByPeriodStatus} */ ({
+    open: nullifyPeriod(result.open, counts.open),
+    closed: nullifyPeriod(result.closed, counts.closed)
+  })
+}
 
 /**
  * Determines whether the record was added, adjusted, or unchanged
@@ -204,6 +227,7 @@ const classifyPeriodStatus = (
  * @param {Map<string, TransactionAmounts>} params.transactionAmounts
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {LoadsByPeriodStatus} params.result
+ * @param {{ open: { added: number, adjusted: number }, closed: { added: number, adjusted: number } }} params.counts
  */
 const classifyRecord = ({
   wasteRecord,
@@ -213,7 +237,8 @@ const classifyRecord = ({
   tableSchemas,
   transactionAmounts,
   existingRecordsMap,
-  result
+  result,
+  counts
 }) => {
   const { record, outcome } = wasteRecord
 
@@ -241,6 +266,7 @@ const classifyRecord = ({
     const period = classify(record.data)
     if (period) {
       result[period].added.tonnageDelta += amounts?.newAmount ?? 0
+      counts[period].added++
     }
     return
   }
@@ -251,7 +277,8 @@ const classifyRecord = ({
     classify,
     record,
     existingRecordsMap,
-    result
+    result,
+    counts
   })
 }
 
@@ -265,6 +292,7 @@ const classifyRecord = ({
  * @param {ValidatedWasteRecord['record']} params.record
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {LoadsByPeriodStatus} params.result
+ * @param {{ open: { added: number, adjusted: number }, closed: { added: number, adjusted: number } }} params.counts
  */
 const classifyAdjustedRecord = ({
   key,
@@ -272,7 +300,8 @@ const classifyAdjustedRecord = ({
   classify,
   record,
   existingRecordsMap,
-  result
+  result,
+  counts
 }) => {
   const newPeriod = classify(record.data)
 
@@ -281,9 +310,11 @@ const classifyAdjustedRecord = ({
 
   if (oldPeriod) {
     result[oldPeriod].adjusted.tonnageDelta -= amounts?.oldAmount ?? 0
+    counts[oldPeriod].adjusted++
   }
   if (newPeriod) {
     result[newPeriod].adjusted.tonnageDelta += amounts?.newAmount ?? 0
+    counts[newPeriod].adjusted++
   }
 }
 
@@ -314,6 +345,7 @@ export const classifyByPeriodStatus = ({
   existingRecordsMap
 }) => {
   const result = emptyResult()
+  const counts = emptyCounts()
 
   const cadence = isRegistrationAccredited(registration)
     ? 'monthly'
@@ -330,11 +362,12 @@ export const classifyByPeriodStatus = ({
       tableSchemas,
       transactionAmounts,
       existingRecordsMap,
-      result
+      result,
+      counts
     })
   }
 
-  return result
+  return nullifyEmptyBuckets(result, counts)
 }
 
 /**
