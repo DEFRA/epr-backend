@@ -1,33 +1,58 @@
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
+
 /**
  * Maps (operatorCategory, reportSection) to the single date field used
  * for filtering records into that section during aggregation.
  *
- * Unlike DATE_FIELDS_BY_OPERATOR_CATEGORY (which groups by record type
- * for period discovery), this maps by report section. The distinction
- * matters for accredited exporters: their `exported` records contribute
- * to both wasteReceived (via DATE_RECEIVED_FOR_EXPORT) and wasteExported
- * (via DATE_OF_EXPORT) — a single record can span two monthly reports.
+ * Derived from REPORTING_DATE_FIELDS, the central registry of date fields
+ * on each table schema. The distinction between operator category and
+ * processing type matters for accredited reprocessors: the input/output
+ * distinction is lost at the waste record level, but both variants use
+ * identical date fields so a single REPROCESSOR mapping suffices.
+ *
+ * For accredited exporters, their received-loads table has two reporting
+ * date fields: DATE_RECEIVED_FOR_EXPORT (for the wasteReceived section)
+ * and DATE_OF_EXPORT (for the wasteExported section). A single record
+ * can appear in two different monthly reports.
  */
+
+const RDF = REPORTING_DATE_FIELDS
+
 export const SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY = Object.freeze({
   EXPORTER: {
-    wasteReceived: 'DATE_RECEIVED_FOR_EXPORT',
-    wasteExported: 'DATE_OF_EXPORT',
-    wasteRepatriated: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
-    wasteSentOn: 'DATE_LOAD_LEFT_SITE'
+    wasteReceived:
+      RDF.EXPORTER.RECEIVED_LOADS_FOR_EXPORT.DATE_RECEIVED_FOR_EXPORT,
+    wasteExported: RDF.EXPORTER.RECEIVED_LOADS_FOR_EXPORT.DATE_OF_EXPORT,
+    // The accredited exporter template has no repatriation date field.
+    // The report's slice always returns empty. The field name is shared
+    // with the registered-only template for structural completeness.
+    wasteRepatriated:
+      RDF.EXPORTER_REGISTERED_ONLY.LOADS_EXPORTED
+        .DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED,
+    wasteSentOn: RDF.EXPORTER.SENT_ON_LOADS.DATE_LOAD_LEFT_SITE
   },
   EXPORTER_REGISTERED_ONLY: {
-    wasteReceived: 'MONTH_RECEIVED_FOR_EXPORT',
-    wasteExported: 'DATE_OF_EXPORT',
-    wasteRepatriated: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
-    wasteSentOn: 'DATE_LOAD_LEFT_SITE'
+    wasteReceived:
+      RDF.EXPORTER_REGISTERED_ONLY.RECEIVED_LOADS_FOR_EXPORT
+        .MONTH_RECEIVED_FOR_EXPORT,
+    wasteExported: RDF.EXPORTER_REGISTERED_ONLY.LOADS_EXPORTED.DATE_OF_EXPORT,
+    wasteRepatriated:
+      RDF.EXPORTER_REGISTERED_ONLY.LOADS_EXPORTED
+        .DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED,
+    wasteSentOn: RDF.EXPORTER_REGISTERED_ONLY.SENT_ON_LOADS.DATE_LOAD_LEFT_SITE
   },
   REPROCESSOR: {
-    wasteReceived: 'DATE_RECEIVED_FOR_REPROCESSING',
-    wasteSentOn: 'DATE_LOAD_LEFT_SITE'
+    wasteReceived:
+      RDF.REPROCESSOR_INPUT.RECEIVED_LOADS_FOR_REPROCESSING
+        .DATE_RECEIVED_FOR_REPROCESSING,
+    wasteSentOn: RDF.REPROCESSOR_INPUT.SENT_ON_LOADS.DATE_LOAD_LEFT_SITE
   },
   REPROCESSOR_REGISTERED_ONLY: {
-    wasteReceived: 'MONTH_RECEIVED_FOR_REPROCESSING',
-    wasteSentOn: 'DATE_LOAD_LEFT_SITE'
+    wasteReceived:
+      RDF.REPROCESSOR_REGISTERED_ONLY.RECEIVED_LOADS_FOR_REPROCESSING
+        .MONTH_RECEIVED_FOR_REPROCESSING,
+    wasteSentOn:
+      RDF.REPROCESSOR_REGISTERED_ONLY.SENT_ON_LOADS.DATE_LOAD_LEFT_SITE
   }
 })
 
