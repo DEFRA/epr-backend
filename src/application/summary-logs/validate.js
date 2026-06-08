@@ -483,38 +483,40 @@ const assertValidatingStatus = (result, summaryLogId) => {
   }
 }
 
+/** @param {string} summaryLogId @param {SubmittedSummaryLog} summaryLog */
+const buildLoggingContext = (summaryLogId, summaryLog) => {
+  const { id: fileId, name: filename } = summaryLog.file
+  return `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
+}
+
+/** @param {TypedLogger} logger @param {string} message @param {string} action */
+const logEvent = (logger, message, action) => {
+  logger.info({
+    message,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action
+    }
+  })
+}
+
 /**
- * Fetches a summary log and asserts it is in validating status.
+ * Fetches a summary log that must be in validating status.
+ * Throws PermanentError if not found or in wrong status.
  *
  * @param {string} summaryLogId
  * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {TypedLogger} logger
- * @returns {Promise<{ version: number, summaryLog: SubmittedSummaryLog, loggingContext: string }>}
+ * @returns {Promise<{ version: number, summaryLog: SubmittedSummaryLog }>}
  */
-const fetchAndAssertValidating = async (
+const fetchValidatingSummaryLog = async (
   summaryLogId,
-  summaryLogsRepository,
-  logger
+  summaryLogsRepository
 ) => {
   const result = await summaryLogsRepository.findById(summaryLogId)
   assertValidatingStatus(result, summaryLogId)
-  const { version, summaryLog } =
-    /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (result)
-  const {
-    file: { id: fileId, name: filename }
-  } = summaryLog
-
-  const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
-
-  logger.info({
-    message: `Summary log validation started: ${loggingContext}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.START_SUCCESS
-    }
-  })
-
-  return { version, summaryLog, loggingContext }
+  return /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
+    result
+  )
 }
 
 /**
@@ -698,10 +700,9 @@ const classifyPeriodStatus = ({
 }
 
 /**
- * Classifies loads and persists the validation result.
+ * Classifies loads by validity, waste record type, and reporting period status.
  *
  * @param {Object} params
- * @param {ValidationIssuesCollector} params.issues
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
  * @param {string} params.summaryLogId
@@ -713,12 +714,8 @@ const classifyPeriodStatus = ({
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {string} params.loggingContext
  * @param {TypedLogger} params.logger
- * @param {ExtractedMeta} [params.meta]
- * @param {SummaryLogsRepository} params.summaryLogsRepository
- * @param {number} params.version
  */
-const classifyAndPersist = async ({
-  issues,
+const classifyAllLoads = async ({
   wasteRecords,
   wasteBalanceRecords,
   summaryLogId,
@@ -729,10 +726,7 @@ const classifyAndPersist = async ({
   reportsRepository,
   summaryLog,
   loggingContext,
-  logger,
-  meta,
-  summaryLogsRepository,
-  version
+  logger
 }) => {
   const { loads, loadsByWasteRecordType } = classifyLoads({
     processingType,
@@ -756,18 +750,7 @@ const classifyAndPersist = async ({
     logger
   })
 
-  await persistValidationResult({
-    issues,
-    loads,
-    loadsByPeriodStatus,
-    loadsByWasteRecordType,
-    meta,
-    status,
-    summaryLog,
-    summaryLogId,
-    summaryLogsRepository,
-    version
-  })
+  return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
 }
 
 /**
@@ -794,12 +777,17 @@ export const createSummaryLogsValidator = ({
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
 
   return async (summaryLogId) => {
-    const { version, summaryLog, loggingContext } =
-      await fetchAndAssertValidating(
-        summaryLogId,
-        summaryLogsRepository,
-        logger
-      )
+    const { version, summaryLog } = await fetchValidatingSummaryLog(
+      summaryLogId,
+      summaryLogsRepository
+    )
+    const loggingContext = buildLoggingContext(summaryLogId, summaryLog)
+
+    logEvent(
+      logger,
+      `Summary log validation started: ${loggingContext}`,
+      LOGGING_EVENT_ACTIONS.START_SUCCESS
+    )
 
     const validationStart = Date.now()
     const { issues, wasteRecords, meta, registration, existingRecordsMap } =
@@ -813,7 +801,6 @@ export const createSummaryLogsValidator = ({
         wasteRecordsRepository,
         validateDataSyntax
       })
-    const validationDurationMs = Date.now() - validationStart
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
@@ -830,35 +817,43 @@ export const createSummaryLogsValidator = ({
       issues,
       processingType,
       status,
-      validationDurationMs,
+      validationDurationMs: Date.now() - validationStart,
       wasteBalanceRecords
     })
 
-    await classifyAndPersist({
+    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
+      await classifyAllLoads({
+        wasteRecords,
+        wasteBalanceRecords,
+        summaryLogId,
+        processingType,
+        status,
+        registration,
+        existingRecordsMap,
+        reportsRepository,
+        summaryLog,
+        loggingContext,
+        logger
+      })
+
+    await persistValidationResult({
       issues,
-      wasteRecords,
-      wasteBalanceRecords,
-      summaryLogId,
-      processingType,
-      status,
-      registration,
-      existingRecordsMap,
-      reportsRepository,
-      summaryLog,
-      loggingContext,
-      logger,
+      loads,
+      loadsByPeriodStatus,
+      loadsByWasteRecordType,
       meta,
+      status,
+      summaryLog,
+      summaryLogId,
       summaryLogsRepository,
       version
     })
 
-    logger.info({
-      message: `Summary log updated: ${loggingContext}, status=${status}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-      }
-    })
+    logEvent(
+      logger,
+      `Summary log updated: ${loggingContext}, status=${status}`,
+      LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    )
   }
 }
 
