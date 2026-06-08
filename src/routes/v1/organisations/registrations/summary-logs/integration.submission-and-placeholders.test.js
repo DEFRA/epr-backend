@@ -19,6 +19,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -348,10 +349,13 @@ describe('Submission and placeholder tests', () => {
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      const reportsRepository = createInMemoryReportsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger
       })
@@ -796,11 +800,13 @@ describe('Submission and placeholder tests', () => {
       })
 
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+      const reportsRepository = createInMemoryReportsRepository()()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
         summaryLogExtractor,
         logger: mockLogger
       })

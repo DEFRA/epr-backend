@@ -15,6 +15,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
 /** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
@@ -119,12 +120,14 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata, data)
 
     const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+    const reportsRepository = createInMemoryReportsRepository()()
 
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
       organisationsRepository,
       wasteRecordsRepository,
+      reportsRepository,
       summaryLogExtractor: extractor
     })
 

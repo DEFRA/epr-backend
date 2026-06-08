@@ -23,6 +23,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {WasteRecordsRepository} wasteRecordsRepository
  * @property {WasteBalancesRepository} wasteBalancesRepository
  * @property {SummaryLogExtractor} summaryLogExtractor
+ * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @property {import('#overseas-sites/repository/port.js').OverseasSitesRepository} overseasSitesRepository
  * @property {(organisationId: string, registrationId: string) => Promise<void>} onSummaryLogSubmittedReportHook
  */
@@ -60,7 +61,8 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        reportsRepository
       } = deps
 
       const validateSummaryLog = createSummaryLogsValidator({
@@ -68,7 +70,8 @@ export const summaryLogCommandHandlers = [
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        reportsRepository
       })
 
       await validateSummaryLog(payload.summaryLogId)

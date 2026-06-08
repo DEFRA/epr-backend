@@ -28,6 +28,26 @@ export const loadsSchema = Joi.object({
   adjusted: loadValiditySchema.required()
 })
 
+const periodStatusBucketSchema = Joi.object({
+  included: Joi.object({
+    count: Joi.number().integer().min(0).required(),
+    tonnesDelta: Joi.number().required()
+  }).required(),
+  excluded: Joi.object({
+    count: Joi.number().integer().min(0).required()
+  }).required()
+})
+
+const periodStatusByChangeSchema = Joi.object({
+  added: periodStatusBucketSchema.required(),
+  adjusted: periodStatusBucketSchema.required()
+})
+
+export const loadsByPeriodStatusSchema = Joi.object({
+  open: periodStatusByChangeSchema.required(),
+  closed: periodStatusByChangeSchema.required()
+})
+
 export const loadsByWasteRecordTypeSchema = Joi.array()
   .items(
     Joi.object({

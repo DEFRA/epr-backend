@@ -12,6 +12,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -381,11 +382,13 @@ describe('Advanced validation scenarios', () => {
       })
 
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+      const reportsRepository = createInMemoryReportsRepository()()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
         summaryLogExtractor,
         logger: mockLogger
       })
@@ -563,11 +566,13 @@ describe('Advanced validation scenarios', () => {
       })
 
       const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+      const reportsRepository = createInMemoryReportsRepository()()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
         summaryLogExtractor,
         logger: mockLogger
       })

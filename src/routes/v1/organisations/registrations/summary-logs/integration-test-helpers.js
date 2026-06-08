@@ -12,6 +12,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -474,11 +475,14 @@ export const createTestInfrastructure = async (
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
   const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
+  const reportsRepository = createInMemoryReportsRepository()()
+
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogExtractor,
+    reportsRepository,
     logger: mockLogger
   })
 
@@ -557,11 +561,14 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     }
   }
 
+  const reportsRepository = createInMemoryReportsRepository()()
+
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
     summaryLogExtractor: dynamicExtractor,
+    reportsRepository,
     logger: mockLogger
   })
 

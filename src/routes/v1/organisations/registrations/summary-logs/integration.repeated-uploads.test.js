@@ -14,6 +14,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -238,10 +239,13 @@ describe('Repeated uploads of identical data', () => {
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      const reportsRepository = createInMemoryReportsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
+        reportsRepository,
         summaryLogExtractor,
         logger: mockLogger
       })
