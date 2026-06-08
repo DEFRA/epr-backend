@@ -129,7 +129,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
-    it('returns 404 when the organisation is not linked', async () => {
+    it('returns 409 when the organisation is not linked', async () => {
       const org = await buildApprovedOrg(organisationsRepository)
 
       const response = await server.inject({
@@ -138,7 +138,7 @@ describe('DELETE /v1/organisations/{organisationId}/link', () => {
         ...asServiceMaintainerWrite()
       })
 
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
     })
 
     describe('when the request succeeds', () => {

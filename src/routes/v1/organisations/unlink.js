@@ -36,7 +36,7 @@ export const organisationsUnlink = {
     } = await organisationsRepository.findById(organisationId)
 
     if (!organisation.linkedDefraOrganisation) {
-      throw Boom.notFound('Organisation is not linked so cannot be unlinked')
+      throw Boom.conflict('Organisation is not linked so cannot be unlinked')
     }
 
     const linkedOrg = organisation.linkedDefraOrganisation

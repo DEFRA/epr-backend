@@ -70,6 +70,10 @@ export const organisationsLink = {
       throw Boom.conflict('Organisation is not in a linkable state')
     }
 
+    if (organisation.linkedDefraOrganisation) {
+      throw Boom.conflict('Organisation is already linked')
+    }
+
     const { email, id: credentialId } =
       /** @type {import('#common/hapi-types.js').HumanCredentials} */ (
         request.auth.credentials

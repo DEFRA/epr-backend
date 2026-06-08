@@ -244,6 +244,48 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         expect(response.statusCode).toBe(StatusCodes.OK)
       })
 
+      it('rejects linking an organisation that is already linked', async () => {
+        const org = await buildApprovedOrg(organisationsRepository)
+
+        // Reproduce an organisation that is active and still linked to a
+        // Defra ID organisation; re-linking it must be rejected.
+        const approvedOrg = await waitForVersion(
+          organisationsRepository,
+          org.id,
+          2
+        )
+        await organisationsRepository.replace(
+          org.id,
+          2,
+          prepareOrgUpdate(approvedOrg, {
+            status: ORGANISATION_STATUS.ACTIVE,
+            linkedDefraOrganisation: {
+              orgId: COMPANY_1_ID,
+              orgName: COMPANY_1_NAME,
+              linkedBy: {
+                email: USER_PRESENT_IN_ORG1_EMAIL,
+                id: VALID_TOKEN_CONTACT_ID
+              },
+              linkedAt: new Date().toISOString()
+            }
+          })
+        )
+        await waitForVersion(organisationsRepository, org.id, 3)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${org.id}/link`,
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+        expect(JSON.parse(response.payload).message).toBe(
+          'Organisation is already linked'
+        )
+      })
+
       describe('when the request succeeds', async () => {
         const performPostLinkOrganisation = async () => {
           const org = await buildApprovedOrg(organisationsRepository)
