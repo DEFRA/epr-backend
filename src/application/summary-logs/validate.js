@@ -483,23 +483,6 @@ const assertValidatingStatus = (result, summaryLogId) => {
   }
 }
 
-/** @param {string} summaryLogId @param {SubmittedSummaryLog} summaryLog */
-const buildLoggingContext = (summaryLogId, summaryLog) => {
-  const { id: fileId, name: filename } = summaryLog.file
-  return `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
-}
-
-/** @param {TypedLogger} logger @param {string} message @param {string} action */
-const logEvent = (logger, message, action) => {
-  logger.info({
-    message,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action
-    }
-  })
-}
-
 /**
  * Fetches a summary log that must be in validating status.
  * Throws PermanentError if not found or in wrong status.
@@ -644,70 +627,6 @@ const classifyLoads = ({
 }
 
 /**
- * Classifies loads by validity, waste record type, and reporting period status.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
- * @param {string} params.summaryLogId
- * @param {ProcessingType} [params.processingType]
- * @param {SummaryLogStatus} params.status
- * @param {Registration} [params.registration]
- * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} [params.existingRecordsMap]
- * @param {ReportsRepository} params.reportsRepository
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- */
-const classifyAllLoads = async ({
-  wasteRecords,
-  wasteBalanceRecords,
-  summaryLogId,
-  processingType,
-  status,
-  registration,
-  existingRecordsMap,
-  reportsRepository,
-  summaryLog,
-  loggingContext,
-  logger
-}) => {
-  const { loads, loadsByWasteRecordType } = classifyLoads({
-    processingType,
-    status,
-    summaryLogId,
-    wasteBalanceRecords,
-    wasteRecords
-  })
-
-  const canClassifyPeriodStatus =
-    status === SUMMARY_LOG_STATUS.VALIDATED &&
-    wasteRecords &&
-    registration &&
-    processingType &&
-    existingRecordsMap
-
-  const loadsByPeriodStatus = canClassifyPeriodStatus
-    ? await computeLoadsByPeriodStatus({
-        wasteRecords,
-        wasteBalanceRecords,
-        summaryLogId,
-        registration,
-        processingType,
-        existingRecordsMap,
-        reportsRepository,
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        loggingContext,
-        logger,
-        processingTypeTables: PROCESSING_TYPE_TABLES
-      })
-    : null
-
-  return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
-}
-
-/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -735,13 +654,16 @@ export const createSummaryLogsValidator = ({
       summaryLogId,
       summaryLogsRepository
     )
-    const loggingContext = buildLoggingContext(summaryLogId, summaryLog)
+    const { id: fileId, name: filename } = summaryLog.file
+    const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
-    logEvent(
-      logger,
-      `Summary log validation started: ${loggingContext}`,
-      LOGGING_EVENT_ACTIONS.START_SUCCESS
-    )
+    logger.info({
+      message: `Summary log validation started: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+      }
+    })
 
     const validationStart = Date.now()
     const { issues, wasteRecords, meta, registration, existingRecordsMap } =
@@ -775,20 +697,36 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords
     })
 
-    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
-      await classifyAllLoads({
-        wasteRecords,
-        wasteBalanceRecords,
-        summaryLogId,
-        processingType,
-        status,
-        registration,
-        existingRecordsMap,
-        reportsRepository,
-        summaryLog,
-        loggingContext,
-        logger
-      })
+    const { loads, loadsByWasteRecordType } = classifyLoads({
+      processingType,
+      status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords
+    })
+
+    const canClassifyPeriodStatus =
+      status === SUMMARY_LOG_STATUS.VALIDATED &&
+      wasteRecords &&
+      registration &&
+      processingType &&
+      existingRecordsMap
+    const loadsByPeriodStatus = canClassifyPeriodStatus
+      ? await computeLoadsByPeriodStatus({
+          wasteRecords,
+          wasteBalanceRecords,
+          summaryLogId,
+          registration,
+          processingType,
+          existingRecordsMap,
+          reportsRepository,
+          organisationId: summaryLog.organisationId,
+          registrationId: summaryLog.registrationId,
+          loggingContext,
+          logger,
+          processingTypeTables: PROCESSING_TYPE_TABLES
+        })
+      : null
 
     await persistValidationResult({
       issues,
@@ -803,11 +741,13 @@ export const createSummaryLogsValidator = ({
       version
     })
 
-    logEvent(
-      logger,
-      `Summary log updated: ${loggingContext}, status=${status}`,
-      LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    )
+    logger.info({
+      message: `Summary log updated: ${loggingContext}, status=${status}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
+    })
   }
 }
 

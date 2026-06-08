@@ -372,34 +372,53 @@ export const buildTransactionAmounts = ({
   const amounts = new Map()
 
   for (const { record, outcome } of wasteBalanceRecords) {
-    const schema = findSchema(record.type)
-    const isIncluded = outcome === ROW_OUTCOME.INCLUDED
-    const newAmount = isIncluded ? getTransactionAmount(schema, record.data) : 0
-
-    const key = recordKey(record)
-    const lastVersion = /** @type {WasteRecordVersion} */ (
-      record.versions.at(-1)
+    const entry = computeRecordAmounts(
+      record,
+      outcome,
+      summaryLogId,
+      existingRecordsMap,
+      findSchema
     )
-    const isAdjusted =
-      lastVersion.summaryLog?.id === summaryLogId &&
-      lastVersion.status === VERSION_STATUS.UPDATED
-
-    if (isAdjusted) {
-      const existing = existingRecordsMap.get(key)
-      const oldAmount = existing
-        ? getTransactionAmount(schema, existing.data)
-        : 0
-      if (newAmount !== 0 || oldAmount !== 0) {
-        amounts.set(key, { oldAmount, newAmount })
-      }
-    } else {
-      if (newAmount !== 0) {
-        amounts.set(key, { oldAmount: 0, newAmount })
-      }
+    if (entry) {
+      amounts.set(recordKey(record), entry)
     }
   }
 
   return amounts
+}
+
+/**
+ * @param {ValidatedWasteRecord['record']} record
+ * @param {string} outcome
+ * @param {string} summaryLogId
+ * @param {Map<string, WasteRecord>} existingRecordsMap
+ * @param {(wasteRecordType: string) => import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} findSchema
+ * @returns {TransactionAmounts | null}
+ */
+const computeRecordAmounts = (
+  record,
+  outcome,
+  summaryLogId,
+  existingRecordsMap,
+  findSchema
+) => {
+  const schema = findSchema(record.type)
+  const isIncluded = outcome === ROW_OUTCOME.INCLUDED
+  const newAmount = isIncluded ? getTransactionAmount(schema, record.data) : 0
+
+  const lastVersion = /** @type {WasteRecordVersion} */ (record.versions.at(-1))
+  const isAdjusted =
+    lastVersion.summaryLog?.id === summaryLogId &&
+    lastVersion.status === VERSION_STATUS.UPDATED
+
+  if (!isAdjusted) {
+    return newAmount !== 0 ? { oldAmount: 0, newAmount } : null
+  }
+
+  const existing = existingRecordsMap.get(recordKey(record))
+  const oldAmount = existing ? getTransactionAmount(schema, existing.data) : 0
+
+  return newAmount !== 0 || oldAmount !== 0 ? { oldAmount, newAmount } : null
 }
 
 /**
