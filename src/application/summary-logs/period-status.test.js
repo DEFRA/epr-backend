@@ -232,9 +232,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'monthly', period: 1 })
         ],
         tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map([['received:1000', 5]])
       })
 
+      expect(result.closed.added.tonnageDelta).toBe(5)
     })
 
     it('skips a record when all date fields are missing', () => {
@@ -361,9 +362,11 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'quarterly', period: 1 })
         ],
         tableSchemas,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map([['received:1000', 8]])
       })
 
+      expect(result.closed.added.tonnageDelta).toBe(8)
+      expect(result.open.added.tonnageDelta).toBe(0)
     })
   })
 
