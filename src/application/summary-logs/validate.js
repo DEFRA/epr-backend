@@ -676,6 +676,7 @@ const classifyPeriodStatus = ({
 }) => {
   if (
     status !== SUMMARY_LOG_STATUS.VALIDATED ||
+    !wasteRecords ||
     !registration ||
     !processingType ||
     !existingRecordsMap
@@ -684,7 +685,7 @@ const classifyPeriodStatus = ({
   }
 
   return computeLoadsByPeriodStatus({
-    wasteRecords: wasteRecords ?? [],
+    wasteRecords,
     wasteBalanceRecords,
     summaryLogId,
     registration,
