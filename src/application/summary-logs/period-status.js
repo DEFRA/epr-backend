@@ -317,9 +317,7 @@ export const buildTransactionAmounts = ({
   for (const { record, outcome } of wasteBalanceRecords) {
     const schema = findSchema(record.type)
     const isIncluded = outcome === ROW_OUTCOME.INCLUDED
-    const newAmount = isIncluded
-      ? getTransactionAmount(schema, record.data)
-      : 0
+    const newAmount = isIncluded ? getTransactionAmount(schema, record.data) : 0
 
     const key = recordKey(record)
     const lastVersion = /** @type {WasteRecordVersion} */ (
