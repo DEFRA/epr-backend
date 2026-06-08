@@ -105,6 +105,28 @@ const buildSummaryLogPayload = ({
  *   logger: TypedLogger
  * }} params
  */
+/** @param {TypedLogger} logger */
+export const logValidationStarted = (logger, loggingContext) => {
+  logger.info({
+    message: `Summary log validation started: ${loggingContext}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+    }
+  })
+}
+
+/** @param {TypedLogger} logger */
+export const logValidationCompleted = (logger, loggingContext, status) => {
+  logger.info({
+    message: `Summary log updated: ${loggingContext}, status=${status}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+}
+
 export const logValidationIssues = ({
   summaryLogId,
   summaryLog,

@@ -455,10 +455,10 @@ const computeRecordAmounts = (
   if (isAdjusted) {
     const existing = existingRecordsMap.get(recordKey(record))
     const oldAmount = existing ? getTransactionAmount(schema, existing.data) : 0
-    return newAmount !== 0 || oldAmount !== 0 ? { oldAmount, newAmount } : null
+    return newAmount === 0 && oldAmount === 0 ? null : { oldAmount, newAmount }
   }
 
-  return newAmount !== 0 ? { oldAmount: 0, newAmount } : null
+  return newAmount === 0 ? null : { oldAmount: 0, newAmount }
 }
 
 /**

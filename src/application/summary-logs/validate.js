@@ -6,7 +6,6 @@ import {
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/index.js'
-import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
@@ -23,10 +22,11 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { classifyLoads } from './load-counts.js'
-import { computeLoadsByPeriodStatus } from './period-status.js'
+import { classifyAndComputePeriodStatus } from './load-counts.js'
 import {
+  logValidationCompleted,
   logValidationIssues,
+  logValidationStarted,
   MAX_VALIDATION_ISSUES
 } from './validate-issue-logging.js'
 import { validateDataBusiness } from './validations/data-business.js'
@@ -564,113 +564,6 @@ const persistValidationResult = async ({
     ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
     ...(meta && { meta })
   })
-}
-
-/**
- * Filters waste records to only those from tables that participate in waste balance.
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {string} [processingType]
- * @returns {ValidatedWasteRecord[]}
- */
-const filterWasteBalanceRecords = (wasteRecords, processingType) => {
-  if (!processingType) {
-    return []
-  }
-  return (
-    wasteRecords?.filter((wr) => {
-      const schema = findSchemaForProcessingType(processingType, wr.record.type)
-      return !isNil(schema?.classifyForWasteBalance)
-    }) ?? []
-  )
-}
-
-/** @param {TypedLogger} logger */
-const logValidationStarted = (logger, loggingContext) => {
-  logger.info({
-    message: `Summary log validation started: ${loggingContext}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.START_SUCCESS
-    }
-  })
-}
-
-/** @param {TypedLogger} logger */
-const logValidationCompleted = (logger, loggingContext, status) => {
-  logger.info({
-    message: `Summary log updated: ${loggingContext}, status=${status}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
-}
-
-/**
- * Classifies loads and computes period status for a validated summary log.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {string} params.summaryLogId
- * @param {string} params.status
- * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} [params.processingType]
- * @param {import('#domain/organisations/registration.js').Registration} [params.registration]
- * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} [params.existingRecordsMap]
- * @param {ReportsRepository} params.reportsRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- */
-const classifyAndComputePeriodStatus = async ({
-  wasteRecords,
-  summaryLogId,
-  status,
-  processingType,
-  registration,
-  existingRecordsMap,
-  reportsRepository,
-  organisationId,
-  registrationId,
-  loggingContext,
-  logger
-}) => {
-  const wasteBalanceRecords = filterWasteBalanceRecords(
-    wasteRecords,
-    processingType
-  )
-
-  const { loads, loadsByWasteRecordType } = classifyLoads({
-    processingType,
-    status,
-    summaryLogId,
-    wasteBalanceRecords,
-    wasteRecords
-  })
-
-  const loadsByPeriodStatus = await computeLoadsByPeriodStatus({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    registration,
-    processingType,
-    existingRecordsMap,
-    reportsRepository,
-    status,
-    organisationId,
-    registrationId,
-    loggingContext,
-    logger,
-    processingTypeTables: PROCESSING_TYPE_TABLES
-  })
-
-  return {
-    loads,
-    loadsByWasteRecordType,
-    loadsByPeriodStatus,
-    wasteBalanceRecords
-  }
 }
 
 /**
