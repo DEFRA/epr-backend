@@ -142,24 +142,12 @@ describe('Summary logs upload lifecycle', () => {
           loads: createEmptyLoads(),
           loadsByPeriodStatus: {
             open: {
-              added: {
-                included: { count: 0, tonnesDelta: 0 },
-                excluded: { count: 0 }
-              },
-              adjusted: {
-                included: { count: 0, tonnesDelta: 0 },
-                excluded: { count: 0 }
-              }
+              added: { tonnageDelta: 0 },
+              adjusted: { tonnageDelta: 0 }
             },
             closed: {
-              added: {
-                included: { count: 0, tonnesDelta: 0 },
-                excluded: { count: 0 }
-              },
-              adjusted: {
-                included: { count: 0, tonnesDelta: 0 },
-                excluded: { count: 0 }
-              }
+              added: { tonnageDelta: 0 },
+              adjusted: { tonnageDelta: 0 }
             }
           },
           loadsByWasteRecordType: [

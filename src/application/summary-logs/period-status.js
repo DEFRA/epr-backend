@@ -17,31 +17,29 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 /** @import {ReportsRepository} from '#reports/repository/port.js' */
 
 /**
- * @typedef {Object} PeriodStatusBucket
- * @property {{ count: number, tonnesDelta: number }} included
- * @property {{ count: number }} excluded
+ * @typedef {Object} PeriodStatusByChange
+ * @property {number} tonnageDelta
  */
 
 /**
- * @typedef {Object} PeriodStatusByChange
- * @property {PeriodStatusBucket} added
- * @property {PeriodStatusBucket} adjusted
+ * @typedef {Object} PeriodStatus
+ * @property {PeriodStatusByChange} added
+ * @property {PeriodStatusByChange} adjusted
  */
 
 /**
  * @typedef {Object} LoadsByPeriodStatus
- * @property {PeriodStatusByChange} open
- * @property {PeriodStatusByChange} closed
+ * @property {PeriodStatus} open
+ * @property {PeriodStatus} closed
  */
 
-const emptyBucket = () => ({
-  included: { count: 0, tonnesDelta: 0 },
-  excluded: { count: 0 }
+const emptyChangeStatus = () => ({
+  tonnageDelta: 0
 })
 
 const emptyStatus = () => ({
-  added: emptyBucket(),
-  adjusted: emptyBucket()
+  added: emptyChangeStatus(),
+  adjusted: emptyChangeStatus()
 })
 
 /** @returns {LoadsByPeriodStatus} */
@@ -191,7 +189,6 @@ const classifyPeriodStatus = (
  * @param {ValidatedWasteRecord} params.wasteRecord
  * @param {string} params.summaryLogId
  * @param {Set<string>} params.closedPeriods
- * @param {Set<string>} params.wasteBalanceRowKeys
  * @param {string} params.cadence
  * @param {Object<string, { reportingDateFields: string[] }>} params.tableSchemas
  * @param {Map<string, number>} params.transactionAmounts
@@ -201,7 +198,6 @@ const classifyRecord = ({
   wasteRecord,
   summaryLogId,
   closedPeriods,
-  wasteBalanceRowKeys,
   cadence,
   tableSchemas,
   transactionAmounts,
@@ -233,18 +229,8 @@ const classifyRecord = ({
     return
   }
 
-  const key = recordKey(record)
-  const isIncluded =
-    outcome === ROW_OUTCOME.INCLUDED && wasteBalanceRowKeys.has(key)
-
-  const bucket = result[periodStatus][status]
-
-  if (isIncluded) {
-    bucket.included.count += 1
-    bucket.included.tonnesDelta += transactionAmounts.get(key) ?? 0
-  } else {
-    bucket.excluded.count += 1
-  }
+  result[periodStatus][status].tonnageDelta +=
+    transactionAmounts.get(recordKey(record)) ?? 0
 }
 
 /**
@@ -256,7 +242,6 @@ const classifyRecord = ({
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
  * @param {string} params.summaryLogId
  * @param {Registration} params.registration
  * @param {PeriodicReport[]} params.submittedReports
@@ -266,7 +251,6 @@ const classifyRecord = ({
  */
 export const classifyByPeriodStatus = ({
   wasteRecords,
-  wasteBalanceRecords,
   summaryLogId,
   registration,
   submittedReports,
@@ -281,16 +265,11 @@ export const classifyByPeriodStatus = ({
 
   const closedPeriods = buildClosedPeriods(submittedReports, cadence)
 
-  const wasteBalanceRowKeys = new Set(
-    wasteBalanceRecords.map((wr) => recordKey(wr.record))
-  )
-
   for (const wasteRecord of wasteRecords) {
     classifyRecord({
       wasteRecord,
       summaryLogId,
       closedPeriods,
-      wasteBalanceRowKeys,
       cadence,
       tableSchemas,
       transactionAmounts,
@@ -334,16 +313,13 @@ export const buildTransactionAmounts = ({
   findSchema
 }) => {
   const amounts = new Map()
-  const included = wasteBalanceRecords.filter(
-    ({ outcome }) => outcome === ROW_OUTCOME.INCLUDED
-  )
 
-  for (const { record } of included) {
+  for (const { record, outcome } of wasteBalanceRecords) {
     const schema = findSchema(record.type)
-    const newAmount = getTransactionAmount(schema, record.data)
-    if (newAmount === 0) {
-      continue
-    }
+    const isIncluded = outcome === ROW_OUTCOME.INCLUDED
+    const newAmount = isIncluded
+      ? getTransactionAmount(schema, record.data)
+      : 0
 
     const key = recordKey(record)
     const lastVersion = /** @type {WasteRecordVersion} */ (
@@ -358,8 +334,11 @@ export const buildTransactionAmounts = ({
       const oldAmount = existing
         ? getTransactionAmount(schema, existing.data)
         : 0
-      amounts.set(key, newAmount - oldAmount)
-    } else {
+      const delta = newAmount - oldAmount
+      if (delta !== 0) {
+        amounts.set(key, delta)
+      }
+    } else if (newAmount !== 0) {
       amounts.set(key, newAmount)
     }
   }
@@ -422,7 +401,6 @@ export const computeLoadsByPeriodStatus = async ({
 
     return classifyByPeriodStatus({
       wasteRecords,
-      wasteBalanceRecords,
       summaryLogId,
       registration,
       submittedReports,

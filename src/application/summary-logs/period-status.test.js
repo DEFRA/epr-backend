@@ -82,14 +82,13 @@ const buildWasteRecord = ({
     })
   )
 
-const emptyBucket = () => ({
-  included: { count: 0, tonnesDelta: 0 },
-  excluded: { count: 0 }
+const emptyChangeStatus = () => ({
+  tonnageDelta: 0
 })
 
 const emptyStatus = () => ({
-  added: emptyBucket(),
-  adjusted: emptyBucket()
+  added: emptyChangeStatus(),
+  adjusted: emptyChangeStatus()
 })
 
 const emptyResult = () => ({
@@ -149,7 +148,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [
@@ -159,11 +157,8 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 10]])
       })
 
-      expect(result.closed.added.included).toEqual({
-        count: 1,
-        tonnesDelta: 10
-      })
-      expect(result.open.added.included).toEqual({ count: 0, tonnesDelta: 0 })
+      expect(result.closed.added.tonnageDelta).toBe(10)
+      expect(result.open.added.tonnageDelta).toBe(0)
     })
 
     it('classifies a row as open when all dates are in open periods', () => {
@@ -179,7 +174,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [
@@ -189,14 +183,8 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 10]])
       })
 
-      expect(result.open.added.included).toEqual({
-        count: 1,
-        tonnesDelta: 10
-      })
-      expect(result.closed.added.included).toEqual({
-        count: 0,
-        tonnesDelta: 0
-      })
+      expect(result.open.added.tonnageDelta).toBe(10)
+      expect(result.closed.added.tonnageDelta).toBe(0)
     })
 
     it('classifies a row as closed when both dates are in closed periods', () => {
@@ -212,7 +200,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [
@@ -222,10 +209,7 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 10]])
       })
 
-      expect(result.closed.added.included).toEqual({
-        count: 1,
-        tonnesDelta: 10
-      })
+      expect(result.closed.added.tonnageDelta).toBe(10)
     })
 
     it('skips missing date values but still classifies on present ones', () => {
@@ -242,7 +226,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [
@@ -252,7 +235,6 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.closed.added.excluded).toEqual({ count: 1 })
     })
 
     it('skips a record when all date fields are missing', () => {
@@ -268,7 +250,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -286,7 +267,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -294,10 +274,7 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 10]])
       })
 
-      expect(result.open.added.included).toEqual({
-        count: 1,
-        tonnesDelta: 10
-      })
+      expect(result.open.added.tonnageDelta).toBe(10)
     })
 
     it('classifies a load in a closed period as closed/added/included', () => {
@@ -305,7 +282,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [
@@ -315,11 +291,8 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 10]])
       })
 
-      expect(result.closed.added.included).toEqual({
-        count: 1,
-        tonnesDelta: 10
-      })
-      expect(result.open.added.included).toEqual({ count: 0, tonnesDelta: 0 })
+      expect(result.closed.added.tonnageDelta).toBe(10)
+      expect(result.open.added.tonnageDelta).toBe(0)
     })
 
     it('treats a period as closed when current report is submitted', () => {
@@ -353,7 +326,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports,
@@ -361,10 +333,7 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 10]])
       })
 
-      expect(result.closed.added.included).toEqual({
-        count: 1,
-        tonnesDelta: 10
-      })
+      expect(result.closed.added.tonnageDelta).toBe(10)
     })
   })
 
@@ -386,7 +355,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: registeredOnlyRegistration,
         submittedReports: [
@@ -396,7 +364,6 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.closed.added.excluded).toEqual({ count: 1 })
     })
   })
 
@@ -406,7 +373,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -414,20 +380,16 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map([['received:1000', 5]])
       })
 
-      expect(result.open.adjusted.included).toEqual({
-        count: 1,
-        tonnesDelta: 5
-      })
+      expect(result.open.adjusted.tonnageDelta).toBe(5)
     })
   })
 
-  describe('inclusion classification', () => {
-    it('classifies excluded records without tonnesDelta', () => {
+  describe('tonnageDelta', () => {
+    it('zero tonnageDelta for excluded records with no prior contribution', () => {
       const wasteRecords = [buildWasteRecord({ outcome: ROW_OUTCOME.EXCLUDED })]
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -435,8 +397,30 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.open.added.excluded).toEqual({ count: 1 })
-      expect(result.open.added.included).toEqual({ count: 0, tonnesDelta: 0 })
+      expect(result.open.added.tonnageDelta).toBe(0)
+    })
+
+    it('negative tonnageDelta when an adjusted record becomes excluded', () => {
+      // Record was previously included at 10 tonnes, now excluded.
+      // The reversal (-10) must appear in adjusted.tonnageDelta
+      // so the frontend can show "these adjusted loads will remove 10 tonnes".
+      const wasteRecords = [
+        buildWasteRecord({
+          change: 'UPDATED',
+          outcome: ROW_OUTCOME.EXCLUDED
+        })
+      ]
+
+      const result = classifyByPeriodStatus({
+        wasteRecords,
+        summaryLogId: SUMMARY_LOG_ID,
+        registration: accreditedRegistration,
+        submittedReports: [],
+        tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+        transactionAmounts: new Map([['received:1000', -10]])
+      })
+
+      expect(result.open.adjusted.tonnageDelta).toBe(-10)
     })
   })
 
@@ -454,7 +438,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -470,7 +453,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -486,7 +468,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -502,7 +483,6 @@ describe('classifyByPeriodStatus', () => {
     it('returns empty result when no waste records', () => {
       const result = classifyByPeriodStatus({
         wasteRecords: [],
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -524,7 +504,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -535,18 +514,14 @@ describe('classifyByPeriodStatus', () => {
         ])
       })
 
-      expect(result.open.added.included).toEqual({
-        count: 2,
-        tonnesDelta: 10
-      })
+      expect(result.open.added.tonnageDelta).toBe(10)
     })
 
-    it('defaults to zero tonnesDelta when transactionAmounts has no entry', () => {
+    it('defaults to zero tonnageDelta when transactionAmounts has no entry', () => {
       const wasteRecords = [buildWasteRecord()]
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: wasteRecords,
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -554,7 +529,7 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.open.added.included).toEqual({ count: 1, tonnesDelta: 0 })
+      expect(result.open.added.tonnageDelta).toBe(0)
     })
 
     it('ignores submitted reports for a different cadence', () => {
@@ -563,7 +538,6 @@ describe('classifyByPeriodStatus', () => {
       // Accredited => monthly, but reports are quarterly
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [
@@ -573,8 +547,8 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.open.added.excluded.count).toBe(1)
-      expect(result.closed.added.excluded.count).toBe(0)
+      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.closed.added.tonnageDelta).toBe(0)
     })
 
     it('treats in_progress reports as open', () => {
@@ -608,7 +582,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports,
@@ -616,8 +589,8 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.open.added.excluded.count).toBe(1)
-      expect(result.closed.added.excluded.count).toBe(0)
+      expect(result.open.added.tonnageDelta).toBe(0)
+      expect(result.closed.added.tonnageDelta).toBe(0)
     })
 
     it('handles Date objects as date values', () => {
@@ -631,7 +604,6 @@ describe('classifyByPeriodStatus', () => {
 
       const result = classifyByPeriodStatus({
         wasteRecords,
-        wasteBalanceRecords: [],
         summaryLogId: SUMMARY_LOG_ID,
         registration: accreditedRegistration,
         submittedReports: [],
@@ -639,7 +611,7 @@ describe('classifyByPeriodStatus', () => {
         transactionAmounts: new Map()
       })
 
-      expect(result.open.added.excluded.count).toBe(1)
+      expect(result.open.added.tonnageDelta).toBe(0)
     })
   })
 })
@@ -681,31 +653,6 @@ describe('buildTransactionAmounts', () => {
   })
 
   it('returns the delta (new - old) for adjusted records', () => {
-    const wasteBalanceRecords = [
-      buildWasteRecord({ rowId: '1000', change: 'UPDATED' })
-    ]
-
-    const existingRecord = /** @type {any} */ ({
-      type: 'received',
-      rowId: '1000',
-      data: { NET_WEIGHT: 8 }
-    })
-
-    const result = buildTransactionAmounts({
-      wasteBalanceRecords,
-      summaryLogId: SUMMARY_LOG_ID,
-      existingRecordsMap: new Map([['received:1000', existingRecord]]),
-      findSchema: () => stubSchema(12)
-    })
-
-    // new amount (12) - old amount (12 from same stub) = 0
-    // To actually test the delta, we need different amounts for old vs new data.
-    // The stub returns the same amount regardless of data, so let's use a
-    // data-sensitive stub instead.
-    expect(result.has('received:1000')).toBe(true)
-  })
-
-  it('returns the delta for adjusted records using data-sensitive classification', () => {
     const wasteBalanceRecords = [
       buildWasteRecord({
         rowId: '1000',
@@ -769,7 +716,7 @@ describe('buildTransactionAmounts', () => {
     expect(result.size).toBe(0)
   })
 
-  it('only processes INCLUDED waste balance records', () => {
+  it('skips added excluded records (no prior contribution to reverse)', () => {
     const wasteBalanceRecords = [
       buildWasteRecord({
         rowId: '1000',
@@ -786,6 +733,48 @@ describe('buildTransactionAmounts', () => {
     })
 
     expect(result.size).toBe(0)
+  })
+
+  it('returns negative delta when an adjusted record becomes excluded', () => {
+    // Record was previously included at 10 tonnes, now excluded.
+    // Delta should be 0 (new, excluded) - 10 (old, included) = -10.
+    const wasteBalanceRecords = [
+      buildWasteRecord({
+        rowId: '1000',
+        change: 'UPDATED',
+        outcome: ROW_OUTCOME.EXCLUDED,
+        data: { NET_WEIGHT: '' }
+      })
+    ]
+
+    const existingRecord = /** @type {any} */ ({
+      type: 'received',
+      rowId: '1000',
+      data: { NET_WEIGHT: '10' }
+    })
+
+    const dataSensitiveSchema = {
+      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => {
+        const weight = Number(data.NET_WEIGHT)
+        if (!weight) {
+          return { outcome: ROW_OUTCOME.EXCLUDED, reasons: [] }
+        }
+        return {
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: weight
+        }
+      }
+    }
+
+    const result = buildTransactionAmounts({
+      wasteBalanceRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      existingRecordsMap: new Map([['received:1000', existingRecord]]),
+      findSchema: () => dataSensitiveSchema
+    })
+
+    expect(result.get('received:1000')).toBe(-10)
   })
 
   it('uses zero as old amount when no existing record found for adjusted record', () => {
@@ -857,8 +846,7 @@ describe('computeLoadsByPeriodStatus', () => {
     })
 
     expect(result).not.toBeNull()
-    expect(result.open.added.included.count).toBe(1)
-    expect(result.open.added.included.tonnesDelta).toBe(10)
+    expect(result.open.added.tonnageDelta).toBe(10)
   })
 
   it('returns null and logs a warning when reports lookup fails', async () => {
