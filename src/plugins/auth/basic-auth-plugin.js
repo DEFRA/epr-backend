@@ -39,7 +39,7 @@ export const basicAuthPlugin = {
           const basicAuthConfigured = options?.username && options?.password
 
           if (!basicAuthConfigured) {
-            server.logger.warn(
+            server.logger.info(
               'Basic Auth strategy registered without credentials - it will reject all requests'
             )
             return {

@@ -39,6 +39,7 @@ import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
+import { REPORTING_DATE_FIELDS } from '#domain/summary-logs/reporting-date-fields.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '../validation-pipeline.js' */
@@ -103,6 +104,9 @@ const SUPPLEMENTARY_FIELDS = [
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
+  reportingDateFields: Object.values(
+    REPORTING_DATE_FIELDS.EXPORTER.RECEIVED_LOADS_FOR_EXPORT
+  ),
   wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
   sheetName: 'Exported',
   rowTransformer: createRowTransformer({

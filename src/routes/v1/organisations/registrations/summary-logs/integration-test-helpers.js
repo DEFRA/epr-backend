@@ -12,17 +12,40 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 
 import { createTestServer } from '#test/create-test-server.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 import { asStandardUser } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
+import assert from 'node:assert/strict'
 
 export { asStandardUser } from '#test/inject-auth.js'
+
+/**
+ * Reads an accreditation's waste balance and asserts it is present, so callers
+ * can read its fields without a null guard at every assertion site.
+ *
+ * @param {{ findBalance: (partition: { registrationId: string, accreditationId: string }) => Promise<import('#waste-balances/domain/model.js').WasteBalance | null> }} wasteBalancesRepository
+ * @param {string} accreditationId
+ * @param {string} registrationId
+ */
+export const getWasteBalance = async (
+  wasteBalancesRepository,
+  accreditationId,
+  registrationId
+) => {
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
+  assert(balance)
+  return balance
+}
 
 export const REPROCESSOR_RECEIVED_HEADERS = [
   'ROW_ID',
@@ -332,9 +355,9 @@ const DEFAULT_MAX_ATTEMPTS = 20
  * @param {string} organisationId - Organisation ID
  * @param {string} registrationId - Registration ID
  * @param {string} summaryLogId - Summary log ID
- * @param {object} options - Polling options
- * @param {string} options.waitWhile - Status to wait while (defaults to VALIDATING)
- * @param {number} options.maxAttempts - Maximum poll attempts (defaults to 20)
+ * @param {object} [options] - Polling options
+ * @param {string} [options.waitWhile] - Status to wait while (defaults to VALIDATING)
+ * @param {number} [options.maxAttempts] - Maximum poll attempts (defaults to 20)
  * @returns {Promise<string>} Final status after polling
  */
 export const pollWhileStatus = async (
@@ -430,14 +453,7 @@ export const createTestInfrastructure = async (
   extractorData,
   { reprocessingType = 'input' } = {}
 ) => {
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn()
-  }
+  const mockLogger = createMockLogger()
 
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
   const uploadsRepository = createInMemoryUploadsRepository()
@@ -488,19 +504,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   material = 'paper',
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
-  featureFlagOverrides = {},
-  existingWasteBalances = []
+  featureFlagOverrides = {}
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn()
-  }
+  const mockLogger = createMockLogger()
   const uploadsRepository = createInMemoryUploadsRepository()
   const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
@@ -512,10 +520,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     material
   })
   testOrg.id = organisationId
-  testOrg.status = 'active'
 
   const organisationsRepository = createInMemoryOrganisationsRepository([
-    testOrg
+    { ...testOrg, status: 'active' }
   ])()
 
   const wasteRecordsRepositoryFactory = createInMemoryWasteRecordsRepository()
@@ -526,17 +533,15 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const streamRepository = createInMemoryStreamRepository()()
 
   const systemLogsForBalanceAudit = {
-    insert: vi.fn().mockResolvedValue(undefined)
+    insert: vi.fn().mockResolvedValue(undefined),
+    find: vi.fn(),
+    findSummaryLogSubmitActors: vi.fn()
   }
 
-  const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    existingWasteBalances,
-    {
-      streamRepository,
-      featureFlags,
-      systemLogsRepository: systemLogsForBalanceAudit
-    }
-  )
+  const wasteBalancesRepositoryFactory = createWasteBalancesRepository({
+    streamRepository,
+    systemLogsRepository: systemLogsForBalanceAudit
+  })
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
   const fileDataMap = {}
@@ -581,13 +586,13 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteBalancesRepository,
     organisationsRepository,
     overseasSitesRepository,
-    featureFlags
+    logger: mockLogger
   })
 
   const packagingRecyclingNotesRepositoryFactory =
     createInMemoryPackagingRecyclingNotesRepository()
   const packagingRecyclingNotesRepository =
-    packagingRecyclingNotesRepositoryFactory()
+    packagingRecyclingNotesRepositoryFactory(mockLogger)
 
   const server = await createTestServer({
     repositories: {

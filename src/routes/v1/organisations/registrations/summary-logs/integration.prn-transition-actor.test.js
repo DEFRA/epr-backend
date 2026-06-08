@@ -10,7 +10,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 
 import {
@@ -46,28 +45,10 @@ const sharedMeta = createWasteBalanceMeta('EXPORTER')
 const setupLedgerEnv = () => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
-  /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
-  const existingWasteBalances = [
-    {
-      id: 'seeded-ledger-balance',
-      accreditationId: LEDGER_ACCREDITATION_ID,
-      registrationId,
-      organisationId,
-      schemaVersion: 1,
-      version: 0,
-      amount: 0,
-      availableAmount: 0,
-      transactions: [],
-      canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-    }
-  ]
   return setupWasteBalanceIntegrationEnvironment({
     processingType: 'exporter',
     organisationId,
-    registrationId,
-    featureFlagOverrides: { wasteBalanceLedger: true },
-    // @ts-expect-error -- existingWasteBalances defaults to never[]; WasteBalance[] is correct at runtime
-    existingWasteBalances
+    registrationId
   })
 }
 

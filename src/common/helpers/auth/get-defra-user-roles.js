@@ -15,13 +15,13 @@ import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
  * Determines the roles for a Defra ID user based on their token and request context
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
  * @param {import('#common/hapi-types.js').HapiRequest} request - The Hapi request object
- * @returns {Promise<string[]>} Array of role strings
+ * @returns {Promise<import('#auth/types.js').UserRoleAndScopes>}
  */
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
 
   if (!email) {
-    return []
+    return { role: null, scopes: [] }
   }
 
   // This throws if the user is unauthorised
@@ -33,14 +33,14 @@ export async function getDefraUserRoles(tokenPayload, request) {
   if (isValidLinkingReq) {
     request.server.app.orgInToken = getDefraTokenSummary(tokenPayload)
 
-    return [ROLES.linker]
+    return { role: null, scopes: [ROLES.linker] } // this highlights how this code has mixed up roles/scopes - needs fixing!
   }
 
   const { organisationsRepository } = request
 
   // The endpoint will show info based on the user's email and contactId
   if (isOrganisationsDiscoveryReq(request)) {
-    return [ROLES.inquirer]
+    return { role: null, scopes: [ROLES.inquirer] } // this highlights how this code has mixed up roles/scopes - needs fixing!
   }
 
   const linkedEprOrg = await getOrgMatchingUsersToken(
@@ -63,5 +63,5 @@ export async function getDefraUserRoles(tokenPayload, request) {
     tokenPayload
   )
 
-  return roles
+  return { role: null, scopes: roles } // this highlights how this code has mixed up roles/scopes - needs fixing!
 }

@@ -91,17 +91,13 @@ describe('mock-repositories', () => {
     createMockWasteBalancesRepository: {
       build: createMockWasteBalancesRepository,
       methods: [
-        'findByAccreditationId',
-        'findByAccreditationIds',
+        'findBalance',
         'updateWasteBalanceTransactions',
         'deductAvailableBalanceForPrnCreation',
         'deductTotalBalanceForPrnIssue',
         'creditAvailableBalanceForPrnCancellation',
         'creditFullBalanceForIssuedPrnCancellation',
         'appendStreamEvent',
-        'flipCanonicalSourceToMigrating',
-        'flipCanonicalSourceToLedger',
-        'resetCanonicalSourceToEmbedded',
         'getPrnCatchupEvents'
       ]
     },

@@ -140,17 +140,13 @@ export const createMockPackagingRecyclingNotesRepository = (
  * @returns {WasteBalancesRepository}
  */
 export const createMockWasteBalancesRepository = (overrides = {}) => ({
-  findByAccreditationId: vi.fn(),
-  findByAccreditationIds: vi.fn(),
+  findBalance: vi.fn(),
   updateWasteBalanceTransactions: vi.fn(),
   deductAvailableBalanceForPrnCreation: vi.fn(),
   deductTotalBalanceForPrnIssue: vi.fn(),
   creditAvailableBalanceForPrnCancellation: vi.fn(),
   creditFullBalanceForIssuedPrnCancellation: vi.fn(),
   appendStreamEvent: vi.fn(),
-  flipCanonicalSourceToMigrating: vi.fn(),
-  flipCanonicalSourceToLedger: vi.fn(),
-  resetCanonicalSourceToEmbedded: vi.fn(),
   getPrnCatchupEvents: vi.fn(),
   ...overrides
 })

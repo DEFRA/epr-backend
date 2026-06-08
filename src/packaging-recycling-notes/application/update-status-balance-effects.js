@@ -14,10 +14,9 @@ import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
  */
 
 /**
- * Payload carried by a balance event — what the embedded path needs to mutate
- * the balance, what the stream path needs to append, and what the logger needs
- * for ops correlation. `currentStatus`/`newStatus` are transition metadata
- * preserved for logging only.
+ * Payload carried by a balance event — what the stream append needs and what
+ * the logger needs for ops correlation. `currentStatus`/`newStatus` are
+ * transition metadata preserved for logging only.
  *
  * @typedef {Object} BalanceEventParams
  * @property {PrnStatus} currentStatus
@@ -54,8 +53,10 @@ export async function deductWasteBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     if ((balance.availableAmount ?? 0) < tonnage) {
@@ -95,8 +96,10 @@ export async function deductTotalBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     if ((balance.amount ?? 0) < tonnage) {
@@ -137,8 +140,10 @@ export async function creditWasteBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     return wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
@@ -175,8 +180,10 @@ export async function creditFullBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     return wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({
@@ -228,11 +235,6 @@ export function logWasteBalanceUpdate(
  * have no balance effect. Keys must be transitions the state machine
  * (`PRN_STATUS_TRANSITIONS`) actually permits.
  *
- * Scaffolding for the embedded→ledger migration: it re-enumerates transitions
- * the state machine already owns. The durable model derives the event a
- * transition writes from the state machine itself (the command decider), so
- * this table retires once the migration completes.
- *
  * @type {Record<string, StreamEventKind>}
  */
 const TRANSITION_TO_EVENT_KIND = Object.freeze({
@@ -268,8 +270,7 @@ export function balanceEventsFor(currentStatus, newStatus, params) {
 
 /**
  * Append a status-only stream event (PRN_ACCEPTED, PRN_REJECTED). No balance
- * change; the ledger-only repository method appends to the stream and throws
- * loudly if called on an embedded balance.
+ * change; the repository method throws loudly if no balance exists.
  *
  * @param {import('#waste-balances/repository/stream-schema.js').StreamEventKind} streamKind
  */
@@ -282,10 +283,9 @@ const appendStatusOnlyStreamEvent =
 
 /**
  * Per-kind dispatch: each kind pairs an effect handler with its log-operation
- * label. Balance-affecting kinds mutate the balance (embedded) or append to
- * the stream (ledger); status-only kinds (PRN_ACCEPTED, PRN_REJECTED) only
- * append on the ledger — they should never be dispatched on the embedded path,
- * and `appendStreamEvent` throws if they are.
+ * label. Balance-affecting kinds append a balance movement to the stream;
+ * status-only kinds (PRN_ACCEPTED, PRN_REJECTED) append a status event with no
+ * balance change.
  */
 const EFFECT_HANDLERS = Object.freeze({
   [STREAM_EVENT_KIND.PRN_CREATED]: {
@@ -315,15 +315,14 @@ const EFFECT_HANDLERS = Object.freeze({
 })
 
 /**
- * Applies the balance events for a status transition. Returns the appended
- * stream events on the ledger path. On the embedded path the array entries
- * are `null` (no stream event was appended); the array still has one entry
- * per input event so callers can map positionally.
+ * Applies the balance events for a status transition, appending one stream
+ * event per input event and returning them in order. Each handler appends to
+ * the stream or throws.
  *
  * @param {WasteBalancesRepository} wasteBalancesRepository
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {BalanceEvent[]} events
- * @returns {Promise<Array<import('#waste-balances/repository/stream-port.js').StreamEvent|null>>}
+ * @returns {Promise<Array<import('#waste-balances/repository/stream-port.js').StreamEvent>>}
  */
 export async function applyWasteBalanceEffects(
   wasteBalancesRepository,
