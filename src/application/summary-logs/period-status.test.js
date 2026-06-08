@@ -84,7 +84,7 @@ const buildWasteRecord = ({
 
 const emptyChange = () => ({
   included: { count: 0, tonnageDelta: 0 },
-  excluded: { count: 0 }
+  excluded: { count: 0, tonnageDelta: 0 }
 })
 
 const emptyPeriod = () => ({
@@ -294,7 +294,7 @@ describe('classifyByPeriodStatus', () => {
 
       expect(result.open?.added).toEqual({
         included: { count: 1, tonnageDelta: 10 },
-        excluded: { count: 0 }
+        excluded: { count: 0, tonnageDelta: 0 }
       })
     })
 
@@ -435,7 +435,7 @@ describe('classifyByPeriodStatus', () => {
 
       expect(result.open?.added).toEqual({
         included: { count: 0, tonnageDelta: 0 },
-        excluded: { count: 1 }
+        excluded: { count: 1, tonnageDelta: 0 }
       })
     })
 
@@ -468,8 +468,11 @@ describe('classifyByPeriodStatus', () => {
         existingRecordsMap: new Map([['received:1000', oldRecord]])
       })
 
-      expect(result.open?.adjusted?.included.tonnageDelta).toBe(-10)
-      expect(result.open?.adjusted?.excluded.count).toBe(1)
+      expect(result.open?.adjusted?.excluded).toEqual({
+        count: 1,
+        tonnageDelta: -10
+      })
+      expect(result.open?.adjusted?.included.tonnageDelta).toBe(0)
     })
   })
 
@@ -1222,7 +1225,7 @@ describe('computeLoadsByPeriodStatus', () => {
       open: {
         added: {
           included: { count: 1, tonnageDelta: 0 },
-          excluded: { count: 0 }
+          excluded: { count: 0, tonnageDelta: 0 }
         },
         adjusted: emptyChange()
       },

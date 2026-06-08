@@ -28,20 +28,15 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
  */
 
 /**
- * @typedef {Object} IncludedLoads
+ * @typedef {Object} LoadSummary
  * @property {number} count
  * @property {number} tonnageDelta
  */
 
 /**
- * @typedef {Object} ExcludedLoads
- * @property {number} count
- */
-
-/**
  * @typedef {Object} PeriodStatusByChange
- * @property {IncludedLoads} included
- * @property {ExcludedLoads} excluded
+ * @property {LoadSummary} included
+ * @property {LoadSummary} excluded
  */
 
 /**
@@ -58,7 +53,7 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 
 const emptyChangeStatus = () => ({
   included: { count: 0, tonnageDelta: 0 },
-  excluded: { count: 0 }
+  excluded: { count: 0, tonnageDelta: 0 }
 })
 
 const emptyStatus = () => ({
@@ -312,19 +307,16 @@ const classifyAdjustedRecord = ({
   const oldPeriod = existing ? classify(existing.data) : null
 
   const countedPeriod = newPeriod ?? oldPeriod
+  const target = isIncluded ? 'included' : 'excluded'
 
   if (oldPeriod) {
-    result[oldPeriod].adjusted.included.tonnageDelta -= amounts?.oldAmount ?? 0
+    result[oldPeriod].adjusted[target].tonnageDelta -= amounts?.oldAmount ?? 0
   }
   if (newPeriod) {
-    result[newPeriod].adjusted.included.tonnageDelta += amounts?.newAmount ?? 0
+    result[newPeriod].adjusted[target].tonnageDelta += amounts?.newAmount ?? 0
   }
   if (countedPeriod) {
-    if (isIncluded) {
-      result[countedPeriod].adjusted.included.count++
-    } else {
-      result[countedPeriod].adjusted.excluded.count++
-    }
+    result[countedPeriod].adjusted[target].count++
   }
 }
 
