@@ -1,7 +1,10 @@
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 import Boom from '@hapi/boom'
-import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
@@ -258,8 +261,8 @@ const performFindAllLinkableForUser = (staleCache) => async (email) => {
       return false
     }
 
-    // Must be approved
-    if (getCurrentStatus(org) !== REG_ACC_STATUS.APPROVED) {
+    // Must be approved, or active but unlinked (re-linkable after unlinking)
+    if (!LINKABLE_ORGANISATION_STATUSES.includes(getCurrentStatus(org))) {
       return false
     }
 

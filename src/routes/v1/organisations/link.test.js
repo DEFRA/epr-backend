@@ -195,6 +195,55 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         }
       )
 
+      it('links an organisation that is active but unlinked (re-link after unlink)', async () => {
+        const org = await buildApprovedOrg(organisationsRepository)
+
+        // Reproduce an organisation that was linked (approved -> active) and
+        // then unlinked, leaving it active but with no linked Defra org.
+        const approvedOrg = await waitForVersion(
+          organisationsRepository,
+          org.id,
+          2
+        )
+        await organisationsRepository.replace(
+          org.id,
+          2,
+          prepareOrgUpdate(approvedOrg, {
+            status: ORGANISATION_STATUS.ACTIVE,
+            linkedDefraOrganisation: {
+              orgId: COMPANY_1_ID,
+              orgName: COMPANY_1_NAME,
+              linkedBy: {
+                email: USER_PRESENT_IN_ORG1_EMAIL,
+                id: VALID_TOKEN_CONTACT_ID
+              },
+              linkedAt: new Date().toISOString()
+            }
+          })
+        )
+        const activeOrg = await waitForVersion(
+          organisationsRepository,
+          org.id,
+          3
+        )
+        await organisationsRepository.replace(
+          org.id,
+          3,
+          prepareOrgUpdate(activeOrg, { linkedDefraOrganisation: undefined })
+        )
+        await waitForVersion(organisationsRepository, org.id, 4)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${org.id}/link`,
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+      })
+
       describe('when the request succeeds', async () => {
         const performPostLinkOrganisation = async () => {
           const org = await buildApprovedOrg(organisationsRepository)

@@ -24,6 +24,17 @@ export const ORGANISATION_STATUS = Object.freeze({
   REJECTED: 'rejected'
 })
 
+/**
+ * Organisation statuses from which an organisation can be linked to a Defra ID
+ * organisation: freshly `approved`, or `active` but unlinked (e.g. after being
+ * unlinked via the admin journey, allowing the user to re-link).
+ * @type {readonly string[]}
+ */
+export const LINKABLE_ORGANISATION_STATUSES = Object.freeze([
+  ORGANISATION_STATUS.APPROVED,
+  ORGANISATION_STATUS.ACTIVE
+])
+
 export const REGULATOR = Object.freeze({
   EA: 'ea',
   NRW: 'nrw',
