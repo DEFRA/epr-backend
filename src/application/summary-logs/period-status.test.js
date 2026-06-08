@@ -213,7 +213,7 @@ describe('classifyByPeriodStatus', () => {
     })
 
     it('skips missing date values but still classifies on present ones', () => {
-      // One date field is null, the other is in a closed period => closed
+      // DATE_OF_EXPORT is null, DATE_RECEIVED_FOR_EXPORT is in a closed period => closed
       const wasteRecords = [
         buildWasteRecord({
           data: {
