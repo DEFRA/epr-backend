@@ -9,6 +9,7 @@
     "#adapters/*": "./src/adapters/*",
     "#application/*": "./src/application/*",
     "#auditing/*": "./src/auditing/*",
+    "#auth/*": "./src/common/helpers/auth/*",
     "#common/*": "./src/common/*",
     "#data/*": "./src/data/*",
     "#domain/*": "./src/domain/*",
