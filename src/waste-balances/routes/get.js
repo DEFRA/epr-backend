@@ -4,6 +4,7 @@ import Joi from 'joi'
 import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @typedef {import('#waste-balances/repository/port.js').WasteBalancesRepository} WasteBalancesRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const wasteBalanceGetPath =
   '/v1/organisations/{organisationId}/waste-balances'
@@ -41,40 +42,58 @@ export const wasteBalanceGet = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {wasteBalancesRepository: WasteBalancesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {wasteBalancesRepository: WasteBalancesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
-  handler: async ({ wasteBalancesRepository, query, params }, h) => {
+  handler: async (
+    { wasteBalancesRepository, organisationsRepository, query, params },
+    h
+  ) => {
     const { organisationId } = params
-    const accreditationIds = /** @type {string} */ (
-      query.accreditationIds
-    ).split(',')
-
-    const wasteBalances =
-      await wasteBalancesRepository.findByAccreditationIds(accreditationIds)
-
-    // Verify all returned balances belong to the specified organisation
-    const unauthorizedBalance = wasteBalances.find(
-      (balance) => balance.organisationId !== organisationId
+    const accreditationIds = new Set(
+      /** @type {string} */ (query.accreditationIds).split(',')
     )
-    if (unauthorizedBalance) {
-      return h
-        .response({
-          statusCode: StatusCodes.FORBIDDEN,
-          error: 'Forbidden',
-          message: `Accreditation ${unauthorizedBalance.accreditationId} does not belong to organisation ${organisationId}`
-        })
-        .code(StatusCodes.FORBIDDEN)
-    }
 
-    const balanceMap = wasteBalances.reduce((acc, balance) => {
-      acc[balance.accreditationId] = {
-        amount: balance.amount,
-        availableAmount: balance.availableAmount
+    const organisation = await organisationsRepository.findById(organisationId)
+
+    const registrationIdByAccreditationId = new Map(
+      organisation.registrations
+        .filter((registration) => registration.accreditationId)
+        .map((registration) => [registration.accreditationId, registration.id])
+    )
+
+    const balances = await Promise.all(
+      [...accreditationIds].map(async (accreditationId) => {
+        const registrationId =
+          registrationIdByAccreditationId.get(accreditationId)
+        if (!registrationId) {
+          return null
+        }
+
+        const balance = await wasteBalancesRepository.findBalance({
+          registrationId,
+          accreditationId
+        })
+
+        return {
+          accreditationId,
+          amount: balance?.amount ?? 0,
+          availableAmount: balance?.availableAmount ?? 0
+        }
+      })
+    )
+
+    /** @type {Record<string, { amount: number, availableAmount: number }>} */
+    const balanceMap = {}
+    for (const balance of balances) {
+      if (balance) {
+        balanceMap[balance.accreditationId] = {
+          amount: balance.amount,
+          availableAmount: balance.availableAmount
+        }
       }
-      return acc
-    }, {})
+    }
 
     return h.response(balanceMap).code(StatusCodes.OK)
   }

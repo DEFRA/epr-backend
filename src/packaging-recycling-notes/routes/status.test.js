@@ -113,10 +113,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeAll(async () => {
       wasteBalancesRepository = {
-        findByAccreditationId: vi
-          .fn()
-          .mockResolvedValue(createMockWasteBalance()),
-        findByAccreditationIds: vi.fn(),
+        findBalance: vi.fn().mockResolvedValue(createMockWasteBalance()),
         getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
         appendStreamEvent: vi.fn(),
         deductAvailableBalanceForPrnCreation: vi
@@ -898,10 +895,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     beforeAll(async () => {
       wasteBalancesRepository = {
-        findByAccreditationId: vi
-          .fn()
-          .mockResolvedValue(createMockWasteBalance()),
-        findByAccreditationIds: vi.fn(),
+        findBalance: vi.fn().mockResolvedValue(createMockWasteBalance()),
         getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
         appendStreamEvent: vi.fn(),
         deductAvailableBalanceForPrnCreation: vi
@@ -958,9 +952,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     it('deducts tonnage from available balance when transitioning to awaiting_authorisation', async () => {
       const balance = createMockWasteBalance()
-      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
-        balance
-      )
+      wasteBalancesRepository.findBalance.mockResolvedValueOnce(balance)
       wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockResolvedValueOnce(
         buildAppendedEvent(STREAM_EVENT_KIND.PRN_CREATED)
       )
@@ -1030,7 +1022,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     it('returns 400 when no waste balance exists', async () => {
-      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(null)
+      wasteBalancesRepository.findBalance.mockResolvedValueOnce(null)
       packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
         createMockPrn()
       )
@@ -1050,9 +1042,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
     it('returns 500 when waste balance deduction fails', async () => {
       const balance = createMockWasteBalance()
-      wasteBalancesRepository.findByAccreditationId.mockResolvedValueOnce(
-        balance
-      )
+      wasteBalancesRepository.findBalance.mockResolvedValueOnce(balance)
       wasteBalancesRepository.deductAvailableBalanceForPrnCreation.mockRejectedValueOnce(
         new Error('Database write failed')
       )

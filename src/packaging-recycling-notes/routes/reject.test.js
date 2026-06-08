@@ -75,7 +75,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
       }
 
       wasteBalancesRepository = {
-        findByAccreditationId: vi.fn().mockResolvedValue(null),
+        findBalance: vi.fn().mockResolvedValue(null),
         getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
         appendStreamEvent: vi.fn()
       }

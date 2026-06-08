@@ -19,13 +19,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
-import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
-import {
-  createWasteBalancesRepository,
-  saveBalance
-} from '#waste-balances/repository/mongodb.js'
 import {
   buildVersionData,
   toWasteRecordVersions
@@ -85,7 +79,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, wasteBalancesSave: Function, [k: string]: object | Function }} repositories
+ * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -113,13 +107,6 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         database,
         []
       )
-      const streamFactory = await createMongoStreamRepository(database)
-      const wasteBalancesFactory = await createWasteBalancesRepository(
-        database,
-        {
-          streamRepository: streamFactory()
-        }
-      )
       const reportsFactory = await createReportsRepository(database)
       const wasteRecordsFactory = await createWasteRecordsRepository(database)
       const summaryLogsFactory = await createSummaryLogsRepository(
@@ -133,13 +120,11 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       await use({
         organisations: organisationsFactory(),
         prns: prnsFactory(mockLogger),
-        wasteBalances: wasteBalancesFactory(),
         reports: reportsFactory(),
         wasteRecords: wasteRecordsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),
         overseasSites: overseasSitesFactory(),
-        systemLogs: systemLogsFactory(mockLogger),
-        wasteBalancesSave: saveBalance(database)
+        systemLogs: systemLogsFactory(mockLogger)
       })
     },
 
@@ -212,12 +197,15 @@ const seedDownstreamForOrganisation = async (
     })
   )
 
-  // waste-balances has no public insert, so use the exported saveBalance
-  // helper the real adapter uses under the hood.
-  await repositories.wasteBalancesSave(
-    buildWasteBalance({ accreditationId, organisationId }),
-    []
-  )
+  // The waste-balances collection is orphaned: nothing in the app writes to it
+  // any more. Seed a residual shell directly so the cascade's teardown of the
+  // collection stays covered.
+  await database.collection('waste-balances').insertOne({
+    _id: new ObjectId(),
+    accreditationId,
+    organisationId,
+    registrationId
+  })
 
   await repositories.reports.createReport(
     buildCreateReportParams({

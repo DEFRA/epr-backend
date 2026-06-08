@@ -100,30 +100,13 @@ describe('Waste balance stream (Exporter)', () => {
     await submitAndPoll(env, summaryLogId)
   }
 
-  const seedStreamBalance = (organisationId, registrationId) => ({
-    id: 'seeded-balance',
-    accreditationId: 'ACC-123',
-    registrationId,
-    organisationId,
-    schemaVersion: 1,
-    version: 0,
-    amount: 0,
-    availableAmount: 0
-  })
-
   const setupStream = () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
-    /** @type {import('#waste-balances/domain/model.js').WasteBalance[]} */
-    const existingWasteBalances = [
-      seedStreamBalance(organisationId, registrationId)
-    ]
     return setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId,
-      registrationId,
-      // @ts-expect-error -- TypeScript infers existingWasteBalances as never[] from the default [], WasteBalance[] is correct at runtime
-      existingWasteBalances
+      registrationId
     })
   }
 
@@ -162,8 +145,10 @@ describe('Waste balance stream (Exporter)', () => {
       availableAmount: 300
     })
 
-    const resolvedBalance =
-      await wasteBalancesRepository.findByAccreditationId('ACC-123')
+    const resolvedBalance = await wasteBalancesRepository.findBalance({
+      registrationId,
+      accreditationId: 'ACC-123'
+    })
     expect(resolvedBalance?.amount).toBe(300)
     expect(resolvedBalance?.availableAmount).toBe(300)
   })

@@ -8,7 +8,7 @@ import {
 import { REGULATOR } from '#domain/organisations/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 
 vi.mock('./metrics.js', () => ({
@@ -104,20 +104,9 @@ const buildLedgerRepositories = (storedPrn, events = []) => {
   const packagingRecyclingNotesRepository =
     createInMemoryPackagingRecyclingNotesRepository([storedPrn])(buildLogger())
   const streamRepository = createInMemoryStreamRepository(events)()
-  const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
-    [
-      {
-        id: 'wb-1',
-        accreditationId: ACC_ID,
-        organisationId: ORG_ID,
-        amount: 1000,
-        availableAmount: 1000,
-        version: 0,
-        schemaVersion: 1
-      }
-    ],
-    { streamRepository }
-  )()
+  const wasteBalancesRepository = createWasteBalancesRepository({
+    streamRepository
+  })()
   return { packagingRecyclingNotesRepository, wasteBalancesRepository }
 }
 
@@ -147,7 +136,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         buildLogger()
       )
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductAvailableBalanceForPrnCreation: vi
         .fn()
         .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_CREATED))
@@ -177,7 +166,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .fn()
       .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED))
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductTotalBalanceForPrnIssue
     }
 
@@ -212,7 +201,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     const prnRepository = { findById: vi.fn(), persistProjection }
     const deductTotalBalanceForPrnIssue = vi.fn()
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductTotalBalanceForPrnIssue
     }
 
@@ -249,7 +238,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
         buildStreamEvent(STREAM_EVENT_KIND.PRN_CANCELLED_AFTER_ISSUE)
       )
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       creditFullBalanceForIssuedPrnCancellation
     }
 
@@ -287,7 +276,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     const prnRepository = { findById: vi.fn(), persistProjection }
     const creditAvailableBalanceForPrnCancellation = vi.fn()
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductAvailableBalanceForPrnCreation: vi
         .fn()
         .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_CREATED)),
@@ -321,7 +310,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .mockImplementation(async ({ projection }) => projection)
     const prnRepository = { findById: vi.fn(), persistProjection }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductTotalBalanceForPrnIssue: vi
         .fn()
         .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED))
@@ -352,7 +341,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
       .mockRejectedValue(new PrnNumberConflictError('ER2600001'))
     const prnRepository = { findById: vi.fn(), persistProjection }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductTotalBalanceForPrnIssue: vi
         .fn()
         .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED))
@@ -379,7 +368,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     const persistProjection = vi.fn().mockResolvedValue(null)
     const prnRepository = { findById: vi.fn(), persistProjection }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductTotalBalanceForPrnIssue: vi
         .fn()
         .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED))
@@ -406,7 +395,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     const persistProjection = vi.fn().mockResolvedValue(null)
     const prnRepository = { findById: vi.fn(), persistProjection }
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       creditFullBalanceForIssuedPrnCancellation: vi
         .fn()
         .mockResolvedValue(
@@ -438,7 +427,7 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
     const prnRepository = { findById: vi.fn(), persistProjection }
     const creditFullBalanceForIssuedPrnCancellation = vi.fn()
     const wasteBalancesRepository = {
-      findByAccreditationId: vi.fn().mockResolvedValue(buildLedgerBalance()),
+      findBalance: vi.fn().mockResolvedValue(buildLedgerBalance()),
       deductTotalBalanceForPrnIssue: vi
         .fn()
         .mockResolvedValue(buildStreamEvent(STREAM_EVENT_KIND.PRN_ISSUED)),

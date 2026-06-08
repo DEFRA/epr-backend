@@ -5,7 +5,7 @@ import {
   balanceEventsFor
 } from './update-status-balance-effects.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
@@ -42,21 +42,9 @@ const setupLedgerRepository = async () => {
     })
   )
 
-  const ledgerBalance = {
-    id: 'bal-1',
-    organisationId: ORGANISATION_ID,
-    registrationId: REGISTRATION_ID,
-    accreditationId: ACCREDITATION_ID,
-    schemaVersion: 1,
-    version: 1,
-    amount: 0,
-    availableAmount: 0
-  }
-
-  const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
-    [ledgerBalance],
-    { streamRepository }
-  )()
+  const wasteBalancesRepository = createWasteBalancesRepository({
+    streamRepository
+  })()
 
   return { wasteBalancesRepository, streamRepository }
 }

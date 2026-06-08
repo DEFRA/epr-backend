@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import {
   getProjectedPrnById,
@@ -89,17 +89,6 @@ const buildEvent = (kind, number, createdAt) => ({
   createdBy: eventActor
 })
 
-const buildBalance = () => ({
-  id: 'wb-1',
-  accreditationId: ACC_ID,
-  registrationId: REG_ID,
-  organisationId: ORG_ID,
-  amount: 100,
-  availableAmount: 100,
-  version: 0,
-  schemaVersion: 1
-})
-
 /**
  * Assembles the real in-memory adapters: the PRN store, the event stream, and
  * the waste-balance store that shares that stream. Catch-up events past the
@@ -115,10 +104,9 @@ const buildRepositories = ({ prn = null, events = [] }) => {
       noopLogger()
     )
   const streamRepository = createInMemoryStreamRepository(events)()
-  const wasteBalancesRepository = createInMemoryWasteBalancesRepository(
-    [buildBalance()],
-    { streamRepository }
-  )()
+  const wasteBalancesRepository = createWasteBalancesRepository({
+    streamRepository
+  })()
   return { packagingRecyclingNotesRepository, wasteBalancesRepository }
 }
 

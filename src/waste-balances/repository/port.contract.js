@@ -1,5 +1,4 @@
-import { testFindByAccreditationIdBehaviour } from './contract/findByAccreditationId.contract.js'
-import { testFindByAccreditationIdsBehaviour } from './contract/findByAccreditationIds.contract.js'
+import { testFindBalanceBehaviour } from './contract/findBalance.contract.js'
 import { testUpdateWasteBalanceTransactionsBehaviour } from './contract/updateWasteBalanceTransactions.contract.js'
 import { testDeductAvailableBalanceForPrnCreationBehaviour } from './contract/deductAvailableBalanceForPrnCreation.contract.js'
 import { testDeductTotalBalanceForPrnIssueBehaviour } from './contract/deductTotalBalanceForPrnIssue.contract.js'
@@ -9,8 +8,7 @@ import { testAppendStreamEventBehaviour } from './contract/appendStreamEvent.con
 import { testGetPrnCatchupEventsBehaviour } from './contract/getPrnCatchupEvents.contract.js'
 
 export const testWasteBalancesRepositoryContract = (repositoryFactory) => {
-  testFindByAccreditationIdBehaviour(repositoryFactory)
-  testFindByAccreditationIdsBehaviour(repositoryFactory)
+  testFindBalanceBehaviour(repositoryFactory)
   testUpdateWasteBalanceTransactionsBehaviour(repositoryFactory)
   testDeductAvailableBalanceForPrnCreationBehaviour(repositoryFactory)
   testDeductTotalBalanceForPrnIssueBehaviour(repositoryFactory)

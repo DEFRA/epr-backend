@@ -1,11 +1,12 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { createWasteBalancesRepository } from './mongodb.js'
+import { createWasteBalancesRepository } from './repository.js'
 import {
   createMongoStreamRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './stream-mongodb.js'
+import { buildStreamEvent } from './stream-test-data.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -15,7 +16,6 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 const DATABASE_NAME = 'epr-backend'
-const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -35,11 +35,8 @@ const it = mongoIt.extend({
     await use(factory())
   },
 
-  wasteBalancesRepository: async ({ mongoClient, streamRepository }, use) => {
-    const database = /** @type {import('mongodb').MongoClient} */ (
-      mongoClient
-    ).db(DATABASE_NAME)
-    const factory = await createWasteBalancesRepository(database, {
+  wasteBalancesRepository: async ({ streamRepository }, use) => {
+    const factory = createWasteBalancesRepository({
       streamRepository:
         /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
           /** @type {unknown} */ (streamRepository)
@@ -48,35 +45,19 @@ const it = mongoIt.extend({
     await use(factory)
   },
 
-  insertWasteBalance: async ({ mongoClient }, use) => {
-    await use(async (wasteBalance) => {
-      await /** @type {import('mongodb').MongoClient} */ (mongoClient)
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .insertOne(wasteBalance)
-    })
-  },
-
-  insertWasteBalances: async ({ mongoClient }, use) => {
-    await use(async (wasteBalances) => {
-      await /** @type {import('mongodb').MongoClient} */ (mongoClient)
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .insertMany(wasteBalances)
+  seedBalance: async ({ streamRepository }, use) => {
+    await use(async (event) => {
+      await /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
+        /** @type {unknown} */ (streamRepository)
+      ).appendEvent(buildStreamEvent(event))
     })
   }
 })
 
 describe('MongoDB waste balances repository', () => {
   describe('repository creation', () => {
-    it('should create repository instance', async ({
-      mongoClient,
-      streamRepository
-    }) => {
-      const database = /** @type {import('mongodb').MongoClient} */ (
-        mongoClient
-      ).db(DATABASE_NAME)
-      const repository = await createWasteBalancesRepository(database, {
+    it('should create repository instance', async ({ streamRepository }) => {
+      const repository = createWasteBalancesRepository({
         streamRepository:
           /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
             /** @type {unknown} */ (streamRepository)
@@ -84,7 +65,7 @@ describe('MongoDB waste balances repository', () => {
       })
       const instance = repository()
       expect(instance).toBeDefined()
-      expect(instance.findByAccreditationId).toBeTypeOf('function')
+      expect(instance.findBalance).toBeTypeOf('function')
     })
   })
 
@@ -97,7 +78,6 @@ describe('MongoDB waste balances repository', () => {
         const database = /** @type {import('mongodb').MongoClient} */ (
           mongoClient
         ).db(DATABASE_NAME)
-        await database.collection(WASTE_BALANCE_COLLECTION_NAME).deleteMany({})
         await database
           .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
           .deleteMany({})

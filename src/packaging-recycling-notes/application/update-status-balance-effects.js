@@ -53,8 +53,10 @@ export async function deductWasteBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     if ((balance.availableAmount ?? 0) < tonnage) {
@@ -94,8 +96,10 @@ export async function deductTotalBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     if ((balance.amount ?? 0) < tonnage) {
@@ -136,8 +140,10 @@ export async function creditWasteBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     return wasteBalancesRepository.creditAvailableBalanceForPrnCancellation({
@@ -174,8 +180,10 @@ export async function creditFullBalanceIfNeeded(
     tonnage,
     createdBy
   } = params
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
 
   if (balance) {
     return wasteBalancesRepository.creditFullBalanceForIssuedPrnCancellation({

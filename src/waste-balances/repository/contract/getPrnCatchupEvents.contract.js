@@ -1,7 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import { STREAM_EVENT_KIND } from '../stream-schema.js'
-import { buildWasteBalance } from './test-data.js'
 import {
   buildPrnCreatedEvent,
   buildPrnIssuedEvent
@@ -13,8 +12,6 @@ const partition = (suffix) => ({
   registrationId: `reg-catchup-${suffix}`,
   accreditationId: `acc-catchup-${suffix}`
 })
-
-const balance = (suffix) => buildWasteBalance(partition(suffix))
 
 const params = ({ suffix, afterEventNumber = 0 }) => ({
   ...partition(suffix),
@@ -39,7 +36,7 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
       }
     )
 
-    it('returns an empty array when no balance document exists', async () => {
+    it('returns an empty array when the partition has no events', async () => {
       const result = await repository.getPrnCatchupEvents(
         params({ suffix: 'missing' })
       )
@@ -48,11 +45,9 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
     })
 
     it('returns an empty array when there are no matching tail events', async ({
-      insertWasteBalance,
       streamRepository
     }) => {
       const suffix = 'no-tail'
-      await insertWasteBalance(balance(suffix))
       await streamRepository.appendEvent(
         buildPrnCreatedEvent({
           ...partition(suffix),
@@ -67,11 +62,9 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
     })
 
     it('returns tail events when events exist for the PRN', async ({
-      insertWasteBalance,
       streamRepository
     }) => {
       const suffix = 'tail'
-      await insertWasteBalance(balance(suffix))
       await streamRepository.appendEvent(
         buildPrnCreatedEvent({
           ...partition(suffix),
@@ -97,11 +90,9 @@ export const testGetPrnCatchupEventsBehaviour = (it) => {
     })
 
     it('filters out events at or below afterEventNumber', async ({
-      insertWasteBalance,
       streamRepository
     }) => {
       const suffix = 'filter'
-      await insertWasteBalance(balance(suffix))
       await streamRepository.appendEvent(
         buildPrnCreatedEvent({
           ...partition(suffix),
