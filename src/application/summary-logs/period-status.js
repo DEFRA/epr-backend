@@ -233,37 +233,50 @@ const classifyRecord = ({
   const key = recordKey(record)
   const amounts = transactionAmounts.get(key)
   const { reportingDateFields } = schema
+  const classify = (/** @type {Record<string, any>} */ data) =>
+    classifyPeriodStatus(data, reportingDateFields, closedPeriods, cadence)
 
   if (status === 'added') {
-    const period = classifyPeriodStatus(
-      record.data,
-      reportingDateFields,
-      closedPeriods,
-      cadence
-    )
+    const period = classify(record.data)
     if (period) {
       result[period].added.tonnageDelta += amounts?.newAmount ?? 0
     }
     return
   }
 
-  // Adjusted: classify old and new data independently
-  const newPeriod = classifyPeriodStatus(
-    record.data,
-    reportingDateFields,
-    closedPeriods,
-    cadence
-  )
+  classifyAdjustedRecord({
+    key,
+    amounts,
+    classify,
+    record,
+    existingRecordsMap,
+    result
+  })
+}
+
+/**
+ * Classifies an adjusted record by its old and new period independently.
+ *
+ * @param {Object} params
+ * @param {string} params.key
+ * @param {TransactionAmounts} [params.amounts]
+ * @param {(data: Record<string, any>) => 'open' | 'closed' | null} params.classify
+ * @param {ValidatedWasteRecord['record']} params.record
+ * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {LoadsByPeriodStatus} params.result
+ */
+const classifyAdjustedRecord = ({
+  key,
+  amounts,
+  classify,
+  record,
+  existingRecordsMap,
+  result
+}) => {
+  const newPeriod = classify(record.data)
 
   const existing = existingRecordsMap.get(key)
-  const oldPeriod = existing
-    ? classifyPeriodStatus(
-        existing.data,
-        reportingDateFields,
-        closedPeriods,
-        cadence
-      )
-    : null
+  const oldPeriod = existing ? classify(existing.data) : null
 
   if (oldPeriod) {
     result[oldPeriod].adjusted.tonnageDelta -= amounts?.oldAmount ?? 0
@@ -379,8 +392,10 @@ export const buildTransactionAmounts = ({
       if (newAmount !== 0 || oldAmount !== 0) {
         amounts.set(key, { oldAmount, newAmount })
       }
-    } else if (newAmount !== 0) {
-      amounts.set(key, { oldAmount: 0, newAmount })
+    } else {
+      if (newAmount !== 0) {
+        amounts.set(key, { oldAmount: 0, newAmount })
+      }
     }
   }
 

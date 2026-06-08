@@ -644,63 +644,6 @@ const classifyLoads = ({
 }
 
 /**
- * Classifies loads by period status (open/closed).
- * Returns null when validation is not complete or when the reports lookup fails.
- *
- * @param {Object} params
- * @param {SummaryLogStatus} params.status
- * @param {Registration} [params.registration]
- * @param {ProcessingType} [params.processingType]
- * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} [params.existingRecordsMap]
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
- * @param {string} params.summaryLogId
- * @param {ReportsRepository} params.reportsRepository
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- * @returns {Promise<import('./period-status.js').LoadsByPeriodStatus | null>}
- */
-const classifyPeriodStatus = ({
-  status,
-  registration,
-  processingType,
-  existingRecordsMap,
-  wasteRecords,
-  wasteBalanceRecords,
-  summaryLogId,
-  reportsRepository,
-  summaryLog,
-  loggingContext,
-  logger
-}) => {
-  if (
-    status !== SUMMARY_LOG_STATUS.VALIDATED ||
-    !wasteRecords ||
-    !registration ||
-    !processingType ||
-    !existingRecordsMap
-  ) {
-    return Promise.resolve(null)
-  }
-
-  return computeLoadsByPeriodStatus({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    registration,
-    processingType,
-    existingRecordsMap,
-    reportsRepository,
-    organisationId: summaryLog.organisationId,
-    registrationId: summaryLog.registrationId,
-    loggingContext,
-    logger,
-    processingTypeTables: PROCESSING_TYPE_TABLES
-  })
-}
-
-/**
  * Classifies loads by validity, waste record type, and reporting period status.
  *
  * @param {Object} params
@@ -737,19 +680,29 @@ const classifyAllLoads = async ({
     wasteRecords
   })
 
-  const loadsByPeriodStatus = await classifyPeriodStatus({
-    status,
-    registration,
-    processingType,
-    existingRecordsMap,
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    reportsRepository,
-    summaryLog,
-    loggingContext,
-    logger
-  })
+  const canClassifyPeriodStatus =
+    status === SUMMARY_LOG_STATUS.VALIDATED &&
+    wasteRecords &&
+    registration &&
+    processingType &&
+    existingRecordsMap
+
+  const loadsByPeriodStatus = canClassifyPeriodStatus
+    ? await computeLoadsByPeriodStatus({
+        wasteRecords,
+        wasteBalanceRecords,
+        summaryLogId,
+        registration,
+        processingType,
+        existingRecordsMap,
+        reportsRepository,
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId,
+        loggingContext,
+        logger,
+        processingTypeTables: PROCESSING_TYPE_TABLES
+      })
+    : null
 
   return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
 }
