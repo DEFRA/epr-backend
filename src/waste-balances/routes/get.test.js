@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -16,33 +17,66 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   const accreditationId1 = '507f1f77bcf86cd799439011'
   const accreditationId2 = '507f191e810c19729de860ea'
   const nonExistentId = '000000000000000000000000'
+  const registrationId1 = 'reg-1'
+  const registrationId2 = 'reg-2'
+
+  /**
+   * Build an in-memory waste balances repository whose balances resolve their
+   * amounts from a stream seeded with the given closing balances.
+   */
+  const buildRepository = async (balances) => {
+    const streamRepository = createInMemoryStreamRepository()()
+    const shells = balances.map(
+      ({ accreditationId, organisationId: orgId, registrationId }) => ({
+        accreditationId,
+        organisationId: orgId,
+        registrationId,
+        amount: 0,
+        availableAmount: 0,
+        version: 1,
+        schemaVersion: 1
+      })
+    )
+    for (const {
+      accreditationId,
+      organisationId: orgId,
+      registrationId,
+      amount,
+      availableAmount
+    } of balances) {
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId,
+          organisationId: orgId,
+          registrationId,
+          number: 1,
+          closingBalance: { amount, availableAmount }
+        })
+      )
+    }
+    return createInMemoryWasteBalancesRepository(shells, { streamRepository })
+  }
 
   describe('with valid authentication and standard data', () => {
     let server
-    let wasteBalancesRepositoryFactory
 
     beforeEach(async () => {
-      wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-        [
-          {
-            accreditationId: accreditationId1,
-            organisationId,
-            amount: 1000,
-            availableAmount: 750,
-            transactions: [],
-            version: 1
-          },
-          {
-            accreditationId: accreditationId2,
-            organisationId,
-            amount: 2500,
-            availableAmount: 2500,
-            transactions: [],
-            version: 1
-          }
-        ],
-        { streamRepository: createInMemoryStreamRepository()() }
-      )
+      const wasteBalancesRepositoryFactory = await buildRepository([
+        {
+          accreditationId: accreditationId1,
+          organisationId,
+          registrationId: registrationId1,
+          amount: 1000,
+          availableAmount: 750
+        },
+        {
+          accreditationId: accreditationId2,
+          organisationId,
+          registrationId: registrationId2,
+          amount: 2500,
+          availableAmount: 2500
+        }
+      ])
 
       const featureFlags = createInMemoryFeatureFlags({})
 
@@ -153,20 +187,15 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     let server
 
     beforeEach(async () => {
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository(
-          [
-            {
-              accreditationId: accreditationId1,
-              organisationId,
-              amount: 1000,
-              availableAmount: 750,
-              transactions: [],
-              version: 1
-            }
-          ],
-          { streamRepository: createInMemoryStreamRepository()() }
-        )
+      const wasteBalancesRepositoryFactory = await buildRepository([
+        {
+          accreditationId: accreditationId1,
+          organisationId,
+          registrationId: registrationId1,
+          amount: 1000,
+          availableAmount: 750
+        }
+      ])
 
       const featureFlags = createInMemoryFeatureFlags({})
 
@@ -219,20 +248,15 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     let server
 
     beforeEach(async () => {
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository(
-          [
-            {
-              accreditationId: accreditationId1,
-              organisationId,
-              amount: 1000,
-              availableAmount: 750,
-              transactions: [],
-              version: 1
-            }
-          ],
-          { streamRepository: createInMemoryStreamRepository()() }
-        )
+      const wasteBalancesRepositoryFactory = await buildRepository([
+        {
+          accreditationId: accreditationId1,
+          organisationId,
+          registrationId: registrationId1,
+          amount: 1000,
+          availableAmount: 750
+        }
+      ])
 
       const featureFlags = createInMemoryFeatureFlags({})
 
@@ -254,19 +278,20 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     })
   })
 
-  describe('null value handling', () => {
-    it('defaults null amount values to zero', async () => {
-      const accreditationIdWithNulls = 'aaaaaaaaaaaaaaaaaaaaaaaa'
+  describe('zero balance handling', () => {
+    it('resolves a balance with no stream events to zero amounts', async () => {
+      const accreditationIdWithNoEvents = 'aaaaaaaaaaaaaaaaaaaaaaaa'
       const wasteBalancesRepositoryFactory =
         createInMemoryWasteBalancesRepository(
           [
             {
-              accreditationId: accreditationIdWithNulls,
+              accreditationId: accreditationIdWithNoEvents,
               organisationId,
-              amount: null,
-              availableAmount: null,
-              transactions: [],
-              version: 1
+              registrationId: registrationId1,
+              amount: 0,
+              availableAmount: 0,
+              version: 1,
+              schemaVersion: 1
             }
           ],
           { streamRepository: createInMemoryStreamRepository()() }
@@ -282,7 +307,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdWithNulls}`,
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdWithNoEvents}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -291,7 +316,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result).toEqual({
-        [accreditationIdWithNulls]: {
+        [accreditationIdWithNoEvents]: {
           amount: 0,
           availableAmount: 0
         }
@@ -304,20 +329,15 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       const differentOrgId = '7777777777777777777777ff'
       const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
 
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository(
-          [
-            {
-              accreditationId: accreditationIdDifferentOrg,
-              organisationId: differentOrgId,
-              amount: 1000,
-              availableAmount: 750,
-              transactions: [],
-              version: 1
-            }
-          ],
-          { streamRepository: createInMemoryStreamRepository()() }
-        )
+      const wasteBalancesRepositoryFactory = await buildRepository([
+        {
+          accreditationId: accreditationIdDifferentOrg,
+          organisationId: differentOrgId,
+          registrationId: registrationId1,
+          amount: 1000,
+          availableAmount: 750
+        }
+      ])
 
       const featureFlags = createInMemoryFeatureFlags({})
       const server = await createTestServer({
@@ -346,28 +366,22 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       const differentOrgId = '7777777777777777777777ff'
       const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
 
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository(
-          [
-            {
-              accreditationId: accreditationId1,
-              organisationId,
-              amount: 1000,
-              availableAmount: 750,
-              transactions: [],
-              version: 1
-            },
-            {
-              accreditationId: accreditationIdDifferentOrg,
-              organisationId: differentOrgId,
-              amount: 2000,
-              availableAmount: 1500,
-              transactions: [],
-              version: 1
-            }
-          ],
-          { streamRepository: createInMemoryStreamRepository()() }
-        )
+      const wasteBalancesRepositoryFactory = await buildRepository([
+        {
+          accreditationId: accreditationId1,
+          organisationId,
+          registrationId: registrationId1,
+          amount: 1000,
+          availableAmount: 750
+        },
+        {
+          accreditationId: accreditationIdDifferentOrg,
+          organisationId: differentOrgId,
+          registrationId: registrationId2,
+          amount: 2000,
+          availableAmount: 1500
+        }
+      ])
 
       const featureFlags = createInMemoryFeatureFlags({})
       const server = await createTestServer({

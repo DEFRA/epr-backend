@@ -1,80 +1,16 @@
-export const WASTE_BALANCE_TRANSACTION_TYPE = Object.freeze({
-  CREDIT: 'credit',
-  DEBIT: 'debit'
-})
-
 /**
- * @typedef {typeof WASTE_BALANCE_TRANSACTION_TYPE[keyof typeof WASTE_BALANCE_TRANSACTION_TYPE]} WasteBalanceTransactionType
- */
-
-export const WASTE_BALANCE_CANONICAL_SOURCE = Object.freeze({
-  EMBEDDED: 'embedded',
-  MIGRATING: 'migrating',
-  LEDGER: 'ledger'
-})
-
-/**
- * @typedef {typeof WASTE_BALANCE_CANONICAL_SOURCE[keyof typeof WASTE_BALANCE_CANONICAL_SOURCE]} WasteBalanceCanonicalSource
- */
-
-export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
-  WASTE_RECORD_RECEIVED: 'waste_record:received',
-  WASTE_RECORD_SENT_ON: 'waste_record:sent_on',
-  WASTE_RECORD_EXPORTED: 'waste_record:exported',
-  PRN_CREATED: 'prn:created',
-  PRN_ISSUED: 'prn:issued',
-  PRN_ACCEPTED: 'prn:accepted',
-  PRN_CANCELLED: 'prn:cancelled',
-  PRN_CANCELLED_POST_ISSUE: 'prn:cancelled_post_issue'
-})
-
-/**
- * @typedef {typeof WASTE_BALANCE_TRANSACTION_ENTITY_TYPE[keyof typeof WASTE_BALANCE_TRANSACTION_ENTITY_TYPE]} WasteBalanceTransactionEntityType
- */
-
-/**
- * @typedef {Object} UserSummary
- * @property {string} id - User ID
- * @property {string} name - Name
- */
-
-/**
- * @typedef {Object} WasteBalanceTransactionEntity
- * @property {string} id - Reference to WASTE-RECORD or PRN
- * @property {string} currentVersionId - Current version ID that contributed to this transaction
- * @property {string[]} previousVersionIds - All previous version IDs (for audit trail)
- * @property {WasteBalanceTransactionEntityType} type - Entity type
- */
-
-/**
- * Transaction record in the waste balance history
- * NOTE: Transactions are immutable once created - they cannot be modified or deleted
+ * Waste balance document - tracks waste tonnage credits and debits.
  *
- * DECIMAL PRECISION: All amount fields are stored as MongoDB Decimal128 in the database
- * for exact decimal precision. In JavaScript code, arithmetic operations use decimal.js
- * to prevent floating point rounding errors. Values are converted to/from JavaScript
- * numbers at the repository boundary.
+ * The document carries identity, optimistic-locking version, and the latest
+ * resolved balance amounts. Balance history lives in the event-sourced stream
+ * (see `repository/stream-port.js`); the document's `amount` /
+ * `availableAmount` are resolved from the stream's latest closing balance on
+ * read.
  *
- * @typedef {Object} WasteBalanceTransaction
- * @property {string} id
- * @property {WasteBalanceTransactionType} type - Transaction type
- * @property {string} createdAt - ISO8601 timestamp
- * @property {UserSummary} [createdBy] - User who created the transaction (may be undefined for system-generated transactions)
- * @property {number} amount - Transaction amount (stored as Decimal128, handled as Decimal in arithmetic)
- * @property {number} openingAmount - Balance before transaction (stored as Decimal128)
- * @property {number} closingAmount - Balance after transaction (stored as Decimal128)
- * @property {number} openingAvailableAmount - Available balance before transaction (stored as Decimal128)
- * @property {number} closingAvailableAmount - Available balance after transaction (stored as Decimal128)
- * @property {WasteBalanceTransactionEntity[]} entities - Related entities
- */
-
-/**
- * Waste balance document - tracks waste tonnage credits and debits
- * NOTE: The document is mutable (uses optimistic locking via version field)
- * However, the transactions array is append-only - existing transactions are immutable
- *
- * DECIMAL PRECISION: Amount fields are stored as MongoDB Decimal128 for exact precision.
- * See WasteBalanceTransaction documentation for details on decimal handling.
+ * DECIMAL PRECISION: Amount fields are stored as MongoDB Decimal128 for exact
+ * precision. In JavaScript code, arithmetic uses decimal.js to avoid floating
+ * point rounding errors. Values convert to/from JavaScript numbers at the
+ * repository boundary.
  *
  * @typedef {Object} WasteBalance
  * @property {string} id - Balance ID
@@ -85,21 +21,6 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * @property {number} version - Document version for optimistic locking
  * @property {number} amount - Total balance (credits minus debits, stored as Decimal128)
  * @property {number} availableAmount - Available balance (amount minus pending debits, stored as Decimal128)
- * @property {WasteBalanceTransaction[]} transactions - Transaction history (append-only)
- * @property {WasteBalanceCanonicalSource} canonicalSource - Per-accreditation marker.
- *   `'embedded'` means this document is the source of truth and reads/writes target
- *   the embedded `transactions[]` array. `'migrating'` means a per-accreditation
- *   rebuild from authoritative sources is in flight: writes that would otherwise
- *   land on the embedded array still do (PRN write path treats `'migrating'` as
- *   `'embedded'`), but summary-log submissions are 409-excluded by
- *   `transitionToSubmittingExclusive` until the rebuild lands. `'ledger'` means
- *   the ledger collection is the source of truth and embedded reads/writes are
- *   bypassed. New documents default to `'embedded'`. Lifecycle:
- *   `embedded → migrating → ledger` (forward sweep) with
- *   `migrating → embedded` available as the stuck-marker recovery reset.
- * @property {string} [migratingSince] - ISO8601 timestamp of when the marker
- *   flipped to `'migrating'`. Set by `flipCanonicalSourceToMigrating` and
- *   cleared by either `flipCanonicalSourceToLedger` (forward) or
- *   `resetCanonicalSourceToEmbedded` (recovery). Drives the stuck-marker
- *   recovery threshold check; absent on every other marker state.
  */
+
+export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

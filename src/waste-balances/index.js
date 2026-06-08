@@ -7,12 +7,6 @@
  * @module waste-balances
  */
 
-// Domain exports
-export {
-  WASTE_BALANCE_TRANSACTION_TYPE,
-  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from './domain/model.js'
-
 // Repository exports
 export { createWasteBalancesRepository } from './repository/mongodb.js'
 

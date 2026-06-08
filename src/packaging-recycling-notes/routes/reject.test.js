@@ -17,6 +17,7 @@ import {
   cognitoJwksUrl,
   setupAuthContext
 } from '#vite/helpers/setup-auth-mocking.js'
+import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import {
   createMockIssuedPrn,
   generateExternalApiToken
@@ -37,12 +38,31 @@ const authHeaders = {
   authorization: `Bearer ${generateExternalApiToken(externalApiClientId)}`
 }
 
+/**
+ * The PRN_REJECTED stream event the ledger-path reject appends. The read-side
+ * fold projects this onto the PRN doc, moving it to awaiting_cancellation.
+ */
+const buildRejectedEvent = () => ({
+  id: 'event-4',
+  registrationId: 'reg-456',
+  accreditationId: 'acc-789',
+  organisationId: 'org-123',
+  number: 4,
+  kind: STREAM_EVENT_KIND.PRN_REJECTED,
+  payload: { prnId, amount: 100 },
+  openingBalance: { amount: 100, availableAmount: 100 },
+  closingBalance: { amount: 100, availableAmount: 100 },
+  createdAt: new Date('2026-02-03T10:00:00.000Z'),
+  createdBy: { id: externalApiClientId, name: 'RPD' }
+})
+
 describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
   setupAuthContext()
 
   describe('when feature flag is enabled', () => {
     let server
     let packagingRecyclingNotesRepository
+    let wasteBalancesRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository = {
@@ -50,7 +70,14 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         findByPrnNumber: vi.fn(),
         create: vi.fn(),
         findByAccreditation: vi.fn(),
-        updateStatus: vi.fn()
+        updateStatus: vi.fn(),
+        persistProjection: vi.fn()
+      }
+
+      wasteBalancesRepository = {
+        findByAccreditationId: vi.fn().mockResolvedValue(null),
+        getPrnCatchupEvents: vi.fn().mockResolvedValue([]),
+        appendStreamEvent: vi.fn()
       }
 
       server = await createTestServer({
@@ -63,10 +90,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,
-          wasteBalancesRepository: () => ({
-            findByAccreditationId: vi.fn().mockResolvedValue(null),
-            getPrnCatchupEvents: vi.fn().mockResolvedValue([])
-          }),
+          wasteBalancesRepository: () => wasteBalancesRepository,
           organisationsRepository: () => ({})
         },
         featureFlags: createInMemoryFeatureFlags()
@@ -87,20 +111,12 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            history: [
-              ...mockPrn.status.history,
-              {
-                status: PRN_STATUS.AWAITING_CANCELLATION,
-                at: new Date(),
-                by: { id: 'rpd', name: 'RPD' }
-              }
-            ]
-          }
-        })
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildRejectedEvent()
+        )
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
+        )
 
         const response = await server.inject({
           method: 'POST',
@@ -112,18 +128,17 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         expect(response.payload).toBe('')
       })
 
-      it('calls updateStatus with awaiting_cancellation status, PRN id, and RPD user', async () => {
+      it('appends a PRN_REJECTED stream event and persists the awaiting_cancellation projection attributed to RPD', async () => {
         const mockPrn = createMockIssuedPrn()
         packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            history: []
-          }
-        })
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildRejectedEvent()
+        )
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
+        )
 
         await server.inject({
           method: 'POST',
@@ -131,21 +146,24 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
           headers: authHeaders
         })
 
-        expect(
-          packagingRecyclingNotesRepository.updateStatus
-        ).toHaveBeenCalledWith(
+        expect(wasteBalancesRepository.appendStreamEvent).toHaveBeenCalledWith(
           expect.objectContaining({
-            id: prnId,
-            status: PRN_STATUS.AWAITING_CANCELLATION,
-            updatedBy: expect.objectContaining({
+            prnId,
+            streamKind: STREAM_EVENT_KIND.PRN_REJECTED,
+            createdBy: expect.objectContaining({
               id: externalApiClientId,
               name: 'RPD'
-            }),
-            operation: expect.objectContaining({
-              slot: 'rejected',
-              by: expect.objectContaining({
-                id: externalApiClientId,
-                name: 'RPD'
+            })
+          })
+        )
+        expect(
+          packagingRecyclingNotesRepository.persistProjection
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            projection: expect.objectContaining({
+              id: prnId,
+              status: expect.objectContaining({
+                currentStatus: PRN_STATUS.AWAITING_CANCELLATION
               })
             })
           })
@@ -162,76 +180,17 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         )
       })
 
-      it('uses provided rejectedAt timestamp', async () => {
-        const rejectedAt = '2026-02-01T10:30:00Z'
+      it('rejects when the payload is null', async () => {
         const mockPrn = createMockIssuedPrn()
         packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
           mockPrn
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            history: []
-          }
-        })
-
-        await server.inject({
-          method: 'POST',
-          url: rejectUrl,
-          headers: authHeaders,
-          payload: { rejectedAt }
-        })
-
-        expect(
-          packagingRecyclingNotesRepository.updateStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            updatedAt: new Date(rejectedAt)
-          })
+        wasteBalancesRepository.appendStreamEvent.mockResolvedValueOnce(
+          buildRejectedEvent()
         )
-      })
-
-      it('uses current time when rejectedAt not provided', async () => {
-        const beforeCall = new Date()
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
+        packagingRecyclingNotesRepository.persistProjection.mockImplementation(
+          async ({ projection }) => projection
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            history: []
-          }
-        })
-
-        await server.inject({
-          method: 'POST',
-          url: rejectUrl,
-          headers: authHeaders
-        })
-
-        const callArgs =
-          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
-        expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
-          beforeCall.getTime()
-        )
-      })
-
-      it('uses current time when payload is null', async () => {
-        const beforeCall = new Date()
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByPrnNumber.mockResolvedValueOnce(
-          mockPrn
-        )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce({
-          ...mockPrn,
-          status: {
-            currentStatus: PRN_STATUS.AWAITING_CANCELLATION,
-            history: []
-          }
-        })
 
         const response = await server.inject({
           method: 'POST',
@@ -241,11 +200,6 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-        const callArgs =
-          packagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
-        expect(callArgs.updatedAt.getTime()).toBeGreaterThanOrEqual(
-          beforeCall.getTime()
-        )
       })
     })
 

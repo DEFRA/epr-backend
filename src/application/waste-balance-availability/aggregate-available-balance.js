@@ -2,7 +2,6 @@ import {
   buildEffectiveMaterialStages,
   formatMaterialResults
 } from '#application/common/material-aggregation.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/stream-mongodb.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -61,24 +60,14 @@ const buildLatestStreamEventLookupStage = () => ({
   }
 })
 
-// Mirrors resolveBalanceAmounts (waste-balances/repository/marker-aware-read.js):
-// 'ledger' resolves to the latest stream closing balance (zero when the stream
-// is empty); every other marker keeps the document's own availableAmount.
-const buildLedgerAwareAvailableAmountStage = () => ({
+// Mirrors resolveBalanceAmounts
+// (waste-balances/repository/resolve-balance-amounts.js): the latest stream
+// closing balance is the source of truth, resolving to zero when the stream is
+// empty.
+const buildStreamAvailableAmountStage = () => ({
   $addFields: {
     availableAmount: {
-      $cond: {
-        if: {
-          $eq: ['$canonicalSource', WASTE_BALANCE_CANONICAL_SOURCE.LEDGER]
-        },
-        then: {
-          $ifNull: [
-            { $arrayElemAt: ['$latestStreamEvent.availableAmount', 0] },
-            0
-          ]
-        },
-        else: '$availableAmount'
-      }
+      $ifNull: [{ $arrayElemAt: ['$latestStreamEvent.availableAmount', 0] }, 0]
     }
   }
 })
@@ -87,7 +76,7 @@ const buildAggregationPipeline = () => [
   buildMaterialLookupStage(),
   ...buildEffectiveMaterialStages(),
   buildLatestStreamEventLookupStage(),
-  buildLedgerAwareAvailableAmountStage(),
+  buildStreamAvailableAmountStage(),
   {
     $group: {
       _id: '$effectiveMaterial',

@@ -1,8 +1,13 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, afterEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createServer } from '#server/server.js'
+import {
+  createMongoStreamRepository,
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME
+} from '#waste-balances/repository/stream-mongodb.js'
+import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 vi.mock(
@@ -20,19 +25,10 @@ const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
+  mongoClient: async (/** @type {{ db: string }} */ { db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
     await client.close()
-  },
-
-  server: async ({ db }, use) => {
-    const server = await createServer({
-      mongoUri: db
-    })
-    await server.initialize()
-    await use(server)
-    await server.stop()
   }
 })
 
@@ -43,39 +39,80 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
   const accreditationId1 = '507f1f77bcf86cd799439011'
   const accreditationId2 = '507f191e810c19729de860ea'
   const nonExistentId = '000000000000000000000000'
+  const registrationId1 = 'reg-1'
+  const registrationId2 = 'reg-2'
 
-  beforeEach(async ({ mongoClient }) => {
-    const collection = mongoClient
-      .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
+  /** @type {import('@hapi/hapi').Server} */
+  let server
+  /** @type {import('mongodb').MongoClient} */
+  let dbClient
 
-    await collection.deleteMany({})
-
-    await collection.insertMany([
-      {
-        accreditationId: accreditationId1,
-        organisationId,
-        amount: 1000,
-        availableAmount: 750,
-        transactions: [],
-        version: 1,
-        schemaVersion: 1
-      },
-      {
-        accreditationId: accreditationId2,
-        organisationId,
-        amount: 2500,
-        availableAmount: 2500,
-        transactions: [],
-        version: 1,
-        schemaVersion: 1
+  beforeEach(
+    async (
+      /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
+        mongoClient
       }
-    ])
+    ) => {
+      dbClient = mongoClient
+      const database = mongoClient.db(DATABASE_NAME)
+      const collection = database.collection(WASTE_BALANCE_COLLECTION_NAME)
+
+      await collection.deleteMany({})
+      await database
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+        .deleteMany({})
+
+      await collection.insertMany([
+        {
+          accreditationId: accreditationId1,
+          organisationId,
+          registrationId: registrationId1,
+          amount: 0,
+          availableAmount: 0,
+          version: 1,
+          schemaVersion: 1
+        },
+        {
+          accreditationId: accreditationId2,
+          organisationId,
+          registrationId: registrationId2,
+          amount: 0,
+          availableAmount: 0,
+          version: 1,
+          schemaVersion: 1
+        }
+      ])
+
+      const streamRepository = (await createMongoStreamRepository(database))()
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: accreditationId1,
+          organisationId,
+          registrationId: registrationId1,
+          number: 1,
+          closingBalance: { amount: 1000, availableAmount: 750 }
+        })
+      )
+      await streamRepository.appendEvent(
+        buildStreamEvent({
+          accreditationId: accreditationId2,
+          organisationId,
+          registrationId: registrationId2,
+          number: 1,
+          closingBalance: { amount: 2500, availableAmount: 2500 }
+        })
+      )
+
+      server = await createServer({ mongoUri: globalThis.__MONGO_URI__ })
+      await server.initialize()
+    }
+  )
+
+  afterEach(async () => {
+    await server.stop()
   })
 
-  it('fetches waste balances from MongoDB for multiple IDs', async ({
-    server
-  }) => {
+  it('fetches waste balances from MongoDB for multiple IDs', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationId2}`,
@@ -97,7 +134,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     })
   })
 
-  it('fetches single waste balance from MongoDB', async ({ server }) => {
+  it('fetches single waste balance from MongoDB', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
@@ -115,9 +152,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     })
   })
 
-  it('returns empty object for non-existent IDs in MongoDB', async ({
-    server
-  }) => {
+  it('returns empty object for non-existent IDs in MongoDB', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${nonExistentId}`,
@@ -132,9 +167,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(result).toEqual({})
   })
 
-  it('handles mixed existing and non-existing IDs from MongoDB', async ({
-    server
-  }) => {
+  it('handles mixed existing and non-existing IDs from MongoDB', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${nonExistentId}`,
@@ -153,11 +186,8 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(result[nonExistentId]).toBeUndefined()
   })
 
-  it('returns empty object when collection is empty', async ({
-    server,
-    mongoClient
-  }) => {
-    await mongoClient
+  it('returns empty object when collection is empty', async () => {
+    await dbClient
       .db(DATABASE_NAME)
       .collection(WASTE_BALANCE_COLLECTION_NAME)
       .deleteMany({})

@@ -6,7 +6,6 @@ import {
   SuspendedAccreditationError
 } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '#waste-balances/domain/model.js'
 import { STREAM_EVENT_KIND } from '#waste-balances/repository/stream-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
@@ -45,7 +44,6 @@ const buildLedgerBalance = (overrides = {}) => ({
   accreditationId: ACC_ID,
   amount: 1000,
   availableAmount: 1000,
-  canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER,
   ...overrides
 })
 
@@ -114,10 +112,8 @@ const buildLedgerRepositories = (storedPrn, events = []) => {
         organisationId: ORG_ID,
         amount: 1000,
         availableAmount: 1000,
-        transactions: [],
         version: 0,
-        schemaVersion: 1,
-        canonicalSource: WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
+        schemaVersion: 1
       }
     ],
     { streamRepository }
@@ -281,32 +277,6 @@ describe('updatePrnStatus on the ledger (event-first) path', () => {
           lastAppliedEventNumber: APPENDED_WATERMARK
         })
       })
-    )
-  })
-
-  it('carries the existing watermark forward on a lifecycle-only transition (embedded path)', async () => {
-    const updateStatus = vi.fn().mockResolvedValue(buildPrn())
-    const prnRepository = { findById: vi.fn(), updateStatus }
-
-    await callUpdate({
-      prnRepository,
-      wasteBalancesRepository: {
-        findByAccreditationId: vi.fn().mockResolvedValue(null)
-      },
-      organisationsRepository: buildOrganisationsRepository(),
-      providedPrn: buildPrn({
-        status: {
-          currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-          history: []
-        },
-        lastAppliedEventNumber: 7
-      }),
-      newStatus: PRN_STATUS.ACCEPTED,
-      actor: PRN_ACTOR.PRODUCER
-    })
-
-    expect(updateStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ lastAppliedEventNumber: 7 })
     )
   })
 

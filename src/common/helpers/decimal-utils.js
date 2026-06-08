@@ -101,17 +101,6 @@ export function subtract(a, b) {
 }
 
 /**
- * Multiply two values using exact decimal arithmetic.
- *
- * @param {DecimalValue} a - First value
- * @param {DecimalValue} b - Second value
- * @returns {DecimalInstance} Product as Decimal
- */
-export function multiply(a, b) {
-  return toDecimal(a).times(toDecimal(b))
-}
-
-/**
  * Check if two values are exactly equal using decimal comparison.
  * Replaces floating point comparisons with tolerance thresholds.
  *

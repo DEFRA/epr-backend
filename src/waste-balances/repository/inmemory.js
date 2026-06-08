@@ -1,5 +1,4 @@
 import { validateAccreditationId } from './validation.js'
-import { WASTE_BALANCE_CANONICAL_SOURCE } from '../domain/model.js'
 import { performUpdateWasteBalanceTransactions } from './helpers.js'
 import {
   performAppendPrnStreamEvent,
@@ -8,7 +7,7 @@ import {
   performCreditAvailableBalanceForPrnCancellation,
   performCreditFullBalanceForIssuedPrnCancellation
 } from './helpers-prn.js'
-import { resolveBalanceAmounts } from './marker-aware-read.js'
+import { resolveBalanceAmounts } from './resolve-balance-amounts.js'
 
 /**
  * Find a waste balance by accreditation ID.
@@ -22,42 +21,15 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
 }
 
 /**
- * Save a waste balance.
- *
- * On update, both `canonicalSource` and `migratingSince` are taken from the
- * existing document, ignoring whatever the caller supplies. The marker
- * lifecycle is mutated solely by `flipCanonicalSourceToMigrating`,
- * `flipCanonicalSourceToLedger`, and `resetCanonicalSourceToEmbedded`; every
- * other write path is marker-blind. Inserts take the caller's
- * `canonicalSource` verbatim so the initial marker (`'embedded'` for fresh
- * balances) lands on the new doc.
+ * Save a brand new waste balance shell document. Balance movements live in the
+ * event-sourced stream, not on this document.
  *
  * @param {import('../domain/model.js').WasteBalance[]} wasteBalanceStorage
- * @returns {(updatedBalance: import('../domain/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
+ * @returns {(balance: import('../domain/model.js').WasteBalance) => Promise<void>}
  */
-export const saveBalance =
-  (wasteBalanceStorage) => async (updatedBalance, _newTransactions) => {
-    const existingIndex = wasteBalanceStorage.findIndex(
-      (b) => b.accreditationId === updatedBalance.accreditationId
-    )
-
-    if (existingIndex === -1) {
-      wasteBalanceStorage.push(updatedBalance)
-      return
-    }
-
-    const existing = wasteBalanceStorage[existingIndex]
-    const preserved = {
-      ...updatedBalance,
-      canonicalSource: existing.canonicalSource
-    }
-    if (existing.migratingSince === undefined) {
-      delete preserved.migratingSince
-    } else {
-      preserved.migratingSince = existing.migratingSince
-    }
-    wasteBalanceStorage[existingIndex] = preserved
-  }
+export const saveBalance = (wasteBalanceStorage) => async (balance) => {
+  wasteBalanceStorage.push(balance)
+}
 
 /**
  * Find a waste balance by accreditation ID.
@@ -94,50 +66,6 @@ const performFindByAccreditationIds =
     )
   }
 
-const performFlipCanonicalSourceToMigrating =
-  (wasteBalanceStorage) =>
-  async ({ accreditationId, capturedVersion }) => {
-    const validatedAccreditationId = validateAccreditationId(accreditationId)
-    const current = wasteBalanceStorage.find(
-      (b) => b.accreditationId === validatedAccreditationId
-    )
-    if (!current) {
-      return null
-    }
-    // The mongodb adapter also treats an absent canonicalSource as embedded;
-    // in memory every balance carries a marker from save onwards, so a strict
-    // equality check covers the only states that can occur here.
-    if (
-      current.version === capturedVersion &&
-      current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-    ) {
-      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-      current.migratingSince = new Date().toISOString()
-    }
-    return { canonicalSource: current.canonicalSource }
-  }
-
-const performFlipCanonicalSourceToLedger =
-  (wasteBalanceStorage) =>
-  async ({ accreditationId, registrationId, capturedVersion }) => {
-    const validatedAccreditationId = validateAccreditationId(accreditationId)
-    const current = wasteBalanceStorage.find(
-      (b) => b.accreditationId === validatedAccreditationId
-    )
-    if (!current) {
-      return null
-    }
-    if (
-      current.version === capturedVersion &&
-      current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING
-    ) {
-      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.LEDGER
-      delete current.migratingSince
-      current.registrationId = registrationId
-    }
-    return { canonicalSource: current.canonicalSource }
-  }
-
 const performGetPrnCatchupEvents =
   (wasteBalanceStorage, streamRepository) =>
   async ({ registrationId, accreditationId, prnId, afterEventNumber }) => {
@@ -145,7 +73,7 @@ const performGetPrnCatchupEvents =
     const current = wasteBalanceStorage.find(
       (b) => b.accreditationId === validatedAccreditationId
     )
-    if (current?.canonicalSource !== WASTE_BALANCE_CANONICAL_SOURCE.LEDGER) {
+    if (!current) {
       return []
     }
     return streamRepository.findEventsByPrnIdAfter(
@@ -156,23 +84,6 @@ const performGetPrnCatchupEvents =
     )
   }
 
-const performResetCanonicalSourceToEmbedded =
-  (wasteBalanceStorage) =>
-  async ({ accreditationId }) => {
-    const validatedAccreditationId = validateAccreditationId(accreditationId)
-    const current = wasteBalanceStorage.find(
-      (b) => b.accreditationId === validatedAccreditationId
-    )
-    if (!current) {
-      return null
-    }
-    if (current.canonicalSource === WASTE_BALANCE_CANONICAL_SOURCE.MIGRATING) {
-      current.canonicalSource = WASTE_BALANCE_CANONICAL_SOURCE.EMBEDDED
-      delete current.migratingSince
-    }
-    return { canonicalSource: current.canonicalSource }
-  }
-
 /**
  * The balance-mutating repository methods, sharing one find/save pair over the
  * in-memory storage. Spread into the repository factory's result.
@@ -181,7 +92,6 @@ const performResetCanonicalSourceToEmbedded =
  * @param {Object} dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  */
 const balanceMutators = (wasteBalanceStorage, dependencies) => {
   const find = findBalance(wasteBalanceStorage)
@@ -205,28 +115,24 @@ const balanceMutators = (wasteBalanceStorage, dependencies) => {
       performDeductAvailableBalanceForPrnCreation({
         deductParams,
         findBalance: find,
-        saveBalance: save,
         dependencies
       }),
     deductTotalBalanceForPrnIssue: async (deductParams) =>
       performDeductTotalBalanceForPrnIssue({
         deductParams,
         findBalance: find,
-        saveBalance: save,
         dependencies
       }),
     creditAvailableBalanceForPrnCancellation: async (creditParams) =>
       performCreditAvailableBalanceForPrnCancellation({
         creditParams,
         findBalance: find,
-        saveBalance: save,
         dependencies
       }),
     creditFullBalanceForIssuedPrnCancellation: async (creditParams) =>
       performCreditFullBalanceForIssuedPrnCancellation({
         creditParams,
         findBalance: find,
-        saveBalance: save,
         dependencies
       }),
     appendStreamEvent: async (appendParams) =>
@@ -246,7 +152,6 @@ const balanceMutators = (wasteBalanceStorage, dependencies) => {
  * @param {Object} dependencies
  * @param {import('./stream-port.js').WasteBalanceStreamRepository} dependencies.streamRepository
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
- * @param {import('#feature-flags/feature-flags.port.js').FeatureFlags} [dependencies.featureFlags]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
 export const createInMemoryWasteBalancesRepository = (
@@ -266,12 +171,6 @@ export const createInMemoryWasteBalancesRepository = (
       streamRepository
     ),
     ...balanceMutators(wasteBalanceStorage, dependencies),
-    flipCanonicalSourceToMigrating:
-      performFlipCanonicalSourceToMigrating(wasteBalanceStorage),
-    flipCanonicalSourceToLedger:
-      performFlipCanonicalSourceToLedger(wasteBalanceStorage),
-    resetCanonicalSourceToEmbedded:
-      performResetCanonicalSourceToEmbedded(wasteBalanceStorage),
     getPrnCatchupEvents: performGetPrnCatchupEvents(
       wasteBalanceStorage,
       streamRepository
