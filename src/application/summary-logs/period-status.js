@@ -65,7 +65,9 @@ const emptyCounts = () => ({
  */
 const nullifyEmptyBuckets = (result, counts) => {
   const nullifyPeriod = (period, periodCounts) => {
-    if (periodCounts.added === 0 && periodCounts.adjusted === 0) return null
+    if (periodCounts.added === 0 && periodCounts.adjusted === 0) {
+      return null
+    }
     return {
       added: periodCounts.added > 0 ? period.added : null,
       adjusted: periodCounts.adjusted > 0 ? period.adjusted : null
@@ -450,14 +452,13 @@ const computeRecordAmounts = (
     lastVersion.summaryLog?.id === summaryLogId &&
     lastVersion.status === VERSION_STATUS.UPDATED
 
-  if (!isAdjusted) {
-    return newAmount !== 0 ? { oldAmount: 0, newAmount } : null
+  if (isAdjusted) {
+    const existing = existingRecordsMap.get(recordKey(record))
+    const oldAmount = existing ? getTransactionAmount(schema, existing.data) : 0
+    return newAmount !== 0 || oldAmount !== 0 ? { oldAmount, newAmount } : null
   }
 
-  const existing = existingRecordsMap.get(recordKey(record))
-  const oldAmount = existing ? getTransactionAmount(schema, existing.data) : 0
-
-  return newAmount !== 0 || oldAmount !== 0 ? { oldAmount, newAmount } : null
+  return newAmount !== 0 ? { oldAmount: 0, newAmount } : null
 }
 
 /**
