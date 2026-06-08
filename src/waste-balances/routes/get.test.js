@@ -350,6 +350,29 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     })
   })
 
+  describe('missing organisation', () => {
+    const missingOrganisationId = '0123456789abcdef01234567'
+
+    it('omits all accreditations when the organisation does not exist', async () => {
+      const server = await buildServer({
+        balances: [],
+        organisations: []
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${missingOrganisationId}/waste-balances?accreditationIds=${accreditationId1}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result).toEqual({})
+    })
+  })
+
   describe('cross-organisation isolation', () => {
     const otherOrganisationId = '7777777777777777777777ff'
     const otherAccreditationId = 'bbbbbbbbbbbbbbbbbbbbbbbb'

@@ -55,10 +55,13 @@ export const wasteBalanceGet = {
       /** @type {string} */ (query.accreditationIds).split(',')
     )
 
-    const organisation = await organisationsRepository.findById(organisationId)
+    const [organisation] = await organisationsRepository.findByIds([
+      organisationId
+    ])
+    const registrations = organisation?.registrations ?? []
 
     const registrationIdByAccreditationId = new Map(
-      organisation.registrations
+      registrations
         .filter((registration) => registration.accreditationId)
         .map((registration) => [registration.accreditationId, registration.id])
     )
