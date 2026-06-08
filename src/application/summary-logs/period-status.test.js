@@ -878,6 +878,36 @@ describe('buildTransactionAmounts', () => {
       })
     })
 
+  it('forwards classification context to classifyForWasteBalance', () => {
+    const wasteBalanceRecords = [
+      buildWasteRecord({ rowId: '1000', change: 'CREATED' })
+    ]
+
+    const classifyForWasteBalance = vi.fn().mockReturnValue({
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 10
+    })
+
+    const context = {
+      accreditation: { status: 'approved' },
+      overseasSites: { enabled: false }
+    }
+
+    buildTransactionAmounts({
+      wasteBalanceRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      existingRecordsMap: new Map(),
+      findSchema: () => /** @type {any} */ ({ classifyForWasteBalance }),
+      context
+    })
+
+    expect(classifyForWasteBalance).toHaveBeenCalledWith(
+      expect.any(Object),
+      context
+    )
+  })
+
   it('returns the full transaction amount for added records', () => {
     const wasteBalanceRecords = [
       buildWasteRecord({ rowId: '1000', change: 'CREATED' })
@@ -1188,6 +1218,49 @@ describe('computeLoadsByPeriodStatus', () => {
       },
       closed: null
     })
+  })
+
+  it('passes null accreditation for registered-only registrations', async () => {
+    const classifyForWasteBalance = vi.fn().mockReturnValue({
+      outcome: ROW_OUTCOME.INCLUDED,
+      reasons: [],
+      transactionAmount: 5
+    })
+
+    const schemas = /** @type {any} */ ({
+      REPROCESSOR_INPUT: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
+          wasteRecordType: 'received',
+          classifyForWasteBalance
+        }
+      }
+    })
+
+    const wasteRecords = [buildWasteRecord()]
+
+    await computeLoadsByPeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords: wasteRecords,
+      summaryLogId: SUMMARY_LOG_ID,
+      status: 'validated',
+      registration: registeredOnlyRegistration,
+      processingType: 'REPROCESSOR_INPUT',
+      existingRecordsMap: new Map(),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: async () => []
+      }),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      loggingContext: 'test',
+      logger: stubLogger,
+      processingTypeTables: schemas
+    })
+
+    expect(classifyForWasteBalance).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ accreditation: null })
+    )
   })
 
   it('returns null for unknown processing type', async () => {
