@@ -154,7 +154,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'monthly', period: 1 })
         ],
         tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 10 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.closed.added.tonnageDelta).toBe(10)
@@ -180,7 +183,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'monthly', period: 1 })
         ],
         tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 10 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(10)
@@ -206,7 +212,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'monthly', period: 1 })
         ],
         tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 10 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.closed.added.tonnageDelta).toBe(10)
@@ -232,7 +241,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'monthly', period: 1 })
         ],
         tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 5]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 5 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.closed.added.tonnageDelta).toBe(5)
@@ -255,7 +267,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: MULTI_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result).toEqual(emptyResult())
@@ -272,7 +285,10 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 10 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(10)
@@ -289,7 +305,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'monthly', period: 1 })
         ],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 10 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.closed.added.tonnageDelta).toBe(10)
@@ -331,7 +350,10 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports,
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 10 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.closed.added.tonnageDelta).toBe(10)
@@ -362,7 +384,10 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'quarterly', period: 1 })
         ],
         tableSchemas,
-        transactionAmounts: new Map([['received:1000', 8]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 8 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.closed.added.tonnageDelta).toBe(8)
@@ -380,7 +405,10 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', 5]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 5 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.adjusted.tonnageDelta).toBe(5)
@@ -397,7 +425,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(0)
@@ -407,6 +436,12 @@ describe('classifyByPeriodStatus', () => {
       // Record was previously included at 10 tonnes, now excluded.
       // The reversal (-10) must appear in adjusted.tonnageDelta
       // so the frontend can show "these adjusted loads will remove 10 tonnes".
+      const oldRecord = /** @type {any} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+      })
+
       const wasteRecords = [
         buildWasteRecord({
           change: 'UPDATED',
@@ -420,10 +455,146 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map([['received:1000', -10]])
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 10, newAmount: 0 }]
+        ]),
+        existingRecordsMap: new Map([['received:1000', oldRecord]])
       })
 
       expect(result.open.adjusted.tonnageDelta).toBe(-10)
+    })
+  })
+
+  describe('adjusted records that change period', () => {
+    it('splits tonnage when a record moves from closed to open', () => {
+      // Old data: DATE_RECEIVED_FOR_REPROCESSING = Jan (closed)
+      // New data: DATE_RECEIVED_FOR_REPROCESSING = Feb (open)
+      // The old +10 must be reversed from closed, the new +12 added to open.
+      const oldRecord = /** @type {any} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+      })
+
+      const wasteRecords = [
+        buildWasteRecord({
+          change: 'UPDATED',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-20' }
+        })
+      ]
+
+      const result = classifyByPeriodStatus({
+        wasteRecords,
+        summaryLogId: SUMMARY_LOG_ID,
+        registration: accreditedRegistration,
+        submittedReports: [
+          buildSubmittedReport({ cadence: 'monthly', period: 1 })
+        ],
+        tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 10, newAmount: 12 }]
+        ]),
+        existingRecordsMap: new Map([['received:1000', oldRecord]])
+      })
+
+      expect(result.closed.adjusted.tonnageDelta).toBe(-10)
+      expect(result.open.adjusted.tonnageDelta).toBe(12)
+    })
+
+    it('collapses to net delta when the period does not change', () => {
+      // Old and new both in Jan (closed). Should behave like today: net delta.
+      const oldRecord = /** @type {any} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-10' }
+      })
+
+      const wasteRecords = [
+        buildWasteRecord({
+          change: 'UPDATED',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-20' }
+        })
+      ]
+
+      const result = classifyByPeriodStatus({
+        wasteRecords,
+        summaryLogId: SUMMARY_LOG_ID,
+        registration: accreditedRegistration,
+        submittedReports: [
+          buildSubmittedReport({ cadence: 'monthly', period: 1 })
+        ],
+        tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 10, newAmount: 12 }]
+        ]),
+        existingRecordsMap: new Map([['received:1000', oldRecord]])
+      })
+
+      // 12 - 10 = +2 net in closed
+      expect(result.closed.adjusted.tonnageDelta).toBe(2)
+      expect(result.open.adjusted.tonnageDelta).toBe(0)
+    })
+
+    it('reverses old period tonnage when all dates are removed', () => {
+      // Old data had Jan date (closed), new data has no dates.
+      // Closed period loses the old contribution, record is otherwise skipped.
+      const oldRecord = /** @type {any} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+      })
+
+      const wasteRecords = [
+        buildWasteRecord({
+          change: 'UPDATED',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: null }
+        })
+      ]
+
+      const result = classifyByPeriodStatus({
+        wasteRecords,
+        summaryLogId: SUMMARY_LOG_ID,
+        registration: accreditedRegistration,
+        submittedReports: [
+          buildSubmittedReport({ cadence: 'monthly', period: 1 })
+        ],
+        tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 10, newAmount: 0 }]
+        ]),
+        existingRecordsMap: new Map([['received:1000', oldRecord]])
+      })
+
+      expect(result.closed.adjusted.tonnageDelta).toBe(-10)
+      expect(result.open.adjusted.tonnageDelta).toBe(0)
+    })
+
+    it('attributes full new amount when no old record exists', () => {
+      // No old record in existingRecordsMap (e.g. first upload adjusted a
+      // row that was created in the same batch). Only new period gets tonnage.
+      const wasteRecords = [
+        buildWasteRecord({
+          change: 'UPDATED',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-20' }
+        })
+      ]
+
+      const result = classifyByPeriodStatus({
+        wasteRecords,
+        summaryLogId: SUMMARY_LOG_ID,
+        registration: accreditedRegistration,
+        submittedReports: [
+          buildSubmittedReport({ cadence: 'monthly', period: 1 })
+        ],
+        tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
+        transactionAmounts: new Map([
+          ['received:1000', { oldAmount: 0, newAmount: 8 }]
+        ]),
+        existingRecordsMap: new Map()
+      })
+
+      expect(result.open.adjusted.tonnageDelta).toBe(8)
+      expect(result.closed.adjusted.tonnageDelta).toBe(0)
     })
   })
 
@@ -445,7 +616,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result).toEqual(emptyResult())
@@ -460,7 +632,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result).toEqual(emptyResult())
@@ -475,7 +648,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result).toEqual(emptyResult())
@@ -490,7 +664,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result).toEqual(emptyResult())
@@ -512,9 +687,10 @@ describe('classifyByPeriodStatus', () => {
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
         transactionAmounts: new Map([
-          ['received:1000', 7.5],
-          ['received:1001', 2.5]
-        ])
+          ['received:1000', { oldAmount: 0, newAmount: 7.5 }],
+          ['received:1001', { oldAmount: 0, newAmount: 2.5 }]
+        ]),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(10)
@@ -529,7 +705,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(0)
@@ -547,7 +724,8 @@ describe('classifyByPeriodStatus', () => {
           buildSubmittedReport({ cadence: 'quarterly', period: 1 })
         ],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(0)
@@ -589,7 +767,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports,
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(0)
@@ -611,7 +790,8 @@ describe('classifyByPeriodStatus', () => {
         registration: accreditedRegistration,
         submittedReports: [],
         tableSchemas: SINGLE_DATE_TABLE_SCHEMAS,
-        transactionAmounts: new Map()
+        transactionAmounts: new Map(),
+        existingRecordsMap: new Map()
       })
 
       expect(result.open.added.tonnageDelta).toBe(0)
@@ -652,10 +832,10 @@ describe('buildTransactionAmounts', () => {
       findSchema: () => stubSchema(10)
     })
 
-    expect(result.get('received:1000')).toBe(10)
+    expect(result.get('received:1000')).toEqual({ oldAmount: 0, newAmount: 10 })
   })
 
-  it('returns the delta (new - old) for adjusted records', () => {
+  it('returns old and new amounts for adjusted records', () => {
     const wasteBalanceRecords = [
       buildWasteRecord({
         rowId: '1000',
@@ -686,7 +866,10 @@ describe('buildTransactionAmounts', () => {
       findSchema: () => dataSensitiveSchema
     })
 
-    expect(result.get('received:1000')).toBe(5) // 15 - 10
+    expect(result.get('received:1000')).toEqual({
+      oldAmount: 10,
+      newAmount: 15
+    })
   })
 
   it('skips records where classification returns zero', () => {
@@ -777,7 +960,7 @@ describe('buildTransactionAmounts', () => {
       findSchema: () => dataSensitiveSchema
     })
 
-    expect(result.get('received:1000')).toBe(-10)
+    expect(result.get('received:1000')).toEqual({ oldAmount: 10, newAmount: 0 })
   })
 
   it('uses zero as old amount when no existing record found for adjusted record', () => {
@@ -804,8 +987,7 @@ describe('buildTransactionAmounts', () => {
       findSchema: () => dataSensitiveSchema
     })
 
-    // 15 - 0 = 15 (full amount when no prior version exists)
-    expect(result.get('received:1000')).toBe(15)
+    expect(result.get('received:1000')).toEqual({ oldAmount: 0, newAmount: 15 })
   })
 })
 

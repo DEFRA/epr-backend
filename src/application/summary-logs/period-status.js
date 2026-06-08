@@ -183,7 +183,16 @@ const classifyPeriodStatus = (
 }
 
 /**
+ * @typedef {{ oldAmount: number, newAmount: number }} TransactionAmounts
+ */
+
+/**
  * Classifies a single waste record into the appropriate period status bucket.
+ *
+ * For added records, classifies the new data into a single period.
+ * For adjusted records, classifies both old and new data independently:
+ * the old period gets -oldAmount, the new period gets +newAmount.
+ * When old and new fall in the same period, this collapses to the net delta.
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord} params.wasteRecord
@@ -191,7 +200,8 @@ const classifyPeriodStatus = (
  * @param {Set<string>} params.closedPeriods
  * @param {string} params.cadence
  * @param {Object<string, { reportingDateFields: string[] }>} params.tableSchemas
- * @param {Map<string, number>} params.transactionAmounts
+ * @param {Map<string, TransactionAmounts>} params.transactionAmounts
+ * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {LoadsByPeriodStatus} params.result
  */
 const classifyRecord = ({
@@ -201,6 +211,7 @@ const classifyRecord = ({
   cadence,
   tableSchemas,
   transactionAmounts,
+  existingRecordsMap,
   result
 }) => {
   const { record, outcome } = wasteRecord
@@ -219,18 +230,47 @@ const classifyRecord = ({
     return
   }
 
-  const periodStatus = classifyPeriodStatus(
-    record.data,
-    schema.reportingDateFields,
-    closedPeriods,
-    cadence
-  )
-  if (!periodStatus) {
+  const key = recordKey(record)
+  const amounts = transactionAmounts.get(key)
+  const { reportingDateFields } = schema
+
+  if (status === 'added') {
+    const period = classifyPeriodStatus(
+      record.data,
+      reportingDateFields,
+      closedPeriods,
+      cadence
+    )
+    if (period) {
+      result[period].added.tonnageDelta += amounts?.newAmount ?? 0
+    }
     return
   }
 
-  result[periodStatus][status].tonnageDelta +=
-    transactionAmounts.get(recordKey(record)) ?? 0
+  // Adjusted: classify old and new data independently
+  const newPeriod = classifyPeriodStatus(
+    record.data,
+    reportingDateFields,
+    closedPeriods,
+    cadence
+  )
+
+  const existing = existingRecordsMap.get(key)
+  const oldPeriod = existing
+    ? classifyPeriodStatus(
+        existing.data,
+        reportingDateFields,
+        closedPeriods,
+        cadence
+      )
+    : null
+
+  if (oldPeriod) {
+    result[oldPeriod].adjusted.tonnageDelta -= amounts?.oldAmount ?? 0
+  }
+  if (newPeriod) {
+    result[newPeriod].adjusted.tonnageDelta += amounts?.newAmount ?? 0
+  }
 }
 
 /**
@@ -246,7 +286,8 @@ const classifyRecord = ({
  * @param {Registration} params.registration
  * @param {PeriodicReport[]} params.submittedReports
  * @param {Object<string, { reportingDateFields: string[], wasteRecordType: string }>} params.tableSchemas
- * @param {Map<string, number>} params.transactionAmounts
+ * @param {Map<string, TransactionAmounts>} params.transactionAmounts
+ * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @returns {LoadsByPeriodStatus}
  */
 export const classifyByPeriodStatus = ({
@@ -255,7 +296,8 @@ export const classifyByPeriodStatus = ({
   registration,
   submittedReports,
   tableSchemas,
-  transactionAmounts
+  transactionAmounts,
+  existingRecordsMap
 }) => {
   const result = emptyResult()
 
@@ -273,6 +315,7 @@ export const classifyByPeriodStatus = ({
       cadence,
       tableSchemas,
       transactionAmounts,
+      existingRecordsMap,
       result
     })
   }
@@ -304,7 +347,7 @@ const getTransactionAmount = (schema, data) => {
  * @param {string} params.summaryLogId
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {(wasteRecordType: string) => import('#domain/summary-logs/table-schemas/index.js').TableSchema | null} params.findSchema
- * @returns {Map<string, number>}
+ * @returns {Map<string, TransactionAmounts>}
  */
 export const buildTransactionAmounts = ({
   wasteBalanceRecords,
@@ -312,6 +355,7 @@ export const buildTransactionAmounts = ({
   existingRecordsMap,
   findSchema
 }) => {
+  /** @type {Map<string, TransactionAmounts>} */
   const amounts = new Map()
 
   for (const { record, outcome } of wasteBalanceRecords) {
@@ -332,12 +376,11 @@ export const buildTransactionAmounts = ({
       const oldAmount = existing
         ? getTransactionAmount(schema, existing.data)
         : 0
-      const delta = newAmount - oldAmount
-      if (delta !== 0) {
-        amounts.set(key, delta)
+      if (newAmount !== 0 || oldAmount !== 0) {
+        amounts.set(key, { oldAmount, newAmount })
       }
     } else if (newAmount !== 0) {
-      amounts.set(key, newAmount)
+      amounts.set(key, { oldAmount: 0, newAmount })
     }
   }
 
@@ -403,7 +446,8 @@ export const computeLoadsByPeriodStatus = async ({
       registration,
       submittedReports,
       tableSchemas: processingTypeTables[processingType],
-      transactionAmounts
+      transactionAmounts,
+      existingRecordsMap
     })
   } catch (err) {
     logger.warn({
