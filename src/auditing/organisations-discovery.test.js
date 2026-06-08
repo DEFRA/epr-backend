@@ -1,9 +1,10 @@
 import { auditOrganisationsDiscovery } from './organisations-discovery.js'
-import { vi, describe, it, beforeEach, afterEach } from 'vitest'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
+import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
 
 const mockAudit = vi.fn()
-const mockInsert = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -12,9 +13,12 @@ vi.mock('@defra/cdp-auditing', () => ({
 describe('auditOrganisationsDiscovery', () => {
   const now = new Date('2026-01-06T15:47:00.000Z')
 
+  let systemLogsRepository
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
+    systemLogsRepository = createSystemLogsRepository()(logger)
   })
 
   afterEach(() => {
@@ -22,16 +26,28 @@ describe('auditOrganisationsDiscovery', () => {
     vi.clearAllMocks()
   })
 
-  const createMockRequest = () => ({
-    systemLogsRepository: { insert: mockInsert },
-    auth: {
-      credentials: {
-        id: 'contact-123',
-        email: 'user@example.com',
-        scope: ['inquirer']
+  const createMockRequest = () =>
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+      systemLogsRepository,
+      auth: {
+        credentials: {
+          id: 'contact-123',
+          email: 'user@example.com',
+          scope: ['inquirer']
+        }
       }
-    }
-  })
+    })
+
+  const findStoredLog = async () => {
+    const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+    return systemLogs[0]
+  }
+
+  const expectedEvent = {
+    category: 'identity',
+    subCategory: 'defra-id-reconciliation',
+    action: 'organisations-discovered'
+  }
 
   /** @type {import('#domain/organisations/model.js').Organisation} */
   const linkedOrg = /** @type {any} */ ({
@@ -62,10 +78,18 @@ describe('auditOrganisationsDiscovery', () => {
     linkableOrgs: /** @type {any[]} */ ([])
   }
 
-  it('maps a linked org into the audit context', async () => {
+  it('records a linked org with full context in the system log', async () => {
     await auditOrganisationsDiscovery(createMockRequest(), baseParams)
 
-    const expectedContext = {
+    const storedLog = await findStoredLog()
+    expect(storedLog.event).toEqual(expectedEvent)
+    expect(storedLog.createdAt).toEqual(now)
+    expect(storedLog.createdBy).toEqual({
+      id: 'contact-123',
+      email: 'user@example.com',
+      scope: ['inquirer']
+    })
+    expect(storedLog.context).toEqual({
       organisationId: 'epr-org-1',
       defraIdOrg: baseParams.defraIdOrg,
       defraIdRelationships,
@@ -78,26 +102,10 @@ describe('auditOrganisationsDiscovery', () => {
         linkedAt: '2026-01-01T00:00:00.000Z'
       },
       unlinked: []
-    }
-
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: {
-          category: 'identity',
-          subCategory: 'defra-id-reconciliation',
-          action: 'organisations-discovered'
-        },
-        context: expectedContext,
-        createdBy: {
-          id: 'contact-123',
-          email: 'user@example.com',
-          scope: ['inquirer']
-        }
-      })
-    )
+    })
   })
 
-  it('sets linked to null and maps linkable orgs with status when no linked org exists', async () => {
+  it('records null linked and maps linkable orgs with status when no linked org exists', async () => {
     /** @type {any[]} */
     const linkableOrgs = [
       {
@@ -114,40 +122,38 @@ describe('auditOrganisationsDiscovery', () => {
       linkableOrgs
     })
 
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        context: expect.objectContaining({
-          organisationId: null,
-          linked: null,
-          unlinked: [
-            {
-              id: 'epr-org-2',
-              name: 'Unlinked Corp',
-              orgId: 2002,
-              status: 'approved'
-            }
-          ]
-        })
-      })
-    )
+    const storedLog = await findStoredLog()
+    expect(storedLog.context).toEqual({
+      organisationId: null,
+      defraIdOrg: baseParams.defraIdOrg,
+      defraIdRelationships,
+      linked: null,
+      unlinked: [
+        {
+          id: 'epr-org-2',
+          name: 'Unlinked Corp',
+          orgId: 2002,
+          status: 'approved'
+        }
+      ]
+    })
   })
 
-  it('sets linked and unlinked to null/empty when there are no EPR organisations', async () => {
+  it('records null linked and empty unlinked when there are no EPR organisations', async () => {
     await auditOrganisationsDiscovery(createMockRequest(), {
       ...baseParams,
       linkedOrg: null,
       linkableOrgs: []
     })
 
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        context: expect.objectContaining({
-          organisationId: null,
-          linked: null,
-          unlinked: []
-        })
-      })
-    )
+    const storedLog = await findStoredLog()
+    expect(storedLog.context).toEqual({
+      organisationId: null,
+      defraIdOrg: baseParams.defraIdOrg,
+      defraIdRelationships,
+      linked: null,
+      unlinked: []
+    })
   })
 
   it('sends full context to CDP audit for normal-sized payloads', async () => {
@@ -176,11 +182,7 @@ describe('auditOrganisationsDiscovery', () => {
 
     // CDP audit receives stripped payload (event + user only)
     expect(mockAudit).toHaveBeenCalledWith({
-      event: {
-        category: 'identity',
-        subCategory: 'defra-id-reconciliation',
-        action: 'organisations-discovered'
-      },
+      event: expectedEvent,
       user: {
         id: 'contact-123',
         email: 'user@example.com',
@@ -189,12 +191,20 @@ describe('auditOrganisationsDiscovery', () => {
     })
 
     // System log always gets full context
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        context: expect.objectContaining({
-          defraIdRelationships: oversizedParams.defraIdRelationships
-        })
-      })
-    )
+    const storedLog = await findStoredLog()
+    expect(storedLog.context).toEqual({
+      organisationId: 'epr-org-1',
+      defraIdOrg: baseParams.defraIdOrg,
+      defraIdRelationships: oversizedParams.defraIdRelationships,
+      linked: {
+        id: 'epr-org-1',
+        name: 'Linked Ltd',
+        orgId: 1001,
+        status: 'approved',
+        linkedBy: { email: 'linker@example.com', id: 'linker-id' },
+        linkedAt: '2026-01-01T00:00:00.000Z'
+      },
+      unlinked: []
+    })
   })
 })
