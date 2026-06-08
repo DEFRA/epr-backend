@@ -96,7 +96,7 @@ describe('ORS waste balance validation (VAL014)', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
     })
-    const { wasteBalancesRepository, accreditationId } = env
+    const { wasteBalancesRepository, accreditationId, registrationId } = env
 
     // OSR_ID 100 is in the test org's overseas sites map and the overseas
     // sites repository has it with validFrom=2025-01-01. The default export
@@ -107,7 +107,8 @@ describe('ORS waste balance validation (VAL014)', () => {
 
     const balance = await getWasteBalance(
       wasteBalancesRepository,
-      accreditationId
+      accreditationId,
+      registrationId
     )
 
     expect(balance.amount).toBe(100)
@@ -117,7 +118,7 @@ describe('ORS waste balance validation (VAL014)', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
     })
-    const { wasteBalancesRepository, accreditationId } = env
+    const { wasteBalancesRepository, accreditationId, registrationId } = env
 
     // OSR_ID 999 is not in the registration's overseas sites map,
     // so the ORS lookup will not find it and the row should be excluded.
@@ -135,7 +136,8 @@ describe('ORS waste balance validation (VAL014)', () => {
 
     const balance = await getWasteBalance(
       wasteBalancesRepository,
-      accreditationId
+      accreditationId,
+      registrationId
     )
 
     // Only row 2002 (approved ORS, 150t) contributes; row 2001 (unapproved

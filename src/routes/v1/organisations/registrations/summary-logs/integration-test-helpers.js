@@ -12,7 +12,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -30,15 +30,19 @@ export { asStandardUser } from '#test/inject-auth.js'
  * Reads an accreditation's waste balance and asserts it is present, so callers
  * can read its fields without a null guard at every assertion site.
  *
- * @param {{ findByAccreditationId: (accreditationId: string) => Promise<import('#waste-balances/domain/model.js').WasteBalance | null> }} wasteBalancesRepository
+ * @param {{ findBalance: (partition: { registrationId: string, accreditationId: string }) => Promise<import('#waste-balances/domain/model.js').WasteBalance | null> }} wasteBalancesRepository
  * @param {string} accreditationId
+ * @param {string} registrationId
  */
 export const getWasteBalance = async (
   wasteBalancesRepository,
-  accreditationId
+  accreditationId,
+  registrationId
 ) => {
-  const balance =
-    await wasteBalancesRepository.findByAccreditationId(accreditationId)
+  const balance = await wasteBalancesRepository.findBalance({
+    registrationId,
+    accreditationId
+  })
   assert(balance)
   return balance
 }
@@ -500,8 +504,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   material = 'paper',
   organisationId = new ObjectId().toString(),
   registrationId = new ObjectId().toString(),
-  featureFlagOverrides = {},
-  existingWasteBalances = []
+  featureFlagOverrides = {}
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -535,13 +538,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     findSummaryLogSubmitActors: vi.fn()
   }
 
-  const wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository(
-    existingWasteBalances,
-    {
-      streamRepository,
-      systemLogsRepository: systemLogsForBalanceAudit
-    }
-  )
+  const wasteBalancesRepositoryFactory = createWasteBalancesRepository({
+    streamRepository,
+    systemLogsRepository: systemLogsForBalanceAudit
+  })
   const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
   const fileDataMap = {}

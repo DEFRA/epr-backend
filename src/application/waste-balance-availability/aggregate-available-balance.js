@@ -5,35 +5,30 @@ import {
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/stream-mongodb.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
-const WASTE_BALANCES_COLLECTION = 'waste-balances'
 const ACCREDITATION_ID_FIELD = '$accreditationId'
 
-const buildMaterialLookupStage = () => ({
-  $lookup: {
-    from: ORGANISATIONS_COLLECTION,
-    let: {
-      orgId: { $toObjectId: '$organisationId' },
-      accId: ACCREDITATION_ID_FIELD
-    },
-    pipeline: [
-      { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
-      { $unwind: '$registrations' },
-      {
-        $match: {
-          $expr: { $eq: ['$registrations.accreditationId', '$$accId'] }
-        }
-      },
-      {
-        $project: {
+const buildAccreditedRegistrationStages = () => [
+  { $unwind: '$registrations' },
+  {
+    $match: {
+      'registrations.accreditationId': { $exists: true, $ne: null }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      registrationId: '$registrations.id',
+      accreditationId: '$registrations.accreditationId',
+      orgData: [
+        {
           orgId: '$orgId',
           material: '$registrations.material',
           glassRecyclingProcess: '$registrations.glassRecyclingProcess'
         }
-      }
-    ],
-    as: 'orgData'
+      ]
+    }
   }
-})
+]
 
 const buildLatestStreamEventLookupStage = () => ({
   $lookup: {
@@ -60,10 +55,9 @@ const buildLatestStreamEventLookupStage = () => ({
   }
 })
 
-// Mirrors resolveBalanceAmounts
-// (waste-balances/repository/resolve-balance-amounts.js): the latest stream
-// closing balance is the source of truth, resolving to zero when the stream is
-// empty.
+// Mirrors findBalanceByPartition
+// (waste-balances/repository/read-balance.js): the latest stream closing
+// balance is the source of truth, resolving to zero when the stream is empty.
 const buildStreamAvailableAmountStage = () => ({
   $addFields: {
     availableAmount: {
@@ -73,7 +67,7 @@ const buildStreamAvailableAmountStage = () => ({
 })
 
 const buildAggregationPipeline = () => [
-  buildMaterialLookupStage(),
+  ...buildAccreditedRegistrationStages(),
   ...buildEffectiveMaterialStages(),
   buildLatestStreamEventLookupStage(),
   buildStreamAvailableAmountStage(),
@@ -90,7 +84,7 @@ export const aggregateAvailableBalance = async (db) => {
   const pipeline = buildAggregationPipeline()
 
   const results = await db
-    .collection(WASTE_BALANCES_COLLECTION)
+    .collection(ORGANISATIONS_COLLECTION)
     .aggregate(pipeline)
     .toArray()
 

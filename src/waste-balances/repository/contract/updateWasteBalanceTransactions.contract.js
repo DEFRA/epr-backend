@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest'
-import { buildWasteBalance, buildWasteRecord } from './test-data.js'
+import { buildWasteRecord } from './test-data.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -9,6 +9,8 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 
 export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
+    // buildWasteRecord credits the stream under this registration partition.
+    const registrationId = 'reg-1'
     const accreditation = {
       id: 'acc-123',
       validFrom: '2023-01-01',
@@ -48,7 +50,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         summaryLogId: 'log-1'
       })
 
-      const balance = await repository.findByAccreditationId(accreditation.id)
+      const balance = await repository.findBalance({
+        registrationId,
+        accreditationId: accreditation.id
+      })
       expect(balance).not.toBeNull()
       expect(balance.amount).toBe(10.5)
       expect(balance.availableAmount).toBe(10.5)
@@ -65,22 +70,24 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         summaryLogId: 'log-1'
       })
 
-      const balance = await repository.findByAccreditationId(accreditation.id)
+      const balance = await repository.findBalance({
+        registrationId,
+        accreditationId: accreditation.id
+      })
       expect(balance).toBeNull()
     })
 
     it('updates an existing balance, resolved from the stream', async ({
       wasteBalancesRepository,
-      insertWasteBalance
+      seedBalance
     }) => {
       const repository = await wasteBalancesRepository()
 
-      const existingBalance = buildWasteBalance({
+      await seedBalance({
+        registrationId,
         accreditationId: accreditation.id,
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
+        organisationId: 'org-1'
       })
-      await insertWasteBalance(existingBalance)
 
       const record = buildWasteRecord({
         accreditationId: accreditation.id,
@@ -100,7 +107,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         summaryLogId: 'log-1'
       })
 
-      const balance = await repository.findByAccreditationId(accreditation.id)
+      const balance = await repository.findBalance({
+        registrationId,
+        accreditationId: accreditation.id
+      })
       expect(balance.amount).toBe(10.5)
       expect(balance.availableAmount).toBe(10.5)
     })
@@ -129,7 +139,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         summaryLogId: 'log-1'
       })
 
-      const balance = await repository.findByAccreditationId(accreditation.id)
+      const balance = await repository.findBalance({
+        registrationId,
+        accreditationId: accreditation.id
+      })
       expect(balance.amount).toBe(0)
       expect(balance.availableAmount).toBe(0)
     })
@@ -185,7 +198,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         summaryLogId: 'log-1'
       })
 
-      const balance = await repository.findByAccreditationId(accreditation.id)
+      const balance = await repository.findBalance({
+        registrationId,
+        accreditationId: accreditation.id
+      })
       expect(balance).not.toBeNull()
       expect(balance.amount).toBe(10.5)
       expect(balance.availableAmount).toBe(10.5)

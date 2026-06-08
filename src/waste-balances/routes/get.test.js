@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryStreamRepository } from '#waste-balances/repository/stream-inmemory.js'
-import { createInMemoryWasteBalancesRepository } from '#waste-balances/repository/inmemory.js'
+import { createWasteBalancesRepository } from '#waste-balances/repository/repository.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -24,19 +29,8 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
    * Build an in-memory waste balances repository whose balances resolve their
    * amounts from a stream seeded with the given closing balances.
    */
-  const buildRepository = async (balances) => {
+  const buildBalancesRepository = async (balances) => {
     const streamRepository = createInMemoryStreamRepository()()
-    const shells = balances.map(
-      ({ accreditationId, organisationId: orgId, registrationId }) => ({
-        accreditationId,
-        organisationId: orgId,
-        registrationId,
-        amount: 0,
-        availableAmount: 0,
-        version: 1,
-        schemaVersion: 1
-      })
-    )
     for (const {
       accreditationId,
       organisationId: orgId,
@@ -54,37 +48,71 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
         })
       )
     }
-    return createInMemoryWasteBalancesRepository(shells, { streamRepository })
+    return createWasteBalancesRepository({ streamRepository })
   }
+
+  /**
+   * Build an in-memory organisations repository whose registrations carry the
+   * accreditationId -> registrationId links the handler resolves against.
+   */
+  const buildOrganisationsRepository = (organisations) =>
+    createInMemoryOrganisationsRepository(
+      organisations.map(({ id, registrations }) =>
+        buildOrganisation({
+          id,
+          registrations: registrations.map(
+            ({ registrationId, accreditationId }) =>
+              buildRegistration({ id: registrationId, accreditationId })
+          )
+        })
+      )
+    )
+
+  const buildServer = async ({ balances, organisations }) =>
+    createTestServer({
+      repositories: {
+        wasteBalancesRepository: await buildBalancesRepository(balances),
+        organisationsRepository: buildOrganisationsRepository(organisations)
+      },
+      featureFlags: createInMemoryFeatureFlags({})
+    })
 
   describe('with valid authentication and standard data', () => {
     let server
 
     beforeEach(async () => {
-      const wasteBalancesRepositoryFactory = await buildRepository([
-        {
-          accreditationId: accreditationId1,
-          organisationId,
-          registrationId: registrationId1,
-          amount: 1000,
-          availableAmount: 750
-        },
-        {
-          accreditationId: accreditationId2,
-          organisationId,
-          registrationId: registrationId2,
-          amount: 2500,
-          availableAmount: 2500
-        }
-      ])
-
-      const featureFlags = createInMemoryFeatureFlags({})
-
-      server = await createTestServer({
-        repositories: {
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        featureFlags
+      server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750
+          },
+          {
+            accreditationId: accreditationId2,
+            organisationId,
+            registrationId: registrationId2,
+            amount: 2500,
+            availableAmount: 2500
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              },
+              {
+                registrationId: registrationId2,
+                accreditationId: accreditationId2
+              }
+            ]
+          }
+        ]
       })
     })
 
@@ -130,7 +158,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       })
     })
 
-    it('returns empty object for non-existent accreditation IDs', async () => {
+    it('omits accreditation IDs not registered to the organisation', async () => {
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${nonExistentId}`,
@@ -144,7 +172,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       expect(result).toEqual({})
     })
 
-    it('handles mixed existing and non-existing IDs', async () => {
+    it('returns balances for registered IDs and omits unregistered ones', async () => {
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${nonExistentId}`,
@@ -187,23 +215,27 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     let server
 
     beforeEach(async () => {
-      const wasteBalancesRepositoryFactory = await buildRepository([
-        {
-          accreditationId: accreditationId1,
-          organisationId,
-          registrationId: registrationId1,
-          amount: 1000,
-          availableAmount: 750
-        }
-      ])
-
-      const featureFlags = createInMemoryFeatureFlags({})
-
-      server = await createTestServer({
-        repositories: {
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        featureFlags
+      server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
       })
     })
 
@@ -248,23 +280,27 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     let server
 
     beforeEach(async () => {
-      const wasteBalancesRepositoryFactory = await buildRepository([
-        {
-          accreditationId: accreditationId1,
-          organisationId,
-          registrationId: registrationId1,
-          amount: 1000,
-          availableAmount: 750
-        }
-      ])
-
-      const featureFlags = createInMemoryFeatureFlags({})
-
-      server = await createTestServer({
-        repositories: {
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        featureFlags
+      server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
       })
     })
 
@@ -279,35 +315,25 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   })
 
   describe('zero balance handling', () => {
-    it('resolves a balance with no stream events to zero amounts', async () => {
-      const accreditationIdWithNoEvents = 'aaaaaaaaaaaaaaaaaaaaaaaa'
-      const wasteBalancesRepositoryFactory =
-        createInMemoryWasteBalancesRepository(
-          [
-            {
-              accreditationId: accreditationIdWithNoEvents,
-              organisationId,
-              registrationId: registrationId1,
-              amount: 0,
-              availableAmount: 0,
-              version: 1,
-              schemaVersion: 1
-            }
-          ],
-          { streamRepository: createInMemoryStreamRepository()() }
-        )
-
-      const featureFlags = createInMemoryFeatureFlags({})
-      const server = await createTestServer({
-        repositories: {
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        featureFlags
+    it('resolves a registered accreditation with no stream events to zero amounts', async () => {
+      const server = await buildServer({
+        balances: [],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          }
+        ]
       })
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdWithNoEvents}`,
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -316,7 +342,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result).toEqual({
-        [accreditationIdWithNoEvents]: {
+        [accreditationId1]: {
           amount: 0,
           availableAmount: 0
         }
@@ -324,85 +350,136 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     })
   })
 
-  describe('authorization checks', () => {
-    it('returns 403 when accreditation belongs to a different organisation', async () => {
-      const differentOrgId = '7777777777777777777777ff'
-      const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
+  describe('missing organisation', () => {
+    const missingOrganisationId = '0123456789abcdef01234567'
 
-      const wasteBalancesRepositoryFactory = await buildRepository([
-        {
-          accreditationId: accreditationIdDifferentOrg,
-          organisationId: differentOrgId,
-          registrationId: registrationId1,
-          amount: 1000,
-          availableAmount: 750
-        }
-      ])
-
-      const featureFlags = createInMemoryFeatureFlags({})
-      const server = await createTestServer({
-        repositories: {
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        featureFlags
+    it('omits all accreditations when the organisation does not exist', async () => {
+      const server = await buildServer({
+        balances: [],
+        organisations: []
       })
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdDifferentOrg}`,
+        url: `/v1/organisations/${missingOrganisationId}/waste-balances?accreditationIds=${accreditationId1}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
-      expect(result.error).toBe('Forbidden')
-      expect(result.message).toContain(accreditationIdDifferentOrg)
-      expect(result.message).toContain(organisationId)
+      expect(result).toEqual({})
+    })
+  })
+
+  describe('cross-organisation isolation', () => {
+    const otherOrganisationId = '7777777777777777777777ff'
+    const otherAccreditationId = 'bbbbbbbbbbbbbbbbbbbbbbbb'
+    const otherRegistrationId = 'reg-other'
+
+    it('omits an accreditation that belongs to a different organisation', async () => {
+      const server = await buildServer({
+        balances: [
+          {
+            accreditationId: otherAccreditationId,
+            organisationId: otherOrganisationId,
+            registrationId: otherRegistrationId,
+            amount: 1000,
+            availableAmount: 750
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          },
+          {
+            id: otherOrganisationId,
+            registrations: [
+              {
+                registrationId: otherRegistrationId,
+                accreditationId: otherAccreditationId
+              }
+            ]
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${otherAccreditationId}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result).toEqual({})
     })
 
-    it('returns 403 when one of multiple accreditations belongs to a different organisation', async () => {
-      const differentOrgId = '7777777777777777777777ff'
-      const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
-
-      const wasteBalancesRepositoryFactory = await buildRepository([
-        {
-          accreditationId: accreditationId1,
-          organisationId,
-          registrationId: registrationId1,
-          amount: 1000,
-          availableAmount: 750
-        },
-        {
-          accreditationId: accreditationIdDifferentOrg,
-          organisationId: differentOrgId,
-          registrationId: registrationId2,
-          amount: 2000,
-          availableAmount: 1500
-        }
-      ])
-
-      const featureFlags = createInMemoryFeatureFlags({})
-      const server = await createTestServer({
-        repositories: {
-          wasteBalancesRepository: wasteBalancesRepositoryFactory
-        },
-        featureFlags
+    it('returns only the organisation-owned balances when a request mixes organisations', async () => {
+      const server = await buildServer({
+        balances: [
+          {
+            accreditationId: accreditationId1,
+            organisationId,
+            registrationId: registrationId1,
+            amount: 1000,
+            availableAmount: 750
+          },
+          {
+            accreditationId: otherAccreditationId,
+            organisationId: otherOrganisationId,
+            registrationId: otherRegistrationId,
+            amount: 2000,
+            availableAmount: 1500
+          }
+        ],
+        organisations: [
+          {
+            id: organisationId,
+            registrations: [
+              {
+                registrationId: registrationId1,
+                accreditationId: accreditationId1
+              }
+            ]
+          },
+          {
+            id: otherOrganisationId,
+            registrations: [
+              {
+                registrationId: otherRegistrationId,
+                accreditationId: otherAccreditationId
+              }
+            ]
+          }
+        ]
       })
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationIdDifferentOrg}`,
+        url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${otherAccreditationId}`,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
-      expect(result.error).toBe('Forbidden')
-      expect(result.message).toContain(accreditationIdDifferentOrg)
+      expect(result).toEqual({
+        [accreditationId1]: {
+          amount: 1000,
+          availableAmount: 750
+        }
+      })
     })
   })
 })

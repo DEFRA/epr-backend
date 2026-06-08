@@ -248,7 +248,7 @@ describe('updatePrnStatus', () => {
         .mockImplementation(async ({ projection }) => projection)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -295,7 +295,7 @@ describe('updatePrnStatus', () => {
       })
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue(null)
+      findBalance: vi.fn().mockResolvedValue(null)
     })
 
     await expect(
@@ -374,7 +374,7 @@ describe('updatePrnStatus', () => {
         .mockImplementation(async ({ projection }) => projection)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -430,7 +430,7 @@ describe('updatePrnStatus', () => {
         .mockImplementation(async ({ projection }) => projection)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -486,7 +486,7 @@ describe('updatePrnStatus', () => {
         .mockImplementation(async ({ projection }) => projection)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -539,7 +539,7 @@ describe('updatePrnStatus', () => {
       })
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue(null)
+      findBalance: vi.fn().mockResolvedValue(null)
     })
 
     await expect(
@@ -579,7 +579,7 @@ describe('updatePrnStatus', () => {
         .mockImplementation(async ({ projection }) => projection)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -638,7 +638,7 @@ describe('updatePrnStatus', () => {
       persistProjection
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -680,7 +680,7 @@ describe('updatePrnStatus', () => {
       updateStatus: vi.fn()
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -723,7 +723,7 @@ describe('updatePrnStatus', () => {
       updateStatus: vi.fn()
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -774,7 +774,7 @@ describe('updatePrnStatus', () => {
       persistProjection: vi.fn().mockRejectedValue(dbError)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -816,7 +816,7 @@ describe('updatePrnStatus', () => {
       persistProjection: vi.fn().mockResolvedValue(null)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -860,7 +860,7 @@ describe('updatePrnStatus', () => {
       persistProjection: vi.fn().mockResolvedValue(null)
     })
     const wasteBalancesRepository = createMockWasteBalancesRepository({
-      findByAccreditationId: vi.fn().mockResolvedValue({
+      findBalance: vi.fn().mockResolvedValue({
         accreditationId: 'acc-456',
         amount: 1000,
         availableAmount: 1000
@@ -900,7 +900,7 @@ describe('updatePrnStatus', () => {
         updateStatus: vi.fn()
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 500,
           availableAmount: 50
@@ -947,7 +947,7 @@ describe('updatePrnStatus', () => {
         persistProjection: vi.fn()
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 50,
           availableAmount: 200
@@ -992,7 +992,7 @@ describe('updatePrnStatus', () => {
           .mockImplementation(async ({ projection }) => projection)
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 500,
           availableAmount: 100
@@ -1033,7 +1033,7 @@ describe('updatePrnStatus', () => {
         updateStatus: vi.fn()
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 500
         })
@@ -1073,7 +1073,7 @@ describe('updatePrnStatus', () => {
         })
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           availableAmount: 200
         })
@@ -1115,7 +1115,7 @@ describe('updatePrnStatus', () => {
           .mockImplementation(async ({ projection }) => projection)
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 50,
           availableAmount: 200
@@ -1162,7 +1162,7 @@ describe('updatePrnStatus', () => {
           .mockImplementation(async ({ projection }) => projection)
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 1000,
           availableAmount: 1000
@@ -1217,7 +1217,7 @@ describe('updatePrnStatus', () => {
           .mockImplementation(async ({ projection }) => projection)
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue({
+        findBalance: vi.fn().mockResolvedValue({
           accreditationId: 'acc-456',
           amount: 1000,
           availableAmount: 1000
@@ -1467,9 +1467,7 @@ describe('updatePrnStatus', () => {
           .mockImplementation(async ({ projection }) => projection)
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi
-          .fn()
-          .mockResolvedValue({ accreditationId: 'acc-456' }),
+        findBalance: vi.fn().mockResolvedValue({ accreditationId: 'acc-456' }),
         creditFullBalanceForIssuedPrnCancellation: vi
           .fn()
           .mockResolvedValue(
@@ -1518,7 +1516,7 @@ describe('updatePrnStatus', () => {
         })
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue(null)
+        findBalance: vi.fn().mockResolvedValue(null)
       })
 
       await expect(
@@ -1560,9 +1558,7 @@ describe('updatePrnStatus', () => {
           .mockImplementation(async ({ projection }) => projection)
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi
-          .fn()
-          .mockResolvedValue({ accreditationId: 'acc-456' }),
+        findBalance: vi.fn().mockResolvedValue({ accreditationId: 'acc-456' }),
         creditAvailableBalanceForPrnCancellation: vi
           .fn()
           .mockResolvedValue(
@@ -1615,7 +1611,7 @@ describe('updatePrnStatus', () => {
         rollbackPendingCancellation: vi.fn().mockResolvedValue({})
       })
       const wasteBalancesRepository = createMockWasteBalancesRepository({
-        findByAccreditationId: vi.fn().mockResolvedValue(null)
+        findBalance: vi.fn().mockResolvedValue(null)
       })
 
       await expect(

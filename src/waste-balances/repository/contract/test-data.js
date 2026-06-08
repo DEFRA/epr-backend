@@ -4,32 +4,6 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
- * Build a minimal waste balance shell for testing
- * @param {Omit<Partial<import('../../domain/model.js').WasteBalance>, 'id'> & { id?: string | null }} [overrides] - Optional overrides; a null or omitted id triggers a generated one
- * @returns {import('../../domain/model.js').WasteBalance}
- */
-export const buildWasteBalance = (overrides = {}) => {
-  const id = overrides.id ?? randomUUID()
-  const organisationId = overrides.organisationId ?? 'org-1'
-  const accreditationId = overrides.accreditationId ?? 'acc-1'
-  const schemaVersion = overrides.schemaVersion ?? 1
-  const version = overrides.version ?? 1
-  const amount = overrides.amount ?? 100
-  const availableAmount = overrides.availableAmount ?? 100
-
-  return {
-    ...overrides,
-    id,
-    organisationId,
-    accreditationId,
-    schemaVersion,
-    version,
-    amount,
-    availableAmount
-  }
-}
-
-/**
  * Build a waste record for testing
  * @param {Partial<import('#domain/waste-records/model.js').WasteRecord>} [overrides]
  * @returns {import('#domain/waste-records/model.js').WasteRecord}

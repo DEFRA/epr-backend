@@ -62,8 +62,9 @@
 
 /**
  * @typedef {Object} WasteBalancesRepository
- * @property {(accreditationId: string) => Promise<import('../domain/model.js').WasteBalance | null>} findByAccreditationId
- * @property {(accreditationIds: string[]) => Promise<import('../domain/model.js').WasteBalance[]>} findByAccreditationIds
+ * @property {(partition: { registrationId: string, accreditationId: string }) => Promise<import('../domain/model.js').WasteBalance | null>} findBalance
+ *   Resolve a balance from its stream partition. `null` when the partition has
+ *   no events (the accreditation has no balance).
  * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], options: { user: import('#domain/summary-logs/worker/port.js').SubmitUser, accreditation: import('#domain/organisations/accreditation.js').Accreditation, overseasSites: import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext, summaryLogId: string }) => Promise<void>} updateWasteBalanceTransactions
  * @property {(params: DeductAvailableBalanceParams) => Promise<import('./stream-port.js').StreamEvent | null>} deductAvailableBalanceForPrnCreation
  *   Resolves to the appended stream event, or `null` when no balance exists.
@@ -78,8 +79,7 @@
  *   Throws when no balance exists.
  * @property {(params: GetPrnCatchupEventsParams) => Promise<import('./stream-schema.js').StreamEvent[]>} getPrnCatchupEvents
  *   Return the stream tail events to project onto a PRN read. Empty array when
- *   no balance document exists, or when the accreditation has no tail events
- *   for this PRN past the watermark.
+ *   the accreditation has no tail events for this PRN past the watermark.
  */
 
 /**

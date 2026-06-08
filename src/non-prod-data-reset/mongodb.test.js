@@ -19,13 +19,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { buildWasteBalance } from '#waste-balances/repository/contract/test-data.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
-import { createMongoStreamRepository } from '#waste-balances/repository/stream-mongodb.js'
-import {
-  createWasteBalancesRepository,
-  saveBalance
-} from '#waste-balances/repository/mongodb.js'
 import {
   buildVersionData,
   toWasteRecordVersions
@@ -61,7 +55,6 @@ const COLLECTIONS = [
   'registration',
   'accreditation',
   'packaging-recycling-notes',
-  'waste-balances',
   'waste-balance-events',
   'reports',
   'waste-records',
@@ -85,7 +78,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, wasteBalancesSave: Function, [k: string]: object | Function }} repositories
+ * @property {object & { prns: { create: Function }, wasteRecords: { appendVersions: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -93,7 +86,6 @@ const mockLogger = {
 const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
-      // @ts-expect-error -- vitest fixture db is a string URL at runtime
       const client = await MongoClient.connect(db)
       await use(client)
       await client.close()
@@ -113,13 +105,6 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         database,
         []
       )
-      const streamFactory = await createMongoStreamRepository(database)
-      const wasteBalancesFactory = await createWasteBalancesRepository(
-        database,
-        {
-          streamRepository: streamFactory()
-        }
-      )
       const reportsFactory = await createReportsRepository(database)
       const wasteRecordsFactory = await createWasteRecordsRepository(database)
       const summaryLogsFactory = await createSummaryLogsRepository(
@@ -133,13 +118,11 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       await use({
         organisations: organisationsFactory(),
         prns: prnsFactory(mockLogger),
-        wasteBalances: wasteBalancesFactory(),
         reports: reportsFactory(),
         wasteRecords: wasteRecordsFactory(),
         summaryLogs: summaryLogsFactory(mockLogger),
         overseasSites: overseasSitesFactory(),
-        systemLogs: systemLogsFactory(mockLogger),
-        wasteBalancesSave: saveBalance(database)
+        systemLogs: systemLogsFactory(mockLogger)
       })
     },
 
@@ -212,13 +195,6 @@ const seedDownstreamForOrganisation = async (
     })
   )
 
-  // waste-balances has no public insert, so use the exported saveBalance
-  // helper the real adapter uses under the hood.
-  await repositories.wasteBalancesSave(
-    buildWasteBalance({ accreditationId, organisationId }),
-    []
-  )
-
   await repositories.reports.createReport(
     buildCreateReportParams({
       organisationId,
@@ -285,7 +261,6 @@ const seedStagingCollections = async (database, orgId) => {
 
 const EMPTY_COUNTS = {
   'packaging-recycling-notes': 0,
-  'waste-balances': 0,
   'waste-balance-events': 0,
   reports: 0,
   'waste-records': 0,
@@ -324,7 +299,6 @@ describe('non-prod data reset (mongo)', () => {
 
       expect(counts).toEqual({
         'packaging-recycling-notes': 2,
-        'waste-balances': 1,
         'waste-balance-events': 1,
         reports: 1,
         'waste-records': 1,
@@ -366,11 +340,6 @@ describe('non-prod data reset (mongo)', () => {
         await database
           .collection('packaging-recycling-notes')
           .countDocuments({ 'organisation.id': other.organisationId })
-      ).toBe(1)
-      expect(
-        await database
-          .collection('waste-balances')
-          .countDocuments({ accreditationId: other.accreditationId })
       ).toBe(1)
       expect(
         await database
@@ -469,34 +438,6 @@ describe('non-prod data reset (mongo)', () => {
       expect(second).toEqual(EMPTY_COUNTS)
     })
 
-    it('short-circuits waste-balances when the organisation has no accreditations', async ({
-      database,
-      reset
-    }) => {
-      // Raw insert: we are deliberately constructing a malformed org doc to
-      // exercise the cascade's empty-accreditations branch, which bypasses
-      // adapter-level validation.
-      const orgId = 600001
-      await database.collection('epr-organisations').insertOne({
-        _id: new ObjectId(),
-        orgId,
-        accreditations: [],
-        registrations: []
-      })
-      // An orphan waste-balance with an accreditation id the cascade should not touch.
-      await database.collection('waste-balances').insertOne({
-        _id: new ObjectId(),
-        accreditationId: new ObjectId().toHexString()
-      })
-
-      const counts = await reset.deleteByOrgId(orgId)
-
-      expect(counts['waste-balances']).toBe(0)
-      expect(await database.collection('waste-balances').countDocuments()).toBe(
-        1
-      )
-    })
-
     it('short-circuits overseas-sites when the organisation has no overseas sites', async ({
       database,
       reset
@@ -565,7 +506,6 @@ describe('non-prod data reset (mongo)', () => {
       const counts = await reset.deleteByOrgId(orgId)
 
       expect(counts['epr-organisations']).toBe(1)
-      expect(counts['waste-balances']).toBe(0)
       expect(counts['overseas-sites']).toBe(0)
     })
   })

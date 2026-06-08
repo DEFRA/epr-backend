@@ -1,11 +1,12 @@
-import { describe, beforeEach, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
-import { createWasteBalancesRepository } from './mongodb.js'
+import { createWasteBalancesRepository } from './repository.js'
 import {
   createMongoStreamRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './stream-mongodb.js'
+import { buildStreamEvent } from './stream-test-data.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -15,94 +16,59 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 const DATABASE_NAME = 'epr-backend'
-const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
-const it = mongoIt.extend({
-  mongoClient: async ({ db }, use) => {
-    const client = await MongoClient.connect(
-      // db is typed as the fixture tuple by TypeScript; the yielded value is a string (mongo URI)
-      /** @type {string} */ (/** @type {unknown} */ (db))
-    )
-    await use(client)
-    await client.close()
-  },
+/**
+ * @typedef {object} WasteBalancesRepoFixtures
+ * @property {import('mongodb').MongoClient} mongoClient
+ * @property {import('./stream-port.js').WasteBalanceStreamRepository} streamRepository
+ * @property {import('./port.js').WasteBalancesRepositoryFactory} wasteBalancesRepository
+ * @property {(event: object) => Promise<void>} seedBalance
+ */
 
-  streamRepository: async ({ mongoClient }, use) => {
-    const database = /** @type {import('mongodb').MongoClient} */ (
-      mongoClient
-    ).db(DATABASE_NAME)
-    const factory = await createMongoStreamRepository(database)
-    await use(factory())
-  },
+const it = /** @type {import('vitest').TestAPI<WasteBalancesRepoFixtures>} */ (
+  mongoIt.extend({
+    mongoClient: async ({ db }, use) => {
+      const client = await MongoClient.connect(db)
+      await use(client)
+      await client.close()
+    },
 
-  wasteBalancesRepository: async ({ mongoClient, streamRepository }, use) => {
-    const database = /** @type {import('mongodb').MongoClient} */ (
-      mongoClient
-    ).db(DATABASE_NAME)
-    const factory = await createWasteBalancesRepository(database, {
-      streamRepository:
-        /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
-          /** @type {unknown} */ (streamRepository)
-        )
-    })
-    await use(factory)
-  },
+    streamRepository: async ({ mongoClient }, use) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const factory = await createMongoStreamRepository(database)
+      await use(factory())
+    },
 
-  insertWasteBalance: async ({ mongoClient }, use) => {
-    await use(async (wasteBalance) => {
-      await /** @type {import('mongodb').MongoClient} */ (mongoClient)
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .insertOne(wasteBalance)
-    })
-  },
+    wasteBalancesRepository: async ({ streamRepository }, use) => {
+      const factory = createWasteBalancesRepository({ streamRepository })
+      await use(factory)
+    },
 
-  insertWasteBalances: async ({ mongoClient }, use) => {
-    await use(async (wasteBalances) => {
-      await /** @type {import('mongodb').MongoClient} */ (mongoClient)
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .insertMany(wasteBalances)
-    })
-  }
-})
+    seedBalance: async ({ streamRepository }, use) => {
+      await use(async (event) => {
+        await streamRepository.appendEvent(buildStreamEvent(event))
+      })
+    }
+  })
+)
 
 describe('MongoDB waste balances repository', () => {
   describe('repository creation', () => {
-    it('should create repository instance', async ({
-      mongoClient,
-      streamRepository
-    }) => {
-      const database = /** @type {import('mongodb').MongoClient} */ (
-        mongoClient
-      ).db(DATABASE_NAME)
-      const repository = await createWasteBalancesRepository(database, {
-        streamRepository:
-          /** @type {import('./stream-port.js').WasteBalanceStreamRepository} */ (
-            /** @type {unknown} */ (streamRepository)
-          )
-      })
+    it('should create repository instance', async ({ streamRepository }) => {
+      const repository = createWasteBalancesRepository({ streamRepository })
       const instance = repository()
       expect(instance).toBeDefined()
-      expect(instance.findByAccreditationId).toBeTypeOf('function')
+      expect(instance.findBalance).toBeTypeOf('function')
     })
   })
 
   describe('data management', () => {
-    beforeEach(
-      async (
-        // @ts-expect-error -- vitest .extend() fixture typing
-        { mongoClient }
-      ) => {
-        const database = /** @type {import('mongodb').MongoClient} */ (
-          mongoClient
-        ).db(DATABASE_NAME)
-        await database.collection(WASTE_BALANCE_COLLECTION_NAME).deleteMany({})
-        await database
-          .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-          .deleteMany({})
-      }
-    )
+    it.beforeEach(async ({ mongoClient }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      await database
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+        .deleteMany({})
+    })
 
     describe('waste balances repository contract', () => {
       testWasteBalancesRepositoryContract(it)

@@ -140,8 +140,7 @@ export const createMockPackagingRecyclingNotesRepository = (
  * @returns {WasteBalancesRepository}
  */
 export const createMockWasteBalancesRepository = (overrides = {}) => ({
-  findByAccreditationId: vi.fn(),
-  findByAccreditationIds: vi.fn(),
+  findBalance: vi.fn(),
   updateWasteBalanceTransactions: vi.fn(),
   deductAvailableBalanceForPrnCreation: vi.fn(),
   deductTotalBalanceForPrnIssue: vi.fn(),

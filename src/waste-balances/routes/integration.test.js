@@ -1,6 +1,6 @@
 import { describe, beforeEach, afterEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient } from 'mongodb'
+import { MongoClient, ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 import { createServer } from '#server/server.js'
 import {
@@ -8,6 +8,10 @@ import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/stream-mongodb.js'
 import { buildStreamEvent } from '#waste-balances/repository/stream-test-data.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 vi.mock(
@@ -22,10 +26,10 @@ vi.mock(
 const { validToken } = entraIdMockAuthTokens
 
 const DATABASE_NAME = 'epr-backend'
-const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
+const ORGANISATIONS_COLLECTION_NAME = 'epr-organisations'
 
 const it = mongoIt.extend({
-  mongoClient: async (/** @type {{ db: string }} */ { db }, use) => {
+  mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
     await client.close()
@@ -47,6 +51,25 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
   /** @type {import('mongodb').MongoClient} */
   let dbClient
 
+  const insertOrganisation = async (database) => {
+    const { id, ...rest } = buildOrganisation({
+      id: organisationId,
+      registrations: [
+        buildRegistration({
+          id: registrationId1,
+          accreditationId: accreditationId1
+        }),
+        buildRegistration({
+          id: registrationId2,
+          accreditationId: accreditationId2
+        })
+      ]
+    })
+    await database
+      .collection(ORGANISATIONS_COLLECTION_NAME)
+      .insertOne({ _id: new ObjectId(id), ...rest })
+  }
+
   beforeEach(
     async (
       /** @type {{ mongoClient: import('mongodb').MongoClient }} */ {
@@ -55,33 +78,13 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     ) => {
       dbClient = mongoClient
       const database = mongoClient.db(DATABASE_NAME)
-      const collection = database.collection(WASTE_BALANCE_COLLECTION_NAME)
 
-      await collection.deleteMany({})
+      await database.collection(ORGANISATIONS_COLLECTION_NAME).deleteMany({})
       await database
         .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
         .deleteMany({})
 
-      await collection.insertMany([
-        {
-          accreditationId: accreditationId1,
-          organisationId,
-          registrationId: registrationId1,
-          amount: 0,
-          availableAmount: 0,
-          version: 1,
-          schemaVersion: 1
-        },
-        {
-          accreditationId: accreditationId2,
-          organisationId,
-          registrationId: registrationId2,
-          amount: 0,
-          availableAmount: 0,
-          version: 1,
-          schemaVersion: 1
-        }
-      ])
+      await insertOrganisation(database)
 
       const streamRepository = (await createMongoStreamRepository(database))()
       await streamRepository.appendEvent(
@@ -112,7 +115,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     await server.stop()
   })
 
-  it('fetches waste balances from MongoDB for multiple IDs', async () => {
+  it('fetches waste balances from the stream for multiple IDs', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationId2}`,
@@ -134,7 +137,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     })
   })
 
-  it('fetches single waste balance from MongoDB', async () => {
+  it('fetches a single waste balance from the stream', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
@@ -152,7 +155,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     })
   })
 
-  it('returns empty object for non-existent IDs in MongoDB', async () => {
+  it('omits accreditation IDs not registered to the organisation', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${nonExistentId}`,
@@ -167,7 +170,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(result).toEqual({})
   })
 
-  it('handles mixed existing and non-existing IDs from MongoDB', async () => {
+  it('returns balances for registered IDs and omits unregistered ones', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${nonExistentId}`,
@@ -186,10 +189,10 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(result[nonExistentId]).toBeUndefined()
   })
 
-  it('returns empty object when collection is empty', async () => {
+  it('resolves a registered accreditation with no stream events to zero amounts', async () => {
     await dbClient
       .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
       .deleteMany({})
 
     const response = await server.inject({
@@ -203,6 +206,9 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
 
-    expect(result).toEqual({})
+    expect(result[accreditationId1]).toEqual({
+      amount: 0,
+      availableAmount: 0
+    })
   })
 })
