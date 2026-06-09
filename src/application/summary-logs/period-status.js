@@ -6,7 +6,8 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
-/** @import {WasteBalanceClassificationResult, OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 
 /**
@@ -289,6 +290,52 @@ const reduceEntries = (entries) => {
 }
 
 /**
+ * Produces fold entries for a single adjusted record.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord} params.wasteRecord
+ * @param {Map<string, WasteRecord>} params.existingRecordsMap
+ * @param {TableSchema} params.schema
+ * @param {boolean} params.isIncluded
+ * @param {(data: Record<string, string | Date | null | undefined>, fields: string[]) => 'open' | 'closed' | null} params.classify
+ * @param {ClassificationContext} params.context
+ * @returns {PeriodStatusEntry[]}
+ */
+const classifyAdjustedWasteRecord = ({
+  wasteRecord,
+  existingRecordsMap,
+  schema,
+  isIncluded,
+  classify,
+  context
+}) => {
+  const { record } = wasteRecord
+  const { reportingDateFields } = schema
+
+  const newPeriod = classify(record.data, reportingDateFields)
+  const existingKey = `${record.type}:${record.rowId}`
+  const existing = existingRecordsMap.get(existingKey)
+  const oldPeriod = existing
+    ? classify(existing.data, reportingDateFields)
+    : null
+
+  if (!newPeriod && !oldPeriod) return []
+
+  const newAmount = getTransactionAmount(schema, record.data, context)
+  const oldAmount = existing
+    ? getTransactionAmount(schema, existing.data, context)
+    : 0
+
+  return classifyAdjustedRecord({
+    oldPeriod,
+    newPeriod,
+    isIncluded,
+    oldAmount,
+    newAmount
+  })
+}
+
+/**
  * Classifies waste records by reporting period status (open/closed).
  *
  * Each record produces 0-2 fold entries which are then reduced into the
@@ -300,7 +347,7 @@ const reduceEntries = (entries) => {
  * @param {PeriodicReport[]} params.periodicReports
  * @param {'monthly' | 'quarterly'} params.cadence
  * @param {string} params.summaryLogId
- * @param {Record<string, { reportingDateFields: string[], wasteRecordType: string, classifyForWasteBalance?: Function }>} params.tableSchemas
+ * @param {Record<string, TableSchema>} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
  * @returns {LoadsByPeriodStatus}
  */
@@ -334,52 +381,37 @@ export const classifyByPeriodStatus = ({
     const schema = tableSchemas[wasteRecord.tableName]
     if (!schema) continue
 
-    const { reportingDateFields } = schema
     const isIncluded = outcome === ROW_OUTCOME.INCLUDED
 
     if (status === 'added') {
-      const period = classify(record.data, reportingDateFields)
+      const period = classify(record.data, schema.reportingDateFields)
       if (period) {
-        const transactionAmount = getTransactionAmount(
+        const amount = getTransactionAmount(
           schema,
           record.data,
           classificationContext
         )
         entries.push(
-          ...classifyAddedRecord({ period, isIncluded, transactionAmount })
+          ...classifyAddedRecord({
+            period,
+            isIncluded,
+            transactionAmount: amount
+          })
         )
       }
       continue
     }
 
-    // Adjusted record: classify old and new dates independently
-    const newPeriod = classify(record.data, reportingDateFields)
-    const existingKey = `${record.type}:${record.rowId}`
-    const existing = existingRecordsMap.get(existingKey)
-    const oldPeriod = existing
-      ? classify(existing.data, reportingDateFields)
-      : null
-
-    const newAmount = getTransactionAmount(
-      schema,
-      record.data,
-      classificationContext
+    entries.push(
+      ...classifyAdjustedWasteRecord({
+        wasteRecord,
+        existingRecordsMap,
+        schema,
+        isIncluded,
+        classify,
+        context: classificationContext
+      })
     )
-    const oldAmount = existing
-      ? getTransactionAmount(schema, existing.data, classificationContext)
-      : 0
-
-    if (newPeriod || oldPeriod) {
-      entries.push(
-        ...classifyAdjustedRecord({
-          oldPeriod,
-          newPeriod,
-          isIncluded,
-          oldAmount,
-          newAmount
-        })
-      )
-    }
   }
 
   return reduceEntries(entries)
