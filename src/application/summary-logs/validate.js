@@ -6,7 +6,6 @@ import {
   VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/index.js'
-import { isNil } from '#common/helpers/is-nil.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
@@ -18,19 +17,16 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
-  PROCESSING_TYPE_TABLES,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import {
-  countByValidity,
-  countByWasteBalanceInclusion,
-  countByWasteRecordType,
-  mergeLoads
-} from './load-counts.js'
-import { classifyByPeriodStatus } from './period-status.js'
+  classifyLoads,
+  fetchPeriodicReportsSafe,
+  filterWasteBalanceRecords
+} from './classify-and-persist.js'
 import {
   logValidationIssues,
   MAX_VALIDATION_ISSUES
@@ -565,189 +561,6 @@ const persistValidationResult = async ({
 }
 
 /**
- * Filters waste records to only those from tables that participate in waste balance.
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {string} processingType
- * @returns {ValidatedWasteRecord[]}
- */
-const filterWasteBalanceRecords = (wasteRecords, processingType) =>
-  wasteRecords?.filter((wr) => {
-    const schema = findSchemaForProcessingType(processingType, wr.record.type)
-    return !isNil(schema?.classifyForWasteBalance)
-  }) ?? []
-
-/**
- * Computes all load classifications for validated summary logs.
- *
- * @param {Object} params
- * @param {string} params.status - Summary log status after validation
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {string} params.summaryLogId
- * @param {ProcessingType} params.processingType
- * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
- * @param {Registration} [params.registration]
- * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByPeriodStatus: LoadsByPeriodStatus | null }}
- */
-const classifyLoads = ({
-  processingType,
-  status,
-  summaryLogId,
-  wasteBalanceRecords,
-  wasteRecords,
-  periodicReports,
-  registration,
-  existingRecordsMap
-}) => {
-  if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return {
-      loads: null,
-      loadsByWasteRecordType: null,
-      loadsByPeriodStatus: null
-    }
-  }
-
-  const loads = mergeLoads(
-    countByValidity({ wasteRecords, summaryLogId }),
-    countByWasteBalanceInclusion({
-      wasteRecords: wasteBalanceRecords,
-      summaryLogId
-    })
-  )
-
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-  const loadsByWasteRecordType = countByWasteRecordType({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    tableSchemas
-  })
-
-  /* v8 ignore start -- defensive guard: all three are always set when status is VALIDATED */
-  const loadsByPeriodStatus =
-    registration && existingRecordsMap && tableSchemas
-      ? classifyByPeriodStatus({
-          wasteRecords,
-          existingRecordsMap,
-          periodicReports,
-          cadence: isRegistrationAccredited(registration)
-            ? 'monthly'
-            : 'quarterly',
-          summaryLogId,
-          tableSchemas,
-          classificationContext: {
-            accreditation: registration.accreditation ?? null,
-            overseasSites: ORS_VALIDATION_DISABLED
-          }
-        })
-      : null
-  /* v8 ignore stop */
-
-  return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
-}
-
-/**
- * Classifies loads and persists the validation result.
- *
- * @param {Object} params
- * @param {ValidationIssuesCollector} params.issues
- * @param {ProcessingType} params.processingType
- * @param {typeof SUMMARY_LOG_STATUS[keyof typeof SUMMARY_LOG_STATUS]} params.status
- * @param {string} params.summaryLogId
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
- * @param {Registration} [params.registration]
- * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
- * @param {ExtractedMeta} [params.meta]
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {SummaryLogsRepository} params.summaryLogsRepository
- * @param {number} params.version
- */
-const classifyAndPersist = async ({
-  issues,
-  processingType,
-  status,
-  summaryLogId,
-  wasteBalanceRecords,
-  wasteRecords,
-  periodicReports,
-  registration,
-  existingRecordsMap,
-  meta,
-  summaryLog,
-  summaryLogsRepository,
-  version
-}) => {
-  const { loads, loadsByWasteRecordType, loadsByPeriodStatus } = classifyLoads({
-    processingType,
-    status,
-    summaryLogId,
-    wasteBalanceRecords,
-    wasteRecords,
-    periodicReports,
-    registration,
-    existingRecordsMap
-  })
-
-  await persistValidationResult({
-    issues,
-    loads,
-    loadsByPeriodStatus,
-    loadsByWasteRecordType,
-    meta,
-    status,
-    summaryLog,
-    summaryLogId,
-    summaryLogsRepository,
-    version
-  })
-}
-
-/**
- * Fetches periodic reports for the validated summary log, swallowing errors.
- *
- * @param {Object} params
- * @param {Registration} [params.registration]
- * @param {string} params.status
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {ReportsRepository} params.reportsRepository
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- * @returns {Promise<import('#reports/repository/port.js').PeriodicReport[]>}
- */
-const fetchPeriodicReportsSafe = async ({
-  registration,
-  status,
-  summaryLog,
-  reportsRepository,
-  loggingContext,
-  logger
-}) => {
-  try {
-    if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-      return await reportsRepository.findPeriodicReports({
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId
-      })
-    }
-  } catch (err) {
-    logger.warn({
-      message: `Failed to fetch periodic reports: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      },
-      err
-    })
-  }
-  return []
-}
-
-/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -828,18 +641,27 @@ export const createSummaryLogsValidator = ({
       logger
     })
 
-    await classifyAndPersist({
+    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
+      classifyLoads({
+        processingType,
+        status,
+        summaryLogId,
+        wasteBalanceRecords,
+        wasteRecords,
+        periodicReports,
+        registration,
+        existingRecordsMap
+      })
+
+    await persistValidationResult({
       issues,
-      processingType,
-      status,
-      summaryLogId,
-      wasteBalanceRecords,
-      wasteRecords,
-      periodicReports,
-      registration,
-      existingRecordsMap,
+      loads,
+      loadsByPeriodStatus,
+      loadsByWasteRecordType,
       meta,
+      status,
       summaryLog,
+      summaryLogId,
       summaryLogsRepository,
       version
     })
