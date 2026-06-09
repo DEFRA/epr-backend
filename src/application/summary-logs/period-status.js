@@ -515,6 +515,9 @@ export const computeLoadsByPeriodStatus = async ({
       registrationId
     })
 
+    // Overseas site validation already ran in the pipeline; here we only
+    // need transaction amounts for period status tallying, so we disable
+    // the overseas sites gate.
     /** @type {ClassificationContext} */
     const classificationContext = {
       accreditation: registration.accreditation ?? null,
