@@ -559,7 +559,6 @@ export const createSummaryLogsValidator = ({
 
     const loadsByPeriodStatus = await computePeriodStatus({
       wasteRecords,
-      wasteBalanceRecords,
       summaryLogId,
       status,
       registration,

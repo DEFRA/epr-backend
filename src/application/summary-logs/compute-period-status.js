@@ -22,7 +22,6 @@ import { classifyByPeriodStatus } from './period-status.js'
  *
  * @param {Object} params
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
  * @param {string} params.summaryLogId
  * @param {string} params.status
  * @param {Registration} [params.registration]
@@ -36,7 +35,6 @@ import { classifyByPeriodStatus } from './period-status.js'
  */
 export const computePeriodStatus = async ({
   wasteRecords,
-  wasteBalanceRecords,
   summaryLogId,
   status,
   registration,
@@ -68,14 +66,20 @@ export const computePeriodStatus = async ({
       registrationId: summaryLog.registrationId
     })
 
+    const findSchema = (/** @type {string} */ wasteRecordType) =>
+      Object.values(tableSchemas).find(
+        (s) => s.wasteRecordType === wasteRecordType
+      ) ?? null
+
+    const wasteBalanceRecords = wasteRecords.filter(
+      (wr) => findSchema(wr.record.type)?.classifyForWasteBalance !== undefined
+    )
+
     const transactionAmounts = buildTransactionAmounts({
       wasteBalanceRecords,
       summaryLogId,
       existingRecordsMap,
-      findSchema: (wasteRecordType) =>
-        Object.values(tableSchemas).find(
-          (s) => s.wasteRecordType === wasteRecordType
-        ) ?? null,
+      findSchema,
       context: {
         accreditation: registration.accreditation ?? null,
         overseasSites: ORS_VALIDATION_DISABLED

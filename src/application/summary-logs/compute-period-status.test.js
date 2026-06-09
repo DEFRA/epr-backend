@@ -77,7 +77,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords,
-      wasteBalanceRecords: wasteRecords,
+
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map()
@@ -101,7 +101,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords,
-      wasteBalanceRecords: wasteRecords,
+
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
@@ -120,7 +120,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords: [buildWasteRecord()],
-      wasteBalanceRecords: [],
+
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
@@ -134,7 +134,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords: null,
-      wasteBalanceRecords: [],
+
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map()
@@ -147,7 +147,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords: [buildWasteRecord()],
-      wasteBalanceRecords: [],
+
       registration: undefined,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map()
@@ -160,7 +160,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords: [buildWasteRecord()],
-      wasteBalanceRecords: [],
+
       registration: accreditedRegistration,
       processingType: 'UNKNOWN_TYPE',
       existingRecordsMap: new Map()
@@ -184,7 +184,7 @@ describe('computePeriodStatus', () => {
     await computePeriodStatus({
       ...baseParams,
       wasteRecords,
-      wasteBalanceRecords: wasteRecords,
+
       registration: registeredOnlyRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map()
@@ -202,7 +202,7 @@ describe('computePeriodStatus', () => {
     const result = await computePeriodStatus({
       ...baseParams,
       wasteRecords,
-      wasteBalanceRecords: wasteRecords,
+
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map()
