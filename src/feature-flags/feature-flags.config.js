@@ -7,8 +7,5 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isCopyFormFilesToS3Enabled() {
     return config.get('featureFlags.copyFormFilesToS3')
-  },
-  isReportUnsubmitEnabled() {
-    return config.get('featureFlags.reportUnsubmit')
   }
 })

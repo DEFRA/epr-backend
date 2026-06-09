@@ -357,18 +357,6 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_COPY_FORM_FILES_TO_S3'
-    },
-    allowFullErrorOutput: {
-      doc: 'Feature Flag: Allow full error output (including potentially sensitive payload / stack detail)',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_ALLOW_FULL_ERROR_OUTPUT'
-    },
-    reportUnsubmit: {
-      doc: 'Feature Flag: Enable admin unsubmit endpoint for reports',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_REPORT_UNSUBMIT'
     }
   },
   formSubmissionOverrides: {
