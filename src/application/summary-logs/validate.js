@@ -465,15 +465,6 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
 }
 
 /**
- * @param {string} summaryLogId
- * @param {SubmittedSummaryLog} summaryLog
- */
-const buildLoggingContext = (summaryLogId, summaryLog) => {
-  const { id: fileId, name: filename } = summaryLog.file
-  return `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
-}
-
-/**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
  * @param {string} summaryLogId
  */
@@ -644,7 +635,8 @@ export const createSummaryLogsValidator = ({
       /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
         result
       )
-    const loggingContext = buildLoggingContext(summaryLogId, summaryLog)
+    const { id: fileId, name: filename } = summaryLog.file
+    const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
     logger.info({
       message: `Summary log validation started: ${loggingContext}`,
