@@ -12,6 +12,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('sqs-consumer')
 vi.mock('@aws-sdk/client-sqs', () => ({
@@ -65,22 +69,9 @@ describe('createCommandQueueConsumer', () => {
       })
     }
 
-    logger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      child: vi.fn(() => ({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        child: vi.fn()
-      }))
-    }
+    logger = createMockLogger()
 
-    summaryLogsRepository = {
-      findById: vi.fn(),
-      update: vi.fn()
-    }
+    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     organisationsRepository = {}
     wasteRecordsRepository = {}
@@ -316,10 +307,10 @@ describe('createCommandQueueConsumer', () => {
     })
 
     it('marks summary log as validation_failed on validate timeout', async () => {
-      summaryLogsRepository.findById.mockResolvedValue({
-        version: 1,
-        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-      })
+      await summaryLogsRepository.insert(
+        'summary-123',
+        summaryLogFactory.validating()
+      )
 
       await createConsumer()
       const error = new Error('Timeout')
@@ -333,20 +324,19 @@ describe('createCommandQueueConsumer', () => {
 
       await eventHandlers.timeout_error(error, message)
 
-      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      const { summaryLog } = await waitForVersion(
+        summaryLogsRepository,
         'summary-123',
-        1,
-        expect.objectContaining({
-          status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
-        })
+        2
       )
+      expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATION_FAILED)
     })
 
     it('marks summary log as submission_failed on submit timeout', async () => {
-      summaryLogsRepository.findById.mockResolvedValue({
-        version: 1,
-        summaryLog: { status: SUMMARY_LOG_STATUS.SUBMITTING }
-      })
+      await summaryLogsRepository.insert(
+        'summary-123',
+        summaryLogFactory.submitting()
+      )
 
       await createConsumer()
       const error = new Error('Timeout')
@@ -361,13 +351,12 @@ describe('createCommandQueueConsumer', () => {
 
       await eventHandlers.timeout_error(error, message)
 
-      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      const { summaryLog } = await waitForVersion(
+        summaryLogsRepository,
         'summary-123',
-        1,
-        expect.objectContaining({
-          status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
-        })
+        2
       )
+      expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
     })
 
     it('logs timeout with messageId when message body is invalid', async () => {
@@ -396,10 +385,10 @@ describe('createCommandQueueConsumer', () => {
       }
       logger.child.mockReturnValue(childLogger)
 
-      summaryLogsRepository.findById.mockResolvedValue({
-        version: 1,
-        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-      })
+      await summaryLogsRepository.insert(
+        'summary-123',
+        summaryLogFactory.validating()
+      )
 
       await createConsumer()
       const error = new Error('Timeout')
@@ -425,10 +414,10 @@ describe('createCommandQueueConsumer', () => {
     })
 
     it('uses global logger for timeout_error when context is absent', async () => {
-      summaryLogsRepository.findById.mockResolvedValue({
-        version: 1,
-        summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-      })
+      await summaryLogsRepository.insert(
+        'summary-123',
+        summaryLogFactory.validating()
+      )
 
       await createConsumer()
       const error = new Error('Timeout')
@@ -681,15 +670,13 @@ describe('createCommandQueueConsumer', () => {
         }
         logger.child.mockReturnValue(childLogger)
 
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: {
-            status: SUMMARY_LOG_STATUS.SUBMITTING,
+        await summaryLogsRepository.insert(
+          'log-123',
+          summaryLogFactory.submitting({
             meta: {},
             file: { id: 'file-456', name: 'test-file.xlsx' }
-          }
-        })
-        summaryLogsRepository.update.mockResolvedValue(undefined)
+          })
+        )
 
         const message = {
           MessageId: 'msg-123',
@@ -782,10 +769,10 @@ describe('createCommandQueueConsumer', () => {
             )
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validating()
+          )
 
           const message = {
             MessageId: 'msg-123',
@@ -797,13 +784,12 @@ describe('createCommandQueueConsumer', () => {
 
           await handleMessage(message)
 
-          expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+          const { summaryLog } = await waitForVersion(
+            summaryLogsRepository,
             'log-123',
-            1,
-            expect.objectContaining({
-              status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
-            })
+            2
           )
+          expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATION_FAILED)
         })
 
         it('logs warning when summary log not found during failure handling', async () => {
@@ -813,8 +799,6 @@ describe('createCommandQueueConsumer', () => {
               new PermanentError('Summary log not found: summaryLogId=log-123')
             )
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
-          summaryLogsRepository.findById.mockResolvedValue(null)
 
           const message = {
             MessageId: 'msg-123',
@@ -840,10 +824,10 @@ describe('createCommandQueueConsumer', () => {
             )
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
-          })
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validated()
+          )
 
           const message = {
             MessageId: 'msg-123',
@@ -855,7 +839,9 @@ describe('createCommandQueueConsumer', () => {
 
           await handleMessage(message)
 
-          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+          const result = await summaryLogsRepository.findById('log-123')
+          expect(result.version).toBe(1)
+          expect(result.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
         })
 
         it('logs error when marking as failed fails', async () => {
@@ -866,12 +852,14 @@ describe('createCommandQueueConsumer', () => {
             )
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validating()
+          )
+          // The in-memory repo only throws Boom; an infra-level update failure
+          // has no in-memory twin, so a throwing override exercises the catch.
           const updateError = new Error('Database error')
-          summaryLogsRepository.update.mockRejectedValue(updateError)
+          summaryLogsRepository.update = vi.fn().mockRejectedValue(updateError)
 
           const message = {
             MessageId: 'msg-123',
@@ -918,6 +906,11 @@ describe('createCommandQueueConsumer', () => {
             .mockRejectedValue(new Error('Database timeout'))
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validating()
+          )
+
           const message = {
             MessageId: 'msg-123',
             ReceiptHandle: 'receipt-123',
@@ -930,7 +923,9 @@ describe('createCommandQueueConsumer', () => {
 
           await handleMessage(message).catch(() => {})
 
-          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+          const result = await summaryLogsRepository.findById('log-123')
+          expect(result.version).toBe(1)
+          expect(result.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
         })
 
         it('does not mark as failed when Attributes are missing', async () => {
@@ -938,6 +933,11 @@ describe('createCommandQueueConsumer', () => {
             .fn()
             .mockRejectedValue(new Error('Database timeout'))
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validating()
+          )
 
           const message = {
             MessageId: 'msg-123',
@@ -950,7 +950,9 @@ describe('createCommandQueueConsumer', () => {
 
           await handleMessage(message).catch(() => {})
 
-          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+          const result = await summaryLogsRepository.findById('log-123')
+          expect(result.version).toBe(1)
+          expect(result.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
         })
 
         it('marks as failed on final attempt before rethrowing', async () => {
@@ -959,10 +961,10 @@ describe('createCommandQueueConsumer', () => {
             .mockRejectedValue(new Error('Database timeout'))
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validating()
+          )
 
           const message = {
             MessageId: 'msg-123',
@@ -978,13 +980,12 @@ describe('createCommandQueueConsumer', () => {
             'Database timeout'
           )
 
-          expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+          const { summaryLog } = await waitForVersion(
+            summaryLogsRepository,
             'log-123',
-            1,
-            expect.objectContaining({
-              status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
-            })
+            2
           )
+          expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATION_FAILED)
         })
 
         it('logs non-final transient errors as warnings', async () => {
@@ -1019,10 +1020,10 @@ describe('createCommandQueueConsumer', () => {
           const mockValidator = vi.fn().mockRejectedValue(transientError)
           vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-          })
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validating()
+          )
 
           const message = {
             MessageId: 'msg-123',
@@ -1049,19 +1050,18 @@ describe('createCommandQueueConsumer', () => {
     })
 
     describe('submit command', () => {
-      beforeEach(() => {
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: {
-            status: SUMMARY_LOG_STATUS.SUBMITTING,
+      const seedSubmitting = (id = 'log-123') =>
+        summaryLogsRepository.insert(
+          id,
+          summaryLogFactory.submitting({
             meta: {},
             file: { id: 'file-456', name: 'test-file.xlsx' }
-          }
-        })
-        summaryLogsRepository.update.mockResolvedValue(undefined)
-      })
+          })
+        )
 
       it('processes submit command successfully', async () => {
+        await seedSubmitting()
+
         const message = {
           MessageId: 'msg-123',
           Body: JSON.stringify({
@@ -1073,13 +1073,12 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        const { summaryLog } = await waitForVersion(
+          summaryLogsRepository,
           'log-123',
-          1,
-          expect.objectContaining({
-            status: SUMMARY_LOG_STATUS.SUBMITTED
-          })
+          2
         )
+        expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message:
@@ -1103,6 +1102,8 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('records metrics during submission', async () => {
+        await seedSubmitting()
+
         const mockSync = vi.fn().mockResolvedValue({ created: 5, updated: 3 })
         vi.mocked(syncFromSummaryLog).mockReturnValue(mockSync)
         vi.mocked(summaryLogMetrics.timedSubmission).mockImplementation(
@@ -1128,9 +1129,6 @@ describe('createCommandQueueConsumer', () => {
 
       describe('permanent errors', () => {
         it('marks as failed when summary log not found', async () => {
-          summaryLogsRepository.findById.mockResolvedValueOnce(null)
-          summaryLogsRepository.findById.mockResolvedValueOnce(null)
-
           const message = {
             MessageId: 'msg-123',
             Body: JSON.stringify({
@@ -1155,10 +1153,10 @@ describe('createCommandQueueConsumer', () => {
         })
 
         it('marks as failed when summary log not in submitting status', async () => {
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
-          })
+          await summaryLogsRepository.insert(
+            'log-123',
+            summaryLogFactory.validated()
+          )
 
           const message = {
             MessageId: 'msg-123',
@@ -1188,14 +1186,7 @@ describe('createCommandQueueConsumer', () => {
             syncError
           )
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: {
-              status: SUMMARY_LOG_STATUS.SUBMITTING,
-              meta: {},
-              file: { id: 'file-456', name: 'test-file.xlsx' }
-            }
-          })
+          await seedSubmitting()
 
           const message = {
             MessageId: 'msg-123',
@@ -1217,14 +1208,7 @@ describe('createCommandQueueConsumer', () => {
             syncError
           )
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: {
-              status: SUMMARY_LOG_STATUS.SUBMITTING,
-              meta: {},
-              file: { id: 'file-456', name: 'test-file.xlsx' }
-            }
-          })
+          await seedSubmitting()
 
           const message = {
             MessageId: 'msg-123',
@@ -1239,8 +1223,9 @@ describe('createCommandQueueConsumer', () => {
 
           await handleMessage(message).catch(() => {})
 
-          // findById is called once by submitSummaryLog, but update should NOT be called
-          expect(summaryLogsRepository.update).not.toHaveBeenCalled()
+          const result = await summaryLogsRepository.findById('log-123')
+          expect(result.version).toBe(1)
+          expect(result.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
         })
 
         it('marks as failed on final attempt before rethrowing', async () => {
@@ -1249,14 +1234,7 @@ describe('createCommandQueueConsumer', () => {
             syncError
           )
 
-          summaryLogsRepository.findById.mockResolvedValue({
-            version: 1,
-            summaryLog: {
-              status: SUMMARY_LOG_STATUS.SUBMITTING,
-              meta: {},
-              file: { id: 'file-456', name: 'test-file.xlsx' }
-            }
-          })
+          await seedSubmitting()
 
           const message = {
             MessageId: 'msg-123',
@@ -1271,13 +1249,12 @@ describe('createCommandQueueConsumer', () => {
 
           await expect(handleMessage(message)).rejects.toThrow('Sync failed')
 
-          expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+          const { summaryLog } = await waitForVersion(
+            summaryLogsRepository,
             'log-123',
-            1,
-            expect.objectContaining({
-              status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED
-            })
+            2
           )
+          expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
         })
       })
     })
