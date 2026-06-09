@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import {
   SendMessageCommand,
@@ -43,7 +44,7 @@ const stopConsumerAndWait = (consumer) => {
       resolve()
       return
     }
-    consumer.on('stopped', resolve)
+    consumer.on('stopped', () => resolve())
     consumer.stop()
   })
 }
@@ -201,7 +202,9 @@ describe('SQS command queue consumer integration', () => {
           email: 'test@example.com',
           scope: ['operator']
         }
-        const request = { auth: { credentials: user } }
+        const request = {
+          auth: { credentials: { ...user, issuer: 'test-issuer' } }
+        }
         await executor.summaryLogsWorker.submit(summaryLogId, request)
 
         const consumer = await createConsumer(sqsClient)
@@ -338,7 +341,10 @@ describe('SQS command queue consumer integration', () => {
             )
             expect(dlqResponse.Messages).toHaveLength(1)
 
-            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            assert(dlqResponse.Messages)
+            const { Body } = dlqResponse.Messages[0]
+            assert(Body)
+            const dlqBody = JSON.parse(Body)
             expect(dlqBody.command).toBe('validate')
             expect(dlqBody.badField).toBe('test')
           },
@@ -400,7 +406,10 @@ describe('SQS command queue consumer integration', () => {
             )
             expect(dlqResponse.Messages).toHaveLength(1)
 
-            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            assert(dlqResponse.Messages)
+            const { Body } = dlqResponse.Messages[0]
+            assert(Body)
+            const dlqBody = JSON.parse(Body)
             expect(dlqBody.summaryLogId).toBe(uniqueId)
           },
           { timeout: 15000, interval: 500 }
@@ -527,7 +536,10 @@ describe('SQS command queue consumer integration', () => {
             )
             expect(dlqResponse.Messages).toHaveLength(1)
 
-            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            assert(dlqResponse.Messages)
+            const { Body } = dlqResponse.Messages[0]
+            assert(Body)
+            const dlqBody = JSON.parse(Body)
             expect(dlqBody.summaryLogId).toBe(summaryLogId)
           },
           { timeout: 15000, interval: 500 }
@@ -563,6 +575,7 @@ describe('SQS command queue consumer integration', () => {
             AttributeNames: ['QueueArn']
           })
         )
+        assert(dlqAttributes.Attributes)
         const dlqArn = dlqAttributes.Attributes.QueueArn
 
         await sqsClient.send(
