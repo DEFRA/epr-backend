@@ -2,52 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildTransactionAmounts } from './transaction-amounts.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { SUMMARY_LOG_ID, buildWasteRecord } from './test-builders.js'
 
-/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-
-const SUMMARY_LOG_ID = 'sl-1'
-
-/**
- * @param {object} [overrides]
- * @returns {ValidatedWasteRecord}
- */
-const buildWasteRecord = ({
-  rowId = '1000',
-  data = { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' },
-  outcome = ROW_OUTCOME.INCLUDED,
-  change = 'CREATED',
-  summaryLogId = SUMMARY_LOG_ID,
-  tableName = 'RECEIVED_LOADS_FOR_REPROCESSING',
-  wasteRecordType = 'received'
-} = {}) =>
-  /** @type {ValidatedWasteRecord} */ (
-    /** @type {unknown} */ ({
-      record: {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        rowId,
-        type: wasteRecordType,
-        data,
-        versions: [
-          {
-            summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
-            status:
-              change === 'CREATED'
-                ? VERSION_STATUS.CREATED
-                : VERSION_STATUS.UPDATED
-          }
-        ]
-      },
-      issues: [],
-      outcome,
-      change,
-      tableName,
-      wasteRecordType
-    })
-  )
 
 describe('buildTransactionAmounts', () => {
   /** @type {import('./transaction-amounts.js').ClassificationContext} */

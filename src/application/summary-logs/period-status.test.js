@@ -2,21 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { classifyByPeriodStatus } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  SUMMARY_LOG_ID,
+  accreditedRegistration,
+  buildWasteRecord,
+  registeredOnlyRegistration
+} from './test-builders.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
-
-const accreditedRegistration = /** @type {Registration} */ (
-  /** @type {unknown} */ ({ accreditation: { status: 'approved' } })
-)
-
-const registeredOnlyRegistration = /** @type {Registration} */ (
-  /** @type {unknown} */ ({})
-)
-
-const SUMMARY_LOG_ID = 'sl-1'
 
 /**
  * Single-date-field table (most tables).
@@ -39,45 +34,6 @@ const MULTI_DATE_TABLE_SCHEMAS = {
     wasteRecordType: 'received'
   }
 }
-
-/**
- * @param {object} [overrides]
- * @returns {ValidatedWasteRecord}
- */
-const buildWasteRecord = ({
-  rowId = '1000',
-  data = { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' },
-  outcome = ROW_OUTCOME.INCLUDED,
-  change = 'CREATED',
-  summaryLogId = SUMMARY_LOG_ID,
-  tableName = 'RECEIVED_LOADS_FOR_REPROCESSING',
-  wasteRecordType = 'received'
-} = {}) =>
-  /** @type {ValidatedWasteRecord} */ (
-    /** @type {unknown} */ ({
-      record: {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        rowId,
-        type: wasteRecordType,
-        data,
-        versions: [
-          {
-            summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
-            status:
-              change === 'CREATED'
-                ? VERSION_STATUS.CREATED
-                : VERSION_STATUS.UPDATED
-          }
-        ]
-      },
-      issues: [],
-      outcome,
-      change,
-      tableName,
-      wasteRecordType
-    })
-  )
 
 const emptyChange = () => ({
   included: { count: 0, tonnageDelta: 0 },

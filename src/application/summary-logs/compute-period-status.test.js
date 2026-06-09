@@ -1,22 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import { computePeriodStatus } from './compute-period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  SUMMARY_LOG_ID,
+  accreditedRegistration,
+  buildWasteRecord,
+  registeredOnlyRegistration
+} from './test-builders.js'
 
-/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ReportsRepository} from '#reports/repository/port.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
-
-const SUMMARY_LOG_ID = 'sl-1'
-
-const accreditedRegistration = /** @type {Registration} */ (
-  /** @type {unknown} */ ({ accreditation: { status: 'approved' } })
-)
-
-const registeredOnlyRegistration = /** @type {Registration} */ (
-  /** @type {unknown} */ ({})
-)
 
 const stubReportsRepository = /** @type {ReportsRepository} */ (
   /** @type {unknown} */ ({
@@ -27,45 +20,6 @@ const stubReportsRepository = /** @type {ReportsRepository} */ (
 const stubLogger = /** @type {TypedLogger} */ (
   /** @type {unknown} */ ({ warn: vi.fn() })
 )
-
-/**
- * @param {object} [overrides]
- * @returns {ValidatedWasteRecord}
- */
-const buildWasteRecord = ({
-  rowId = '1000',
-  data = { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' },
-  outcome = ROW_OUTCOME.INCLUDED,
-  change = 'CREATED',
-  summaryLogId = SUMMARY_LOG_ID,
-  tableName = 'RECEIVED_LOADS_FOR_REPROCESSING',
-  wasteRecordType = 'received'
-} = {}) =>
-  /** @type {ValidatedWasteRecord} */ (
-    /** @type {unknown} */ ({
-      record: {
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        rowId,
-        type: wasteRecordType,
-        data,
-        versions: [
-          {
-            summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
-            status:
-              change === 'CREATED'
-                ? VERSION_STATUS.CREATED
-                : VERSION_STATUS.UPDATED
-          }
-        ]
-      },
-      issues: [],
-      outcome,
-      change,
-      tableName,
-      wasteRecordType
-    })
-  )
 
 // Stub the PROCESSING_TYPE_TABLES import — vi.hoisted runs before vi.mock
 const { stubbedProcessingTypeTables } = vi.hoisted(() => ({
