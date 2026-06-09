@@ -8,7 +8,10 @@ import { REPORT_STATUS } from '#reports/domain/report-status.js'
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+
+/** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
 
 /**
  * @typedef {{ count: number, tonnageDelta: number }} PeriodStatusBucket
@@ -347,7 +350,7 @@ const classifyAdjustedWasteRecord = ({
  * @param {PeriodicReport[]} params.periodicReports
  * @param {'monthly' | 'quarterly'} params.cadence
  * @param {string} params.summaryLogId
- * @param {Record<string, TableSchema>} params.tableSchemas
+ * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
  * @returns {LoadsByPeriodStatus}
  */
