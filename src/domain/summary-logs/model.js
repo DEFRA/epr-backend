@@ -34,6 +34,7 @@
  */
 
 /** @import {Loads, LoadsByWasteRecordType} from '#application/summary-logs/load-counts.js' */
+/** @import {LoadsByPeriodStatus} from '#application/summary-logs/period-status.js' */
 /** @import {ValidationIssueCounts} from '#common/validation/validation-issues.js' */
 /** @import {ProcessingType} from './meta-fields.js' */
 /** @import {SummaryLogStatus} from './status.js' */
@@ -58,6 +59,7 @@
  *   expiresAt?: Date | null,
  *   file: SummaryLogFile,
  *   loads?: Loads,
+ *   loadsByPeriodStatus?: LoadsByPeriodStatus,
  *   loadsByWasteRecordType?: LoadsByWasteRecordType,
  *   meta?: SummaryLogMeta,
  *   organisationId?: string,

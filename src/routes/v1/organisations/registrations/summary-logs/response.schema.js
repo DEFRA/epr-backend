@@ -5,6 +5,7 @@ import {
   loadsSchema,
   loadsByWasteRecordTypeSchema
 } from '#domain/summary-logs/loads-schema.js'
+import { loadsByPeriodStatusSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 const countSchema = Joi.number().integer().min(0).required()
 
@@ -69,6 +70,7 @@ export const summaryLogResponseSchema = Joi.object({
     }).required()
   }).optional(),
   loads: loadsSchema.optional(),
+  loadsByPeriodStatus: loadsByPeriodStatusSchema.optional(),
   loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   processingType: Joi.string().optional(),
   material: Joi.string().optional(),
