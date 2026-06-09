@@ -173,9 +173,11 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         })
 
         const updated = await reportsRepository.findReportById(reportId)
-        const lastEntry = /** @type {ReportStatusHistoryItem} */ (
-          updated.status.history.at(-1)
-        )
+
+        const lastEntry =
+          /** @type {import('#reports/repository/port.js').ReportStatusHistoryItem} */ (
+            updated.status.history.at(-1)
+          )
         expect(lastEntry.status).toBe('ready_to_submit')
       })
 

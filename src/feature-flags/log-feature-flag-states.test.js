@@ -8,28 +8,36 @@ describe('logFeatureFlagStates', () => {
         devEndpoints: false
       })
     }
-    const logger = /** @type {import('../types.js').TypedLogger} */ ({
-      info: vi.fn()
-    })
+    const loggerInfo = vi.fn()
+    const logger =
+      /** @type {import('#common/helpers/logging/logger.js').TypedLogger} */ (
+        /** @type {unknown} */ ({
+          info: loggerInfo
+        })
+      )
 
     logFeatureFlagStates(config, logger)
 
     expect(config.get).toHaveBeenCalledWith('featureFlags')
-    expect(logger.info).toHaveBeenCalledTimes(1)
-    const [logged] = logger.info.mock.calls[0]
+    expect(loggerInfo).toHaveBeenCalledTimes(1)
+    const [logged] = loggerInfo.mock.calls[0]
     expect(logged.message).toBe('Feature flags: devEndpoints=false')
     expect(logged.event).toEqual({ category: 'configuration' })
   })
 
   it('handles an empty feature flag set', () => {
     const config = { get: vi.fn().mockReturnValue({}) }
-    const logger = /** @type {import('../types.js').TypedLogger} */ ({
-      info: vi.fn()
-    })
+    const loggerInfo = vi.fn()
+    const logger =
+      /** @type {import('#common/helpers/logging/logger.js').TypedLogger} */ (
+        /** @type {unknown} */ ({
+          info: loggerInfo
+        })
+      )
 
     logFeatureFlagStates(config, logger)
 
-    const [logged] = logger.info.mock.calls[0]
+    const [logged] = loggerInfo.mock.calls[0]
     expect(logged.message).toBe('Feature flags: ')
   })
 })
