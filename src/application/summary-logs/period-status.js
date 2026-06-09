@@ -124,7 +124,9 @@ const buildClosedPeriods = (periodicReports, cadence) => {
   const closed = new Set()
   for (const periodicReport of periodicReports) {
     const slots = periodicReport.reports[cadence]
-    if (!slots) continue
+    if (!slots) {
+      continue
+    }
     for (const [period, slot] of Object.entries(slots)) {
       const hasBeenSubmitted =
         slot.current?.status === REPORT_STATUS.SUBMITTED ||
@@ -158,7 +160,9 @@ const classifyPeriodStatus = (
 
   for (const field of reportingDateFields) {
     const dateValue = data[field]
-    if (!dateValue) continue
+    if (!dateValue) {
+      continue
+    }
 
     hasAnyDate = true
     const period = monthToPeriod(extractMonth(dateValue), cadence)
@@ -177,7 +181,7 @@ const classifyPeriodStatus = (
  * @returns {'added' | 'adjusted' | 'unchanged'}
  */
 const determineRecordStatus = (record, summaryLogId) => {
-  const lastVersion = record.versions[record.versions.length - 1]
+  const lastVersion = record.versions.at(-1)
   if (lastVersion?.summaryLog?.id !== summaryLogId) {
     return 'unchanged'
   }
@@ -322,7 +326,9 @@ const classifyAdjustedWasteRecord = ({
     ? classify(existing.data, reportingDateFields)
     : null
 
-  if (!newPeriod && !oldPeriod) return []
+  if (!newPeriod && !oldPeriod) {
+    return []
+  }
 
   const newAmount = getTransactionAmount(schema, record.data, context)
   const oldAmount = existing
@@ -375,14 +381,12 @@ export const classifyByPeriodStatus = ({
 
   for (const wasteRecord of wasteRecords) {
     const { record, outcome } = wasteRecord
-
-    if (outcome === ROW_OUTCOME.IGNORED) continue
-
     const status = determineRecordStatus(record, summaryLogId)
-    if (status === 'unchanged') continue
-
     const schema = tableSchemas[wasteRecord.tableName]
-    if (!schema) continue
+
+    if (outcome === ROW_OUTCOME.IGNORED || status === 'unchanged' || !schema) {
+      continue
+    }
 
     const isIncluded = outcome === ROW_OUTCOME.INCLUDED
 
@@ -402,19 +406,18 @@ export const classifyByPeriodStatus = ({
           })
         )
       }
-      continue
+    } else {
+      entries.push(
+        ...classifyAdjustedWasteRecord({
+          wasteRecord,
+          existingRecordsMap,
+          schema,
+          isIncluded,
+          classify,
+          context: classificationContext
+        })
+      )
     }
-
-    entries.push(
-      ...classifyAdjustedWasteRecord({
-        wasteRecord,
-        existingRecordsMap,
-        schema,
-        isIncluded,
-        classify,
-        context: classificationContext
-      })
-    )
   }
 
   return reduceEntries(entries)

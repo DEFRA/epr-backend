@@ -641,6 +641,104 @@ const classifyLoads = ({
 }
 
 /**
+ * Classifies loads and persists the validation result.
+ *
+ * @param {Object} params
+ * @param {ValidationIssuesCollector} params.issues
+ * @param {ProcessingType} params.processingType
+ * @param {typeof SUMMARY_LOG_STATUS[keyof typeof SUMMARY_LOG_STATUS]} params.status
+ * @param {string} params.summaryLogId
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {ValidatedWasteRecord[] | null} params.wasteRecords
+ * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
+ * @param {Registration} [params.registration]
+ * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
+ * @param {ExtractedMeta} [params.meta]
+ * @param {SubmittedSummaryLog} params.summaryLog
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
+ * @param {number} params.version
+ */
+const classifyAndPersist = async ({
+  issues,
+  processingType,
+  status,
+  summaryLogId,
+  wasteBalanceRecords,
+  wasteRecords,
+  periodicReports,
+  registration,
+  existingRecordsMap,
+  meta,
+  summaryLog,
+  summaryLogsRepository,
+  version
+}) => {
+  const { loads, loadsByWasteRecordType, loadsByPeriodStatus } = classifyLoads({
+    processingType,
+    status,
+    summaryLogId,
+    wasteBalanceRecords,
+    wasteRecords,
+    periodicReports,
+    registration,
+    existingRecordsMap
+  })
+
+  await persistValidationResult({
+    issues,
+    loads,
+    loadsByPeriodStatus,
+    loadsByWasteRecordType,
+    meta,
+    status,
+    summaryLog,
+    summaryLogId,
+    summaryLogsRepository,
+    version
+  })
+}
+
+/**
+ * Fetches periodic reports for the validated summary log, swallowing errors.
+ *
+ * @param {Object} params
+ * @param {Registration} [params.registration]
+ * @param {string} params.status
+ * @param {SubmittedSummaryLog} params.summaryLog
+ * @param {ReportsRepository} params.reportsRepository
+ * @param {string} params.loggingContext
+ * @param {TypedLogger} params.logger
+ * @returns {Promise<import('#reports/repository/port.js').PeriodicReport[]>}
+ */
+const fetchPeriodicReportsSafe = async ({
+  registration,
+  status,
+  summaryLog,
+  reportsRepository,
+  loggingContext,
+  logger
+}) => {
+  try {
+    if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
+      return await reportsRepository.findPeriodicReports({
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId
+      })
+    }
+  } catch (err) {
+    logger.warn({
+      message: `Failed to fetch periodic reports: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      },
+      err
+    })
+  }
+  return []
+}
+
+/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -719,47 +817,27 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords
     })
 
-    /** @type {import('#reports/repository/port.js').PeriodicReport[]} */
-    let periodicReports = []
-    try {
-      if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-        periodicReports = await reportsRepository.findPeriodicReports({
-          organisationId: summaryLog.organisationId,
-          registrationId: summaryLog.registrationId
-        })
-      }
-    } catch (err) {
-      logger.warn({
-        message: `Failed to fetch periodic reports: ${loggingContext}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-        },
-        err
-      })
-    }
-
-    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
-      classifyLoads({
-        processingType,
-        status,
-        summaryLogId,
-        wasteBalanceRecords,
-        wasteRecords,
-        periodicReports,
-        registration,
-        existingRecordsMap
-      })
-
-    await persistValidationResult({
-      issues,
-      loads,
-      loadsByPeriodStatus,
-      loadsByWasteRecordType,
-      meta,
+    const periodicReports = await fetchPeriodicReportsSafe({
+      registration,
       status,
       summaryLog,
+      reportsRepository,
+      loggingContext,
+      logger
+    })
+
+    await classifyAndPersist({
+      issues,
+      processingType,
+      status,
       summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords,
+      periodicReports,
+      registration,
+      existingRecordsMap,
+      meta,
+      summaryLog,
       summaryLogsRepository,
       version
     })
