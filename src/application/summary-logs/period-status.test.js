@@ -6,7 +6,6 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {ClassificationContext, ProcessingTypeSchemas} from './period-status.js' */
 
 const SUMMARY_LOG_ID = 'sl-1'
@@ -94,20 +93,19 @@ const MULTI_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
 )
 
 /** @type {ProcessingTypeSchemas} Registered-only table schemas (monthly dates as YYYY-MM). */
-const REGISTERED_ONLY_TABLE_SCHEMAS =
-  /** @type {ProcessingTypeSchemas} */ (
-    /** @type {unknown} */ ({
-      RECEIVED_LOADS_FOR_REPROCESSING: {
-        reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
-        wasteRecordType: 'received',
-        classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: Number(data.GROSS_WEIGHT) || 0
-        })
-      }
-    })
-  )
+const REGISTERED_ONLY_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
+  /** @type {unknown} */ ({
+    RECEIVED_LOADS_FOR_REPROCESSING: {
+      reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
+      wasteRecordType: 'received',
+      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: Number(data.GROSS_WEIGHT) || 0
+      })
+    }
+  })
+)
 
 const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
 const emptyChange = () => ({
