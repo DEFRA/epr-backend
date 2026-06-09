@@ -70,7 +70,11 @@ export const summaryLogResponseSchema = Joi.object({
     }).required()
   }).optional(),
   loads: loadsSchema.optional(),
-  loadsByPeriodStatus: loadsByPeriodStatusSchema.optional(),
+  loadsByPeriodStatus: Joi.when('status', {
+    is: SUMMARY_LOG_STATUS.VALIDATED,
+    then: loadsByPeriodStatusSchema.required(),
+    otherwise: loadsByPeriodStatusSchema.optional()
+  }),
   loadsByWasteRecordType: loadsByWasteRecordTypeSchema.optional(),
   processingType: Joi.string().optional(),
   material: Joi.string().optional(),

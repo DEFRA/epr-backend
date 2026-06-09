@@ -25,3 +25,16 @@ export const loadsByPeriodStatusSchema = Joi.object({
   open: periodStatusByChangeSchema.required(),
   closed: periodStatusByChangeSchema.required()
 })
+
+const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
+const emptyGroup = () => ({
+  included: emptyBucket(),
+  excluded: emptyBucket()
+})
+const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
+
+/** Default loadsByPeriodStatus for validated logs without period-status data. */
+export const emptyLoadsByPeriodStatus = () => ({
+  open: emptyChange(),
+  closed: emptyChange()
+})

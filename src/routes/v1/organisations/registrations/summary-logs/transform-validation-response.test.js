@@ -763,7 +763,29 @@ describe('transformValidationResponse', () => {
 
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.VALIDATED,
-        ...transformValidationResponse(validation)
+        ...transformValidationResponse(validation),
+        loadsByPeriodStatus: {
+          open: {
+            added: {
+              included: { count: 0, tonnageDelta: 0 },
+              excluded: { count: 0, tonnageDelta: 0 }
+            },
+            adjusted: {
+              included: { count: 0, tonnageDelta: 0 },
+              excluded: { count: 0, tonnageDelta: 0 }
+            }
+          },
+          closed: {
+            added: {
+              included: { count: 0, tonnageDelta: 0 },
+              excluded: { count: 0, tonnageDelta: 0 }
+            },
+            adjusted: {
+              included: { count: 0, tonnageDelta: 0 },
+              excluded: { count: 0, tonnageDelta: 0 }
+            }
+          }
+        }
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)
       expect(error).toBeUndefined()
