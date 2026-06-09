@@ -675,6 +675,9 @@ describe('SummaryLogsValidator', () => {
       summaryLogsRepository: brokenRepository,
       organisationsRepository: /** @type {any} */ (organisationsRepository),
       wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockResolvedValue([])
+      }),
       summaryLogExtractor
     })
 
