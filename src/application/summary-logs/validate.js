@@ -469,6 +469,15 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
 }
 
 /**
+ * @param {string} summaryLogId
+ * @param {SubmittedSummaryLog} summaryLog
+ */
+const buildLoggingContext = (summaryLogId, summaryLog) => {
+  const { id: fileId, name: filename } = summaryLog.file
+  return `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
+}
+
+/**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
  * @param {string} summaryLogId
  */
@@ -768,11 +777,7 @@ export const createSummaryLogsValidator = ({
       /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
         result
       )
-    const {
-      file: { id: fileId, name: filename }
-    } = summaryLog
-
-    const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
+    const loggingContext = buildLoggingContext(summaryLogId, summaryLog)
 
     logger.info({
       message: `Summary log validation started: ${loggingContext}`,
@@ -794,16 +799,13 @@ export const createSummaryLogsValidator = ({
         wasteRecordsRepository,
         validateDataSyntax
       })
-    const validationDurationMs = Date.now() - validationStart
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
-
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
       processingType
@@ -813,7 +815,7 @@ export const createSummaryLogsValidator = ({
       issues,
       processingType,
       status,
-      validationDurationMs,
+      validationDurationMs: Date.now() - validationStart,
       wasteBalanceRecords
     })
 
