@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createInMemoryStreamRepository } from '../repository/stream-inmemory.js'
 import { STREAM_EVENT_KIND } from '../repository/stream-schema.js'
 import { performUpdateViaStream } from './update-via-stream.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -87,7 +89,7 @@ describe('performUpdateViaStream', () => {
 
   beforeEach(async () => {
     streamRepository = createInMemoryStreamRepository()()
-    systemLogsRepository = { insert: vi.fn().mockResolvedValue(undefined) }
+    systemLogsRepository = createSystemLogsRepository()(logger)
     const { findSchemaForProcessingType } =
       await import('#domain/summary-logs/table-schemas/index.js')
     vi.mocked(findSchemaForProcessingType).mockReturnValue(includingSchema)
@@ -215,7 +217,8 @@ describe('performUpdateViaStream', () => {
       })
 
       expect(appendSpy).not.toHaveBeenCalled()
-      expect(systemLogsRepository.insert).not.toHaveBeenCalled()
+      const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+      expect(systemLogs).toHaveLength(0)
     })
   })
 
@@ -234,17 +237,27 @@ describe('performUpdateViaStream', () => {
         summaryLogId: 'log-A'
       })
 
-      expect(systemLogsRepository.insert).toHaveBeenCalledTimes(1)
-      const [entry] = systemLogsRepository.insert.mock.calls[0]
+      const latest = await streamRepository.findLatestByPartition(
+        'reg-1',
+        accreditationId
+      )
+
+      const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+      expect(systemLogs).toHaveLength(1)
+      const [entry] = systemLogs
+      expect(entry.createdBy).toEqual(user)
+      expect(entry.createdAt).toBeInstanceOf(Date)
       expect(entry.event).toEqual({
         category: 'waste-reporting',
         subCategory: 'waste-balance',
         action: 'update'
       })
-      expect(entry.context.accreditationId).toBe(accreditationId)
-      expect(entry.context.amount).toBe(150)
-      expect(entry.context.availableAmount).toBe(150)
-      expect(entry.context.newTransactions).toHaveLength(1)
+      expect(entry.context).toEqual({
+        accreditationId,
+        amount: 150,
+        availableAmount: 150,
+        newTransactions: [latest]
+      })
     })
   })
 

@@ -1,8 +1,9 @@
 import { randomBytes } from 'crypto'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
 const mockAudit = vi.fn()
-const mockInsert = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -11,16 +12,24 @@ vi.mock('@defra/cdp-auditing', () => ({
 const { auditReportStatusTransition, auditReportCreate, auditReportDelete } =
   await import('./audit.js')
 
-const createMockRequest = () => ({
-  auth: {
-    credentials: {
-      id: 'user-1',
-      email: 'user@example.gov.uk',
-      scope: ['standardUser']
-    }
-  },
-  systemLogsRepository: { insert: mockInsert }
-})
+let systemLogsRepository
+
+const createMockRequest = () =>
+  /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+    auth: {
+      credentials: {
+        id: 'user-1',
+        email: 'user@example.gov.uk',
+        scope: ['standardUser']
+      }
+    },
+    systemLogsRepository
+  })
+
+const findStoredLog = async () => {
+  const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
+  return systemLogs[0]
+}
 
 const user = {
   id: 'user-1',
@@ -31,7 +40,7 @@ const user = {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2025-06-01T12:00:00.000Z'))
-  mockInsert.mockResolvedValue(undefined)
+  systemLogsRepository = createSystemLogsRepository()(logger)
 })
 
 afterEach(() => {
@@ -46,7 +55,7 @@ describe('auditReportStatusTransition', () => {
     year: 2025,
     cadence: 'quarterly',
     period: 1,
-    submissionNumber: 'sub-1',
+    submissionNumber: 1,
     reportId: 'rep-1',
     previous: {
       id: 'rep-1',
@@ -77,7 +86,8 @@ describe('auditReportStatusTransition', () => {
   it('records system log', async () => {
     await auditReportStatusTransition(createMockRequest(), params)
 
-    expect(mockInsert).toHaveBeenCalledWith({
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
       createdAt: new Date('2025-06-01T12:00:00.000Z'),
       createdBy: user,
       event: {
@@ -97,7 +107,7 @@ describe('auditReportStatusTransition', () => {
       year: 2025,
       cadence: 'quarterly',
       period: 1,
-      submissionNumber: 'sub-1',
+      submissionNumber: 1,
       reportId: 'rep-1',
       previous: {
         id: 'rep-1',
@@ -128,7 +138,7 @@ describe('auditReportStatusTransition', () => {
           year: 2025,
           cadence: 'quarterly',
           period: 1,
-          submissionNumber: 'sub-1',
+          submissionNumber: 1,
           reportId: 'rep-1',
           previous: { status: 'in_progress' },
           next: { status: 'ready_to_submit' }
@@ -136,16 +146,13 @@ describe('auditReportStatusTransition', () => {
       })
     )
 
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'status-transition'
-        },
-        context: oversizedParams
-      })
-    )
+    const storedLog = await findStoredLog()
+    expect(storedLog.event).toEqual({
+      category: 'waste-reporting',
+      subCategory: 'reports',
+      action: 'status-transition'
+    })
+    expect(storedLog.context).toEqual(oversizedParams)
   })
 })
 
@@ -156,7 +163,7 @@ describe('auditReportDelete', () => {
     year: 2025,
     cadence: 'quarterly',
     period: 1,
-    submissionNumber: 'sub-1',
+    submissionNumber: 1,
     reportId: 'rep-1',
     previous: {
       id: 'rep-1',
@@ -182,7 +189,8 @@ describe('auditReportDelete', () => {
   it('records system log', async () => {
     await auditReportDelete(createMockRequest(), params)
 
-    expect(mockInsert).toHaveBeenCalledWith({
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
       createdAt: new Date('2025-06-01T12:00:00.000Z'),
       createdBy: user,
       event: {
@@ -195,7 +203,6 @@ describe('auditReportDelete', () => {
   })
 
   it('strips previous to { status } in CDP audit event when payload is oversized', async () => {
-    const { randomBytes } = await import('crypto')
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
       organisationId: 'org-1',
@@ -203,7 +210,7 @@ describe('auditReportDelete', () => {
       year: 2025,
       cadence: 'quarterly',
       period: 1,
-      submissionNumber: 'sub-1',
+      submissionNumber: 1,
       reportId: 'rep-1',
       previous: {
         id: 'rep-1',
@@ -228,23 +235,20 @@ describe('auditReportDelete', () => {
           year: 2025,
           cadence: 'quarterly',
           period: 1,
-          submissionNumber: 'sub-1',
+          submissionNumber: 1,
           reportId: 'rep-1',
           previous: { status: 'in_progress' }
         }
       })
     )
 
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        event: {
-          category: 'waste-reporting',
-          subCategory: 'reports',
-          action: 'delete'
-        },
-        context: oversizedParams
-      })
-    )
+    const storedLog = await findStoredLog()
+    expect(storedLog.event).toEqual({
+      category: 'waste-reporting',
+      subCategory: 'reports',
+      action: 'delete'
+    })
+    expect(storedLog.context).toEqual(oversizedParams)
   })
 })
 
@@ -255,7 +259,7 @@ describe('auditReportCreate', () => {
     year: 2025,
     cadence: 'quarterly',
     period: 1,
-    submissionNumber: 'sub-1',
+    submissionNumber: 1,
     reportId: 'rep-1',
     createdAt: '2025-06-01T10:00:00.000Z'
   }
@@ -277,7 +281,8 @@ describe('auditReportCreate', () => {
   it('records system log', async () => {
     await auditReportCreate(createMockRequest(), params)
 
-    expect(mockInsert).toHaveBeenCalledWith({
+    const storedLog = await findStoredLog()
+    expect(storedLog).toEqual({
       createdAt: new Date('2025-06-01T12:00:00.000Z'),
       createdBy: user,
       event: {
