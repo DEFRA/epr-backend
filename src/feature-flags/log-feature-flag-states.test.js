@@ -5,8 +5,7 @@ describe('logFeatureFlagStates', () => {
   it('logs every feature flag name and value on a single info line', () => {
     const config = {
       get: vi.fn().mockReturnValue({
-        devEndpoints: false,
-        reports: true
+        devEndpoints: false
       })
     }
     const logger = { info: vi.fn() }
@@ -16,9 +15,7 @@ describe('logFeatureFlagStates', () => {
     expect(config.get).toHaveBeenCalledWith('featureFlags')
     expect(logger.info).toHaveBeenCalledTimes(1)
     const [logged] = logger.info.mock.calls[0]
-    expect(logged.message).toBe(
-      'Feature flags: devEndpoints=false reports=true'
-    )
+    expect(logged.message).toBe('Feature flags: devEndpoints=false')
     expect(logged.event).toEqual({ category: 'configuration' })
   })
 
