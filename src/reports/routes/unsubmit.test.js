@@ -61,8 +61,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         reportsRepository: reportsRepositoryFactory
       },
       featureFlags: createInMemoryFeatureFlags({
-        reports: true,
-        reportUnsubmit: true
+        reports: true
       })
     })
 
@@ -109,8 +108,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         reportsRepository: reportsRepositoryFactory
       },
       featureFlags: createInMemoryFeatureFlags({
-        reports: true,
-        reportUnsubmit: true
+        reports: true
       })
     })
 
@@ -262,8 +260,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
             reportsRepository: createInMemoryReportsRepository()
           },
           featureFlags: createInMemoryFeatureFlags({
-            reports: true,
-            reportUnsubmit: true
+            reports: true
           })
         })
 
@@ -312,8 +309,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       const server = await createTestServer({
         repositories: {},
         featureFlags: createInMemoryFeatureFlags({
-          reports: true,
-          reportUnsubmit: false
+          reports: true
         })
       })
 

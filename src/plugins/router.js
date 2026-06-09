@@ -41,10 +41,6 @@ const router = {
         const { reportsUnsubmit: _unsubmit, ...coreReportsRoutes } =
           reportsRoutes
 
-        const unsubmitBehindFeatureFlag = featureFlags.isReportUnsubmitEnabled()
-          ? [reportsUnsubmit]
-          : []
-
         server.route([
           health,
           ...apply,
@@ -69,7 +65,7 @@ const router = {
           adminPackagingRecyclingNotesList,
           ...Object.values(overseasSitesRoutes),
           ...Object.values(coreReportsRoutes),
-          ...unsubmitBehindFeatureFlag,
+          reportsUnsubmit,
           adminMeGet,
           streamEventsGet,
           dlqMessagesGet,
