@@ -11,14 +11,18 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {ReportsRepository} from '#reports/repository/port.js' */
+/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
-/** @type {Registration} */
-const accreditedRegistration = /** @type {any} */ ({
-  accreditation: { status: 'approved' }
-})
+const accreditedRegistration = /** @type {Registration} */ (
+  /** @type {unknown} */ ({ accreditation: { status: 'approved' } })
+)
 
-/** @type {Registration} */
-const registeredOnlyRegistration = /** @type {any} */ ({})
+const registeredOnlyRegistration = /** @type {Registration} */ (
+  /** @type {unknown} */ ({})
+)
 
 const SUMMARY_LOG_ID = 'sl-1'
 
@@ -444,11 +448,13 @@ describe('classifyByPeriodStatus', () => {
       // Record was previously included at 10 tonnes, now excluded.
       // The reversal (-10) must appear in adjusted.tonnageDelta
       // so the frontend can show "these adjusted loads will remove 10 tonnes".
-      const oldRecord = /** @type {any} */ ({
-        type: 'received',
-        rowId: '1000',
-        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
-      })
+      const oldRecord = /** @type {WasteRecord} */ (
+        /** @type {unknown} */ ({
+          type: 'received',
+          rowId: '1000',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+        })
+      )
 
       const wasteRecords = [
         buildWasteRecord({
@@ -482,11 +488,13 @@ describe('classifyByPeriodStatus', () => {
       // Old data: DATE_RECEIVED_FOR_REPROCESSING = Jan (closed)
       // New data: DATE_RECEIVED_FOR_REPROCESSING = Feb (open)
       // The old +10 must be reversed from closed, the new +12 added to open.
-      const oldRecord = /** @type {any} */ ({
-        type: 'received',
-        rowId: '1000',
-        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
-      })
+      const oldRecord = /** @type {WasteRecord} */ (
+        /** @type {unknown} */ ({
+          type: 'received',
+          rowId: '1000',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+        })
+      )
 
       const wasteRecords = [
         buildWasteRecord({
@@ -515,11 +523,13 @@ describe('classifyByPeriodStatus', () => {
 
     it('collapses to net delta when the period does not change', () => {
       // Old and new both in Jan (closed). Should behave like today: net delta.
-      const oldRecord = /** @type {any} */ ({
-        type: 'received',
-        rowId: '1000',
-        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-10' }
-      })
+      const oldRecord = /** @type {WasteRecord} */ (
+        /** @type {unknown} */ ({
+          type: 'received',
+          rowId: '1000',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-10' }
+        })
+      )
 
       const wasteRecords = [
         buildWasteRecord({
@@ -550,11 +560,13 @@ describe('classifyByPeriodStatus', () => {
     it('reverses old period tonnage when all dates are removed', () => {
       // Old data had Jan date (closed), new data has no dates.
       // Closed period loses the old contribution, record is otherwise skipped.
-      const oldRecord = /** @type {any} */ ({
-        type: 'received',
-        rowId: '1000',
-        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
-      })
+      const oldRecord = /** @type {WasteRecord} */ (
+        /** @type {unknown} */ ({
+          type: 'received',
+          rowId: '1000',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+        })
+      )
 
       const wasteRecords = [
         buildWasteRecord({
@@ -610,11 +622,13 @@ describe('classifyByPeriodStatus', () => {
     })
 
     it('skips counting when neither old nor new data has dates', () => {
-      const oldRecord = /** @type {any} */ ({
-        type: 'received',
-        rowId: '1000',
-        data: { DATE_RECEIVED_FOR_REPROCESSING: null }
-      })
+      const oldRecord = /** @type {WasteRecord} */ (
+        /** @type {unknown} */ ({
+          type: 'received',
+          rowId: '1000',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: null }
+        })
+      )
 
       const wasteRecords = [
         buildWasteRecord({
@@ -637,11 +651,13 @@ describe('classifyByPeriodStatus', () => {
     })
 
     it('treats missing transactionAmounts entry as zero for adjusted record', () => {
-      const oldRecord = /** @type {any} */ ({
-        type: 'received',
-        rowId: '1000',
-        data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
-      })
+      const oldRecord = /** @type {WasteRecord} */ (
+        /** @type {unknown} */ ({
+          type: 'received',
+          rowId: '1000',
+          data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15' }
+        })
+      )
 
       const wasteRecords = [
         buildWasteRecord({
@@ -882,21 +898,25 @@ describe('buildTransactionAmounts', () => {
    */
   /** @param {number} amount */
   const stubSchema = (amount) =>
-    /** @type {any} */ ({
-      classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: amount
+    /** @type {TableSchema} */ (
+      /** @type {unknown} */ ({
+        classifyForWasteBalance: () => ({
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: amount
+        })
       })
-    })
+    )
 
   const stubSchemaExcluded = () =>
-    /** @type {any} */ ({
-      classifyForWasteBalance: () => ({
-        outcome: ROW_OUTCOME.EXCLUDED,
-        reasons: [{ code: 'MISSING_REQUIRED_FIELD' }]
+    /** @type {TableSchema} */ (
+      /** @type {unknown} */ ({
+        classifyForWasteBalance: () => ({
+          outcome: ROW_OUTCOME.EXCLUDED,
+          reasons: [{ code: 'MISSING_REQUIRED_FIELD' }]
+        })
       })
-    })
+    )
 
   it('forwards classification context to classifyForWasteBalance', () => {
     const wasteBalanceRecords = [
@@ -911,7 +931,10 @@ describe('buildTransactionAmounts', () => {
 
     /** @type {import('./period-status.js').ClassificationContext} */
     const context = {
-      accreditation: /** @type {any} */ ({ status: 'approved' }),
+      accreditation:
+        /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
+          /** @type {unknown} */ ({ status: 'approved' })
+        ),
       overseasSites: ORS_VALIDATION_DISABLED
     }
 
@@ -919,7 +942,10 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => /** @type {any} */ ({ classifyForWasteBalance }),
+      findSchema: () =>
+        /** @type {TableSchema} */ (
+          /** @type {unknown} */ ({ classifyForWasteBalance })
+        ),
       context
     })
 
@@ -954,20 +980,24 @@ describe('buildTransactionAmounts', () => {
       })
     ]
 
-    const existingRecord = /** @type {any} */ ({
-      type: 'received',
-      rowId: '1000',
-      data: { NET_WEIGHT: '10' }
-    })
+    const existingRecord = /** @type {WasteRecord} */ (
+      /** @type {unknown} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { NET_WEIGHT: '10' }
+      })
+    )
 
     /** Schema stub that reads NET_WEIGHT from data */
-    const dataSensitiveSchema = /** @type {any} */ ({
-      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: Number(data.NET_WEIGHT)
+    const dataSensitiveSchema = /** @type {TableSchema} */ (
+      /** @type {unknown} */ ({
+        classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: Number(data.NET_WEIGHT)
+        })
       })
-    })
+    )
 
     const result = buildTransactionAmounts({
       wasteBalanceRecords,
@@ -1079,25 +1109,29 @@ describe('buildTransactionAmounts', () => {
       })
     ]
 
-    const existingRecord = /** @type {any} */ ({
-      type: 'received',
-      rowId: '1000',
-      data: { NET_WEIGHT: '10' }
-    })
+    const existingRecord = /** @type {WasteRecord} */ (
+      /** @type {unknown} */ ({
+        type: 'received',
+        rowId: '1000',
+        data: { NET_WEIGHT: '10' }
+      })
+    )
 
-    const dataSensitiveSchema = /** @type {any} */ ({
-      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => {
-        const weight = Number(data.NET_WEIGHT)
-        if (!weight) {
-          return { outcome: ROW_OUTCOME.EXCLUDED, reasons: [] }
+    const dataSensitiveSchema = /** @type {TableSchema} */ (
+      /** @type {unknown} */ ({
+        classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => {
+          const weight = Number(data.NET_WEIGHT)
+          if (!weight) {
+            return { outcome: ROW_OUTCOME.EXCLUDED, reasons: [] }
+          }
+          return {
+            outcome: ROW_OUTCOME.INCLUDED,
+            reasons: [],
+            transactionAmount: weight
+          }
         }
-        return {
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: weight
-        }
-      }
-    })
+      })
+    )
 
     const result = buildTransactionAmounts({
       wasteBalanceRecords,
@@ -1119,18 +1153,20 @@ describe('buildTransactionAmounts', () => {
       })
     ]
 
-    const dataSensitiveSchema = /** @type {any} */ ({
-      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: Number(data.NET_WEIGHT)
+    const dataSensitiveSchema = /** @type {TableSchema} */ (
+      /** @type {unknown} */ ({
+        classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
+          outcome: ROW_OUTCOME.INCLUDED,
+          reasons: [],
+          transactionAmount: Number(data.NET_WEIGHT)
+        })
       })
-    })
+    )
 
     const result = buildTransactionAmounts({
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
-      existingRecordsMap: new Map(), // no existing record
+      existingRecordsMap: new Map(),
       findSchema: () => dataSensitiveSchema,
       context: stubContext
     })
@@ -1140,23 +1176,28 @@ describe('buildTransactionAmounts', () => {
 })
 
 describe('computeLoadsByPeriodStatus', () => {
-  const stubLogger = /** @type {any} */ ({
-    warn: vi.fn()
-  })
+  const stubLogger = /** @type {TypedLogger} */ (
+    /** @type {unknown} */ ({
+      warn: vi.fn()
+    })
+  )
 
-  const TABLE_SCHEMAS_FOR_PROCESSING = /** @type {any} */ ({
-    REPROCESSOR_INPUT: {
-      RECEIVED_LOADS_FOR_REPROCESSING: {
-        reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
-        wasteRecordType: 'received',
-        classifyForWasteBalance: () => ({
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: 10
-        })
-      }
-    }
-  })
+  const TABLE_SCHEMAS_FOR_PROCESSING =
+    /** @type {typeof import('#domain/summary-logs/table-schemas/index.js').PROCESSING_TYPE_TABLES} */ (
+      /** @type {unknown} */ ({
+        REPROCESSOR_INPUT: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
+            wasteRecordType: 'received',
+            classifyForWasteBalance: () => ({
+              outcome: ROW_OUTCOME.INCLUDED,
+              reasons: [],
+              transactionAmount: 10
+            })
+          }
+        }
+      })
+    )
 
   it('returns classified loads when reports lookup succeeds', async () => {
     const wasteRecords = [buildWasteRecord()]
@@ -1169,9 +1210,12 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: /** @type {any} */ ({
-        findPeriodicReports: async () => []
-      }),
+      reportsRepository: /** @type {ReportsRepository} */ (
+        /** @type {unknown} */ ({
+          findPeriodicReports: async () => []
+        })
+      ),
+
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test',
@@ -1187,7 +1231,7 @@ describe('computeLoadsByPeriodStatus', () => {
   })
 
   it('returns null and logs a warning when reports lookup fails', async () => {
-    stubLogger.warn.mockClear()
+    vi.mocked(stubLogger.warn).mockClear()
 
     const result = await computeLoadsByPeriodStatus({
       wasteRecords: [buildWasteRecord()],
@@ -1197,11 +1241,13 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: /** @type {any} */ ({
-        findPeriodicReports: async () => {
-          throw new Error('database unavailable')
-        }
-      }),
+      reportsRepository: /** @type {ReportsRepository} */ (
+        /** @type {unknown} */ ({
+          findPeriodicReports: async () => {
+            throw new Error('database unavailable')
+          }
+        })
+      ),
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test-context',
@@ -1228,9 +1274,12 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: /** @type {any} */ ({
-        findPeriodicReports: async () => []
-      }),
+      reportsRepository: /** @type {ReportsRepository} */ (
+        /** @type {unknown} */ ({
+          findPeriodicReports: async () => []
+        })
+      ),
+
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test',
@@ -1257,15 +1306,18 @@ describe('computeLoadsByPeriodStatus', () => {
       transactionAmount: 5
     })
 
-    const schemas = /** @type {any} */ ({
-      REPROCESSOR_INPUT: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
-          wasteRecordType: 'received',
-          classifyForWasteBalance
-        }
-      }
-    })
+    const schemas =
+      /** @type {typeof import('#domain/summary-logs/table-schemas/index.js').PROCESSING_TYPE_TABLES} */ (
+        /** @type {unknown} */ ({
+          REPROCESSOR_INPUT: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
+              wasteRecordType: 'received',
+              classifyForWasteBalance
+            }
+          }
+        })
+      )
 
     const wasteRecords = [buildWasteRecord()]
 
@@ -1277,9 +1329,12 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: registeredOnlyRegistration,
       processingType: 'REPROCESSOR_INPUT',
       existingRecordsMap: new Map(),
-      reportsRepository: /** @type {any} */ ({
-        findPeriodicReports: async () => []
-      }),
+      reportsRepository: /** @type {ReportsRepository} */ (
+        /** @type {unknown} */ ({
+          findPeriodicReports: async () => []
+        })
+      ),
+
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test',
@@ -1294,7 +1349,7 @@ describe('computeLoadsByPeriodStatus', () => {
   })
 
   it('returns null for unknown processing type', async () => {
-    stubLogger.warn.mockClear()
+    vi.mocked(stubLogger.warn).mockClear()
     const wasteRecords = [buildWasteRecord()]
 
     const result = await computeLoadsByPeriodStatus({
@@ -1305,9 +1360,12 @@ describe('computeLoadsByPeriodStatus', () => {
       registration: accreditedRegistration,
       processingType: 'UNKNOWN_TYPE',
       existingRecordsMap: new Map(),
-      reportsRepository: /** @type {any} */ ({
-        findPeriodicReports: async () => []
-      }),
+      reportsRepository: /** @type {ReportsRepository} */ (
+        /** @type {unknown} */ ({
+          findPeriodicReports: async () => []
+        })
+      ),
+
       organisationId: 'org-1',
       registrationId: 'reg-1',
       loggingContext: 'test',
