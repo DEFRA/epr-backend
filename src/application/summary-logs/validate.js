@@ -566,8 +566,7 @@ export const createSummaryLogsValidator = ({
       processingType,
       existingRecordsMap,
       reportsRepository,
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
+      summaryLog,
       loggingContext,
       logger
     })

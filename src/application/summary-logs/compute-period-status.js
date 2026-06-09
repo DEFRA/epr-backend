@@ -14,6 +14,7 @@ import { classifyByPeriodStatus } from './period-status.js'
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 /** @import {ReportsRepository} from '#reports/repository/port.js' */
 /** @import {LoadsByPeriodStatus} from './period-status.js' */
+/** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 
 /**
  * Computes loadsByPeriodStatus with graceful degradation.
@@ -28,8 +29,7 @@ import { classifyByPeriodStatus } from './period-status.js'
  * @param {string} [params.processingType]
  * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
  * @param {ReportsRepository} params.reportsRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
+ * @param {SubmittedSummaryLog} params.summaryLog
  * @param {string} params.loggingContext
  * @param {TypedLogger} params.logger
  * @returns {Promise<LoadsByPeriodStatus | null>}
@@ -43,8 +43,7 @@ export const computePeriodStatus = async ({
   processingType,
   existingRecordsMap,
   reportsRepository,
-  organisationId,
-  registrationId,
+  summaryLog,
   loggingContext,
   logger
 }) => {
@@ -65,8 +64,8 @@ export const computePeriodStatus = async ({
 
   try {
     const submittedReports = await reportsRepository.findPeriodicReports({
-      organisationId,
-      registrationId
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId
     })
 
     const transactionAmounts = buildTransactionAmounts({

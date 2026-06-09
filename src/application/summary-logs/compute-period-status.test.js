@@ -100,12 +100,19 @@ vi.mock(
   }
 )
 
+const stubSummaryLog = /** @type {unknown} */ ({
+  organisationId: 'org-1',
+  registrationId: 'reg-1'
+})
+
 const baseParams = {
   summaryLogId: SUMMARY_LOG_ID,
   status: 'validated',
   reportsRepository: stubReportsRepository,
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
+  summaryLog:
+    /** @type {import('./validate-issue-logging.js').SubmittedSummaryLog} */ (
+      stubSummaryLog
+    ),
   loggingContext: 'test',
   logger: stubLogger
 }
