@@ -260,6 +260,10 @@ const classifyRecord = ({
 /**
  * Classifies an adjusted record by its old and new period independently.
  *
+ * Applies -oldAmount to the old period and +newAmount to the new period.
+ * When the period doesn't change, this naturally collapses to the net
+ * delta (newAmount - oldAmount) in a single bucket.
+ *
  * @param {Object} params
  * @param {string} params.key
  * @param {TransactionAmounts} [params.amounts]
