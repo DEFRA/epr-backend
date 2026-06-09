@@ -13,29 +13,6 @@ import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 
-const emptyLoadsByPeriodStatus = {
-  open: {
-    added: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
-    },
-    adjusted: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
-    }
-  },
-  closed: {
-    added: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
-    },
-    adjusted: {
-      included: { count: 0, tonnageDelta: 0 },
-      excluded: { count: 0, tonnageDelta: 0 }
-    }
-  }
-}
-
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}', () => {
   setupAuthContext()
 
