@@ -561,6 +561,60 @@ const persistValidationResult = async ({
 }
 
 /**
+ * Fetches periodic reports, classifies loads, and persists the validation result.
+ */
+const classifyAndPersistResult = async ({
+  issues,
+  processingType,
+  status,
+  summaryLogId,
+  wasteBalanceRecords,
+  wasteRecords,
+  registration,
+  existingRecordsMap,
+  meta,
+  summaryLog,
+  summaryLogsRepository,
+  version,
+  reportsRepository,
+  loggingContext,
+  logger
+}) => {
+  const periodicReports = await fetchPeriodicReportsSafe({
+    registration,
+    status,
+    summaryLog,
+    reportsRepository,
+    loggingContext,
+    logger
+  })
+
+  const { loads, loadsByWasteRecordType, loadsByPeriodStatus } = classifyLoads({
+    processingType,
+    status,
+    summaryLogId,
+    wasteBalanceRecords,
+    wasteRecords,
+    periodicReports,
+    registration,
+    existingRecordsMap
+  })
+
+  await persistValidationResult({
+    issues,
+    loads,
+    loadsByPeriodStatus,
+    loadsByWasteRecordType,
+    meta,
+    status,
+    summaryLog,
+    summaryLogId,
+    summaryLogsRepository,
+    version
+  })
+}
+
+/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -632,38 +686,22 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords
     })
 
-    const periodicReports = await fetchPeriodicReportsSafe({
-      registration,
+    await classifyAndPersistResult({
+      issues,
+      processingType,
       status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords,
+      registration,
+      existingRecordsMap,
+      meta,
       summaryLog,
+      summaryLogsRepository,
+      version,
       reportsRepository,
       loggingContext,
       logger
-    })
-
-    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
-      classifyLoads({
-        processingType,
-        status,
-        summaryLogId,
-        wasteBalanceRecords,
-        wasteRecords,
-        periodicReports,
-        registration,
-        existingRecordsMap
-      })
-
-    await persistValidationResult({
-      issues,
-      loads,
-      loadsByPeriodStatus,
-      loadsByWasteRecordType,
-      meta,
-      status,
-      summaryLog,
-      summaryLogId,
-      summaryLogsRepository,
-      version
     })
 
     logger.info({
