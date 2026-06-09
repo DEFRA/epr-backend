@@ -355,12 +355,14 @@ describe('Submission and placeholder tests', () => {
         })
       })
 
-      const syncWasteRecords = syncFromSummaryLog(/** @type {any} */ ({
-        extractor: transformationExtractor,
-        wasteRecordRepository: wasteRecordsRepository,
-        organisationsRepository,
-        overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
-      }))
+      const syncWasteRecords = syncFromSummaryLog(
+        /** @type {any} */ ({
+          extractor: transformationExtractor,
+          wasteRecordRepository: wasteRecordsRepository,
+          organisationsRepository,
+          overseasSitesRepository: { findByIds: vi.fn().mockResolvedValue([]) }
+        })
+      )
 
       const submitterWorker = {
         validate: validateSummaryLog,
@@ -368,7 +370,10 @@ describe('Submission and placeholder tests', () => {
           await new Promise((resolve) => setImmediate(resolve))
 
           const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } = /** @type {import('#repositories/summary-logs/port.js').SummaryLogVersion} */ (existing)
+          const { version, summaryLog } =
+            /** @type {import('#repositories/summary-logs/port.js').SummaryLogVersion} */ (
+              existing
+            )
 
           await syncWasteRecords(summaryLog)
 
@@ -768,7 +773,9 @@ describe('Submission and placeholder tests', () => {
         { ...testOrg, status: 'active' }
       ])()
 
-      const excelBuffer = /** @type {Buffer<ArrayBufferLike>} */ (/** @type {unknown} */ (await createExcelWithPlaceholders()))
+      const excelBuffer = /** @type {Buffer<ArrayBufferLike>} */ (
+        /** @type {unknown} */ (await createExcelWithPlaceholders())
+      )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
         organisationId,
