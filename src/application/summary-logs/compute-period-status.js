@@ -5,10 +5,8 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import {
-  buildTransactionAmounts,
-  classifyByPeriodStatus
-} from './period-status.js'
+import { buildTransactionAmounts } from './transaction-amounts.js'
+import { classifyByPeriodStatus } from './period-status.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
