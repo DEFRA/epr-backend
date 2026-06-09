@@ -1,21 +1,13 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
 import { MONTHS_PER_PERIOD } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord, WasteRecordVersion} from '#domain/waste-records/model.js' */
-/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ReportsRepository} from '#reports/repository/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -461,102 +453,4 @@ const computeRecordAmounts = (
   }
 
   return newAmount === 0 ? null : { oldAmount: 0, newAmount }
-}
-
-/**
- * Computes loadsByPeriodStatus for a validated summary log.
- * Returns null if preconditions are not met (non-validated status, missing
- * registration/processingType/existingRecordsMap) or if the reports lookup fails.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
- * @param {string} params.summaryLogId
- * @param {string} params.status
- * @param {Registration} [params.registration]
- * @param {string} [params.processingType]
- * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
- * @param {ReportsRepository} params.reportsRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- * @param {typeof import('#domain/summary-logs/table-schemas/index.js').PROCESSING_TYPE_TABLES} params.processingTypeTables
- * @returns {Promise<LoadsByPeriodStatus | null>}
- */
-export const computeLoadsByPeriodStatus = async ({
-  wasteRecords,
-  wasteBalanceRecords,
-  summaryLogId,
-  status,
-  registration,
-  processingType,
-  existingRecordsMap,
-  reportsRepository,
-  organisationId,
-  registrationId,
-  loggingContext,
-  logger,
-  processingTypeTables
-}) => {
-  if (
-    status !== SUMMARY_LOG_STATUS.VALIDATED ||
-    !wasteRecords ||
-    !registration ||
-    !processingType ||
-    !existingRecordsMap
-  ) {
-    return null
-  }
-
-  try {
-    const submittedReports = await reportsRepository.findPeriodicReports({
-      organisationId,
-      registrationId
-    })
-
-    // Overseas site validation already ran in the pipeline; here we only
-    // need transaction amounts for period status tallying, so we disable
-    // the overseas sites gate.
-    /** @type {ClassificationContext} */
-    const classificationContext = {
-      accreditation: registration.accreditation ?? null,
-      overseasSites: ORS_VALIDATION_DISABLED
-    }
-
-    const transactionAmounts = buildTransactionAmounts({
-      wasteBalanceRecords,
-      summaryLogId,
-      existingRecordsMap,
-      findSchema: (wasteRecordType) => {
-        const tables = processingTypeTables[processingType]
-        return tables
-          ? (Object.values(tables).find(
-              (s) => s.wasteRecordType === wasteRecordType
-            ) ?? null)
-          : null
-      },
-      context: classificationContext
-    })
-
-    return classifyByPeriodStatus({
-      wasteRecords,
-      summaryLogId,
-      registration,
-      submittedReports,
-      tableSchemas: processingTypeTables[processingType],
-      transactionAmounts,
-      existingRecordsMap
-    })
-  } catch (err) {
-    logger.warn({
-      message: `Failed to classify loads by period status: ${loggingContext}`,
-      err,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-    return null
-  }
 }

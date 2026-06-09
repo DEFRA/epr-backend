@@ -22,7 +22,8 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { classifyAndComputePeriodStatus } from './load-counts.js'
+import { classifyLoads, filterWasteBalanceRecords } from './load-counts.js'
+import { computePeriodStatus } from './compute-period-status.js'
 import {
   recordValidationIssueMetrics,
   recordRowOutcomeMetrics
@@ -543,17 +544,26 @@ export const createSummaryLogsValidator = ({
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    const {
-      loads,
-      loadsByWasteRecordType,
-      loadsByPeriodStatus,
-      wasteBalanceRecords
-    } = await classifyAndComputePeriodStatus({
+    const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
+      processingType
+    )
+
+    const { loads, loadsByWasteRecordType } = classifyLoads({
+      processingType,
+      status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords
+    })
+
+    const loadsByPeriodStatus = await computePeriodStatus({
+      wasteRecords,
+      wasteBalanceRecords,
       summaryLogId,
       status,
-      processingType,
       registration,
+      processingType,
       existingRecordsMap,
       reportsRepository,
       organisationId: summaryLog.organisationId,

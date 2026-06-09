@@ -6,12 +6,9 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { computeLoadsByPeriodStatus } from './period-status.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
-/** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ReportsRepository} from '#reports/repository/port.js' */
 
 /**
  * @typedef {Object} LoadCategory
@@ -314,7 +311,7 @@ export const classifyLoads = ({
  * @param {string} [processingType]
  * @returns {ValidatedWasteRecord[]}
  */
-const filterWasteBalanceRecords = (wasteRecords, processingType) => {
+export const filterWasteBalanceRecords = (wasteRecords, processingType) => {
   if (!processingType) {
     return []
   }
@@ -324,70 +321,4 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) => {
       return !isNil(schema?.classifyForWasteBalance)
     }) ?? []
   )
-}
-
-/**
- * Classifies loads and computes period status for a validated summary log.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {string} params.summaryLogId
- * @param {string} params.status
- * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} [params.processingType]
- * @param {import('#domain/organisations/registration.js').Registration} [params.registration]
- * @param {Map<string, import('#domain/waste-records/model.js').WasteRecord>} [params.existingRecordsMap]
- * @param {ReportsRepository} params.reportsRepository
- * @param {string} params.organisationId
- * @param {string} params.registrationId
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- */
-export const classifyAndComputePeriodStatus = async ({
-  wasteRecords,
-  summaryLogId,
-  status,
-  processingType,
-  registration,
-  existingRecordsMap,
-  reportsRepository,
-  organisationId,
-  registrationId,
-  loggingContext,
-  logger
-}) => {
-  const wasteBalanceRecords = filterWasteBalanceRecords(
-    wasteRecords,
-    processingType
-  )
-
-  const { loads, loadsByWasteRecordType } = classifyLoads({
-    processingType,
-    status,
-    summaryLogId,
-    wasteBalanceRecords,
-    wasteRecords
-  })
-
-  const loadsByPeriodStatus = await computeLoadsByPeriodStatus({
-    wasteRecords,
-    wasteBalanceRecords,
-    summaryLogId,
-    registration,
-    processingType,
-    existingRecordsMap,
-    reportsRepository,
-    status,
-    organisationId,
-    registrationId,
-    loggingContext,
-    logger,
-    processingTypeTables: PROCESSING_TYPE_TABLES
-  })
-
-  return {
-    loads,
-    loadsByWasteRecordType,
-    loadsByPeriodStatus,
-    wasteBalanceRecords
-  }
 }
