@@ -149,7 +149,7 @@ const buildClosedPeriods = (submittedReports, cadence) => {
  *
  * Returns null if no date fields have a value (record should be skipped).
  *
- * @param {Record<string, any>} data
+ * @param {Record<string, string | Date | null | undefined>} data
  * @param {string[]} reportingDateFields
  * @param {Set<string>} closedPeriods
  * @param {string} cadence
@@ -229,8 +229,9 @@ const classifyRecord = ({
   const amounts = transactionAmounts.get(key)
   const isIncluded = outcome === ROW_OUTCOME.INCLUDED
   const { reportingDateFields } = schema
-  const classify = (/** @type {Record<string, any>} */ data) =>
-    classifyPeriodStatus(data, reportingDateFields, closedPeriods, cadence)
+  const classify = (
+    /** @type {Record<string, string | Date | null | undefined>} */ data
+  ) => classifyPeriodStatus(data, reportingDateFields, closedPeriods, cadence)
 
   if (status === 'added') {
     const period = classify(record.data)
@@ -268,7 +269,7 @@ const classifyRecord = ({
  * @param {string} params.key
  * @param {TransactionAmounts} [params.amounts]
  * @param {boolean} params.isIncluded
- * @param {(data: Record<string, any>) => 'open' | 'closed' | null} params.classify
+ * @param {(data: Record<string, string | Date | null | undefined>) => 'open' | 'closed' | null} params.classify
  * @param {ValidatedWasteRecord['record']} params.record
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {LoadsByPeriodStatus} params.result
