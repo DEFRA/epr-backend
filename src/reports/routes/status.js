@@ -7,6 +7,7 @@ import { assertReportComplete } from '#reports/application/assert-report-complet
 import { fetchCurrentReport } from '#reports/application/report-service.js'
 import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { REPORT_STATUS, STATUS_TO_SLOT } from '#reports/domain/report-status.js'
+import { assertNotStale } from '#reports/domain/stale.js'
 import { isValidReportTransition } from '#reports/domain/report-transitions.js'
 import {
   periodParamsSchema,
@@ -70,6 +71,8 @@ export const reportsStatus = {
         `No report found for ${cadence} period ${period} of ${year}`
       )
     }
+
+    assertNotStale(report)
 
     if (!isValidReportTransition(report.status.currentStatus, status)) {
       throw Boom.badRequest(

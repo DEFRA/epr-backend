@@ -6,6 +6,7 @@ import {
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
+  validateMarkActiveReportsStale,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -14,7 +15,11 @@ import {
   groupAsPeriodicReports,
   prepareCreateReportParams
 } from '#root/reports/repository/helpers.js'
-import { REPORT_STATUS } from '#root/reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  ACTIVE_REPORT_STATUSES
+} from '#root/reports/domain/report-status.js'
+import { STALE_REASON } from '#root/reports/domain/stale.js'
 
 /**
  * @import {
@@ -345,6 +350,81 @@ const performFindAllPeriodicReports = async (db) => {
 }
 
 /**
+ * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
+ * Skips reports already stale from this SL (retry-safe) and reports built from it (already current).
+ *
+ * @param {Db} db
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} summaryLogId
+ * @param {string} uploadedAt
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
+ */
+const performMarkActiveReportsStale = async (
+  db,
+  organisationId,
+  registrationId,
+  summaryLogId,
+  uploadedAt
+) => {
+  validateMarkActiveReportsStale({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt
+  })
+
+  const stale = {
+    uploadedAt,
+    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
+    summaryLogId
+  }
+
+  const filter = {
+    organisationId,
+    registrationId,
+    'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
+    'stale.summaryLogId': { $ne: summaryLogId },
+    'source.summaryLogId': { $ne: summaryLogId }
+  }
+
+  const { modifiedCount } = await reportsCollection(db).updateMany(filter, {
+    $set: { stale },
+    $inc: { version: 1 }
+  })
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  const updatedDocs = await reportsCollection(db)
+    .find(
+      { organisationId, registrationId, 'stale.summaryLogId': summaryLogId },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          year: 1,
+          cadence: 1,
+          period: 1,
+          submissionNumber: 1,
+          stale: 1
+        }
+      }
+    )
+    .toArray()
+
+  return updatedDocs.map((d) => ({
+    reportId: d.id,
+    year: d.year,
+    cadence: d.cadence,
+    period: d.period,
+    submissionNumber: d.submissionNumber,
+    stale: /** @type {import('./port.js').ReportStale} */ (d.stale)
+  }))
+}
+
+/**
  * Creates a MongoDB-backed reports repository.
  *
  * @param {Db} db
@@ -360,6 +440,19 @@ export const createReportsRepository = async (db) => {
     deleteReport: (params) => performDeleteReport(db, params),
     findPeriodicReports: (params) => performFindPeriodicReports(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
-    findReportById: (reportId) => performFindReportById(db, reportId)
+    findReportById: (reportId) => performFindReportById(db, reportId),
+    markActiveReportsStale: (
+      organisationId,
+      registrationId,
+      summaryLogId,
+      uploadedAt
+    ) =>
+      performMarkActiveReportsStale(
+        db,
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt
+      )
   })
 }

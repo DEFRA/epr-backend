@@ -37,6 +37,26 @@ const performInsert = (db, logger) => async (systemLog) => {
   }
 }
 
+const performInsertMany = (db, logger) => async (systemLogs) => {
+  if (systemLogs.length === 0) {
+    return
+  }
+
+  try {
+    await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertMany(
+      systemLogs.map((log) => ({ schemaVersion: 1, ...log })),
+      {
+        ordered: false
+      }
+    )
+  } catch (error) {
+    logger.error({
+      err: error,
+      message: 'Failed to internally record system logs'
+    })
+  }
+}
+
 const performFind =
   (db) =>
   async ({ organisationId, userId, subCategory, limit, cursor, direction }) => {
@@ -120,6 +140,7 @@ export const createSystemLogsRepository = async (db) => {
 
   return (logger) => ({
     insert: performInsert(db, logger),
+    insertMany: performInsertMany(db, logger),
     find: performFind(db),
     findSummaryLogSubmitActors: performFindSummaryLogSubmitActors(db)
   })

@@ -43,6 +43,7 @@ describe('createCommandQueueConsumer', () => {
   let wasteRecordsRepository
   let wasteBalancesRepository
   let summaryLogExtractor
+  let onSummaryLogSubmittedReportHook
   let mockConsumer
   let eventHandlers
 
@@ -85,6 +86,7 @@ describe('createCommandQueueConsumer', () => {
     wasteRecordsRepository = {}
     wasteBalancesRepository = {}
     summaryLogExtractor = {}
+    onSummaryLogSubmittedReportHook = vi.fn().mockResolvedValue(undefined)
 
     mockConsumer = {
       on: vi.fn((event, handler) => {
@@ -94,16 +96,23 @@ describe('createCommandQueueConsumer', () => {
       stop: vi.fn()
     }
 
-    vi.mocked(Consumer.create).mockReturnValue(mockConsumer)
+    vi.mocked(Consumer.create).mockReturnValue(
+      /** @type {import('sqs-consumer').Consumer} */ (
+        /** @type {unknown} */ (mockConsumer)
+      )
+    )
     vi.mocked(GetQueueUrlCommand).mockImplementation(function (params) {
-      this.QueueName = params.QueueName
+      const self = /** @type {any} */ (this)
+      self.QueueName = /** @type {any} */ (params).QueueName
     })
     vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
     )
-    vi.mocked(summaryLogMetrics).timedSubmission = vi.fn((_, fn) => fn())
+    vi.mocked(summaryLogMetrics.timedSubmission).mockImplementation((_, fn) =>
+      Promise.resolve(fn())
+    )
     vi.mocked(summaryLogMetrics).recordWasteRecordsCreated = vi.fn()
     vi.mocked(summaryLogMetrics).recordWasteRecordsUpdated = vi.fn()
     vi.mocked(summaryLogMetrics).recordStatusTransition = vi.fn()
@@ -123,7 +132,8 @@ describe('createCommandQueueConsumer', () => {
         organisationsRepository,
         wasteRecordsRepository,
         wasteBalancesRepository,
-        summaryLogExtractor
+        summaryLogExtractor,
+        onSummaryLogSubmittedReportHook
       },
       summaryLogCommandHandlers
     )
@@ -446,7 +456,9 @@ describe('createCommandQueueConsumer', () => {
 
     beforeEach(async () => {
       await createConsumer()
-      handleMessage = Consumer.create.mock.calls[0][0].handleMessage
+      handleMessage = /** @type {{ mock: { calls: Array<Array<any>> } }} */ (
+        /** @type {unknown} */ (Consumer.create)
+      ).mock.calls[0][0].handleMessage
     })
 
     describe('message parsing', () => {
@@ -1093,8 +1105,8 @@ describe('createCommandQueueConsumer', () => {
       it('records metrics during submission', async () => {
         const mockSync = vi.fn().mockResolvedValue({ created: 5, updated: 3 })
         vi.mocked(syncFromSummaryLog).mockReturnValue(mockSync)
-        vi.mocked(summaryLogMetrics).timedSubmission.mockImplementation(
-          (_, fn) => fn()
+        vi.mocked(summaryLogMetrics.timedSubmission).mockImplementation(
+          (_, fn) => Promise.resolve(fn())
         )
 
         const message = {

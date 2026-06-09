@@ -55,7 +55,7 @@ describe('mock-repositories', () => {
     },
     createMockSystemLogsRepository: {
       build: createMockSystemLogsRepository,
-      methods: ['insert', 'find', 'findSummaryLogSubmitActors']
+      methods: ['insert', 'insertMany', 'find', 'findSummaryLogSubmitActors']
     },
     createMockFormSubmissionsRepository: {
       build: createMockFormSubmissionsRepository,

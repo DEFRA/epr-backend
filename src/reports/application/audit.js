@@ -2,8 +2,12 @@ import {
   extractUserDetails,
   isPayloadSmallEnoughToAudit,
   recordSystemLog,
+  recordSystemLogs,
   safeAudit
 } from '#auditing/helpers.js'
+
+/** @type {import('#repositories/system-logs/port.js').SystemLog['createdBy']} */
+const SYSTEM_ACTOR = Object.freeze({ id: 'system', email: 'system', scope: [] })
 
 const AUDIT_CATEGORY = 'waste-reporting'
 const AUDIT_SUB_CATEGORY = 'reports'
@@ -143,6 +147,49 @@ export async function auditReportDelete(request, params) {
 
   safeAudit(safeAuditingPayload)
   await recordSystemLog(request, payload)
+}
+
+/**
+ * Audits a bulk markActiveReportsStale operation via CDP audit and system logs.
+ * Emits one CDP audit event and one system-log record per report.
+ * Uses {@link recordSystemLogs} for a single DB round-trip across all records.
+ * @param {{
+ *   systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
+ *   organisationId: string,
+ *   registrationId: string,
+ *   reportsMarkedStale: import('#reports/repository/port.js').MarkReportStaleResult[]
+ * }} params
+ */
+export async function auditMarkReportsStale({
+  systemLogsRepository,
+  organisationId,
+  registrationId,
+  reportsMarkedStale
+}) {
+  const payloads = reportsMarkedStale.map(
+    ({ reportId, year, cadence, period, submissionNumber, stale }) => ({
+      user: SYSTEM_ACTOR,
+      event: {
+        category: AUDIT_CATEGORY,
+        subCategory: AUDIT_SUB_CATEGORY,
+        action: 'mark-stale'
+      },
+      context: {
+        organisationId,
+        registrationId,
+        year,
+        cadence,
+        period,
+        submissionNumber,
+        reportId,
+        previous: { stale: null },
+        next: { stale }
+      }
+    })
+  )
+
+  payloads.forEach((p) => safeAudit(p))
+  await recordSystemLogs(systemLogsRepository, payloads)
 }
 
 /**

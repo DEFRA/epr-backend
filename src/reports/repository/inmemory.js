@@ -1,12 +1,17 @@
 import Boom from '@hapi/boom'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
-import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import {
+  REPORT_STATUS,
+  ACTIVE_REPORT_STATUSES
+} from '#reports/domain/report-status.js'
+import { STALE_REASON } from '#reports/domain/stale.js'
 import {
   validateCreateReport,
   validateDeleteReportParams,
   validateFindPeriodicReports,
   validateFindReportById,
+  validateMarkActiveReportsStale,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -262,6 +267,72 @@ const findAllPeriodicReports = async (reports) => {
 }
 
 /**
+ * @param {Map<string, Object>} reports
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} summaryLogId
+ * @param {string} uploadedAt
+ * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
+ */
+const markActiveReportsStale = async (
+  reports,
+  organisationId,
+  registrationId,
+  summaryLogId,
+  uploadedAt
+) => {
+  validateMarkActiveReportsStale({
+    organisationId,
+    registrationId,
+    summaryLogId,
+    uploadedAt
+  })
+
+  const stale = {
+    uploadedAt,
+    reason: STALE_REASON.SUMMARY_LOG_CHANGED,
+    summaryLogId
+  }
+
+  let modifiedCount = 0
+
+  for (const [id, report] of reports) {
+    if (
+      report.organisationId === organisationId &&
+      report.registrationId === registrationId &&
+      ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
+      report.stale?.summaryLogId !== summaryLogId &&
+      report.source?.summaryLogId !== summaryLogId
+    ) {
+      reports.set(id, { ...report, stale, version: report.version + 1 })
+      modifiedCount++
+    }
+  }
+
+  if (modifiedCount === 0) {
+    return []
+  }
+
+  return [...reports.values()]
+    .filter(
+      (r) =>
+        r.organisationId === organisationId &&
+        r.registrationId === registrationId &&
+        r.stale?.summaryLogId === summaryLogId
+    )
+    .map((r) =>
+      structuredClone({
+        reportId: r.id,
+        year: r.year,
+        cadence: r.cadence,
+        period: r.period,
+        submissionNumber: r.submissionNumber,
+        stale: r.stale
+      })
+    )
+}
+
+/**
  * Create an in-memory reports repository.
  *
  * The store is used by reference so test fixtures can seed data directly.
@@ -279,6 +350,19 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     deleteReport: (params) => deleteReport(reports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
     findPeriodicReports: (params) => findPeriodicReports(reports, params),
-    findAllPeriodicReports: () => findAllPeriodicReports(reports)
+    findAllPeriodicReports: () => findAllPeriodicReports(reports),
+    markActiveReportsStale: (
+      organisationId,
+      registrationId,
+      summaryLogId,
+      uploadedAt
+    ) =>
+      markActiveReportsStale(
+        reports,
+        organisationId,
+        registrationId,
+        summaryLogId,
+        uploadedAt
+      )
   })
 }
