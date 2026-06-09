@@ -478,6 +478,9 @@ export const createTestInfrastructure = async (
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    reportsRepository: /** @type {any} */ ({
+      findPeriodicReports: async () => []
+    }),
     summaryLogExtractor,
     logger: mockLogger
   })
@@ -561,6 +564,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     summaryLogsRepository,
     organisationsRepository,
     wasteRecordsRepository,
+    reportsRepository: /** @type {any} */ ({
+      findPeriodicReports: async () => []
+    }),
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
   })

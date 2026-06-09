@@ -23,12 +23,14 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import {
   countByValidity,
   countByWasteBalanceInclusion,
   countByWasteRecordType,
   mergeLoads
 } from './load-counts.js'
+import { classifyByPeriodStatus } from './period-status.js'
 import {
   logValidationIssues,
   MAX_VALIDATION_ISSUES
@@ -56,6 +58,9 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
+/** @import {LoadsByPeriodStatus} from './period-status.js' */
+/** @import {ReportsRepository} from '#reports/repository/port.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
 /**
  * @param {{
@@ -94,6 +99,7 @@ const extractSummaryLog = async ({
  * }} params
  * @returns {Promise<{
  *   wasteRecords: ValidatedWasteRecord[],
+ *   existingRecordsMap: Map<string, WasteRecord>,
  *   issues: ValidationIssuesCollector
  * }>}
  */
@@ -137,7 +143,7 @@ const transformAndValidateData = async ({
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })
 
-  return { wasteRecords, issues }
+  return { wasteRecords, existingRecordsMap, issues }
 }
 
 /**
@@ -183,6 +189,8 @@ const fetchRegistration = async ({
  * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
+ * @property {Registration} [registration] - Registration fetched during validation
+ * @property {Map<string, WasteRecord>} [existingRecordsMap] - Existing records map for adjusted record lookup
  */
 
 /**
@@ -304,7 +312,12 @@ const performValidationChecks = async ({
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
+  /** @type {ExtractedMeta | undefined} */
   let meta
+  /** @type {Registration | undefined} */
+  let registration
+  /** @type {Map<string, WasteRecord> | undefined} */
+  let existingRecordsMap
 
   try {
     const parsed = await extractSummaryLog({
@@ -322,7 +335,7 @@ const performValidationChecks = async ({
       return { issues, wasteRecords, meta }
     }
 
-    const registration = await fetchRegistration({
+    registration = await fetchRegistration({
       organisationsRepository,
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
@@ -339,7 +352,7 @@ const performValidationChecks = async ({
     )
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
+      return { issues, wasteRecords, meta, registration }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
@@ -348,7 +361,7 @@ const performValidationChecks = async ({
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
+      return { issues, wasteRecords, meta, registration }
     }
 
     const dataResult = await transformAndValidateData({
@@ -359,6 +372,7 @@ const performValidationChecks = async ({
     })
 
     wasteRecords = dataResult.wasteRecords
+    existingRecordsMap = dataResult.existingRecordsMap
 
     markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
 
@@ -372,7 +386,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta }
+  return { issues, wasteRecords, meta, registration, existingRecordsMap }
 }
 
 /**
@@ -504,6 +518,7 @@ const recordValidationMetrics = async ({
  * @param {Object} params
  * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
+ * @param {LoadsByPeriodStatus | null} params.loadsByPeriodStatus
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
@@ -515,6 +530,7 @@ const recordValidationMetrics = async ({
 const persistValidationResult = async ({
   issues,
   loads,
+  loadsByPeriodStatus,
   loadsByWasteRecordType,
   meta,
   status,
@@ -533,6 +549,7 @@ const persistValidationResult = async ({
       counts: issues.getCounts()
     },
     ...(loads && { loads }),
+    ...(loadsByPeriodStatus && { loadsByPeriodStatus }),
     ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
     ...(meta && { meta })
   })
@@ -594,6 +611,85 @@ const classifyLoads = ({
 }
 
 /**
+ * Computes loadsByPeriodStatus with graceful degradation.
+ * Returns null if preconditions aren't met or the reports lookup fails.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[] | null} params.wasteRecords
+ * @param {string} params.summaryLogId
+ * @param {string} params.status
+ * @param {Registration} [params.registration]
+ * @param {string} [params.processingType]
+ * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
+ * @param {ReportsRepository} params.reportsRepository
+ * @param {SubmittedSummaryLog} params.summaryLog
+ * @param {string} params.loggingContext
+ * @param {TypedLogger} params.logger
+ * @returns {Promise<LoadsByPeriodStatus | null>}
+ */
+const computeLoadsByPeriodStatus = async ({
+  wasteRecords,
+  summaryLogId,
+  status,
+  registration,
+  processingType,
+  existingRecordsMap,
+  reportsRepository,
+  summaryLog,
+  loggingContext,
+  logger
+}) => {
+  if (
+    status !== SUMMARY_LOG_STATUS.VALIDATED ||
+    !wasteRecords ||
+    !registration ||
+    !processingType ||
+    !existingRecordsMap
+  ) {
+    return null
+  }
+
+  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
+  if (!tableSchemas) {
+    return null
+  }
+
+  try {
+    const periodicReports = await reportsRepository.findPeriodicReports({
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId
+    })
+
+    const cadence = isRegistrationAccredited(registration)
+      ? 'monthly'
+      : 'quarterly'
+
+    return classifyByPeriodStatus({
+      wasteRecords,
+      existingRecordsMap,
+      periodicReports,
+      cadence,
+      summaryLogId,
+      tableSchemas,
+      classificationContext: {
+        accreditation: registration.accreditation ?? null,
+        overseasSites: ORS_VALIDATION_DISABLED
+      }
+    })
+  } catch (err) {
+    logger.warn({
+      message: `Failed to classify loads by period status: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      },
+      err
+    })
+    return null
+  }
+}
+
+/**
  * Creates a summary logs validator function.
  *
  * @param {{
@@ -601,6 +697,7 @@ const classifyLoads = ({
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationsRepository: OrganisationsRepository,
  *   wasteRecordsRepository: WasteRecordsRepository,
+ *   reportsRepository: ReportsRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: string) => Promise<void>}
@@ -610,6 +707,7 @@ export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
   wasteRecordsRepository,
+  reportsRepository,
   summaryLogExtractor
 }) => {
   const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
@@ -636,7 +734,13 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta } = await performValidationChecks({
+    const {
+      issues,
+      wasteRecords,
+      meta,
+      registration,
+      existingRecordsMap
+    } = await performValidationChecks({
       summaryLogId,
       summaryLog,
       loggingContext,
@@ -677,9 +781,23 @@ export const createSummaryLogsValidator = ({
       wasteRecords
     })
 
+    const loadsByPeriodStatus = await computeLoadsByPeriodStatus({
+      wasteRecords,
+      summaryLogId,
+      status,
+      registration,
+      processingType,
+      existingRecordsMap,
+      reportsRepository,
+      summaryLog,
+      loggingContext,
+      logger
+    })
+
     await persistValidationResult({
       issues,
       loads,
+      loadsByPeriodStatus,
       loadsByWasteRecordType,
       meta,
       status,

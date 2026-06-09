@@ -69,6 +69,7 @@ function buildConsumerDeps(server, { config }) {
     organisationsRepository,
     wasteRecordsRepository,
     wasteBalancesRepository,
+    reportsRepository,
     summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
     onSummaryLogSubmittedReportHook
   }

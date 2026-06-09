@@ -353,7 +353,8 @@ describe('Submission and placeholder tests', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor: validationExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({ findPeriodicReports: async () => [] })
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -802,7 +803,8 @@ describe('Submission and placeholder tests', () => {
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor,
-        logger: mockLogger
+        logger: mockLogger,
+        reportsRepository: /** @type {any} */ ({ findPeriodicReports: async () => [] })
       })
       const featureFlags = createInMemoryFeatureFlags()
 
