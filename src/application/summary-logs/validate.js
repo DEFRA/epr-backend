@@ -23,7 +23,6 @@ import {
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { classifyLoads, filterWasteBalanceRecords } from './load-counts.js'
-import { computePeriodStatus } from './compute-period-status.js'
 import {
   recordValidationIssueMetrics,
   recordRowOutcomeMetrics
@@ -544,31 +543,38 @@ export const createSummaryLogsValidator = ({
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
+    let submittedReports = null
+    try {
+      submittedReports = await reportsRepository.findPeriodicReports({
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId
+      })
+    } catch (err) {
+      logger.warn({
+        message: `Failed to fetch reports for period status: ${loggingContext}`,
+        err,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+        }
+      })
+    }
+
+    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
+      classifyLoads({
+        processingType,
+        status,
+        summaryLogId,
+        wasteRecords,
+        registration,
+        existingRecordsMap,
+        submittedReports
+      })
+
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
       processingType
     )
-
-    const { loads, loadsByWasteRecordType } = classifyLoads({
-      processingType,
-      status,
-      summaryLogId,
-      wasteBalanceRecords,
-      wasteRecords
-    })
-
-    const loadsByPeriodStatus = await computePeriodStatus({
-      wasteRecords,
-      summaryLogId,
-      status,
-      registration,
-      processingType,
-      existingRecordsMap,
-      reportsRepository,
-      summaryLog,
-      loggingContext,
-      logger
-    })
 
     await recordValidationMetrics({
       issues,

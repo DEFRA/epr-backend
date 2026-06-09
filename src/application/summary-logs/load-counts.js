@@ -4,11 +4,18 @@ import {
   PROCESSING_TYPE_TABLES,
   findSchemaForProcessingType
 } from '#domain/summary-logs/table-schemas/index.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { buildTransactionAmounts } from './transaction-amounts.js'
+import { classifyByPeriodStatus } from './period-status.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
+/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {WasteRecord} from '#domain/waste-records/model.js' */
+/** @import {PeriodicReport} from '#reports/repository/port.js' */
+/** @import {LoadsByPeriodStatus} from './period-status.js' */
 
 /**
  * @typedef {Object} LoadCategory
@@ -263,26 +270,41 @@ export const countByWasteRecordType = ({
 }
 
 /**
- * Computes aggregate and per-waste-record-type load counts for validated summary logs.
+ * Computes aggregate, per-waste-record-type, and per-period-status load
+ * counts for validated summary logs.
  *
  * @param {Object} params
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
  * @param {string} params.summaryLogId
  * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} [params.processingType]
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: LoadsByWasteRecordType | null }}
+ * @param {Registration} [params.registration]
+ * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
+ * @param {PeriodicReport[] | null} [params.submittedReports] - null skips period-status classification
+ * @returns {{ loads: Loads | null, loadsByWasteRecordType: LoadsByWasteRecordType | null, loadsByPeriodStatus: LoadsByPeriodStatus | null }}
  */
 export const classifyLoads = ({
   processingType,
   status,
   summaryLogId,
-  wasteBalanceRecords,
-  wasteRecords
+  wasteRecords,
+  registration,
+  existingRecordsMap,
+  submittedReports
 }) => {
   if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return { loads: null, loadsByWasteRecordType: null }
+    return {
+      loads: null,
+      loadsByWasteRecordType: null,
+      loadsByPeriodStatus: null
+    }
   }
+
+  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
+  const wasteBalanceRecords = filterWasteBalanceRecords(
+    wasteRecords,
+    processingType
+  )
 
   const loads = mergeLoads(
     countByValidity({ wasteRecords, summaryLogId }),
@@ -292,8 +314,6 @@ export const classifyLoads = ({
     })
   )
 
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
   const loadsByWasteRecordType = countByWasteRecordType({
     wasteRecords,
     wasteBalanceRecords,
@@ -301,7 +321,79 @@ export const classifyLoads = ({
     tableSchemas
   })
 
-  return { loads, loadsByWasteRecordType }
+  const loadsByPeriodStatus = computePeriodStatus({
+    wasteRecords,
+    wasteBalanceRecords,
+    summaryLogId,
+    registration,
+    existingRecordsMap,
+    submittedReports,
+    tableSchemas
+  })
+
+  return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
+}
+
+/**
+ * Computes loadsByPeriodStatus when all preconditions are met.
+ * Returns null if any required input is missing.
+ *
+ * @param {Object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {string} params.summaryLogId
+ * @param {Registration} [params.registration]
+ * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
+ * @param {PeriodicReport[] | null} [params.submittedReports]
+ * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} [params.tableSchemas]
+ * @returns {LoadsByPeriodStatus | null}
+ */
+const computePeriodStatus = ({
+  wasteRecords,
+  wasteBalanceRecords,
+  summaryLogId,
+  registration,
+  existingRecordsMap,
+  submittedReports,
+  tableSchemas
+}) => {
+  if (
+    !registration ||
+    !existingRecordsMap ||
+    !tableSchemas ||
+    !submittedReports
+  ) {
+    return null
+  }
+
+  /** @param {string} wasteRecordType */
+  const findSchema = (wasteRecordType) => {
+    const match = Object.values(tableSchemas).find(
+      (s) => s.wasteRecordType === wasteRecordType
+    )
+    return match ?? null
+  }
+
+  const transactionAmounts = buildTransactionAmounts({
+    wasteBalanceRecords,
+    summaryLogId,
+    existingRecordsMap,
+    findSchema,
+    context: {
+      accreditation: registration.accreditation ?? null,
+      overseasSites: ORS_VALIDATION_DISABLED
+    }
+  })
+
+  return classifyByPeriodStatus({
+    wasteRecords,
+    summaryLogId,
+    registration,
+    submittedReports,
+    tableSchemas,
+    transactionAmounts,
+    existingRecordsMap
+  })
 }
 
 /**

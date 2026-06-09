@@ -1,4 +1,5 @@
 import {
+  classifyLoads,
   countByWasteBalanceInclusion,
   countByValidity,
   mergeLoads
@@ -8,6 +9,12 @@ import {
   WASTE_RECORD_TYPE
 } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import {
+  SUMMARY_LOG_ID,
+  accreditedRegistration,
+  buildWasteRecord,
+  registeredOnlyRegistration
+} from './test-builders.js'
 
 const CURRENT_SUMMARY_LOG_ID = 'current-summary-log'
 const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
@@ -919,5 +926,95 @@ describe('mergeLoads', () => {
         excluded: { count: 0, rowIds: [] }
       }
     })
+  })
+})
+
+describe('classifyLoads', () => {
+  it('returns null loadsByPeriodStatus when submittedReports is null', () => {
+    const { loadsByPeriodStatus } = classifyLoads({
+      processingType: 'REPROCESSOR_INPUT',
+      status: 'validated',
+      summaryLogId: SUMMARY_LOG_ID,
+      wasteRecords: [buildWasteRecord()],
+      registration: accreditedRegistration,
+      existingRecordsMap: new Map(),
+      submittedReports: null
+    })
+
+    expect(loadsByPeriodStatus).toBeNull()
+  })
+
+  it('returns loadsByPeriodStatus when submittedReports is provided', () => {
+    const { loadsByPeriodStatus } = classifyLoads({
+      processingType: 'REPROCESSOR_INPUT',
+      status: 'validated',
+      summaryLogId: SUMMARY_LOG_ID,
+      wasteRecords: [buildWasteRecord()],
+      registration: accreditedRegistration,
+      existingRecordsMap: new Map(),
+      submittedReports: []
+    })
+
+    expect(loadsByPeriodStatus).not.toBeNull()
+    expect(loadsByPeriodStatus?.open).toBeDefined()
+    expect(loadsByPeriodStatus?.closed).toBeDefined()
+  })
+
+  it('returns all nulls when status is not validated', () => {
+    const result = classifyLoads({
+      processingType: 'REPROCESSOR_INPUT',
+      status: 'invalid',
+      summaryLogId: SUMMARY_LOG_ID,
+      wasteRecords: [buildWasteRecord()],
+      registration: accreditedRegistration,
+      existingRecordsMap: new Map(),
+      submittedReports: []
+    })
+
+    expect(result.loads).toBeNull()
+    expect(result.loadsByWasteRecordType).toBeNull()
+    expect(result.loadsByPeriodStatus).toBeNull()
+  })
+
+  it('returns null loadsByPeriodStatus when registration is missing', () => {
+    const { loadsByPeriodStatus } = classifyLoads({
+      processingType: 'REPROCESSOR_INPUT',
+      status: 'validated',
+      summaryLogId: SUMMARY_LOG_ID,
+      wasteRecords: [buildWasteRecord()],
+      registration: undefined,
+      existingRecordsMap: new Map(),
+      submittedReports: []
+    })
+
+    expect(loadsByPeriodStatus).toBeNull()
+  })
+
+  it('passes null accreditation for registered-only registrations', () => {
+    const { loadsByPeriodStatus } = classifyLoads({
+      processingType: 'REPROCESSOR_INPUT',
+      status: 'validated',
+      summaryLogId: SUMMARY_LOG_ID,
+      wasteRecords: [buildWasteRecord()],
+      registration: registeredOnlyRegistration,
+      existingRecordsMap: new Map(),
+      submittedReports: []
+    })
+
+    expect(loadsByPeriodStatus).not.toBeNull()
+  })
+
+  it('handles unknown waste record type gracefully', () => {
+    const { loadsByPeriodStatus } = classifyLoads({
+      processingType: 'REPROCESSOR_INPUT',
+      status: 'validated',
+      summaryLogId: SUMMARY_LOG_ID,
+      wasteRecords: [buildWasteRecord({ wasteRecordType: 'unknown' })],
+      registration: accreditedRegistration,
+      existingRecordsMap: new Map(),
+      submittedReports: []
+    })
+
+    expect(loadsByPeriodStatus).not.toBeNull()
   })
 })
