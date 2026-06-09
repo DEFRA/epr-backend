@@ -8,7 +8,9 @@ describe('logFeatureFlagStates', () => {
         devEndpoints: false
       })
     }
-    const logger = { info: vi.fn() }
+    const logger = /** @type {import('../types.js').TypedLogger} */ {
+      info: vi.fn()
+    }
 
     logFeatureFlagStates(config, logger)
 
@@ -21,7 +23,9 @@ describe('logFeatureFlagStates', () => {
 
   it('handles an empty feature flag set', () => {
     const config = { get: vi.fn().mockReturnValue({}) }
-    const logger = { info: vi.fn() }
+    const logger = /** @type {import('../types.js').TypedLogger} */ {
+      info: vi.fn()
+    }
 
     logFeatureFlagStates(config, logger)
 
