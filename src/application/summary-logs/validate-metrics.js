@@ -7,7 +7,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 /**
  * Records validation issue metrics grouped by severity × category.
  *
- * @param {import('./validate-issue-logging.js').ValidationIssuesCollector} issues
+ * @param {import('#common/validation/validation-issues.js').ValidationIssuesCollector} issues
  * @param {string} processingType - The processing type for the metric dimension
  */
 export const recordValidationIssueMetrics = async (issues, processingType) => {
