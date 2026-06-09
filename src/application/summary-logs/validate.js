@@ -569,7 +569,7 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
   }) ?? []
 
 /**
- * Computes aggregate and per-waste-record-type load counts for validated summary logs.
+ * Computes all load classifications for validated summary logs.
  *
  * @param {Object} params
  * @param {string} params.status - Summary log status after validation
@@ -577,17 +577,23 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {string} params.summaryLogId
  * @param {ProcessingType} params.processingType
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null }}
+ * @param {import('#reports/repository/port.js').PeriodicReport[] | null} params.periodicReports
+ * @param {Registration} [params.registration]
+ * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
+ * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByPeriodStatus: LoadsByPeriodStatus | null }}
  */
 const classifyLoads = ({
   processingType,
   status,
   summaryLogId,
   wasteBalanceRecords,
-  wasteRecords
+  wasteRecords,
+  periodicReports,
+  registration,
+  existingRecordsMap
 }) => {
   if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return { loads: null, loadsByWasteRecordType: null }
+    return { loads: null, loadsByWasteRecordType: null, loadsByPeriodStatus: null }
   }
 
   const loads = mergeLoads(
@@ -607,86 +613,25 @@ const classifyLoads = ({
     tableSchemas
   })
 
-  return { loads, loadsByWasteRecordType }
-}
+  const loadsByPeriodStatus =
+    periodicReports && registration && existingRecordsMap && tableSchemas
+      ? classifyByPeriodStatus({
+          wasteRecords,
+          existingRecordsMap,
+          periodicReports,
+          cadence: isRegistrationAccredited(registration)
+            ? 'monthly'
+            : 'quarterly',
+          summaryLogId,
+          tableSchemas,
+          classificationContext: {
+            accreditation: registration.accreditation ?? null,
+            overseasSites: ORS_VALIDATION_DISABLED
+          }
+        })
+      : null
 
-/**
- * Computes loadsByPeriodStatus with graceful degradation.
- * Returns null if preconditions aren't met or the reports lookup fails.
- *
- * @param {Object} params
- * @param {ValidatedWasteRecord[] | null} params.wasteRecords
- * @param {string} params.summaryLogId
- * @param {string} params.status
- * @param {Registration} [params.registration]
- * @param {string} [params.processingType]
- * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
- * @param {ReportsRepository} params.reportsRepository
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {string} params.loggingContext
- * @param {TypedLogger} params.logger
- * @returns {Promise<LoadsByPeriodStatus | null>}
- */
-const computeLoadsByPeriodStatus = async ({
-  wasteRecords,
-  summaryLogId,
-  status,
-  registration,
-  processingType,
-  existingRecordsMap,
-  reportsRepository,
-  summaryLog,
-  loggingContext,
-  logger
-}) => {
-  if (
-    status !== SUMMARY_LOG_STATUS.VALIDATED ||
-    !wasteRecords ||
-    !registration ||
-    !processingType ||
-    !existingRecordsMap
-  ) {
-    return null
-  }
-
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-  if (!tableSchemas) {
-    return null
-  }
-
-  try {
-    const periodicReports = await reportsRepository.findPeriodicReports({
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId
-    })
-
-    const cadence = isRegistrationAccredited(registration)
-      ? 'monthly'
-      : 'quarterly'
-
-    return classifyByPeriodStatus({
-      wasteRecords,
-      existingRecordsMap,
-      periodicReports,
-      cadence,
-      summaryLogId,
-      tableSchemas,
-      classificationContext: {
-        accreditation: registration.accreditation ?? null,
-        overseasSites: ORS_VALIDATION_DISABLED
-      }
-    })
-  } catch (err) {
-    logger.warn({
-      message: `Failed to classify loads by period status: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      },
-      err
-    })
-    return null
-  }
+  return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
 }
 
 /**
@@ -773,26 +718,38 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords
     })
 
-    const { loads, loadsByWasteRecordType } = classifyLoads({
-      processingType,
-      status,
-      summaryLogId,
-      wasteBalanceRecords,
-      wasteRecords
-    })
+    /** @type {import('#reports/repository/port.js').PeriodicReport[] | null} */
+    let periodicReports = null
+    try {
+      if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
+        periodicReports = await reportsRepository.findPeriodicReports({
+          organisationId: summaryLog.organisationId,
+          registrationId: summaryLog.registrationId
+        })
+      }
+    } catch (err) {
+      logger.warn({
+        message: `Failed to fetch periodic reports: ${loggingContext}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+        },
+        err
+      })
+    }
 
-    const loadsByPeriodStatus = await computeLoadsByPeriodStatus({
-      wasteRecords,
-      summaryLogId,
-      status,
-      registration,
-      processingType,
-      existingRecordsMap,
-      reportsRepository,
-      summaryLog,
-      loggingContext,
-      logger
-    })
+    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } = classifyLoads(
+      {
+        processingType,
+        status,
+        summaryLogId,
+        wasteBalanceRecords,
+        wasteRecords,
+        periodicReports,
+        registration,
+        existingRecordsMap
+      }
+    )
 
     await persistValidationResult({
       issues,
