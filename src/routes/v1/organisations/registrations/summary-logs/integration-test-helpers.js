@@ -538,6 +538,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const systemLogsForBalanceAudit = {
     insert: vi.fn().mockResolvedValue(undefined),
+    insertMany: vi.fn().mockResolvedValue(undefined),
     find: vi.fn(),
     findSummaryLogSubmitActors: vi.fn()
   }
