@@ -617,6 +617,7 @@ const classifyLoads = ({
     tableSchemas
   })
 
+  /* v8 ignore start -- defensive guard: all three are always set when status is VALIDATED */
   const loadsByPeriodStatus =
     registration && existingRecordsMap && tableSchemas
       ? classifyByPeriodStatus({
@@ -634,6 +635,7 @@ const classifyLoads = ({
           }
         })
       : null
+  /* v8 ignore stop */
 
   return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
 }
