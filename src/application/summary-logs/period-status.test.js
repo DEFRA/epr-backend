@@ -5,6 +5,7 @@ import {
   computeLoadsByPeriodStatus
 } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
@@ -868,6 +869,12 @@ describe('classifyByPeriodStatus', () => {
 })
 
 describe('buildTransactionAmounts', () => {
+  /** @type {import('./period-status.js').ClassificationContext} */
+  const stubContext = {
+    accreditation: null,
+    overseasSites: ORS_VALIDATION_DISABLED
+  }
+
   /**
    * Minimal schema stub that returns a fixed transaction amount.
    *
@@ -902,9 +909,10 @@ describe('buildTransactionAmounts', () => {
       transactionAmount: 10
     })
 
+    /** @type {import('./period-status.js').ClassificationContext} */
     const context = {
-      accreditation: { status: 'approved' },
-      overseasSites: { enabled: false }
+      accreditation: /** @type {any} */ ({ status: 'approved' }),
+      overseasSites: ORS_VALIDATION_DISABLED
     }
 
     buildTransactionAmounts({
@@ -930,7 +938,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => stubSchema(10)
+      findSchema: () => stubSchema(10),
+      context: stubContext
     })
 
     expect(result.get('received:1000')).toEqual({ oldAmount: 0, newAmount: 10 })
@@ -964,7 +973,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map([['received:1000', existingRecord]]),
-      findSchema: () => dataSensitiveSchema
+      findSchema: () => dataSensitiveSchema,
+      context: stubContext
     })
 
     expect(result.get('received:1000')).toEqual({
@@ -982,7 +992,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => stubSchema(0)
+      findSchema: () => stubSchema(0),
+      context: stubContext
     })
 
     expect(result.size).toBe(0)
@@ -997,7 +1008,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => stubSchema(0)
+      findSchema: () => stubSchema(0),
+      context: stubContext
     })
 
     expect(result.size).toBe(0)
@@ -1012,7 +1024,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => null
+      findSchema: () => null,
+      context: stubContext
     })
 
     expect(result.size).toBe(0)
@@ -1027,7 +1040,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => stubSchemaExcluded()
+      findSchema: () => stubSchemaExcluded(),
+      context: stubContext
     })
 
     expect(result.size).toBe(0)
@@ -1046,7 +1060,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(),
-      findSchema: () => stubSchema(10)
+      findSchema: () => stubSchema(10),
+      context: stubContext
     })
 
     expect(result.size).toBe(0)
@@ -1088,7 +1103,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map([['received:1000', existingRecord]]),
-      findSchema: () => dataSensitiveSchema
+      findSchema: () => dataSensitiveSchema,
+      context: stubContext
     })
 
     expect(result.get('received:1000')).toEqual({ oldAmount: 10, newAmount: 0 })
@@ -1115,7 +1131,8 @@ describe('buildTransactionAmounts', () => {
       wasteBalanceRecords,
       summaryLogId: SUMMARY_LOG_ID,
       existingRecordsMap: new Map(), // no existing record
-      findSchema: () => dataSensitiveSchema
+      findSchema: () => dataSensitiveSchema,
+      context: stubContext
     })
 
     expect(result.get('received:1000')).toEqual({ oldAmount: 0, newAmount: 15 })

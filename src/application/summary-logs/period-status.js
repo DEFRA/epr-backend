@@ -14,7 +14,6 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {WasteRecord, WasteRecordVersion} from '#domain/waste-records/model.js' */
-/** @import {WasteBalanceClassificationResult} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ReportsRepository} from '#reports/repository/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
