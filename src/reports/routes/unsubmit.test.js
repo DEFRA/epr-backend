@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -59,11 +58,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         organisationsRepository: createInMemoryOrganisationsRepository([org]),
         wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
-      },
-      featureFlags: createInMemoryFeatureFlags({
-        reports: true,
-        reportUnsubmit: true
-      })
+      }
     })
 
     return {
@@ -107,11 +102,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         organisationsRepository: createInMemoryOrganisationsRepository([org]),
         wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
         reportsRepository: reportsRepositoryFactory
-      },
-      featureFlags: createInMemoryFeatureFlags({
-        reports: true,
-        reportUnsubmit: true
-      })
+      }
     })
 
     return { server, organisationId: org.id, registrationId: registration.id }
@@ -182,7 +173,11 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
         })
 
         const updated = await reportsRepository.findReportById(reportId)
-        const lastEntry = updated.status.history.at(-1)
+
+        const lastEntry =
+          /** @type {import('#reports/repository/port.js').ReportStatusHistoryItem} */ (
+            updated.status.history.at(-1)
+          )
         expect(lastEntry.status).toBe('ready_to_submit')
       })
 
@@ -260,11 +255,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
             ]),
             wasteRecordsRepository: createInMemoryWasteRecordsRepository([]),
             reportsRepository: createInMemoryReportsRepository()
-          },
-          featureFlags: createInMemoryFeatureFlags({
-            reports: true,
-            reportUnsubmit: true
-          })
+          }
         })
 
         const response = await server.inject({
@@ -310,11 +301,7 @@ describe(`POST ${reportsUnsubmitPath}`, () => {
       const registrationId = new ObjectId().toString()
 
       const server = await createTestServer({
-        repositories: {},
-        featureFlags: createInMemoryFeatureFlags({
-          reports: true,
-          reportUnsubmit: false
-        })
+        repositories: {}
       })
 
       const response = await server.inject({
