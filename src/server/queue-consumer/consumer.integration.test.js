@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { describe, expect, vi, beforeEach } from 'vitest'
 import {
   SendMessageCommand,
@@ -14,6 +15,10 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
+import { createMockLogger } from '#test/mock-logger.js'
 
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/summary-logs/submit.js')
@@ -39,7 +44,7 @@ const stopConsumerAndWait = (consumer) => {
       resolve()
       return
     }
-    consumer.on('stopped', resolve)
+    consumer.on('stopped', () => resolve())
     consumer.stop()
   })
 }
@@ -68,21 +73,11 @@ describe('SQS command queue consumer integration', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
-    logger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      child: vi.fn()
-    }
-    // The consumer wraps the logger in a trace-bound child when the envelope
-    // carries a traceId (PAE-1340). Returning `this` keeps every assertion
-    // looking at a single logger object.
-    logger.child.mockReturnValue(logger)
+    // child() returns the same mock, so a trace-bound child and the global
+    // logger are one object — every assertion sees the same spies.
+    logger = createMockLogger()
 
-    summaryLogsRepository = {
-      findById: vi.fn().mockResolvedValue(null),
-      update: vi.fn().mockResolvedValue(undefined)
-    }
+    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     organisationsRepository = {}
     wasteRecordsRepository = {}
@@ -207,7 +202,9 @@ describe('SQS command queue consumer integration', () => {
           email: 'test@example.com',
           scope: ['operator']
         }
-        const request = { auth: { credentials: user } }
+        const request = {
+          auth: { credentials: { ...user, issuer: 'test-issuer' } }
+        }
         await executor.summaryLogsWorker.submit(summaryLogId, request)
 
         const consumer = await createConsumer(sqsClient)
@@ -344,7 +341,10 @@ describe('SQS command queue consumer integration', () => {
             )
             expect(dlqResponse.Messages).toHaveLength(1)
 
-            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            assert(dlqResponse.Messages)
+            const { Body } = dlqResponse.Messages[0]
+            assert(Body)
+            const dlqBody = JSON.parse(Body)
             expect(dlqBody.command).toBe('validate')
             expect(dlqBody.badField).toBe('test')
           },
@@ -406,7 +406,10 @@ describe('SQS command queue consumer integration', () => {
             )
             expect(dlqResponse.Messages).toHaveLength(1)
 
-            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            assert(dlqResponse.Messages)
+            const { Body } = dlqResponse.Messages[0]
+            assert(Body)
+            const dlqBody = JSON.parse(Body)
             expect(dlqBody.summaryLogId).toBe(uniqueId)
           },
           { timeout: 15000, interval: 500 }
@@ -486,11 +489,6 @@ describe('SQS command queue consumer integration', () => {
           .mockRejectedValue(new Error('Database timeout'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-        })
-
         const { QueueUrl: dlqUrl } = await sqsClient.send(
           new GetQueueUrlCommand({ QueueName: sqsClient.dlqName })
         )
@@ -498,6 +496,10 @@ describe('SQS command queue consumer integration', () => {
         const executor = await createExecutor(sqsClient)
 
         const summaryLogId = `transient-test-${Date.now()}`
+        await summaryLogsRepository.insert(
+          summaryLogId,
+          summaryLogFactory.validating()
+        )
         await executor.summaryLogsWorker.validate(summaryLogId)
 
         const consumer = await createConsumer(sqsClient)
@@ -514,13 +516,12 @@ describe('SQS command queue consumer integration', () => {
         )
 
         // Summary log should be marked as failed on the final attempt
-        expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        const { summaryLog } = await waitForVersion(
+          summaryLogsRepository,
           summaryLogId,
-          1,
-          expect.objectContaining({
-            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
-          })
+          2
         )
+        expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATION_FAILED)
 
         // Wait for message to land on DLQ. The consumer must stay alive so
         // SQS can attempt another receive where it sees receiveCount >
@@ -535,7 +536,10 @@ describe('SQS command queue consumer integration', () => {
             )
             expect(dlqResponse.Messages).toHaveLength(1)
 
-            const dlqBody = JSON.parse(dlqResponse.Messages[0].Body)
+            assert(dlqResponse.Messages)
+            const { Body } = dlqResponse.Messages[0]
+            assert(Body)
+            const dlqBody = JSON.parse(Body)
             expect(dlqBody.summaryLogId).toBe(summaryLogId)
           },
           { timeout: 15000, interval: 500 }
@@ -556,11 +560,6 @@ describe('SQS command queue consumer integration', () => {
           .mockRejectedValue(new Error('Database timeout'))
         vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
 
-        summaryLogsRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATING }
-        })
-
         // Create a queue with a long visibility timeout (30s) so the only
         // way the retry arrives within 10s is via terminateVisibilityTimeout.
         const longTimeoutQueueName = `epr_backend_commands_vis_${Date.now()}`
@@ -576,6 +575,7 @@ describe('SQS command queue consumer integration', () => {
             AttributeNames: ['QueueArn']
           })
         )
+        assert(dlqAttributes.Attributes)
         const dlqArn = dlqAttributes.Attributes.QueueArn
 
         await sqsClient.send(
