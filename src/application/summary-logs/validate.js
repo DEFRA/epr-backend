@@ -593,7 +593,11 @@ const classifyLoads = ({
   existingRecordsMap
 }) => {
   if (status !== SUMMARY_LOG_STATUS.VALIDATED || !wasteRecords) {
-    return { loads: null, loadsByWasteRecordType: null, loadsByPeriodStatus: null }
+    return {
+      loads: null,
+      loadsByWasteRecordType: null,
+      loadsByPeriodStatus: null
+    }
   }
 
   const loads = mergeLoads(
@@ -679,22 +683,17 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const {
-      issues,
-      wasteRecords,
-      meta,
-      registration,
-      existingRecordsMap
-    } = await performValidationChecks({
-      summaryLogId,
-      summaryLog,
-      loggingContext,
-      logger,
-      summaryLogExtractor,
-      organisationsRepository,
-      wasteRecordsRepository,
-      validateDataSyntax
-    })
+    const { issues, wasteRecords, meta, registration, existingRecordsMap } =
+      await performValidationChecks({
+        summaryLogId,
+        summaryLog,
+        loggingContext,
+        logger,
+        summaryLogExtractor,
+        organisationsRepository,
+        wasteRecordsRepository,
+        validateDataSyntax
+      })
     const validationDurationMs = Date.now() - validationStart
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
@@ -738,8 +737,8 @@ export const createSummaryLogsValidator = ({
       })
     }
 
-    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } = classifyLoads(
-      {
+    const { loads, loadsByWasteRecordType, loadsByPeriodStatus } =
+      classifyLoads({
         processingType,
         status,
         summaryLogId,
@@ -748,8 +747,7 @@ export const createSummaryLogsValidator = ({
         periodicReports,
         registration,
         existingRecordsMap
-      }
-    )
+      })
 
     await persistValidationResult({
       issues,

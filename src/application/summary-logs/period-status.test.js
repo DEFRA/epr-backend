@@ -64,36 +64,34 @@ const buildWasteRecord = ({
   )
 
 /** @type {Record<string, TableSchema>} Single-date-field table schemas (most tables). */
-const SINGLE_DATE_TABLE_SCHEMAS =
-  /** @type {Record<string, TableSchema>} */ (
-    /** @type {unknown} */ ({
-      RECEIVED_LOADS_FOR_REPROCESSING: {
-        reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
-        wasteRecordType: 'received',
-        classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: Number(data.GROSS_WEIGHT) || 0
-        })
-      }
-    })
-  )
+const SINGLE_DATE_TABLE_SCHEMAS = /** @type {Record<string, TableSchema>} */ (
+  /** @type {unknown} */ ({
+    RECEIVED_LOADS_FOR_REPROCESSING: {
+      reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
+      wasteRecordType: 'received',
+      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: Number(data.GROSS_WEIGHT) || 0
+      })
+    }
+  })
+)
 
 /** @type {Record<string, TableSchema>} Multi-date-field table schemas (exporter received-loads). */
-const MULTI_DATE_TABLE_SCHEMAS =
-  /** @type {Record<string, TableSchema>} */ (
-    /** @type {unknown} */ ({
-      RECEIVED_LOADS_FOR_EXPORT: {
-        reportingDateFields: ['DATE_RECEIVED_FOR_EXPORT', 'DATE_OF_EXPORT'],
-        wasteRecordType: 'received',
-        classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: Number(data.GROSS_WEIGHT) || 0
-        })
-      }
-    })
-  )
+const MULTI_DATE_TABLE_SCHEMAS = /** @type {Record<string, TableSchema>} */ (
+  /** @type {unknown} */ ({
+    RECEIVED_LOADS_FOR_EXPORT: {
+      reportingDateFields: ['DATE_RECEIVED_FOR_EXPORT', 'DATE_OF_EXPORT'],
+      wasteRecordType: 'received',
+      classifyForWasteBalance: (/** @type {Record<string, any>} */ data) => ({
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: Number(data.GROSS_WEIGHT) || 0
+      })
+    }
+  })
+)
 
 /** @type {Record<string, TableSchema>} Registered-only table schemas (monthly dates as YYYY-MM). */
 const REGISTERED_ONLY_TABLE_SCHEMAS =
@@ -672,15 +670,17 @@ describe('classifyByPeriodStatus', () => {
 
   describe('transaction amount for non-INCLUDED classification', () => {
     it('uses zero transaction amount when classifyForWasteBalance returns EXCLUDED', () => {
-      const schemasWithExcluded = /** @type {Record<string, TableSchema>} */ (/** @type {unknown} */ ({
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          ...SINGLE_DATE_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_REPROCESSING,
-          classifyForWasteBalance: () => ({
-            outcome: ROW_OUTCOME.EXCLUDED,
-            reasons: []
-          })
-        }
-      }))
+      const schemasWithExcluded = /** @type {Record<string, TableSchema>} */ (
+        /** @type {unknown} */ ({
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            ...SINGLE_DATE_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_REPROCESSING,
+            classifyForWasteBalance: () => ({
+              outcome: ROW_OUTCOME.EXCLUDED,
+              reasons: []
+            })
+          }
+        })
+      )
 
       const result = classifyByPeriodStatus({
         ...baseParams,

@@ -388,7 +388,9 @@ describe('Advanced validation scenarios', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({ findPeriodicReports: async () => [] })
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
       const featureFlags = createInMemoryFeatureFlags()
 
@@ -571,7 +573,9 @@ describe('Advanced validation scenarios', () => {
         wasteRecordsRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsRepository: /** @type {any} */ ({ findPeriodicReports: async () => [] })
+        reportsRepository: /** @type {any} */ ({
+          findPeriodicReports: async () => []
+        })
       })
       const featureFlags = createInMemoryFeatureFlags()
 
