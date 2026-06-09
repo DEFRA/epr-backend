@@ -577,7 +577,7 @@ const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {string} params.summaryLogId
  * @param {ProcessingType} params.processingType
- * @param {import('#reports/repository/port.js').PeriodicReport[] | null} params.periodicReports
+ * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {Registration} [params.registration]
  * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
  * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByPeriodStatus: LoadsByPeriodStatus | null }}
@@ -618,7 +618,7 @@ const classifyLoads = ({
   })
 
   const loadsByPeriodStatus =
-    periodicReports && registration && existingRecordsMap && tableSchemas
+    registration && existingRecordsMap && tableSchemas
       ? classifyByPeriodStatus({
           wasteRecords,
           existingRecordsMap,
@@ -717,8 +717,8 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords
     })
 
-    /** @type {import('#reports/repository/port.js').PeriodicReport[] | null} */
-    let periodicReports = null
+    /** @type {import('#reports/repository/port.js').PeriodicReport[]} */
+    let periodicReports = []
     try {
       if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
         periodicReports = await reportsRepository.findPeriodicReports({
