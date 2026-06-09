@@ -452,6 +452,52 @@ describe('classifyByPeriodStatus', () => {
         tonnageDelta: -30
       })
     })
+
+    it('produces no entries when both new and existing records have no date', () => {
+      const existingRecordsMap = new Map([
+        [
+          'received:10001',
+          /** @type {WasteRecord} */ (
+            /** @type {unknown} */ ({
+              type: 'received',
+              rowId: '10001',
+              data: {
+                DATE_RECEIVED_FOR_REPROCESSING: null,
+                GROSS_WEIGHT: '30'
+              }
+            })
+          )
+        ]
+      ])
+
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        existingRecordsMap,
+        wasteRecords: [
+          buildWasteRecord({
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: null,
+              GROSS_WEIGHT: '50'
+            },
+            versionStatus: VERSION_STATUS.UPDATED,
+            previousVersions: [
+              {
+                summaryLog: { id: 'sl-old' },
+                status: VERSION_STATUS.CREATED,
+                data: {
+                  DATE_RECEIVED_FOR_REPROCESSING: null,
+                  GROSS_WEIGHT: '30'
+                }
+              }
+            ]
+          })
+        ]
+      })
+
+      // Both new and old dates are null so classify returns null for both;
+      // the record contributes nothing to any period bucket
+      expect(result).toEqual(emptyResult())
+    })
   })
 
   describe('closed-wins rule (multiple reporting date fields)', () => {

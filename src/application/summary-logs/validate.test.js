@@ -711,6 +711,35 @@ describe('SummaryLogsValidator', () => {
     expect(result).toBe(databaseError)
   })
 
+  it('should log a warning when fetching periodic reports fails', async () => {
+    const fetchError = new Error('Database connection lost')
+
+    const validateWithBrokenReports = createSummaryLogsValidator({
+      logger,
+      summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
+      reportsRepository: /** @type {any} */ ({
+        findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
+      }),
+      summaryLogExtractor
+    })
+
+    await validateWithBrokenReports(summaryLogId)
+
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Failed to fetch periodic reports: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
+        event: expect.objectContaining({
+          category: 'server',
+          action: 'process_failure'
+        }),
+        err: fetchError
+      })
+    )
+  })
+
   describe('Four-level validation hierarchy short-circuit behavior', () => {
     it('Level 1 fatal (meta syntax) stops Level 2 (meta business) from running', async () => {
       // Meta syntax error: missing TEMPLATE_VERSION
