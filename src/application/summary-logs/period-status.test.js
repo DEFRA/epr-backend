@@ -7,7 +7,7 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @import {ClassificationContext} from './period-status.js' */
+/** @import {ClassificationContext, ProcessingTypeSchemas} from './period-status.js' */
 
 const SUMMARY_LOG_ID = 'sl-1'
 
@@ -63,8 +63,8 @@ const buildWasteRecord = ({
     })
   )
 
-/** @type {Record<string, TableSchema>} Single-date-field table schemas (most tables). */
-const SINGLE_DATE_TABLE_SCHEMAS = /** @type {Record<string, TableSchema>} */ (
+/** @type {ProcessingTypeSchemas} Single-date-field table schemas (most tables). */
+const SINGLE_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   /** @type {unknown} */ ({
     RECEIVED_LOADS_FOR_REPROCESSING: {
       reportingDateFields: ['DATE_RECEIVED_FOR_REPROCESSING'],
@@ -78,8 +78,8 @@ const SINGLE_DATE_TABLE_SCHEMAS = /** @type {Record<string, TableSchema>} */ (
   })
 )
 
-/** @type {Record<string, TableSchema>} Multi-date-field table schemas (exporter received-loads). */
-const MULTI_DATE_TABLE_SCHEMAS = /** @type {Record<string, TableSchema>} */ (
+/** @type {ProcessingTypeSchemas} Multi-date-field table schemas (exporter received-loads). */
+const MULTI_DATE_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
   /** @type {unknown} */ ({
     RECEIVED_LOADS_FOR_EXPORT: {
       reportingDateFields: ['DATE_RECEIVED_FOR_EXPORT', 'DATE_OF_EXPORT'],
@@ -93,9 +93,9 @@ const MULTI_DATE_TABLE_SCHEMAS = /** @type {Record<string, TableSchema>} */ (
   })
 )
 
-/** @type {Record<string, TableSchema>} Registered-only table schemas (monthly dates as YYYY-MM). */
+/** @type {ProcessingTypeSchemas} Registered-only table schemas (monthly dates as YYYY-MM). */
 const REGISTERED_ONLY_TABLE_SCHEMAS =
-  /** @type {Record<string, TableSchema>} */ (
+  /** @type {ProcessingTypeSchemas} */ (
     /** @type {unknown} */ ({
       RECEIVED_LOADS_FOR_REPROCESSING: {
         reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
@@ -716,7 +716,7 @@ describe('classifyByPeriodStatus', () => {
 
   describe('transaction amount for non-INCLUDED classification', () => {
     it('uses zero transaction amount when classifyForWasteBalance returns EXCLUDED', () => {
-      const schemasWithExcluded = /** @type {Record<string, TableSchema>} */ (
+      const schemasWithExcluded = /** @type {ProcessingTypeSchemas} */ (
         /** @type {unknown} */ ({
           RECEIVED_LOADS_FOR_REPROCESSING: {
             ...SINGLE_DATE_TABLE_SCHEMAS.RECEIVED_LOADS_FOR_REPROCESSING,
