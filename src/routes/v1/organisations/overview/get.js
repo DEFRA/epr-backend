@@ -71,13 +71,24 @@ export const organisationsOverviewGet = {
         }
       })
 
-      return h
-        .response({
-          id: organisation.id,
-          companyName: organisation.companyDetails.name,
-          registrations
-        })
-        .code(StatusCodes.OK)
+      const response = {
+        id: organisation.id,
+        companyName: organisation.companyDetails.name,
+        registrations
+      }
+
+      if (organisation.linkedDefraOrganisation) {
+        const { orgId, orgName, linkedAt, linkedBy } =
+          organisation.linkedDefraOrganisation
+        response.linkedDefraOrganisation = {
+          orgId,
+          orgName,
+          linkedAt,
+          linkedBy: { email: linkedBy.email }
+        }
+      }
+
+      return h.response(response).code(StatusCodes.OK)
     } catch (error) {
       if (Boom.isBoom(error)) {
         throw error

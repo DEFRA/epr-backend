@@ -1,4 +1,5 @@
 import { badRequest, conflict } from '#common/helpers/logging/cdp-boom.js'
+import { resolveDetailedMaterial } from '#domain/organisations/registration-utils.js'
 import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -60,22 +61,6 @@ export async function fetchCurrentReport(
   }
 
   return reportsRepository.findReportById(currentReportId)
-}
-
-/**
- * Resolves the tonnage-monitoring material from a registration.
- * Glass registrations use glassRecyclingProcess[0] (e.g. 'glass_re_melt').
- * @param {object} registration
- * @returns {string}
- */
-function resolveTonnageMaterial(registration) {
-  if (
-    registration.material === 'glass' &&
-    registration.glassRecyclingProcess?.length > 0
-  ) {
-    return registration.glassRecyclingProcess[0]
-  }
-  return registration.material
 }
 
 /**
@@ -211,7 +196,7 @@ function buildReportData(aggregated, registration) {
   const { recyclingActivity, exportActivity, wasteSent, prn, source } =
     aggregated
   return {
-    material: resolveTonnageMaterial(registration),
+    material: resolveDetailedMaterial(registration),
     wasteProcessingType: registration.wasteProcessingType,
     siteAddress: formatSiteAddress(registration.site?.address),
     source,

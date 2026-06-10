@@ -1,6 +1,9 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { config } from '#root/config.js'
-import { organisationLinkingMetrics } from './organisation-linking.js'
+import {
+  organisationLinkingMetrics,
+  organisationUnlinkingMetrics
+} from './organisation-linking.js'
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 
 const mockPutMetric = vi.fn()
@@ -12,11 +15,14 @@ vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
 
   return {
     ...original,
-    createMetricsLogger: () => ({
-      putMetric: mockPutMetric,
-      putDimensions: mockPutDimensions,
-      flush: mockFlush
-    })
+    createMetricsLogger: () =>
+      /** @type {import('aws-embedded-metrics').MetricsLogger} */ (
+        /** @type {unknown} */ ({
+          putMetric: mockPutMetric,
+          putDimensions: mockPutDimensions,
+          flush: mockFlush
+        })
+      )
   }
 })
 
@@ -37,6 +43,21 @@ describe('organisationLinkingMetrics', () => {
       expect(mockPutDimensions).toHaveBeenCalledWith({})
       expect(mockPutMetric).toHaveBeenCalledWith(
         'organisation.linked',
+        1,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+  })
+
+  describe('organisationUnlinked', () => {
+    it('records metric with no dimensions', async () => {
+      await organisationUnlinkingMetrics.organisationUnlinked()
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({})
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'organisation.unlinked',
         1,
         Unit.Count,
         StorageResolution.Standard
