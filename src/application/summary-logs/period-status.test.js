@@ -238,6 +238,40 @@ describe('classifyByPeriodStatus', () => {
       expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(0)
     })
 
+    it('classifies registered-only loads (no balance classifier) as nonBalanceAffecting', () => {
+      // Registered-only schemas have no classifyForWasteBalance, so no load can
+      // contribute to a waste balance. Every transaction amount is 0 and every
+      // load must land in nonBalanceAffecting with no tonnage.
+      const registeredOnlySchemas = /** @type {ProcessingTypeSchemas} */ (
+        /** @type {unknown} */ ({
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            reportingDateFields: ['MONTH_RECEIVED_FOR_REPROCESSING'],
+            wasteRecordType: 'received',
+            classifyForWasteBalance: null
+          }
+        })
+      )
+
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        tableSchemas: registeredOnlySchemas,
+        wasteRecords: [
+          buildWasteRecord({
+            outcome: ROW_OUTCOME.EXCLUDED,
+            data: {
+              MONTH_RECEIVED_FOR_REPROCESSING: '2026-01-01',
+              GROSS_WEIGHT: '42.5'
+            }
+          })
+        ]
+      })
+
+      expect(result.openPeriodLoads.added.nonBalanceAffecting).toEqual({
+        count: 1
+      })
+      expect(result.openPeriodLoads.added.balanceAffecting.count).toBe(0)
+    })
+
     it('rounds summed tonnageDelta to 2dp so no float noise leaks out', () => {
       // 0.1 + 0.2 = 0.30000000000000004 in IEEE-754. Tonnages are reported
       // to 2dp, so the aggregate must be the exact 0.3, not the noisy float.
