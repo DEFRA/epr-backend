@@ -279,12 +279,13 @@ const reduceEntries = (entries) => {
 
   for (const { period, change, count, tonnageDelta } of entries) {
     const group = result[PERIOD_TO_KEY[period]][change]
-    // A leg is balanceAffecting iff its (rounded) net delta moved the balance.
-    if (tonnageDelta !== 0) {
+    // A leg with no net delta is nonBalanceAffecting; any movement (rounded)
+    // goes to balanceAffecting.
+    if (tonnageDelta === 0) {
+      group.nonBalanceAffecting.count += count
+    } else {
       group.balanceAffecting.count += count
       group.balanceAffecting.tonnageDelta += tonnageDelta
-    } else {
-      group.nonBalanceAffecting.count += count
     }
   }
 
