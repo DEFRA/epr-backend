@@ -2,7 +2,10 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  ORGANISATION_STATUS
+} from '#domain/organisations/model.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
@@ -63,8 +66,12 @@ export const organisationsLink = {
       ...organisation
     } = await organisationsRepository.findById(organisationId)
 
-    if (organisation.status !== ORGANISATION_STATUS.APPROVED) {
-      throw Boom.conflict('Organisation is not in an approvable state')
+    if (!LINKABLE_ORGANISATION_STATUSES.includes(organisation.status)) {
+      throw Boom.conflict('Organisation is not in a linkable state')
+    }
+
+    if (organisation.linkedDefraOrganisation) {
+      throw Boom.conflict('Organisation is already linked')
     }
 
     const { email, id: credentialId } =
