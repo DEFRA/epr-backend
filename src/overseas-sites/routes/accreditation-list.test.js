@@ -285,7 +285,7 @@ describe('GET accreditation overseas-sites', () => {
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
   })
 
-  it('403s when authenticated as a standard user', async () => {
+  it('allows a standard user', async () => {
     const { organisation, registration, accreditation } = buildScenario()
     await startServer({ organisation, sites: [siteOne, siteTwo] })
 
@@ -299,7 +299,11 @@ describe('GET accreditation overseas-sites', () => {
       ...asStandardUser({ linkedOrgId: organisation.id })
     })
 
-    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).map((entry) => entry.orsId)).toEqual([
+      '001',
+      '002'
+    ])
   })
 
   it('404s when the organisation does not exist', async () => {

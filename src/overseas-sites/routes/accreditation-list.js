@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { SCOPES } from '#common/helpers/auth/constants.js'
+import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -62,7 +62,7 @@ export const accreditationOverseasSitesList = {
   options: {
     auth: {
       strategies: ['access-token', BASIC_AUTH],
-      scope: [SCOPES.adminRead, SCOPES.organisationRead]
+      scope: [ROLES.standardUser, SCOPES.adminRead, SCOPES.organisationRead]
     },
     tags: ['api'],
     validate: {
