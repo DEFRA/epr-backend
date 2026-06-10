@@ -2,6 +2,7 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { MONTHS_PER_PERIOD } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
@@ -291,6 +292,17 @@ const reduceEntries = (entries) => {
     const bucket = result[period][change][inclusion]
     bucket.count += count
     bucket.tonnageDelta += tonnageDelta
+  }
+
+  // Tonnages are reported to 2dp, so each bucket's accumulated delta is
+  // mathematically a multiple of 0.01. Rounding the summed float recovers
+  // the exact value and strips IEEE-754 noise (eg 0.1 + 0.2 = 0.30000…004).
+  for (const period of Object.values(result)) {
+    for (const change of Object.values(period)) {
+      for (const bucket of Object.values(change)) {
+        bucket.tonnageDelta = roundToTwoDecimalPlaces(bucket.tonnageDelta)
+      }
+    }
   }
 
   return result

@@ -220,6 +220,35 @@ describe('classifyByPeriodStatus', () => {
         tonnageDelta: 0
       })
     })
+
+    it('rounds summed tonnageDelta to 2dp so no float noise leaks out', () => {
+      // 0.1 + 0.2 = 0.30000000000000004 in IEEE-754. Tonnages are reported
+      // to 2dp, so the aggregate must be the exact 0.3, not the noisy float.
+      const result = classifyByPeriodStatus({
+        ...baseParams,
+        wasteRecords: [
+          buildWasteRecord({
+            rowId: '10001',
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15',
+              GROSS_WEIGHT: '0.1'
+            }
+          }),
+          buildWasteRecord({
+            rowId: '10002',
+            data: {
+              DATE_RECEIVED_FOR_REPROCESSING: '2026-01-15',
+              GROSS_WEIGHT: '0.2'
+            }
+          })
+        ]
+      })
+
+      expect(result.open.added.included).toEqual({
+        count: 2,
+        tonnageDelta: 0.3
+      })
+    })
   })
 
   describe('adjusted records', () => {
