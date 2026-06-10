@@ -52,6 +52,9 @@ const DEFAULT_OVERSEAS_SITES = {
   '002': { overseasSiteId: SITE_TWO_ID }
 }
 
+/**
+ * @param {{ overseasSites?: Record<string, { overseasSiteId: string }> | null }} [options]
+ */
 const buildScenario = ({ overseasSites = DEFAULT_OVERSEAS_SITES } = {}) => {
   const accreditation = buildAccreditation({ wasteProcessingType: 'exporter' })
   const registrationOverrides = {
