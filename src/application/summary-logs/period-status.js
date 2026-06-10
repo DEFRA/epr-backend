@@ -304,7 +304,8 @@ const reduceEntries = (entries) => {
  * @param {Map<string, WasteRecord>} params.existingRecordsMap
  * @param {TableSchema} params.schema
  * @param {boolean} params.isIncluded
- * @param {(data: Record<string, string | Date | null | undefined>, fields: string[]) => 'open' | 'closed' | null} params.classify
+ * @param {Set<string>} params.closedPeriods
+ * @param {'monthly' | 'quarterly'} params.cadence
  * @param {ClassificationContext} params.context
  * @returns {PeriodStatusEntry[]}
  */
@@ -313,17 +314,28 @@ const classifyAdjustedWasteRecord = ({
   existingRecordsMap,
   schema,
   isIncluded,
-  classify,
+  closedPeriods,
+  cadence,
   context
 }) => {
   const { record } = wasteRecord
   const { reportingDateFields } = schema
 
-  const newPeriod = classify(record.data, reportingDateFields)
+  const newPeriod = classifyPeriodStatus(
+    record.data,
+    reportingDateFields,
+    closedPeriods,
+    cadence
+  )
   const existingKey = `${record.type}:${record.rowId}`
   const existing = existingRecordsMap.get(existingKey)
   const oldPeriod = existing
-    ? classify(existing.data, reportingDateFields)
+    ? classifyPeriodStatus(
+        existing.data,
+        reportingDateFields,
+        closedPeriods,
+        cadence
+      )
     : null
 
   if (!newPeriod && !oldPeriod) {
@@ -371,11 +383,6 @@ export const classifyByPeriodStatus = ({
 }) => {
   const closedPeriods = buildClosedPeriods(periodicReports, cadence)
 
-  const classify = (
-    /** @type {Record<string, string | Date | null | undefined>} */ data,
-    /** @type {string[]} */ reportingDateFields
-  ) => classifyPeriodStatus(data, reportingDateFields, closedPeriods, cadence)
-
   /** @type {PeriodStatusEntry[]} */
   const entries = []
 
@@ -391,7 +398,12 @@ export const classifyByPeriodStatus = ({
     const isIncluded = outcome === ROW_OUTCOME.INCLUDED
 
     if (status === 'added') {
-      const period = classify(record.data, schema.reportingDateFields)
+      const period = classifyPeriodStatus(
+        record.data,
+        schema.reportingDateFields,
+        closedPeriods,
+        cadence
+      )
       if (period) {
         const amount = getTransactionAmount(
           schema,
@@ -413,7 +425,8 @@ export const classifyByPeriodStatus = ({
           existingRecordsMap,
           schema,
           isIncluded,
-          classify,
+          closedPeriods,
+          cadence,
           context: classificationContext
         })
       )
