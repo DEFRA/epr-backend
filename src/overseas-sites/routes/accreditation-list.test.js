@@ -19,6 +19,7 @@ const SITE_TWO_ID = new ObjectId().toString()
 const MISSING_SITE_ID = new ObjectId().toString()
 
 const now = new Date('2025-04-01T00:00:00.000Z')
+const approvedFrom = new Date('2024-01-01T00:00:00.000Z')
 
 const siteOne = {
   id: SITE_ONE_ID,
@@ -31,6 +32,7 @@ const siteOne = {
     stateOrRegion: 'Berlin-Mitte',
     postcode: '10115'
   },
+  validFrom: approvedFrom,
   createdAt: now,
   updatedAt: now
 }
@@ -99,7 +101,7 @@ describe('GET accreditation overseas-sites', () => {
     server = undefined
   })
 
-  it('returns the accreditation approved overseas sites with full detail', async () => {
+  it('returns the registration overseas sites with full detail, approved and unapproved', async () => {
     const { organisation, registration, accreditation } = buildScenario()
     await startServer({ organisation, sites: [siteOne, siteTwo] })
 
@@ -125,7 +127,8 @@ describe('GET accreditation overseas-sites', () => {
           townOrCity: 'Berlin',
           stateOrRegion: 'Berlin-Mitte',
           postcode: '10115'
-        }
+        },
+        validFrom: approvedFrom.toISOString()
       },
       {
         orsId: '002',
@@ -134,8 +137,35 @@ describe('GET accreditation overseas-sites', () => {
         address: {
           line1: '1 Rue de Test',
           townOrCity: 'Paris'
-        }
+        },
+        validFrom: null
       }
+    ])
+  })
+
+  it('carries the approved-from date for an approved site and null for an unapproved one', async () => {
+    const { organisation, registration, accreditation } = buildScenario()
+    await startServer({ organisation, sites: [siteOne, siteTwo] })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId: accreditation.id
+      }),
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(
+      JSON.parse(response.payload).map(({ orsId, validFrom }) => ({
+        orsId,
+        validFrom
+      }))
+    ).toStrictEqual([
+      { orsId: '001', validFrom: approvedFrom.toISOString() },
+      { orsId: '002', validFrom: null }
     ])
   })
 
@@ -165,7 +195,7 @@ describe('GET accreditation overseas-sites', () => {
     ])
   })
 
-  it('returns null detail for an approved site whose record is missing', async () => {
+  it('returns null detail for an overseas site whose record is missing', async () => {
     const { organisation, registration, accreditation } = buildScenario({
       overseasSites: {
         '001': { overseasSiteId: MISSING_SITE_ID }
@@ -185,11 +215,17 @@ describe('GET accreditation overseas-sites', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(JSON.parse(response.payload)).toStrictEqual([
-      { orsId: '001', name: null, country: null, address: null }
+      {
+        orsId: '001',
+        name: null,
+        country: null,
+        address: null,
+        validFrom: null
+      }
     ])
   })
 
-  it('returns an empty array when the accreditation has no approved sites', async () => {
+  it('returns an empty array when the registration has no overseas sites', async () => {
     const { organisation, registration, accreditation } = buildScenario({
       overseasSites: {}
     })

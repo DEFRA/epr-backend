@@ -21,14 +21,15 @@ const objectId = () =>
     .required()
 
 /**
- * Resolves a registration's approved overseas-site map into detail records,
- * sorted by their three-digit ORS id. Detail is null for any approved site
+ * Resolves a registration's overseas-site map into detail records, sorted by
+ * their three-digit ORS id. Each entry carries validFrom — the approved-from
+ * date, null when the site is not yet approved. Detail is null for any site
  * whose record cannot be found.
  *
  * @param {OverseasSitesRepository} overseasSitesRepository
  * @param {Record<string, { overseasSiteId: string }> | undefined} overseasSites
  */
-const resolveApprovedSites = async (overseasSitesRepository, overseasSites) => {
+const resolveOverseasSites = async (overseasSitesRepository, overseasSites) => {
   const entries = Object.entries(overseasSites ?? {}).sort(([a], [b]) =>
     a.localeCompare(b)
   )
@@ -48,7 +49,8 @@ const resolveApprovedSites = async (overseasSitesRepository, overseasSites) => {
       orsId,
       name: site?.name ?? null,
       country: site?.country ?? null,
-      address: site?.address ?? null
+      address: site?.address ?? null,
+      validFrom: site?.validFrom ?? null
     }
   })
 }
@@ -94,7 +96,7 @@ export const accreditationOverseasSitesList = {
         )
       }
 
-      const sites = await resolveApprovedSites(
+      const sites = await resolveOverseasSites(
         overseasSitesRepository,
         registration.overseasSites
       )
