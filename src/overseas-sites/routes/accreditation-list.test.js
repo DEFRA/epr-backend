@@ -32,6 +32,7 @@ const siteOne = {
     stateOrRegion: 'Berlin-Mitte',
     postcode: '10115'
   },
+  coordinates: '52.5200,13.4050',
   validFrom: approvedFrom,
   createdAt: now,
   updatedAt: now
@@ -128,6 +129,7 @@ describe('GET accreditation overseas-sites', () => {
           stateOrRegion: 'Berlin-Mitte',
           postcode: '10115'
         },
+        coordinates: '52.5200,13.4050',
         validFrom: approvedFrom.toISOString()
       },
       {
@@ -138,6 +140,7 @@ describe('GET accreditation overseas-sites', () => {
           line1: '1 Rue de Test',
           townOrCity: 'Paris'
         },
+        coordinates: null,
         validFrom: null
       }
     ])
@@ -220,6 +223,7 @@ describe('GET accreditation overseas-sites', () => {
         name: null,
         country: null,
         address: null,
+        coordinates: null,
         validFrom: null
       }
     ])
@@ -265,7 +269,23 @@ describe('GET accreditation overseas-sites', () => {
     expect(JSON.parse(response.payload)).toStrictEqual([])
   })
 
-  it('allows a standard user to read the sites', async () => {
+  it('401s when not authenticated', async () => {
+    const { organisation, registration, accreditation } = buildScenario()
+    await startServer({ organisation, sites: [siteOne, siteTwo] })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: pathFor({
+        organisationId: organisation.id,
+        registrationId: registration.id,
+        accreditationId: accreditation.id
+      })
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+  })
+
+  it('403s when authenticated as a standard user', async () => {
     const { organisation, registration, accreditation } = buildScenario()
     await startServer({ organisation, sites: [siteOne, siteTwo] })
 
@@ -279,8 +299,7 @@ describe('GET accreditation overseas-sites', () => {
       ...asStandardUser({ linkedOrgId: organisation.id })
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).toHaveLength(2)
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
   })
 
   it('404s when the organisation does not exist', async () => {

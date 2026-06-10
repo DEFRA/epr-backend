@@ -6,8 +6,8 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { ROLES, SCOPES } from '#common/helpers/auth/constants.js'
-import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { SCOPES } from '#common/helpers/auth/constants.js'
+import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
@@ -50,6 +50,7 @@ const resolveOverseasSites = async (overseasSitesRepository, overseasSites) => {
       name: site?.name ?? null,
       country: site?.country ?? null,
       address: site?.address ?? null,
+      coordinates: site?.coordinates ?? null,
       validFrom: site?.validFrom ?? null
     }
   })
@@ -59,7 +60,10 @@ export const accreditationOverseasSitesList = {
   method: 'GET',
   path: accreditationOverseasSitesPath,
   options: {
-    auth: getAuthConfig([ROLES.standardUser, SCOPES.adminRead]),
+    auth: {
+      strategies: ['access-token', BASIC_AUTH],
+      scope: [SCOPES.adminRead, SCOPES.organisationRead]
+    },
     tags: ['api'],
     validate: {
       params: Joi.object({
