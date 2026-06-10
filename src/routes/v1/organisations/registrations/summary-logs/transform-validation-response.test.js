@@ -764,8 +764,8 @@ describe('transformValidationResponse', () => {
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.VALIDATED,
         ...transformValidationResponse(validation),
-        loadsByPeriodStatus: {
-          open: {
+        loadsByReportingPeriod: {
+          openPeriodLoads: {
             added: {
               balanceAffecting: { count: 0, tonnageDelta: 0 },
               nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
@@ -775,7 +775,7 @@ describe('transformValidationResponse', () => {
               nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
             }
           },
-          closed: {
+          closedPeriodLoads: {
             added: {
               balanceAffecting: { count: 0, tonnageDelta: 0 },
               nonBalanceAffecting: { count: 0, tonnageDelta: 0 }

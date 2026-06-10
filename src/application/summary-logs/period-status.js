@@ -27,7 +27,7 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
  */
 
 /**
- * @typedef {{ open: PeriodStatusByRecordChange, closed: PeriodStatusByRecordChange }} LoadsByPeriodStatus
+ * @typedef {{ openPeriodLoads: PeriodStatusByRecordChange, closedPeriodLoads: PeriodStatusByRecordChange }} LoadsByReportingPeriod
  */
 
 /**
@@ -46,9 +46,9 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
  * @property {number} tonnageDelta
  */
 
-/** @returns {LoadsByPeriodStatus} */
+/** @returns {LoadsByReportingPeriod} */
 const emptyResult = () => ({
-  open: {
+  openPeriodLoads: {
     added: {
       balanceAffecting: { count: 0, tonnageDelta: 0 },
       nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
@@ -58,7 +58,7 @@ const emptyResult = () => ({
       nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
     }
   },
-  closed: {
+  closedPeriodLoads: {
     added: {
       balanceAffecting: { count: 0, tonnageDelta: 0 },
       nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
@@ -280,16 +280,22 @@ const classifyAdjustedRecord = ({
 }
 
 /**
- * Folds an array of entries into the LoadsByPeriodStatus structure.
+ * Maps a record's internal period status to its output bucket key.
+ * @type {Record<'open' | 'closed', 'openPeriodLoads' | 'closedPeriodLoads'>}
+ */
+const PERIOD_TO_KEY = { open: 'openPeriodLoads', closed: 'closedPeriodLoads' }
+
+/**
+ * Folds an array of entries into the LoadsByReportingPeriod structure.
  *
  * @param {PeriodStatusEntry[]} entries
- * @returns {LoadsByPeriodStatus}
+ * @returns {LoadsByReportingPeriod}
  */
 const reduceEntries = (entries) => {
   const result = emptyResult()
 
   for (const { period, change, inclusion, count, tonnageDelta } of entries) {
-    const bucket = result[period][change][inclusion]
+    const bucket = result[PERIOD_TO_KEY[period]][change][inclusion]
     bucket.count += count
     bucket.tonnageDelta += tonnageDelta
   }
@@ -382,7 +388,7 @@ const classifyAdjustedWasteRecord = ({
  * @param {string} params.summaryLogId
  * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {ClassificationContext} params.classificationContext
- * @returns {LoadsByPeriodStatus}
+ * @returns {LoadsByReportingPeriod}
  */
 export const classifyByPeriodStatus = ({
   wasteRecords,

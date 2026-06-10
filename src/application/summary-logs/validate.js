@@ -54,7 +54,7 @@ export const MAX_ACTUAL_LENGTH = 200
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {SummaryLogExtractor} from './extractor.js' */
 /** @import {Loads} from './load-counts.js' */
-/** @import {LoadsByPeriodStatus} from './period-status.js' */
+/** @import {LoadsByReportingPeriod} from './period-status.js' */
 /** @import {ReportsRepository} from '#reports/repository/port.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
 
@@ -514,7 +514,7 @@ const recordValidationMetrics = async ({
  * @param {Object} params
  * @param {ValidationIssuesCollector} params.issues
  * @param {Loads | null} params.loads
- * @param {LoadsByPeriodStatus | null} params.loadsByPeriodStatus
+ * @param {LoadsByReportingPeriod | null} params.loadsByReportingPeriod
  * @param {import('./load-counts.js').LoadsByWasteRecordType | null} params.loadsByWasteRecordType
  * @param {ExtractedMeta | undefined} params.meta
  * @param {SummaryLogStatus} params.status
@@ -526,7 +526,7 @@ const recordValidationMetrics = async ({
 const persistValidationResult = async ({
   issues,
   loads,
-  loadsByPeriodStatus,
+  loadsByReportingPeriod,
   loadsByWasteRecordType,
   meta,
   status,
@@ -545,7 +545,7 @@ const persistValidationResult = async ({
       counts: issues.getCounts()
     },
     ...(loads && { loads }),
-    ...(loadsByPeriodStatus && { loadsByPeriodStatus }),
+    ...(loadsByReportingPeriod && { loadsByReportingPeriod }),
     ...(loadsByWasteRecordType && { loadsByWasteRecordType }),
     ...(meta && { meta })
   })
@@ -580,21 +580,22 @@ const classifyAndPersistResult = async ({
     logger
   })
 
-  const { loads, loadsByWasteRecordType, loadsByPeriodStatus } = classifyLoads({
-    processingType,
-    status,
-    summaryLogId,
-    wasteBalanceRecords,
-    wasteRecords,
-    periodicReports,
-    registration,
-    existingRecordsMap
-  })
+  const { loads, loadsByWasteRecordType, loadsByReportingPeriod } =
+    classifyLoads({
+      processingType,
+      status,
+      summaryLogId,
+      wasteBalanceRecords,
+      wasteRecords,
+      periodicReports,
+      registration,
+      existingRecordsMap
+    })
 
   await persistValidationResult({
     issues,
     loads,
-    loadsByPeriodStatus,
+    loadsByReportingPeriod,
     loadsByWasteRecordType,
     meta,
     status,

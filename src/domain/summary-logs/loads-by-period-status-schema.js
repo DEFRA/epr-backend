@@ -21,9 +21,9 @@ const periodStatusByChangeSchema = Joi.object({
   adjusted: periodStatusGroupSchema.required()
 })
 
-export const loadsByPeriodStatusSchema = Joi.object({
-  open: periodStatusByChangeSchema.required(),
-  closed: periodStatusByChangeSchema.required()
+export const loadsByReportingPeriodSchema = Joi.object({
+  openPeriodLoads: periodStatusByChangeSchema.required(),
+  closedPeriodLoads: periodStatusByChangeSchema.required()
 })
 
 const emptyBucket = () => ({ count: 0, tonnageDelta: 0 })
@@ -33,8 +33,8 @@ const emptyGroup = () => ({
 })
 const emptyChange = () => ({ added: emptyGroup(), adjusted: emptyGroup() })
 
-/** Default loadsByPeriodStatus for validated logs without period-status data. */
-export const emptyLoadsByPeriodStatus = () => ({
-  open: emptyChange(),
-  closed: emptyChange()
+/** Default loadsByReportingPeriod for validated logs without period-status data. */
+export const emptyLoadsByReportingPeriod = () => ({
+  openPeriodLoads: emptyChange(),
+  closedPeriodLoads: emptyChange()
 })

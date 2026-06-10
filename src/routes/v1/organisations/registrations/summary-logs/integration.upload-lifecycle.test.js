@@ -140,8 +140,8 @@ describe('Summary logs upload lifecycle', () => {
             counts: { fatal: 0, error: 0, warning: 0, total: 0 }
           },
           loads: createEmptyLoads(),
-          loadsByPeriodStatus: {
-            open: {
+          loadsByReportingPeriod: {
+            openPeriodLoads: {
               added: {
                 balanceAffecting: { count: 0, tonnageDelta: 0 },
                 nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
@@ -151,7 +151,7 @@ describe('Summary logs upload lifecycle', () => {
                 nonBalanceAffecting: { count: 0, tonnageDelta: 0 }
               }
             },
-            closed: {
+            closedPeriodLoads: {
               added: {
                 balanceAffecting: { count: 0, tonnageDelta: 0 },
                 nonBalanceAffecting: { count: 0, tonnageDelta: 0 }

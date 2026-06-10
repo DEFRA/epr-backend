@@ -24,7 +24,7 @@ import {
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @typedef {import('./load-counts.js').Loads} Loads */
-/** @typedef {import('./period-status.js').LoadsByPeriodStatus} LoadsByPeriodStatus */
+/** @typedef {import('./period-status.js').LoadsByReportingPeriod} LoadsByReportingPeriod */
 /** @typedef {string} ProcessingType */
 /** @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository */
 
@@ -53,7 +53,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {Registration} [params.registration]
  * @param {Map<string, WasteRecord>} [params.existingRecordsMap]
- * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByPeriodStatus: LoadsByPeriodStatus | null }}
+ * @returns {{ loads: Loads | null, loadsByWasteRecordType: import('./load-counts.js').LoadsByWasteRecordType | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
   processingType,
@@ -69,7 +69,7 @@ export const classifyLoads = ({
     return {
       loads: null,
       loadsByWasteRecordType: null,
-      loadsByPeriodStatus: null
+      loadsByReportingPeriod: null
     }
   }
 
@@ -91,7 +91,7 @@ export const classifyLoads = ({
   })
 
   /* v8 ignore start -- defensive guard: all three are always set when status is VALIDATED */
-  const loadsByPeriodStatus =
+  const loadsByReportingPeriod =
     registration && existingRecordsMap && tableSchemas
       ? classifyByPeriodStatus({
           wasteRecords,
@@ -110,7 +110,7 @@ export const classifyLoads = ({
       : null
   /* v8 ignore stop */
 
-  return { loads, loadsByWasteRecordType, loadsByPeriodStatus }
+  return { loads, loadsByWasteRecordType, loadsByReportingPeriod }
 }
 
 /**
